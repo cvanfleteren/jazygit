@@ -2,10 +2,12 @@ package net.vanfleteren.jazygit.ui;
 
 import static dev.tamboui.toolkit.Toolkit.*;
 
+import dev.tamboui.style.Color;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Panel;
 import net.vanfleteren.jazygit.model.Commit;
 import net.vanfleteren.jazygit.state.BranchLog;
+import net.vanfleteren.jazygit.state.FileDiff;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 
@@ -17,7 +19,7 @@ import java.util.stream.Stream;
 
 /**
  * The right-hand content panel: it always mirrors whichever left pane currently has focus,
- * showing the file status, the branch log, or the commit diff/body.
+ * showing the file diff, the branch log, or the commit diff/body.
  */
 public final class ContentPanel {
 
@@ -33,13 +35,46 @@ public final class ContentPanel {
         if (CommitsPanel.ID.equals(focusedId)) {
             return commitDiffView(model, commitsSelection);
         }
-        return fileStatusView(model);
+        return fileDiffView(model);
     }
 
-    private static Panel fileStatusView(Model model) {
-        return whenLoaded("Status", model.status(), status -> panel("Status", rows(status.files().stream()
-                .map(f -> f.type().marker() + " " + f.path())
-                .toList())).rounded());
+    private static Panel fileDiffView(Model model) {
+        return model.fileDiff()
+                .map(ContentPanel::shown)
+                .map(d -> whenLoaded("Diff", d.diff(), diff -> panel("Diff", diffRows(diff)).rounded()))
+                .orElseGet(() -> panel("Diff", text(Placeholders.LOADING).dim()).rounded());
+    }
+
+    /**
+     * While a diff is loading, keep showing the previously loaded one rather than flashing a placeholder.
+     */
+    private static FileDiff shown(FileDiff diff) {
+        return diff.diff() instanceof Loadable.Loading<String> ? diff.previous().orElse(diff) : diff;
+    }
+
+    private static Element[] diffRows(String diff) {
+        return diff.isBlank()
+                ? new Element[]{text("No changes").dim()}
+                : diff.lines().map(ContentPanel::diffLine).toArray(Element[]::new);
+    }
+
+    /**
+     * A line of a unified diff, colored by what it is: added, removed, a hunk header or a file header.
+     */
+    static Element diffLine(String line) {
+        if (line.startsWith("+++") || line.startsWith("---") || line.startsWith("diff ") || line.startsWith("index ")) {
+            return text(line).bold();
+        }
+        if (line.startsWith("+")) {
+            return text(line).fg(Color.GREEN);
+        }
+        if (line.startsWith("-")) {
+            return text(line).fg(Color.RED);
+        }
+        if (line.startsWith("@@")) {
+            return text(line).fg(Color.CYAN);
+        }
+        return text(line);
     }
 
     private static Panel branchLogView(Model model) {

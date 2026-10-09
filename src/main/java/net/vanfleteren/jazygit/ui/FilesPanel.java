@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.model.ChangeType;
 import net.vanfleteren.jazygit.model.FileEntry;
 import net.vanfleteren.jazygit.model.FileTree;
 import net.vanfleteren.jazygit.model.RepoStatus;
+import net.vanfleteren.jazygit.state.FileDiff;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -52,6 +53,17 @@ public class FilesPanel {
      */
     public FilesPanel(Consumer<Msg> dispatch) {
         tree.onKeyEvent(event -> handleKey(event, dispatch));
+    }
+
+    /**
+     * The message to send when the highlighted node is not the one whose diff {@code model} holds.
+     */
+    public Optional<Msg> selectionChange(Model model) {
+        return Optional.ofNullable(tree.selectedNode())
+                .map(TreeNode::data)
+                .map(FileTree::entries)
+                .filter(files -> !model.fileDiff().map(FileDiff::files).equals(Optional.of(files)))
+                .map(Msg.FilesSelected::new);
     }
 
     private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {

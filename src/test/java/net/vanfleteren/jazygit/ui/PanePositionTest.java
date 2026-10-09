@@ -63,6 +63,11 @@ class PanePositionTest {
         public void unstage(List<String> paths) {
             throw new UnsupportedOperationException();
         }
+
+        @Override
+        public String diff(List<FileEntry> files) {
+            throw new UnsupportedOperationException();
+        }
     }
 
     private static final Model MODEL = TestModels.loaded(new FixedProvider(

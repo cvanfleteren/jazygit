@@ -93,6 +93,11 @@ class ProgramTest {
             index("unstage", paths);
         }
 
+        @Override
+        public String diff(List<FileEntry> files) {
+            return "diff of " + files.size();
+        }
+
         private void index(String operation, List<String> paths) {
             if (indexError != null) {
                 throw indexError;
@@ -179,6 +184,17 @@ class ProgramTest {
 
         assertEquals(List.of("stage[a.txt]", "unstageNew[b.txt]", "unstage[c.txt]"), provider.indexCalls);
         assertEquals(Optional.empty(), program.model().error());
+    }
+
+    @Test
+    void selectingFilesLoadsTheirDiff() {
+        settle();
+        List<FileEntry> files = List.of(new FileEntry("a.txt", ChangeType.UNTRACKED));
+
+        program.dispatch(new Msg.FilesSelected(files));
+        settle();
+
+        assertEquals(new Loaded<>("diff of 1"), program.model().fileDiff().orElseThrow().diff());
     }
 
     @Test

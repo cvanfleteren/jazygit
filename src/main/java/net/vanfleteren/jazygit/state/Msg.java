@@ -36,6 +36,23 @@ public sealed interface Msg {
     record BranchLogLoaded(String branch, List<Commit> commits) implements Msg {
     }
 
+    /**
+     * The user highlighted a node of the files tree; {@code files} are the changed files under it.
+     */
+    record FilesSelected(List<FileEntry> files) implements Msg {
+
+        public FilesSelected {
+            files = List.copyOf(files);
+        }
+    }
+
+    record FileDiffLoaded(List<FileEntry> files, String diff) implements Msg {
+
+        public FileDiffLoaded {
+            files = List.copyOf(files);
+        }
+    }
+
     record LoadFailed(Cmd.Load cmd, String message) implements Msg {
     }
 

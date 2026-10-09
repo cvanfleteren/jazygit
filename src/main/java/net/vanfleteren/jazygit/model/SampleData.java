@@ -100,4 +100,11 @@ public final class SampleData implements GitInfoProvider {
     @Override
     public void unstage(List<String> paths) {
     }
+
+    @Override
+    public String diff(List<FileEntry> files) {
+        return files.stream()
+                .map(f -> "diff --git a/" + f.path() + " b/" + f.path() + "\n@@ -1 +1 @@\n-old\n+new\n")
+                .collect(java.util.stream.Collectors.joining());
+    }
 }

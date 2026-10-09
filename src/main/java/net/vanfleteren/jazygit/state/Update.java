@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.state.Cmd.Checkout;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
+import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.Cmd.Stage;
 import net.vanfleteren.jazygit.state.Cmd.Unstage;
@@ -20,6 +21,8 @@ import net.vanfleteren.jazygit.state.Msg.CheckedOut;
 import net.vanfleteren.jazygit.state.Msg.CheckoutFailed;
 import net.vanfleteren.jazygit.state.Msg.CheckoutRequested;
 import net.vanfleteren.jazygit.state.Msg.CommitsLoaded;
+import net.vanfleteren.jazygit.state.Msg.FileDiffLoaded;
+import net.vanfleteren.jazygit.state.Msg.FilesSelected;
 import net.vanfleteren.jazygit.state.Msg.LoadFailed;
 import net.vanfleteren.jazygit.state.Msg.StageToggleFailed;
 import net.vanfleteren.jazygit.state.Msg.StageToggled;
@@ -77,6 +80,10 @@ public final class Update {
             // A log that arrives after another branch was highlighted is dropped.
             case BranchLogLoaded(String branch, var commits) ->
                     Next.of(updateBranchLog(model, branch, log -> log.reload(commits)));
+            case FilesSelected(List<FileEntry> files) -> filesSelected(model, files);
+            // A diff that arrives after another node was highlighted is dropped.
+            case FileDiffLoaded(List<FileEntry> files, String diff) ->
+                    Next.of(updateFileDiff(finished(model, new LoadFileDiff(files)), files, d -> d.reload(diff)));
             case LoadFailed(Cmd.Load cmd, String message) -> Next.of(failed(finished(model, cmd), cmd, message));
             case CheckoutRequested(String branch) -> checkoutRequested(model, branch);
             // Status and branches show the new HEAD; the moved HEAD then reloads the commits.
@@ -103,6 +110,14 @@ public final class Update {
         model.branchLog()
                 .filter(log -> log.commits() instanceof Failed)
                 .ifPresent(log -> cmds.add(new LoadBranchLog(log.branch())));
+        // The files can change on disk without their status changing, so the diff is read again.
+        model.fileDiff()
+                .map(d -> new LoadFileDiff(d.files()))
+                .filter(cmd -> !refreshing.contains(cmd))
+                .ifPresent(cmd -> {
+                    refreshing.add(cmd);
+                    cmds.add(cmd);
+                });
         return new Next(model.withRefreshing(refreshing), cmds);
     }
 
@@ -150,6 +165,21 @@ public final class Update {
         return model.withBranchLog(model.branchLog().map(log -> log.branch().equals(branch) ? f.apply(log) : log));
     }
 
+    private static Next filesSelected(Model model, List<FileEntry> files) {
+        if (model.fileDiff().map(FileDiff::files).filter(files::equals).isPresent()) {
+            return Next.of(model);
+        }
+        return Next.of(model.withFileDiff(Optional.of(FileDiff.loading(files, model.fileDiff()))),
+                new LoadFileDiff(files));
+    }
+
+    /**
+     * Applies {@code f} to the file diff if it is the diff of {@code files}.
+     */
+    private static Model updateFileDiff(Model model, List<FileEntry> files, UnaryOperator<FileDiff> f) {
+        return model.withFileDiff(model.fileDiff().map(d -> d.files().equals(files) ? f.apply(d) : d));
+    }
+
     private static Next checkoutRequested(Model model, String branch) {
         boolean known = model.branches() instanceof Loaded<List<Branch>>(List<Branch> branches)
                 && branches.stream().anyMatch(b -> b.name().equals(branch) && !b.current());
@@ -184,6 +214,8 @@ public final class Update {
             case LoadStatus() -> model.withStatus(new Failed<>(message));
             case LoadBranches() -> model.withBranches(new Failed<>(message));
             case LoadCommits() -> model.withCommits(new Failed<>(message));
+            case LoadFileDiff(List<FileEntry> files) ->
+                    updateFileDiff(model, files, d -> new FileDiff(files, new Failed<>(message)));
             case LoadBranchLog(String branch) ->
                     updateBranchLog(model, branch, log -> new BranchLog(branch, new Failed<>(message)));
         };

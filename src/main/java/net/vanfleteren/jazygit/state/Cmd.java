@@ -26,6 +26,13 @@ public sealed interface Cmd {
     record LoadBranchLog(String branch) implements Load {
     }
 
+    record LoadFileDiff(List<net.vanfleteren.jazygit.model.FileEntry> files) implements Load {
+
+        public LoadFileDiff {
+            files = List.copyOf(files);
+        }
+    }
+
     record Checkout(String branch) implements Cmd {
     }
 

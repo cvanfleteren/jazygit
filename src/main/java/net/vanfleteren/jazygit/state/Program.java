@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.state.Cmd.Checkout;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
+import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.Cmd.Stage;
 import net.vanfleteren.jazygit.state.Cmd.Unstage;
@@ -13,6 +14,7 @@ import net.vanfleteren.jazygit.state.Msg.BranchesLoaded;
 import net.vanfleteren.jazygit.state.Msg.CheckedOut;
 import net.vanfleteren.jazygit.state.Msg.CheckoutFailed;
 import net.vanfleteren.jazygit.state.Msg.CommitsLoaded;
+import net.vanfleteren.jazygit.state.Msg.FileDiffLoaded;
 import net.vanfleteren.jazygit.state.Msg.LoadFailed;
 import net.vanfleteren.jazygit.state.Msg.StageToggleFailed;
 import net.vanfleteren.jazygit.state.Msg.StageToggled;
@@ -80,6 +82,7 @@ public final class Program {
                 case LoadBranches() -> new BranchesLoaded(provider.branches());
                 case LoadCommits() -> new CommitsLoaded(provider.commits());
                 case LoadBranchLog(String branch) -> new BranchLogLoaded(branch, provider.log(branch));
+                case LoadFileDiff(var files) -> new FileDiffLoaded(files, provider.diff(files));
                 case Checkout(String branch) -> {
                     provider.checkout(branch);
                     yield new CheckedOut(branch);

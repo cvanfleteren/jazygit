@@ -160,6 +160,33 @@ class JGitInfoProviderTest {
     }
 
     @Test
+    void diffCombinesStagedUnstagedAndUntrackedChanges() throws Exception {
+        Files.writeString(repo.resolve("README.md"), "staged\n");
+        git("add", "README.md");
+        Files.writeString(repo.resolve("README.md"), "unstaged\n");
+        Files.writeString(repo.resolve("new.txt"), "brand new\n");
+
+        String diff = provider.diff(provider.status().files());
+
+        assertTrue(diff.contains("-hello"), diff);
+        assertTrue(diff.contains("+unstaged"), diff);
+        assertTrue(diff.contains("+brand new"), diff);
+        assertTrue(diff.contains("new.txt"), diff);
+        assertEquals("", provider.diff(List.of()));
+    }
+
+    @Test
+    void diffOfOneFileLeavesOutTheOthers() throws Exception {
+        Files.writeString(repo.resolve("README.md"), "changed\n");
+        Files.writeString(repo.resolve("new.txt"), "new\n");
+
+        String diff = provider.diff(List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)));
+
+        assertTrue(diff.contains("+new"), diff);
+        assertTrue(!diff.contains("README.md"), diff);
+    }
+
+    @Test
     void stageFailsWithGitsExplanationForAnUnknownPath() {
         IllegalStateException e = assertThrows(IllegalStateException.class,
                 () -> provider.stage(List.of("missing.txt")));

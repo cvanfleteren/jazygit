@@ -287,6 +287,50 @@ class UpdateTest {
                 List.of(new Branch("main", true, "aaaa"), new Branch("feature", false, "moved")))).cmds());
     }
 
+    @Test
+    void highlightingFilesLoadsTheirDiffOnce() {
+        Model model = loaded();
+        List<FileEntry> files = DIRTY.files();
+
+        Next next = Update.update(model, new Msg.FilesSelected(files));
+        assertEquals(List.of(new Cmd.LoadFileDiff(files)), next.cmds());
+        assertEquals(Optional.of(new FileDiff(files, new Loading<>())), next.model().fileDiff());
+
+        assertEquals(List.of(), Update.update(next.model(), new Msg.FilesSelected(files)).cmds());
+    }
+
+    @Test
+    void aDiffOfOtherFilesThanTheHighlightedOnesIsDropped() {
+        Model model = Update.update(loaded(), new Msg.FilesSelected(DIRTY.files())).model();
+        List<FileEntry> other = List.of(new FileEntry("b.txt", ChangeType.UNTRACKED));
+
+        assertEquals(model.fileDiff(), Update.update(model, new Msg.FileDiffLoaded(other, "x")).model().fileDiff());
+        assertEquals(Optional.of(new FileDiff(DIRTY.files(), new Loaded<>("+a"))),
+                Update.update(model, new Msg.FileDiffLoaded(DIRTY.files(), "+a")).model().fileDiff());
+    }
+
+    @Test
+    void ticksReloadTheDiffAndKeepTheOldOneVisibleWhileLoading() {
+        Model model = Update.update(loaded(), new Msg.FilesSelected(DIRTY.files())).model();
+        model = Update.update(model, new Msg.FileDiffLoaded(DIRTY.files(), "+a")).model();
+
+        Next tick = Update.update(model, new Tick());
+        assertEquals(true, tick.cmds().contains(new Cmd.LoadFileDiff(DIRTY.files())));
+
+        List<FileEntry> next = List.of(new FileEntry("b.txt", ChangeType.UNTRACKED));
+        FileDiff loading = Update.update(model, new Msg.FilesSelected(next)).model().fileDiff().orElseThrow();
+        assertEquals(Optional.of(new FileDiff(DIRTY.files(), new Loaded<>("+a"))), loading.previous());
+    }
+
+    @Test
+    void aFailedDiffLoadIsShown() {
+        Model model = Update.update(loaded(), new Msg.FilesSelected(DIRTY.files())).model();
+        Cmd.LoadFileDiff cmd = new Cmd.LoadFileDiff(DIRTY.files());
+
+        assertEquals(Optional.of(new FileDiff(DIRTY.files(), new Failed<>("boom"))),
+                Update.update(model, new LoadFailed(cmd, "boom")).model().fileDiff());
+    }
+
     /**
      * A model with everything loaded and nothing running.
      */

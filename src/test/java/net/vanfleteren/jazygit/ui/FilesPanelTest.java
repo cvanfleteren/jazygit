@@ -69,6 +69,11 @@ class FilesPanelTest {
         public void unstage(List<String> paths) {
             throw new UnsupportedOperationException();
         }
+
+        @Override
+        public String diff(List<FileEntry> files) {
+            throw new UnsupportedOperationException();
+        }
     }
 
     private final FilesPanel panel = new FilesPanel(msg -> { });
