@@ -122,7 +122,20 @@ class FilesPanelTest {
     }
 
     @Test
-    void rendersMergedDirectoriesAndKeepsSelectionWhenStatusChanges() throws Exception {
+    void rendersEmptyPanelWithoutRootWhenThereAreNoFiles() throws Exception {
+        Model empty = TestModels.loaded(new FixedProvider(List.of()));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(empty, FilesPanel.ID))) {
+            String screen = RenderedText.of(testRunner, () -> panel.render(empty, FilesPanel.ID));
+            assertTrue(screen.contains("Files"), screen);
+            assertFalse(screen.contains("/"), screen);
+
+            testRunner.pilot().quit();
+        }
+    }
+
+    @Test
+    void rendersMergedDirectoriesAndKeepsSelectionWhenStatusChanges()throws Exception {
         FileEntry a = new FileEntry("net/vanfleteren/A.java", ChangeType.MODIFIED);
         FileEntry b = new FileEntry("net/vanfleteren/B.java", ChangeType.UNTRACKED);
         Model before = TestModels.loaded(new FixedProvider(List.of(a, b)));
