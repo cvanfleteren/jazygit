@@ -125,6 +125,7 @@ public class FilesPanel {
             case Loadable.Loading<RepoStatus>() -> List.of(TreeNode.<FileTree>of(Placeholders.LOADING).leaf());
             case Loadable.Failed<RepoStatus>(String message) ->
                     List.of(TreeNode.<FileTree>of(Placeholders.error(message)).leaf());
+            case Loadable.Loaded<RepoStatus>(RepoStatus value) when value.files().isEmpty() -> List.of();
             case Loadable.Loaded<RepoStatus>(RepoStatus value) -> List.of(node(
                     new FileTree.Dir(ROOT_NAME, "", FileTree.of(value.files())), collapsed));
         };
