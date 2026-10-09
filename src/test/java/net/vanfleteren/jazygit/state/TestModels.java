@@ -1,16 +1,45 @@
 package net.vanfleteren.jazygit.state;
 
+import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.RepoStatus;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 /**
- * Builds models for UI tests by running the real {@link Program} synchronously.
+ * Builds models for tests: with fixed sample data through {@link Update}, or by running the real
+ * {@link Program} synchronously.
  */
 public final class TestModels {
 
+    public static final RepoStatus CLEAN = new RepoStatus("main", "aaaa", List.of());
+    public static final RepoStatus DIRTY = new RepoStatus("main", "aaaa",
+            List.of(new FileEntry("a.txt", ChangeType.UNTRACKED)));
+    public static final RepoStatus MOVED = new RepoStatus("main", "bbbb", List.of());
+    public static final List<Branch> BRANCHES = List.of(new Branch("main", true, "aaaa"),
+            new Branch("feature", false, "ffff"));
+    public static final List<Commit> COMMITS = List.of(
+            new Commit("aaaa", "Ada", "ada@example.com", Instant.EPOCH, "First", ""));
+    public static final List<Commit> FEATURE_COMMITS = List.of(
+            new Commit("ffff", "Ada", "ada@example.com", Instant.EPOCH, "Feature", ""));
+
     private TestModels() {
+    }
+
+    /**
+     * A model with the sample status, branches and commits loaded and nothing running.
+     */
+    public static Model loaded() {
+        Model model = Update.init("repo").model();
+        model = Update.update(model, new LoadMsg.StatusLoaded(CLEAN)).model();
+        model = Update.update(model, new LoadMsg.BranchesLoaded(BRANCHES)).model();
+        return Update.update(model, new LoadMsg.CommitsLoaded(COMMITS)).model();
     }
 
     /**

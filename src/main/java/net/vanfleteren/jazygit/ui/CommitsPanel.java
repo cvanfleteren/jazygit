@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
-import net.vanfleteren.jazygit.state.RewordMsg;
+import net.vanfleteren.jazygit.feature.commit.RewordMsg;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyEvent;

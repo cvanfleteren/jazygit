@@ -1,9 +1,9 @@
 package net.vanfleteren.jazygit.ui;
 
-import net.vanfleteren.jazygit.state.CheckoutMsg;
-import net.vanfleteren.jazygit.state.DeleteBranchMsg;
-import net.vanfleteren.jazygit.state.NewBranchMsg;
-import net.vanfleteren.jazygit.state.SelectionMsg;
+import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
+import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg;
+import net.vanfleteren.jazygit.feature.branch.NewBranchMsg;
+import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyEvent;

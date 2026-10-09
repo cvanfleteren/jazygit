@@ -13,6 +13,11 @@ import java.util.List;
  */
 public sealed interface LoadMsg extends Msg {
 
+    @Override
+    default Update.Next apply(Model model) {
+        return LoadUpdate.update(model, this);
+    }
+
     record StatusLoaded(RepoStatus status) implements LoadMsg {
     }
 

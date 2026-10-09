@@ -1,10 +1,10 @@
 package net.vanfleteren.jazygit;
 
-import net.vanfleteren.jazygit.state.CheckoutMsg;
-import net.vanfleteren.jazygit.state.CommitMsg;
-import net.vanfleteren.jazygit.state.RewordMsg;
-import net.vanfleteren.jazygit.state.SelectionMsg;
-import net.vanfleteren.jazygit.state.StageMsg;
+import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
+import net.vanfleteren.jazygit.feature.commit.CommitMsg;
+import net.vanfleteren.jazygit.feature.commit.RewordMsg;
+import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
+import net.vanfleteren.jazygit.feature.stage.StageMsg;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Panel;

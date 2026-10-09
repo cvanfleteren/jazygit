@@ -14,7 +14,7 @@ import java.util.function.Supplier;
 /**
  * Renders a single element to plain text, for asserting on what a panel shows.
  */
-final class RenderedText {
+public final class RenderedText {
 
     private static final Rect AREA = new Rect(0, 0, 40, 5);
     private static final Rect LARGE = new Rect(0, 0, 100, 30);
@@ -25,14 +25,14 @@ final class RenderedText {
     /**
      * Renders the element into a fresh buffer on the render thread, which TamboUI requires.
      */
-    static String of(ToolkitTestRunner testRunner, Supplier<? extends Element> element) throws Exception {
+    public static String of(ToolkitTestRunner testRunner, Supplier<? extends Element> element) throws Exception {
         return of(testRunner, element, AREA);
     }
 
     /**
      * Like {@link #of(ToolkitTestRunner, Supplier)}, on a 100x30 screen, for popups.
      */
-    static String ofLarge(ToolkitTestRunner testRunner, Supplier<? extends Element> element) throws Exception {
+    public static String ofLarge(ToolkitTestRunner testRunner, Supplier<? extends Element> element) throws Exception {
         return of(testRunner, element, LARGE);
     }
 

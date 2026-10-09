@@ -1,7 +1,8 @@
 package net.vanfleteren.jazygit.state;
 
-import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.state.Update.Next;
+
+import net.vanfleteren.jazygit.git.GitInfoProvider;
 
 import java.util.concurrent.Executor;
 

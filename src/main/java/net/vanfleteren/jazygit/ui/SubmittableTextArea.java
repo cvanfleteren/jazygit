@@ -17,7 +17,7 @@ import dev.tamboui.tui.event.KeyEvent;
  * can be attached to it; so this element registers itself with the same id, ahead of the text area,
  * to see the keys first.
  */
-final class SubmittableTextArea extends StyledElement<SubmittableTextArea> {
+public final class SubmittableTextArea extends StyledElement<SubmittableTextArea> {
 
     private final TextAreaElement area;
     private final Runnable onSubmit;
@@ -27,7 +27,7 @@ final class SubmittableTextArea extends StyledElement<SubmittableTextArea> {
      * @param area     the text area; it gets the id
      * @param onSubmit what Ctrl+Enter does
      */
-    SubmittableTextArea(TextAreaElement area, String id, Runnable onSubmit) {
+    public SubmittableTextArea(TextAreaElement area, String id, Runnable onSubmit) {
         this.area = area.id(id);
         this.onSubmit = onSubmit;
         id(id);
@@ -36,7 +36,7 @@ final class SubmittableTextArea extends StyledElement<SubmittableTextArea> {
     /**
      * Makes the text area this many rows high, borders included.
      */
-    SubmittableTextArea rows(int rows) {
+    public SubmittableTextArea rows(int rows) {
         this.height = rows;
         return length(rows);
     }

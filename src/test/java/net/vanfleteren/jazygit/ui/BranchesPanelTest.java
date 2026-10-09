@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
 import net.vanfleteren.jazygit.state.LoadMsg;
-import net.vanfleteren.jazygit.state.NewBranchMsg;
+import net.vanfleteren.jazygit.feature.branch.NewBranchMsg;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.tui.event.KeyCode;
 import net.vanfleteren.jazygit.git.model.Branch;

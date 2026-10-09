@@ -1,9 +1,9 @@
 package net.vanfleteren.jazygit.ui;
 
-import net.vanfleteren.jazygit.state.AmendMsg;
-import net.vanfleteren.jazygit.state.CommitMsg;
-import net.vanfleteren.jazygit.state.SelectionMsg;
-import net.vanfleteren.jazygit.state.StageMsg;
+import net.vanfleteren.jazygit.feature.commit.AmendMsg;
+import net.vanfleteren.jazygit.feature.commit.CommitMsg;
+import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
+import net.vanfleteren.jazygit.feature.stage.StageMsg;
 import dev.tamboui.toolkit.Toolkit;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.elements.TreeElement;

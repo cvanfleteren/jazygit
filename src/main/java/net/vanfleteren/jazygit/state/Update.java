@@ -1,15 +1,21 @@
 package net.vanfleteren.jazygit.state;
 
-import net.vanfleteren.jazygit.state.update.*;
+import net.vanfleteren.jazygit.state.Loadable.Loaded;
+
+import net.vanfleteren.jazygit.state.Loadable.Failed;
+
+import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
+
+import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
+
+import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
+
+import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
+
+import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
+
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
-import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
-import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
-import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
-import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
-import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
-import net.vanfleteren.jazygit.state.Loadable.Failed;
-import net.vanfleteren.jazygit.state.Loadable.Loaded;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -51,18 +57,7 @@ public final class Update {
     }
 
     public static Next update(Model model, Msg msg) {
-        return switch (msg) {
-            case Msg.Tick() -> refresh(model);
-            case LoadMsg m -> LoadUpdate.update(model, m);
-            case SelectionMsg m -> SelectionUpdate.update(model, m);
-            case CheckoutMsg m -> CheckoutUpdate.update(model, m);
-            case NewBranchMsg m -> NewBranchUpdate.update(model, m);
-            case DeleteBranchMsg m -> DeleteBranchUpdate.update(model, m);
-            case StageMsg m -> StageUpdate.update(model, m);
-            case CommitMsg m -> CommitUpdate.update(model, m);
-            case AmendMsg m -> AmendUpdate.update(model, m);
-            case RewordMsg m -> RewordUpdate.update(model, m);
-        };
+        return msg.apply(model);
     }
 
     public static Next refresh(Model model) {

@@ -1,5 +1,27 @@
 package net.vanfleteren.jazygit.state;
 
+import net.vanfleteren.jazygit.feature.branch.BranchCmd;
+
+import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
+
+import net.vanfleteren.jazygit.feature.commit.RewordMsg;
+
+import net.vanfleteren.jazygit.feature.commit.AmendMsg;
+
+import net.vanfleteren.jazygit.feature.commit.CommitMsg;
+
+import net.vanfleteren.jazygit.feature.stage.StageMsg;
+
+import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg;
+
+import net.vanfleteren.jazygit.feature.branch.NewBranchMsg;
+
+import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
+
+import net.vanfleteren.jazygit.state.Loadable.Loaded;
+
+import net.vanfleteren.jazygit.state.Loadable.Failed;
+
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.ChangeType;
@@ -7,8 +29,6 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
-import net.vanfleteren.jazygit.state.Loadable.Failed;
-import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -238,7 +258,7 @@ class ProgramTest {
         settle();
 
         program.dispatch(new DeleteBranchMsg.Requested("other"));
-        program.dispatch(new DeleteBranchMsg.Chosen(Cmd.BranchCmd.DeleteBranch.DeleteScope.BOTH));
+        program.dispatch(new DeleteBranchMsg.Chosen(BranchCmd.DeleteBranch.DeleteScope.BOTH));
         settle();
 
         assertEquals(List.of("other local remote"), provider.deleted);
