@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
 import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
+import net.vanfleteren.jazygit.state.Cmd.Amend;
 import net.vanfleteren.jazygit.state.Cmd.Commit;
 import net.vanfleteren.jazygit.state.Cmd.Stage;
 import net.vanfleteren.jazygit.state.Cmd.StageForCommit;
@@ -134,6 +135,12 @@ public final class Update {
             case Msg.Committed() -> refresh(model.withError(Optional.empty()));
             case Msg.CommitFailed(String message) ->
                     refresh(model.withError(Optional.of("Commit failed: " + message)));
+            case Msg.AmendRequested() -> amendRequested(model);
+            case Msg.AmendCancelled() -> Next.of(model.withAmendPrompt(false));
+            case Msg.AmendConfirmed() -> amendConfirmed(model);
+            case Msg.Amended() -> refresh(model.withError(Optional.empty()));
+            case Msg.AmendFailed(String message) ->
+                    refresh(model.withError(Optional.of("Amend failed: " + message)));
         };
     }
 
@@ -298,6 +305,28 @@ public final class Update {
         List<String> paths = files(model).stream().filter(FileEntry::unstaged).map(FileEntry::path).toList();
         return model.stageAllPrompt()
                 ? Next.of(model.withStageAllPrompt(false), new StageForCommit(paths))
+                : Next.of(model);
+    }
+
+    /**
+     * Asks for confirmation, when the last commit has something to be amended with.
+     */
+    private static Next amendRequested(Model model) {
+        return files(model).isEmpty()
+                ? Next.of(model.withError(Optional.of("Nothing to amend the last commit with")))
+                : Next.of(model.withError(Optional.empty()).withAmendPrompt(true));
+    }
+
+    /**
+     * Amends with the staged files; when none is staged, all files are added first.
+     */
+    private static Next amendConfirmed(Model model) {
+        List<FileEntry> files = files(model);
+        List<String> stage = files.stream().anyMatch(FileEntry::staged)
+                ? List.of()
+                : files.stream().filter(FileEntry::unstaged).map(FileEntry::path).toList();
+        return model.amendPrompt()
+                ? Next.of(model.withAmendPrompt(false), new Amend(stage))
                 : Next.of(model);
     }
 

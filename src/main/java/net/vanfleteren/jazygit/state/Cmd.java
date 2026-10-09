@@ -76,4 +76,14 @@ public sealed interface Cmd {
 
     record Commit(String summary, String description) implements Cmd {
     }
+
+    /**
+     * Stages the paths, if any, then amends the last commit with the index, keeping its message.
+     */
+    record Amend(List<String> stage) implements Cmd {
+
+        public Amend {
+            stage = List.copyOf(stage);
+        }
+    }
 }

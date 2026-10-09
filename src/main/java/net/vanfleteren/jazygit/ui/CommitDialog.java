@@ -25,7 +25,6 @@ public final class CommitDialog {
     public static final String ID = "commit-summary";
     public static final String DESCRIPTION_ID = "commit-description";
 
-    
     private static final int WIDTH = 110;
     private static final int INPUT_HEIGHT = 3;
     private static final int DESCRIPTION_HEIGHT = 10;

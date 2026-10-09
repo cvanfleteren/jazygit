@@ -157,4 +157,23 @@ public sealed interface Msg {
 
     record CommitFailed(String message) implements Msg {
     }
+
+    /**
+     * The user asked to amend the last commit with the staged files, or with all files if none is
+     * staged; confirmation is still to be given.
+     */
+    record AmendRequested() implements Msg {
+    }
+
+    record AmendCancelled() implements Msg {
+    }
+
+    record AmendConfirmed() implements Msg {
+    }
+
+    record Amended() implements Msg {
+    }
+
+    record AmendFailed(String message) implements Msg {
+    }
 }

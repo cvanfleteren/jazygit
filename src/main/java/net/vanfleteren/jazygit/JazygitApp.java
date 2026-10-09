@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.model.JGitInfoProvider;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Program;
+import net.vanfleteren.jazygit.ui.AmendDialog;
 import net.vanfleteren.jazygit.ui.BranchesPanel;
 import net.vanfleteren.jazygit.ui.CommitDialog;
 import net.vanfleteren.jazygit.ui.CommitsPanel;
@@ -47,6 +48,7 @@ public class JazygitApp extends ToolkitApp {
     private final BranchesPanel branchesPanel = new BranchesPanel(msg -> this.program.dispatch(msg));
     private final NewBranchDialog newBranchDialog = new NewBranchDialog(msg -> this.program.dispatch(msg));
     private final DeleteBranchDialog deleteBranchDialog = new DeleteBranchDialog(msg -> this.program.dispatch(msg));
+    private final AmendDialog amendDialog = new AmendDialog(msg -> this.program.dispatch(msg));
     private final StageAllDialog stageAllDialog = new StageAllDialog(msg -> this.program.dispatch(msg));
     private final CommitDialog commitDialog = new CommitDialog(msg -> this.program.dispatch(msg));
     private final CommitsPanel commitsPanel = new CommitsPanel();
@@ -111,6 +113,7 @@ public class JazygitApp extends ToolkitApp {
         List<Popup> popups = List.of(
                 new Popup(newBranchDialog.render(model), List.of(NewBranchDialog.ID), BranchesPanel.ID),
                 new Popup(deleteBranchDialog.render(model), List.of(DeleteBranchDialog.ID), BranchesPanel.ID),
+                new Popup(amendDialog.render(model), List.of(AmendDialog.ID), FilesPanel.ID),
                 new Popup(stageAllDialog.render(model), List.of(StageAllDialog.ID), FilesPanel.ID),
                 new Popup(commitDialog.render(model), List.of(CommitDialog.ID, CommitDialog.DESCRIPTION_ID),
                         FilesPanel.ID));

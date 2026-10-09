@@ -74,6 +74,10 @@ public class FilesPanel {
             dispatch.accept(new Msg.CommitRequested());
             return EventResult.HANDLED;
         }
+        if (event.isChar('A')) {
+            dispatch.accept(new Msg.AmendRequested());
+            return EventResult.HANDLED;
+        }
         return Optional.ofNullable(tree.selectedNode())
                 .map(TreeNode::data)
                 .filter(data -> event.isChar(' '))

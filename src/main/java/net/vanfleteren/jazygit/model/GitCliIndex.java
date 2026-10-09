@@ -53,6 +53,13 @@ public final class GitCliIndex {
         execute(workTree, command, "commit");
     }
 
+    /**
+     * {@code git commit --amend --no-edit}: amends the last commit with the index.
+     */
+    public static void amend(Path workTree) {
+        execute(workTree, List.of("git", "commit", "--quiet", "--amend", "--no-edit"), "commit");
+    }
+
     private static void run(Path workTree, List<String> subcommand, List<String> paths) {
         if (paths.isEmpty()) {
             return;

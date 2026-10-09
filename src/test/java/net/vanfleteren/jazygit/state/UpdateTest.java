@@ -278,6 +278,44 @@ class UpdateTest {
     }
 
     @Test
+    void amendAsksForConfirmationThenAmendsWithTheStagedFiles() {
+        Model asking = Update.update(withFiles(new FileEntry("a.txt", ChangeType.ADDED),
+                new FileEntry("b.txt", ChangeType.MODIFIED)), new Msg.AmendRequested()).model();
+        assertEquals(true, asking.amendPrompt());
+
+        Next next = Update.update(asking, new Msg.AmendConfirmed());
+
+        assertEquals(List.of(new Cmd.Amend(List.of())), next.cmds());
+        assertEquals(false, next.model().amendPrompt());
+    }
+
+    @Test
+    void amendStagesAllFilesWhenNoneIsStaged() {
+        Model asking = Update.update(withFiles(new FileEntry("a.txt", ChangeType.MODIFIED),
+                new FileEntry("b.txt", ChangeType.UNTRACKED)), new Msg.AmendRequested()).model();
+
+        assertEquals(List.of(new Cmd.Amend(List.of("a.txt", "b.txt"))),
+                Update.update(asking, new Msg.AmendConfirmed()).cmds());
+    }
+
+    @Test
+    void cancellingTheAmendClosesThePrompt() {
+        Model asking = Update.update(withFiles(new FileEntry("a.txt", ChangeType.ADDED)), new Msg.AmendRequested())
+                .model();
+
+        Next next = Update.update(asking, new Msg.AmendCancelled());
+
+        assertEquals(false, next.model().amendPrompt());
+        assertEquals(List.of(), next.cmds());
+    }
+
+    @Test
+    void amendWithoutChangesIsAnError() {
+        assertEquals(Optional.of("Nothing to amend the last commit with"),
+                Update.update(withFiles(), new Msg.AmendRequested()).model().error());
+    }
+
+    @Test
     void commitOpensTheDialogWhenSomethingIsStaged() {
         Model model = Update.update(withFiles(new FileEntry("a.txt", ChangeType.ADDED)), new Msg.CommitRequested())
                 .model();

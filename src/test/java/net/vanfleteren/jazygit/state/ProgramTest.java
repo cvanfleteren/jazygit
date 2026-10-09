@@ -105,6 +105,11 @@ class ProgramTest {
         }
 
         @Override
+        public void amend() {
+            index("amend", List.of());
+        }
+
+        @Override
         public void commit(String summary, String description) {
             if (commitFailure != null) {
                 throw new IllegalStateException(commitFailure);
@@ -266,6 +271,20 @@ class ProgramTest {
 
         assertEquals(List.of("summary|more"), provider.commits);
         assertEquals(false, program.model().commitOpen());
+        assertEquals(Optional.empty(), program.model().error());
+    }
+
+    @Test
+    void amendingStagesAllFilesWhenNoneIsStaged() {
+        provider.status = new RepoStatus("main", "aaaa", List.of(new FileEntry("a.txt", ChangeType.MODIFIED)));
+        settle();
+
+        program.dispatch(new Msg.AmendRequested());
+        program.dispatch(new Msg.AmendConfirmed());
+        settle();
+
+        assertEquals(List.of("stage[a.txt]", "amend[]"), provider.indexCalls);
+        assertEquals(false, program.model().amendPrompt());
         assertEquals(Optional.empty(), program.model().error());
     }
 

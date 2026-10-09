@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
 import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
+import net.vanfleteren.jazygit.state.Cmd.Amend;
 import net.vanfleteren.jazygit.state.Cmd.Commit;
 import net.vanfleteren.jazygit.state.Cmd.Stage;
 import net.vanfleteren.jazygit.state.Cmd.StageForCommit;
@@ -115,6 +116,11 @@ public final class Program {
                     provider.commit(summary, description);
                     yield new Msg.Committed();
                 }
+                case Amend(List<String> stage) -> {
+                    provider.stage(stage);
+                    provider.amend();
+                    yield new Msg.Amended();
+                }
                 case Unstage(List<String> added, List<String> others) -> {
                     provider.unstageNew(added);
                     provider.unstage(others);
@@ -136,6 +142,7 @@ public final class Program {
             case Unstage unstage -> new StageToggleFailed(message);
             case StageForCommit stage -> new Msg.StageForCommitFailed(message);
             case Commit commit -> new Msg.CommitFailed(message);
+            case Amend amend -> new Msg.AmendFailed(message);
         };
     }
 }

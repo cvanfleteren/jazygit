@@ -86,4 +86,11 @@ public interface GitInfoProvider {
      * @throws IllegalStateException if git fails, with git's explanation as message
      */
     void commit(String summary, String description);
+
+    /**
+     * Amends the last commit with what is staged, keeping its message.
+     *
+     * @throws IllegalStateException if git fails, with git's explanation as message
+     */
+    void amend();
 }
