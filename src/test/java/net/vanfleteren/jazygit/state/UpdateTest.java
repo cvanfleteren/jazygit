@@ -10,6 +10,8 @@ import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
+import net.vanfleteren.jazygit.state.Cmd.Stage;
+import net.vanfleteren.jazygit.state.Cmd.Unstage;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Loadable.Loading;
@@ -21,8 +23,11 @@ import net.vanfleteren.jazygit.state.Msg.CheckoutFailed;
 import net.vanfleteren.jazygit.state.Msg.CheckoutRequested;
 import net.vanfleteren.jazygit.state.Msg.CommitsLoaded;
 import net.vanfleteren.jazygit.state.Msg.LoadFailed;
+import net.vanfleteren.jazygit.state.Msg.StageToggleFailed;
+import net.vanfleteren.jazygit.state.Msg.StageToggled;
 import net.vanfleteren.jazygit.state.Msg.StatusLoaded;
 import net.vanfleteren.jazygit.state.Msg.Tick;
+import net.vanfleteren.jazygit.state.Msg.ToggleStageRequested;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
@@ -164,6 +169,51 @@ class UpdateTest {
         assertEquals(Optional.of("Checkout of feature failed: local changes would be overwritten"),
                 next.model().error());
         assertEquals(List.of(), next.cmds());
+    }
+
+    @Test
+    void toggleStagesTheFilesWithUnstagedChanges() {
+        FileEntry unstaged = new FileEntry("a.txt", ChangeType.MODIFIED);
+        FileEntry untracked = new FileEntry("b.txt", ChangeType.UNTRACKED);
+        FileEntry staged = new FileEntry("c.txt", ChangeType.MODIFIED, true, false);
+
+        Next next = Update.update(loaded(), new ToggleStageRequested(List.of(unstaged, untracked, staged)));
+
+        assertEquals(List.of(new Stage(List.of("a.txt", "b.txt"))), next.cmds());
+    }
+
+    @Test
+    void toggleStagesAPartiallyStagedFile() {
+        FileEntry both = new FileEntry("a.txt", ChangeType.MODIFIED, true, true);
+
+        assertEquals(List.of(new Stage(List.of("a.txt"))),
+                Update.update(loaded(), new ToggleStageRequested(List.of(both))).cmds());
+    }
+
+    @Test
+    void toggleUnstagesAddedFilesAndResetsTheOthers() {
+        FileEntry added = new FileEntry("a.txt", ChangeType.ADDED);
+        FileEntry modified = new FileEntry("b.txt", ChangeType.MODIFIED, true, false);
+        FileEntry deleted = new FileEntry("c.txt", ChangeType.DELETED, true, false);
+
+        Next next = Update.update(loaded(), new ToggleStageRequested(List.of(added, modified, deleted)));
+
+        assertEquals(List.of(new Unstage(List.of("a.txt"), List.of("b.txt", "c.txt"))), next.cmds());
+    }
+
+    @Test
+    void toggleOfNothingDoesNothing() {
+        assertEquals(List.of(), Update.update(loaded(), new ToggleStageRequested(List.of())).cmds());
+    }
+
+    @Test
+    void toggledReloadsAndFailureIsReported() {
+        assertEquals(List.of(new LoadStatus(), new LoadBranches()),
+                Update.update(loaded(), new StageToggled()).cmds());
+
+        Next failed = Update.update(loaded(), new StageToggleFailed("fatal: pathspec"));
+        assertEquals(Optional.of("Staging failed: fatal: pathspec"), failed.model().error());
+        assertEquals(List.of(new LoadStatus(), new LoadBranches()), failed.cmds());
     }
 
     @Test

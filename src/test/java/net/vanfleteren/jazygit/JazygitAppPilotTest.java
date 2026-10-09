@@ -48,7 +48,7 @@ class JazygitAppPilotTest {
         }
 
         private Fixture(SampleData data, List<Msg> dispatched) {
-            this(data, TestModels.loaded(data), dispatched, new ArrayList<>(), new FilesPanel(), new BranchesPanel(dispatched::add),
+            this(data, TestModels.loaded(data), dispatched, new ArrayList<>(), new FilesPanel(dispatched::add), new BranchesPanel(dispatched::add),
                     new CommitsPanel(), new AtomicReference<>());
         }
 
@@ -181,6 +181,31 @@ class JazygitAppPilotTest {
             pilot.press(' ');
             pilot.pause();
             assertEquals(1, fixture.dispatched().size(), "Space outside the branches pane should not check out");
+
+            pilot.quit();
+        }
+    }
+
+    @Test
+    void spaceTogglesStagingOfTheSelectedFilesNode() throws Exception {
+        Fixture fixture = new Fixture();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
+            FocusManager focusManager = testRunner.runner().focusManager();
+            fixture.focusManagerRef().set(focusManager);
+            focusManager.setFocus(FilesPanel.ID);
+
+            Pilot pilot = testRunner.pilot();
+            pilot.pause();
+            pilot.press(KeyCode.DOWN);
+            pilot.press(' ');
+            pilot.pause();
+
+            assertEquals(1, fixture.dispatched().size());
+            Msg.ToggleStageRequested requested = (Msg.ToggleStageRequested) fixture.dispatched().get(0);
+            // DOWN highlights the "model" directory, so its file is requested.
+            assertEquals(List.of("src/main/java/net/vanfleteren/jazygit/model/SampleData.java"),
+                    requested.files().stream().map(f -> f.path()).toList());
 
             pilot.quit();
         }

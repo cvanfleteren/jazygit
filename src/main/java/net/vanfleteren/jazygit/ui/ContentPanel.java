@@ -89,6 +89,7 @@ public final class ContentPanel {
         });
     }
 
+
     private static <T> Panel whenLoaded(String title, Loadable<T> loadable, Function<T, Panel> view) {
         return switch (loadable) {
             case Loadable.Loaded<T>(T value) -> view.apply(value);

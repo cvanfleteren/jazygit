@@ -54,9 +54,24 @@ class FilesPanelTest {
         public void checkout(String branch) {
             throw new UnsupportedOperationException();
         }
+
+        @Override
+        public void stage(List<String> paths) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void unstageNew(List<String> paths) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void unstage(List<String> paths) {
+            throw new UnsupportedOperationException();
+        }
     }
 
-    private final FilesPanel panel = new FilesPanel();
+    private final FilesPanel panel = new FilesPanel(msg -> { });
 
     @Test
     void rendersLoadingThenStatusChanges() throws Exception {
@@ -71,7 +86,7 @@ class FilesPanelTest {
             assertTrue(initial.contains("?? a.txt"), initial);
 
             String screen = RenderedText.of(testRunner, () -> panel.render(added, FilesPanel.ID));
-            assertTrue(screen.contains("A a.txt"), screen);
+            assertTrue(screen.contains("A  a.txt"), screen);
             assertFalse(screen.contains("?? a.txt"), screen);
 
             testRunner.pilot().quit();
@@ -88,7 +103,7 @@ class FilesPanelTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, FilesPanel.ID))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(before, FilesPanel.ID));
             assertTrue(screen.contains("net/vanfleteren"), screen);
-            assertTrue(screen.contains("M A.java"), screen);
+            assertTrue(screen.contains(" M A.java"), screen);
             assertTrue(screen.contains("?? B.java"), screen);
             assertFalse(screen.contains("net/vanfleteren/A.java"), screen);
 

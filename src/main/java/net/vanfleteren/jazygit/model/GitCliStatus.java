@@ -60,7 +60,7 @@ public final class GitCliStatus {
     static RepoStatus parse(String raw) {
         String head = "";
         String oid = "";
-        Map<String, ChangeType> byPath = new TreeMap<>();
+        Map<String, FileEntry> byPath = new TreeMap<>();
         String[] fields = raw.split("\0");
         for (int i = 0; i < fields.length; i++) {
             String field = fields[i];
@@ -75,27 +75,35 @@ public final class GitCliStatus {
                         oid = field.substring("# branch.oid ".length());
                     }
                 }
-                case '?' -> byPath.put(field.substring(2), ChangeType.UNTRACKED);
+                case '?' -> put(byPath, new FileEntry(field.substring(2), ChangeType.UNTRACKED, false, true));
                 // 1 XY sub mH mI mW hH hI path
-                case '1' -> byPath.put(pathAfter(field, 8), ordinaryChange(field.substring(2, 4)));
+                case '1' -> {
+                    String xy = field.substring(2, 4);
+                    put(byPath, new FileEntry(pathAfter(field, 8), ordinaryChange(xy),
+                            xy.charAt(0) != '.', xy.charAt(1) != '.'));
+                }
                 // 2 XY sub mH mI mW hH hI Xscore path, followed by the original path as its own field
                 case '2' -> {
-                    byPath.put(pathAfter(field, 9), ChangeType.ADDED);
+                    String xy = field.substring(2, 4);
+                    boolean staged = xy.charAt(0) != '.';
+                    boolean unstaged = xy.charAt(1) != '.';
+                    put(byPath, new FileEntry(pathAfter(field, 9), ChangeType.ADDED, staged, unstaged));
                     if (i + 1 < fields.length) {
-                        byPath.put(fields[++i], ChangeType.DELETED);
+                        put(byPath, new FileEntry(fields[++i], ChangeType.DELETED, staged, unstaged));
                     }
                 }
                 // u XY sub m1 m2 m3 mW h1 h2 h3 path
-                case 'u' -> byPath.put(pathAfter(field, 10), ChangeType.MODIFIED);
+                case 'u' -> put(byPath, new FileEntry(pathAfter(field, 10), ChangeType.MODIFIED, false, true));
                 default -> {
                     // Ignored entries ('!') and anything unknown are not shown.
                 }
             }
         }
-        List<FileEntry> files = byPath.entrySet().stream()
-                .map(e -> new FileEntry(e.getKey(), e.getValue()))
-                .toList();
-        return new RepoStatus(head, oid, files);
+        return new RepoStatus(head, oid, List.copyOf(byPath.values()));
+    }
+
+    private static void put(Map<String, FileEntry> byPath, FileEntry entry) {
+        byPath.put(entry.path(), entry);
     }
 
     private static ChangeType ordinaryChange(String xy) {

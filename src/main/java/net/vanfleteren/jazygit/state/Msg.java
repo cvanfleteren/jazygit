@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.state;
 
 import net.vanfleteren.jazygit.model.Branch;
 import net.vanfleteren.jazygit.model.Commit;
+import net.vanfleteren.jazygit.model.FileEntry;
 import net.vanfleteren.jazygit.model.RepoStatus;
 
 import java.util.List;
@@ -48,5 +49,21 @@ public sealed interface Msg {
     }
 
     record CheckoutFailed(String branch, String message) implements Msg {
+    }
+
+    /**
+     * The user asked to stage the given files, or to unstage them if they are all staged already.
+     */
+    record ToggleStageRequested(List<FileEntry> files) implements Msg {
+
+        public ToggleStageRequested {
+            files = List.copyOf(files);
+        }
+    }
+
+    record StageToggled() implements Msg {
+    }
+
+    record StageToggleFailed(String message) implements Msg {
     }
 }

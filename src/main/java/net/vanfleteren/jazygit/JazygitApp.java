@@ -34,7 +34,7 @@ public class JazygitApp extends ToolkitApp {
     private static final Duration REFRESH_INTERVAL = Duration.ofMillis(500);
 
     private final GitInfoProvider provider;
-    private final FilesPanel filesPanel = new FilesPanel();
+    private final FilesPanel filesPanel = new FilesPanel(msg -> this.program.dispatch(msg));
     // Key handlers run on the render thread, where the program may be used.
     private final BranchesPanel branchesPanel = new BranchesPanel(msg -> this.program.dispatch(msg));
     private final CommitsPanel commitsPanel = new CommitsPanel();

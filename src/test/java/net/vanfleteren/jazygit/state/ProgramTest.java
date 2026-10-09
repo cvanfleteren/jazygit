@@ -30,6 +30,8 @@ class ProgramTest {
         RepoStatus status = new RepoStatus("main", "aaaa", List.of());
         RuntimeException statusError;
         RuntimeException checkoutError;
+        RuntimeException indexError;
+        final List<String> indexCalls = new ArrayList<>();
         int commitLoads;
         final List<String> logLoads = new ArrayList<>();
 
@@ -74,6 +76,28 @@ class ProgramTest {
                 throw checkoutError;
             }
             status = new RepoStatus(branch, branch + "-head", List.of());
+        }
+
+        @Override
+        public void stage(List<String> paths) {
+            index("stage", paths);
+        }
+
+        @Override
+        public void unstageNew(List<String> paths) {
+            index("unstageNew", paths);
+        }
+
+        @Override
+        public void unstage(List<String> paths) {
+            index("unstage", paths);
+        }
+
+        private void index(String operation, List<String> paths) {
+            if (indexError != null) {
+                throw indexError;
+            }
+            indexCalls.add(operation + paths);
         }
     }
 
@@ -141,6 +165,31 @@ class ProgramTest {
         assertEquals(new Loaded<>(List.of(new Branch("main", false, "main-tip"), new Branch("other", true, "other-tip"))), model.branches());
         assertEquals("other-head", ((Loaded<List<Commit>>) model.commits()).value().get(0).shortSha());
         assertEquals(Optional.empty(), model.error());
+    }
+
+    @Test
+    void toggleStageRunsTheGitCommandsAndReloadsStatus() {
+        settle();
+
+        program.dispatch(new Msg.ToggleStageRequested(List.of(new FileEntry("a.txt", ChangeType.UNTRACKED))));
+        settle();
+        program.dispatch(new Msg.ToggleStageRequested(List.of(
+                new FileEntry("b.txt", ChangeType.ADDED), new FileEntry("c.txt", ChangeType.MODIFIED, true, false))));
+        settle();
+
+        assertEquals(List.of("stage[a.txt]", "unstageNew[b.txt]", "unstage[c.txt]"), provider.indexCalls);
+        assertEquals(Optional.empty(), program.model().error());
+    }
+
+    @Test
+    void failedToggleStageIsReported() {
+        settle();
+
+        provider.indexError = new IllegalStateException("fatal: pathspec 'a.txt' did not match");
+        program.dispatch(new Msg.ToggleStageRequested(List.of(new FileEntry("a.txt", ChangeType.UNTRACKED))));
+        settle();
+
+        assertEquals(Optional.of("Staging failed: fatal: pathspec 'a.txt' did not match"), program.model().error());
     }
 
     @Test

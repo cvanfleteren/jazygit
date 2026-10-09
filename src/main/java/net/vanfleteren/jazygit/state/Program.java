@@ -6,15 +6,20 @@ import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
+import net.vanfleteren.jazygit.state.Cmd.Stage;
+import net.vanfleteren.jazygit.state.Cmd.Unstage;
 import net.vanfleteren.jazygit.state.Msg.BranchLogLoaded;
 import net.vanfleteren.jazygit.state.Msg.BranchesLoaded;
 import net.vanfleteren.jazygit.state.Msg.CheckedOut;
 import net.vanfleteren.jazygit.state.Msg.CheckoutFailed;
 import net.vanfleteren.jazygit.state.Msg.CommitsLoaded;
 import net.vanfleteren.jazygit.state.Msg.LoadFailed;
+import net.vanfleteren.jazygit.state.Msg.StageToggleFailed;
+import net.vanfleteren.jazygit.state.Msg.StageToggled;
 import net.vanfleteren.jazygit.state.Msg.StatusLoaded;
 import net.vanfleteren.jazygit.state.Update.Next;
 
+import java.util.List;
 import java.util.concurrent.Executor;
 
 /**
@@ -79,6 +84,15 @@ public final class Program {
                     provider.checkout(branch);
                     yield new CheckedOut(branch);
                 }
+                case Stage(List<String> paths) -> {
+                    provider.stage(paths);
+                    yield new StageToggled();
+                }
+                case Unstage(List<String> added, List<String> others) -> {
+                    provider.unstageNew(added);
+                    provider.unstage(others);
+                    yield new StageToggled();
+                }
             };
         } catch (RuntimeException e) {
             return failure(cmd, e.getMessage() != null ? e.getMessage() : e.toString());
@@ -89,6 +103,8 @@ public final class Program {
         return switch (cmd) {
             case Cmd.Load load -> new LoadFailed(load, message);
             case Checkout(String branch) -> new CheckoutFailed(branch, message);
+            case Stage stage -> new StageToggleFailed(message);
+            case Unstage unstage -> new StageToggleFailed(message);
         };
     }
 }

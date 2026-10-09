@@ -145,6 +145,29 @@ class JGitInfoProviderTest {
     }
 
     @Test
+    void stageAndUnstageMoveFilesInAndOutOfTheIndex() throws Exception {
+        Files.writeString(repo.resolve("README.md"), "changed\n");
+        Files.writeString(repo.resolve("new.txt"), "new\n");
+
+        provider.stage(List.of("README.md", "new.txt"));
+        assertEquals(List.of(new FileEntry("README.md", ChangeType.MODIFIED, true, false),
+                new FileEntry("new.txt", ChangeType.ADDED, true, false)), provider.status().files());
+
+        provider.unstageNew(List.of("new.txt"));
+        provider.unstage(List.of("README.md"));
+        assertEquals(List.of(new FileEntry("README.md", ChangeType.MODIFIED, false, true),
+                new FileEntry("new.txt", ChangeType.UNTRACKED, false, true)), provider.status().files());
+    }
+
+    @Test
+    void stageFailsWithGitsExplanationForAnUnknownPath() {
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> provider.stage(List.of("missing.txt")));
+
+        assertTrue(e.getMessage().contains("missing.txt"), e.getMessage());
+    }
+
+    @Test
     void emptyRepositoryHasNoCommits() throws Exception {
         Path empty = repo.resolve("empty");
         Files.createDirectories(empty);

@@ -46,15 +46,22 @@ class GitCliStatusTest {
                 "! ignored.log",
                 "");
         assertEquals(List.of(
-                new FileEntry("added.txt", ChangeType.ADDED),
-                new FileEntry("conflict.txt", ChangeType.MODIFIED),
-                new FileEntry("deleted.txt", ChangeType.DELETED),
+                new FileEntry("added.txt", ChangeType.ADDED, true, false),
+                new FileEntry("conflict.txt", ChangeType.MODIFIED, false, true),
+                new FileEntry("deleted.txt", ChangeType.DELETED, false, true),
                 new FileEntry("dir/untracked file.txt", ChangeType.UNTRACKED),
-                new FileEntry("new name.txt", ChangeType.ADDED),
-                new FileEntry("old name.txt", ChangeType.DELETED),
-                new FileEntry("removed.txt", ChangeType.DELETED),
-                new FileEntry("staged.txt", ChangeType.MODIFIED),
+                new FileEntry("new name.txt", ChangeType.ADDED, true, false),
+                new FileEntry("old name.txt", ChangeType.DELETED, true, false),
+                new FileEntry("removed.txt", ChangeType.DELETED, true, false),
+                new FileEntry("staged.txt", ChangeType.MODIFIED, true, false),
                 new FileEntry("unstaged.txt", ChangeType.MODIFIED)),
+                GitCliStatus.parse(raw).files());
+    }
+
+    @Test
+    void parsesStagedAndUnstagedChangesOfOneFile() {
+        String raw = "1 MM N... " + HASHES + " both.txt\0";
+        assertEquals(List.of(new FileEntry("both.txt", ChangeType.MODIFIED, true, true)),
                 GitCliStatus.parse(raw).files());
     }
 

@@ -140,6 +140,21 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     }
 
     @Override
+    public void stage(List<String> paths) {
+        GitCliIndex.add(workTree, paths);
+    }
+
+    @Override
+    public void unstageNew(List<String> paths) {
+        GitCliIndex.removeCached(workTree, paths);
+    }
+
+    @Override
+    public void unstage(List<String> paths) {
+        GitCliIndex.reset(workTree, paths);
+    }
+
+    @Override
     public void close() {
         git.close();
         repository.close();

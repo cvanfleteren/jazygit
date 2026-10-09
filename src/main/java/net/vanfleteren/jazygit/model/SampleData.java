@@ -88,4 +88,16 @@ public final class SampleData implements GitInfoProvider {
     @Override
     public void checkout(String branch) {
     }
+
+    @Override
+    public void stage(List<String> paths) {
+    }
+
+    @Override
+    public void unstageNew(List<String> paths) {
+    }
+
+    @Override
+    public void unstage(List<String> paths) {
+    }
 }

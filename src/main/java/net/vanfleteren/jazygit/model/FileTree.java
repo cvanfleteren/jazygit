@@ -31,6 +31,16 @@ public sealed interface FileTree {
     }
 
     /**
+     * All files in this node: the file itself, or every file below a directory.
+     */
+    default List<FileEntry> entries() {
+        return switch (this) {
+            case File file -> List.of(file.entry());
+            case Dir dir -> dir.children().stream().flatMap(child -> child.entries().stream()).toList();
+        };
+    }
+
+    /**
      * The roots of the tree for the given files: directories first, then files, each sorted by name.
      */
     static List<FileTree> of(List<FileEntry> files) {

@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
+import java.util.List;
+
 /**
  * IO that {@link Update} asks for. Commands are plain data; {@link Program} performs them in the
  * background and feeds the outcome back as a {@link Msg}.
@@ -25,5 +27,24 @@ public sealed interface Cmd {
     }
 
     record Checkout(String branch) implements Cmd {
+    }
+
+    record Stage(List<String> paths) implements Cmd {
+
+        public Stage {
+            paths = List.copyOf(paths);
+        }
+    }
+
+    /**
+     * Takes paths out of the index: the {@code added} ones (not in HEAD) become untracked again, the
+     * {@code others} are reset to HEAD.
+     */
+    record Unstage(List<String> added, List<String> others) implements Cmd {
+
+        public Unstage {
+            added = List.copyOf(added);
+            others = List.copyOf(others);
+        }
     }
 }

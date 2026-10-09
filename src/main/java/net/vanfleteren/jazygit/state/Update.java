@@ -1,12 +1,16 @@
 package net.vanfleteren.jazygit.state;
 
 import net.vanfleteren.jazygit.model.Branch;
+import net.vanfleteren.jazygit.model.ChangeType;
+import net.vanfleteren.jazygit.model.FileEntry;
 import net.vanfleteren.jazygit.model.RepoStatus;
 import net.vanfleteren.jazygit.state.Cmd.Checkout;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
+import net.vanfleteren.jazygit.state.Cmd.Stage;
+import net.vanfleteren.jazygit.state.Cmd.Unstage;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Msg.BranchLogLoaded;
@@ -17,8 +21,11 @@ import net.vanfleteren.jazygit.state.Msg.CheckoutFailed;
 import net.vanfleteren.jazygit.state.Msg.CheckoutRequested;
 import net.vanfleteren.jazygit.state.Msg.CommitsLoaded;
 import net.vanfleteren.jazygit.state.Msg.LoadFailed;
+import net.vanfleteren.jazygit.state.Msg.StageToggleFailed;
+import net.vanfleteren.jazygit.state.Msg.StageToggled;
 import net.vanfleteren.jazygit.state.Msg.StatusLoaded;
 import net.vanfleteren.jazygit.state.Msg.Tick;
+import net.vanfleteren.jazygit.state.Msg.ToggleStageRequested;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -76,6 +83,10 @@ public final class Update {
             case CheckedOut(String branch) -> refresh(model.withError(Optional.empty()));
             case CheckoutFailed(String branch, String message) ->
                     Next.of(model.withError(Optional.of("Checkout of " + branch + " failed: " + message)));
+            case ToggleStageRequested(List<FileEntry> files) -> toggleStage(model, files);
+            case StageToggled() -> refresh(model.withError(Optional.empty()));
+            case StageToggleFailed(String message) ->
+                    refresh(model.withError(Optional.of("Staging failed: " + message)));
         };
     }
 
@@ -143,6 +154,23 @@ public final class Update {
         boolean known = model.branches() instanceof Loaded<List<Branch>>(List<Branch> branches)
                 && branches.stream().anyMatch(b -> b.name().equals(branch) && !b.current());
         return known ? Next.of(model.withError(Optional.empty()), new Checkout(branch)) : Next.of(model);
+    }
+
+    /**
+     * Stages the files that have unstaged changes; when there are none, unstages them all.
+     */
+    private static Next toggleStage(Model model, List<FileEntry> files) {
+        List<String> unstaged = files.stream().filter(FileEntry::unstaged).map(FileEntry::path).toList();
+        if (!unstaged.isEmpty()) {
+            return Next.of(model.withError(Optional.empty()), new Stage(unstaged));
+        }
+        List<FileEntry> staged = files.stream().filter(FileEntry::staged).toList();
+        if (staged.isEmpty()) {
+            return Next.of(model);
+        }
+        List<String> added = staged.stream().filter(f -> f.type() == ChangeType.ADDED).map(FileEntry::path).toList();
+        List<String> others = staged.stream().filter(f -> f.type() != ChangeType.ADDED).map(FileEntry::path).toList();
+        return Next.of(model.withError(Optional.empty()), new Unstage(added, others));
     }
 
     private static Model finished(Model model, Cmd.Load cmd) {

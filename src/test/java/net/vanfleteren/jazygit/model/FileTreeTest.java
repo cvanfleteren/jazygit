@@ -15,6 +15,18 @@ class FileTreeTest {
     }
 
     @Test
+    void entriesCoverEveryFileBelowANode() {
+        FileEntry a = modified("net/A.java");
+        FileEntry b = modified("net/sub/B.java");
+        FileEntry c = modified("c.txt");
+        List<FileTree> roots = FileTree.of(List.of(a, b, c));
+
+        // Directories sort before files.
+        assertEquals(List.of(b, a), roots.get(0).entries());
+        assertEquals(List.of(c), roots.get(1).entries());
+    }
+
+    @Test
     void emptyStatusHasNoNodes() {
         assertEquals(List.of(), FileTree.of(List.of()));
     }

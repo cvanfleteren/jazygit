@@ -3,15 +3,23 @@ package net.vanfleteren.jazygit.ui;
 import dev.tamboui.toolkit.Toolkit;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.elements.TreeElement;
+import dev.tamboui.style.Color;
+import dev.tamboui.toolkit.element.StyledElement;
+import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.widgets.tree.TreeNode;
+import net.vanfleteren.jazygit.model.ChangeType;
+import net.vanfleteren.jazygit.model.FileEntry;
 import net.vanfleteren.jazygit.model.FileTree;
 import net.vanfleteren.jazygit.model.RepoStatus;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -24,17 +32,43 @@ public class FilesPanel {
 
     public static final String ID = "files";
 
+    private static final Color STAGED = Color.GREEN;
+    private static final Color UNSTAGED = Color.RED;
+
     private final TreeElement<FileTree> tree = Toolkit.<FileTree>tree()
             .id(ID)
-            .focusable();
+            .focusable()
+            .nodeRenderer(FilesPanel::renderNode);
     private List<TreeNode<FileTree>> roots = List.of();
     private Loadable<RepoStatus> shown;
+    // The tree's key handler also sees keys typed in other panes, so it must know whether it has focus.
+    private boolean focused;
+
+    /**
+     * @param dispatch receives the messages for the user's actions, on the render thread
+     */
+    public FilesPanel(Consumer<Msg> dispatch) {
+        tree.onKeyEvent(event -> handleKey(event, dispatch));
+    }
+
+    private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {
+        return Optional.ofNullable(tree.selectedNode())
+                .filter(node -> focused)
+                .map(TreeNode::data)
+                .filter(data -> event.isChar(' '))
+                .map(data -> {
+                    dispatch.accept(new Msg.ToggleStageRequested(data.entries()));
+                    return EventResult.HANDLED;
+                })
+                .orElse(EventResult.UNHANDLED);
+    }
 
     /**
      * @param focusedId the id of the currently focused left pane, as reported by
      *                  {@code runner().focusManager().focusedId()}
      */
     public Panel render(Model model, String focusedId) {
+        focused = ID.equals(focusedId);
         if (model.status() != shown) {
             shown = model.status();
             rebuild(shown);
@@ -87,6 +121,24 @@ public class FilesPanel {
             case FileTree.File file ->
                     TreeNode.of(file.entry().type().marker() + " " + file.name(), node).leaf();
         };
+    }
+
+    /**
+     * Files show two status columns like {@code git status --short}: the staged change in green, then
+     * the unstaged change in red. Untracked files show a red {@code ??}.
+     */
+    private static StyledElement<?> renderNode(TreeNode<FileTree> node) {
+        if (!(node.data() instanceof FileTree.File file)) {
+            return Toolkit.text(node.label());
+        }
+        FileEntry entry = file.entry();
+        if (entry.type() == ChangeType.UNTRACKED) {
+            return Toolkit.row(Toolkit.text("??").fg(UNSTAGED), Toolkit.text(" " + file.name()));
+        }
+        String staged = entry.staged() ? entry.type().marker() : " ";
+        String unstaged = !entry.unstaged() ? " " : entry.type() == ChangeType.DELETED ? "D" : "M";
+        return Toolkit.row(Toolkit.text(staged).fg(STAGED), Toolkit.text(unstaged).fg(UNSTAGED),
+                Toolkit.text(" " + file.name()));
     }
 
     /**
