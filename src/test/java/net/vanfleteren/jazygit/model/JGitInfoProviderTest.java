@@ -80,7 +80,7 @@ class JGitInfoProviderTest {
         assertEquals(List.of(new Branch("main", true, head)), provider.branches());
 
         git("branch", "foo");
-        assertEquals(List.of(new Branch("foo", false, head), new Branch("main", true, head)), provider.branches());
+        assertEquals(List.of(new Branch("main", true, head), new Branch("foo", false, head)), provider.branches());
 
         git("checkout", "-q", "foo");
         assertEquals(List.of(new Branch("foo", true, head), new Branch("main", false, head)), provider.branches());
@@ -88,6 +88,39 @@ class JGitInfoProviderTest {
         git("commit", "-q", "--allow-empty", "-m", "Move foo");
         String moved = provider.status().headOid();
         assertEquals(List.of(new Branch("foo", true, moved), new Branch("main", false, head)), provider.branches());
+    }
+
+    @Test
+    void branchesListTheCurrentOneFirstThenTheMostRecentlyCommittedTo() throws Exception {
+        commitAt("main", "2020-01-02T00:00:00Z");
+        for (String branch : List.of("old", "newest", "middle")) {
+            git("branch", branch, "main");
+        }
+        commitAt("old", "2020-01-03T00:00:00Z");
+        commitAt("middle", "2020-01-05T00:00:00Z");
+        commitAt("newest", "2020-01-09T00:00:00Z");
+
+        assertEquals(List.of("main", "newest", "middle", "old"),
+                provider.branches().stream().map(Branch::name).toList());
+
+        git("checkout", "-q", "old");
+        assertEquals(List.of("old", "newest", "middle", "main"),
+                provider.branches().stream().map(Branch::name).toList());
+    }
+
+    private void commitAt(String branch, String date) throws Exception {
+        git("checkout", "-q", branch);
+        ProcessResult result = new ProcessExecutor()
+                .command("git", "-c", "user.name=Test", "-c", "user.email=test@example.com",
+                        "-c", "commit.gpgsign=false", "commit", "-q", "--allow-empty", "-m", "at " + date)
+                .environment("GIT_COMMITTER_DATE", date)
+                .directory(repo.toFile())
+                .readOutput(true)
+                .redirectErrorStream(true)
+                .exitValueAny()
+                .execute();
+        assertEquals(0, result.getExitValue(), result.outputUTF8());
+        git("checkout", "-q", "main");
     }
 
     @Test
@@ -142,6 +175,27 @@ class JGitInfoProviderTest {
 
         assertTrue(e.getMessage().contains("would be overwritten"), e.getMessage());
         assertEquals("main", provider.status().branchLabel());
+    }
+
+    @Test
+    void createBranchStartsAtTheGivenBranchAndSwitchesToIt() throws Exception {
+        git("checkout", "-q", "-b", "other");
+        Files.writeString(repo.resolve("other.txt"), "other\n");
+        git("add", "other.txt");
+        git("commit", "-q", "-m", "On other");
+        git("checkout", "-q", "main");
+
+        provider.createBranch("topic", "other");
+
+        assertEquals("topic", provider.status().branchLabel());
+        assertTrue(Files.exists(repo.resolve("other.txt")));
+    }
+
+    @Test
+    void createBranchFailsWhenTheNameIsTaken() throws Exception {
+        git("branch", "topic");
+
+        assertThrows(IllegalStateException.class, () -> provider.createBranch("topic", "main"));
     }
 
     @Test

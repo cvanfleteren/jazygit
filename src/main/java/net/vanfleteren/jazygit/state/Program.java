@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.state;
 
 import net.vanfleteren.jazygit.model.GitInfoProvider;
 import net.vanfleteren.jazygit.state.Cmd.Checkout;
+import net.vanfleteren.jazygit.state.Cmd.CreateBranch;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
@@ -9,6 +10,8 @@ import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.Cmd.Stage;
 import net.vanfleteren.jazygit.state.Cmd.Unstage;
+import net.vanfleteren.jazygit.state.Msg.BranchCreateFailed;
+import net.vanfleteren.jazygit.state.Msg.BranchCreated;
 import net.vanfleteren.jazygit.state.Msg.BranchLogLoaded;
 import net.vanfleteren.jazygit.state.Msg.BranchesLoaded;
 import net.vanfleteren.jazygit.state.Msg.CheckedOut;
@@ -87,6 +90,10 @@ public final class Program {
                     provider.checkout(branch);
                     yield new CheckedOut(branch);
                 }
+                case CreateBranch(String name, String base) -> {
+                    provider.createBranch(name, base);
+                    yield new BranchCreated(name);
+                }
                 case Stage(List<String> paths) -> {
                     provider.stage(paths);
                     yield new StageToggled();
@@ -106,6 +113,7 @@ public final class Program {
         return switch (cmd) {
             case Cmd.Load load -> new LoadFailed(load, message);
             case Checkout(String branch) -> new CheckoutFailed(branch, message);
+            case CreateBranch(String name, String base) -> new BranchCreateFailed(name, message);
             case Stage stage -> new StageToggleFailed(message);
             case Unstage unstage -> new StageToggleFailed(message);
         };

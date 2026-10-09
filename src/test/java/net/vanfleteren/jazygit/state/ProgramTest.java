@@ -79,6 +79,14 @@ class ProgramTest {
         }
 
         @Override
+        public void createBranch(String name, String startPoint) {
+            if (checkoutError != null) {
+                throw checkoutError;
+            }
+            status = new RepoStatus(name, name + "-head", List.of());
+        }
+
+        @Override
         public void stage(List<String> paths) {
             index("stage", paths);
         }
@@ -170,6 +178,32 @@ class ProgramTest {
         assertEquals(new Loaded<>(List.of(new Branch("main", false, "main-tip"), new Branch("other", true, "other-tip"))), model.branches());
         assertEquals("other-head", ((Loaded<List<Commit>>) model.commits()).value().get(0).shortSha());
         assertEquals(Optional.empty(), model.error());
+    }
+
+    @Test
+    void confirmedNewBranchIsCreatedAndShownAsCurrent() {
+        settle();
+
+        program.dispatch(new Msg.NewBranchRequested("other"));
+        program.dispatch(new Msg.NewBranchConfirmed("topic"));
+        settle();
+
+        Model model = program.model();
+        assertEquals("topic", ((Loaded<RepoStatus>) model.status()).value().head());
+        assertEquals(Optional.empty(), model.newBranchBase());
+        assertEquals(Optional.empty(), model.error());
+    }
+
+    @Test
+    void failedNewBranchIsReported() {
+        settle();
+        provider.checkoutError = new IllegalStateException("fatal: exists");
+
+        program.dispatch(new Msg.NewBranchRequested("other"));
+        program.dispatch(new Msg.NewBranchConfirmed("topic"));
+        settle();
+
+        assertEquals(Optional.of("Creating branch topic failed: fatal: exists"), program.model().error());
     }
 
     @Test

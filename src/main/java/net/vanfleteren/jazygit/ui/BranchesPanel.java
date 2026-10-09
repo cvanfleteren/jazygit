@@ -12,10 +12,11 @@ import net.vanfleteren.jazygit.state.Msg;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.stream.IntStream;
 
 /**
  * Left-side panel listing the local branches, with the current branch marked. Space checks out
- * the highlighted branch.
+ * the highlighted branch, n asks for the name of a new branch starting at it.
  */
 public class BranchesPanel {
 
@@ -24,7 +25,28 @@ public class BranchesPanel {
     private final LoadableList<List<Branch>> list = new LoadableList<>("Branches", ID,
             branches -> branches.stream()
                     .map(b -> (b.current() ? "* " : "  ") + b.name())
-                    .toList());
+                    .toList(),
+            BranchesPanel::reselect);
+
+    /**
+     * The selection follows its branch when the list is reordered. After a checkout it goes to the new
+     * current branch, which is listed first.
+     */
+    private static int reselect(List<Branch> previous, List<Branch> next, int selected) {
+        Optional<String> before = current(previous);
+        Optional<String> target = before.equals(current(next))
+                ? Optional.of(selected).filter(i -> i < previous.size()).map(i -> previous.get(i).name())
+                : current(next);
+        return target
+                .map(name -> IntStream.range(0, next.size()).filter(i -> next.get(i).name().equals(name)).boxed()
+                        .findFirst()
+                        .orElse(selected))
+                .orElse(selected);
+    }
+
+    private static Optional<String> current(List<Branch> branches) {
+        return branches.stream().filter(Branch::current).map(Branch::name).findFirst();
+    }
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
@@ -68,11 +90,17 @@ public class BranchesPanel {
 
     private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {
         return selectedBranch()
-                .filter(branch -> event.isChar(' '))
-                .map(branch -> {
-                    dispatch.accept(new Msg.CheckoutRequested(branch));
+                .flatMap(branch -> request(event, branch))
+                .map(msg -> {
+                    dispatch.accept(msg);
                     return EventResult.HANDLED;
                 })
                 .orElse(EventResult.UNHANDLED);
+    }
+
+    private static Optional<Msg> request(KeyEvent event, String branch) {
+        return event.isChar(' ') ? Optional.of(new Msg.CheckoutRequested(branch))
+                : event.isChar('n') ? Optional.of(new Msg.NewBranchRequested(branch))
+                : Optional.empty();
     }
 }

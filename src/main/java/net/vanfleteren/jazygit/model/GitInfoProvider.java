@@ -37,6 +37,13 @@ public interface GitInfoProvider {
     void checkout(String branch);
 
     /**
+     * Creates the local branch {@code name} at {@code startPoint} and checks it out.
+     *
+     * @throws IllegalStateException if git fails, with git's explanation as message
+     */
+    void createBranch(String name, String startPoint);
+
+    /**
      * Stages the changes of {@code paths}.
      *
      * @throws IllegalStateException if git fails, with git's explanation as message

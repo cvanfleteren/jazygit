@@ -21,6 +21,7 @@ import java.util.Set;
  * @param refreshing     periodic loads that have been started and not finished yet, so a tick does
  *                       not queue them again
  * @param error          why the last operation failed, until the next one is started
+ * @param newBranchBase  the branch a new branch is being created from, while its name is asked
  */
 public record Model(String repositoryName,
                     Loadable<RepoStatus> status,
@@ -29,7 +30,8 @@ public record Model(String repositoryName,
                     Optional<BranchLog> branchLog,
                     Optional<FileDiff> fileDiff,
                     Set<Cmd.Load> refreshing,
-                    Optional<String> error) {
+                    Optional<String> error,
+                    Optional<String> newBranchBase) {
 
     public Model {
         refreshing = Set.copyOf(refreshing);
@@ -38,34 +40,38 @@ public record Model(String repositoryName,
     public static Model initial(String repositoryName) {
         return new Model(repositoryName, Loadable.loading(), Loadable.loading(), Loadable.loading(), Optional.empty(),
                 Optional.empty(), Set.of(),
-                Optional.empty());
+                Optional.empty(), Optional.empty());
     }
 
     Model withStatus(Loadable<RepoStatus> status) {
-        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error);
+        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase);
     }
 
     Model withBranches(Loadable<List<Branch>> branches) {
-        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error);
+        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase);
     }
 
     Model withCommits(Loadable<List<Commit>> commits) {
-        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error);
+        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase);
     }
 
     Model withBranchLog(Optional<BranchLog> branchLog) {
-        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error);
+        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase);
     }
 
     Model withFileDiff(Optional<FileDiff> fileDiff) {
-        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error);
+        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase);
     }
 
     Model withRefreshing(Set<Cmd.Load> refreshing) {
-        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error);
+        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase);
     }
 
     Model withError(Optional<String> error) {
-        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error);
+        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase);
+    }
+
+    Model withNewBranchBase(Optional<String> newBranchBase) {
+        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase);
     }
 }

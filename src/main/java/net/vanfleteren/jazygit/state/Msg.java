@@ -70,6 +70,27 @@ public sealed interface Msg {
     }
 
     /**
+     * The user asked for a new branch starting at {@code base}; the name is still to be entered.
+     */
+    record NewBranchRequested(String base) implements Msg {
+    }
+
+    record NewBranchCancelled() implements Msg {
+    }
+
+    /**
+     * The user entered the name of the new branch.
+     */
+    record NewBranchConfirmed(String name) implements Msg {
+    }
+
+    record BranchCreated(String name) implements Msg {
+    }
+
+    record BranchCreateFailed(String name, String message) implements Msg {
+    }
+
+    /**
      * The user asked to stage the given files, or to unstage them if they are all staged already.
      */
     record ToggleStageRequested(List<FileEntry> files) implements Msg {

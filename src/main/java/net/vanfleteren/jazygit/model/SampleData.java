@@ -90,6 +90,10 @@ public final class SampleData implements GitInfoProvider {
     }
 
     @Override
+    public void createBranch(String name, String startPoint) {
+    }
+
+    @Override
     public void stage(List<String> paths) {
     }
 

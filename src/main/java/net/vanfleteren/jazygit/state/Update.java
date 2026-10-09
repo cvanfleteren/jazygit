@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.model.Diffs;
 import net.vanfleteren.jazygit.model.FileEntry;
 import net.vanfleteren.jazygit.model.RepoStatus;
 import net.vanfleteren.jazygit.state.Cmd.Checkout;
+import net.vanfleteren.jazygit.state.Cmd.CreateBranch;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
@@ -15,6 +16,8 @@ import net.vanfleteren.jazygit.state.Cmd.Stage;
 import net.vanfleteren.jazygit.state.Cmd.Unstage;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
+import net.vanfleteren.jazygit.state.Msg.BranchCreateFailed;
+import net.vanfleteren.jazygit.state.Msg.BranchCreated;
 import net.vanfleteren.jazygit.state.Msg.BranchLogLoaded;
 import net.vanfleteren.jazygit.state.Msg.BranchSelected;
 import net.vanfleteren.jazygit.state.Msg.BranchesLoaded;
@@ -25,6 +28,9 @@ import net.vanfleteren.jazygit.state.Msg.CommitsLoaded;
 import net.vanfleteren.jazygit.state.Msg.FileDiffLoaded;
 import net.vanfleteren.jazygit.state.Msg.FilesSelected;
 import net.vanfleteren.jazygit.state.Msg.LoadFailed;
+import net.vanfleteren.jazygit.state.Msg.NewBranchCancelled;
+import net.vanfleteren.jazygit.state.Msg.NewBranchConfirmed;
+import net.vanfleteren.jazygit.state.Msg.NewBranchRequested;
 import net.vanfleteren.jazygit.state.Msg.StageToggleFailed;
 import net.vanfleteren.jazygit.state.Msg.StageToggled;
 import net.vanfleteren.jazygit.state.Msg.StatusLoaded;
@@ -91,6 +97,14 @@ public final class Update {
             case CheckedOut(String branch) -> refresh(model.withError(Optional.empty()));
             case CheckoutFailed(String branch, String message) ->
                     Next.of(model.withError(Optional.of("Checkout of " + branch + " failed: " + message)));
+            case NewBranchRequested(String base) ->
+                    Next.of(model.withNewBranchBase(Optional.of(base)));
+            case NewBranchCancelled() -> Next.of(model.withNewBranchBase(Optional.empty()));
+            case NewBranchConfirmed(String name) -> newBranchConfirmed(model, name);
+            // Like a checkout: status and branches show the new HEAD.
+            case BranchCreated(String name) -> refresh(model.withError(Optional.empty()));
+            case BranchCreateFailed(String name, String message) ->
+                    Next.of(model.withError(Optional.of("Creating branch " + name + " failed: " + message)));
             case ToggleStageRequested(List<FileEntry> files) -> toggleStage(model, files);
             case StageToggled() -> refresh(model.withError(Optional.empty()));
             case StageToggleFailed(String message) ->
@@ -185,6 +199,16 @@ public final class Update {
         boolean known = model.branches() instanceof Loaded<List<Branch>>(List<Branch> branches)
                 && branches.stream().anyMatch(b -> b.name().equals(branch) && !b.current());
         return known ? Next.of(model.withError(Optional.empty()), new Checkout(branch)) : Next.of(model);
+    }
+
+    private static Next newBranchConfirmed(Model model, String name) {
+        String trimmed = name.strip();
+        // A blank name keeps the dialog open.
+        return model.newBranchBase()
+                .filter(base -> !trimmed.isEmpty())
+                .map(base -> Next.of(model.withNewBranchBase(Optional.empty()).withError(Optional.empty()),
+                        new CreateBranch(trimmed, base)))
+                .orElseGet(() -> Next.of(model));
     }
 
     /**

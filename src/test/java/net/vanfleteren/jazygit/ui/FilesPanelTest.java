@@ -56,6 +56,10 @@ class FilesPanelTest {
         }
 
         @Override
+        public void createBranch(String name, String startPoint) {
+        }
+
+        @Override
         public void stage(List<String> paths) {
             throw new UnsupportedOperationException();
         }

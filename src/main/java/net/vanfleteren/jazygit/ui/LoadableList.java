@@ -19,12 +19,31 @@ final class LoadableList<T> {
     private final String title;
     private final ListElement<?> list;
     private final Function<T, List<String>> items;
+    private final Reselect<T> reselect;
     private Loadable<T> shown;
     private int count;
 
+    /**
+     * Where the selection goes when the loaded value changes.
+     */
+    @FunctionalInterface
+    interface Reselect<T> {
+
+        /**
+         * @param selected the index selected in {@code previous}
+         * @return the index to select in {@code next}
+         */
+        int apply(T previous, T next, int selected);
+    }
+
     LoadableList(String title, String id, Function<T, List<String>> items) {
+        this(title, id, items, (previous, next, selected) -> selected);
+    }
+
+    LoadableList(String title, String id, Function<T, List<String>> items, Reselect<T> reselect) {
         this.title = title;
         this.items = items;
+        this.reselect = reselect;
         this.list = list()
                 .id(id)
                 .focusable();
@@ -32,9 +51,13 @@ final class LoadableList<T> {
 
     Panel render(Loadable<T> value, boolean focused) {
         if (value != shown) {
+            Loadable<T> previous = shown;
             shown = value;
             List<String> rows = Placeholders.items(value, items);
             list.items(rows);
+            if (previous instanceof Loadable.Loaded<T>(T before) && value instanceof Loadable.Loaded<T>(T after)) {
+                list.selected(reselect.apply(before, after, selectedIndex()));
+            }
             if (list.selected() >= rows.size()) {
                 list.selected(Math.max(0, rows.size() - 1));
             }

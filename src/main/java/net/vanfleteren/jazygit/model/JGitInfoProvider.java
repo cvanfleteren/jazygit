@@ -8,13 +8,17 @@ import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.StreamSupport;
 
 /**
@@ -74,12 +78,23 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     public List<Branch> branches() {
         try {
             String fullBranch = repository.getFullBranch();
+            Map<String, Integer> modified = new HashMap<>();
+            try (RevWalk walk = new RevWalk(repository)) {
+                for (Ref ref : git.branchList().call()) {
+                    modified.put(ref.getObjectId().name(), walk.parseCommit(ref.getObjectId()).getCommitTime());
+                }
+            }
             List<Branch> branches = new ArrayList<>();
             for (Ref ref : git.branchList().call()) {
                 branches.add(new Branch(Repository.shortenRefName(ref.getName()),
                         ref.getName().equals(fullBranch), ref.getObjectId().name()));
             }
-            return List.copyOf(branches);
+            // The checked out branch first, then the most recently committed to.
+            return branches.stream()
+                    .sorted(Comparator.comparing(Branch::current).reversed()
+                            .thenComparing(Comparator.comparingInt((Branch b) -> modified.get(b.tipOid())).reversed())
+                            .thenComparing(Branch::name))
+                    .toList();
         } catch (IOException e) {
             throw new UncheckedIOException("Could not read branches", e);
         } catch (GitAPIException e) {
@@ -137,6 +152,11 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     @Override
     public void checkout(String branch) {
         GitCliCheckout.checkout(workTree, branch);
+    }
+
+    @Override
+    public void createBranch(String name, String startPoint) {
+        GitCliCheckout.createBranch(workTree, name, startPoint);
     }
 
     @Override

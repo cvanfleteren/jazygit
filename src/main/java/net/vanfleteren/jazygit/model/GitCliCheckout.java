@@ -28,10 +28,25 @@ public final class GitCliCheckout {
      *                               is git's own explanation
      */
     public static void checkout(Path workTree, String branch) {
+        run(workTree, "git", "checkout", "--quiet", branch, "--");
+    }
+
+    /**
+     * Runs {@code git checkout -b <name> <startPoint>} in {@code workTree}: creates the branch at
+     * {@code startPoint} and switches to it.
+     *
+     * @throws IllegalStateException if git cannot be run or refuses; the message then is git's own
+     *                               explanation
+     */
+    public static void createBranch(Path workTree, String name, String startPoint) {
+        run(workTree, "git", "checkout", "--quiet", "-b", name, startPoint, "--");
+    }
+
+    private static void run(Path workTree, String... command) {
         try {
             ProcessResult result = new ProcessExecutor()
-                    // The trailing "--" keeps git from treating the branch name as a path.
-                    .command("git", "checkout", "--quiet", branch, "--")
+                    // A trailing "--" keeps git from treating branch names as paths.
+                    .command(command)
                     .directory(workTree.toFile())
                     .readOutput(true)
                     .redirectErrorStream(true)

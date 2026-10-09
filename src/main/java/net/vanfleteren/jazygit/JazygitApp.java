@@ -16,11 +16,13 @@ import net.vanfleteren.jazygit.ui.BranchesPanel;
 import net.vanfleteren.jazygit.ui.CommitsPanel;
 import net.vanfleteren.jazygit.ui.ContentPanel;
 import net.vanfleteren.jazygit.ui.FilesPanel;
+import net.vanfleteren.jazygit.ui.NewBranchDialog;
 import net.vanfleteren.jazygit.ui.StashPanel;
 import net.vanfleteren.jazygit.ui.StatusPanel;
 
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -39,6 +41,7 @@ public class JazygitApp extends ToolkitApp {
     private final FilesPanel filesPanel = new FilesPanel(msg -> this.program.dispatch(msg));
     // Key handlers run on the render thread, where the program may be used.
     private final BranchesPanel branchesPanel = new BranchesPanel(msg -> this.program.dispatch(msg));
+    private final NewBranchDialog newBranchDialog = new NewBranchDialog(msg -> this.program.dispatch(msg));
     private final CommitsPanel commitsPanel = new CommitsPanel();
     private ExecutorService io;
     private Program program;
@@ -86,7 +89,7 @@ public class JazygitApp extends ToolkitApp {
         // content panel then shows the log of that branch.
         branchesPanel.selectionChange(model).ifPresent(program::dispatch);
         filesPanel.selectionChange(model).ifPresent(program::dispatch);
-        return row(
+        Element layout = row(
                 column(
                         StatusPanel.render(model),
                         filesPanel.render(model, focusedId).percent(30),
@@ -97,6 +100,14 @@ public class JazygitApp extends ToolkitApp {
                         .percent(30),
                 ContentPanel.render(program.model(), focusedId, commitsPanel.selectedIndex())
                         .fill());
+        Optional<Element> dialog = newBranchDialog.render(model);
+        // The popup takes the focus while it is open and gives it back to the branches pane.
+        if (dialog.isPresent() && !NewBranchDialog.ID.equals(focusedId)) {
+            runner().focusManager().setFocus(NewBranchDialog.ID);
+        } else if (dialog.isEmpty() && NewBranchDialog.ID.equals(focusedId)) {
+            runner().focusManager().setFocus(BranchesPanel.ID);
+        }
+        return dialog.<Element>map(d -> stack(layout, d)).orElse(layout);
     }
 
     /**

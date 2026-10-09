@@ -36,6 +36,12 @@ public sealed interface Cmd {
     record Checkout(String branch) implements Cmd {
     }
 
+    /**
+     * Creates the branch {@code name} at {@code base} and switches to it.
+     */
+    record CreateBranch(String name, String base) implements Cmd {
+    }
+
     record Stage(List<String> paths) implements Cmd {
 
         public Stage {

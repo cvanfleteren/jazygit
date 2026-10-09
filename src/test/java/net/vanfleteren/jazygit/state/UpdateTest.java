@@ -156,6 +156,43 @@ class UpdateTest {
     }
 
     @Test
+    void newBranchRequestOpensTheDialogAndCancelClosesIt() {
+        Model open = Update.update(loaded(), new Msg.NewBranchRequested("feature")).model();
+        assertEquals(Optional.of("feature"), open.newBranchBase());
+
+        Next cancelled = Update.update(open, new Msg.NewBranchCancelled());
+        assertEquals(Optional.empty(), cancelled.model().newBranchBase());
+        assertEquals(List.of(), cancelled.cmds());
+    }
+
+    @Test
+    void confirmedNewBranchIsCreatedAtTheBase() {
+        Model open = Update.update(loaded(), new Msg.NewBranchRequested("feature")).model();
+
+        Next next = Update.update(open, new Msg.NewBranchConfirmed(" topic "));
+
+        assertEquals(List.of(new Cmd.CreateBranch("topic", "feature")), next.cmds());
+        assertEquals(Optional.empty(), next.model().newBranchBase());
+    }
+
+    @Test
+    void blankNewBranchNameKeepsTheDialogOpen() {
+        Model open = Update.update(loaded(), new Msg.NewBranchRequested("feature")).model();
+
+        Next next = Update.update(open, new Msg.NewBranchConfirmed("  "));
+
+        assertEquals(List.of(), next.cmds());
+        assertEquals(Optional.of("feature"), next.model().newBranchBase());
+    }
+
+    @Test
+    void failedBranchCreationIsStored() {
+        Model model = Update.update(loaded(), new Msg.BranchCreateFailed("topic", "boom")).model();
+
+        assertEquals(Optional.of("Creating branch topic failed: boom"), model.error());
+    }
+
+    @Test
     void checkedOutReloadsStatusAndBranches() {
         Next next = Update.update(loaded(), new CheckedOut("feature"));
 
