@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.feature.commit.RewordMsg.Requested;
 
 import net.vanfleteren.jazygit.feature.commit.RewordMsg.Failed;
@@ -35,7 +36,7 @@ public final class RewordUpdate {
             case Cancelled() -> Next.of(model.withRewording(Optional.empty()));
             case Confirmed(String summary, String description) -> confirmed(model, summary, description);
             case Done() -> Update.refresh(model.withError(Optional.empty()));
-            case Failed(String message) -> Update.refresh(model.withError(Optional.of("Reword failed: " + message)));
+            case Failed(String message) -> Update.refresh(model.withError(Optional.of(Messages.get("error.reword.failed", message))));
         };
     }
 
@@ -49,7 +50,7 @@ public final class RewordUpdate {
         }
         return index == 0
                 ? Next.of(model.withError(Optional.empty()).withRewording(Optional.of(commits.getFirst())))
-                : Next.of(model.withError(Optional.of("Only the last commit can be reworded")));
+                : Next.of(model.withError(Optional.of(Messages.get("error.reword.onlyLast"))));
     }
 
     private static Next confirmed(Model model, String summary, String description) {

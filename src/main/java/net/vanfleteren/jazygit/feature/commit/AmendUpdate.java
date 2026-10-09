@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.feature.commit.CommitCmd.Amend;
 
 import net.vanfleteren.jazygit.feature.commit.AmendMsg.Requested;
@@ -33,7 +34,7 @@ public final class AmendUpdate {
             case Cancelled() -> Next.of(model.withAmendPrompt(false));
             case Confirmed() -> confirmed(model);
             case Done() -> Update.refresh(model.withError(Optional.empty()));
-            case Failed(String message) -> Update.refresh(model.withError(Optional.of("Amend failed: " + message)));
+            case Failed(String message) -> Update.refresh(model.withError(Optional.of(Messages.get("error.amend.failed", message))));
         };
     }
 
@@ -42,7 +43,7 @@ public final class AmendUpdate {
      */
     private static Next requested(Model model) {
         return Update.files(model).isEmpty()
-                ? Next.of(model.withError(Optional.of("Nothing to amend the last commit with")))
+                ? Next.of(model.withError(Optional.of(Messages.get("error.amend.nothing"))))
                 : Next.of(model.withError(Optional.empty()).withAmendPrompt(true));
     }
 

@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.NewBranchMsg;
@@ -35,10 +36,10 @@ public class BranchesPanel {
      */
     static String age(Duration since) {
         long seconds = Math.max(0, since.toSeconds());
-        return seconds < 60 ? seconds + "s"
-                : seconds < 3600 ? seconds / 60 + "m"
-                : seconds < 86400 ? seconds / 3600 + "h"
-                : seconds / 86400 + "d";
+        return seconds < 60 ? Messages.get("branches.age.seconds", String.valueOf(seconds))
+                : seconds < 3600 ? Messages.get("branches.age.minutes", String.valueOf(seconds / 60))
+                : seconds < 86400 ? Messages.get("branches.age.hours", String.valueOf(seconds / 3600))
+                : Messages.get("branches.age.days", String.valueOf(seconds / 86400));
     }
 
     /**
@@ -72,7 +73,7 @@ public class BranchesPanel {
      * @param clock tells how long ago the branches were last committed to
      */
     public BranchesPanel(Consumer<Msg> dispatch, Clock clock) {
-        list = new LoadableList<>("Branches", ID,
+        list = new LoadableList<>(Messages.get("panel.branches.title"), ID,
                 branches -> branches.stream()
                         .map(b -> "%4s ".formatted(age(Duration.between(b.tipTime(), clock.instant())))
                                 + (b.current() ? "* " : "  ") + b.name())

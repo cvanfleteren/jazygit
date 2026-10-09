@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.i18n.Messages;
 import org.zeroturnaround.exec.ProcessExecutor;
 import org.zeroturnaround.exec.ProcessResult;
 
@@ -58,12 +59,12 @@ public final class CliCheckout {
             }
             return result.outputUTF8().strip();
         } catch (IOException e) {
-            throw new IllegalStateException("Could not run git; is it installed and on the PATH?", e);
+            throw new IllegalStateException(Messages.get("git.notInstalled"), e);
         } catch (TimeoutException e) {
-            throw new IllegalStateException("git timed out in " + workTree, e);
+            throw new IllegalStateException(Messages.get("git.timedOut", "checkout", workTree), e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted while running git", e);
+            throw new IllegalStateException(Messages.get("git.interrupted", "checkout"), e);
         }
     }
 
@@ -73,6 +74,6 @@ public final class CliCheckout {
      */
     static String explanation(String output, int exitValue) {
         List<String> lines = output.lines().map(String::strip).filter(line -> !line.isEmpty()).toList();
-        return lines.isEmpty() ? "git exited with code " + exitValue : lines.getFirst();
+        return lines.isEmpty() ? Messages.get("git.exitedWithCode", String.valueOf(exitValue)) : lines.getFirst();
     }
 }

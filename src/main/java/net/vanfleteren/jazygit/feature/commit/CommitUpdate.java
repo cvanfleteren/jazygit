@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.feature.commit.CommitMsg.StagedForCommit;
 
 import net.vanfleteren.jazygit.feature.commit.CommitMsg.StageForCommitFailed;
@@ -45,11 +46,11 @@ public final class CommitUpdate {
             case StageAllConfirmed() -> stageAllConfirmed(model);
             case StagedForCommit() -> Update.refresh(model.withCommitOpen(true));
             case StageForCommitFailed(String message) ->
-                    Update.refresh(model.withError(Optional.of("Staging failed: " + message)));
+                    Update.refresh(model.withError(Optional.of(Messages.get("error.staging.failed", message))));
             case Cancelled() -> Next.of(model.withCommitOpen(false));
             case Confirmed(String summary, String description) -> confirmed(model, summary, description);
             case Done() -> Update.refresh(model.withError(Optional.empty()));
-            case Failed(String message) -> Update.refresh(model.withError(Optional.of("Commit failed: " + message)));
+            case Failed(String message) -> Update.refresh(model.withError(Optional.of(Messages.get("error.commit.failed", message))));
         };
     }
 
@@ -62,7 +63,7 @@ public final class CommitUpdate {
             return Next.of(model.withError(Optional.empty()).withCommitOpen(true));
         }
         if (files.isEmpty()) {
-            return Next.of(model.withError(Optional.of("Nothing to commit")));
+            return Next.of(model.withError(Optional.of(Messages.get("error.commit.nothing"))));
         }
         return Next.of(model.withError(Optional.empty()).withStageAllPrompt(true));
     }

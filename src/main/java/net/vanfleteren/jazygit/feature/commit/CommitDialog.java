@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import net.vanfleteren.jazygit.i18n.Messages;
 import static dev.tamboui.toolkit.Toolkit.*;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.widgets.block.BorderType;
@@ -109,14 +110,14 @@ public final class CommitDialog {
         return Optional.of(dialog(
                         textInput(summary)
                                 .id(summaryId)
-                                .title("Commit summary")
+                                .title(Messages.get("dialog.commit.summary.title"))
                                 .rounded()
-                                .placeholder("summary")
+                                .placeholder(Messages.get("dialog.commit.summary.placeholder"))
                                 .length(INPUT_HEIGHT)
                                 .onSubmit(this::confirm),
                         new SubmittableTextArea(textArea(description)
-                                .title("Commit description")
-                                .placeholder("ctrl+enter to confirm")
+                                .title(Messages.get("dialog.commit.description.title"))
+                                .placeholder(Messages.get("dialog.commit.description.placeholder"))
                                 .rounded(), descriptionId, this::confirm)
                                 .rows(DESCRIPTION_HEIGHT))
                 .borderType(BorderType.NONE)

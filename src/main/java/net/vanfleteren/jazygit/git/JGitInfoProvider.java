@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.git.model.*;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -50,12 +51,12 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
                 .readEnvironment()
                 .findGitDir(startDir.toFile());
         if (builder.getGitDir() == null) {
-            throw new IllegalStateException("Not a git repository: " + startDir);
+            throw new IllegalStateException(Messages.get("git.notRepository", startDir));
         }
         try {
             this.repository = builder.setMustExist(true).build();
         } catch (IOException e) {
-            throw new UncheckedIOException("Could not open git repository at " + builder.getGitDir(), e);
+            throw new UncheckedIOException(Messages.get("git.openFailed", builder.getGitDir()), e);
         }
         this.git = new Git(repository);
         try {
@@ -104,9 +105,9 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
                             .thenComparing(Branch::name))
                     .toList();
         } catch (IOException e) {
-            throw new UncheckedIOException("Could not read branches", e);
+            throw new UncheckedIOException(Messages.get("git.readBranchesFailed"), e);
         } catch (GitAPIException e) {
-            throw new IllegalStateException("Could not read branches", e);
+            throw new IllegalStateException(Messages.get("git.readBranchesFailed"), e);
         }
     }
 
@@ -116,7 +117,7 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
             ObjectId head = repository.resolve(Constants.HEAD);
             return head == null ? List.of() : log(head);
         } catch (IOException e) {
-            throw new UncheckedIOException("Could not read commit log", e);
+            throw new UncheckedIOException(Messages.get("git.readLogFailed"), e);
         }
     }
 
@@ -125,11 +126,11 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
         try {
             ObjectId tip = repository.resolve(Constants.R_HEADS + branch);
             if (tip == null) {
-                throw new IllegalStateException("Unknown branch: " + branch);
+                throw new IllegalStateException(Messages.get("git.unknownBranch", branch));
             }
             return log(tip);
         } catch (IOException e) {
-            throw new UncheckedIOException("Could not read the log of " + branch, e);
+            throw new UncheckedIOException(Messages.get("git.readBranchLogFailed", branch), e);
         }
     }
 
@@ -139,7 +140,7 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
                     .map(JGitInfoProvider::toCommit)
                     .toList();
         } catch (GitAPIException e) {
-            throw new IllegalStateException("Could not read commit log", e);
+            throw new IllegalStateException(Messages.get("git.readLogFailed"), e);
         }
     }
 

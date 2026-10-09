@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Requested;
 
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Failed;
@@ -36,7 +37,7 @@ public final class DeleteBranchUpdate {
             case Chosen(DeleteBranch.DeleteScope scope) -> chosen(model, scope);
             case Deleted(String branch) -> Update.refresh(model.withError(Optional.empty()));
             case Failed(String branch, String message) ->
-                    Update.refresh(model.withError(Optional.of("Deleting branch " + branch + " failed: " + message)));
+                    Update.refresh(model.withError(Optional.of(Messages.get("error.deleteBranch.failed", branch, message))));
         };
     }
 

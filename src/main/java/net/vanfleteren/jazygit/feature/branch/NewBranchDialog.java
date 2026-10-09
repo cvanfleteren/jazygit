@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import net.vanfleteren.jazygit.i18n.Messages;
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.toolkit.element.Element;
@@ -36,10 +37,10 @@ public final class NewBranchDialog {
      * The popup, while the model asks for a branch name.
      */
     public Optional<Element> render(Model model) {
-        return model.newBranchBase().map(base -> dialog("New branch from " + base,
+        return model.newBranchBase().map(base -> dialog(Messages.get("dialog.newBranch.title", base),
                         textInput(input)
                                 .id(ID)
-                                .placeholder("branch name")
+                                .placeholder(Messages.get("dialog.newBranch.placeholder"))
                                 .onSubmit(this::confirm)
                                 .onKeyEvent(event -> {
                                     if (event.code() == KeyCode.ESCAPE) {

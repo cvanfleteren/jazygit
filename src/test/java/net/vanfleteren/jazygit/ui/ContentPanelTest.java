@@ -50,7 +50,7 @@ class ContentPanelTest {
         Model unselected = TestModels.loaded(new SampleData());
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> ContentPanel.render(unselected, BranchesPanel.ID, 0))) {
             String screen = RenderedText.of(testRunner, () -> ContentPanel.render(unselected, BranchesPanel.ID, 0));
-            assertTrue(screen.contains(Placeholders.LOADING), screen);
+            assertTrue(screen.contains(Placeholders.loading()), screen);
         }
     }
 
@@ -61,7 +61,7 @@ class ContentPanelTest {
             String screen = RenderedText.of(testRunner, () -> ContentPanel.render(switching, BranchesPanel.ID, 0));
             assertTrue(screen.contains("Log: feature/initial-layout"), screen);
             assertTrue(screen.contains("commit 0a1b2c3"), screen);
-            assertFalse(screen.contains(Placeholders.LOADING), screen);
+            assertFalse(screen.contains(Placeholders.loading()), screen);
         }
     }
 

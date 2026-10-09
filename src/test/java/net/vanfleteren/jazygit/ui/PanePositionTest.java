@@ -127,7 +127,7 @@ class PanePositionTest {
         Model loading = TestModels.loading("repo");
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(loading, BranchesPanel.ID))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(loading, BranchesPanel.ID));
-            assertTrue(screen.contains(Placeholders.LOADING), screen);
+            assertTrue(screen.contains(Placeholders.loading()), screen);
             assertFalse(screen.contains("1/1"), screen);
 
             testRunner.pilot().quit();

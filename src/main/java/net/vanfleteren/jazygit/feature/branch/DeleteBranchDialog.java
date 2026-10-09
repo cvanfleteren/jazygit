@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.*;
 import static dev.tamboui.toolkit.Toolkit.*;
 
@@ -27,14 +28,14 @@ public final class DeleteBranchDialog {
     /**
      * An option of the popup; no scope means cancel.
      */
-    private record Option(char key, String label, Optional<BranchCmd.DeleteBranch.DeleteScope> scope) {
+    private record Option(char key, String labelKey, Optional<BranchCmd.DeleteBranch.DeleteScope> scope) {
 
         Msg msg() {
             return scope.<Msg>map(DeleteBranchMsg.Chosen::new).orElseGet(DeleteBranchMsg.Cancelled::new);
         }
 
         String row() {
-            return "(" + key + ") " + label;
+            return Messages.get("dialog.deleteBranch.row", String.valueOf(key), Messages.get(labelKey));
         }
 
         /**
@@ -50,10 +51,10 @@ public final class DeleteBranchDialog {
     }
 
     private static final List<Option> OPTIONS = List.of(
-            new Option('d', "delete local branch", Optional.of(BranchCmd.DeleteBranch.DeleteScope.LOCAL)),
-            new Option('r', "delete remote branch", Optional.of(BranchCmd.DeleteBranch.DeleteScope.REMOTE)),
-            new Option('b', "delete local and remote branch", Optional.of(BranchCmd.DeleteBranch.DeleteScope.BOTH)),
-            new Option('c', "cancel", Optional.empty()));
+            new Option('d', "dialog.deleteBranch.local", Optional.of(BranchCmd.DeleteBranch.DeleteScope.LOCAL)),
+            new Option('r', "dialog.deleteBranch.remote", Optional.of(BranchCmd.DeleteBranch.DeleteScope.REMOTE)),
+            new Option('b', "dialog.deleteBranch.both", Optional.of(BranchCmd.DeleteBranch.DeleteScope.BOTH)),
+            new Option('c', "dialog.deleteBranch.cancel", Optional.empty()));
 
     private final ListElement<?> list = list()
             .id(ID)
@@ -78,7 +79,7 @@ public final class DeleteBranchDialog {
         return model.deleteTarget().map(branch -> {
             showOptions(remoteDeletable(model, branch));
             return branch;
-        }).map(branch -> dialog("Delete branch " + branch, list)
+        }).map(branch -> dialog(Messages.get("dialog.deleteBranch.title", branch), list)
                 .rounded()
                 .width(WIDTH)
                 .padding(1)

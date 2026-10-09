@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.feature.commit.AmendMsg;
 import net.vanfleteren.jazygit.feature.commit.CommitMsg;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
@@ -106,7 +107,7 @@ public class FilesPanel {
         // Counted on every render: expanding or collapsing a directory changes the visible rows
         // without a rebuild.
         int count = shown instanceof Loadable.Loaded<RepoStatus> ? (int) visible(roots).count() : 0;
-        return Pane.bordered("Files", tree, ID.equals(focusedId), Math.max(0, tree.selected()), count);
+        return Pane.bordered(Messages.get("panel.files.title"), tree, ID.equals(focusedId), Math.max(0, tree.selected()), count);
     }
 
     /**
@@ -127,7 +128,7 @@ public class FilesPanel {
                 .map(FilesPanel::path);
 
         roots = switch (status) {
-            case Loadable.Loading<RepoStatus>() -> List.of(TreeNode.<FileTree>of(Placeholders.LOADING).leaf());
+            case Loadable.Loading<RepoStatus>() -> List.of(TreeNode.<FileTree>of(Placeholders.loading()).leaf());
             case Loadable.Failed<RepoStatus>(String message) ->
                     List.of(TreeNode.<FileTree>of(Placeholders.error(message)).leaf());
             case Loadable.Loaded<RepoStatus>(RepoStatus value) when value.files().isEmpty() -> List.of();

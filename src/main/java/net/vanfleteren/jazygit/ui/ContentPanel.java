@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
+import net.vanfleteren.jazygit.i18n.Messages;
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.style.Color;
@@ -29,7 +30,9 @@ public final class ContentPanel {
     private ContentPanel() {
     }
 
-    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static DateTimeFormatter dateTime() {
+        return DateTimeFormatter.ofPattern(Messages.get("content.dateTimePattern"));
+    }
 
     public static StyledElement<?> render(Model model, String focusedId, int commitsSelection) {
         if (BranchesPanel.ID.equals(focusedId)) {
@@ -49,20 +52,20 @@ public final class ContentPanel {
                 .map(ContentPanel::shown)
                 .map(d -> switch (d.diff()) {
                     case Loadable.Loaded<Diffs>(Diffs diffs) -> diffPanels(diffs);
-                    case Loadable.Loading<Diffs>() -> panel("Diff", text(Placeholders.LOADING).dim()).rounded();
+                    case Loadable.Loading<Diffs>() -> panel(Messages.get("panel.diff.title"), text(Placeholders.loading()).dim()).rounded();
                     case Loadable.Failed<Diffs>(String message) ->
-                            panel("Diff", text(Placeholders.error(message))).rounded();
+                            panel(Messages.get("panel.diff.title"), text(Placeholders.error(message))).rounded();
                 })
-                .orElseGet(() -> panel("Diff", text(Placeholders.LOADING).dim()).rounded());
+                .orElseGet(() -> panel(Messages.get("panel.diff.title"), text(Placeholders.loading()).dim()).rounded());
     }
 
     private static StyledElement<?> diffPanels(Diffs diffs) {
         if (diffs.isEmpty()) {
-            return panel("Diff", text("No changes").dim()).rounded();
+            return panel(Messages.get("panel.diff.title"), text(Messages.get("content.noChanges")).dim()).rounded();
         }
         List<Element> panels = Stream.of(
-                        Map.entry("Staged changes", diffs.staged()),
-                        Map.entry("Unstaged changes", diffs.unstaged()))
+                        Map.entry(Messages.get("content.staged"), diffs.staged()),
+                        Map.entry(Messages.get("content.unstaged"), diffs.unstaged()))
                 .filter(e -> !e.getValue().isBlank())
                 .map(e -> (Element) panel(e.getKey(), e.getValue().lines().map(ContentPanel::diffLine)
                         .toArray(Element[]::new)).rounded().fill())
@@ -99,9 +102,9 @@ public final class ContentPanel {
     private static Panel branchLogView(Model model) {
         return model.branchLog()
                 .map(ContentPanel::shown)
-                .map(log -> whenLoaded("Log: " + log.branch(), log.commits(), commits ->
-                        panel("Log: " + log.branch(), rows(logLines(commits, ZoneId.systemDefault()))).rounded()))
-                .orElseGet(() -> panel("Log", text(Placeholders.LOADING).dim()).rounded());
+                .map(log -> whenLoaded(Messages.get("panel.log.titleFor", log.branch()), log.commits(), commits ->
+                        panel(Messages.get("panel.log.titleFor", log.branch()), rows(logLines(commits, ZoneId.systemDefault()))).rounded()))
+                .orElseGet(() -> panel(Messages.get("panel.log.title"), text(Placeholders.loading()).dim()).rounded());
     }
 
     /**
@@ -117,25 +120,26 @@ public final class ContentPanel {
     static List<String> logLines(List<Commit> commits, ZoneId zone) {
         return commits.stream()
                 .flatMap(c -> Stream.concat(
-                        Stream.of("commit " + c.shortSha(), author(c), DATE_TIME.format(c.authorTime().atZone(zone)),
+                        Stream.of(Messages.get("content.commitSha", c.shortSha()), author(c), dateTime().format(c.authorTime().atZone(zone)),
                                 "", c.message(), ""),
                         c.body().isBlank() ? Stream.empty() : Stream.concat(c.body().lines(), Stream.of(""))))
                 .toList();
     }
 
     private static String author(Commit commit) {
-        return commit.authorName() + " <" + commit.authorEmail() + ">";
+        return Messages.get("content.author", commit.authorName(), commit.authorEmail());
     }
 
     private static Panel commitDiffView(Model model, int commitsSelection) {
-        return whenLoaded("Commit", model.commits(), commits -> {
+        return whenLoaded(Messages.get("panel.commit.title"), model.commits(), commits -> {
             if (commits.isEmpty()) {
-                return panel("Commit", text("No commits")).rounded();
+                return panel(Messages.get("panel.commit.title"), text(Messages.get("content.noCommits"))).rounded();
             }
             Commit commit = commits.get(clamp(commitsSelection, commits.size()));
-            return panel("Commit: " + commit.shortSha(),
+            return panel(Messages.get("panel.commit.titleFor", commit.shortSha()),
                     text(commit.message()).bold(),
-                    text(author(commit) + " on " + DATE_TIME.format(commit.authorTime().atZone(ZoneId.systemDefault())))
+                    text(Messages.get("content.authoredOn", author(commit),
+                    dateTime().format(commit.authorTime().atZone(ZoneId.systemDefault()))))
                             .dim(),
                     spacer(),
                     text(commit.body()))
@@ -147,7 +151,7 @@ public final class ContentPanel {
     private static <T> Panel whenLoaded(String title, Loadable<T> loadable, Function<T, Panel> view) {
         return switch (loadable) {
             case Loadable.Loaded<T>(T value) -> view.apply(value);
-            case Loadable.Loading<T>() -> panel(title, text(Placeholders.LOADING).dim()).rounded();
+            case Loadable.Loading<T>() -> panel(title, text(Placeholders.loading()).dim()).rounded();
             case Loadable.Failed<T>(String message) -> panel(title, text(Placeholders.error(message))).rounded();
         };
     }

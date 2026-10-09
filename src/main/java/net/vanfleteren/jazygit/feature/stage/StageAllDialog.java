@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.stage;
 
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.feature.commit.CommitMsg;
 import static dev.tamboui.toolkit.Toolkit.*;
 
@@ -21,7 +22,6 @@ public final class StageAllDialog {
 
     private static final int WIDTH = 50;
 
-    private static final String MESSAGE = "Nothing is staged. Stage all files?";
     private static final int MESSAGE_HEIGHT = 1;
     // The message, a blank line and the hint, plus the border.
     private static final int HEIGHT = MESSAGE_HEIGHT + 2 + 2;
@@ -40,11 +40,11 @@ public final class StageAllDialog {
      */
     public Optional<Element> render(Model model) {
         return Optional.of(model).filter(Model::stageAllPrompt)
-                .map(m -> dialog("Commit",
-                        widget(Paragraph.builder().text(MESSAGE).overflow(Overflow.WRAP_WORD).build())
+                .map(m -> dialog(Messages.get("dialog.stageAll.title"),
+                        widget(Paragraph.builder().text(Messages.get("dialog.stageAll.message")).overflow(Overflow.WRAP_WORD).build())
                                 .length(MESSAGE_HEIGHT),
                         text(""),
-                        text("(enter) confirm   (esc) cancel").dim())
+                        text(Messages.get("dialog.hint.confirmCancel")).dim())
                         .id(ID)
                         .focusable()
                         .rounded()

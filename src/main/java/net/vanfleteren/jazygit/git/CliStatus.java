@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
@@ -45,15 +46,14 @@ public final class CliStatus {
                     .outputUTF8();
             return parse(output);
         } catch (IOException e) {
-            throw new IllegalStateException("Could not run git; is it installed and on the PATH?", e);
+            throw new IllegalStateException(Messages.get("git.notInstalled"), e);
         } catch (InvalidExitValueException e) {
-            throw new IllegalStateException("git status failed in " + workTree
-                    + " (exit code " + e.getExitValue() + ")", e);
+            throw new IllegalStateException(Messages.get("git.failed", "status", workTree, String.valueOf(e.getExitValue())), e);
         } catch (TimeoutException e) {
-            throw new IllegalStateException("git status timed out in " + workTree, e);
+            throw new IllegalStateException(Messages.get("git.timedOut", "status", workTree), e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted while running git status", e);
+            throw new IllegalStateException(Messages.get("git.interrupted", "status"), e);
         }
     }
 

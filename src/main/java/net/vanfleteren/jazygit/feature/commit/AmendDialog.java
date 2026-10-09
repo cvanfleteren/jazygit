@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import net.vanfleteren.jazygit.i18n.Messages;
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.style.Overflow;
@@ -20,8 +21,6 @@ public final class AmendDialog {
 
     private static final int WIDTH = 60;
 
-    private static final String MESSAGE = "Are you sure you want to amend the last commit? "
-            + "Afterwards, you can change the commit message from the commits panel.";
     // The message wrapped at the popup's inner width.
     private static final int MESSAGE_HEIGHT = 3;
     // The message, a blank line and the hint, plus the border.
@@ -41,11 +40,11 @@ public final class AmendDialog {
      */
     public Optional<Element> render(Model model) {
         return Optional.of(model).filter(Model::amendPrompt)
-                .map(m -> dialog("Amend last commit",
-                        widget(Paragraph.builder().text(MESSAGE).overflow(Overflow.WRAP_WORD).build())
+                .map(m -> dialog(Messages.get("dialog.amend.title"),
+                        widget(Paragraph.builder().text(Messages.get("dialog.amend.message")).overflow(Overflow.WRAP_WORD).build())
                                 .length(MESSAGE_HEIGHT),
                         text(""),
-                        text("(enter) confirm   (esc) cancel").dim())
+                        text(Messages.get("dialog.hint.confirmCancel")).dim())
                         .id(ID)
                         .focusable()
                         .rounded()

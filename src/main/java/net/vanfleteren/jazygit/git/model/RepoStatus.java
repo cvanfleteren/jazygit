@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.git.model;
 
+import net.vanfleteren.jazygit.i18n.Messages;
 import java.util.List;
 
 /**
@@ -25,6 +26,6 @@ public record RepoStatus(String head, String headOid, List<FileEntry> files) {
         if (!DETACHED.equals(head)) {
             return head;
         }
-        return "HEAD detached at " + headOid.substring(0, Math.min(7, headOid.length()));
+        return Messages.get("status.headDetached", headOid.substring(0, Math.min(7, headOid.length())));
     }
 }

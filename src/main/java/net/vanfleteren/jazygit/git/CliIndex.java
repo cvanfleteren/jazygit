@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.i18n.Messages;
 import org.zeroturnaround.exec.ProcessExecutor;
 import org.zeroturnaround.exec.ProcessResult;
 
@@ -100,12 +101,12 @@ public final class CliIndex {
                         CliCheckout.explanation(result.outputUTF8(), result.getExitValue()));
             }
         } catch (IOException e) {
-            throw new IllegalStateException("Could not run git; is it installed and on the PATH?", e);
+            throw new IllegalStateException(Messages.get("git.notInstalled"), e);
         } catch (TimeoutException e) {
-            throw new IllegalStateException("git " + name + " timed out in " + workTree, e);
+            throw new IllegalStateException(Messages.get("git.timedOut", name, workTree), e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted while running git " + name, e);
+            throw new IllegalStateException(Messages.get("git.interrupted", name), e);
         }
     }
 }

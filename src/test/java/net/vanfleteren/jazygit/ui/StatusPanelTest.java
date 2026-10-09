@@ -23,7 +23,7 @@ class StatusPanelTest {
             assertTrue(screen.contains("jazygit → main"), screen);
 
             String loading = RenderedText.of(testRunner, () -> StatusPanel.render(TestModels.loading("jazygit")));
-            assertTrue(loading.contains("jazygit → " + Placeholders.LOADING), loading);
+            assertTrue(loading.contains("jazygit → " + Placeholders.loading()), loading);
 
             testRunner.pilot().quit();
         }

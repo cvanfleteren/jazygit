@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.feature.commit.RewordMsg;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
@@ -18,7 +19,7 @@ public class CommitsPanel {
 
     public static final String ID = "commits";
 
-    private final LoadableList<List<Commit>> list = new LoadableList<>("Commits", ID,
+    private final LoadableList<List<Commit>> list = new LoadableList<>(Messages.get("panel.commits.title"), ID,
             commits -> commits.stream()
                     .map(c -> c.shortSha() + " " + c.message())
                     .toList());

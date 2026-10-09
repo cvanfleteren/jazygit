@@ -109,7 +109,7 @@ class FilesPanelTest {
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(untracked, FilesPanel.ID))) {
             String loading = RenderedText.of(testRunner, () -> panel.render(TestModels.loading("repo"), FilesPanel.ID));
-            assertTrue(loading.contains(Placeholders.LOADING), loading);
+            assertTrue(loading.contains(Placeholders.loading()), loading);
 
             String initial = RenderedText.of(testRunner, () -> panel.render(untracked, FilesPanel.ID));
             assertTrue(initial.contains("?? a.txt"), initial);

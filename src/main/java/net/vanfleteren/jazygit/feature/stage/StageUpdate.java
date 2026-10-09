@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.stage;
 
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.feature.stage.StageMsg.Requested;
 
 import net.vanfleteren.jazygit.feature.stage.StageMsg.Failed;
@@ -30,7 +31,7 @@ public final class StageUpdate {
         return switch (msg) {
             case Requested(List<FileEntry> files) -> toggle(model, files);
             case Done() -> Update.refresh(model.withError(Optional.empty()));
-            case Failed(String message) -> Update.refresh(model.withError(Optional.of("Staging failed: " + message)));
+            case Failed(String message) -> Update.refresh(model.withError(Optional.of(Messages.get("error.staging.failed", message))));
         };
     }
 

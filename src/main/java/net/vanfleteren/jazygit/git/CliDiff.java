@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -62,7 +63,7 @@ public final class CliDiff {
         List<String> lines = diff.lines().toList();
         return lines.size() <= MAX_LINES
                 ? diff
-                : Stream.concat(lines.stream().limit(MAX_LINES), Stream.of("… truncated"))
+                : Stream.concat(lines.stream().limit(MAX_LINES), Stream.of(Messages.get("git.diff.truncated")))
                 .collect(Collectors.joining("\n", "", "\n"));
     }
 
@@ -89,12 +90,12 @@ public final class CliDiff {
             }
             return result.outputUTF8();
         } catch (IOException e) {
-            throw new IllegalStateException("Could not run git; is it installed and on the PATH?", e);
+            throw new IllegalStateException(Messages.get("git.notInstalled"), e);
         } catch (TimeoutException e) {
-            throw new IllegalStateException("git diff timed out in " + workTree, e);
+            throw new IllegalStateException(Messages.get("git.timedOut", "diff", workTree), e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted while running git diff", e);
+            throw new IllegalStateException(Messages.get("git.interrupted", "diff"), e);
         }
     }
 }

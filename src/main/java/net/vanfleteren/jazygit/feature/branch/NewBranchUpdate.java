@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Requested;
 
 import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Failed;
@@ -34,7 +35,7 @@ public final class NewBranchUpdate {
             // Like a checkout: status and branches show the new HEAD.
             case Created(String name) -> Update.refresh(model.withError(Optional.empty()));
             case Failed(String name, String message) ->
-                    Next.of(model.withError(Optional.of("Creating branch " + name + " failed: " + message)));
+                    Next.of(model.withError(Optional.of(Messages.get("error.newBranch.failed", name, message))));
         };
     }
 

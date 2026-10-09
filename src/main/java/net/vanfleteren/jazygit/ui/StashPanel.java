@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
+import net.vanfleteren.jazygit.i18n.Messages;
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.toolkit.elements.Panel;
@@ -15,6 +16,6 @@ public final class StashPanel {
     }
 
     public static Panel render() {
-        return Pane.bordered("Stash", text(""), false, 0, 0);
+        return Pane.bordered(Messages.get("panel.stash.title"), text(""), false, 0, 0);
     }
 }

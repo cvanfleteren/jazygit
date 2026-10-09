@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.Requested;
 
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.Failed;
@@ -31,7 +32,7 @@ public final class CheckoutUpdate {
             // Status and branches show the new HEAD; the moved HEAD then reloads the commits.
             case Done(String branch) -> Update.refresh(model.withError(Optional.empty()));
             case Failed(String branch, String message) ->
-                    Next.of(model.withError(Optional.of("Checkout of " + branch + " failed: " + message)));
+                    Next.of(model.withError(Optional.of(Messages.get("error.checkout.failed", branch, message))));
         };
     }
 
