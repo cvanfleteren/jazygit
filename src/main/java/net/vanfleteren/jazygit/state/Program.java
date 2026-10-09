@@ -1,23 +1,8 @@
 package net.vanfleteren.jazygit.state;
 
 import net.vanfleteren.jazygit.git.GitInfoProvider;
-import net.vanfleteren.jazygit.state.Cmd.BranchCmd.Checkout;
-import net.vanfleteren.jazygit.state.Cmd.BranchCmd.CreateBranch;
-import net.vanfleteren.jazygit.state.Cmd.BranchCmd.DeleteBranch;
-import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
-import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
-import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
-import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
-import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
-import net.vanfleteren.jazygit.state.Cmd.Amend;
-import net.vanfleteren.jazygit.state.Cmd.Commit;
-import net.vanfleteren.jazygit.state.Cmd.Reword;
-import net.vanfleteren.jazygit.state.Cmd.Stage;
-import net.vanfleteren.jazygit.state.Cmd.StageForCommit;
-import net.vanfleteren.jazygit.state.Cmd.Unstage;
 import net.vanfleteren.jazygit.state.Update.Next;
 
-import java.util.List;
 import java.util.concurrent.Executor;
 
 /**
@@ -73,68 +58,9 @@ public final class Program {
 
     static Msg perform(GitInfoProvider provider, Cmd cmd) {
         try {
-            return switch (cmd) {
-                case LoadStatus() -> new LoadMsg.StatusLoaded(provider.status());
-                case LoadBranches() -> new LoadMsg.BranchesLoaded(provider.branches());
-                case LoadCommits() -> new LoadMsg.CommitsLoaded(provider.commits());
-                case LoadBranchLog(String branch) -> new LoadMsg.BranchLogLoaded(branch, provider.log(branch));
-                case LoadFileDiff(var files) -> new LoadMsg.FileDiffLoaded(files, provider.diff(files));
-                case Checkout(String branch) -> {
-                    provider.checkout(branch);
-                    yield new CheckoutMsg.Done(branch);
-                }
-                case CreateBranch(String name, String base) -> {
-                    provider.createBranch(name, base);
-                    yield new NewBranchMsg.Created(name);
-                }
-                case DeleteBranch(String branch, DeleteBranch.DeleteScope scope) -> {
-                    provider.deleteBranch(branch, scope != DeleteBranch.DeleteScope.REMOTE, scope != DeleteBranch.DeleteScope.LOCAL);
-                    yield new DeleteBranchMsg.Deleted(branch);
-                }
-                case Stage(List<String> paths) -> {
-                    provider.stage(paths);
-                    yield new StageMsg.Done();
-                }
-                case StageForCommit(List<String> paths) -> {
-                    provider.stage(paths);
-                    yield new CommitMsg.StagedForCommit();
-                }
-                case Commit(String summary, String description) -> {
-                    provider.commit(summary, description);
-                    yield new CommitMsg.Done();
-                }
-                case Amend(List<String> stage) -> {
-                    provider.stage(stage);
-                    provider.amend();
-                    yield new AmendMsg.Done();
-                }
-                case Reword(String summary, String description) -> {
-                    provider.reword(summary, description);
-                    yield new RewordMsg.Done();
-                }
-                case Unstage(List<String> added, List<String> others) -> {
-                    provider.unstageNew(added);
-                    provider.unstage(others);
-                    yield new StageMsg.Done();
-                }
-            };
+            return cmd.run(provider);
         } catch (RuntimeException e) {
-            return failure(cmd, e.getMessage() != null ? e.getMessage() : e.toString());
+            return cmd.failed(e.getMessage() != null ? e.getMessage() : e.toString());
         }
-    }
-
-    private static Msg failure(Cmd cmd, String message) {
-        return switch (cmd) {
-            case Cmd.Load load -> new LoadMsg.Failed(load, message);
-            case Checkout(String branch) -> new CheckoutMsg.Failed(branch, message);
-            case CreateBranch(String name, String base) -> new NewBranchMsg.Failed(name, message);
-            case DeleteBranch(String branch, DeleteBranch.DeleteScope scope) -> new DeleteBranchMsg.Failed(branch, message);
-            case Stage stage -> new StageMsg.Failed(message);
-            case Unstage unstage -> new StageMsg.Failed(message);
-            case StageForCommit stage -> new CommitMsg.StageForCommitFailed(message);
-            case Commit commit -> new CommitMsg.Failed(message);
-            case Amend amend -> new AmendMsg.Failed(message);
-            case Reword reword -> new RewordMsg.Failed(message);
-        };
     }
 }

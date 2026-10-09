@@ -117,7 +117,7 @@ public final class SampleData implements GitInfoProvider {
     }
 
     @Override
-    public void amend() {
+    public void amendLastCommit() {
     }
 
     @Override

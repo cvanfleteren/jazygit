@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.model.*;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.Constants;
@@ -229,7 +228,7 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     }
 
     @Override
-    public void amend() {
+    public void amendLastCommit() {
         CliIndex.amend(workTree);
     }
 

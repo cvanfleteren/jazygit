@@ -80,7 +80,7 @@ class FilesPanelTest {
         }
 
         @Override
-        public void amend() {
+        public void amendLastCommit() {
             throw new UnsupportedOperationException();
         }
 

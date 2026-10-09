@@ -74,7 +74,7 @@ class PanePositionTest {
         }
 
         @Override
-        public void amend() {
+        public void amendLastCommit() {
             throw new UnsupportedOperationException();
         }
 

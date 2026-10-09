@@ -111,7 +111,7 @@ class ProgramTest {
         }
 
         @Override
-        public void amend() {
+        public void amendLastCommit() {
             index("amend", List.of());
         }
 
