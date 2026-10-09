@@ -1,0 +1,47 @@
+name: AI implement issue
+on:
+  issues:
+    types: [labeled]
+
+concurrency:
+  group: ai-issue-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  implement:
+    if: github.event.label.name == 'ai:ready'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+          cache: maven
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          # Max subscription token, generate with `claude setup-token`
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Implement GitHub issue #${{ github.event.issue.number }}.
+            Title: ${{ github.event.issue.title }}
+            Body: ${{ github.event.issue.body }}
+
+            Follow the conventions in agents.md / CLAUDE.md (functional style, immutable data).
+            Create a branch named feature/issue-${{ github.event.issue.number }}, implement the change,
+            run `mvn -B verify`, commit, push, and open a PR with `gh pr create`
+            whose body contains "Implements #${{ github.event.issue.number }}".
+            If the issue is unclear, comment on it with questions instead of guessing.
+          claude_args: |
+            --max-turns 40
+            --allowedTools "Bash(git:*),Bash(gh pr:*),Bash(gh issue comment:*),Bash(mvn:*),Edit,Write,Read,Glob,Grep"
