@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.ui.BranchesPanel;
 import net.vanfleteren.jazygit.ui.CommitsPanel;
 import net.vanfleteren.jazygit.ui.ContentPanel;
 import net.vanfleteren.jazygit.ui.FilesPanel;
+import net.vanfleteren.jazygit.ui.StashPanel;
 import net.vanfleteren.jazygit.ui.StatusPanel;
 
 import java.nio.file.Path;
@@ -88,9 +89,11 @@ public class JazygitApp extends ToolkitApp {
         return row(
                 column(
                         StatusPanel.render(model),
-                        filesPanel.render(model, focusedId),
-                        branches,
-                        commitsPanel.render(model, focusedId))
+                        filesPanel.render(model, focusedId).percent(30),
+                        branches.percent(30),
+                        commitsPanel.render(model, focusedId).percent(30),
+                        // The remaining ~10%, after the fixed-height status panel.
+                        StashPanel.render().fill())
                         .percent(30),
                 ContentPanel.render(program.model(), focusedId, commitsPanel.selectedIndex())
                         .fill());

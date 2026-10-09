@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.ui.BranchesPanel;
 import net.vanfleteren.jazygit.ui.CommitsPanel;
 import net.vanfleteren.jazygit.ui.ContentPanel;
 import net.vanfleteren.jazygit.ui.FilesPanel;
+import net.vanfleteren.jazygit.ui.StashPanel;
 import net.vanfleteren.jazygit.ui.StatusPanel;
 import org.junit.jupiter.api.Test;
 
@@ -59,8 +60,9 @@ class JazygitAppPilotTest {
                 Panel branchesPane = branches.render(model, focusedId);
                 branches.selectionChange(model).ifPresent(selections::add);
                 return row(
-                        column(StatusPanel.render(model), files.render(model, focusedId),
-                                branchesPane, commits.render(model, focusedId))
+                        column(StatusPanel.render(model), files.render(model, focusedId).percent(30),
+                                branchesPane.percent(30), commits.render(model, focusedId).percent(30),
+                                StashPanel.render().fill())
                                 .percent(30),
                         ContentPanel.render(model, focusedId, commits.selectedIndex())
                                 .fill());
