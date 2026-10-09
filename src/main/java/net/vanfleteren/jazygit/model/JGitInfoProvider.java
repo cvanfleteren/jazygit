@@ -222,6 +222,11 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     }
 
     @Override
+    public void commit(String summary, String description) {
+        GitCliIndex.commit(workTree, summary, description);
+    }
+
+    @Override
     public Diffs diff(List<FileEntry> files) {
         return GitCliDiff.diff(workTree, files);
     }

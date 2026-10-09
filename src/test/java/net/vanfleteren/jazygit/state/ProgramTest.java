@@ -31,6 +31,8 @@ class ProgramTest {
         RuntimeException statusError;
         RuntimeException checkoutError;
         RuntimeException indexError;
+        String commitFailure;
+        final List<String> commits = new ArrayList<>();
         final List<String> deleted = new ArrayList<>();
         final List<String> indexCalls = new ArrayList<>();
         int commitLoads;
@@ -100,6 +102,14 @@ class ProgramTest {
         @Override
         public void unstageNew(List<String> paths) {
             index("unstageNew", paths);
+        }
+
+        @Override
+        public void commit(String summary, String description) {
+            if (commitFailure != null) {
+                throw new IllegalStateException(commitFailure);
+            }
+            commits.add(summary + "|" + description);
         }
 
         @Override
@@ -237,6 +247,39 @@ class ProgramTest {
 
         assertEquals(List.of("stage[a.txt]", "unstageNew[b.txt]", "unstage[c.txt]"), provider.indexCalls);
         assertEquals(Optional.empty(), program.model().error());
+    }
+
+    @Test
+    void stagingAllAndCommitting() {
+        provider.status = new RepoStatus("main", "aaaa", List.of(new FileEntry("a.txt", ChangeType.UNTRACKED)));
+        settle();
+
+        program.dispatch(new Msg.CommitRequested());
+        program.dispatch(new Msg.StageAllConfirmed());
+        settle();
+
+        assertEquals(List.of("stage[a.txt]"), provider.indexCalls);
+        assertEquals(true, program.model().commitOpen());
+
+        program.dispatch(new Msg.CommitConfirmed("summary", "more"));
+        settle();
+
+        assertEquals(List.of("summary|more"), provider.commits);
+        assertEquals(false, program.model().commitOpen());
+        assertEquals(Optional.empty(), program.model().error());
+    }
+
+    @Test
+    void failedCommitIsReported() {
+        provider.status = new RepoStatus("main", "aaaa", List.of(new FileEntry("a.txt", ChangeType.ADDED)));
+        provider.commitFailure = "boom";
+        settle();
+
+        program.dispatch(new Msg.CommitRequested());
+        program.dispatch(new Msg.CommitConfirmed("summary", ""));
+        settle();
+
+        assertEquals(Optional.of("Commit failed: boom"), program.model().error());
     }
 
     @Test

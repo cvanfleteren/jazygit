@@ -189,6 +189,30 @@ class JazygitAppPilotTest {
     }
 
     @Test
+    void cRequestsACommitFromTheFilesPane() throws Exception {
+        Fixture fixture = new Fixture();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
+            FocusManager focusManager = testRunner.runner().focusManager();
+            fixture.focusManagerRef().set(focusManager);
+            focusManager.setFocus(FilesPanel.ID);
+
+            Pilot pilot = testRunner.pilot();
+            pilot.pause();
+            // Moving re-renders, which is how the panel learns it has focus.
+            pilot.press(KeyCode.DOWN);
+            pilot.press(KeyCode.UP);
+            pilot.pause();
+            pilot.press('c');
+            pilot.pause();
+
+            assertEquals(true, fixture.dispatched().contains(new Msg.CommitRequested()));
+
+            pilot.quit();
+        }
+    }
+
+    @Test
     void spaceTogglesStagingOfTheSelectedFilesNode() throws Exception {
         Fixture fixture = new Fixture();
 

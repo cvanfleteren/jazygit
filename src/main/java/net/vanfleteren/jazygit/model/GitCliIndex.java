@@ -42,6 +42,17 @@ public final class GitCliIndex {
         run(workTree, List.of("reset", "--quiet", "HEAD"), paths);
     }
 
+    /**
+     * {@code git commit -m <summary> [-m <description>]}: commits the index.
+     */
+    public static void commit(Path workTree, String summary, String description) {
+        List<String> command = new ArrayList<>(List.of("git", "commit", "--quiet", "-m", summary));
+        if (!description.isBlank()) {
+            command.addAll(List.of("-m", description));
+        }
+        execute(workTree, command, "commit");
+    }
+
     private static void run(Path workTree, List<String> subcommand, List<String> paths) {
         if (paths.isEmpty()) {
             return;
@@ -51,6 +62,10 @@ public final class GitCliIndex {
         command.addAll(subcommand);
         command.add("--");
         command.addAll(paths);
+        execute(workTree, command, subcommand.getFirst());
+    }
+
+    private static void execute(Path workTree, List<String> command, String name) {
         try {
             ProcessResult result = new ProcessExecutor()
                     .command(command)
@@ -67,10 +82,10 @@ public final class GitCliIndex {
         } catch (IOException e) {
             throw new IllegalStateException("Could not run git; is it installed and on the PATH?", e);
         } catch (TimeoutException e) {
-            throw new IllegalStateException("git " + subcommand.getFirst() + " timed out in " + workTree, e);
+            throw new IllegalStateException("git " + name + " timed out in " + workTree, e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted while running git " + subcommand.getFirst(), e);
+            throw new IllegalStateException("Interrupted while running git " + name, e);
         }
     }
 }

@@ -13,7 +13,9 @@ import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
 import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
+import net.vanfleteren.jazygit.state.Cmd.Commit;
 import net.vanfleteren.jazygit.state.Cmd.Stage;
+import net.vanfleteren.jazygit.state.Cmd.StageForCommit;
 import net.vanfleteren.jazygit.state.Cmd.Unstage;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
@@ -121,6 +123,17 @@ public final class Update {
             case StageToggled() -> refresh(model.withError(Optional.empty()));
             case StageToggleFailed(String message) ->
                     refresh(model.withError(Optional.of("Staging failed: " + message)));
+            case Msg.CommitRequested() -> commitRequested(model);
+            case Msg.StageAllCancelled() -> Next.of(model.withStageAllPrompt(false));
+            case Msg.StageAllConfirmed() -> stageAllConfirmed(model);
+            case Msg.StagedForCommit() -> refresh(model.withCommitOpen(true));
+            case Msg.StageForCommitFailed(String message) ->
+                    refresh(model.withError(Optional.of("Staging failed: " + message)));
+            case Msg.CommitCancelled() -> Next.of(model.withCommitOpen(false));
+            case Msg.CommitConfirmed(String summary, String description) -> commitConfirmed(model, summary, description);
+            case Msg.Committed() -> refresh(model.withError(Optional.empty()));
+            case Msg.CommitFailed(String message) ->
+                    refresh(model.withError(Optional.of("Commit failed: " + message)));
         };
     }
 
@@ -261,6 +274,40 @@ public final class Update {
         List<String> added = staged.stream().filter(f -> f.type() == ChangeType.ADDED).map(FileEntry::path).toList();
         List<String> others = staged.stream().filter(f -> f.type() != ChangeType.ADDED).map(FileEntry::path).toList();
         return Next.of(model.withError(Optional.empty()), new Unstage(added, others));
+    }
+
+    private static List<FileEntry> files(Model model) {
+        return model.status() instanceof Loaded<RepoStatus>(RepoStatus status) ? status.files() : List.of();
+    }
+
+    /**
+     * Commits what is staged; when nothing is, offers to stage everything first.
+     */
+    private static Next commitRequested(Model model) {
+        List<FileEntry> files = files(model);
+        if (files.stream().anyMatch(FileEntry::staged)) {
+            return Next.of(model.withError(Optional.empty()).withCommitOpen(true));
+        }
+        if (files.isEmpty()) {
+            return Next.of(model.withError(Optional.of("Nothing to commit")));
+        }
+        return Next.of(model.withError(Optional.empty()).withStageAllPrompt(true));
+    }
+
+    private static Next stageAllConfirmed(Model model) {
+        List<String> paths = files(model).stream().filter(FileEntry::unstaged).map(FileEntry::path).toList();
+        return model.stageAllPrompt()
+                ? Next.of(model.withStageAllPrompt(false), new StageForCommit(paths))
+                : Next.of(model);
+    }
+
+    private static Next commitConfirmed(Model model, String summary, String description) {
+        String trimmed = summary.strip();
+        // A blank summary keeps the dialog open.
+        return model.commitOpen() && !trimmed.isEmpty()
+                ? Next.of(model.withCommitOpen(false).withError(Optional.empty()),
+                new Commit(trimmed, description.strip()))
+                : Next.of(model);
     }
 
     private static Model finished(Model model, Cmd.Load cmd) {

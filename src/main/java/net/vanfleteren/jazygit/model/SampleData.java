@@ -110,6 +110,10 @@ public final class SampleData implements GitInfoProvider {
     }
 
     @Override
+    public void commit(String summary, String description) {
+    }
+
+    @Override
     public Diffs diff(List<FileEntry> files) {
         return new Diffs(sample(files, FileEntry::staged), sample(files, FileEntry::unstaged));
     }

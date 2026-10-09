@@ -78,4 +78,12 @@ public interface GitInfoProvider {
      * @throws IllegalStateException if git fails, with git's explanation as message
      */
     Diffs diff(List<FileEntry> files);
+
+    /**
+     * Commits what is staged.
+     *
+     * @param description the extended message; may be blank
+     * @throws IllegalStateException if git fails, with git's explanation as message
+     */
+    void commit(String summary, String description);
 }

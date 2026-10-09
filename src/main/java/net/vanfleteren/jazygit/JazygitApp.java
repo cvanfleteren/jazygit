@@ -13,7 +13,9 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Program;
 import net.vanfleteren.jazygit.ui.BranchesPanel;
+import net.vanfleteren.jazygit.ui.CommitDialog;
 import net.vanfleteren.jazygit.ui.CommitsPanel;
+import net.vanfleteren.jazygit.ui.StageAllDialog;
 import net.vanfleteren.jazygit.ui.DeleteBranchDialog;
 import net.vanfleteren.jazygit.ui.ContentPanel;
 import net.vanfleteren.jazygit.ui.FilesPanel;
@@ -23,6 +25,7 @@ import net.vanfleteren.jazygit.ui.StatusPanel;
 
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -44,6 +47,8 @@ public class JazygitApp extends ToolkitApp {
     private final BranchesPanel branchesPanel = new BranchesPanel(msg -> this.program.dispatch(msg));
     private final NewBranchDialog newBranchDialog = new NewBranchDialog(msg -> this.program.dispatch(msg));
     private final DeleteBranchDialog deleteBranchDialog = new DeleteBranchDialog(msg -> this.program.dispatch(msg));
+    private final StageAllDialog stageAllDialog = new StageAllDialog(msg -> this.program.dispatch(msg));
+    private final CommitDialog commitDialog = new CommitDialog(msg -> this.program.dispatch(msg));
     private final CommitsPanel commitsPanel = new CommitsPanel();
     private ExecutorService io;
     private Program program;
@@ -102,18 +107,29 @@ public class JazygitApp extends ToolkitApp {
                         .percent(30),
                 ContentPanel.render(program.model(), focusedId, commitsPanel.selectedIndex())
                         .fill());
-        Optional<Element> newBranch = newBranchDialog.render(model);
-        Optional<Element> delete = deleteBranchDialog.render(model);
-        Optional<Element> dialog = newBranch.isPresent() ? newBranch : delete;
-        String dialogId = newBranch.isPresent() ? NewBranchDialog.ID : DeleteBranchDialog.ID;
-        // A popup takes the focus while it is open and gives it back to the branches pane.
-        if (dialog.isPresent() && !dialogId.equals(focusedId)) {
-            runner().focusManager().setFocus(dialogId);
-        } else if (dialog.isEmpty()
-                && (NewBranchDialog.ID.equals(focusedId) || DeleteBranchDialog.ID.equals(focusedId))) {
-            runner().focusManager().setFocus(BranchesPanel.ID);
+        // The open popup takes the focus, and gives it back to the pane it was opened from.
+        List<Popup> popups = List.of(
+                new Popup(newBranchDialog.render(model), List.of(NewBranchDialog.ID), BranchesPanel.ID),
+                new Popup(deleteBranchDialog.render(model), List.of(DeleteBranchDialog.ID), BranchesPanel.ID),
+                new Popup(stageAllDialog.render(model), List.of(StageAllDialog.ID), FilesPanel.ID),
+                new Popup(commitDialog.render(model), List.of(CommitDialog.ID, CommitDialog.DESCRIPTION_ID),
+                        FilesPanel.ID));
+        Optional<Popup> open = popups.stream().filter(p -> p.element().isPresent()).findFirst();
+        if (open.isPresent()) {
+            if (!open.get().ids().contains(focusedId)) {
+                runner().focusManager().setFocus(open.get().ids().getFirst());
+            }
+        } else {
+            popups.stream()
+                    .filter(p -> p.ids().contains(focusedId))
+                    .findFirst()
+                    .ifPresent(p -> runner().focusManager().setFocus(p.returnTo()));
         }
+        Optional<Element> dialog = open.flatMap(Popup::element);
         return dialog.<Element>map(d -> stack(layout, d)).orElse(layout);
+    }
+
+    private record Popup(Optional<Element> element, List<String> ids, String returnTo) {
     }
 
     /**

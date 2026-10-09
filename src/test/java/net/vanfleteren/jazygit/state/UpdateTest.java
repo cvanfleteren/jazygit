@@ -273,6 +273,86 @@ class UpdateTest {
         assertEquals(List.of(), next.cmds());
     }
 
+    private Model withFiles(FileEntry... files) {
+        return loaded().withStatus(new Loaded<>(new RepoStatus("main", "aaaa", List.of(files))));
+    }
+
+    @Test
+    void commitOpensTheDialogWhenSomethingIsStaged() {
+        Model model = Update.update(withFiles(new FileEntry("a.txt", ChangeType.ADDED)), new Msg.CommitRequested())
+                .model();
+
+        assertEquals(true, model.commitOpen());
+        assertEquals(false, model.stageAllPrompt());
+    }
+
+    @Test
+    void commitAsksToStageAllWhenNothingIsStaged() {
+        Model model = Update.update(withFiles(new FileEntry("a.txt", ChangeType.MODIFIED)), new Msg.CommitRequested())
+                .model();
+
+        assertEquals(true, model.stageAllPrompt());
+        assertEquals(false, model.commitOpen());
+    }
+
+    @Test
+    void commitWithoutChangesIsAnError() {
+        Model model = Update.update(withFiles(), new Msg.CommitRequested()).model();
+
+        assertEquals(Optional.of("Nothing to commit"), model.error());
+        assertEquals(false, model.stageAllPrompt());
+    }
+
+    @Test
+    void confirmingStageAllStagesEverythingUnstaged() {
+        Model asking = Update.update(withFiles(new FileEntry("a.txt", ChangeType.MODIFIED),
+                new FileEntry("b.txt", ChangeType.UNTRACKED)), new Msg.CommitRequested()).model();
+
+        Next next = Update.update(asking, new Msg.StageAllConfirmed());
+
+        assertEquals(List.of(new Cmd.StageForCommit(List.of("a.txt", "b.txt"))), next.cmds());
+        assertEquals(false, next.model().stageAllPrompt());
+        assertEquals(true, Update.update(next.model(), new Msg.StagedForCommit()).model().commitOpen());
+    }
+
+    @Test
+    void cancellingStageAllClosesThePrompt() {
+        Model asking = Update.update(withFiles(new FileEntry("a.txt", ChangeType.MODIFIED)),
+                new Msg.CommitRequested()).model();
+
+        assertEquals(false, Update.update(asking, new Msg.StageAllCancelled()).model().stageAllPrompt());
+    }
+
+    @Test
+    void confirmingTheCommitCommitsAndClosesTheDialog() {
+        Model open = Update.update(withFiles(new FileEntry("a.txt", ChangeType.ADDED)), new Msg.CommitRequested())
+                .model();
+
+        Next next = Update.update(open, new Msg.CommitConfirmed(" summary ", "\ndetails\n"));
+
+        assertEquals(List.of(new Cmd.Commit("summary", "details")), next.cmds());
+        assertEquals(false, next.model().commitOpen());
+    }
+
+    @Test
+    void blankSummaryKeepsTheCommitDialogOpen() {
+        Model open = Update.update(withFiles(new FileEntry("a.txt", ChangeType.ADDED)), new Msg.CommitRequested())
+                .model();
+
+        Next next = Update.update(open, new Msg.CommitConfirmed("  ", "details"));
+
+        assertEquals(List.of(), next.cmds());
+        assertEquals(true, next.model().commitOpen());
+    }
+
+    @Test
+    void cancellingTheCommitClosesTheDialog() {
+        Model open = Update.update(withFiles(new FileEntry("a.txt", ChangeType.ADDED)), new Msg.CommitRequested())
+                .model();
+
+        assertEquals(false, Update.update(open, new Msg.CommitCancelled()).model().commitOpen());
+    }
+
     @Test
     void toggleStagesTheFilesWithUnstagedChanges() {
         FileEntry unstaged = new FileEntry("a.txt", ChangeType.MODIFIED);

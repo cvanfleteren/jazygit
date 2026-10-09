@@ -123,4 +123,38 @@ public sealed interface Msg {
 
     record StageToggleFailed(String message) implements Msg {
     }
+
+    /**
+     * The user asked to commit: the message is asked for, after staging everything if nothing is
+     * staged yet.
+     */
+    record CommitRequested() implements Msg {
+    }
+
+    record StageAllConfirmed() implements Msg {
+    }
+
+    record StageAllCancelled() implements Msg {
+    }
+
+    /**
+     * Everything was staged for a commit.
+     */
+    record StagedForCommit() implements Msg {
+    }
+
+    record StageForCommitFailed(String message) implements Msg {
+    }
+
+    record CommitCancelled() implements Msg {
+    }
+
+    record CommitConfirmed(String summary, String description) implements Msg {
+    }
+
+    record Committed() implements Msg {
+    }
+
+    record CommitFailed(String message) implements Msg {
+    }
 }

@@ -9,7 +9,9 @@ import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
 import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
+import net.vanfleteren.jazygit.state.Cmd.Commit;
 import net.vanfleteren.jazygit.state.Cmd.Stage;
+import net.vanfleteren.jazygit.state.Cmd.StageForCommit;
 import net.vanfleteren.jazygit.state.Cmd.Unstage;
 import net.vanfleteren.jazygit.state.Msg.BranchCreateFailed;
 import net.vanfleteren.jazygit.state.Msg.BranchDeleteFailed;
@@ -105,6 +107,14 @@ public final class Program {
                     provider.stage(paths);
                     yield new StageToggled();
                 }
+                case StageForCommit(List<String> paths) -> {
+                    provider.stage(paths);
+                    yield new Msg.StagedForCommit();
+                }
+                case Commit(String summary, String description) -> {
+                    provider.commit(summary, description);
+                    yield new Msg.Committed();
+                }
                 case Unstage(List<String> added, List<String> others) -> {
                     provider.unstageNew(added);
                     provider.unstage(others);
@@ -124,6 +134,8 @@ public final class Program {
             case DeleteBranch(String branch, DeleteScope scope) -> new BranchDeleteFailed(branch, message);
             case Stage stage -> new StageToggleFailed(message);
             case Unstage unstage -> new StageToggleFailed(message);
+            case StageForCommit stage -> new Msg.StageForCommitFailed(message);
+            case Commit commit -> new Msg.CommitFailed(message);
         };
     }
 }

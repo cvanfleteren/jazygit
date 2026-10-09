@@ -67,8 +67,14 @@ public class FilesPanel {
     }
 
     private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {
+        if (!focused) {
+            return EventResult.UNHANDLED;
+        }
+        if (event.isChar('c')) {
+            dispatch.accept(new Msg.CommitRequested());
+            return EventResult.HANDLED;
+        }
         return Optional.ofNullable(tree.selectedNode())
-                .filter(node -> focused)
                 .map(TreeNode::data)
                 .filter(data -> event.isChar(' '))
                 .map(data -> {

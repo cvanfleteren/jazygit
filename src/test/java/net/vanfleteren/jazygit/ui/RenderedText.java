@@ -17,6 +17,7 @@ import java.util.function.Supplier;
 final class RenderedText {
 
     private static final Rect AREA = new Rect(0, 0, 40, 5);
+    private static final Rect LARGE = new Rect(0, 0, 100, 30);
 
     private RenderedText() {
     }
@@ -25,19 +26,31 @@ final class RenderedText {
      * Renders the element into a fresh buffer on the render thread, which TamboUI requires.
      */
     static String of(ToolkitTestRunner testRunner, Supplier<? extends Element> element) throws Exception {
+        return of(testRunner, element, AREA);
+    }
+
+    /**
+     * Like {@link #of(ToolkitTestRunner, Supplier)}, on a 100x30 screen, for popups.
+     */
+    static String ofLarge(ToolkitTestRunner testRunner, Supplier<? extends Element> element) throws Exception {
+        return of(testRunner, element, LARGE);
+    }
+
+    private static String of(ToolkitTestRunner testRunner, Supplier<? extends Element> element, Rect area)
+            throws Exception {
         CompletableFuture<String> screen = new CompletableFuture<>();
         testRunner.runner().runOnRenderThread(() -> {
-            Buffer buffer = Buffer.empty(AREA);
-            element.get().render(Frame.forTesting(buffer), AREA, RenderContext.empty());
-            screen.complete(text(buffer));
+            Buffer buffer = Buffer.empty(area);
+            element.get().render(Frame.forTesting(buffer), area, RenderContext.empty());
+            screen.complete(text(buffer, area));
         });
         return screen.get(5, TimeUnit.SECONDS);
     }
 
-    private static String text(Buffer buffer) {
+    private static String text(Buffer buffer, Rect area) {
         StringBuilder text = new StringBuilder();
-        for (int y = AREA.y(); y < AREA.y() + AREA.height(); y++) {
-            for (int x = AREA.x(); x < AREA.x() + AREA.width(); x++) {
+        for (int y = area.y(); y < area.y() + area.height(); y++) {
+            for (int x = area.x(); x < area.x() + area.width(); x++) {
                 text.append(buffer.get(x, y).symbol());
             }
             text.append('\n');

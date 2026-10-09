@@ -68,6 +68,11 @@ class PanePositionTest {
         }
 
         @Override
+        public void commit(String summary, String description) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public void unstage(List<String> paths) {
             throw new UnsupportedOperationException();
         }

@@ -63,4 +63,17 @@ public sealed interface Cmd {
             others = List.copyOf(others);
         }
     }
+
+    /**
+     * Stages the paths so they can be committed; the commit dialog opens afterwards.
+     */
+    record StageForCommit(List<String> paths) implements Cmd {
+
+        public StageForCommit {
+            paths = List.copyOf(paths);
+        }
+    }
+
+    record Commit(String summary, String description) implements Cmd {
+    }
 }
