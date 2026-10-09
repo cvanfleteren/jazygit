@@ -94,8 +94,8 @@ class ProgramTest {
         }
 
         @Override
-        public String diff(List<FileEntry> files) {
-            return "diff of " + files.size();
+        public net.vanfleteren.jazygit.model.Diffs diff(List<FileEntry> files) {
+            return new net.vanfleteren.jazygit.model.Diffs("", "diff of " + files.size());
         }
 
         private void index(String operation, List<String> paths) {
@@ -194,7 +194,7 @@ class ProgramTest {
         program.dispatch(new Msg.FilesSelected(files));
         settle();
 
-        assertEquals(new Loaded<>("diff of 1"), program.model().fileDiff().orElseThrow().diff());
+        assertEquals(new Loaded<>(new net.vanfleteren.jazygit.model.Diffs("", "diff of 1")), program.model().fileDiff().orElseThrow().diff());
     }
 
     @Test

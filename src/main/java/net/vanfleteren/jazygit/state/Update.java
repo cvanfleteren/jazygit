@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.state;
 
 import net.vanfleteren.jazygit.model.Branch;
 import net.vanfleteren.jazygit.model.ChangeType;
+import net.vanfleteren.jazygit.model.Diffs;
 import net.vanfleteren.jazygit.model.FileEntry;
 import net.vanfleteren.jazygit.model.RepoStatus;
 import net.vanfleteren.jazygit.state.Cmd.Checkout;
@@ -82,7 +83,7 @@ public final class Update {
                     Next.of(updateBranchLog(model, branch, log -> log.reload(commits)));
             case FilesSelected(List<FileEntry> files) -> filesSelected(model, files);
             // A diff that arrives after another node was highlighted is dropped.
-            case FileDiffLoaded(List<FileEntry> files, String diff) ->
+            case FileDiffLoaded(List<FileEntry> files, Diffs diff) ->
                     Next.of(updateFileDiff(finished(model, new LoadFileDiff(files)), files, d -> d.reload(diff)));
             case LoadFailed(Cmd.Load cmd, String message) -> Next.of(failed(finished(model, cmd), cmd, message));
             case CheckoutRequested(String branch) -> checkoutRequested(model, branch);

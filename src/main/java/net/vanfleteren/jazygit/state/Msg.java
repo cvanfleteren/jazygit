@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.state;
 
 import net.vanfleteren.jazygit.model.Branch;
 import net.vanfleteren.jazygit.model.Commit;
+import net.vanfleteren.jazygit.model.Diffs;
 import net.vanfleteren.jazygit.model.FileEntry;
 import net.vanfleteren.jazygit.model.RepoStatus;
 
@@ -46,7 +47,7 @@ public sealed interface Msg {
         }
     }
 
-    record FileDiffLoaded(List<FileEntry> files, String diff) implements Msg {
+    record FileDiffLoaded(List<FileEntry> files, Diffs diff) implements Msg {
 
         public FileDiffLoaded {
             files = List.copyOf(files);

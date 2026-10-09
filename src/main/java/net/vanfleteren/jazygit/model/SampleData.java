@@ -102,8 +102,13 @@ public final class SampleData implements GitInfoProvider {
     }
 
     @Override
-    public String diff(List<FileEntry> files) {
+    public Diffs diff(List<FileEntry> files) {
+        return new Diffs(sample(files, FileEntry::staged), sample(files, FileEntry::unstaged));
+    }
+
+    private static String sample(List<FileEntry> files, java.util.function.Predicate<FileEntry> filter) {
         return files.stream()
+                .filter(filter)
                 .map(f -> "diff --git a/" + f.path() + " b/" + f.path() + "\n@@ -1 +1 @@\n-old\n+new\n")
                 .collect(java.util.stream.Collectors.joining());
     }

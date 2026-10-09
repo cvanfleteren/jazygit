@@ -29,6 +29,15 @@ public final class TestModels {
     }
 
     /**
+     * The model after all of the provider's data, and the diff of {@code files}, has been loaded.
+     */
+    public static Model withFilesSelected(GitInfoProvider provider, java.util.List<net.vanfleteren.jazygit.model.FileEntry> files) {
+        Program program = Program.start(provider, Runnable::run, Runnable::run);
+        program.dispatch(new Msg.FilesSelected(files));
+        return program.model();
+    }
+
+    /**
      * The model before anything has been loaded.
      */
     public static Model loading(String repositoryName) {

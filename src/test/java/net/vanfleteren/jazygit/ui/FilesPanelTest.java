@@ -71,7 +71,7 @@ class FilesPanelTest {
         }
 
         @Override
-        public String diff(List<FileEntry> files) {
+        public net.vanfleteren.jazygit.model.Diffs diff(List<FileEntry> files) {
             throw new UnsupportedOperationException();
         }
     }

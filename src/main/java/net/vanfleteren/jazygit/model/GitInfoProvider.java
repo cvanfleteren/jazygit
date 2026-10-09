@@ -58,9 +58,9 @@ public interface GitInfoProvider {
     void unstage(List<String> paths);
 
     /**
-     * The diff of {@code files} against HEAD, staged and unstaged changes together, as unified diff text.
+     * The staged and the unstaged diff of {@code files}.
      *
      * @throws IllegalStateException if git fails, with git's explanation as message
      */
-    String diff(List<FileEntry> files);
+    Diffs diff(List<FileEntry> files);
 }

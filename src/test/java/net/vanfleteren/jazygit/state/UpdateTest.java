@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state;
 import net.vanfleteren.jazygit.model.Branch;
 import net.vanfleteren.jazygit.model.ChangeType;
 import net.vanfleteren.jazygit.model.Commit;
+import net.vanfleteren.jazygit.model.Diffs;
 import net.vanfleteren.jazygit.model.FileEntry;
 import net.vanfleteren.jazygit.model.RepoStatus;
 import net.vanfleteren.jazygit.state.Cmd.Checkout;
@@ -304,22 +305,22 @@ class UpdateTest {
         Model model = Update.update(loaded(), new Msg.FilesSelected(DIRTY.files())).model();
         List<FileEntry> other = List.of(new FileEntry("b.txt", ChangeType.UNTRACKED));
 
-        assertEquals(model.fileDiff(), Update.update(model, new Msg.FileDiffLoaded(other, "x")).model().fileDiff());
-        assertEquals(Optional.of(new FileDiff(DIRTY.files(), new Loaded<>("+a"))),
-                Update.update(model, new Msg.FileDiffLoaded(DIRTY.files(), "+a")).model().fileDiff());
+        assertEquals(model.fileDiff(), Update.update(model, new Msg.FileDiffLoaded(other, new Diffs("", "x"))).model().fileDiff());
+        assertEquals(Optional.of(new FileDiff(DIRTY.files(), new Loaded<>(new Diffs("", "+a")))),
+                Update.update(model, new Msg.FileDiffLoaded(DIRTY.files(), new Diffs("", "+a"))).model().fileDiff());
     }
 
     @Test
     void ticksReloadTheDiffAndKeepTheOldOneVisibleWhileLoading() {
         Model model = Update.update(loaded(), new Msg.FilesSelected(DIRTY.files())).model();
-        model = Update.update(model, new Msg.FileDiffLoaded(DIRTY.files(), "+a")).model();
+        model = Update.update(model, new Msg.FileDiffLoaded(DIRTY.files(), new Diffs("", "+a"))).model();
 
         Next tick = Update.update(model, new Tick());
         assertEquals(true, tick.cmds().contains(new Cmd.LoadFileDiff(DIRTY.files())));
 
         List<FileEntry> next = List.of(new FileEntry("b.txt", ChangeType.UNTRACKED));
         FileDiff loading = Update.update(model, new Msg.FilesSelected(next)).model().fileDiff().orElseThrow();
-        assertEquals(Optional.of(new FileDiff(DIRTY.files(), new Loaded<>("+a"))), loading.previous());
+        assertEquals(Optional.of(new FileDiff(DIRTY.files(), new Loaded<>(new Diffs("", "+a")))), loading.previous());
     }
 
     @Test

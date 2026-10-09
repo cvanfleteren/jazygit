@@ -1,8 +1,10 @@
 package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
-import dev.tamboui.toolkit.elements.Panel;
+import dev.tamboui.toolkit.element.StyledElement;
+import net.vanfleteren.jazygit.model.ChangeType;
 import net.vanfleteren.jazygit.model.Commit;
+import net.vanfleteren.jazygit.model.FileEntry;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -29,7 +31,7 @@ class ContentPanelTest {
 
     @Test
     void filesFocusedRendersFileStatusView() {
-        Panel panel = ContentPanel.render(model, FilesPanel.ID, 0);
+        StyledElement<?> panel = ContentPanel.render(model, FilesPanel.ID, 0);
         assertNotNull(panel);
     }
 
@@ -65,13 +67,13 @@ class ContentPanelTest {
 
     @Test
     void commitsFocusedRendersCommitDiffView() {
-        Panel panel = ContentPanel.render(model, CommitsPanel.ID, 2);
+        StyledElement<?> panel = ContentPanel.render(model, CommitsPanel.ID, 2);
         assertNotNull(panel);
     }
 
     @Test
     void unknownFocusFallsBackToFileStatusView() {
-        Panel panel = ContentPanel.render(model, "unknown", 0);
+        StyledElement<?> panel = ContentPanel.render(model, "unknown", 0);
         assertNotNull(panel);
     }
 
@@ -116,5 +118,22 @@ class ContentPanelTest {
                 "commit a1b2c3d", "Ada <ada@example.com>", "2026-10-09 12:30:00", "", "Second", "",
                 "commit b2c3d4e", "Ada <ada@example.com>", "2026-10-08 12:30:00", "", "First", ""),
                 ContentPanel.logLines(commits, ZoneOffset.UTC));
+    }
+
+    @Test
+    void filesFocusedShowsStagedAndUnstagedChangesInSeparatePanels() throws Exception {
+        SampleData data = new SampleData();
+        Model selected = TestModels.withFilesSelected(data, List.of(
+                new FileEntry("a.txt", ChangeType.MODIFIED, true, false),
+                new FileEntry("b.txt", ChangeType.MODIFIED, false, true)));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> ContentPanel.render(selected, FilesPanel.ID, 0))) {
+            String screen = RenderedText.of(testRunner, () -> ContentPanel.render(selected, FilesPanel.ID, 0));
+            assertTrue(screen.contains("Staged changes"), screen);
+            assertTrue(screen.contains("Unstaged changes"), screen);
+            assertTrue(screen.indexOf("Staged changes") < screen.indexOf("Unstaged changes"), screen);
+
+            testRunner.pilot().quit();
+        }
     }
 }

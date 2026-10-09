@@ -166,13 +166,15 @@ class JGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "unstaged\n");
         Files.writeString(repo.resolve("new.txt"), "brand new\n");
 
-        String diff = provider.diff(provider.status().files());
+        Diffs diffs = provider.diff(provider.status().files());
 
-        assertTrue(diff.contains("-hello"), diff);
-        assertTrue(diff.contains("+unstaged"), diff);
-        assertTrue(diff.contains("+brand new"), diff);
-        assertTrue(diff.contains("new.txt"), diff);
-        assertEquals("", provider.diff(List.of()));
+        assertTrue(diffs.staged().contains("-hello"), diffs.toString());
+        assertTrue(diffs.staged().contains("+staged"), diffs.toString());
+        assertTrue(!diffs.staged().contains("unstaged"), diffs.toString());
+        assertTrue(diffs.unstaged().contains("-staged"), diffs.toString());
+        assertTrue(diffs.unstaged().contains("+unstaged"), diffs.toString());
+        assertTrue(diffs.unstaged().contains("+brand new"), diffs.toString());
+        assertEquals(new Diffs("", ""), provider.diff(List.of()));
     }
 
     @Test
@@ -180,10 +182,11 @@ class JGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "changed\n");
         Files.writeString(repo.resolve("new.txt"), "new\n");
 
-        String diff = provider.diff(List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)));
+        Diffs diffs = provider.diff(List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)));
 
-        assertTrue(diff.contains("+new"), diff);
-        assertTrue(!diff.contains("README.md"), diff);
+        assertEquals("", diffs.staged());
+        assertTrue(diffs.unstaged().contains("+new"), diffs.unstaged());
+        assertTrue(!diffs.unstaged().contains("README.md"), diffs.unstaged());
     }
 
     @Test

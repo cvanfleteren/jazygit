@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -24,22 +25,34 @@ public final class GitCliDiff {
     }
 
     /**
-     * The diff of the files against HEAD, staged and unstaged changes together. Untracked files are
-     * shown as entirely added. Long diffs are cut off.
+     * The staged changes of the files (index against HEAD), and their unstaged changes (working tree
+     * against the index). Untracked files are shown as entirely added. Long diffs are cut off.
      */
-    public static String diff(Path workTree, List<FileEntry> files) {
-        List<String> tracked = files.stream()
-                .filter(f -> f.type() != ChangeType.UNTRACKED)
-                .map(FileEntry::path)
-                .toList();
-        Stream<String> trackedDiff = tracked.isEmpty()
-                ? Stream.empty()
-                : Stream.of(run(workTree, List.of("diff", "HEAD", "--no-color", "--no-ext-diff", "--"), tracked));
-        Stream<String> untrackedDiffs = files.stream()
+    public static Diffs diff(Path workTree, List<FileEntry> files) {
+        List<String> staged = paths(files, f -> f.staged() && f.type() != ChangeType.UNTRACKED);
+        List<String> unstaged = paths(files, f -> f.unstaged() && f.type() != ChangeType.UNTRACKED);
+        Stream<String> untracked = files.stream()
                 .filter(f -> f.type() == ChangeType.UNTRACKED)
-                .map(f -> run(workTree, List.of("diff", "--no-index", "--no-color", "--no-ext-diff", "--", "/dev/null"),
-                        List.of(f.path())));
-        return truncated(Stream.concat(trackedDiff, untrackedDiffs).collect(Collectors.joining()));
+                .map(f -> run(workTree, List.of("diff", "--no-index", "--no-color", "--no-ext-diff", "--",
+                        "/dev/null"), List.of(f.path())));
+        return new Diffs(
+                truncated(tracked(workTree, "--cached", staged)),
+                truncated(Stream.concat(Stream.of(tracked(workTree, "--", unstaged)), untracked)
+                        .collect(Collectors.joining())));
+    }
+
+    private static List<String> paths(List<FileEntry> files, Predicate<FileEntry> filter) {
+        return files.stream().filter(filter).map(FileEntry::path).toList();
+    }
+
+    private static String tracked(Path workTree, String mode, List<String> paths) {
+        if (paths.isEmpty()) {
+            return "";
+        }
+        List<String> subcommand = mode.equals("--")
+                ? List.of("diff", "--no-color", "--no-ext-diff", "--")
+                : List.of("diff", "--cached", "--no-color", "--no-ext-diff", "--");
+        return run(workTree, subcommand, paths);
     }
 
     static String truncated(String diff) {
