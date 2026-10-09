@@ -1,0 +1,6 @@
+# Default: normalize to LF internally
+* text=auto eol=lf
+
+# Force CRLF for specific files if needed
+*.bat text eol=crlf
+*.cmd text eol=crlf
