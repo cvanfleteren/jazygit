@@ -42,6 +42,9 @@ public sealed interface Cmd {
     record CreateBranch(String name, String base) implements Cmd {
     }
 
+    record DeleteBranch(String branch, DeleteScope scope) implements Cmd {
+    }
+
     record Stage(List<String> paths) implements Cmd {
 
         public Stage {

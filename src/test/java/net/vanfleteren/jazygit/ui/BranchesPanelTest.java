@@ -41,6 +41,19 @@ class BranchesPanelTest {
     }
 
     @Test
+    void ageIsShownInTheLargestFittingUnit() {
+        assertEquals("45s", BranchesPanel.age(java.time.Duration.ofSeconds(45)));
+        assertEquals("2m", BranchesPanel.age(java.time.Duration.ofSeconds(150)));
+        assertEquals("5m", BranchesPanel.age(java.time.Duration.ofMinutes(5)));
+        assertEquals("3h", BranchesPanel.age(java.time.Duration.ofHours(3)));
+        assertEquals("3h", BranchesPanel.age(java.time.Duration.ofMinutes(181)));
+        assertEquals("3h", BranchesPanel.age(java.time.Duration.ofMinutes(210)));
+        assertEquals("3h", BranchesPanel.age(java.time.Duration.ofMinutes(239)));
+        assertEquals("4h", BranchesPanel.age(java.time.Duration.ofMinutes(240)));
+        assertEquals("2d", BranchesPanel.age(java.time.Duration.ofDays(2)));
+    }
+
+    @Test
     void nAsksForANewBranchStartingAtTheHighlightedBranch() throws Exception {
         List<Msg> dispatched = new java.util.ArrayList<>();
         BranchesPanel panel = new BranchesPanel(dispatched::add);

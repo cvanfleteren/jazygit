@@ -22,6 +22,7 @@ import java.util.Set;
  *                       not queue them again
  * @param error          why the last operation failed, until the next one is started
  * @param newBranchBase  the branch a new branch is being created from, while its name is asked
+ * @param deleteTarget   the branch being deleted, while the user chooses where to delete it
  */
 public record Model(String repositoryName,
                     Loadable<RepoStatus> status,
@@ -31,7 +32,8 @@ public record Model(String repositoryName,
                     Optional<FileDiff> fileDiff,
                     Set<Cmd.Load> refreshing,
                     Optional<String> error,
-                    Optional<String> newBranchBase) {
+                    Optional<String> newBranchBase,
+                    Optional<String> deleteTarget) {
 
     public Model {
         refreshing = Set.copyOf(refreshing);
@@ -40,38 +42,42 @@ public record Model(String repositoryName,
     public static Model initial(String repositoryName) {
         return new Model(repositoryName, Loadable.loading(), Loadable.loading(), Loadable.loading(), Optional.empty(),
                 Optional.empty(), Set.of(),
-                Optional.empty(), Optional.empty());
+                Optional.empty(), Optional.empty(), Optional.empty());
     }
 
     Model withStatus(Loadable<RepoStatus> status) {
-        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase);
+        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase, deleteTarget);
     }
 
     Model withBranches(Loadable<List<Branch>> branches) {
-        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase);
+        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase, deleteTarget);
     }
 
     Model withCommits(Loadable<List<Commit>> commits) {
-        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase);
+        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase, deleteTarget);
     }
 
     Model withBranchLog(Optional<BranchLog> branchLog) {
-        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase);
+        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase, deleteTarget);
     }
 
     Model withFileDiff(Optional<FileDiff> fileDiff) {
-        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase);
+        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase, deleteTarget);
     }
 
     Model withRefreshing(Set<Cmd.Load> refreshing) {
-        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase);
+        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase, deleteTarget);
     }
 
     Model withError(Optional<String> error) {
-        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase);
+        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase, deleteTarget);
     }
 
     Model withNewBranchBase(Optional<String> newBranchBase) {
-        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase);
+        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase, deleteTarget);
+    }
+
+    Model withDeleteTarget(Optional<String> deleteTarget) {
+        return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase, deleteTarget);
     }
 }

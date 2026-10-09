@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.model.FileEntry;
 import net.vanfleteren.jazygit.model.RepoStatus;
 import net.vanfleteren.jazygit.state.Cmd.Checkout;
 import net.vanfleteren.jazygit.state.Cmd.CreateBranch;
+import net.vanfleteren.jazygit.state.Cmd.DeleteBranch;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
@@ -17,6 +18,11 @@ import net.vanfleteren.jazygit.state.Cmd.Unstage;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Msg.BranchCreateFailed;
+import net.vanfleteren.jazygit.state.Msg.BranchDeleteFailed;
+import net.vanfleteren.jazygit.state.Msg.BranchDeleted;
+import net.vanfleteren.jazygit.state.Msg.DeleteBranchCancelled;
+import net.vanfleteren.jazygit.state.Msg.DeleteBranchChosen;
+import net.vanfleteren.jazygit.state.Msg.DeleteBranchRequested;
 import net.vanfleteren.jazygit.state.Msg.BranchCreated;
 import net.vanfleteren.jazygit.state.Msg.BranchLogLoaded;
 import net.vanfleteren.jazygit.state.Msg.BranchSelected;
@@ -105,6 +111,12 @@ public final class Update {
             case BranchCreated(String name) -> refresh(model.withError(Optional.empty()));
             case BranchCreateFailed(String name, String message) ->
                     Next.of(model.withError(Optional.of("Creating branch " + name + " failed: " + message)));
+            case DeleteBranchRequested(String branch) -> deleteRequested(model, branch);
+            case DeleteBranchCancelled() -> Next.of(model.withDeleteTarget(Optional.empty()));
+            case DeleteBranchChosen(DeleteScope scope) -> deleteChosen(model, scope);
+            case BranchDeleted(String branch) -> refresh(model.withError(Optional.empty()));
+            case BranchDeleteFailed(String branch, String message) ->
+                    refresh(model.withError(Optional.of("Deleting branch " + branch + " failed: " + message)));
             case ToggleStageRequested(List<FileEntry> files) -> toggleStage(model, files);
             case StageToggled() -> refresh(model.withError(Optional.empty()));
             case StageToggleFailed(String message) ->
@@ -199,6 +211,22 @@ public final class Update {
         boolean known = model.branches() instanceof Loaded<List<Branch>>(List<Branch> branches)
                 && branches.stream().anyMatch(b -> b.name().equals(branch) && !b.current());
         return known ? Next.of(model.withError(Optional.empty()), new Checkout(branch)) : Next.of(model);
+    }
+
+    /**
+     * Only a known branch that is not checked out can be deleted.
+     */
+    private static Next deleteRequested(Model model, String branch) {
+        boolean deletable = model.branches() instanceof Loaded<List<Branch>>(List<Branch> branches)
+                && branches.stream().anyMatch(b -> b.name().equals(branch) && !b.current());
+        return deletable ? Next.of(model.withDeleteTarget(Optional.of(branch))) : Next.of(model);
+    }
+
+    private static Next deleteChosen(Model model, DeleteScope scope) {
+        return model.deleteTarget()
+                .map(branch -> Next.of(model.withDeleteTarget(Optional.empty()).withError(Optional.empty()),
+                        new DeleteBranch(branch, scope)))
+                .orElseGet(() -> Next.of(model));
     }
 
     private static Next newBranchConfirmed(Model model, String name) {

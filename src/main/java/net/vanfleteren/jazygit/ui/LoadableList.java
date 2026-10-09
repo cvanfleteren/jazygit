@@ -21,6 +21,7 @@ final class LoadableList<T> {
     private final Function<T, List<String>> items;
     private final Reselect<T> reselect;
     private Loadable<T> shown;
+    private List<String> shownRows = List.of();
     private int count;
 
     /**
@@ -50,10 +51,10 @@ final class LoadableList<T> {
     }
 
     Panel render(Loadable<T> value, boolean focused) {
+        List<String> rows = Placeholders.items(value, items);
         if (value != shown) {
             Loadable<T> previous = shown;
             shown = value;
-            List<String> rows = Placeholders.items(value, items);
             list.items(rows);
             if (previous instanceof Loadable.Loaded<T>(T before) && value instanceof Loadable.Loaded<T>(T after)) {
                 list.selected(reselect.apply(before, after, selectedIndex()));
@@ -62,7 +63,11 @@ final class LoadableList<T> {
                 list.selected(Math.max(0, rows.size() - 1));
             }
             count = value instanceof Loadable.Loaded<T> ? rows.size() : 0;
+        } else if (!rows.equals(shownRows)) {
+            // The rows can depend on more than the value, e.g. on the time.
+            list.items(rows);
         }
+        shownRows = rows;
         return Pane.bordered(title, list, focused, selectedIndex(), count);
     }
 
@@ -78,6 +83,13 @@ final class LoadableList<T> {
      */
     Loadable<T> shown() {
         return shown;
+    }
+
+    /**
+     * Sets the text drawn before the highlighted row. The default one indents every row.
+     */
+    void highlightSymbol(String symbol) {
+        list.highlightSymbol(symbol);
     }
 
     /**

@@ -44,6 +44,14 @@ public interface GitInfoProvider {
     void createBranch(String name, String startPoint);
 
     /**
+     * Deletes the branch {@code name}, locally and/or on its remote. With both, the remote one goes
+     * first, so a failure leaves the local branch in place.
+     *
+     * @throws IllegalStateException if git fails, with git's explanation as message
+     */
+    void deleteBranch(String name, boolean local, boolean remote);
+
+    /**
      * Stages the changes of {@code paths}.
      *
      * @throws IllegalStateException if git fails, with git's explanation as message

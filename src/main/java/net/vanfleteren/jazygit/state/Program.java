@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state;
 import net.vanfleteren.jazygit.model.GitInfoProvider;
 import net.vanfleteren.jazygit.state.Cmd.Checkout;
 import net.vanfleteren.jazygit.state.Cmd.CreateBranch;
+import net.vanfleteren.jazygit.state.Cmd.DeleteBranch;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
@@ -11,6 +12,8 @@ import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.Cmd.Stage;
 import net.vanfleteren.jazygit.state.Cmd.Unstage;
 import net.vanfleteren.jazygit.state.Msg.BranchCreateFailed;
+import net.vanfleteren.jazygit.state.Msg.BranchDeleteFailed;
+import net.vanfleteren.jazygit.state.Msg.BranchDeleted;
 import net.vanfleteren.jazygit.state.Msg.BranchCreated;
 import net.vanfleteren.jazygit.state.Msg.BranchLogLoaded;
 import net.vanfleteren.jazygit.state.Msg.BranchesLoaded;
@@ -94,6 +97,10 @@ public final class Program {
                     provider.createBranch(name, base);
                     yield new BranchCreated(name);
                 }
+                case DeleteBranch(String branch, DeleteScope scope) -> {
+                    provider.deleteBranch(branch, scope != DeleteScope.REMOTE, scope != DeleteScope.LOCAL);
+                    yield new BranchDeleted(branch);
+                }
                 case Stage(List<String> paths) -> {
                     provider.stage(paths);
                     yield new StageToggled();
@@ -114,6 +121,7 @@ public final class Program {
             case Cmd.Load load -> new LoadFailed(load, message);
             case Checkout(String branch) -> new CheckoutFailed(branch, message);
             case CreateBranch(String name, String base) -> new BranchCreateFailed(name, message);
+            case DeleteBranch(String branch, DeleteScope scope) -> new BranchDeleteFailed(branch, message);
             case Stage stage -> new StageToggleFailed(message);
             case Unstage unstage -> new StageToggleFailed(message);
         };

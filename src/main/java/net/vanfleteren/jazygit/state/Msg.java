@@ -91,6 +91,24 @@ public sealed interface Msg {
     }
 
     /**
+     * The user asked to delete a branch; where is still to be chosen.
+     */
+    record DeleteBranchRequested(String branch) implements Msg {
+    }
+
+    record DeleteBranchCancelled() implements Msg {
+    }
+
+    record DeleteBranchChosen(DeleteScope scope) implements Msg {
+    }
+
+    record BranchDeleted(String branch) implements Msg {
+    }
+
+    record BranchDeleteFailed(String branch, String message) implements Msg {
+    }
+
+    /**
      * The user asked to stage the given files, or to unstage them if they are all staged already.
      */
     record ToggleStageRequested(List<FileEntry> files) implements Msg {

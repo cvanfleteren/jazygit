@@ -42,7 +42,7 @@ public final class GitCliCheckout {
         run(workTree, "git", "checkout", "--quiet", "-b", name, startPoint, "--");
     }
 
-    private static void run(Path workTree, String... command) {
+    static String run(Path workTree, String... command) {
         try {
             ProcessResult result = new ProcessExecutor()
                     // A trailing "--" keeps git from treating branch names as paths.
@@ -56,13 +56,14 @@ public final class GitCliCheckout {
             if (result.getExitValue() != 0) {
                 throw new IllegalStateException(explanation(result.outputUTF8(), result.getExitValue()));
             }
+            return result.outputUTF8().strip();
         } catch (IOException e) {
             throw new IllegalStateException("Could not run git; is it installed and on the PATH?", e);
         } catch (TimeoutException e) {
-            throw new IllegalStateException("git checkout timed out in " + workTree, e);
+            throw new IllegalStateException("git timed out in " + workTree, e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted while running git checkout", e);
+            throw new IllegalStateException("Interrupted while running git", e);
         }
     }
 
@@ -72,6 +73,6 @@ public final class GitCliCheckout {
      */
     static String explanation(String output, int exitValue) {
         List<String> lines = output.lines().map(String::strip).filter(line -> !line.isEmpty()).toList();
-        return lines.isEmpty() ? "git checkout exited with code " + exitValue : lines.getFirst();
+        return lines.isEmpty() ? "git exited with code " + exitValue : lines.getFirst();
     }
 }

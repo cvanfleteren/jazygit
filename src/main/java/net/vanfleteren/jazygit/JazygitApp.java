@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Program;
 import net.vanfleteren.jazygit.ui.BranchesPanel;
 import net.vanfleteren.jazygit.ui.CommitsPanel;
+import net.vanfleteren.jazygit.ui.DeleteBranchDialog;
 import net.vanfleteren.jazygit.ui.ContentPanel;
 import net.vanfleteren.jazygit.ui.FilesPanel;
 import net.vanfleteren.jazygit.ui.NewBranchDialog;
@@ -42,6 +43,7 @@ public class JazygitApp extends ToolkitApp {
     // Key handlers run on the render thread, where the program may be used.
     private final BranchesPanel branchesPanel = new BranchesPanel(msg -> this.program.dispatch(msg));
     private final NewBranchDialog newBranchDialog = new NewBranchDialog(msg -> this.program.dispatch(msg));
+    private final DeleteBranchDialog deleteBranchDialog = new DeleteBranchDialog(msg -> this.program.dispatch(msg));
     private final CommitsPanel commitsPanel = new CommitsPanel();
     private ExecutorService io;
     private Program program;
@@ -100,11 +102,15 @@ public class JazygitApp extends ToolkitApp {
                         .percent(30),
                 ContentPanel.render(program.model(), focusedId, commitsPanel.selectedIndex())
                         .fill());
-        Optional<Element> dialog = newBranchDialog.render(model);
-        // The popup takes the focus while it is open and gives it back to the branches pane.
-        if (dialog.isPresent() && !NewBranchDialog.ID.equals(focusedId)) {
-            runner().focusManager().setFocus(NewBranchDialog.ID);
-        } else if (dialog.isEmpty() && NewBranchDialog.ID.equals(focusedId)) {
+        Optional<Element> newBranch = newBranchDialog.render(model);
+        Optional<Element> delete = deleteBranchDialog.render(model);
+        Optional<Element> dialog = newBranch.isPresent() ? newBranch : delete;
+        String dialogId = newBranch.isPresent() ? NewBranchDialog.ID : DeleteBranchDialog.ID;
+        // A popup takes the focus while it is open and gives it back to the branches pane.
+        if (dialog.isPresent() && !dialogId.equals(focusedId)) {
+            runner().focusManager().setFocus(dialogId);
+        } else if (dialog.isEmpty()
+                && (NewBranchDialog.ID.equals(focusedId) || DeleteBranchDialog.ID.equals(focusedId))) {
             runner().focusManager().setFocus(BranchesPanel.ID);
         }
         return dialog.<Element>map(d -> stack(layout, d)).orElse(layout);

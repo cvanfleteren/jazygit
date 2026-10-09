@@ -77,17 +77,17 @@ class JGitInfoProviderTest {
     @Test
     void branchesFollowExternalChanges() throws Exception {
         String head = provider.status().headOid();
-        assertEquals(List.of(new Branch("main", true, head)), provider.branches());
+        assertEquals(List.of(new Branch("main", true, head)), withoutTimes(provider.branches()));
 
         git("branch", "foo");
-        assertEquals(List.of(new Branch("main", true, head), new Branch("foo", false, head)), provider.branches());
+        assertEquals(List.of(new Branch("main", true, head), new Branch("foo", false, head)), withoutTimes(provider.branches()));
 
         git("checkout", "-q", "foo");
-        assertEquals(List.of(new Branch("foo", true, head), new Branch("main", false, head)), provider.branches());
+        assertEquals(List.of(new Branch("foo", true, head), new Branch("main", false, head)), withoutTimes(provider.branches()));
 
         git("commit", "-q", "--allow-empty", "-m", "Move foo");
         String moved = provider.status().headOid();
-        assertEquals(List.of(new Branch("foo", true, moved), new Branch("main", false, head)), provider.branches());
+        assertEquals(List.of(new Branch("foo", true, moved), new Branch("main", false, head)), withoutTimes(provider.branches()));
     }
 
     @Test
@@ -177,6 +177,15 @@ class JGitInfoProviderTest {
         assertEquals("main", provider.status().branchLabel());
     }
 
+    private static List<Branch> withoutTimes(List<Branch> branches) {
+        return branches.stream().map(b -> new Branch(b.name(), b.current(), b.tipOid())).toList();
+    }
+
+    @Test
+    void branchesCarryTheTimeOfTheirLastCommit() {
+        assertEquals(provider.commits().get(0).authorTime().getEpochSecond(), provider.branches().get(0).tipTime().getEpochSecond());
+    }
+
     @Test
     void createBranchStartsAtTheGivenBranchAndSwitchesToIt() throws Exception {
         git("checkout", "-q", "-b", "other");
@@ -189,6 +198,20 @@ class JGitInfoProviderTest {
 
         assertEquals("topic", provider.status().branchLabel());
         assertTrue(Files.exists(repo.resolve("other.txt")));
+    }
+
+    @Test
+    void deleteBranchRemovesTheLocalBranch() throws Exception {
+        git("branch", "topic");
+
+        provider.deleteBranch("topic", true, false);
+
+        assertEquals(List.of("main"), provider.branches().stream().map(Branch::name).toList());
+    }
+
+    @Test
+    void deleteBranchFailsForTheCheckedOutBranch() {
+        assertThrows(IllegalStateException.class, () -> provider.deleteBranch("main", true, false));
     }
 
     @Test

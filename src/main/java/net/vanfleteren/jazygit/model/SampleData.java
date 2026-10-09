@@ -94,6 +94,10 @@ public final class SampleData implements GitInfoProvider {
     }
 
     @Override
+    public void deleteBranch(String name, boolean local, boolean remote) {
+    }
+
+    @Override
     public void stage(List<String> paths) {
     }
 

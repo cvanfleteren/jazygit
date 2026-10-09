@@ -31,6 +31,7 @@ class ProgramTest {
         RuntimeException statusError;
         RuntimeException checkoutError;
         RuntimeException indexError;
+        final List<String> deleted = new ArrayList<>();
         final List<String> indexCalls = new ArrayList<>();
         int commitLoads;
         final List<String> logLoads = new ArrayList<>();
@@ -76,6 +77,11 @@ class ProgramTest {
                 throw checkoutError;
             }
             status = new RepoStatus(branch, branch + "-head", List.of());
+        }
+
+        @Override
+        public void deleteBranch(String name, boolean local, boolean remote) {
+            deleted.add(name + (local ? " local" : "") + (remote ? " remote" : ""));
         }
 
         @Override
@@ -204,6 +210,19 @@ class ProgramTest {
         settle();
 
         assertEquals(Optional.of("Creating branch topic failed: fatal: exists"), program.model().error());
+    }
+
+    @Test
+    void deletingABranchCallsTheProviderWithTheChosenScope() {
+        settle();
+
+        program.dispatch(new Msg.DeleteBranchRequested("other"));
+        program.dispatch(new Msg.DeleteBranchChosen(DeleteScope.BOTH));
+        settle();
+
+        assertEquals(List.of("other local remote"), provider.deleted);
+        assertEquals(Optional.empty(), program.model().deleteTarget());
+        assertEquals(Optional.empty(), program.model().error());
     }
 
     @Test

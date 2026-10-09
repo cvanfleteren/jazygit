@@ -9,6 +9,8 @@ import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -16,17 +18,24 @@ import java.util.stream.IntStream;
 
 /**
  * Left-side panel listing the local branches, with the current branch marked. Space checks out
- * the highlighted branch, n asks for the name of a new branch starting at it.
+ * the highlighted branch, d asks where to delete it, n asks for the name of a new branch starting at it.
  */
 public class BranchesPanel {
 
     public static final String ID = "branches";
 
-    private final LoadableList<List<Branch>> list = new LoadableList<>("Branches", ID,
-            branches -> branches.stream()
-                    .map(b -> (b.current() ? "* " : "  ") + b.name())
-                    .toList(),
-            BranchesPanel::reselect);
+    private final LoadableList<List<Branch>> list;
+
+    /**
+     * The time since the last commit as a number and one unit: s, m, h or d.
+     */
+    static String age(Duration since) {
+        long seconds = Math.max(0, since.toSeconds());
+        return seconds < 60 ? seconds + "s"
+                : seconds < 3600 ? seconds / 60 + "m"
+                : seconds < 86400 ? seconds / 3600 + "h"
+                : seconds / 86400 + "d";
+    }
 
     /**
      * The selection follows its branch when the list is reordered. After a checkout it goes to the new
@@ -52,6 +61,21 @@ public class BranchesPanel {
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public BranchesPanel(Consumer<Msg> dispatch) {
+        this(dispatch, Clock.systemUTC());
+    }
+
+    /**
+     * @param clock tells how long ago the branches were last committed to
+     */
+    public BranchesPanel(Consumer<Msg> dispatch, Clock clock) {
+        list = new LoadableList<>("Branches", ID,
+                branches -> branches.stream()
+                        .map(b -> "%4s ".formatted(age(Duration.between(b.tipTime(), clock.instant())))
+                                + (b.current() ? "* " : "  ") + b.name())
+                        .toList(),
+                BranchesPanel::reselect);
+        // The highlight alone marks the selection; a symbol would indent the rows.
+        list.highlightSymbol("");
         list.onKeyEvent(event -> handleKey(event, dispatch));
     }
 
@@ -100,6 +124,7 @@ public class BranchesPanel {
 
     private static Optional<Msg> request(KeyEvent event, String branch) {
         return event.isChar(' ') ? Optional.of(new Msg.CheckoutRequested(branch))
+                : event.isChar('d') ? Optional.of(new Msg.DeleteBranchRequested(branch))
                 : event.isChar('n') ? Optional.of(new Msg.NewBranchRequested(branch))
                 : Optional.empty();
     }

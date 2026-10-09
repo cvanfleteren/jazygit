@@ -193,6 +193,43 @@ class UpdateTest {
     }
 
     @Test
+    void deleteRequestOpensThePopupOnlyForAnotherKnownBranch() {
+        Model model = loaded();
+
+        assertEquals(Optional.of("feature"),
+                Update.update(model, new Msg.DeleteBranchRequested("feature")).model().deleteTarget());
+        assertEquals(Optional.empty(), Update.update(model, new Msg.DeleteBranchRequested("main")).model().deleteTarget());
+        assertEquals(Optional.empty(), Update.update(model, new Msg.DeleteBranchRequested("gone")).model().deleteTarget());
+    }
+
+    @Test
+    void choosingAScopeDeletesTheBranchAndClosesThePopup() {
+        Model open = Update.update(loaded(), new Msg.DeleteBranchRequested("feature")).model();
+
+        Next next = Update.update(open, new Msg.DeleteBranchChosen(DeleteScope.REMOTE));
+
+        assertEquals(List.of(new Cmd.DeleteBranch("feature", DeleteScope.REMOTE)), next.cmds());
+        assertEquals(Optional.empty(), next.model().deleteTarget());
+    }
+
+    @Test
+    void cancellingClosesThePopupWithoutDeleting() {
+        Model open = Update.update(loaded(), new Msg.DeleteBranchRequested("feature")).model();
+
+        Next next = Update.update(open, new Msg.DeleteBranchCancelled());
+
+        assertEquals(List.of(), next.cmds());
+        assertEquals(Optional.empty(), next.model().deleteTarget());
+    }
+
+    @Test
+    void failedDeletionIsStored() {
+        Model model = Update.update(loaded(), new Msg.BranchDeleteFailed("feature", "boom")).model();
+
+        assertEquals(Optional.of("Deleting branch feature failed: boom"), model.error());
+    }
+
+    @Test
     void checkedOutReloadsStatusAndBranches() {
         Next next = Update.update(loaded(), new CheckedOut("feature"));
 

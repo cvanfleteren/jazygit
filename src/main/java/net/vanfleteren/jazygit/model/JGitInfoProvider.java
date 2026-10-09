@@ -14,6 +14,7 @@ import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -87,7 +88,8 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
             List<Branch> branches = new ArrayList<>();
             for (Ref ref : git.branchList().call()) {
                 branches.add(new Branch(Repository.shortenRefName(ref.getName()),
-                        ref.getName().equals(fullBranch), ref.getObjectId().name()));
+                        ref.getName().equals(fullBranch), ref.getObjectId().name(),
+                        Instant.ofEpochSecond(modified.get(ref.getObjectId().name()))));
             }
             // The checked out branch first, then the most recently committed to.
             return branches.stream()
@@ -157,6 +159,16 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     @Override
     public void createBranch(String name, String startPoint) {
         GitCliCheckout.createBranch(workTree, name, startPoint);
+    }
+
+    @Override
+    public void deleteBranch(String name, boolean local, boolean remote) {
+        if (remote) {
+            GitCliBranch.deleteRemote(workTree, name);
+        }
+        if (local) {
+            GitCliBranch.deleteLocal(workTree, name);
+        }
     }
 
     @Override

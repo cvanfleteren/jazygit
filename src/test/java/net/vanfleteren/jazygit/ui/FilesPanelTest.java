@@ -56,6 +56,10 @@ class FilesPanelTest {
         }
 
         @Override
+        public void deleteBranch(String name, boolean local, boolean remote) {
+        }
+
+        @Override
         public void createBranch(String name, String startPoint) {
         }
 
