@@ -41,4 +41,11 @@ public final class TestModels {
     public static Model withError(Model model, String error) {
         return model.withError(Optional.of(error));
     }
+
+    /**
+     * {@code model} with the log of {@code branch} still loading, while the log it replaced stays visible.
+     */
+    public static Model switchingBranch(Model model, String branch) {
+        return model.withBranchLog(Optional.of(BranchLog.loading(branch, model.branchLog())));
+    }
 }

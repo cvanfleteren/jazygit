@@ -5,6 +5,7 @@ import static dev.tamboui.toolkit.Toolkit.*;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Panel;
 import net.vanfleteren.jazygit.model.Commit;
+import net.vanfleteren.jazygit.state.BranchLog;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 
@@ -43,9 +44,17 @@ public final class ContentPanel {
 
     private static Panel branchLogView(Model model) {
         return model.branchLog()
+                .map(ContentPanel::shown)
                 .map(log -> whenLoaded("Log: " + log.branch(), log.commits(), commits ->
                         panel("Log: " + log.branch(), rows(logLines(commits, ZoneId.systemDefault()))).rounded()))
                 .orElseGet(() -> panel("Log", text(Placeholders.LOADING).dim()).rounded());
+    }
+
+    /**
+     * While a log is loading, keep showing the previously loaded one rather than flashing a placeholder.
+     */
+    private static BranchLog shown(BranchLog log) {
+        return log.commits() instanceof Loadable.Loading<List<Commit>> ? log.previous().orElse(log) : log;
     }
 
     /**

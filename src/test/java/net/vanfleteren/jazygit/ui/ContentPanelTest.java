@@ -53,6 +53,17 @@ class ContentPanelTest {
     }
 
     @Test
+    void branchesFocusedKeepsShowingThePreviousLogWhileTheNewOneLoads() throws Exception {
+        Model switching = TestModels.switchingBranch(model, "other");
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> ContentPanel.render(switching, BranchesPanel.ID, 0))) {
+            String screen = RenderedText.of(testRunner, () -> ContentPanel.render(switching, BranchesPanel.ID, 0));
+            assertTrue(screen.contains("Log: feature/initial-layout"), screen);
+            assertTrue(screen.contains("commit 0a1b2c3"), screen);
+            assertFalse(screen.contains(Placeholders.LOADING), screen);
+        }
+    }
+
+    @Test
     void commitsFocusedRendersCommitDiffView() {
         Panel panel = ContentPanel.render(model, CommitsPanel.ID, 2);
         assertNotNull(panel);

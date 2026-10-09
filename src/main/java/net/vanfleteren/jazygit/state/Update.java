@@ -128,7 +128,7 @@ public final class Update {
         if (model.branchLog().map(BranchLog::branch).filter(branch::equals).isPresent()) {
             return Next.of(model);
         }
-        return Next.of(model.withBranchLog(Optional.of(new BranchLog(branch, Loadable.loading()))),
+        return Next.of(model.withBranchLog(Optional.of(BranchLog.loading(branch, model.branchLog()))),
                 new LoadBranchLog(branch));
     }
 

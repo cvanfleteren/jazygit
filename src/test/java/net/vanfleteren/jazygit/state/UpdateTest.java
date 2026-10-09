@@ -179,6 +179,23 @@ class UpdateTest {
     }
 
     @Test
+    void switchingBranchesKeepsTheLastLoadedLogUntilTheNewOneArrives() {
+        Model feature = Update.update(
+                Update.update(loaded(), new BranchSelected("feature")).model(),
+                new BranchLogLoaded("feature", FEATURE_COMMITS)).model();
+        BranchLog featureLog = feature.branchLog().orElseThrow();
+
+        Model main = Update.update(feature, new BranchSelected("main")).model();
+        assertEquals(Optional.of(new BranchLog("main", new Loading<>(), Optional.of(featureLog))), main.branchLog());
+
+        Model other = Update.update(main, new BranchSelected("other")).model();
+        assertEquals(Optional.of(featureLog), other.branchLog().orElseThrow().previous());
+
+        Model done = Update.update(other, new BranchLogLoaded("other", FEATURE_COMMITS)).model();
+        assertEquals(Optional.empty(), done.branchLog().orElseThrow().previous());
+    }
+
+    @Test
     void loadedLogIsShownForTheSelectedBranch() {
         Model model = Update.update(loaded(), new BranchSelected("feature")).model();
 
