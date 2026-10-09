@@ -4,13 +4,15 @@ import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Panel;
-import net.vanfleteren.jazygit.model.Branch;
 import net.vanfleteren.jazygit.model.Commit;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 /**
  * The right-hand content panel: it always mirrors whichever left pane currently has focus,
@@ -21,9 +23,11 @@ public final class ContentPanel {
     private ContentPanel() {
     }
 
-    public static Panel render(Model model, String focusedId, int branchesSelection, int commitsSelection) {
+    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    public static Panel render(Model model, String focusedId, int commitsSelection) {
         if (BranchesPanel.ID.equals(focusedId)) {
-            return branchLogView(model, branchesSelection);
+            return branchLogView(model);
         }
         if (CommitsPanel.ID.equals(focusedId)) {
             return commitDiffView(model, commitsSelection);
@@ -37,17 +41,27 @@ public final class ContentPanel {
                 .toList())).rounded());
     }
 
-    private static Panel branchLogView(Model model, int branchesSelection) {
-        return whenLoaded("Log", model.branches(), branches -> {
-            if (branches.isEmpty()) {
-                return panel("Log", text("No branches")).rounded();
-            }
-            Branch branch = branches.get(clamp(branchesSelection, branches.size()));
-            return whenLoaded("Log: " + branch.name(), model.commits(), commits ->
-                    panel("Log: " + branch.name(), rows(commits.stream()
-                            .map(c -> c.shortSha() + "  " + c.date() + "  " + c.message())
-                            .toList())).rounded());
-        });
+    private static Panel branchLogView(Model model) {
+        return model.branchLog()
+                .map(log -> whenLoaded("Log: " + log.branch(), log.commits(), commits ->
+                        panel("Log: " + log.branch(), rows(logLines(commits, ZoneId.systemDefault()))).rounded()))
+                .orElseGet(() -> panel("Log", text(Placeholders.LOADING).dim()).rounded());
+    }
+
+    /**
+     * The commits as a {@code git log}-style listing, with dates in {@code zone}.
+     */
+    static List<String> logLines(List<Commit> commits, ZoneId zone) {
+        return commits.stream()
+                .flatMap(c -> Stream.concat(
+                        Stream.of("commit " + c.shortSha(), author(c), DATE_TIME.format(c.authorTime().atZone(zone)),
+                                "", c.message(), ""),
+                        c.body().isBlank() ? Stream.empty() : Stream.concat(c.body().lines(), Stream.of(""))))
+                .toList();
+    }
+
+    private static String author(Commit commit) {
+        return commit.authorName() + " <" + commit.authorEmail() + ">";
     }
 
     private static Panel commitDiffView(Model model, int commitsSelection) {
@@ -58,7 +72,8 @@ public final class ContentPanel {
             Commit commit = commits.get(clamp(commitsSelection, commits.size()));
             return panel("Commit: " + commit.shortSha(),
                     text(commit.message()).bold(),
-                    text(commit.author() + " on " + commit.date()).dim(),
+                    text(author(commit) + " on " + DATE_TIME.format(commit.authorTime().atZone(ZoneId.systemDefault())))
+                            .dim(),
                     spacer(),
                     text(commit.body()))
                     .rounded();

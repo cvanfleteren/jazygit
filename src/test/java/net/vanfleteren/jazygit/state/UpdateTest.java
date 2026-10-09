@@ -5,13 +5,20 @@ import net.vanfleteren.jazygit.model.ChangeType;
 import net.vanfleteren.jazygit.model.Commit;
 import net.vanfleteren.jazygit.model.FileEntry;
 import net.vanfleteren.jazygit.model.RepoStatus;
+import net.vanfleteren.jazygit.state.Cmd.Checkout;
+import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Loadable.Loading;
+import net.vanfleteren.jazygit.state.Msg.BranchLogLoaded;
+import net.vanfleteren.jazygit.state.Msg.BranchSelected;
 import net.vanfleteren.jazygit.state.Msg.BranchesLoaded;
+import net.vanfleteren.jazygit.state.Msg.CheckedOut;
+import net.vanfleteren.jazygit.state.Msg.CheckoutFailed;
+import net.vanfleteren.jazygit.state.Msg.CheckoutRequested;
 import net.vanfleteren.jazygit.state.Msg.CommitsLoaded;
 import net.vanfleteren.jazygit.state.Msg.LoadFailed;
 import net.vanfleteren.jazygit.state.Msg.StatusLoaded;
@@ -19,7 +26,9 @@ import net.vanfleteren.jazygit.state.Msg.Tick;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -35,8 +44,12 @@ class UpdateTest {
     private static final RepoStatus DIRTY = new RepoStatus("main", "aaaa",
             List.of(new FileEntry("a.txt", ChangeType.UNTRACKED)));
     private static final RepoStatus MOVED = new RepoStatus("main", "bbbb", List.of());
-    private static final List<Branch> BRANCHES = List.of(new Branch("main", true));
-    private static final List<Commit> COMMITS = List.of(new Commit("aaaa", "Ada", "2026-10-09", "First", "First"));
+    private static final List<Branch> BRANCHES = List.of(new Branch("main", true, "aaaa"),
+            new Branch("feature", false, "ffff"));
+    private static final List<Commit> COMMITS = List.of(
+            new Commit("aaaa", "Ada", "ada@example.com", Instant.EPOCH, "First", ""));
+    private static final List<Commit> FEATURE_COMMITS = List.of(
+            new Commit("ffff", "Ada", "ada@example.com", Instant.EPOCH, "Feature", ""));
 
     @Test
     void initStartsLoadingStatusAndBranches() {
@@ -115,6 +128,96 @@ class UpdateTest {
                 .model();
         assertEquals(new Failed<>("no git"), statusFailed.status());
         assertEquals(List.of(new LoadStatus()), Update.update(statusFailed, new Tick()).cmds());
+    }
+
+    @Test
+    void checkoutRequestOfAnotherBranchChecksItOut() {
+        Model failedBefore = Update.update(loaded(), new CheckoutFailed("feature", "boom")).model();
+
+        Next next = Update.update(failedBefore, new CheckoutRequested("feature"));
+
+        assertEquals(List.of(new Checkout("feature")), next.cmds());
+        assertEquals(Optional.empty(), next.model().error());
+    }
+
+    @Test
+    void checkoutRequestIsIgnoredForTheCurrentOrAnUnknownBranch() {
+        Model model = loaded();
+
+        assertEquals(List.of(), Update.update(model, new CheckoutRequested("main")).cmds());
+        assertEquals(List.of(), Update.update(model, new CheckoutRequested("gone")).cmds());
+        assertEquals(List.of(), Update.update(Update.init("repo").model(), new CheckoutRequested("feature")).cmds());
+    }
+
+    @Test
+    void checkedOutReloadsStatusAndBranches() {
+        Next next = Update.update(loaded(), new CheckedOut("feature"));
+
+        assertEquals(List.of(new LoadStatus(), new LoadBranches()), next.cmds());
+        assertEquals(Optional.empty(), next.model().error());
+    }
+
+    @Test
+    void failedCheckoutIsStoredWithoutFurtherCommands() {
+        Next next = Update.update(loaded(), new CheckoutFailed("feature", "local changes would be overwritten"));
+
+        assertEquals(Optional.of("Checkout of feature failed: local changes would be overwritten"),
+                next.model().error());
+        assertEquals(List.of(), next.cmds());
+    }
+
+    @Test
+    void selectingABranchLoadsItsLogOnce() {
+        Next next = Update.update(loaded(), new BranchSelected("feature"));
+
+        assertEquals(Optional.of(new BranchLog("feature", new Loading<>())), next.model().branchLog());
+        assertEquals(List.of(new LoadBranchLog("feature")), next.cmds());
+
+        Next again = Update.update(next.model(), new BranchSelected("feature"));
+        assertSame(next.model(), again.model());
+        assertEquals(List.of(), again.cmds());
+    }
+
+    @Test
+    void loadedLogIsShownForTheSelectedBranch() {
+        Model model = Update.update(loaded(), new BranchSelected("feature")).model();
+
+        Model next = Update.update(model, new BranchLogLoaded("feature", FEATURE_COMMITS)).model();
+
+        assertEquals(Optional.of(new BranchLog("feature", new Loaded<>(FEATURE_COMMITS))), next.branchLog());
+    }
+
+    @Test
+    void resultsForABranchThatIsNoLongerSelectedAreDropped() {
+        Model model = Update.update(loaded(), new BranchSelected("feature")).model();
+        model = Update.update(model, new BranchSelected("main")).model();
+
+        assertEquals(model.branchLog(), Update.update(model, new BranchLogLoaded("feature", FEATURE_COMMITS))
+                .model().branchLog());
+        assertEquals(model.branchLog(), Update.update(model, new LoadFailed(new LoadBranchLog("feature"), "boom"))
+                .model().branchLog());
+    }
+
+    @Test
+    void failedLogIsRetriedOnTheNextTick() {
+        Model model = Update.update(loaded(), new BranchSelected("feature")).model();
+        model = Update.update(model, new LoadFailed(new LoadBranchLog("feature"), "boom")).model();
+
+        assertEquals(Optional.of(new BranchLog("feature", new Failed<>("boom"))), model.branchLog());
+        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new LoadBranchLog("feature")),
+                Update.update(model, new Tick()).cmds());
+    }
+
+    @Test
+    void movedTipOfTheSelectedBranchReloadsItsLog() {
+        Model model = Update.update(loaded(), new BranchSelected("feature")).model();
+        model = Update.update(model, new BranchLogLoaded("feature", FEATURE_COMMITS)).model();
+
+        assertEquals(List.of(), Update.update(model, new BranchesLoaded(BRANCHES)).cmds());
+        assertEquals(List.of(), Update.update(model, new BranchesLoaded(
+                List.of(new Branch("main", true, "moved"), new Branch("feature", false, "ffff")))).cmds());
+        assertEquals(List.of(new LoadBranchLog("feature")), Update.update(model, new BranchesLoaded(
+                List.of(new Branch("main", true, "aaaa"), new Branch("feature", false, "moved")))).cmds());
     }
 
     /**

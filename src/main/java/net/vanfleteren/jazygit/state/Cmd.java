@@ -6,12 +6,24 @@ package net.vanfleteren.jazygit.state;
  */
 public sealed interface Cmd {
 
-    record LoadStatus() implements Cmd {
+    /**
+     * Reads part of the repository state into the {@link Model}.
+     */
+    sealed interface Load extends Cmd {
     }
 
-    record LoadBranches() implements Cmd {
+    record LoadStatus() implements Load {
     }
 
-    record LoadCommits() implements Cmd {
+    record LoadBranches() implements Load {
+    }
+
+    record LoadCommits() implements Load {
+    }
+
+    record LoadBranchLog(String branch) implements Load {
+    }
+
+    record Checkout(String branch) implements Cmd {
     }
 }

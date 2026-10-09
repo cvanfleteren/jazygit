@@ -4,6 +4,7 @@ import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.elements.Panel;
+import dev.tamboui.toolkit.event.KeyEventHandler;
 import net.vanfleteren.jazygit.state.Loadable;
 
 import java.util.List;
@@ -47,5 +48,20 @@ final class LoadableList<T> {
      */
     int selectedIndex() {
         return Math.max(0, list.selected());
+    }
+
+    /**
+     * The value shown by the last render, or {@code null} before the first one.
+     */
+    Loadable<T> shown() {
+        return shown;
+    }
+
+    /**
+     * Handles the keys the list itself does not use while it has focus; it only uses the
+     * navigation keys.
+     */
+    void onKeyEvent(KeyEventHandler handler) {
+        list.onKeyEvent(handler);
     }
 }

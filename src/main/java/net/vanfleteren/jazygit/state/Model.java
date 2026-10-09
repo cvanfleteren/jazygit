@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.model.Commit;
 import net.vanfleteren.jazygit.model.RepoStatus;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -14,36 +15,51 @@ import java.util.Set;
  * @param status         the working tree status and HEAD
  * @param branches       the local branches
  * @param commits        the commit log of HEAD
+ * @param branchLog      the log of the branch highlighted in the branches pane, once one is
+ *                       highlighted
  * @param refreshing     periodic loads that have been started and not finished yet, so a tick does
  *                       not queue them again
+ * @param error          why the last operation failed, until the next one is started
  */
 public record Model(String repositoryName,
                     Loadable<RepoStatus> status,
                     Loadable<List<Branch>> branches,
                     Loadable<List<Commit>> commits,
-                    Set<Cmd> refreshing) {
+                    Optional<BranchLog> branchLog,
+                    Set<Cmd.Load> refreshing,
+                    Optional<String> error) {
 
     public Model {
         refreshing = Set.copyOf(refreshing);
     }
 
     public static Model initial(String repositoryName) {
-        return new Model(repositoryName, Loadable.loading(), Loadable.loading(), Loadable.loading(), Set.of());
+        return new Model(repositoryName, Loadable.loading(), Loadable.loading(), Loadable.loading(), Optional.empty(),
+                Set.of(),
+                Optional.empty());
     }
 
     Model withStatus(Loadable<RepoStatus> status) {
-        return new Model(repositoryName, status, branches, commits, refreshing);
+        return new Model(repositoryName, status, branches, commits, branchLog, refreshing, error);
     }
 
     Model withBranches(Loadable<List<Branch>> branches) {
-        return new Model(repositoryName, status, branches, commits, refreshing);
+        return new Model(repositoryName, status, branches, commits, branchLog, refreshing, error);
     }
 
     Model withCommits(Loadable<List<Commit>> commits) {
-        return new Model(repositoryName, status, branches, commits, refreshing);
+        return new Model(repositoryName, status, branches, commits, branchLog, refreshing, error);
     }
 
-    Model withRefreshing(Set<Cmd> refreshing) {
-        return new Model(repositoryName, status, branches, commits, refreshing);
+    Model withBranchLog(Optional<BranchLog> branchLog) {
+        return new Model(repositoryName, status, branches, commits, branchLog, refreshing, error);
+    }
+
+    Model withRefreshing(Set<Cmd.Load> refreshing) {
+        return new Model(repositoryName, status, branches, commits, branchLog, refreshing, error);
+    }
+
+    Model withError(Optional<String> error) {
+        return new Model(repositoryName, status, branches, commits, branchLog, refreshing, error);
     }
 }

@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.model;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.Constants;
+import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
@@ -12,13 +13,14 @@ import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.StreamSupport;
 
 /**
  * {@link GitInfoProvider} backed by a real repository. The working tree status comes from the
- * {@code git status} command line tool, branches and commits are read through JGit.
+ * {@code git status} command line tool, branches and commits are read through JGit,
+ * and checkouts go through the {@code git checkout} command line tool.
  */
 public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
 
@@ -75,7 +77,7 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
             List<Branch> branches = new ArrayList<>();
             for (Ref ref : git.branchList().call()) {
                 branches.add(new Branch(Repository.shortenRefName(ref.getName()),
-                        ref.getName().equals(fullBranch)));
+                        ref.getName().equals(fullBranch), ref.getObjectId().name()));
             }
             return List.copyOf(branches);
         } catch (IOException e) {
@@ -88,22 +90,53 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     @Override
     public List<Commit> commits() {
         try {
-            if (repository.resolve(Constants.HEAD) == null) {
-                return List.of();
-            }
-            List<Commit> commits = new ArrayList<>();
-            for (RevCommit c : git.log().setMaxCount(MAX_COMMITS).call()) {
-                PersonIdent author = c.getAuthorIdent();
-                String date = LocalDate.ofInstant(author.getWhenAsInstant(), author.getZoneId()).toString();
-                commits.add(new Commit(c.abbreviate(7).name(), author.getName(), date,
-                        c.getShortMessage(), c.getFullMessage()));
-            }
-            return List.copyOf(commits);
+            ObjectId head = repository.resolve(Constants.HEAD);
+            return head == null ? List.of() : log(head);
         } catch (IOException e) {
             throw new UncheckedIOException("Could not read commit log", e);
+        }
+    }
+
+    @Override
+    public List<Commit> log(String branch) {
+        try {
+            ObjectId tip = repository.resolve(Constants.R_HEADS + branch);
+            if (tip == null) {
+                throw new IllegalStateException("Unknown branch: " + branch);
+            }
+            return log(tip);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Could not read the log of " + branch, e);
+        }
+    }
+
+    private List<Commit> log(ObjectId start) throws IOException {
+        try {
+            return StreamSupport.stream(git.log().add(start).setMaxCount(MAX_COMMITS).call().spliterator(), false)
+                    .map(JGitInfoProvider::toCommit)
+                    .toList();
         } catch (GitAPIException e) {
             throw new IllegalStateException("Could not read commit log", e);
         }
+    }
+
+    private static Commit toCommit(RevCommit c) {
+        PersonIdent author = c.getAuthorIdent();
+        return new Commit(c.abbreviate(7).name(), author.getName(), author.getEmailAddress(),
+                author.getWhenAsInstant(), c.getShortMessage(), extendedMessage(c.getFullMessage()));
+    }
+
+    /**
+     * The commit message after the subject paragraph, or an empty string if there is none.
+     */
+    static String extendedMessage(String fullMessage) {
+        String[] parts = fullMessage.split("\\R\\s*\\R", 2);
+        return parts.length < 2 ? "" : parts[1].strip();
+    }
+
+    @Override
+    public void checkout(String branch) {
+        GitCliCheckout.checkout(workTree, branch);
     }
 
     @Override

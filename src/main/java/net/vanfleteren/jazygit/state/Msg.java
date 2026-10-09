@@ -26,6 +26,27 @@ public sealed interface Msg {
     record CommitsLoaded(List<Commit> commits) implements Msg {
     }
 
-    record LoadFailed(Cmd cmd, String message) implements Msg {
+    /**
+     * The user highlighted a branch in the branches pane.
+     */
+    record BranchSelected(String branch) implements Msg {
+    }
+
+    record BranchLogLoaded(String branch, List<Commit> commits) implements Msg {
+    }
+
+    record LoadFailed(Cmd.Load cmd, String message) implements Msg {
+    }
+
+    /**
+     * The user asked to check out a branch.
+     */
+    record CheckoutRequested(String branch) implements Msg {
+    }
+
+    record CheckedOut(String branch) implements Msg {
+    }
+
+    record CheckoutFailed(String branch, String message) implements Msg {
     }
 }

@@ -5,6 +5,7 @@ import static dev.tamboui.toolkit.Toolkit.*;
 import dev.tamboui.toolkit.app.ToolkitApp;
 import dev.tamboui.toolkit.app.ToolkitRunner;
 import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.toolkit.elements.Panel;
 import net.vanfleteren.jazygit.model.GitInfoProvider;
 import net.vanfleteren.jazygit.model.JGitInfoProvider;
 import net.vanfleteren.jazygit.state.Model;
@@ -34,7 +35,8 @@ public class JazygitApp extends ToolkitApp {
 
     private final GitInfoProvider provider;
     private final FilesPanel filesPanel = new FilesPanel();
-    private final BranchesPanel branchesPanel = new BranchesPanel();
+    // Key handlers run on the render thread, where the program may be used.
+    private final BranchesPanel branchesPanel = new BranchesPanel(msg -> this.program.dispatch(msg));
     private final CommitsPanel commitsPanel = new CommitsPanel();
     private ExecutorService io;
     private Program program;
@@ -71,14 +73,18 @@ public class JazygitApp extends ToolkitApp {
     protected Element render() {
         Model model = program.model();
         String focusedId = runner().focusManager().focusedId();
+        Panel branches = branchesPanel.render(model, focusedId);
+        // The highlighted branch lives in the list widget, which knows it once rendered; the
+        // content panel then shows the log of that branch.
+        branchesPanel.selectionChange(model).ifPresent(program::dispatch);
         return row(
                 column(
                         StatusPanel.render(model),
                         filesPanel.render(model, focusedId),
-                        branchesPanel.render(model, focusedId),
+                        branches,
                         commitsPanel.render(model, focusedId))
                         .percent(30),
-                ContentPanel.render(model, focusedId, branchesPanel.selectedIndex(), commitsPanel.selectedIndex())
+                ContentPanel.render(program.model(), focusedId, commitsPanel.selectedIndex())
                         .fill());
     }
 

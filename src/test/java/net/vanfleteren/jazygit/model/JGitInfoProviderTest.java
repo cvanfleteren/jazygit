@@ -16,6 +16,7 @@ import java.util.concurrent.TimeoutException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -75,13 +76,35 @@ class JGitInfoProviderTest {
 
     @Test
     void branchesFollowExternalChanges() throws Exception {
-        assertEquals(List.of(new Branch("main", true)), provider.branches());
+        String head = provider.status().headOid();
+        assertEquals(List.of(new Branch("main", true, head)), provider.branches());
 
         git("branch", "foo");
-        assertEquals(List.of(new Branch("foo", false), new Branch("main", true)), provider.branches());
+        assertEquals(List.of(new Branch("foo", false, head), new Branch("main", true, head)), provider.branches());
 
         git("checkout", "-q", "foo");
-        assertEquals(List.of(new Branch("foo", true), new Branch("main", false)), provider.branches());
+        assertEquals(List.of(new Branch("foo", true, head), new Branch("main", false, head)), provider.branches());
+
+        git("commit", "-q", "--allow-empty", "-m", "Move foo");
+        String moved = provider.status().headOid();
+        assertEquals(List.of(new Branch("foo", true, moved), new Branch("main", false, head)), provider.branches());
+    }
+
+    @Test
+    void logShowsOnlyTheCommitsOfTheBranch() throws Exception {
+        git("checkout", "-q", "-b", "side");
+        git("commit", "-q", "--allow-empty", "-m", "Side subject", "-m", "Side detail\nsecond line");
+        git("checkout", "-q", "main");
+
+        List<Commit> side = provider.log("side");
+        assertEquals(List.of("Side subject", "Initial commit"), side.stream().map(Commit::message).toList());
+        assertEquals("Side detail\nsecond line", side.get(0).body());
+        assertEquals("", side.get(1).body());
+        assertEquals("Test", side.get(0).authorName());
+        assertEquals("test@example.com", side.get(0).authorEmail());
+
+        assertEquals(List.of("Initial commit"), provider.log("main").stream().map(Commit::message).toList());
+        assertThrows(IllegalStateException.class, () -> provider.log("gone"));
     }
 
     @Test
@@ -94,6 +117,31 @@ class JGitInfoProviderTest {
 
         git("checkout", "-q", "--detach");
         assertEquals("HEAD detached at " + provider.commits().get(0).shortSha(), provider.status().branchLabel());
+    }
+
+    @Test
+    void checkoutSwitchesBranchAndCarriesOverLocalChanges() throws Exception {
+        git("branch", "feature");
+        Files.writeString(repo.resolve("new.txt"), "new\n");
+
+        provider.checkout("feature");
+
+        assertEquals("feature", provider.status().branchLabel());
+        assertEquals(List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)), provider.status().files());
+    }
+
+    @Test
+    void checkoutFailsWithGitsExplanationWhenLocalChangesWouldBeOverwritten() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("README.md"), "changed on feature\n");
+        git("commit", "-q", "-am", "Change README");
+        git("checkout", "-q", "main");
+        Files.writeString(repo.resolve("README.md"), "local change\n");
+
+        IllegalStateException e = assertThrows(IllegalStateException.class, () -> provider.checkout("feature"));
+
+        assertTrue(e.getMessage().contains("would be overwritten"), e.getMessage());
+        assertEquals("main", provider.status().branchLabel());
     }
 
     @Test

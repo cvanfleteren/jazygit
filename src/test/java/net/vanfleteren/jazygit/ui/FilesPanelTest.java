@@ -44,6 +44,16 @@ class FilesPanelTest {
         public List<Commit> commits() {
             return List.of();
         }
+
+        @Override
+        public List<Commit> log(String branch) {
+            return List.of();
+        }
+
+        @Override
+        public void checkout(String branch) {
+            throw new UnsupportedOperationException();
+        }
     }
 
     private final FilesPanel panel = new FilesPanel();

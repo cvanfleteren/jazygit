@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -37,19 +38,29 @@ class PanePositionTest {
         public RepoStatus status() {
             return new RepoStatus("main", "aaaa", files);
         }
+
+        @Override
+        public List<Commit> log(String branch) {
+            return commits;
+        }
+
+        @Override
+        public void checkout(String branch) {
+            throw new UnsupportedOperationException();
+        }
     }
 
     private static final Model MODEL = TestModels.loaded(new FixedProvider(
             List.of(new FileEntry("net/vanfleteren/A.java", ChangeType.MODIFIED),
                     new FileEntry("net/vanfleteren/B.java", ChangeType.UNTRACKED)),
-            List.of(new Branch("main", true), new Branch("feature", false)),
-            List.of(new Commit("aaaa", "me", "today", "first", ""),
-                    new Commit("bbbb", "me", "today", "second", ""),
-                    new Commit("cccc", "me", "today", "third", ""))));
+            List.of(new Branch("main", true, "aaaa"), new Branch("feature", false, "bbbb")),
+            List.of(new Commit("aaaa", "me", "me@example.com", Instant.EPOCH, "first", ""),
+                    new Commit("bbbb", "me", "me@example.com", Instant.EPOCH, "second", ""),
+                    new Commit("cccc", "me", "me@example.com", Instant.EPOCH, "third", ""))));
 
     @Test
     void branchesShowSelectedPositionAndFollowSelection() throws Exception {
-        BranchesPanel panel = new BranchesPanel();
+        BranchesPanel panel = new BranchesPanel(msg -> { });
         assertPositions(() -> panel.render(MODEL, BranchesPanel.ID), BranchesPanel.ID, KeyCode.DOWN, "1/2", "2/2");
     }
 
@@ -68,7 +79,7 @@ class PanePositionTest {
 
     @Test
     void showsNoPositionWhileLoading() throws Exception {
-        BranchesPanel panel = new BranchesPanel();
+        BranchesPanel panel = new BranchesPanel(msg -> { });
         Model loading = TestModels.loading("repo");
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(loading, BranchesPanel.ID))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(loading, BranchesPanel.ID));

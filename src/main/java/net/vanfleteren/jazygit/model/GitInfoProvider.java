@@ -3,8 +3,8 @@ package net.vanfleteren.jazygit.model;
 import java.util.List;
 
 /**
- * Source of the git information shown by the TUI. Every call reads the current state of the
- * repository; deciding when to call is up to the caller.
+ * Source of the git information shown by the TUI, and the operations it performs. Every read
+ * reflects the current state of the repository; deciding when to call is up to the caller.
  */
 public interface GitInfoProvider {
 
@@ -17,5 +17,22 @@ public interface GitInfoProvider {
 
     List<Branch> branches();
 
+    /**
+     * The log of HEAD, newest first.
+     */
     List<Commit> commits();
+
+    /**
+     * The log of the local branch {@code branch}, newest first.
+     *
+     * @throws IllegalStateException if there is no such branch
+     */
+    List<Commit> log(String branch);
+
+    /**
+     * Checks out the local branch {@code branch}.
+     *
+     * @throws IllegalStateException if the checkout fails, with git's explanation as message
+     */
+    void checkout(String branch);
 }

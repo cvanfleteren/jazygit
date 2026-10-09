@@ -10,8 +10,11 @@ import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Queue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -26,7 +29,9 @@ class ProgramTest {
 
         RepoStatus status = new RepoStatus("main", "aaaa", List.of());
         RuntimeException statusError;
+        RuntimeException checkoutError;
         int commitLoads;
+        final List<String> logLoads = new ArrayList<>();
 
         @Override
         public String repositoryName() {
@@ -43,13 +48,32 @@ class ProgramTest {
 
         @Override
         public List<Branch> branches() {
-            return List.of(new Branch(status.head(), true));
+            return List.of(new Branch("main", status.head().equals("main"), "main-tip"),
+                    new Branch("other", status.head().equals("other"), "other-tip"));
         }
 
         @Override
         public List<Commit> commits() {
             commitLoads++;
-            return List.of(new Commit(status.headOid(), "Ada", "2026-10-09", "msg", "msg"));
+            return List.of(commit(status.headOid()));
+        }
+
+        @Override
+        public List<Commit> log(String branch) {
+            logLoads.add(branch);
+            return List.of(commit(branch + "-tip"));
+        }
+
+        private static Commit commit(String sha) {
+            return new Commit(sha, "Ada", "ada@example.com", Instant.EPOCH, "msg", "");
+        }
+
+        @Override
+        public void checkout(String branch) {
+            if (checkoutError != null) {
+                throw checkoutError;
+            }
+            status = new RepoStatus(branch, branch + "-head", List.of());
         }
     }
 
@@ -64,7 +88,7 @@ class ProgramTest {
 
         Model model = program.model();
         assertEquals(new Loaded<>(provider.status), model.status());
-        assertEquals(new Loaded<>(List.of(new Branch("main", true))), model.branches());
+        assertEquals(new Loaded<>(List.of(new Branch("main", true, "main-tip"), new Branch("other", false, "other-tip"))), model.branches());
         assertEquals(1, provider.commitLoads);
     }
 
@@ -103,6 +127,50 @@ class ProgramTest {
         program.dispatch(new Msg.Tick());
         settle();
         assertEquals(new Loaded<>(provider.status), program.model().status());
+    }
+
+    @Test
+    void checkoutReloadsStatusBranchesAndCommits() {
+        settle();
+
+        program.dispatch(new Msg.CheckoutRequested("other"));
+        settle();
+
+        Model model = program.model();
+        assertEquals(new Loaded<>(provider.status), model.status());
+        assertEquals(new Loaded<>(List.of(new Branch("main", false, "main-tip"), new Branch("other", true, "other-tip"))), model.branches());
+        assertEquals("other-head", ((Loaded<List<Commit>>) model.commits()).value().get(0).shortSha());
+        assertEquals(Optional.empty(), model.error());
+    }
+
+    @Test
+    void failedCheckoutIsReportedUntilTheNextOne() {
+        settle();
+
+        provider.checkoutError = new IllegalStateException("error: Your local changes would be overwritten");
+        program.dispatch(new Msg.CheckoutRequested("other"));
+        settle();
+        assertEquals(Optional.of("Checkout of other failed: error: Your local changes would be overwritten"),
+                program.model().error());
+        assertEquals("main", ((Loaded<RepoStatus>) program.model().status()).value().head());
+
+        provider.checkoutError = null;
+        program.dispatch(new Msg.CheckoutRequested("other"));
+        settle();
+        assertEquals(Optional.empty(), program.model().error());
+        assertEquals("other", ((Loaded<RepoStatus>) program.model().status()).value().head());
+    }
+
+    @Test
+    void selectingABranchLoadsItsLog() {
+        settle();
+
+        program.dispatch(new Msg.BranchSelected("other"));
+        settle();
+
+        assertEquals(Optional.of(new BranchLog("other", new Loaded<>(List.of(FakeProvider.commit("other-tip"))))),
+                program.model().branchLog());
+        assertEquals(List.of("other"), provider.logLoads);
     }
 
     /**

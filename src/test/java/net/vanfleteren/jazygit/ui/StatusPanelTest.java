@@ -28,4 +28,17 @@ class StatusPanelTest {
             testRunner.pilot().quit();
         }
     }
+
+    @Test
+    void showsTheLastOperationError() throws Exception {
+        Model model = TestModels.withError(TestModels.loaded(new SampleData()), "Checkout of foo failed: boom");
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> StatusPanel.render(model))) {
+            String screen = RenderedText.of(testRunner, () -> StatusPanel.render(model));
+            assertTrue(screen.contains("jazygit → main"), screen);
+            assertTrue(screen.contains("Checkout of foo failed: boom"), screen);
+
+            testRunner.pilot().quit();
+        }
+    }
 }

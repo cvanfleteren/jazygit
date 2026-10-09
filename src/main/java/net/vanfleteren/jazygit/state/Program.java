@@ -1,10 +1,15 @@
 package net.vanfleteren.jazygit.state;
 
 import net.vanfleteren.jazygit.model.GitInfoProvider;
+import net.vanfleteren.jazygit.state.Cmd.Checkout;
+import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
+import net.vanfleteren.jazygit.state.Msg.BranchLogLoaded;
 import net.vanfleteren.jazygit.state.Msg.BranchesLoaded;
+import net.vanfleteren.jazygit.state.Msg.CheckedOut;
+import net.vanfleteren.jazygit.state.Msg.CheckoutFailed;
 import net.vanfleteren.jazygit.state.Msg.CommitsLoaded;
 import net.vanfleteren.jazygit.state.Msg.LoadFailed;
 import net.vanfleteren.jazygit.state.Msg.StatusLoaded;
@@ -69,9 +74,21 @@ public final class Program {
                 case LoadStatus() -> new StatusLoaded(provider.status());
                 case LoadBranches() -> new BranchesLoaded(provider.branches());
                 case LoadCommits() -> new CommitsLoaded(provider.commits());
+                case LoadBranchLog(String branch) -> new BranchLogLoaded(branch, provider.log(branch));
+                case Checkout(String branch) -> {
+                    provider.checkout(branch);
+                    yield new CheckedOut(branch);
+                }
             };
         } catch (RuntimeException e) {
-            return new LoadFailed(cmd, e.getMessage() != null ? e.getMessage() : e.toString());
+            return failure(cmd, e.getMessage() != null ? e.getMessage() : e.toString());
         }
+    }
+
+    private static Msg failure(Cmd cmd, String message) {
+        return switch (cmd) {
+            case Cmd.Load load -> new LoadFailed(load, message);
+            case Checkout(String branch) -> new CheckoutFailed(branch, message);
+        };
     }
 }
