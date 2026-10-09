@@ -203,8 +203,35 @@ class UpdateTest {
     }
 
     @Test
-    void choosingAScopeDeletesTheBranchAndClosesThePopup() {
+    void remoteScopesAreRefusedForALocalOnlyBranch() {
         Model open = Update.update(loaded(), new Msg.DeleteBranchRequested("feature")).model();
+
+        for (DeleteScope scope : List.of(DeleteScope.REMOTE, DeleteScope.BOTH)) {
+            Next next = Update.update(open, new Msg.DeleteBranchChosen(scope));
+            assertEquals(List.of(), next.cmds());
+            assertEquals(Optional.of("feature"), next.model().deleteTarget());
+        }
+        assertEquals(List.of(new Cmd.DeleteBranch("feature", DeleteScope.LOCAL)),
+                Update.update(open, new Msg.DeleteBranchChosen(DeleteScope.LOCAL)).cmds());
+    }
+
+    @Test
+    void remoteScopesAreRefusedForTheDefaultBranch() {
+        Model model = Update.update(loaded(), new BranchesLoaded(List.of(new Branch("main", true, "aaaa"),
+                new Branch("trunk", false, "tttt", java.time.Instant.EPOCH, true, true)))).model();
+        Model open = Update.update(model, new Msg.DeleteBranchRequested("trunk")).model();
+
+        assertEquals(List.of(), Update.update(open, new Msg.DeleteBranchChosen(DeleteScope.REMOTE)).cmds());
+        assertEquals(List.of(), Update.update(open, new Msg.DeleteBranchChosen(DeleteScope.BOTH)).cmds());
+        assertEquals(List.of(new Cmd.DeleteBranch("trunk", DeleteScope.LOCAL)),
+                Update.update(open, new Msg.DeleteBranchChosen(DeleteScope.LOCAL)).cmds());
+    }
+
+    @Test
+    void choosingAScopeDeletesTheBranchAndClosesThePopup() {
+        Model withRemote = Update.update(loaded(), new BranchesLoaded(
+                List.of(new Branch("main", true, "aaaa"), new Branch("feature", false, "ffff", java.time.Instant.EPOCH, true)))).model();
+        Model open = Update.update(withRemote, new Msg.DeleteBranchRequested("feature")).model();
 
         Next next = Update.update(open, new Msg.DeleteBranchChosen(DeleteScope.REMOTE));
 

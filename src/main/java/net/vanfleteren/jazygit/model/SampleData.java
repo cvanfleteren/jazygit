@@ -28,8 +28,8 @@ public final class SampleData implements GitInfoProvider {
     @Override
     public List<Branch> branches() {
         return List.of(
-                new Branch("main", true, "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678"),
-                new Branch("feature/initial-layout", false, "0a1b2c3d4e5f60718293a4b5c6d7e8f901234567"),
+                new Branch("main", true, "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678", Instant.EPOCH, true, true),
+                new Branch("feature/initial-layout", false, "0a1b2c3d4e5f60718293a4b5c6d7e8f901234567", Instant.EPOCH, true),
                 new Branch("feature/jgit-backend", false, "1a2b3c4d5e6f708192a3b4c5d6e7f80912345678"),
                 new Branch("bugfix/focus-cycling", false, "c3d4e5f60718293a4b5c6d7e8f9012345678a1b2")
         );

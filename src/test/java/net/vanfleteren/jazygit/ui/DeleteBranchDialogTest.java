@@ -53,22 +53,56 @@ class DeleteBranchDialogTest {
         assertEquals(List.of(new Msg.DeleteBranchCancelled()), pressing(r -> r.pilot().press('c')));
     }
 
+    @Test
+    void remoteOptionsAreNotActionableForALocalOnlyBranch() throws Exception {
+        Model localOnly = Update.update(TestModels.loaded(new SampleData()),
+                new Msg.DeleteBranchRequested("feature/jgit-backend")).model();
+
+        assertEquals(List.of(), pressing(localOnly, r -> {
+            r.pilot().press('r');
+            r.pilot().press('b');
+            r.pilot().press(KeyCode.DOWN);
+            r.pilot().press(KeyCode.ENTER);
+            r.pilot().press(KeyCode.DOWN);
+            r.pilot().press(KeyCode.ENTER);
+        }));
+        dispatched.clear();
+        assertEquals(List.of(new Msg.DeleteBranchChosen(DeleteScope.LOCAL)), pressing(localOnly, r -> r.pilot().press('d')));
+    }
+
+    @Test
+    void remoteOptionsAreNotActionableForTheDefaultBranch() throws Exception {
+        Model model = Update.update(TestModels.loaded(new SampleData()), new Msg.BranchesLoaded(List.of(
+                new net.vanfleteren.jazygit.model.Branch("x", true, "1"),
+                new net.vanfleteren.jazygit.model.Branch("trunk", false, "2", java.time.Instant.EPOCH, true, true)))).model();
+        Model open = Update.update(model, new Msg.DeleteBranchRequested("trunk")).model();
+
+        assertEquals(List.of(), pressing(open, r -> {
+            r.pilot().press('r');
+            r.pilot().press('b');
+        }));
+    }
+
     @FunctionalInterface
     private interface Keys {
         void press(ToolkitTestRunner runner) throws Exception;
     }
 
     private List<Msg> pressing(Keys keys) throws Exception {
-        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view)) {
+        return pressing(open, keys);
+    }
+
+    private List<Msg> pressing(Model model, Keys keys) throws Exception {
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(model))) {
             runner.runner().focusManager().setFocus(DeleteBranchDialog.ID);
-            RenderedText.of(runner, this::view);
+            RenderedText.of(runner, () -> view(model));
             keys.press(runner);
             runner.pilot().pause();
         }
         return List.copyOf(dispatched);
     }
 
-    private Element view() {
-        return stack(text("background"), dialog.render(open).orElseThrow());
+    private Element view(Model model) {
+        return stack(text("background"), dialog.render(model).orElseThrow());
     }
 }

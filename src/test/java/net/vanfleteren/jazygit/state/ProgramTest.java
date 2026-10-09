@@ -52,7 +52,7 @@ class ProgramTest {
         @Override
         public List<Branch> branches() {
             return List.of(new Branch("main", status.head().equals("main"), "main-tip"),
-                    new Branch("other", status.head().equals("other"), "other-tip"));
+                    new Branch("other", status.head().equals("other"), "other-tip", Instant.EPOCH, true));
         }
 
         @Override
@@ -131,7 +131,7 @@ class ProgramTest {
 
         Model model = program.model();
         assertEquals(new Loaded<>(provider.status), model.status());
-        assertEquals(new Loaded<>(List.of(new Branch("main", true, "main-tip"), new Branch("other", false, "other-tip"))), model.branches());
+        assertEquals(new Loaded<>(List.of(new Branch("main", true, "main-tip"), new Branch("other", false, "other-tip", Instant.EPOCH, true))), model.branches());
         assertEquals(1, provider.commitLoads);
     }
 
@@ -181,7 +181,7 @@ class ProgramTest {
 
         Model model = program.model();
         assertEquals(new Loaded<>(provider.status), model.status());
-        assertEquals(new Loaded<>(List.of(new Branch("main", false, "main-tip"), new Branch("other", true, "other-tip"))), model.branches());
+        assertEquals(new Loaded<>(List.of(new Branch("main", false, "main-tip"), new Branch("other", true, "other-tip", Instant.EPOCH, true))), model.branches());
         assertEquals("other-head", ((Loaded<List<Commit>>) model.commits()).value().get(0).shortSha());
         assertEquals(Optional.empty(), model.error());
     }

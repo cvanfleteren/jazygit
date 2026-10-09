@@ -201,6 +201,35 @@ class JGitInfoProviderTest {
     }
 
     @Test
+    void branchesKnowWhetherTheyExistOnTheirRemote() throws Exception {
+        git("branch", "pushed");
+        git("branch", "local-only");
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        git("push", "-q", "origin", "pushed");
+
+        assertEquals(List.of(true, false), provider.branches().stream()
+                .filter(b -> !b.name().equals("main"))
+                .sorted(java.util.Comparator.comparing(Branch::name).reversed())
+                .map(Branch::hasRemote).toList());
+    }
+
+    @Test
+    void theDefaultBranchIsTheOneOriginHeadPointsToElseMainOrMaster() throws Exception {
+        git("branch", "trunk");
+        assertEquals(List.of("main"), defaultBranches());
+
+        git("update-ref", "refs/remotes/origin/trunk", "HEAD");
+        git("symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/trunk");
+        assertEquals(List.of("trunk"), defaultBranches());
+    }
+
+    private List<String> defaultBranches() {
+        return provider.branches().stream().filter(Branch::isDefault).map(Branch::name).toList();
+    }
+
+    @Test
     void deleteBranchRemovesTheLocalBranch() throws Exception {
         git("branch", "topic");
 

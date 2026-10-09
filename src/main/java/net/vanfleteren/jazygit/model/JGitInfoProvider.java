@@ -20,6 +20,8 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 /**
@@ -85,11 +87,14 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
                     modified.put(ref.getObjectId().name(), walk.parseCommit(ref.getObjectId()).getCommitTime());
                 }
             }
+            Optional<String> defaultBranch = defaultBranch();
             List<Branch> branches = new ArrayList<>();
             for (Ref ref : git.branchList().call()) {
                 branches.add(new Branch(Repository.shortenRefName(ref.getName()),
                         ref.getName().equals(fullBranch), ref.getObjectId().name(),
-                        Instant.ofEpochSecond(modified.get(ref.getObjectId().name()))));
+                        Instant.ofEpochSecond(modified.get(ref.getObjectId().name())),
+                        hasRemote(Repository.shortenRefName(ref.getName())),
+                        defaultBranch.equals(Optional.of(Repository.shortenRefName(ref.getName())))));
             }
             // The checked out branch first, then the most recently committed to.
             return branches.stream()
@@ -154,6 +159,36 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     @Override
     public void checkout(String branch) {
         GitCliCheckout.checkout(workTree, branch);
+    }
+
+    /**
+     * The main branch: the one {@code origin/HEAD} points to, as set by a clone. Without it, the
+     * first of {@code main} and {@code master} that exists.
+     */
+    private Optional<String> defaultBranch() throws IOException {
+        String prefix = "refs/remotes/origin/";
+        Ref head = repository.exactRef(prefix + "HEAD");
+        if (head != null && head.isSymbolic() && head.getTarget().getName().startsWith(prefix)) {
+            return Optional.of(head.getTarget().getName().substring(prefix.length()));
+        }
+        return Stream.of("main", "master")
+                .filter(name -> {
+                    try {
+                        return repository.exactRef("refs/heads/" + name) != null;
+                    } catch (IOException e) {
+                        throw new UncheckedIOException(e);
+                    }
+                })
+                .findFirst();
+    }
+
+    /**
+     * Whether the remote-tracking ref of {@code branch} exists. The remote is the one
+     * {@link GitCliBranch#deleteRemote} pushes to: the configured one, or {@code origin}.
+     */
+    private boolean hasRemote(String branch) throws IOException {
+        String remote = repository.getConfig().getString("branch", branch, "remote");
+        return repository.exactRef("refs/remotes/" + (remote == null ? "origin" : remote) + "/" + branch) != null;
     }
 
     @Override

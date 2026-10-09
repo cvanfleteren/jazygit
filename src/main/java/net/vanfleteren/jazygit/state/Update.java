@@ -224,9 +224,16 @@ public final class Update {
 
     private static Next deleteChosen(Model model, DeleteScope scope) {
         return model.deleteTarget()
+                // Deleting on the remote is not possible for a local-only branch, nor for the default one.
+                .filter(branch -> scope == DeleteScope.LOCAL || remoteDeletable(model, branch))
                 .map(branch -> Next.of(model.withDeleteTarget(Optional.empty()).withError(Optional.empty()),
                         new DeleteBranch(branch, scope)))
                 .orElseGet(() -> Next.of(model));
+    }
+
+    private static boolean remoteDeletable(Model model, String branch) {
+        return model.branches() instanceof Loaded<List<Branch>>(List<Branch> branches)
+                && branches.stream().anyMatch(b -> b.name().equals(branch) && b.remoteDeletable());
     }
 
     private static Next newBranchConfirmed(Model model, String name) {
