@@ -197,13 +197,25 @@ class JazygitAppPilotTest {
 
             Pilot pilot = testRunner.pilot();
             pilot.pause();
+            // Moving re-renders, which is how the panel learns it has focus.
             pilot.press(KeyCode.DOWN);
+            pilot.press(KeyCode.UP);
+            pilot.pause();
             pilot.press(' ');
             pilot.pause();
 
             assertEquals(1, fixture.dispatched().size());
-            Msg.ToggleStageRequested requested = (Msg.ToggleStageRequested) fixture.dispatched().get(0);
-            // DOWN highlights the "model" directory, so its file is requested.
+            Msg.ToggleStageRequested all = (Msg.ToggleStageRequested) fixture.dispatched().get(0);
+            // The virtual root is selected first, so every changed file is requested.
+            assertEquals(java.util.Set.copyOf(fixture.data().status().files()), java.util.Set.copyOf(all.files()));
+
+            pilot.press(KeyCode.DOWN);
+            pilot.press(KeyCode.DOWN);
+            pilot.press(' ');
+            pilot.pause();
+
+            Msg.ToggleStageRequested requested = (Msg.ToggleStageRequested) fixture.dispatched().get(1);
+            // DOWN highlights the "model" directory, so only its file is requested.
             assertEquals(List.of("src/main/java/net/vanfleteren/jazygit/model/SampleData.java"),
                     requested.files().stream().map(f -> f.path()).toList());
 

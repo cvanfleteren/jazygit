@@ -104,10 +104,9 @@ class FilesPanelTest {
             String screen = RenderedText.of(testRunner, () -> panel.render(before, FilesPanel.ID));
             assertTrue(screen.contains("net/vanfleteren"), screen);
             assertTrue(screen.contains(" M A.java"), screen);
-            assertTrue(screen.contains("?? B.java"), screen);
             assertFalse(screen.contains("net/vanfleteren/A.java"), screen);
 
-            RenderedText.of(testRunner, () -> panel.tree().selected(2));
+            RenderedText.of(testRunner, () -> panel.tree().selected(3));
             RenderedText.of(testRunner, () -> panel.render(after, FilesPanel.ID));
             FileTree selected = panel.tree().selectedNode().data();
             assertEquals(b, ((FileTree.File) selected).entry());

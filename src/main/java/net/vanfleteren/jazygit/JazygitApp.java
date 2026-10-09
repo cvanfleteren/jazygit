@@ -6,6 +6,7 @@ import dev.tamboui.toolkit.app.ToolkitApp;
 import dev.tamboui.toolkit.app.ToolkitRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Panel;
+import dev.tamboui.tui.TuiConfig;
 import net.vanfleteren.jazygit.model.GitInfoProvider;
 import net.vanfleteren.jazygit.model.JGitInfoProvider;
 import net.vanfleteren.jazygit.state.Model;
@@ -53,6 +54,12 @@ public class JazygitApp extends ToolkitApp {
         program = Program.start(provider, io, runner::runOnRenderThread);
         runner.scheduleRepeating(() -> runner.runOnRenderThread(() -> program.dispatch(new Msg.Tick())),
                 REFRESH_INTERVAL);
+    }
+
+
+    @Override
+    protected TuiConfig configure() {
+        return TuiConfig.builder().mouseCapture(true).fpsOverlay(true).build();
     }
 
     @Override

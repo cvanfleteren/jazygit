@@ -88,8 +88,8 @@ class PanePositionTest {
     @Test
     void filesCountOnlyVisibleRows() throws Exception {
         FilesPanel panel = new FilesPanel(msg -> { });
-        // The merged directory and its two files; collapsing the directory hides the files.
-        assertPositions(() -> panel.render(MODEL, FilesPanel.ID), FilesPanel.ID, KeyCode.LEFT, "1/3", "1/1");
+        // The root, the merged directory and its two files; collapsing the directory hides the files.
+        assertPositions(() -> panel.render(MODEL, FilesPanel.ID), FilesPanel.ID, KeyCode.LEFT, "1/4", "1/1");
     }
 
     @Test

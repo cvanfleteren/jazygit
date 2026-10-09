@@ -32,6 +32,9 @@ public class FilesPanel {
 
     public static final String ID = "files";
 
+    // A virtual directory holding everything, so that all changes can be (un)staged at once.
+    private static final String ROOT_NAME = "/";
+
     private static final Color STAGED = Color.GREEN;
     private static final Color UNSTAGED = Color.RED;
 
@@ -100,9 +103,8 @@ public class FilesPanel {
             case Loadable.Loading<RepoStatus>() -> List.of(TreeNode.<FileTree>of(Placeholders.LOADING).leaf());
             case Loadable.Failed<RepoStatus>(String message) ->
                     List.of(TreeNode.<FileTree>of(Placeholders.error(message)).leaf());
-            case Loadable.Loaded<RepoStatus>(RepoStatus value) -> FileTree.of(value.files()).stream()
-                    .map(node -> node(node, collapsed))
-                    .toList();
+            case Loadable.Loaded<RepoStatus>(RepoStatus value) -> List.of(node(
+                    new FileTree.Dir(ROOT_NAME, "", FileTree.of(value.files())), collapsed));
         };
         tree.roots(roots.toArray(TreeNode[]::new));
 
