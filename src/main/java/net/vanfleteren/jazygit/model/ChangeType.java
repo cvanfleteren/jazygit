@@ -1,0 +1,21 @@
+package net.vanfleteren.jazygit.model;
+
+/**
+ * The kind of change a {@link FileEntry} carries, mirroring the markers used by {@code git status}.
+ */
+public enum ChangeType {
+    MODIFIED("M"),
+    ADDED("A"),
+    DELETED("D"),
+    UNTRACKED("??");
+
+    private final String marker;
+
+    ChangeType(String marker) {
+        this.marker = marker;
+    }
+
+    public String marker() {
+        return marker;
+    }
+}
