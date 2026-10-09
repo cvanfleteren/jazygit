@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.Cmd.Amend;
 import net.vanfleteren.jazygit.state.Cmd.Commit;
+import net.vanfleteren.jazygit.state.Cmd.Reword;
 import net.vanfleteren.jazygit.state.Cmd.Stage;
 import net.vanfleteren.jazygit.state.Cmd.StageForCommit;
 import net.vanfleteren.jazygit.state.Cmd.Unstage;
@@ -135,6 +136,12 @@ public final class Update {
             case Msg.Committed() -> refresh(model.withError(Optional.empty()));
             case Msg.CommitFailed(String message) ->
                     refresh(model.withError(Optional.of("Commit failed: " + message)));
+            case Msg.RewordRequested(int index) -> rewordRequested(model, index);
+            case Msg.RewordCancelled() -> Next.of(model.withRewording(Optional.empty()));
+            case Msg.RewordConfirmed(String summary, String description) -> rewordConfirmed(model, summary, description);
+            case Msg.Reworded() -> refresh(model.withError(Optional.empty()));
+            case Msg.RewordFailed(String message) ->
+                    refresh(model.withError(Optional.of("Reword failed: " + message)));
             case Msg.AmendRequested() -> amendRequested(model);
             case Msg.AmendCancelled() -> Next.of(model.withAmendPrompt(false));
             case Msg.AmendConfirmed() -> amendConfirmed(model);
@@ -327,6 +334,28 @@ public final class Update {
                 : files.stream().filter(FileEntry::unstaged).map(FileEntry::path).toList();
         return model.amendPrompt()
                 ? Next.of(model.withAmendPrompt(false), new Amend(stage))
+                : Next.of(model);
+    }
+
+    /**
+     * Only the last commit can be reworded; the dialog starts out with its message.
+     */
+    private static Next rewordRequested(Model model, int index) {
+        if (!(model.commits() instanceof Loaded<List<net.vanfleteren.jazygit.model.Commit>>(var commits))
+                || commits.isEmpty()) {
+            return Next.of(model);
+        }
+        return index == 0
+                ? Next.of(model.withError(Optional.empty()).withRewording(Optional.of(commits.getFirst())))
+                : Next.of(model.withError(Optional.of("Only the last commit can be reworded")));
+    }
+
+    private static Next rewordConfirmed(Model model, String summary, String description) {
+        String trimmed = summary.strip();
+        // A blank summary keeps the dialog open.
+        return model.rewording().isPresent() && !trimmed.isEmpty()
+                ? Next.of(model.withRewording(Optional.empty()).withError(Optional.empty()),
+                new Reword(trimmed, description.strip()))
                 : Next.of(model);
     }
 

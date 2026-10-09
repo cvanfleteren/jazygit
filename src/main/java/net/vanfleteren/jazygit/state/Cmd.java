@@ -86,4 +86,10 @@ public sealed interface Cmd {
             stage = List.copyOf(stage);
         }
     }
+
+    /**
+     * Replaces the message of the last commit.
+     */
+    record Reword(String summary, String description) implements Cmd {
+    }
 }

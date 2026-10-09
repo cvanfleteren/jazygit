@@ -176,4 +176,23 @@ public sealed interface Msg {
 
     record AmendFailed(String message) implements Msg {
     }
+
+    /**
+     * The user asked to reword the commit at {@code index} in the commit log. Only the last commit
+     * (index 0) can be reworded.
+     */
+    record RewordRequested(int index) implements Msg {
+    }
+
+    record RewordCancelled() implements Msg {
+    }
+
+    record RewordConfirmed(String summary, String description) implements Msg {
+    }
+
+    record Reworded() implements Msg {
+    }
+
+    record RewordFailed(String message) implements Msg {
+    }
 }

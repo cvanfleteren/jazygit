@@ -60,6 +60,19 @@ public final class GitCliIndex {
         execute(workTree, List.of("git", "commit", "--quiet", "--amend", "--no-edit"), "commit");
     }
 
+    /**
+     * {@code git commit --allow-empty --amend --only -m <summary> [-m <description>]}: replaces the
+     * message of the last commit, whatever is staged.
+     */
+    public static void reword(Path workTree, String summary, String description) {
+        List<String> command = new ArrayList<>(
+                List.of("git", "commit", "--quiet", "--allow-empty", "--amend", "--only", "-m", summary));
+        if (!description.isBlank()) {
+            command.addAll(List.of("-m", description));
+        }
+        execute(workTree, command, "commit");
+    }
+
     private static void run(Path workTree, List<String> subcommand, List<String> paths) {
         if (paths.isEmpty()) {
             return;

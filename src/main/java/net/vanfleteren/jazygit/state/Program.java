@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.Cmd.Amend;
 import net.vanfleteren.jazygit.state.Cmd.Commit;
+import net.vanfleteren.jazygit.state.Cmd.Reword;
 import net.vanfleteren.jazygit.state.Cmd.Stage;
 import net.vanfleteren.jazygit.state.Cmd.StageForCommit;
 import net.vanfleteren.jazygit.state.Cmd.Unstage;
@@ -121,6 +122,10 @@ public final class Program {
                     provider.amend();
                     yield new Msg.Amended();
                 }
+                case Reword(String summary, String description) -> {
+                    provider.reword(summary, description);
+                    yield new Msg.Reworded();
+                }
                 case Unstage(List<String> added, List<String> others) -> {
                     provider.unstageNew(added);
                     provider.unstage(others);
@@ -143,6 +148,7 @@ public final class Program {
             case StageForCommit stage -> new Msg.StageForCommitFailed(message);
             case Commit commit -> new Msg.CommitFailed(message);
             case Amend amend -> new Msg.AmendFailed(message);
+            case Reword reword -> new Msg.RewordFailed(message);
         };
     }
 }

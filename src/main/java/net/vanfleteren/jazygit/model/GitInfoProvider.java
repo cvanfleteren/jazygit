@@ -93,4 +93,12 @@ public interface GitInfoProvider {
      * @throws IllegalStateException if git fails, with git's explanation as message
      */
     void amend();
+
+    /**
+     * Replaces the message of the last commit, leaving its content alone.
+     *
+     * @param description the extended message; may be blank
+     * @throws IllegalStateException if git fails, with git's explanation as message
+     */
+    void reword(String summary, String description);
 }

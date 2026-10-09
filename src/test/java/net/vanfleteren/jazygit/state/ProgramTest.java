@@ -105,6 +105,11 @@ class ProgramTest {
         }
 
         @Override
+        public void reword(String summary, String description) {
+            commits.add("reword " + summary + "|" + description);
+        }
+
+        @Override
         public void amend() {
             index("amend", List.of());
         }
@@ -285,6 +290,19 @@ class ProgramTest {
 
         assertEquals(List.of("stage[a.txt]", "amend[]"), provider.indexCalls);
         assertEquals(false, program.model().amendPrompt());
+        assertEquals(Optional.empty(), program.model().error());
+    }
+
+    @Test
+    void rewordingTheLastCommit() {
+        settle();
+
+        program.dispatch(new Msg.RewordRequested(0));
+        program.dispatch(new Msg.RewordConfirmed("new summary", "new body"));
+        settle();
+
+        assertEquals(List.of("reword new summary|new body"), provider.commits);
+        assertEquals(Optional.empty(), program.model().rewording());
         assertEquals(Optional.empty(), program.model().error());
     }
 

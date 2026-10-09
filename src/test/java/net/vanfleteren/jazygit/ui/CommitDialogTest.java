@@ -83,6 +83,23 @@ class CommitDialogTest {
         assertEquals(List.of(new Msg.CommitCancelled(), new Msg.CommitCancelled()), dispatched);
     }
 
+    @Test
+    void rewordStartsOutWithTheCurrentMessageAndConfirmsIt() throws Exception {
+        CommitDialog reword = CommitDialog.reword(dispatched::add);
+        Model rewording = Update.update(TestModels.loaded(new SampleData()), new Msg.RewordRequested(0)).model();
+        net.vanfleteren.jazygit.model.Commit last = rewording.rewording().orElseThrow();
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> reword.render(rewording).orElseThrow())) {
+            runner.runner().focusManager().setFocus(CommitDialog.REWORD_ID);
+            String screen = RenderedText.ofLarge(runner, () -> reword.render(rewording).orElseThrow());
+            assertTrue(screen.contains(last.message()), screen);
+            runner.pilot().press(KeyCode.ENTER);
+            runner.pilot().pause();
+        }
+
+        assertEquals(List.of(new Msg.RewordConfirmed(last.message(), last.body())), dispatched);
+    }
+
     private ToolkitTestRunner start() throws Exception {
         assertTrue(open.commitOpen());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);

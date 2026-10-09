@@ -49,9 +49,10 @@ public class JazygitApp extends ToolkitApp {
     private final NewBranchDialog newBranchDialog = new NewBranchDialog(msg -> this.program.dispatch(msg));
     private final DeleteBranchDialog deleteBranchDialog = new DeleteBranchDialog(msg -> this.program.dispatch(msg));
     private final AmendDialog amendDialog = new AmendDialog(msg -> this.program.dispatch(msg));
+    private final CommitDialog rewordDialog = CommitDialog.reword(msg -> this.program.dispatch(msg));
     private final StageAllDialog stageAllDialog = new StageAllDialog(msg -> this.program.dispatch(msg));
     private final CommitDialog commitDialog = new CommitDialog(msg -> this.program.dispatch(msg));
-    private final CommitsPanel commitsPanel = new CommitsPanel();
+    private final CommitsPanel commitsPanel = new CommitsPanel(msg -> this.program.dispatch(msg));
     private ExecutorService io;
     private Program program;
 
@@ -115,8 +116,8 @@ public class JazygitApp extends ToolkitApp {
                 new Popup(deleteBranchDialog.render(model), List.of(DeleteBranchDialog.ID), BranchesPanel.ID),
                 new Popup(amendDialog.render(model), List.of(AmendDialog.ID), FilesPanel.ID),
                 new Popup(stageAllDialog.render(model), List.of(StageAllDialog.ID), FilesPanel.ID),
-                new Popup(commitDialog.render(model), List.of(CommitDialog.ID, CommitDialog.DESCRIPTION_ID),
-                        FilesPanel.ID));
+                new Popup(commitDialog.render(model), commitDialog.ids(), FilesPanel.ID),
+                new Popup(rewordDialog.render(model), rewordDialog.ids(), CommitsPanel.ID));
         Optional<Popup> open = popups.stream().filter(p -> p.element().isPresent()).findFirst();
         if (open.isPresent()) {
             if (!open.get().ids().contains(focusedId)) {

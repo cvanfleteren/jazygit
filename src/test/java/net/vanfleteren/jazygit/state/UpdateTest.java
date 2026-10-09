@@ -277,6 +277,58 @@ class UpdateTest {
         return loaded().withStatus(new Loaded<>(new RepoStatus("main", "aaaa", List.of(files))));
     }
 
+    private Model withCommits(Commit... commits) {
+        return loaded().withCommits(new Loaded<>(List.of(commits)));
+    }
+
+    private static Commit commit(String message, String body) {
+        return new Commit("abc1234", "me", "me@example.com", Instant.EPOCH, message, body);
+    }
+
+    @Test
+    void rewordOpensTheDialogForTheLastCommit() {
+        Commit last = commit("last", "details");
+        Model model = Update.update(withCommits(last, commit("older", "")), new Msg.RewordRequested(0)).model();
+
+        assertEquals(Optional.of(last), model.rewording());
+    }
+
+    @Test
+    void onlyTheLastCommitCanBeReworded() {
+        Model model = Update.update(withCommits(commit("last", ""), commit("older", "")), new Msg.RewordRequested(1))
+                .model();
+
+        assertEquals(Optional.empty(), model.rewording());
+        assertEquals(Optional.of("Only the last commit can be reworded"), model.error());
+    }
+
+    @Test
+    void confirmingTheRewordRewordsAndClosesTheDialog() {
+        Model open = Update.update(withCommits(commit("last", "")), new Msg.RewordRequested(0)).model();
+
+        Next next = Update.update(open, new Msg.RewordConfirmed(" better ", "\nwhy\n"));
+
+        assertEquals(List.of(new Cmd.Reword("better", "why")), next.cmds());
+        assertEquals(Optional.empty(), next.model().rewording());
+    }
+
+    @Test
+    void blankSummaryKeepsTheRewordDialogOpen() {
+        Model open = Update.update(withCommits(commit("last", "")), new Msg.RewordRequested(0)).model();
+
+        Next next = Update.update(open, new Msg.RewordConfirmed(" ", "why"));
+
+        assertEquals(List.of(), next.cmds());
+        assertEquals(open.rewording(), next.model().rewording());
+    }
+
+    @Test
+    void cancellingTheRewordClosesTheDialog() {
+        Model open = Update.update(withCommits(commit("last", "")), new Msg.RewordRequested(0)).model();
+
+        assertEquals(Optional.empty(), Update.update(open, new Msg.RewordCancelled()).model().rewording());
+    }
+
     @Test
     void amendAsksForConfirmationThenAmendsWithTheStagedFiles() {
         Model asking = Update.update(withFiles(new FileEntry("a.txt", ChangeType.ADDED),

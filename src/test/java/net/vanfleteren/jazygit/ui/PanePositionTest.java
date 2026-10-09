@@ -68,6 +68,11 @@ class PanePositionTest {
         }
 
         @Override
+        public void reword(String summary, String description) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public void amend() {
             throw new UnsupportedOperationException();
         }

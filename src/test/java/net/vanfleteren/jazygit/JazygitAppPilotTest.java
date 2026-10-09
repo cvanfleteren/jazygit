@@ -50,7 +50,7 @@ class JazygitAppPilotTest {
 
         private Fixture(SampleData data, List<Msg> dispatched) {
             this(data, TestModels.loaded(data), dispatched, new ArrayList<>(), new FilesPanel(dispatched::add), new BranchesPanel(dispatched::add),
-                    new CommitsPanel(), new AtomicReference<>());
+                    new CommitsPanel(dispatched::add), new AtomicReference<>());
         }
 
         Supplier<Element> renderer() {
@@ -183,6 +183,30 @@ class JazygitAppPilotTest {
             pilot.press(' ');
             pilot.pause();
             assertEquals(1, fixture.dispatched().size(), "Space outside the branches pane should not check out");
+
+            pilot.quit();
+        }
+    }
+
+    @Test
+    void rRequestsARewordFromTheCommitsPane() throws Exception {
+        Fixture fixture = new Fixture();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
+            FocusManager focusManager = testRunner.runner().focusManager();
+            fixture.focusManagerRef().set(focusManager);
+            focusManager.setFocus(CommitsPanel.ID);
+
+            Pilot pilot = testRunner.pilot();
+            pilot.pause();
+            // Moving re-renders, which is how the panel learns it has focus.
+            pilot.press(KeyCode.DOWN);
+            pilot.press(KeyCode.UP);
+            pilot.pause();
+            pilot.press('r');
+            pilot.pause();
+
+            assertEquals(true, fixture.dispatched().contains(new Msg.RewordRequested(0)));
 
             pilot.quit();
         }
