@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.model;
+package net.vanfleteren.jazygit.git;
 
 import org.zeroturnaround.exec.ProcessExecutor;
 import org.zeroturnaround.exec.ProcessResult;
@@ -13,11 +13,11 @@ import java.util.concurrent.TimeoutException;
 /**
  * Changes the index (staging area) through the git command line tool.
  */
-public final class GitCliIndex {
+public final class CliIndex {
 
     private static final long TIMEOUT_SECONDS = 30;
 
-    private GitCliIndex() {
+    private CliIndex() {
     }
 
     /**
@@ -97,7 +97,7 @@ public final class GitCliIndex {
                     .execute();
             if (result.getExitValue() != 0) {
                 throw new IllegalStateException(
-                        GitCliCheckout.explanation(result.outputUTF8(), result.getExitValue()));
+                        CliCheckout.explanation(result.outputUTF8(), result.getExitValue()));
             }
         } catch (IOException e) {
             throw new IllegalStateException("Could not run git; is it installed and on the PATH?", e);

@@ -1,5 +1,9 @@
 package net.vanfleteren.jazygit.ui;
 
+import net.vanfleteren.jazygit.state.AmendMsg;
+import net.vanfleteren.jazygit.state.CommitMsg;
+import net.vanfleteren.jazygit.state.SelectionMsg;
+import net.vanfleteren.jazygit.state.StageMsg;
 import dev.tamboui.toolkit.Toolkit;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.elements.TreeElement;
@@ -8,14 +12,15 @@ import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.widgets.tree.TreeNode;
-import net.vanfleteren.jazygit.model.ChangeType;
-import net.vanfleteren.jazygit.model.FileEntry;
-import net.vanfleteren.jazygit.model.FileTree;
-import net.vanfleteren.jazygit.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.FileTree;
+import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.state.FileDiff;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.ui.widgets.Pane;
 
 import java.util.List;
 import java.util.Optional;
@@ -63,7 +68,7 @@ public class FilesPanel {
                 .map(TreeNode::data)
                 .map(FileTree::entries)
                 .filter(files -> !model.fileDiff().map(FileDiff::files).equals(Optional.of(files)))
-                .map(Msg.FilesSelected::new);
+                .map(SelectionMsg.FilesSelected::new);
     }
 
     private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {
@@ -71,18 +76,18 @@ public class FilesPanel {
             return EventResult.UNHANDLED;
         }
         if (event.isChar('c')) {
-            dispatch.accept(new Msg.CommitRequested());
+            dispatch.accept(new CommitMsg.Requested());
             return EventResult.HANDLED;
         }
         if (event.isChar('A')) {
-            dispatch.accept(new Msg.AmendRequested());
+            dispatch.accept(new AmendMsg.Requested());
             return EventResult.HANDLED;
         }
         return Optional.ofNullable(tree.selectedNode())
                 .map(TreeNode::data)
                 .filter(data -> event.isChar(' '))
                 .map(data -> {
-                    dispatch.accept(new Msg.ToggleStageRequested(data.entries()));
+                    dispatch.accept(new StageMsg.Requested(data.entries()));
                     return EventResult.HANDLED;
                 })
                 .orElse(EventResult.UNHANDLED);

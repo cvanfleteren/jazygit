@@ -1,5 +1,8 @@
-package net.vanfleteren.jazygit.model;
+package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.RepoStatus;
 import org.zeroturnaround.exec.InvalidExitValueException;
 import org.zeroturnaround.exec.ProcessExecutor;
 
@@ -15,11 +18,11 @@ import java.util.concurrent.TimeoutException;
 /**
  * Reads the working tree status through the {@code git status} command line tool.
  */
-public final class GitCliStatus {
+public final class CliStatus {
 
     private static final long TIMEOUT_SECONDS = 10;
 
-    private GitCliStatus() {
+    private CliStatus() {
     }
 
     /**

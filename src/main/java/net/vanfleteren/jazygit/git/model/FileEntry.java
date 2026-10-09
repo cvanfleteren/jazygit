@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.model;
+package net.vanfleteren.jazygit.git.model;
 
 /**
  * A single file entry as it would appear in {@code git status}.

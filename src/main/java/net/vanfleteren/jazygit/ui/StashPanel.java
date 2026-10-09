@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.ui;
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.toolkit.elements.Panel;
+import net.vanfleteren.jazygit.ui.widgets.Pane;
 
 /**
  * Bottom-left panel reserved for the stashes. It is a placeholder: it shows nothing yet and does not

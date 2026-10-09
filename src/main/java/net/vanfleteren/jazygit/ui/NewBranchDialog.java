@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
+import net.vanfleteren.jazygit.state.NewBranchMsg;
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.toolkit.element.Element;
@@ -61,11 +62,11 @@ public final class NewBranchDialog {
         if (!name.isBlank()) {
             input.clear();
         }
-        dispatch.accept(new Msg.NewBranchConfirmed(name));
+        dispatch.accept(new NewBranchMsg.Confirmed(name));
     }
 
     private void cancel() {
         input.clear();
-        dispatch.accept(new Msg.NewBranchCancelled());
+        dispatch.accept(new NewBranchMsg.Cancelled());
     }
 }

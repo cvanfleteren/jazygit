@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.model;
+package net.vanfleteren.jazygit.git;
 
 import org.zeroturnaround.exec.ProcessExecutor;
 import org.zeroturnaround.exec.ProcessResult;
@@ -14,11 +14,11 @@ import java.util.concurrent.TimeoutException;
  * handled exactly like git itself does: local changes are carried over, and conflicting ones make
  * the checkout fail.
  */
-public final class GitCliCheckout {
+public final class CliCheckout {
 
     private static final long TIMEOUT_SECONDS = 30;
 
-    private GitCliCheckout() {
+    private CliCheckout() {
     }
 
     /**

@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
-import net.vanfleteren.jazygit.model.GitInfoProvider;
+import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.model.FileEntry;
 
 import java.util.Optional;
 
@@ -24,16 +25,16 @@ public final class TestModels {
      */
     public static Model loaded(GitInfoProvider provider, String branch) {
         Program program = Program.start(provider, Runnable::run, Runnable::run);
-        program.dispatch(new Msg.BranchSelected(branch));
+        program.dispatch(new SelectionMsg.BranchSelected(branch));
         return program.model();
     }
 
     /**
      * The model after all of the provider's data, and the diff of {@code files}, has been loaded.
      */
-    public static Model withFilesSelected(GitInfoProvider provider, java.util.List<net.vanfleteren.jazygit.model.FileEntry> files) {
+    public static Model withFilesSelected(GitInfoProvider provider, java.util.List<FileEntry> files) {
         Program program = Program.start(provider, Runnable::run, Runnable::run);
-        program.dispatch(new Msg.FilesSelected(files));
+        program.dispatch(new SelectionMsg.FilesSelected(files));
         return program.model();
     }
 

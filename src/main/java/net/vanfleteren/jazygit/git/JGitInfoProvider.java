@@ -1,5 +1,7 @@
-package net.vanfleteren.jazygit.model;
+package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.model.*;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.Constants;
@@ -60,7 +62,7 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
         try {
             this.workTree = repository.getWorkTree().toPath();
             // Fail at startup rather than on first use when git is not available.
-            GitCliStatus.read(workTree);
+            CliStatus.read(workTree);
         } catch (RuntimeException e) {
             close();
             throw e;
@@ -74,7 +76,7 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
 
     @Override
     public RepoStatus status() {
-        return GitCliStatus.read(workTree);
+        return CliStatus.read(workTree);
     }
 
     @Override
@@ -158,7 +160,7 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
 
     @Override
     public void checkout(String branch) {
-        GitCliCheckout.checkout(workTree, branch);
+        CliCheckout.checkout(workTree, branch);
     }
 
     /**
@@ -184,7 +186,7 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
 
     /**
      * Whether the remote-tracking ref of {@code branch} exists. The remote is the one
-     * {@link GitCliBranch#deleteRemote} pushes to: the configured one, or {@code origin}.
+     * {@link CliBranch#deleteRemote} pushes to: the configured one, or {@code origin}.
      */
     private boolean hasRemote(String branch) throws IOException {
         String remote = repository.getConfig().getString("branch", branch, "remote");
@@ -193,52 +195,52 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
 
     @Override
     public void createBranch(String name, String startPoint) {
-        GitCliCheckout.createBranch(workTree, name, startPoint);
+        CliCheckout.createBranch(workTree, name, startPoint);
     }
 
     @Override
     public void deleteBranch(String name, boolean local, boolean remote) {
         if (remote) {
-            GitCliBranch.deleteRemote(workTree, name);
+            CliBranch.deleteRemote(workTree, name);
         }
         if (local) {
-            GitCliBranch.deleteLocal(workTree, name);
+            CliBranch.deleteLocal(workTree, name);
         }
     }
 
     @Override
     public void stage(List<String> paths) {
-        GitCliIndex.add(workTree, paths);
+        CliIndex.add(workTree, paths);
     }
 
     @Override
     public void unstageNew(List<String> paths) {
-        GitCliIndex.removeCached(workTree, paths);
+        CliIndex.removeCached(workTree, paths);
     }
 
     @Override
     public void unstage(List<String> paths) {
-        GitCliIndex.reset(workTree, paths);
+        CliIndex.reset(workTree, paths);
     }
 
     @Override
     public void commit(String summary, String description) {
-        GitCliIndex.commit(workTree, summary, description);
+        CliIndex.commit(workTree, summary, description);
     }
 
     @Override
     public void amend() {
-        GitCliIndex.amend(workTree);
+        CliIndex.amend(workTree);
     }
 
     @Override
     public void reword(String summary, String description) {
-        GitCliIndex.reword(workTree, summary, description);
+        CliIndex.reword(workTree, summary, description);
     }
 
     @Override
     public Diffs diff(List<FileEntry> files) {
-        return GitCliDiff.diff(workTree, files);
+        return CliDiff.diff(workTree, files);
     }
 
     @Override

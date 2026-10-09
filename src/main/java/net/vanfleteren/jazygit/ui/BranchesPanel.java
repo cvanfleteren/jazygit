@@ -1,9 +1,13 @@
 package net.vanfleteren.jazygit.ui;
 
+import net.vanfleteren.jazygit.state.CheckoutMsg;
+import net.vanfleteren.jazygit.state.DeleteBranchMsg;
+import net.vanfleteren.jazygit.state.NewBranchMsg;
+import net.vanfleteren.jazygit.state.SelectionMsg;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyEvent;
-import net.vanfleteren.jazygit.model.Branch;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.BranchLog;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
@@ -109,7 +113,7 @@ public class BranchesPanel {
     public Optional<Msg> selectionChange(Model model) {
         return selectedBranch()
                 .filter(branch -> !model.branchLog().map(BranchLog::branch).equals(Optional.of(branch)))
-                .map(Msg.BranchSelected::new);
+                .map(SelectionMsg.BranchSelected::new);
     }
 
     private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {
@@ -123,9 +127,9 @@ public class BranchesPanel {
     }
 
     private static Optional<Msg> request(KeyEvent event, String branch) {
-        return event.isChar(' ') ? Optional.of(new Msg.CheckoutRequested(branch))
-                : event.isChar('d') ? Optional.of(new Msg.DeleteBranchRequested(branch))
-                : event.isChar('n') ? Optional.of(new Msg.NewBranchRequested(branch))
+        return event.isChar(' ') ? Optional.of(new CheckoutMsg.Requested(branch))
+                : event.isChar('d') ? Optional.of(new DeleteBranchMsg.Requested(branch))
+                : event.isChar('n') ? Optional.of(new NewBranchMsg.Requested(branch))
                 : Optional.empty();
     }
 }

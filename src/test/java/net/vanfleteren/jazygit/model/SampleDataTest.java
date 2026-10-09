@@ -1,5 +1,8 @@
 package net.vanfleteren.jazygit.model;
 
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.FileEntry;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

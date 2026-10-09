@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
+import net.vanfleteren.jazygit.state.NewBranchMsg;
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
@@ -24,7 +25,7 @@ class NewBranchDialogTest {
 
     private final List<Msg> dispatched = new ArrayList<>();
     private final NewBranchDialog dialog = new NewBranchDialog(dispatched::add);
-    private final Model open = Update.update(TestModels.loaded(new SampleData()), new Msg.NewBranchRequested("main"))
+    private final Model open = Update.update(TestModels.loaded(new SampleData()), new NewBranchMsg.Requested("main"))
             .model();
 
     @Test
@@ -35,7 +36,7 @@ class NewBranchDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new Msg.NewBranchConfirmed("topic")), dispatched);
+        assertEquals(List.of(new NewBranchMsg.Confirmed("topic")), dispatched);
     }
 
     @Test
@@ -46,7 +47,7 @@ class NewBranchDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new Msg.NewBranchCancelled()), dispatched);
+        assertEquals(List.of(new NewBranchMsg.Cancelled()), dispatched);
     }
 
     @Test

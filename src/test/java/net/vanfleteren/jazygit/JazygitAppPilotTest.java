@@ -1,5 +1,10 @@
 package net.vanfleteren.jazygit;
 
+import net.vanfleteren.jazygit.state.CheckoutMsg;
+import net.vanfleteren.jazygit.state.CommitMsg;
+import net.vanfleteren.jazygit.state.RewordMsg;
+import net.vanfleteren.jazygit.state.SelectionMsg;
+import net.vanfleteren.jazygit.state.StageMsg;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Panel;
@@ -152,11 +157,11 @@ class JazygitAppPilotTest {
 
             Pilot pilot = testRunner.pilot();
             pilot.pause();
-            assertEquals(new Msg.BranchSelected("main"), fixture.selections().getLast());
+            assertEquals(new SelectionMsg.BranchSelected("main"), fixture.selections().getLast());
 
             pilot.press(KeyCode.DOWN);
             pilot.pause();
-            assertEquals(new Msg.BranchSelected("feature/initial-layout"), fixture.selections().getLast());
+            assertEquals(new SelectionMsg.BranchSelected("feature/initial-layout"), fixture.selections().getLast());
 
             pilot.quit();
         }
@@ -176,7 +181,7 @@ class JazygitAppPilotTest {
             pilot.press(KeyCode.DOWN);
             pilot.press(' ');
             pilot.pause();
-            assertEquals(List.of(new Msg.CheckoutRequested("feature/initial-layout")), fixture.dispatched());
+            assertEquals(List.of(new CheckoutMsg.Requested("feature/initial-layout")), fixture.dispatched());
 
             focusManager.setFocus(CommitsPanel.ID);
             pilot.pause();
@@ -206,7 +211,7 @@ class JazygitAppPilotTest {
             pilot.press('r');
             pilot.pause();
 
-            assertEquals(true, fixture.dispatched().contains(new Msg.RewordRequested(0)));
+            assertEquals(true, fixture.dispatched().contains(new RewordMsg.Requested(0)));
 
             pilot.quit();
         }
@@ -230,7 +235,7 @@ class JazygitAppPilotTest {
             pilot.press('c');
             pilot.pause();
 
-            assertEquals(true, fixture.dispatched().contains(new Msg.CommitRequested()));
+            assertEquals(true, fixture.dispatched().contains(new CommitMsg.Requested()));
 
             pilot.quit();
         }
@@ -255,7 +260,7 @@ class JazygitAppPilotTest {
             pilot.pause();
 
             assertEquals(1, fixture.dispatched().size());
-            Msg.ToggleStageRequested all = (Msg.ToggleStageRequested) fixture.dispatched().get(0);
+            StageMsg.Requested all = (StageMsg.Requested) fixture.dispatched().get(0);
             // The virtual root is selected first, so every changed file is requested.
             assertEquals(java.util.Set.copyOf(fixture.data().status().files()), java.util.Set.copyOf(all.files()));
 
@@ -264,7 +269,7 @@ class JazygitAppPilotTest {
             pilot.press(' ');
             pilot.pause();
 
-            Msg.ToggleStageRequested requested = (Msg.ToggleStageRequested) fixture.dispatched().get(1);
+            StageMsg.Requested requested = (StageMsg.Requested) fixture.dispatched().get(1);
             // DOWN highlights the "model" directory, so only its file is requested.
             assertEquals(List.of("src/main/java/net/vanfleteren/jazygit/model/SampleData.java"),
                     requested.files().stream().map(f -> f.path()).toList());

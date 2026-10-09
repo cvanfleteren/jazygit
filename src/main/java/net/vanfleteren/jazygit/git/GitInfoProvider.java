@@ -1,4 +1,7 @@
-package net.vanfleteren.jazygit.model;
+package net.vanfleteren.jazygit.git;
+
+import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.model.*;
 
 import java.util.List;
 

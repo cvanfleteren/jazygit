@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.model;
+package net.vanfleteren.jazygit.git.model;
 
 /**
  * The kind of change a {@link FileEntry} carries, mirroring the markers used by {@code git status}.

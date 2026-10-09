@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
+import net.vanfleteren.jazygit.state.*;
+
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.toolkit.element.Element;
@@ -8,11 +10,7 @@ import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
-import net.vanfleteren.jazygit.model.Branch;
-import net.vanfleteren.jazygit.state.DeleteScope;
-import net.vanfleteren.jazygit.state.Loadable;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.git.model.Branch;
 
 import java.util.List;
 import java.util.Optional;
@@ -31,10 +29,10 @@ public final class DeleteBranchDialog {
     /**
      * An option of the popup; no scope means cancel.
      */
-    private record Option(char key, String label, Optional<DeleteScope> scope) {
+    private record Option(char key, String label, Optional<Cmd.BranchCmd.DeleteBranch.DeleteScope> scope) {
 
         Msg msg() {
-            return scope.<Msg>map(Msg.DeleteBranchChosen::new).orElseGet(Msg.DeleteBranchCancelled::new);
+            return scope.<Msg>map(DeleteBranchMsg.Chosen::new).orElseGet(DeleteBranchMsg.Cancelled::new);
         }
 
         String row() {
@@ -45,7 +43,7 @@ public final class DeleteBranchDialog {
          * Whether the option acts on the remote branch, so it needs one.
          */
         boolean needsRemote() {
-            return scope.filter(scope -> scope != DeleteScope.LOCAL).isPresent();
+            return scope.filter(scope -> scope != Cmd.BranchCmd.DeleteBranch.DeleteScope.LOCAL).isPresent();
         }
 
         boolean enabled(boolean remoteAvailable) {
@@ -54,9 +52,9 @@ public final class DeleteBranchDialog {
     }
 
     private static final List<Option> OPTIONS = List.of(
-            new Option('d', "delete local branch", Optional.of(DeleteScope.LOCAL)),
-            new Option('r', "delete remote branch", Optional.of(DeleteScope.REMOTE)),
-            new Option('b', "delete local and remote branch", Optional.of(DeleteScope.BOTH)),
+            new Option('d', "delete local branch", Optional.of(Cmd.BranchCmd.DeleteBranch.DeleteScope.LOCAL)),
+            new Option('r', "delete remote branch", Optional.of(Cmd.BranchCmd.DeleteBranch.DeleteScope.REMOTE)),
+            new Option('b', "delete local and remote branch", Optional.of(Cmd.BranchCmd.DeleteBranch.DeleteScope.BOTH)),
             new Option('c', "cancel", Optional.empty()));
 
     private final ListElement<?> list = list()

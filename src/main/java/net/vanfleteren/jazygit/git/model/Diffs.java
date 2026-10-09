@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.model;
+package net.vanfleteren.jazygit.git.model;
 
 /**
  * The diff of some files as unified diff text, split by where the changes are.

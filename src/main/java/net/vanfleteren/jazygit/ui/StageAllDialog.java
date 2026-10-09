@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
+import net.vanfleteren.jazygit.state.CommitMsg;
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.toolkit.element.Element;
@@ -51,7 +52,7 @@ public final class StageAllDialog {
                         .width(WIDTH)
                         .length(HEIGHT)
                         .padding(1)
-                        .onConfirm(() -> dispatch.accept(new Msg.StageAllConfirmed()))
-                        .onCancel(() -> dispatch.accept(new Msg.StageAllCancelled())));
+                        .onConfirm(() -> dispatch.accept(new CommitMsg.StageAllConfirmed()))
+                        .onCancel(() -> dispatch.accept(new CommitMsg.StageAllCancelled())));
     }
 }

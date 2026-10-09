@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
+import net.vanfleteren.jazygit.state.AmendMsg;
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.style.Overflow;
@@ -53,7 +54,7 @@ public final class AmendDialog {
                         .width(WIDTH)
                         .length(HEIGHT)
                         .padding(1)
-                        .onConfirm(() -> dispatch.accept(new Msg.AmendConfirmed()))
-                        .onCancel(() -> dispatch.accept(new Msg.AmendCancelled())));
+                        .onConfirm(() -> dispatch.accept(new AmendMsg.Confirmed()))
+                        .onCancel(() -> dispatch.accept(new AmendMsg.Cancelled())));
     }
 }

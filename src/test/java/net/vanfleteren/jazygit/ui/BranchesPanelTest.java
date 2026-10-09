@@ -1,8 +1,10 @@
 package net.vanfleteren.jazygit.ui;
 
+import net.vanfleteren.jazygit.state.LoadMsg;
+import net.vanfleteren.jazygit.state.NewBranchMsg;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.tui.event.KeyCode;
-import net.vanfleteren.jazygit.model.Branch;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -66,7 +68,7 @@ class BranchesPanelTest {
             testRunner.pilot().quit();
         }
 
-        assertEquals(List.of(new Msg.NewBranchRequested("feature")), dispatched);
+        assertEquals(List.of(new NewBranchMsg.Requested("feature")), dispatched);
     }
 
     private String highlightedAfterMovingTo(int index, Model after) throws Exception {
@@ -86,6 +88,6 @@ class BranchesPanelTest {
     }
 
     private static Model with(Model model, List<Branch> branches) {
-        return Update.update(model, new Msg.BranchesLoaded(branches)).model();
+        return Update.update(model, new LoadMsg.BranchesLoaded(branches)).model();
     }
 }

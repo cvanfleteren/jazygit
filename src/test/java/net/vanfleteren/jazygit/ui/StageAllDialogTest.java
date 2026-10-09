@@ -1,13 +1,15 @@
 package net.vanfleteren.jazygit.ui;
 
+import net.vanfleteren.jazygit.state.CommitMsg;
+import net.vanfleteren.jazygit.state.LoadMsg;
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
-import net.vanfleteren.jazygit.model.ChangeType;
-import net.vanfleteren.jazygit.model.FileEntry;
-import net.vanfleteren.jazygit.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -30,9 +32,9 @@ class StageAllDialogTest {
     private final Model open = openModel();
 
     private static Model openModel() {
-        Model unstaged = Update.update(TestModels.loaded(new SampleData()), new Msg.StatusLoaded(
+        Model unstaged = Update.update(TestModels.loaded(new SampleData()), new LoadMsg.StatusLoaded(
                 new RepoStatus("main", "aaaa", List.of(new FileEntry("a.txt", ChangeType.MODIFIED))))).model();
-        return Update.update(unstaged, new Msg.CommitRequested()).model();
+        return Update.update(unstaged, new CommitMsg.Requested()).model();
     }
 
     @Test
@@ -42,7 +44,7 @@ class StageAllDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new Msg.StageAllConfirmed()), dispatched);
+        assertEquals(List.of(new CommitMsg.StageAllConfirmed()), dispatched);
     }
 
     @Test
@@ -52,7 +54,7 @@ class StageAllDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new Msg.StageAllCancelled()), dispatched);
+        assertEquals(List.of(new CommitMsg.StageAllCancelled()), dispatched);
     }
 
     @Test

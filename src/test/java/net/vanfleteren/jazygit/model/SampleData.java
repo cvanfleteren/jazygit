@@ -1,5 +1,8 @@
 package net.vanfleteren.jazygit.model;
 
+import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.model.*;
+
 import java.time.Instant;
 import java.util.List;
 

@@ -1,9 +1,10 @@
 package net.vanfleteren.jazygit.ui;
 
+import net.vanfleteren.jazygit.state.RewordMsg;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyEvent;
-import net.vanfleteren.jazygit.model.Commit;
+import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 
@@ -54,7 +55,7 @@ public class CommitsPanel {
 
     private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {
         if (focused && event.isChar('r')) {
-            dispatch.accept(new Msg.RewordRequested(selectedIndex()));
+            dispatch.accept(new RewordMsg.Requested(selectedIndex()));
             return EventResult.HANDLED;
         }
         return EventResult.UNHANDLED;

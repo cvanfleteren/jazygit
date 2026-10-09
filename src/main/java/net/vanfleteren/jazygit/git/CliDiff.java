@@ -1,5 +1,8 @@
-package net.vanfleteren.jazygit.model;
+package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.Diffs;
+import net.vanfleteren.jazygit.git.model.FileEntry;
 import org.zeroturnaround.exec.ProcessExecutor;
 import org.zeroturnaround.exec.ProcessResult;
 
@@ -16,12 +19,12 @@ import java.util.stream.Stream;
 /**
  * Reads the diff of changed files through the git command line tool.
  */
-public final class GitCliDiff {
+public final class CliDiff {
 
     private static final long TIMEOUT_SECONDS = 30;
     static final int MAX_LINES = 5000;
 
-    private GitCliDiff() {
+    private CliDiff() {
     }
 
     /**
@@ -82,7 +85,7 @@ public final class GitCliDiff {
                     .execute();
             if (result.getExitValue() > 1) {
                 throw new IllegalStateException(
-                        GitCliCheckout.explanation(result.outputUTF8(), result.getExitValue()));
+                        CliCheckout.explanation(result.outputUTF8(), result.getExitValue()));
             }
             return result.outputUTF8();
         } catch (IOException e) {

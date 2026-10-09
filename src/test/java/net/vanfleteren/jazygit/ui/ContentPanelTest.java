@@ -2,9 +2,9 @@ package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.StyledElement;
-import net.vanfleteren.jazygit.model.ChangeType;
-import net.vanfleteren.jazygit.model.Commit;
-import net.vanfleteren.jazygit.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;

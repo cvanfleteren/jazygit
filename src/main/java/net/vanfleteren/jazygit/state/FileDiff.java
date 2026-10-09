@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
-import net.vanfleteren.jazygit.model.Diffs;
-import net.vanfleteren.jazygit.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.Diffs;
+import net.vanfleteren.jazygit.git.model.FileEntry;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,7 +26,7 @@ public record FileDiff(List<FileEntry> files, Loadable<Diffs> diff, Optional<Fil
     /**
      * A diff that is loading, falling back to the diff that was shown before it.
      */
-    static FileDiff loading(List<FileEntry> files, Optional<FileDiff> shown) {
+    public static FileDiff loading(List<FileEntry> files, Optional<FileDiff> shown) {
         Optional<FileDiff> previous = shown.flatMap(d ->
                 d.diff() instanceof Loadable.Loaded<Diffs> ? Optional.of(d) : d.previous());
         return new FileDiff(files, Loadable.loading(), previous);
@@ -35,7 +35,7 @@ public record FileDiff(List<FileEntry> files, Loadable<Diffs> diff, Optional<Fil
     /**
      * Like {@link Loadable#reload}, returns this instance when the diff is unchanged.
      */
-    FileDiff reload(Diffs diffs) {
+    public FileDiff reload(Diffs diffs) {
         Loadable<Diffs> reloaded = diff.reload(diffs);
         return reloaded == diff ? this : new FileDiff(files, reloaded);
     }

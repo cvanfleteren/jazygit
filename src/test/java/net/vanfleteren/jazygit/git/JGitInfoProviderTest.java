@@ -1,5 +1,6 @@
-package net.vanfleteren.jazygit.model;
+package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.git.model.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -1,12 +1,14 @@
 package net.vanfleteren.jazygit.ui;
 
+import net.vanfleteren.jazygit.state.CommitMsg;
+import net.vanfleteren.jazygit.state.RewordMsg;
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.widgets.block.BorderType;
 import dev.tamboui.widgets.input.TextAreaState;
 import dev.tamboui.widgets.input.TextInputState;
-import net.vanfleteren.jazygit.model.Commit;
+import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 
@@ -70,8 +72,8 @@ public final class CommitDialog {
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public CommitDialog(Consumer<Msg> dispatch) {
-        this(ID, DESCRIPTION_ID, Model::commitOpen, model -> Optional.empty(), Msg.CommitConfirmed::new,
-                Msg.CommitCancelled::new, dispatch);
+        this(ID, DESCRIPTION_ID, Model::commitOpen, model -> Optional.empty(), CommitMsg.Confirmed::new,
+                CommitMsg.Cancelled::new, dispatch);
     }
 
     /**
@@ -81,7 +83,7 @@ public final class CommitDialog {
      */
     public static CommitDialog reword(Consumer<Msg> dispatch) {
         return new CommitDialog(REWORD_ID, REWORD_DESCRIPTION_ID, model -> model.rewording().isPresent(),
-                Model::rewording, Msg.RewordConfirmed::new, Msg.RewordCancelled::new, dispatch);
+                Model::rewording, RewordMsg.Confirmed::new, RewordMsg.Cancelled::new, dispatch);
     }
 
     /**

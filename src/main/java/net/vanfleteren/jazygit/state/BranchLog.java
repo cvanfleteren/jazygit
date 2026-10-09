@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
-import net.vanfleteren.jazygit.model.Commit;
+import net.vanfleteren.jazygit.git.model.Commit;
 
 import java.util.List;
 import java.util.Optional;
@@ -20,7 +20,7 @@ public record BranchLog(String branch, Loadable<List<Commit>> commits, Optional<
     /**
      * A log that is loading, falling back to the log that was shown before it.
      */
-    static BranchLog loading(String branch, Optional<BranchLog> shown) {
+    public static BranchLog loading(String branch, Optional<BranchLog> shown) {
         Optional<BranchLog> previous = shown.flatMap(log ->
                 log.commits() instanceof Loadable.Loaded<List<Commit>> ? Optional.of(log) : log.previous());
         return new BranchLog(branch, Loadable.loading(), previous);
@@ -29,7 +29,7 @@ public record BranchLog(String branch, Loadable<List<Commit>> commits, Optional<
     /**
      * Like {@link Loadable#reload}, returns this instance when the commits are unchanged.
      */
-    BranchLog reload(List<Commit> commits) {
+    public BranchLog reload(List<Commit> commits) {
         Loadable<List<Commit>> reloaded = this.commits.reload(commits);
         return reloaded == this.commits ? this : new BranchLog(branch, reloaded);
     }

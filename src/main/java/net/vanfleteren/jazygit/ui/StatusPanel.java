@@ -5,7 +5,7 @@ import static dev.tamboui.toolkit.Toolkit.*;
 import dev.tamboui.style.Color;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.elements.TextElement;
-import net.vanfleteren.jazygit.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 

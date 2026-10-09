@@ -1,5 +1,8 @@
 package net.vanfleteren.jazygit.ui;
 
+import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.state.CommitMsg;
+import net.vanfleteren.jazygit.state.RewordMsg;
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
@@ -32,8 +35,8 @@ class CommitDialogTest {
     private static Model openModel() {
         // The sample data has staged files, so the commit popup opens directly.
         Model loaded = TestModels.loaded(new SampleData());
-        Model asked = Update.update(loaded, new Msg.CommitRequested()).model();
-        return asked.commitOpen() ? asked : Update.update(asked, new Msg.StagedForCommit()).model();
+        Model asked = Update.update(loaded, new CommitMsg.Requested()).model();
+        return asked.commitOpen() ? asked : Update.update(asked, new CommitMsg.StagedForCommit()).model();
     }
 
     @Test
@@ -53,7 +56,7 @@ class CommitDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new Msg.CommitConfirmed("fix it", "")), dispatched);
+        assertEquals(List.of(new CommitMsg.Confirmed("fix it", "")), dispatched);
     }
 
     @Test
@@ -68,7 +71,7 @@ class CommitDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new Msg.CommitConfirmed("fix it", "because\nreasons")), dispatched);
+        assertEquals(List.of(new CommitMsg.Confirmed("fix it", "because\nreasons")), dispatched);
     }
 
     @Test
@@ -80,14 +83,14 @@ class CommitDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new Msg.CommitCancelled(), new Msg.CommitCancelled()), dispatched);
+        assertEquals(List.of(new CommitMsg.Cancelled(), new CommitMsg.Cancelled()), dispatched);
     }
 
     @Test
     void rewordStartsOutWithTheCurrentMessageAndConfirmsIt() throws Exception {
         CommitDialog reword = CommitDialog.reword(dispatched::add);
-        Model rewording = Update.update(TestModels.loaded(new SampleData()), new Msg.RewordRequested(0)).model();
-        net.vanfleteren.jazygit.model.Commit last = rewording.rewording().orElseThrow();
+        Model rewording = Update.update(TestModels.loaded(new SampleData()), new RewordMsg.Requested(0)).model();
+        Commit last = rewording.rewording().orElseThrow();
 
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> reword.render(rewording).orElseThrow())) {
             runner.runner().focusManager().setFocus(CommitDialog.REWORD_ID);
@@ -97,7 +100,7 @@ class CommitDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new Msg.RewordConfirmed(last.message(), last.body())), dispatched);
+        assertEquals(List.of(new RewordMsg.Confirmed(last.message(), last.body())), dispatched);
     }
 
     private ToolkitTestRunner start() throws Exception {

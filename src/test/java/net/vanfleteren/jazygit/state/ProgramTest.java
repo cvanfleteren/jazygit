@@ -1,11 +1,12 @@
 package net.vanfleteren.jazygit.state;
 
-import net.vanfleteren.jazygit.model.Branch;
-import net.vanfleteren.jazygit.model.ChangeType;
-import net.vanfleteren.jazygit.model.Commit;
-import net.vanfleteren.jazygit.model.FileEntry;
-import net.vanfleteren.jazygit.model.GitInfoProvider;
-import net.vanfleteren.jazygit.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.Diffs;
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import org.junit.jupiter.api.Test;
@@ -128,8 +129,8 @@ class ProgramTest {
         }
 
         @Override
-        public net.vanfleteren.jazygit.model.Diffs diff(List<FileEntry> files) {
-            return new net.vanfleteren.jazygit.model.Diffs("", "diff of " + files.size());
+        public Diffs diff(List<FileEntry> files) {
+            return new Diffs("", "diff of " + files.size());
         }
 
         private void index(String operation, List<String> paths) {
@@ -196,7 +197,7 @@ class ProgramTest {
     void checkoutReloadsStatusBranchesAndCommits() {
         settle();
 
-        program.dispatch(new Msg.CheckoutRequested("other"));
+        program.dispatch(new CheckoutMsg.Requested("other"));
         settle();
 
         Model model = program.model();
@@ -210,8 +211,8 @@ class ProgramTest {
     void confirmedNewBranchIsCreatedAndShownAsCurrent() {
         settle();
 
-        program.dispatch(new Msg.NewBranchRequested("other"));
-        program.dispatch(new Msg.NewBranchConfirmed("topic"));
+        program.dispatch(new NewBranchMsg.Requested("other"));
+        program.dispatch(new NewBranchMsg.Confirmed("topic"));
         settle();
 
         Model model = program.model();
@@ -225,8 +226,8 @@ class ProgramTest {
         settle();
         provider.checkoutError = new IllegalStateException("fatal: exists");
 
-        program.dispatch(new Msg.NewBranchRequested("other"));
-        program.dispatch(new Msg.NewBranchConfirmed("topic"));
+        program.dispatch(new NewBranchMsg.Requested("other"));
+        program.dispatch(new NewBranchMsg.Confirmed("topic"));
         settle();
 
         assertEquals(Optional.of("Creating branch topic failed: fatal: exists"), program.model().error());
@@ -236,8 +237,8 @@ class ProgramTest {
     void deletingABranchCallsTheProviderWithTheChosenScope() {
         settle();
 
-        program.dispatch(new Msg.DeleteBranchRequested("other"));
-        program.dispatch(new Msg.DeleteBranchChosen(DeleteScope.BOTH));
+        program.dispatch(new DeleteBranchMsg.Requested("other"));
+        program.dispatch(new DeleteBranchMsg.Chosen(Cmd.BranchCmd.DeleteBranch.DeleteScope.BOTH));
         settle();
 
         assertEquals(List.of("other local remote"), provider.deleted);
@@ -249,9 +250,9 @@ class ProgramTest {
     void toggleStageRunsTheGitCommandsAndReloadsStatus() {
         settle();
 
-        program.dispatch(new Msg.ToggleStageRequested(List.of(new FileEntry("a.txt", ChangeType.UNTRACKED))));
+        program.dispatch(new StageMsg.Requested(List.of(new FileEntry("a.txt", ChangeType.UNTRACKED))));
         settle();
-        program.dispatch(new Msg.ToggleStageRequested(List.of(
+        program.dispatch(new StageMsg.Requested(List.of(
                 new FileEntry("b.txt", ChangeType.ADDED), new FileEntry("c.txt", ChangeType.MODIFIED, true, false))));
         settle();
 
@@ -264,14 +265,14 @@ class ProgramTest {
         provider.status = new RepoStatus("main", "aaaa", List.of(new FileEntry("a.txt", ChangeType.UNTRACKED)));
         settle();
 
-        program.dispatch(new Msg.CommitRequested());
-        program.dispatch(new Msg.StageAllConfirmed());
+        program.dispatch(new CommitMsg.Requested());
+        program.dispatch(new CommitMsg.StageAllConfirmed());
         settle();
 
         assertEquals(List.of("stage[a.txt]"), provider.indexCalls);
         assertEquals(true, program.model().commitOpen());
 
-        program.dispatch(new Msg.CommitConfirmed("summary", "more"));
+        program.dispatch(new CommitMsg.Confirmed("summary", "more"));
         settle();
 
         assertEquals(List.of("summary|more"), provider.commits);
@@ -284,8 +285,8 @@ class ProgramTest {
         provider.status = new RepoStatus("main", "aaaa", List.of(new FileEntry("a.txt", ChangeType.MODIFIED)));
         settle();
 
-        program.dispatch(new Msg.AmendRequested());
-        program.dispatch(new Msg.AmendConfirmed());
+        program.dispatch(new AmendMsg.Requested());
+        program.dispatch(new AmendMsg.Confirmed());
         settle();
 
         assertEquals(List.of("stage[a.txt]", "amend[]"), provider.indexCalls);
@@ -297,8 +298,8 @@ class ProgramTest {
     void rewordingTheLastCommit() {
         settle();
 
-        program.dispatch(new Msg.RewordRequested(0));
-        program.dispatch(new Msg.RewordConfirmed("new summary", "new body"));
+        program.dispatch(new RewordMsg.Requested(0));
+        program.dispatch(new RewordMsg.Confirmed("new summary", "new body"));
         settle();
 
         assertEquals(List.of("reword new summary|new body"), provider.commits);
@@ -312,8 +313,8 @@ class ProgramTest {
         provider.commitFailure = "boom";
         settle();
 
-        program.dispatch(new Msg.CommitRequested());
-        program.dispatch(new Msg.CommitConfirmed("summary", ""));
+        program.dispatch(new CommitMsg.Requested());
+        program.dispatch(new CommitMsg.Confirmed("summary", ""));
         settle();
 
         assertEquals(Optional.of("Commit failed: boom"), program.model().error());
@@ -324,10 +325,10 @@ class ProgramTest {
         settle();
         List<FileEntry> files = List.of(new FileEntry("a.txt", ChangeType.UNTRACKED));
 
-        program.dispatch(new Msg.FilesSelected(files));
+        program.dispatch(new SelectionMsg.FilesSelected(files));
         settle();
 
-        assertEquals(new Loaded<>(new net.vanfleteren.jazygit.model.Diffs("", "diff of 1")), program.model().fileDiff().orElseThrow().diff());
+        assertEquals(new Loaded<>(new Diffs("", "diff of 1")), program.model().fileDiff().orElseThrow().diff());
     }
 
     @Test
@@ -335,7 +336,7 @@ class ProgramTest {
         settle();
 
         provider.indexError = new IllegalStateException("fatal: pathspec 'a.txt' did not match");
-        program.dispatch(new Msg.ToggleStageRequested(List.of(new FileEntry("a.txt", ChangeType.UNTRACKED))));
+        program.dispatch(new StageMsg.Requested(List.of(new FileEntry("a.txt", ChangeType.UNTRACKED))));
         settle();
 
         assertEquals(Optional.of("Staging failed: fatal: pathspec 'a.txt' did not match"), program.model().error());
@@ -346,14 +347,14 @@ class ProgramTest {
         settle();
 
         provider.checkoutError = new IllegalStateException("error: Your local changes would be overwritten");
-        program.dispatch(new Msg.CheckoutRequested("other"));
+        program.dispatch(new CheckoutMsg.Requested("other"));
         settle();
         assertEquals(Optional.of("Checkout of other failed: error: Your local changes would be overwritten"),
                 program.model().error());
         assertEquals("main", ((Loaded<RepoStatus>) program.model().status()).value().head());
 
         provider.checkoutError = null;
-        program.dispatch(new Msg.CheckoutRequested("other"));
+        program.dispatch(new CheckoutMsg.Requested("other"));
         settle();
         assertEquals(Optional.empty(), program.model().error());
         assertEquals("other", ((Loaded<RepoStatus>) program.model().status()).value().head());
@@ -363,7 +364,7 @@ class ProgramTest {
     void selectingABranchLoadsItsLog() {
         settle();
 
-        program.dispatch(new Msg.BranchSelected("other"));
+        program.dispatch(new SelectionMsg.BranchSelected("other"));
         settle();
 
         assertEquals(Optional.of(new BranchLog("other", new Loaded<>(List.of(FakeProvider.commit("other-tip"))))),

@@ -1,5 +1,8 @@
-package net.vanfleteren.jazygit.model;
+package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.RepoStatus;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -9,13 +12,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * Parsing of {@code git status --porcelain=v2 --branch -z} output.
  */
-class GitCliStatusTest {
+class CliStatusTest {
 
     private static final String HASHES = "100644 100644 100644 aaaaaaa bbbbbbb";
 
     @Test
     void parsesBranchHeaders() {
-        RepoStatus status = GitCliStatus.parse(
+        RepoStatus status = CliStatus.parse(
                 "# branch.oid 0123abcd\0# branch.head main\0# branch.upstream origin/main\0");
         assertEquals("0123abcd", status.headOid());
         assertEquals("main", status.head());
@@ -24,7 +27,7 @@ class GitCliStatusTest {
 
     @Test
     void parsesInitialAndDetachedHeads() {
-        RepoStatus status = GitCliStatus.parse("# branch.oid (initial)\0# branch.head (detached)\0");
+        RepoStatus status = CliStatus.parse("# branch.oid (initial)\0# branch.head (detached)\0");
         assertEquals("(initial)", status.headOid());
         assertEquals("(detached)", status.head());
     }
@@ -55,14 +58,14 @@ class GitCliStatusTest {
                 new FileEntry("removed.txt", ChangeType.DELETED, true, false),
                 new FileEntry("staged.txt", ChangeType.MODIFIED, true, false),
                 new FileEntry("unstaged.txt", ChangeType.MODIFIED)),
-                GitCliStatus.parse(raw).files());
+                CliStatus.parse(raw).files());
     }
 
     @Test
     void parsesStagedAndUnstagedChangesOfOneFile() {
         String raw = "1 MM N... " + HASHES + " both.txt\0";
         assertEquals(List.of(new FileEntry("both.txt", ChangeType.MODIFIED, true, true)),
-                GitCliStatus.parse(raw).files());
+                CliStatus.parse(raw).files());
     }
 
     @Test

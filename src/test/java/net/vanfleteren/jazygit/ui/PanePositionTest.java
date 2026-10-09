@@ -4,12 +4,13 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.pilot.Pilot;
-import net.vanfleteren.jazygit.model.Branch;
-import net.vanfleteren.jazygit.model.ChangeType;
-import net.vanfleteren.jazygit.model.Commit;
-import net.vanfleteren.jazygit.model.FileEntry;
-import net.vanfleteren.jazygit.model.GitInfoProvider;
-import net.vanfleteren.jazygit.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.Diffs;
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import org.junit.jupiter.api.Test;
@@ -88,7 +89,7 @@ class PanePositionTest {
         }
 
         @Override
-        public net.vanfleteren.jazygit.model.Diffs diff(List<FileEntry> files) {
+        public Diffs diff(List<FileEntry> files) {
             throw new UnsupportedOperationException();
         }
     }

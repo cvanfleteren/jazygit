@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
+import net.vanfleteren.jazygit.git.model.FileEntry;
+
 import java.util.List;
 
 /**
@@ -14,6 +16,27 @@ public sealed interface Cmd {
     sealed interface Load extends Cmd {
     }
 
+    sealed interface BranchCmd extends Cmd {
+
+        /**
+         * Creates the branch {@code name} at {@code base} and switches to it.
+         */
+        record CreateBranch(String name, String base) implements BranchCmd {
+        }
+
+        record DeleteBranch(String branch, DeleteScope scope) implements BranchCmd {
+            /**
+             * Where a branch is deleted.
+             */
+            public enum DeleteScope {
+                LOCAL, REMOTE, BOTH
+            }
+        }
+
+        record Checkout(String branch) implements BranchCmd {
+        }
+    }
+
     record LoadStatus() implements Load {
     }
 
@@ -26,23 +49,11 @@ public sealed interface Cmd {
     record LoadBranchLog(String branch) implements Load {
     }
 
-    record LoadFileDiff(List<net.vanfleteren.jazygit.model.FileEntry> files) implements Load {
+    record LoadFileDiff(List<FileEntry> files) implements Load {
 
         public LoadFileDiff {
             files = List.copyOf(files);
         }
-    }
-
-    record Checkout(String branch) implements Cmd {
-    }
-
-    /**
-     * Creates the branch {@code name} at {@code base} and switches to it.
-     */
-    record CreateBranch(String name, String base) implements Cmd {
-    }
-
-    record DeleteBranch(String branch, DeleteScope scope) implements Cmd {
     }
 
     record Stage(List<String> paths) implements Cmd {

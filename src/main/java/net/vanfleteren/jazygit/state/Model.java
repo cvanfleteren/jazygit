@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.state;
 
-import net.vanfleteren.jazygit.model.Branch;
-import net.vanfleteren.jazygit.model.Commit;
-import net.vanfleteren.jazygit.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.RepoStatus;
 
 import java.util.List;
 import java.util.Optional;
@@ -53,55 +53,55 @@ public record Model(String repositoryName,
                 Optional.empty(), Optional.empty(), Optional.empty(), false, false, false, Optional.empty());
     }
 
-    Model withStatus(Loadable<RepoStatus> status) {
+    public Model withStatus(Loadable<RepoStatus> status) {
         return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase, deleteTarget, stageAllPrompt, commitOpen, amendPrompt, rewording);
     }
 
-    Model withBranches(Loadable<List<Branch>> branches) {
+    public Model withBranches(Loadable<List<Branch>> branches) {
         return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase, deleteTarget, stageAllPrompt, commitOpen, amendPrompt, rewording);
     }
 
-    Model withCommits(Loadable<List<Commit>> commits) {
+    public Model withCommits(Loadable<List<Commit>> commits) {
         return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase, deleteTarget, stageAllPrompt, commitOpen, amendPrompt, rewording);
     }
 
-    Model withBranchLog(Optional<BranchLog> branchLog) {
+    public Model withBranchLog(Optional<BranchLog> branchLog) {
         return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase, deleteTarget, stageAllPrompt, commitOpen, amendPrompt, rewording);
     }
 
-    Model withFileDiff(Optional<FileDiff> fileDiff) {
+    public Model withFileDiff(Optional<FileDiff> fileDiff) {
         return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase, deleteTarget, stageAllPrompt, commitOpen, amendPrompt, rewording);
     }
 
-    Model withRefreshing(Set<Cmd.Load> refreshing) {
+    public Model withRefreshing(Set<Cmd.Load> refreshing) {
         return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase, deleteTarget, stageAllPrompt, commitOpen, amendPrompt, rewording);
     }
 
-    Model withError(Optional<String> error) {
+    public Model withError(Optional<String> error) {
         return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase, deleteTarget, stageAllPrompt, commitOpen, amendPrompt, rewording);
     }
 
-    Model withNewBranchBase(Optional<String> newBranchBase) {
+    public Model withNewBranchBase(Optional<String> newBranchBase) {
         return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase, deleteTarget, stageAllPrompt, commitOpen, amendPrompt, rewording);
     }
 
-    Model withDeleteTarget(Optional<String> deleteTarget) {
+    public Model withDeleteTarget(Optional<String> deleteTarget) {
         return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase, deleteTarget, stageAllPrompt, commitOpen, amendPrompt, rewording);
     }
 
-    Model withStageAllPrompt(boolean stageAllPrompt) {
+    public Model withStageAllPrompt(boolean stageAllPrompt) {
         return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase, deleteTarget, stageAllPrompt, commitOpen, amendPrompt, rewording);
     }
 
-    Model withCommitOpen(boolean commitOpen) {
+    public Model withCommitOpen(boolean commitOpen) {
         return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase, deleteTarget, stageAllPrompt, commitOpen, amendPrompt, rewording);
     }
 
-    Model withAmendPrompt(boolean amendPrompt) {
+    public Model withAmendPrompt(boolean amendPrompt) {
         return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase, deleteTarget, stageAllPrompt, commitOpen, amendPrompt, rewording);
     }
 
-    Model withRewording(Optional<Commit> rewording) {
+    public Model withRewording(Optional<Commit> rewording) {
         return new Model(repositoryName, status, branches, commits, branchLog, fileDiff, refreshing, error, newBranchBase, deleteTarget, stageAllPrompt, commitOpen, amendPrompt, rewording);
     }
 }

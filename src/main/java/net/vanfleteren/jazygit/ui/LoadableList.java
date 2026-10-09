@@ -6,6 +6,7 @@ import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.KeyEventHandler;
 import net.vanfleteren.jazygit.state.Loadable;
+import net.vanfleteren.jazygit.ui.widgets.Pane;
 
 import java.util.List;
 import java.util.function.Function;

@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.model;
+package net.vanfleteren.jazygit.git;
 
 import java.nio.file.Path;
 
@@ -6,11 +6,11 @@ import java.nio.file.Path;
  * Deletes branches through the {@code git} command line tool, so the remote is reached with the
  * user's own configuration and credentials.
  */
-public final class GitCliBranch {
+public final class CliBranch {
 
     private static final String DEFAULT_REMOTE = "origin";
 
-    private GitCliBranch() {
+    private CliBranch() {
     }
 
     /**
@@ -19,7 +19,7 @@ public final class GitCliBranch {
      * @throws IllegalStateException if git refuses; the message then is git's own explanation
      */
     public static void deleteLocal(Path workTree, String name) {
-        GitCliCheckout.run(workTree, "git", "branch", "--delete", "--force", name);
+        CliCheckout.run(workTree, "git", "branch", "--delete", "--force", name);
     }
 
     /**
@@ -29,12 +29,12 @@ public final class GitCliBranch {
      * @throws IllegalStateException if git refuses; the message then is git's own explanation
      */
     public static void deleteRemote(Path workTree, String name) {
-        GitCliCheckout.run(workTree, "git", "push", remoteOf(workTree, name), "--delete", name);
+        CliCheckout.run(workTree, "git", "push", remoteOf(workTree, name), "--delete", name);
     }
 
     private static String remoteOf(Path workTree, String name) {
         try {
-            String remote = GitCliCheckout.run(workTree, "git", "config", "--get", "branch." + name + ".remote");
+            String remote = CliCheckout.run(workTree, "git", "config", "--get", "branch." + name + ".remote");
             return remote.isEmpty() ? DEFAULT_REMOTE : remote;
         } catch (IllegalStateException e) {
             // Not configured: git config exits with 1.
