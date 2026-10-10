@@ -95,7 +95,7 @@ class ProgramTest {
         }
 
         private static Commit commit(String sha) {
-            return new Commit(sha, "Ada", "ada@example.com", Instant.EPOCH, "msg", "");
+            return new Commit(sha, sha, "Ada", "ada@example.com", Instant.EPOCH, "msg", "");
         }
 
         @Override
@@ -155,6 +155,11 @@ class ProgramTest {
         @Override
         public void unstage(List<String> paths) {
             index("unstage", paths);
+        }
+
+        @Override
+        public String commitChanges(String sha) {
+            return "changes of " + sha;
         }
 
         @Override

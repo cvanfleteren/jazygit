@@ -97,14 +97,12 @@ public final class CliDiff {
     /**
      * Exit code 1 is fine: {@code --no-index} uses it to say the files differ.
      */
-    private static String run(Path workTree, List<String> subcommand, List<String> paths) {
+    static String run(Path workTree, List<String> subcommand, List<String> paths) {
         return run(workTree, subcommand, paths, Map.of());
     }
 
-
-    
-    private static String run(Path workTree, List<String> subcommand, List<String> paths,
-                              Map<String, String> env) {
+    static String run(Path workTree, List<String> subcommand, List<String> paths,
+                      Map<String, String> env) {
         List<String> command = new ArrayList<>();
         command.add("git");
         command.addAll(subcommand);

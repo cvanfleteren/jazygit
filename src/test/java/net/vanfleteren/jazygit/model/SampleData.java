@@ -81,7 +81,7 @@ public final class SampleData implements GitInfoProvider {
      */
     private static Commit commit(String sha, String author, String time, String message, String body) {
         int lt = author.indexOf(" <");
-        return new Commit(sha, author.substring(0, lt), author.substring(lt + 2, author.length() - 1),
+        return new Commit(sha, sha, author.substring(0, lt), author.substring(lt + 2, author.length() - 1),
                 Instant.parse(time), message, body);
     }
 
@@ -126,6 +126,11 @@ public final class SampleData implements GitInfoProvider {
 
     @Override
     public void reword(String summary, String description) {
+    }
+
+    @Override
+    public String commitChanges(String sha) {
+        return "1 file changed, 1 insertion(+)\n\ndiff --git a/" + sha + " b/" + sha + "\n";
     }
 
     @Override

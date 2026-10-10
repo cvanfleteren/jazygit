@@ -66,6 +66,14 @@ public interface Cmd {
         }
     }
 
+    record LoadCommitDetail(String sha) implements Load {
+
+        @Override
+        public Msg run(GitInfoProvider git) {
+            return new LoadMsg.CommitDetailLoaded(sha, git.commitChanges(sha));
+        }
+    }
+
     record LoadFileDiff(List<FileEntry> files) implements Load {
 
         public LoadFileDiff {

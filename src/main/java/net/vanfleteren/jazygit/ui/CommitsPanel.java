@@ -8,6 +8,9 @@ import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyEvent;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
+import net.vanfleteren.jazygit.state.CommitDetail;
+import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 
@@ -55,6 +58,25 @@ public class CommitsPanel {
      */
     public int selectedIndex() {
         return list.selectedIndex();
+    }
+
+    /**
+     * The highlighted commit, once the commits are shown.
+     */
+    public Optional<Commit> selectedCommit() {
+        return list.shown() instanceof Loadable.Loaded<List<Commit>>(List<Commit> commits) && !commits.isEmpty()
+                ? Optional.of(commits.get(Math.min(selectedIndex(), commits.size() - 1)))
+                : Optional.empty();
+    }
+
+    /**
+     * The message to send when the highlighted commit is not the one whose changes {@code model} holds.
+     */
+    public Optional<Msg> selectionChange(Model model) {
+        return selectedCommit()
+                .map(Commit::sha)
+                .filter(sha -> !model.commitDetail().map(CommitDetail::sha).equals(Optional.of(sha)))
+                .map(SelectionMsg.CommitSelected::new);
     }
 
     private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {

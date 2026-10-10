@@ -25,9 +25,9 @@ public final class TestModels {
     public static final List<Branch> BRANCHES = List.of(new Branch("main", true, "aaaa"),
             new Branch("feature", false, "ffff"));
     public static final List<Commit> COMMITS = List.of(
-            new Commit("aaaa", "Ada", "ada@example.com", Instant.EPOCH, "First", ""));
+            new Commit("aaaa", "aaaa", "Ada", "ada@example.com", Instant.EPOCH, "First", ""));
     public static final List<Commit> FEATURE_COMMITS = List.of(
-            new Commit("ffff", "Ada", "ada@example.com", Instant.EPOCH, "Feature", ""));
+            new Commit("ffff", "ffff", "Ada", "ada@example.com", Instant.EPOCH, "Feature", ""));
 
     private TestModels() {
     }

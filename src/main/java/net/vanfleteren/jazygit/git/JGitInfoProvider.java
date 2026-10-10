@@ -165,7 +165,7 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
 
     private static Commit toCommit(RevCommit c) {
         PersonIdent author = c.getAuthorIdent();
-        return new Commit(c.abbreviate(7).name(), author.getName(), author.getEmailAddress(),
+        return new Commit(c.name(), c.abbreviate(7).name(), author.getName(), author.getEmailAddress(),
                 author.getWhenAsInstant(), c.getShortMessage(), extendedMessage(c.getFullMessage()));
     }
 
@@ -282,6 +282,11 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     @Override
     public void reword(String summary, String description) {
         CliIndex.reword(workTree, summary, description);
+    }
+
+    @Override
+    public String commitChanges(String sha) {
+        return CliShow.changes(workTree, sha);
     }
 
     @Override

@@ -30,6 +30,9 @@ public sealed interface LoadMsg extends Msg {
     record BranchLogLoaded(String branch, List<Commit> commits) implements LoadMsg {
     }
 
+    record CommitDetailLoaded(String sha, String changes) implements LoadMsg {
+    }
+
     record FileDiffLoaded(List<FileEntry> files, Diffs diff) implements LoadMsg {
 
         public FileDiffLoaded {

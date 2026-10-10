@@ -93,6 +93,11 @@ class PanePositionTest {
         }
 
         @Override
+        public String commitChanges(String sha) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public Diffs diff(List<FileEntry> files) {
             throw new UnsupportedOperationException();
         }
@@ -102,9 +107,9 @@ class PanePositionTest {
             List.of(new FileEntry("net/vanfleteren/A.java", ChangeType.MODIFIED),
                     new FileEntry("net/vanfleteren/B.java", ChangeType.UNTRACKED)),
             List.of(new Branch("main", true, "aaaa"), new Branch("feature", false, "bbbb")),
-            List.of(new Commit("aaaa", "me", "me@example.com", Instant.EPOCH, "first", ""),
-                    new Commit("bbbb", "me", "me@example.com", Instant.EPOCH, "second", ""),
-                    new Commit("cccc", "me", "me@example.com", Instant.EPOCH, "third", ""))));
+            List.of(new Commit("aaaa", "aaaa", "me", "me@example.com", Instant.EPOCH, "first", ""),
+                    new Commit("bbbb", "bbbb", "me", "me@example.com", Instant.EPOCH, "second", ""),
+                    new Commit("cccc", "cccc", "me", "me@example.com", Instant.EPOCH, "third", ""))));
 
     @Test
     void branchesShowSelectedPositionAndFollowSelection() throws Exception {

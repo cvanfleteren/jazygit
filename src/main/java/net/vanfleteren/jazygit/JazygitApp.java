@@ -112,6 +112,7 @@ public class JazygitApp extends ToolkitApp {
         // The highlighted branch lives in the list widget, which knows it once rendered; the
         // content panel then shows the log of that branch.
         branchesPanel.selectionChange(model).ifPresent(program::dispatch);
+        commitsPanel.selectionChange(model).ifPresent(program::dispatch);
         filesPanel.selectionChange(model).ifPresent(program::dispatch);
         Element layout = row(
                 column(

@@ -4,6 +4,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
 
 import net.vanfleteren.jazygit.state.LoadMsg.StatusLoaded;
 
+import net.vanfleteren.jazygit.state.LoadMsg.CommitDetailLoaded;
 import net.vanfleteren.jazygit.state.LoadMsg.FileDiffLoaded;
 
 import net.vanfleteren.jazygit.state.LoadMsg.CommitsLoaded;
@@ -18,6 +19,7 @@ import net.vanfleteren.jazygit.state.Loadable.Failed;
 
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 
+import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
 import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
 
 import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
@@ -52,6 +54,9 @@ public final class LoadUpdate {
             // A log that arrives after another branch was highlighted is dropped.
             case BranchLogLoaded(String branch, var commits) ->
                     Next.of(updateBranchLog(model, branch, log -> log.reload(commits)));
+            // Changes that arrive after another commit was highlighted are dropped.
+            case CommitDetailLoaded(String sha, String changes) ->
+                    Next.of(updateCommitDetail(finished(model, new LoadCommitDetail(sha)), sha, d -> d.reload(changes)));
             // A diff that arrives after another node was highlighted is dropped.
             case FileDiffLoaded(List<FileEntry> files, Diffs diff) ->
                     Next.of(updateFileDiff(finished(model, new LoadFileDiff(files)), files, d -> d.reload(diff)));
@@ -96,6 +101,13 @@ public final class LoadUpdate {
     }
 
     /**
+     * Applies {@code f} to the commit detail if it is the detail of {@code sha}.
+     */
+    private static Model updateCommitDetail(Model model, String sha, UnaryOperator<CommitDetail> f) {
+        return model.withCommitDetail(model.commitDetail().map(d -> d.sha().equals(sha) ? f.apply(d) : d));
+    }
+
+    /**
      * Applies {@code f} to the file diff if it is the diff of {@code files}.
      */
     private static Model updateFileDiff(Model model, List<FileEntry> files, UnaryOperator<FileDiff> f) {
@@ -113,6 +125,8 @@ public final class LoadUpdate {
             case LoadStatus() -> model.withStatus(new Failed<>(message));
             case LoadBranches() -> model.withBranches(new Failed<>(message));
             case LoadCommits() -> model.withCommits(new Failed<>(message));
+            case LoadCommitDetail(String sha) ->
+                    updateCommitDetail(model, sha, d -> new CommitDetail(sha, new Failed<>(message)));
             case LoadFileDiff(List<FileEntry> files) ->
                     updateFileDiff(model, files, d -> new FileDiff(files, new Failed<>(message)));
             case LoadBranchLog(String branch) ->

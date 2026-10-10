@@ -18,6 +18,7 @@ import java.util.Set;
  * @param commits        the commit log of HEAD
  * @param branchLog      the log of the branch highlighted in the branches pane, once one is
  *                       highlighted
+ * @param commitDetail   what the commit highlighted in the commits pane changed, once one is highlighted
  * @param fileDiff       the diff of the node highlighted in the files pane, once one is highlighted
  * @param refreshing     periodic loads that have been started and not finished yet, so a tick does
  *                       not queue them again
@@ -31,6 +32,7 @@ public record Model(String repositoryName,
                     Loadable<List<Branch>> branches,
                     Loadable<List<Commit>> commits,
                     Optional<BranchLog> branchLog,
+                    Optional<CommitDetail> commitDetail,
                     Optional<FileDiff> fileDiff,
                     Set<Cmd.Load> refreshing,
                     Optional<String> error,
@@ -44,7 +46,7 @@ public record Model(String repositoryName,
 
     public static Model initial(String repositoryName) {
         return new Model(repositoryName, Loadable.loading(), Loadable.loading(), Loadable.loading(), Optional.empty(),
-                Optional.empty(), Set.of(), Optional.empty(), Set.of(), Optional.empty());
+                Optional.empty(), Optional.empty(), Set.of(), Optional.empty(), Set.of(), Optional.empty());
     }
 
     /**

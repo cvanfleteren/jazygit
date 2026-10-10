@@ -99,6 +99,11 @@ class FilesPanelTest {
         }
 
         @Override
+        public String commitChanges(String sha) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public Diffs diff(List<FileEntry> files) {
             throw new UnsupportedOperationException();
         }

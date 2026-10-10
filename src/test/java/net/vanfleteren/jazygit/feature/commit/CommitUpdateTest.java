@@ -32,7 +32,7 @@ class CommitUpdateTest {
     }
 
     private static Commit commit(String message, String body) {
-        return new Commit("abc1234", "me", "me@example.com", Instant.EPOCH, message, body);
+        return new Commit("abc1234", "abc1234", "me", "me@example.com", Instant.EPOCH, message, body);
     }
 
     @Test

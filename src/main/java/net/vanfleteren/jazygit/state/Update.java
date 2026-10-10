@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
+import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
 
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
@@ -73,6 +74,9 @@ public final class Update {
         model.branchLog()
                 .filter(log -> log.commits() instanceof Failed)
                 .ifPresent(log -> cmds.add(new LoadBranchLog(log.branch())));
+        model.commitDetail()
+                .filter(detail -> detail.changes() instanceof Failed)
+                .ifPresent(detail -> cmds.add(new LoadCommitDetail(detail.sha())));
         // The files can change on disk without their status changing, so the diff is read again.
         model.fileDiff()
                 .map(d -> new LoadFileDiff(d.files()))

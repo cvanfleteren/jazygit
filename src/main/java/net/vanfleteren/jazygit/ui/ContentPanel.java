@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.state.BranchLog;
+import net.vanfleteren.jazygit.state.CommitDetail;
 import net.vanfleteren.jazygit.state.FileDiff;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
@@ -26,6 +27,7 @@ import net.vanfleteren.jazygit.state.Update;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -39,13 +41,15 @@ import java.util.stream.Stream;
 public final class ContentPanel {
 
     /**
-     * The scrollable areas for the diffs and the branch log. They are kept between renders because an area holds its own scroll
+     * The scrollable areas for the diffs, the branch log and the commit. They are kept between renders because an area holds its own scroll
      * position; a new element every frame would jump back to the top. Only used from the render thread.
      */
     private static final ScrollArea STAGED_AREA = new ScrollArea("diff-staged", true, ContentPanel::diffText);
     private static final ScrollArea UNSTAGED_AREA = new ScrollArea("diff-unstaged", true, ContentPanel::diffText);
     // Not focusable: clicking the log must not take the focus from the branches pane it mirrors.
     private static final ScrollArea LOG_AREA = new ScrollArea("branch-log", false, ContentPanel::plainText);
+    // Not focusable either, for the same reason: it mirrors the commits pane.
+    private static final ScrollArea COMMIT_AREA = new ScrollArea("commit-changes", false, ContentPanel::plainText);
     // Called when Escape is pressed; gives the focus back to the file tree if a focusable area had it, and
     // says whether it did.
     private static Supplier<Boolean> leaveScrollArea = () -> false;
@@ -72,7 +76,7 @@ public final class ContentPanel {
         private final String id;
         private final RichTextAreaElement element;
         private final Function<String, Text> styling;
-        private String content = "";
+        private Object key = "";
 
         ScrollArea(String id, boolean focusable, Function<String, Text> styling) {
             this.id = id;
@@ -95,16 +99,24 @@ public final class ContentPanel {
          * Shows {@code newContent}, scrolling back to the top when it differs from what was shown.
          */
         ScrollArea with(String newContent) {
-            if (!newContent.equals(content)) {
-                content = newContent;
-                element.text(styling.apply(newContent));
+            return with(newContent, () -> styling.apply(newContent));
+        }
+
+        /**
+         * Shows the text for {@code newKey}, which is only built, and the scroll position only reset to
+         * the top, when the key differs from the one shown.
+         */
+        ScrollArea with(Object newKey, Supplier<Text> text) {
+            if (!newKey.equals(key)) {
+                key = newKey;
+                element.text(text.get());
                 element.state().scrollToTop();
             }
             return this;
         }
 
         boolean hasContent() {
-            return !content.isBlank();
+            return key instanceof String content && !content.isBlank();
         }
 
         RichTextAreaElement show(String title) {
@@ -121,7 +133,7 @@ public final class ContentPanel {
             return branchLogView(model);
         }
         if (CommitsPanel.ID.equals(focusedId)) {
-            return commitDiffView(model, commitsSelection);
+            return commitDiffView(model);
         }
         return fileDiffView(model);
     }
@@ -226,23 +238,67 @@ public final class ContentPanel {
         return Messages.get("content.author", commit.authorName(), commit.authorEmail());
     }
 
-    private static StyledElement<?> commitDiffView(Model model, int commitsSelection) {
-        return whenLoaded(Messages.get("panel.commit.title"), model.commits(), commits -> {
-            if (commits.isEmpty()) {
-                return panel(Messages.get("panel.commit.title"), text(Messages.get("content.noCommits"))).rounded();
-            }
-            Commit commit = commits.get(clamp(commitsSelection, commits.size()));
-            return panel(Messages.get("panel.commit.titleFor", commit.shortSha()),
-                    text(commit.message()).bold(),
-                    text(Messages.get("content.authoredOn", author(commit),
-                    dateTime().format(commit.authorTime().atZone(ZoneId.systemDefault()))))
-                            .dim(),
-                    spacer(),
-                    text(commit.body()))
-                    .rounded();
-        });
+    /**
+     * What the commit area shows: the commit, and what it changed.
+     */
+    private record CommitContent(Commit commit, String changes) {
     }
 
+    private static StyledElement<?> commitDiffView(Model model) {
+        String title = Messages.get("panel.commit.title");
+        return model.commitDetail()
+                .map(ContentPanel::shown)
+                .<StyledElement<?>>map(detail -> switch (detail.changes()) {
+                    case Loadable.Loaded<String>(String changes) -> commit(model, detail.sha())
+                            .<StyledElement<?>>map(commit -> COMMIT_AREA
+                                    .with(new CommitContent(commit, changes), () -> commitText(commit, changes))
+                                    .show(Messages.get("panel.commit.titleFor", commit.shortSha())))
+                            .orElseGet(() -> panel(title, text(Placeholders.loading()).dim()).rounded());
+                    case Loadable.Loading<String>() -> panel(title, text(Placeholders.loading()).dim()).rounded();
+                    case Loadable.Failed<String>(String message) ->
+                            panel(title, text(Placeholders.error(message))).rounded();
+                })
+                .orElseGet(() -> model.commits() instanceof Loadable.Loaded<List<Commit>>(List<Commit> commits)
+                        && commits.isEmpty()
+                        ? panel(title, text(Messages.get("content.noCommits"))).rounded()
+                        : panel(title, text(Placeholders.loading()).dim()).rounded());
+    }
+
+    private static Optional<Commit> commit(Model model, String sha) {
+        return model.commits() instanceof Loadable.Loaded<List<Commit>>(List<Commit> commits)
+                ? commits.stream().filter(c -> c.sha().equals(sha)).findFirst()
+                : Optional.empty();
+    }
+
+    /**
+     * While the changes of a commit are loading, keep showing the previously loaded ones rather than
+     * flashing a placeholder.
+     */
+    private static CommitDetail shown(CommitDetail detail) {
+        return detail.changes() instanceof Loadable.Loading<String> ? detail.previous().orElse(detail) : detail;
+    }
+
+    /**
+     * Like {@code git show}: the commit's header and message, a {@code ---} line and then the changes.
+     */
+    static Text commitText(Commit commit, String changes) {
+        Stream<Line> header = Stream.of(
+                Line.from(Span.styled(Messages.get("content.commitSha", commit.sha()), Style.EMPTY.fg(Color.YELLOW))),
+                Line.from(Span.raw(Messages.get("content.commitAuthor", commit.authorName(), commit.authorEmail()))),
+                Line.from(Span.raw(Messages.get("content.commitDate", commitDate().format(
+                        commit.authorTime().atZone(ZoneId.systemDefault()))))),
+                Line.from(Span.styled(commit.message(), Style.EMPTY.bold())));
+        Stream<Line> body = commit.body().isBlank()
+                ? Stream.empty()
+                : Stream.concat(Stream.of(Line.from(Span.raw(""))), commit.body().lines().map(l -> Line.from(Span.raw(l))));
+        return Text.from(Stream.of(header, body, Stream.of(Line.from(Span.raw("---"))), changes.lines().map(ContentPanel::diffLine))
+                .flatMap(lines -> lines)
+                .toList());
+    }
+
+    private static DateTimeFormatter commitDate() {
+        return DateTimeFormatter.ofPattern(Messages.get("content.commitDatePattern"), Locale.ENGLISH);
+    }
 
     private static <T> StyledElement<?> whenLoaded(String title, Loadable<T> loadable, Function<T, StyledElement<?>> view) {
         return switch (loadable) {
@@ -250,9 +306,5 @@ public final class ContentPanel {
             case Loadable.Loading<T>() -> panel(title, text(Placeholders.loading()).dim()).rounded();
             case Loadable.Failed<T>(String message) -> panel(title, text(Placeholders.error(message))).rounded();
         };
-    }
-
-    private static int clamp(int index, int size) {
-        return Math.max(0, Math.min(index, size - 1));
     }
 }

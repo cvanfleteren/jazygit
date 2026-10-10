@@ -32,6 +32,14 @@ public interface GitRead {
     List<Commit> log(String branch);
 
     /**
+     * What the commit {@code sha} changed, like {@code git show}: the changed files, a summary of the
+     * changes, a blank line and the diff. Long output is cut off.
+     *
+     * @throws IllegalStateException if git fails, with git's explanation as message
+     */
+    String commitChanges(String sha);
+
+    /**
      * The staged and the unstaged diff of {@code files}.
      *
      * @throws IllegalStateException if git fails, with git's explanation as message

@@ -8,6 +8,8 @@ import net.vanfleteren.jazygit.state.BranchLog;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
+import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
+import net.vanfleteren.jazygit.state.CommitDetail;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.FileDiff;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
@@ -26,6 +28,7 @@ import java.util.Optional;
 import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The selection transitions: highlighting a branch or files loads their log or diff.
@@ -42,6 +45,52 @@ class SelectionUpdateTest {
         Next again = Update.update(next.model(), new SelectionMsg.BranchSelected("feature"));
         assertSame(next.model(), again.model());
         assertEquals(List.of(), again.cmds());
+    }
+
+    @Test
+    void selectingACommitLoadsItsChangesOnce() {
+        Next next = Update.update(loaded(), new SelectionMsg.CommitSelected("aaaa"));
+
+        assertEquals(Optional.of(new CommitDetail("aaaa", new Loading<>())), next.model().commitDetail());
+        assertEquals(List.of(new LoadCommitDetail("aaaa")), next.cmds());
+
+        Next again = Update.update(next.model(), new SelectionMsg.CommitSelected("aaaa"));
+        assertSame(next.model(), again.model());
+        assertEquals(List.of(), again.cmds());
+    }
+
+    @Test
+    void loadedChangesAreShownKeepingThePreviousOnesWhileTheNextCommitLoads() {
+        Model first = Update.update(
+                Update.update(loaded(), new SelectionMsg.CommitSelected("aaaa")).model(),
+                new LoadMsg.CommitDetailLoaded("aaaa", "changes")).model();
+        CommitDetail firstDetail = new CommitDetail("aaaa", new Loaded<>("changes"));
+        assertEquals(Optional.of(firstDetail), first.commitDetail());
+
+        Model second = Update.update(first, new SelectionMsg.CommitSelected("ffff")).model();
+        assertEquals(Optional.of(new CommitDetail("ffff", new Loading<>(), Optional.of(firstDetail))),
+                second.commitDetail());
+    }
+
+    @Test
+    void changesOfACommitThatIsNoLongerSelectedAreDropped() {
+        Model model = Update.update(loaded(), new SelectionMsg.CommitSelected("aaaa")).model();
+        model = Update.update(model, new SelectionMsg.CommitSelected("ffff")).model();
+
+        assertEquals(model.commitDetail(),
+                Update.update(model, new LoadMsg.CommitDetailLoaded("aaaa", "changes")).model().commitDetail());
+        assertEquals(model.commitDetail(),
+                Update.update(model, new LoadMsg.Failed(new LoadCommitDetail("aaaa"), "boom")).model().commitDetail());
+    }
+
+    @Test
+    void failedChangesAreShownAndRetriedOnTheNextTick() {
+        Model model = Update.update(
+                Update.update(loaded(), new SelectionMsg.CommitSelected("aaaa")).model(),
+                new LoadMsg.Failed(new LoadCommitDetail("aaaa"), "boom")).model();
+        assertEquals(Optional.of(new CommitDetail("aaaa", new Failed<>("boom"))), model.commitDetail());
+
+        assertTrue(Update.update(model, new Tick()).cmds().contains(new LoadCommitDetail("aaaa")));
     }
 
     @Test
