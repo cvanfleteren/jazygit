@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
@@ -52,7 +53,7 @@ public final class ContentPanel {
             new ScrollArea("commit-changes", CommitsPanel.ID, ContentPanel::plainText);
     // Not focusable: clicking the log must not take the focus from the branches pane it mirrors.
     private static final ScrollArea LOG_AREA =
-            new ScrollArea("branch-log", Optional.empty(), ContentPanel::plainText);
+            new ScrollArea("branch-log", Optional.empty(), ContentPanel::logText);
     // Called when Escape is pressed; gives the focus back to the file tree if a focusable area had it, and
     // says whether it did.
     private static Supplier<Boolean> leaveScrollArea = () -> false;
@@ -82,6 +83,8 @@ public final class ContentPanel {
                 .map(ScrollArea::id)
                 .findFirst();
     }
+
+    private static final String MESSAGE_INDENT = "    ";
 
     private ContentPanel() {
     }
@@ -206,6 +209,16 @@ public final class ContentPanel {
         return Text.from(diff.lines().map(ContentPanel::diffLine).toList());
     }
 
+    /**
+     * The branch log: the {@code commit <sha>} part of each commit's first line is yellow.
+     */
+    static Text logText(String content) {
+        return Text.from(content.lines().map(line -> line.startsWith("* ")
+                        ? Line.from(Span.raw("* "), Span.styled(line.substring(2), Style.EMPTY.fg(Color.YELLOW)))
+                        : Line.from(Span.raw(line)))
+                .toList());
+    }
+
     static Text plainText(String content) {
         return Text.from(content.lines().map(line -> Line.from(Span.raw(line))).toList());
     }
@@ -245,14 +258,20 @@ public final class ContentPanel {
     }
 
     /**
-     * The commits as a {@code git log}-style listing, with dates in {@code zone}.
+     * The commits as a {@code git log}-style listing, with dates in {@code zone}. Like a graph, the first
+     * line of each commit starts with {@code "* "} and its other lines with {@code "| "}. The message is
+     * indented.
      */
     static List<String> logLines(List<Commit> commits, ZoneId zone) {
         return commits.stream()
-                .flatMap(c -> Stream.concat(
-                        Stream.of(Messages.get("content.commitSha", c.shortSha()), author(c), dateTime().format(c.authorTime().atZone(zone)),
-                                "", c.message(), ""),
-                        c.body().isBlank() ? Stream.empty() : Stream.concat(c.body().lines(), Stream.of(""))))
+                .flatMap(c -> {
+                    List<String> lines = Stream.concat(
+                            Stream.of(Messages.get("content.commitSha", c.shortSha()), author(c), dateTime().format(c.authorTime().atZone(zone)),
+                                    "", MESSAGE_INDENT + c.message(), ""),
+                            c.body().isBlank() ? Stream.empty() : Stream.concat(
+                                    c.body().lines().map(line -> line.isBlank() ? line : MESSAGE_INDENT + line), Stream.of(""))).toList();
+                    return IntStream.range(0, lines.size()).mapToObj(i -> (i == 0 ? "* " : "| ") + lines.get(i));
+                })
                 .toList();
     }
 
@@ -301,7 +320,7 @@ public final class ContentPanel {
     }
 
     /**
-     * Like {@code git show}: the commit's header and message, a {@code ---} line and then the changes.
+     * Like {@code git show}: the commit's header, its indented message, a {@code ---} line and then the changes.
      */
     static Text commitText(Commit commit, String changes) {
         Stream<Line> header = Stream.of(
@@ -309,10 +328,11 @@ public final class ContentPanel {
                 Line.from(Span.raw(Messages.get("content.commitAuthor", commit.authorName(), commit.authorEmail()))),
                 Line.from(Span.raw(Messages.get("content.commitDate", commitDate().format(
                         commit.authorTime().atZone(ZoneId.systemDefault()))))),
-                Line.from(Span.styled(commit.message(), Style.EMPTY.bold())));
+                Line.from(Span.raw("")),
+                Line.from(Span.styled(MESSAGE_INDENT + commit.message(), Style.EMPTY.bold())));
         Stream<Line> body = commit.body().isBlank()
                 ? Stream.empty()
-                : Stream.concat(Stream.of(Line.from(Span.raw(""))), commit.body().lines().map(l -> Line.from(Span.raw(l))));
+                : Stream.concat(Stream.of(Line.from(Span.raw(""))), commit.body().lines().map(l -> Line.from(Span.raw(l.isBlank() ? l : MESSAGE_INDENT + l))));
         return Text.from(Stream.of(header, body, Stream.of(Line.from(Span.raw("---"))), changes.lines().map(ContentPanel::diffLine))
                 .flatMap(lines -> lines)
                 .toList());
