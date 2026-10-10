@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.git;
 
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.Conflict;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import org.zeroturnaround.exec.InvalidExitValueException;
@@ -96,7 +97,7 @@ public final class CliStatus {
                     }
                 }
                 // u XY sub m1 m2 m3 mW h1 h2 h3 path
-                case 'u' -> put(byPath, new FileEntry(pathAfter(field, 10), ChangeType.MODIFIED, false, true));
+                case 'u' -> put(byPath, FileEntry.conflicted(pathAfter(field, 10), Conflict.of(field.substring(2, 4))));
                 default -> {
                     // Ignored entries ('!') and anything unknown are not shown.
                 }

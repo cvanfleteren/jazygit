@@ -7,7 +7,11 @@ public enum ChangeType {
     MODIFIED("M"),
     ADDED("A"),
     DELETED("D"),
-    UNTRACKED("??");
+    UNTRACKED("??"),
+    /**
+     * Both sides of a merge changed the file; see {@link FileEntry#conflict()}.
+     */
+    CONFLICTED("U");
 
     private final String marker;
 

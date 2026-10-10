@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
+import net.vanfleteren.jazygit.git.model.Conflict;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.FileTree;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
@@ -121,6 +122,28 @@ class FilesPanelTest {
     }
 
     private final FilesPanel panel = new FilesPanel(msg -> { });
+
+    @Test
+    void conflictedFilesShowAMarkerForEachBranchThatChangedThem() throws Exception {
+        Model updated = TestModels.loaded(new FixedProvider(List.of(
+                FileEntry.conflicted("both.txt", Conflict.of("UU")),
+                FileEntry.conflicted("added.txt", Conflict.of("AA")))));
+        Model deleted = TestModels.loaded(new FixedProvider(List.of(
+                FileEntry.conflicted("theirs-deleted.txt", Conflict.of("UD")),
+                FileEntry.conflicted("ours-deleted.txt", Conflict.of("DU")))));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(updated, FilesPanel.ID))) {
+            String screen = RenderedText.of(testRunner, () -> panel.render(updated, FilesPanel.ID));
+            assertTrue(screen.contains("UU both.txt"), screen);
+            assertTrue(screen.contains("UU added.txt"), screen);
+
+            String other = RenderedText.of(testRunner, () -> panel.render(deleted, FilesPanel.ID));
+            assertTrue(other.contains("UD theirs-deleted.txt"), other);
+            assertTrue(other.contains("DU ours-deleted.txt"), other);
+
+            testRunner.pilot().quit();
+        }
+    }
 
     @Test
     void rendersLoadingThenStatusChanges() throws Exception {

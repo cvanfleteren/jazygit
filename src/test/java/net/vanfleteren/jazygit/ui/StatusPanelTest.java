@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -30,13 +31,13 @@ class StatusPanelTest {
     }
 
     @Test
-    void showsTheLastOperationError() throws Exception {
+    void doesNotShowTheLastOperationError() throws Exception {
         Model model = TestModels.withError(TestModels.loaded(new SampleData()), "Checkout of foo failed: boom");
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> StatusPanel.render(model))) {
             String screen = RenderedText.of(testRunner, () -> StatusPanel.render(model));
             assertTrue(screen.contains("jazygit → main"), screen);
-            assertTrue(screen.contains("Checkout of foo failed: boom"), screen);
+            assertFalse(screen.contains("Checkout of foo failed: boom"), screen);
 
             testRunner.pilot().quit();
         }

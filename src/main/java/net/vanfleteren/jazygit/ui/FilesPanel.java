@@ -18,6 +18,7 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.widgets.tree.TreeNode;
 import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.Conflict;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.FileTree;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
@@ -178,7 +179,8 @@ public class FilesPanel {
 
     /**
      * Files show two status columns like {@code git status --short}: the staged change in green, then
-     * the unstaged change in red. Untracked files show a red {@code ??}.
+     * the unstaged change in red. Untracked files show a red {@code ??}. Files in a merge conflict show a
+     * {@code U} for each branch that updated them: green for the current branch, red for the other.
      */
     private static StyledElement<?> renderNode(TreeNode<FileTree> node) {
         if (!(node.data() instanceof FileTree.File file)) {
@@ -188,10 +190,22 @@ public class FilesPanel {
         if (entry.type() == ChangeType.UNTRACKED) {
             return Toolkit.row(Toolkit.text("??").fg(UNSTAGED), Toolkit.text(" " + file.name()));
         }
+        if (entry.conflict().isPresent()) {
+            Conflict conflict = entry.conflict().get();
+            return Toolkit.row(Toolkit.text(marker(conflict.ours())).fg(STAGED),
+                    Toolkit.text(marker(conflict.theirs())).fg(UNSTAGED), Toolkit.text(" " + file.name()));
+        }
         String staged = entry.staged() ? entry.type().marker() : " ";
         String unstaged = !entry.unstaged() ? " " : entry.type() == ChangeType.DELETED ? "D" : "M";
         return Toolkit.row(Toolkit.text(staged).fg(STAGED), Toolkit.text(unstaged).fg(UNSTAGED),
                 Toolkit.text(" " + file.name()));
+    }
+
+    /**
+     * {@code U} for a branch that updated the conflicting file, {@code D} for one that deleted it.
+     */
+    private static String marker(Conflict.Side side) {
+        return side == Conflict.Side.DELETED ? "D" : "U";
     }
 
     /**

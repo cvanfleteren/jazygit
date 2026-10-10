@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.feature.help.HelpDialog;
 import net.vanfleteren.jazygit.feature.help.HelpPopup;
 import net.vanfleteren.jazygit.ui.BranchesPanel;
 import net.vanfleteren.jazygit.feature.commit.CommitDialog;
+import net.vanfleteren.jazygit.ui.CommandLogPanel;
 import net.vanfleteren.jazygit.ui.CommitsPanel;
 import net.vanfleteren.jazygit.feature.stage.StageAllDialog;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchDialog;
@@ -45,6 +46,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class JazygitApp extends ToolkitApp {
 
+    // Rows of the command log panel, borders included.
+    private static final int COMMAND_LOG_HEIGHT = 8;
     private static final Duration REFRESH_INTERVAL = Duration.ofMillis(500);
 
     private final GitInfoProvider provider;
@@ -133,7 +136,10 @@ public class JazygitApp extends ToolkitApp {
                         // The remaining ~10%, after the fixed-height status panel.
                         StashPanel.render().fill())
                         .percent(30),
-                ContentPanel.render(program.model(), focusedId, commitsPanel.selectedIndex())
+                column(
+                        ContentPanel.render(program.model(), focusedId, commitsPanel.selectedIndex())
+                                .fill(),
+                        CommandLogPanel.render(model).length(COMMAND_LOG_HEIGHT))
                         .fill());
         // The open popup takes the focus, and gives it back to the pane it was opened from.
         model.popup(HelpPopup.class).map(HelpPopup::topic).ifPresent(topic -> helpOrigin = switch (topic) {

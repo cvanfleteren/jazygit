@@ -11,9 +11,8 @@ import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 
 /**
- * Top-left panel showing the repository name and the current branch, and why the last operation
- * failed, if it did. It is display-only and
- * does not take part in focus cycling.
+ * Top-left panel showing the repository name and the current branch. It is display-only and does not
+ * take part in focus cycling.
  */
 public final class StatusPanel {
 
@@ -27,9 +26,8 @@ public final class StatusPanel {
             case Loadable.Loaded<RepoStatus>(RepoStatus status) -> status.branchLabel();
         };
         TextElement repository = text(Messages.get("status.line", model.repositoryName(), branch));
-        return model.error()
-                .map(error -> panel(Messages.get("panel.status.title"), repository, text(error).red()).length(4))
-                .orElseGet(() -> panel(Messages.get("panel.status.title"), repository).length(3))
+        return panel(Messages.get("panel.status.title"), repository)
+                .length(3)
                 .rounded()
                 .borderColor(Color.WHITE);
     }
