@@ -43,6 +43,27 @@ class BranchUpdateTest {
     }
 
     @Test
+    void pushRequestOfAKnownBranchPushesIt() {
+        Model failedBefore = Update.update(loaded(), new PushMsg.Failed("feature", "boom")).model();
+
+        Next next = Update.update(failedBefore, new PushMsg.Requested("feature"));
+
+        assertEquals(List.of(new BranchCmd.Push("feature")), next.cmds());
+        assertEquals(Optional.empty(), next.model().error());
+        assertEquals(List.of(), Update.update(loaded(), new PushMsg.Requested("gone")).cmds());
+    }
+
+    @Test
+    void failedPushIsStoredAndASuccessfulOneReloadsTheBranches() {
+        Model failed = Update.update(loaded(), new PushMsg.Failed("feature", "boom")).model();
+        assertEquals(Optional.of("Pushing branch feature failed: boom"), failed.error());
+
+        Next done = Update.update(withError(loaded(), "boom"), new PushMsg.Done("feature"));
+        assertEquals(Optional.empty(), done.model().error());
+        assertEquals(true, done.cmds().contains(new LoadBranches()));
+    }
+
+    @Test
     void newBranchRequestOpensTheDialogAndCancelClosesIt() {
         Model open = Update.update(loaded(), new NewBranchMsg.Requested("feature")).model();
         assertEquals(Optional.of("feature"), open.newBranchBase());

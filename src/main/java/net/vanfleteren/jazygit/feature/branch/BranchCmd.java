@@ -59,4 +59,18 @@ public sealed interface BranchCmd extends Cmd {
             return new CheckoutMsg.Failed(branch, message);
         }
     }
+
+    record Push(String branch) implements BranchCmd {
+
+        @Override
+        public Msg run(GitInfoProvider git) {
+            git.push(branch);
+            return new PushMsg.Done(branch);
+        }
+
+        @Override
+        public Msg failed(String message) {
+            return new PushMsg.Failed(branch, message);
+        }
+    }
 }

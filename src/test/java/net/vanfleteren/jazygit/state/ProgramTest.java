@@ -55,6 +55,7 @@ class ProgramTest {
         String commitFailure;
         final List<String> commits = new ArrayList<>();
         final List<String> deleted = new ArrayList<>();
+        final List<String> pushed = new ArrayList<>();
         final List<String> indexCalls = new ArrayList<>();
         int commitLoads;
         final List<String> logLoads = new ArrayList<>();
@@ -100,6 +101,11 @@ class ProgramTest {
                 throw checkoutError;
             }
             status = new RepoStatus(branch, branch + "-head", List.of());
+        }
+
+        @Override
+        public void push(String branch) {
+            pushed.add(branch);
         }
 
         @Override

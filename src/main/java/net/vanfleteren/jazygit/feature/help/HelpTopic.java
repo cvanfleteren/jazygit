@@ -13,6 +13,7 @@ public enum HelpTopic {
             new Binding("A", "help.files.amend"))),
     BRANCHES("panel.branches.title", List.of(
             new Binding("space", "help.branches.checkout"),
+            new Binding("P", "help.branches.push"),
             new Binding("n", "help.branches.new"),
             new Binding("d", "help.branches.delete"))),
     COMMITS("panel.commits.title", List.of(

@@ -49,6 +49,8 @@ public final class CliCheckout {
                     // A trailing "--" keeps git from treating branch names as paths.
                     .command(command)
                     .directory(workTree.toFile())
+                    // Fail instead of waiting for credentials that cannot be typed.
+                    .environment("GIT_TERMINAL_PROMPT", "0")
                     .readOutput(true)
                     .redirectErrorStream(true)
                     .exitValueAny()

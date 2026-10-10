@@ -238,6 +238,27 @@ class JGitInfoProviderTest {
     }
 
     @Test
+    void pushPublishesABranchWithoutUpstreamAndThenSendsNewCommits() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+
+        provider.push("main");
+        assertEquals(List.of(0, 0), counts("main"));
+        assertTrue(provider.branches().stream().filter(b -> b.name().equals("main")).allMatch(Branch::hasRemote));
+
+        git("commit", "-q", "--allow-empty", "-m", "local");
+        assertEquals(List.of(1, 0), counts("main"));
+        provider.push("main");
+        assertEquals(List.of(0, 0), counts("main"));
+    }
+
+    @Test
+    void pushFailsWithGitsExplanationWithoutARemote() {
+        assertThrows(IllegalStateException.class, () -> provider.push("main"));
+    }
+
+    @Test
     void branchesWithoutAnUpstreamAreNeitherAheadNorBehind() throws Exception {
         git("branch", "local-only");
         assertEquals(List.of(0, 0), counts("local-only"));

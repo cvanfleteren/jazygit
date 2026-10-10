@@ -4,6 +4,7 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.NewBranchMsg;
+import net.vanfleteren.jazygit.feature.branch.PushMsg;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.feature.help.HelpTopic;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
@@ -27,7 +28,7 @@ import java.util.stream.Stream;
 
 /**
  * Left-side panel listing the local branches, with the current branch marked. Space checks out
- * the highlighted branch, d asks where to delete it, n asks for the name of a new branch starting at it.
+ * the highlighted branch, P pushes it, d asks where to delete it, n asks for the name of a new branch starting at it.
  */
 public class BranchesPanel {
 
@@ -158,9 +159,12 @@ public class BranchesPanel {
     }
 
     private static Optional<Msg> request(KeyEvent event, String branch) {
-        return event.isChar(' ') ? Optional.of(new CheckoutMsg.Requested(branch))
-                : event.isChar('d') ? Optional.of(new DeleteBranchMsg.Requested(branch))
-                : event.isChar('n') ? Optional.of(new NewBranchMsg.Requested(branch))
-                : Optional.empty();
+        return switch (event.string()) {
+            case " " -> Optional.of(new CheckoutMsg.Requested(branch));
+            case "d" -> Optional.of(new DeleteBranchMsg.Requested(branch));
+            case "P" -> Optional.of(new PushMsg.Requested(branch));
+            case "n" -> Optional.of(new NewBranchMsg.Requested(branch));
+            default -> Optional.empty();
+        };
     }
 }

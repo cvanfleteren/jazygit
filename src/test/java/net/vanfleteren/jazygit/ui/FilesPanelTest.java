@@ -57,6 +57,10 @@ class FilesPanelTest {
         }
 
         @Override
+        public void push(String branch) {
+        }
+
+        @Override
         public void deleteBranch(String name, boolean local, boolean remote) {
         }
 

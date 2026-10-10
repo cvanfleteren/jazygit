@@ -26,4 +26,12 @@ public interface GitBranches {
      * @throws IllegalStateException if git fails, with git's explanation as message
      */
     void deleteBranch(String name, boolean local, boolean remote);
+
+    /**
+     * Pushes the local branch {@code branch} to its remote, setting that as the upstream when the
+     * branch has none yet.
+     *
+     * @throws IllegalStateException if git fails, with git's explanation as message
+     */
+    void push(String branch);
 }

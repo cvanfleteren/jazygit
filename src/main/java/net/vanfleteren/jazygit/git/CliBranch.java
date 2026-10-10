@@ -32,6 +32,31 @@ public final class CliBranch {
         CliCheckout.run(workTree, "git", "push", remoteOf(workTree, name), "--delete", name);
     }
 
+    /**
+     * Runs {@code git push <remote> <name>} in {@code workTree}, where the remote is the one the
+     * branch tracks, or {@code origin}. A branch without an upstream gets one, as with
+     * {@code --set-upstream}.
+     *
+     * @throws IllegalStateException if git refuses; the message then is git's own explanation
+     */
+    public static void push(Path workTree, String name) {
+        String remote = remoteOf(workTree, name);
+        if (hasUpstream(workTree, name)) {
+            CliCheckout.run(workTree, "git", "push", remote, name);
+        } else {
+            CliCheckout.run(workTree, "git", "push", "--set-upstream", remote, name);
+        }
+    }
+
+    private static boolean hasUpstream(Path workTree, String name) {
+        try {
+            return !CliCheckout.run(workTree, "git", "config", "--get", "branch." + name + ".merge").isEmpty();
+        } catch (IllegalStateException e) {
+            // Not configured: git config exits with 1.
+            return false;
+        }
+    }
+
     private static String remoteOf(Path workTree, String name) {
         try {
             String remote = CliCheckout.run(workTree, "git", "config", "--get", "branch." + name + ".remote");
