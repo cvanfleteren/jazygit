@@ -37,12 +37,16 @@ public final class CliBranch {
      * branch tracks, or {@code origin}. A branch without an upstream gets one, as with
      * {@code --set-upstream}.
      *
+     * @param forceWithLease also overwrite a remote branch that has diverged, unless somebody
+     *                       pushed to it since the last fetch
      * @throws IllegalStateException if git refuses; the message then is git's own explanation
      */
-    public static void push(Path workTree, String name) {
+    public static void push(Path workTree, String name, boolean forceWithLease) {
         String remote = remoteOf(workTree, name);
         if (hasUpstream(workTree, name)) {
-            CliCheckout.run(workTree, "git", "push", remote, name);
+            CliCheckout.run(workTree, forceWithLease
+                    ? new String[]{"git", "push", "--force-with-lease", remote, name}
+                    : new String[]{"git", "push", remote, name});
         } else {
             CliCheckout.run(workTree, "git", "push", "--set-upstream", remote, name);
         }

@@ -60,11 +60,11 @@ public sealed interface BranchCmd extends Cmd {
         }
     }
 
-    record Push(String branch) implements BranchCmd {
+    record Push(String branch, boolean forceWithLease) implements BranchCmd {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            git.push(branch);
+            git.push(branch, forceWithLease);
             return new PushMsg.Done(branch);
         }
 

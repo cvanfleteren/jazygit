@@ -240,8 +240,8 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     }
 
     @Override
-    public void push(String branch) {
-        CliBranch.push(workTree, branch);
+    public void push(String branch, boolean forceWithLease) {
+        CliBranch.push(workTree, branch, forceWithLease);
     }
 
     @Override

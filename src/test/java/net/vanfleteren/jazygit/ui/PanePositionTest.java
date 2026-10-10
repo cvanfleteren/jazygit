@@ -51,7 +51,7 @@ class PanePositionTest {
         }
 
         @Override
-        public void push(String branch) {
+        public void push(String branch, boolean forceWithLease) {
         }
 
         @Override

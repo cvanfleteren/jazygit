@@ -104,8 +104,8 @@ class ProgramTest {
         }
 
         @Override
-        public void push(String branch) {
-            pushed.add(branch);
+        public void push(String branch, boolean forceWithLease) {
+            pushed.add(branch + (forceWithLease ? " force" : ""));
         }
 
         @Override

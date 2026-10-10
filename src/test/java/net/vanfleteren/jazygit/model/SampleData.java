@@ -97,7 +97,7 @@ public final class SampleData implements GitInfoProvider {
     }
 
     @Override
-    public void push(String branch) {
+    public void push(String branch, boolean forceWithLease) {
     }
 
     @Override

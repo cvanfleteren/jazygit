@@ -48,12 +48,39 @@ class BranchUpdateTest {
 
         Next next = Update.update(failedBefore, new PushMsg.Requested("feature"));
 
-        assertEquals(List.of(new BranchCmd.Push("feature")), next.cmds());
+        assertEquals(List.of(new BranchCmd.Push("feature", false)), next.cmds());
         assertEquals(Optional.empty(), next.model().error());
         assertEquals(java.util.Set.of("feature"), next.model().pushing());
         // Not pushed again while it is being pushed.
         assertEquals(List.of(), Update.update(next.model(), new PushMsg.Requested("feature")).cmds());
         assertEquals(List.of(), Update.update(loaded(), new PushMsg.Requested("gone")).cmds());
+    }
+
+    @Test
+    void pushRequestOfADivergedBranchAsksForConfirmationInsteadOfPushing() {
+        Model diverged = Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(
+                new Branch("main", true, "aaaa"),
+                new Branch("feature", false, "ffff", Instant.EPOCH, true, false, 1, 2)))).model();
+
+        Next asked = Update.update(diverged, new PushMsg.Requested("feature"));
+
+        assertEquals(List.of(), asked.cmds());
+        assertEquals(Optional.of("feature"), asked.model().forcePushTarget());
+        assertEquals(java.util.Set.of(), asked.model().pushing());
+
+        Next confirmed = Update.update(asked.model(), new PushMsg.ForceConfirmed());
+        assertEquals(List.of(new BranchCmd.Push("feature", true)), confirmed.cmds());
+        assertEquals(Optional.empty(), confirmed.model().forcePushTarget());
+        assertEquals(java.util.Set.of("feature"), confirmed.model().pushing());
+
+        Next cancelled = Update.update(asked.model(), new PushMsg.ForceCancelled());
+        assertEquals(List.of(), cancelled.cmds());
+        assertEquals(Optional.empty(), cancelled.model().forcePushTarget());
+    }
+
+    @Test
+    void confirmingWithoutAPromptDoesNothing() {
+        assertEquals(List.of(), Update.update(loaded(), new PushMsg.ForceConfirmed()).cmds());
     }
 
     @Test

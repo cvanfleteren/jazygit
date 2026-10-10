@@ -31,7 +31,9 @@ public interface GitBranches {
      * Pushes the local branch {@code branch} to its remote, setting that as the upstream when the
      * branch has none yet.
      *
+     * @param forceWithLease overwrite the remote branch, but only if it is still where this
+     *                       repository last saw it ({@code --force-with-lease})
      * @throws IllegalStateException if git fails, with git's explanation as message
      */
-    void push(String branch);
+    void push(String branch, boolean forceWithLease);
 }

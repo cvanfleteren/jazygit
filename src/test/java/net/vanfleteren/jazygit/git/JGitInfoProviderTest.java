@@ -243,19 +243,42 @@ class JGitInfoProviderTest {
         git("init", "-q", "--bare", "-b", "main", bare.toString());
         git("remote", "add", "origin", bare.toString());
 
-        provider.push("main");
+        provider.push("main", false);
         assertEquals(List.of(0, 0), counts("main"));
         assertTrue(provider.branches().stream().filter(b -> b.name().equals("main")).allMatch(Branch::hasRemote));
 
         git("commit", "-q", "--allow-empty", "-m", "local");
         assertEquals(List.of(1, 0), counts("main"));
-        provider.push("main");
+        provider.push("main", false);
+        assertEquals(List.of(0, 0), counts("main"));
+    }
+
+    @Test
+    void aDivergedBranchOnlyPushesWithForceWithLease() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        git("push", "-q", "-u", "origin", "main");
+
+        // The remote gets a commit that this repository fetches, while the local branch is rewritten.
+        java.nio.file.Path other = Files.createTempDirectory("other");
+        gitIn(other, "clone", "-q", bare.toString(), "clone");
+        gitIn(other.resolve("clone"), "commit", "-q", "--allow-empty", "-m", "theirs");
+        gitIn(other.resolve("clone"), "push", "-q", "origin", "main");
+        git("fetch", "-q", "origin");
+        git("commit", "-q", "--allow-empty", "-m", "ours");
+        assertEquals(List.of(1, 1), counts("main"));
+
+        assertThrows(IllegalStateException.class, () -> provider.push("main", false));
+
+        provider.push("main", true);
+        git("fetch", "-q", "origin");
         assertEquals(List.of(0, 0), counts("main"));
     }
 
     @Test
     void pushFailsWithGitsExplanationWithoutARemote() {
-        assertThrows(IllegalStateException.class, () -> provider.push("main"));
+        assertThrows(IllegalStateException.class, () -> provider.push("main", false));
     }
 
     @Test

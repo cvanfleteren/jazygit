@@ -17,6 +17,15 @@ public sealed interface PushMsg extends Msg {
     record Requested(String branch) implements PushMsg {
     }
 
+    record ForceCancelled() implements PushMsg {
+    }
+
+    /**
+     * The user confirmed overwriting the diverged remote branch.
+     */
+    record ForceConfirmed() implements PushMsg {
+    }
+
     record Done(String branch) implements PushMsg {
     }
 
