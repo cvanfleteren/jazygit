@@ -7,7 +7,10 @@ import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.model.SampleData;
+import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
+import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.TestModels;
 import org.junit.jupiter.api.Test;
 
@@ -104,6 +107,27 @@ class ContentPanelTest {
         assertNotNull(ContentPanel.render(loading, FilesPanel.ID, 0));
         assertNotNull(ContentPanel.render(loading, BranchesPanel.ID, 0));
         assertNotNull(ContentPanel.render(loading, CommitsPanel.ID, 0));
+    }
+
+    @Test
+    void theCommitAreaCanBeFocusedOnceItShowsTheHighlightedCommitAndReturnsToTheCommitsPane() {
+        Model selected = Update.update(
+                Update.update(TestModels.loaded(), new SelectionMsg.CommitSelected("aaaa")).model(),
+                new LoadMsg.CommitDetailLoaded("aaaa", "changes")).model();
+
+        // Rendering gives the area its content; the commits pane has the focus while doing so.
+        ContentPanel.render(selected, CommitsPanel.ID, 0);
+
+        String area = ContentPanel.areaOfPane(CommitsPanel.ID).orElseThrow();
+        assertEquals(java.util.Optional.of(CommitsPanel.ID), ContentPanel.paneOfArea(area));
+        assertNotNull(ContentPanel.render(selected, area, 0));
+    }
+
+    @Test
+    void theDiffAreasReturnToTheFilesPane() {
+        assertEquals(java.util.Optional.empty(), ContentPanel.paneOfArea("unknown"));
+        assertEquals(java.util.Optional.of(FilesPanel.ID), ContentPanel.paneOfArea("diff-staged"));
+        assertEquals(java.util.Optional.of(FilesPanel.ID), ContentPanel.paneOfArea("diff-unstaged"));
     }
 
     @Test

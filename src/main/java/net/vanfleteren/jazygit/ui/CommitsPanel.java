@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.feature.help.HelpTopic;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
@@ -31,6 +32,7 @@ public class CommitsPanel {
                     .toList());
     // The list's key handler also sees keys typed in other panes, so it must know whether it has focus.
     private boolean focused;
+    private final Runnable openCommit;
 
     public CommitsPanel() {
         this(msg -> {
@@ -41,6 +43,16 @@ public class CommitsPanel {
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public CommitsPanel(Consumer<Msg> dispatch) {
+        this(dispatch, () -> {
+        });
+    }
+
+    /**
+     * @param dispatch   receives the messages for the user's actions, on the render thread
+     * @param openCommit called when Enter is pressed on a commit, to move focus to its content
+     */
+    public CommitsPanel(Consumer<Msg> dispatch, Runnable openCommit) {
+        this.openCommit = openCommit;
         list.onKeyEvent(event -> handleKey(event, dispatch));
     }
 
@@ -80,6 +92,10 @@ public class CommitsPanel {
     }
 
     private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {
+        if (focused && event.code() == KeyCode.ENTER && selectedCommit().isPresent()) {
+            openCommit.run();
+            return EventResult.HANDLED;
+        }
         return Optional.of(event)
                 .filter(e -> focused)
                 .flatMap(this::request)

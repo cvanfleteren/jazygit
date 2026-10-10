@@ -47,7 +47,7 @@ public class JazygitApp extends ToolkitApp {
 
     private final GitInfoProvider provider;
     private final FilesPanel filesPanel = new FilesPanel(msg -> this.program.dispatch(msg),
-            () -> ContentPanel.firstFocusableAreaId().ifPresent(id -> runner().focusManager().setFocus(id)));
+            () -> openContent(FilesPanel.ID));
     private final BranchesPanel branchesPanel = new BranchesPanel(msg -> this.program.dispatch(msg));
     private final NewBranchDialog newBranchDialog = new NewBranchDialog(msg -> this.program.dispatch(msg));
     private final DeleteBranchDialog deleteBranchDialog = new DeleteBranchDialog(msg -> this.program.dispatch(msg));
@@ -56,7 +56,8 @@ public class JazygitApp extends ToolkitApp {
     private final CommitDialog rewordDialog = CommitDialog.reword(msg -> this.program.dispatch(msg));
     private final StageAllDialog stageAllDialog = new StageAllDialog(msg -> this.program.dispatch(msg));
     private final CommitDialog commitDialog = new CommitDialog(msg -> this.program.dispatch(msg));
-    private final CommitsPanel commitsPanel = new CommitsPanel(msg -> this.program.dispatch(msg));
+    private final CommitsPanel commitsPanel = new CommitsPanel(msg -> this.program.dispatch(msg),
+            () -> openContent(CommitsPanel.ID));
     private final HelpDialog helpDialog = new HelpDialog(msg -> this.program.dispatch(msg));
     // The panel the help popup was opened from, which gets the focus back.
     private String helpOrigin = FilesPanel.ID;
@@ -67,16 +68,21 @@ public class JazygitApp extends ToolkitApp {
         this.provider = provider;
     }
 
+    /**
+     * Moves the focus to the content shown for the pane {@code paneId}, so it can be scrolled by key.
+     */
+    private void openContent(String paneId) {
+        ContentPanel.areaOfPane(paneId).ifPresent(id -> runner().focusManager().setFocus(id));
+    }
+
     @Override
     protected void onStart() {
         ToolkitRunner runner = runner();
         runner.focusManager().setFocus(FilesPanel.ID);
         ContentPanel.onLeaveScrollArea(() -> {
-            boolean inArea = ContentPanel.isFocusableAreaId(runner.focusManager().focusedId());
-            if (inArea) {
-                runner.focusManager().setFocus(FilesPanel.ID);
-            }
-            return inArea;
+            Optional<String> pane = ContentPanel.paneOfArea(runner.focusManager().focusedId());
+            pane.ifPresent(runner.focusManager()::setFocus);
+            return pane.isPresent();
         });
         io = Executors.newSingleThreadExecutor(Thread.ofPlatform().name("git-io").daemon().factory());
         program = Program.start(provider, io, runner::runOnRenderThread);

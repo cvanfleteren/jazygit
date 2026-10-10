@@ -44,12 +44,15 @@ public final class ContentPanel {
      * The scrollable areas for the diffs, the branch log and the commit. They are kept between renders because an area holds its own scroll
      * position; a new element every frame would jump back to the top. Only used from the render thread.
      */
-    private static final ScrollArea STAGED_AREA = new ScrollArea("diff-staged", true, ContentPanel::diffText);
-    private static final ScrollArea UNSTAGED_AREA = new ScrollArea("diff-unstaged", true, ContentPanel::diffText);
+    private static final ScrollArea STAGED_AREA =
+            new ScrollArea("diff-staged", FilesPanel.ID, ContentPanel::diffText);
+    private static final ScrollArea UNSTAGED_AREA =
+            new ScrollArea("diff-unstaged", FilesPanel.ID, ContentPanel::diffText);
+    private static final ScrollArea COMMIT_AREA =
+            new ScrollArea("commit-changes", CommitsPanel.ID, ContentPanel::plainText);
     // Not focusable: clicking the log must not take the focus from the branches pane it mirrors.
-    private static final ScrollArea LOG_AREA = new ScrollArea("branch-log", false, ContentPanel::plainText);
-    // Not focusable either, for the same reason: it mirrors the commits pane.
-    private static final ScrollArea COMMIT_AREA = new ScrollArea("commit-changes", false, ContentPanel::plainText);
+    private static final ScrollArea LOG_AREA =
+            new ScrollArea("branch-log", Optional.empty(), ContentPanel::plainText);
     // Called when Escape is pressed; gives the focus back to the file tree if a focusable area had it, and
     // says whether it did.
     private static Supplier<Boolean> leaveScrollArea = () -> false;
@@ -58,15 +61,26 @@ public final class ContentPanel {
         leaveScrollArea = leave;
     }
 
-    public static boolean isFocusableAreaId(String id) {
-        return STAGED_AREA.id().equals(id) || UNSTAGED_AREA.id().equals(id);
+    /**
+     * The pane that gets the focus back when Escape is pressed in the area with id {@code areaId}, if that
+     * is a focusable area.
+     */
+    public static Optional<String> paneOfArea(String areaId) {
+        return Stream.of(STAGED_AREA, UNSTAGED_AREA, COMMIT_AREA)
+                .filter(area -> area.id().equals(areaId))
+                .flatMap(area -> area.pane.stream())
+                .findFirst();
     }
 
     /**
-     * The id of the focusable area to focus: the staged one if it shows anything, else the unstaged one.
+     * The id of the area that shows what the pane {@code paneId} has highlighted, to move the focus into:
+     * the staged diff if it shows anything, else the unstaged one, or the commit.
      */
-    public static Optional<String> firstFocusableAreaId() {
-        return Stream.of(STAGED_AREA, UNSTAGED_AREA).filter(ScrollArea::hasContent).map(ScrollArea::id).findFirst();
+    public static Optional<String> areaOfPane(String paneId) {
+        return Stream.of(STAGED_AREA, UNSTAGED_AREA, COMMIT_AREA)
+                .filter(area -> area.pane.filter(paneId::equals).isPresent() && area.hasContent())
+                .map(ScrollArea::id)
+                .findFirst();
     }
 
     private ContentPanel() {
@@ -74,15 +88,23 @@ public final class ContentPanel {
 
     private static final class ScrollArea {
         private final String id;
+        // The pane this area shows the content of, which gets the focus back from it; none if the area
+        // cannot be focused.
+        private final Optional<String> pane;
         private final RichTextAreaElement element;
         private final Function<String, Text> styling;
         private Object key = "";
 
-        ScrollArea(String id, boolean focusable, Function<String, Text> styling) {
+        ScrollArea(String id, String pane, Function<String, Text> styling) {
+            this(id, Optional.of(pane), styling);
+        }
+
+        ScrollArea(String id, Optional<String> pane, Function<String, Text> styling) {
             this.id = id;
+            this.pane = pane;
             this.styling = styling;
             element = richTextArea().id(id).rounded().scrollbar().fill();
-            if (focusable) {
+            if (pane.isPresent()) {
                 element.focusable();
             }
             element.onKeyEvent(event -> {
@@ -116,7 +138,7 @@ public final class ContentPanel {
         }
 
         boolean hasContent() {
-            return key instanceof String content && !content.isBlank();
+            return !(key instanceof String content) || !content.isBlank();
         }
 
         RichTextAreaElement show(String title) {
@@ -132,7 +154,7 @@ public final class ContentPanel {
         if (BranchesPanel.ID.equals(focusedId)) {
             return branchLogView(model);
         }
-        if (CommitsPanel.ID.equals(focusedId)) {
+        if (CommitsPanel.ID.equals(focusedId) || COMMIT_AREA.id().equals(focusedId)) {
             return commitDiffView(model);
         }
         return fileDiffView(model);
