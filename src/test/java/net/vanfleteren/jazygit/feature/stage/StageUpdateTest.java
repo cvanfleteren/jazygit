@@ -53,6 +53,29 @@ class StageUpdateTest {
     }
 
     @Test
+    void toggleOfADirectoryStagesTheDirectory() {
+        FileEntry unstaged = new FileEntry("src/a.txt", ChangeType.MODIFIED);
+        FileEntry staged = new FileEntry("src/c.txt", ChangeType.MODIFIED, true, false);
+
+        assertEquals(List.of(new Stage(List.of("src"))), Update.update(loaded(),
+                new StageMsg.Requested(List.of(unstaged, staged), Optional.of("src"))).cmds());
+        assertEquals(List.of(new Stage(List.of("."))), Update.update(loaded(),
+                new StageMsg.Requested(List.of(unstaged, staged), Optional.of(""))).cmds());
+    }
+
+    @Test
+    void toggleOfAStagedDirectoryResetsItUnlessItHasNewlyAddedFiles() {
+        FileEntry modified = new FileEntry("src/b.txt", ChangeType.MODIFIED, true, false);
+        FileEntry deleted = new FileEntry("src/c.txt", ChangeType.DELETED, true, false);
+        FileEntry added = new FileEntry("src/a.txt", ChangeType.ADDED);
+
+        assertEquals(List.of(new Unstage(List.of(), List.of("."))), Update.update(loaded(),
+                new StageMsg.Requested(List.of(modified, deleted), Optional.of(""))).cmds());
+        assertEquals(List.of(new Unstage(List.of("src/a.txt"), List.of("src/b.txt"))), Update.update(loaded(),
+                new StageMsg.Requested(List.of(added, modified), Optional.of("src"))).cmds());
+    }
+
+    @Test
     void toggleOfNothingDoesNothing() {
         assertEquals(List.of(), Update.update(loaded(), new StageMsg.Requested(List.of())).cmds());
     }
