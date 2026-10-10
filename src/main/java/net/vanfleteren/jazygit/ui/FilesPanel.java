@@ -75,29 +75,26 @@ public class FilesPanel {
     }
 
     private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {
-        if (!focused) {
-            return EventResult.UNHANDLED;
-        }
-        if (event.isChar('?')) {
-            dispatch.accept(new HelpMsg.Requested(HelpTopic.FILES));
-            return EventResult.HANDLED;
-        }
-        if (event.isChar('c')) {
-            dispatch.accept(new CommitMsg.Requested());
-            return EventResult.HANDLED;
-        }
-        if (event.isChar('A')) {
-            dispatch.accept(new AmendMsg.Requested());
-            return EventResult.HANDLED;
-        }
-        return Optional.ofNullable(tree.selectedNode())
-                .map(TreeNode::data)
-                .filter(data -> event.isChar(' '))
-                .map(data -> {
-                    dispatch.accept(new StageMsg.Requested(data.entries()));
+        return Optional.of(event)
+                .filter(e -> focused)
+                .flatMap(this::request)
+                .map(msg -> {
+                    dispatch.accept(msg);
                     return EventResult.HANDLED;
                 })
                 .orElse(EventResult.UNHANDLED);
+    }
+
+    private Optional<Msg> request(KeyEvent event) {
+        return switch (event.string()) {
+            case "?" -> Optional.of(new HelpMsg.Requested(HelpTopic.FILES));
+            case "c" -> Optional.of(new CommitMsg.Requested());
+            case "A" -> Optional.of(new AmendMsg.Requested());
+            case " " -> Optional.ofNullable(tree.selectedNode())
+                    .map(TreeNode::data)
+                    .map(data -> new StageMsg.Requested(data.entries()));
+            default -> Optional.empty();
+        };
     }
 
     /**

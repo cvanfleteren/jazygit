@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
@@ -57,14 +58,21 @@ public class CommitsPanel {
     }
 
     private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {
-        if (focused && event.isChar('?')) {
-            dispatch.accept(new HelpMsg.Requested(HelpTopic.COMMITS));
-            return EventResult.HANDLED;
-        }
-        if (focused && event.isChar('r')) {
-            dispatch.accept(new RewordMsg.Requested(selectedIndex()));
-            return EventResult.HANDLED;
-        }
-        return EventResult.UNHANDLED;
+        return Optional.of(event)
+                .filter(e -> focused)
+                .flatMap(this::request)
+                .map(msg -> {
+                    dispatch.accept(msg);
+                    return EventResult.HANDLED;
+                })
+                .orElse(EventResult.UNHANDLED);
+    }
+
+    private Optional<Msg> request(KeyEvent event) {
+        return switch (event.string()) {
+            case "?" -> Optional.of(new HelpMsg.Requested(HelpTopic.COMMITS));
+            case "r" -> Optional.of(new RewordMsg.Requested(selectedIndex()));
+            default -> Optional.empty();
+        };
     }
 }
