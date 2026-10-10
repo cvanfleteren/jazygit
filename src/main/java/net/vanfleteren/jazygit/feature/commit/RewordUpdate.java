@@ -13,7 +13,6 @@ import net.vanfleteren.jazygit.feature.commit.RewordMsg.Cancelled;
 
 import net.vanfleteren.jazygit.feature.commit.CommitCmd.Reword;
 
-import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;

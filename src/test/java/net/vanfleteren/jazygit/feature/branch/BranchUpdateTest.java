@@ -5,7 +5,6 @@ import net.vanfleteren.jazygit.feature.branch.BranchCmd.Checkout;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
-import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;

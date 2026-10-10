@@ -9,7 +9,6 @@ import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.Done;
 
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.Checkout;
 
-import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;

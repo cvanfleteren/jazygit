@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.feature.commit;
 
 import net.vanfleteren.jazygit.ui.RenderedText;
 
-import net.vanfleteren.jazygit.feature.commit.AmendMsg;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import static dev.tamboui.toolkit.Toolkit.*;
 

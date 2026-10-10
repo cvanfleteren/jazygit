@@ -41,6 +41,19 @@ public sealed interface FileTree {
     }
 
     /**
+     * The files shown in the diff panel: the file itself, or only the files directly inside a directory,
+     * not those in its subdirectories.
+     */
+    default List<FileEntry> directEntries() {
+        return switch (this) {
+            case File file -> List.of(file.entry());
+            case Dir dir -> dir.children().stream()
+                    .flatMap(child -> child instanceof File file ? Stream.of(file.entry()) : Stream.empty())
+                    .toList();
+        };
+    }
+
+    /**
      * The roots of the tree for the given files: directories first, then files, each sorted by name.
      */
     static List<FileTree> of(List<FileEntry> files) {

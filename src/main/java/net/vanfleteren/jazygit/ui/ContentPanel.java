@@ -4,6 +4,10 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.style.Color;
+import dev.tamboui.style.Style;
+import dev.tamboui.text.Line;
+import dev.tamboui.text.Span;
+import dev.tamboui.text.Text;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.Panel;
@@ -73,8 +77,7 @@ public final class ContentPanel {
                         Map.entry(Messages.get("content.staged"), diffs.staged()),
                         Map.entry(Messages.get("content.unstaged"), diffs.unstaged()))
                 .filter(e -> !e.getValue().isBlank())
-                .map(e -> (Element) panel(e.getKey(), e.getValue().lines().map(ContentPanel::diffLine)
-                        .toArray(Element[]::new)).rounded().fill())
+                .map(e -> (Element) richTextArea(diffText(e.getValue())).title(e.getKey()).rounded().scrollbar().fill())
                 .toList();
         return column(panels.toArray(Element[]::new));
     }
@@ -87,22 +90,29 @@ public final class ContentPanel {
     }
 
     /**
+     * The unified diff as one styled text, so it is a single element to lay out however long the diff is.
+     */
+    static Text diffText(String diff) {
+        return Text.from(diff.lines().map(ContentPanel::diffLine).toList());
+    }
+
+    /**
      * A line of a unified diff, colored by what it is: added, removed, a hunk header or a file header.
      */
-    static Element diffLine(String line) {
+    static Line diffLine(String line) {
         if (line.startsWith("+++") || line.startsWith("---") || line.startsWith("diff ") || line.startsWith("index ")) {
-            return text(line).bold();
+            return Line.from(Span.styled(line, Style.EMPTY.bold()));
         }
         if (line.startsWith("+")) {
-            return text(line).fg(Color.GREEN);
+            return Line.from(Span.styled(line, Style.EMPTY.fg(Color.GREEN)));
         }
         if (line.startsWith("-")) {
-            return text(line).fg(Color.RED);
+            return Line.from(Span.styled(line, Style.EMPTY.fg(Color.RED)));
         }
         if (line.startsWith("@@")) {
-            return text(line).fg(Color.CYAN);
+            return Line.from(Span.styled(line, Style.EMPTY.fg(Color.CYAN)));
         }
-        return text(line);
+        return Line.from(Span.raw(line));
     }
 
     private static Panel branchLogView(Model model) {

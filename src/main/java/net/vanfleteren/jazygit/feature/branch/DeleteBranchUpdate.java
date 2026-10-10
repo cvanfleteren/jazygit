@@ -13,7 +13,6 @@ import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Cancelled;
 
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.DeleteBranch;
 
-import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.git.model.Branch;

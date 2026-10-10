@@ -30,6 +30,18 @@ class FileTreeTest {
     }
 
     @Test
+    void directEntriesSkipSubdirectories() {
+        FileEntry a = modified("net/A.java");
+        FileEntry b = modified("net/sub/B.java");
+        FileEntry c = modified("c.txt");
+        Dir root = new Dir("root", "", FileTree.of(List.of(a, b, c)));
+
+        assertEquals(List.of(c), root.directEntries());
+        assertEquals(List.of(a), ((Dir) root.children().get(0)).directEntries());
+        assertEquals(List.of(c), new File("c.txt", c).directEntries());
+    }
+
+    @Test
     void emptyStatusHasNoNodes() {
         assertEquals(List.of(), FileTree.of(List.of()));
     }

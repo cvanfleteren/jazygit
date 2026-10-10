@@ -12,6 +12,15 @@
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.13.0</version>
+        <configuration>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+              <version>${lombok.version}</version>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
       </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
@@ -125,6 +134,12 @@
       <classifier>test-fixtures</classifier>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <version>1.18.46</version>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
   <dependencyManagement>
     <dependencies>
@@ -146,6 +161,7 @@
   </dependencyManagement>
   <properties>
     <maven.compiler.release>25</maven.compiler.release>
+    <lombok.version>1.18.46</lombok.version>
     <zt-exec.version>1.13.0</zt-exec.version>
     <main.class>net.vanfleteren.jazygit.JazygitApp</main.class>
     <slf4j.version>2.0.17</slf4j.version>

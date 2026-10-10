@@ -4,9 +4,6 @@ import net.vanfleteren.jazygit.feature.selection.SelectionMsg.FilesSelected;
 
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg.BranchSelected;
 
-import net.vanfleteren.jazygit.state.Cmd;
-import net.vanfleteren.jazygit.state.Update;
-
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.state.BranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;

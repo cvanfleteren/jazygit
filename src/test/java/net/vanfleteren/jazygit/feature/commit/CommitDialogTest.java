@@ -4,8 +4,7 @@ package net.vanfleteren.jazygit.feature.commit;
 import net.vanfleteren.jazygit.ui.RenderedText;
 
 import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.feature.commit.CommitMsg;
-import net.vanfleteren.jazygit.feature.commit.RewordMsg;
+
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;

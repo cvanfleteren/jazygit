@@ -3,8 +3,6 @@ package net.vanfleteren.jazygit.feature.help;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 
-import java.util.Optional;
-
 /**
  * Showing the keybindings of a panel.
  */

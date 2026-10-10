@@ -69,7 +69,7 @@ public class FilesPanel {
     public Optional<Msg> selectionChange(Model model) {
         return Optional.ofNullable(tree.selectedNode())
                 .map(TreeNode::data)
-                .map(FileTree::entries)
+                .map(FileTree::directEntries)
                 .filter(files -> !model.fileDiff().map(FileDiff::files).equals(Optional.of(files)))
                 .map(SelectionMsg.FilesSelected::new);
     }

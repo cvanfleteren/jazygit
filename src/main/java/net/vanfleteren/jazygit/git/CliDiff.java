@@ -8,9 +8,12 @@ import org.zeroturnaround.exec.ProcessExecutor;
 import org.zeroturnaround.exec.ProcessResult;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
@@ -35,28 +38,52 @@ public final class CliDiff {
     public static Diffs diff(Path workTree, List<FileEntry> files) {
         List<String> staged = paths(files, f -> f.staged() && f.type() != ChangeType.UNTRACKED);
         List<String> unstaged = paths(files, f -> f.unstaged() && f.type() != ChangeType.UNTRACKED);
-        Stream<String> untracked = files.stream()
-                .filter(f -> f.type() == ChangeType.UNTRACKED)
-                .map(f -> run(workTree, List.of("diff", "--no-index", "--no-color", "--no-ext-diff", "--",
-                        "/dev/null"), List.of(f.path())));
+        List<String> untracked = paths(files, f -> f.type() == ChangeType.UNTRACKED);
         return new Diffs(
-                truncated(tracked(workTree, "--cached", staged)),
-                truncated(Stream.concat(Stream.of(tracked(workTree, "--", unstaged)), untracked)
-                        .collect(Collectors.joining())));
+                truncated(tracked(workTree, List.of("diff", "--cached", "--no-color", "--no-ext-diff", "--"),
+                        staged, Map.of())),
+                truncated(unstagedAndUntracked(workTree, unstaged, untracked)));
     }
 
     private static List<String> paths(List<FileEntry> files, Predicate<FileEntry> filter) {
         return files.stream().filter(filter).map(FileEntry::path).toList();
     }
 
-    private static String tracked(Path workTree, String mode, List<String> paths) {
-        if (paths.isEmpty()) {
-            return "";
+    /**
+     * Untracked files are marked intent-to-add in a temporary copy of the index, so one {@code git diff}
+     * shows them as entirely added next to the unstaged changes. The real index is left untouched.
+     */
+    private static String unstagedAndUntracked(Path workTree, List<String> unstaged, List<String> untracked) {
+        List<String> diff = List.of("diff", "--no-color", "--no-ext-diff", "--");
+        if (untracked.isEmpty()) {
+            return tracked(workTree, diff, unstaged, Map.of());
         }
-        List<String> subcommand = mode.equals("--")
-                ? List.of("diff", "--no-color", "--no-ext-diff", "--")
-                : List.of("diff", "--cached", "--no-color", "--no-ext-diff", "--");
-        return run(workTree, subcommand, paths);
+        Path tempIndex = null;
+        try {
+            Path index = workTree.resolve(run(workTree, List.of("rev-parse", "--git-path", "index"), List.of()).strip());
+            tempIndex = Files.createTempFile("jazygit-index", null);
+            if (Files.exists(index)) {
+                Files.copy(index, tempIndex, StandardCopyOption.REPLACE_EXISTING);
+            }
+            Map<String, String> env = Map.of("GIT_INDEX_FILE", tempIndex.toString());
+            run(workTree, List.of("add", "--intent-to-add", "--"), untracked, env);
+            return tracked(workTree, diff, Stream.concat(unstaged.stream(), untracked.stream()).toList(), env);
+        } catch (IOException e) {
+            throw new IllegalStateException(Messages.get("git.notInstalled"), e);
+        } finally {
+            if (tempIndex != null) {
+                try {
+                    Files.deleteIfExists(tempIndex);
+                } catch (IOException ignored) {
+                    // a leftover temp file is harmless
+                }
+            }
+        }
+    }
+
+    private static String tracked(Path workTree, List<String> subcommand, List<String> paths,
+                                  Map<String, String> env) {
+        return paths.isEmpty() ? "" : run(workTree, subcommand, paths, env);
     }
 
     static String truncated(String diff) {
@@ -71,6 +98,11 @@ public final class CliDiff {
      * Exit code 1 is fine: {@code --no-index} uses it to say the files differ.
      */
     private static String run(Path workTree, List<String> subcommand, List<String> paths) {
+        return run(workTree, subcommand, paths, Map.of());
+    }
+
+    private static String run(Path workTree, List<String> subcommand, List<String> paths,
+                              Map<String, String> env) {
         List<String> command = new ArrayList<>();
         command.add("git");
         command.addAll(subcommand);
@@ -79,6 +111,7 @@ public final class CliDiff {
             ProcessResult result = new ProcessExecutor()
                     .command(command)
                     .directory(workTree.toFile())
+                    .environment(env)
                     .readOutput(true)
                     .redirectErrorStream(true)
                     .exitValueAny()

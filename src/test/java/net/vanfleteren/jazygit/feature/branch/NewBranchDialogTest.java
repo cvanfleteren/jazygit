@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.feature.branch;
 
 import net.vanfleteren.jazygit.ui.RenderedText;
 
-import net.vanfleteren.jazygit.feature.branch.NewBranchMsg;
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
