@@ -165,6 +165,35 @@ class JGitInfoProviderTest {
     }
 
     @Test
+    void mutatingCommandsReturnTheCommandLinesTheyRan() throws Exception {
+        Files.writeString(repo.resolve("README.md"), "changed\n");
+        Files.writeString(repo.resolve("new file.txt"), "new\n");
+
+        assertEquals(List.of("git add -- README.md 'new file.txt'"),
+                provider.stage(List.of("README.md", "new file.txt")));
+        assertEquals(List.of("git rm --cached --force --quiet -- 'new file.txt'"),
+                provider.unstageNew(List.of("new file.txt")));
+        assertEquals(List.of(), provider.unstage(List.of()));
+        assertEquals(List.of("git commit --quiet -m 'a summary' -m details"),
+                provider.commit("a summary", "details"));
+
+        git("branch", "feature");
+        Files.writeString(repo.resolve("README.md"), "dirty\n");
+        assertEquals(List.of("git stash push --quiet", "git checkout --quiet feature --",
+                "git stash pop --quiet"), provider.checkoutWithStash("feature"));
+    }
+
+    @Test
+    void aFailingCommandReportsTheCommandsRunUpToAndIncludingIt() {
+        GitCommandException e = assertThrows(GitCommandException.class,
+                () -> provider.deleteBranch("missing", true, false));
+        assertEquals(List.of("git branch --delete --force missing"), e.commands());
+
+        e = assertThrows(GitCommandException.class, () -> provider.stage(List.of("missing.txt")));
+        assertEquals(List.of("git add -- missing.txt"), e.commands());
+    }
+
+    @Test
     void checkoutFailsWithGitsExplanationWhenLocalChangesWouldBeOverwritten() throws Exception {
         git("checkout", "-q", "-b", "feature");
         Files.writeString(repo.resolve("README.md"), "changed on feature\n");

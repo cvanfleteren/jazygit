@@ -24,6 +24,7 @@ import java.util.Set;
  *                       not queue them again
  * @param error          why the last operation failed, until the next one is started
  * @param pushing        the branches being pushed right now
+ * @param commandLog     the mutating git commands that were executed, oldest first
  * @param popup          the popup that is open, if any; only one can be
  */
 @With
@@ -37,16 +38,18 @@ public record Model(String repositoryName,
                     Set<Cmd.Load> refreshing,
                     Optional<String> error,
                     Set<String> pushing,
+                    List<LogEntry> commandLog,
                     Optional<Popup> popup) {
 
     public Model {
         refreshing = Set.copyOf(refreshing);
         pushing = Set.copyOf(pushing);
+        commandLog = List.copyOf(commandLog);
     }
 
     public static Model initial(String repositoryName) {
         return new Model(repositoryName, Loadable.loading(), Loadable.loading(), Loadable.loading(), Optional.empty(),
-                Optional.empty(), Optional.empty(), Set.of(), Optional.empty(), Set.of(), Optional.empty());
+                Optional.empty(), Optional.empty(), Set.of(), Optional.empty(), Set.of(), List.of(), Optional.empty());
     }
 
     /**

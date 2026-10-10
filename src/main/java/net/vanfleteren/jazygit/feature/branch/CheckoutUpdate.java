@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.StashConfirmed;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.NeedsStash;
 
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
@@ -39,7 +40,8 @@ public final class CheckoutUpdate {
                             new CheckoutWithStash(branch)))
                     .orElseGet(() -> Next.of(model));
             // Status and branches show the new HEAD; the moved HEAD then reloads the commits.
-            case Done(String branch) -> Update.refresh(model.withError(Optional.empty()));
+            case Done(String branch, List<String> commands) ->
+                    Update.refresh(CommandLog.append(model.withError(Optional.empty()), "log.title.checkout", commands));
             case Failed(String branch, String message) ->
                     Next.of(model.withError(Optional.of(Messages.get("error.checkout.failed", branch, message))));
         };

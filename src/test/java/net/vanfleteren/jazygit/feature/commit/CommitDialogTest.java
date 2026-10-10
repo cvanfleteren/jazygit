@@ -38,7 +38,7 @@ class CommitDialogTest {
         // The sample data has staged files, so the commit popup opens directly.
         Model loaded = TestModels.loaded(new SampleData());
         Model asked = Update.update(loaded, new CommitMsg.Requested()).model();
-        return asked.popup(CommitPopup.class).isPresent() ? asked : Update.update(asked, new CommitMsg.StagedForCommit()).model();
+        return asked.popup(CommitPopup.class).isPresent() ? asked : Update.update(asked, new CommitMsg.StagedForCommit(List.of())).model();
     }
 
     @Test

@@ -101,75 +101,87 @@ class ProgramTest {
         }
 
         @Override
-        public void checkout(String branch) {
+        public List<String> checkout(String branch) {
             if (checkoutError != null) {
                 throw checkoutError;
             }
             status = new RepoStatus(branch, branch + "-head", List.of());
+            return List.of("git checkout");
         }
 
         @Override
-        public void checkoutWithStash(String branch) {
+        public List<String> checkoutWithStash(String branch) {
             if (checkoutError != null) {
                 throw checkoutError;
             }
             status = new RepoStatus(branch, branch + "-head", List.of());
+            return List.of("git checkoutWithStash");
         }
 
         @Override
-        public void push(String branch, boolean forceWithLease) {
+        public List<String> push(String branch, boolean forceWithLease) {
             pushed.add(branch + (forceWithLease ? " force" : ""));
+            return List.of("git push");
         }
 
         @Override
-        public void deleteBranch(String name, boolean local, boolean remote) {
+        public List<String> deleteBranch(String name, boolean local, boolean remote) {
             deleted.add(name + (local ? " local" : "") + (remote ? " remote" : ""));
+            return List.of("git deleteBranch");
         }
 
         @Override
-        public void createBranch(String name, String startPoint) {
+        public List<String> createBranch(String name, String startPoint) {
             if (checkoutError != null) {
                 throw checkoutError;
             }
             status = new RepoStatus(name, name + "-head", List.of());
+            return List.of("git createBranch");
         }
 
         @Override
-        public void stage(List<String> paths) {
+        public List<String> stage(List<String> paths) {
             index("stage", paths);
+            return List.of("git stage");
         }
 
         @Override
-        public void unstageNew(List<String> paths) {
+        public List<String> unstageNew(List<String> paths) {
             index("unstageNew", paths);
+            return List.of("git unstageNew");
         }
 
         @Override
-        public void reword(String summary, String description) {
+        public List<String> reword(String summary, String description) {
             commits.add("reword " + summary + "|" + description);
+            return List.of("git reword");
         }
 
         @Override
-        public void amendLastCommit() {
+        public List<String> amendLastCommit() {
             index("amend", List.of());
+            return List.of("git amendLastCommit");
         }
 
         @Override
-        public void commit(String summary, String description) {
+        public List<String> commit(String summary, String description) {
             if (commitFailure != null) {
                 throw new IllegalStateException(commitFailure);
             }
             commits.add(summary + "|" + description);
+            return List.of("git commit");
         }
 
         @Override
-        public void discard(DiscardPlan plan) {
+        public List<String> discard(DiscardPlan plan) {
             discarded.add(plan);
+            return List.of("git discard");
         }
 
         @Override
-        public void unstage(List<String> paths) {
+        public List<String> unstage(List<String> paths) {
             index("unstage", paths);
+            return List.of("git unstage");
         }
 
         @Override

@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import java.util.List;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -26,7 +27,7 @@ public sealed interface PushMsg extends Msg {
     record ForceConfirmed() implements PushMsg {
     }
 
-    record Done(String branch) implements PushMsg {
+    record Done(String branch, List<String> commands) implements PushMsg {
     }
 
     record Failed(String branch, String message) implements PushMsg {

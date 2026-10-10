@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import java.util.List;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Model;
 
@@ -28,7 +29,7 @@ public sealed interface CommitMsg extends Msg {
     /**
      * Everything was staged for a commit.
      */
-    record StagedForCommit() implements CommitMsg {
+    record StagedForCommit(List<String> commands) implements CommitMsg {
     }
 
     record StageForCommitFailed(String message) implements CommitMsg {
@@ -40,7 +41,7 @@ public sealed interface CommitMsg extends Msg {
     record Confirmed(String summary, String description) implements CommitMsg {
     }
 
-    record Done() implements CommitMsg {
+    record Done(List<String> commands) implements CommitMsg {
     }
 
     record Failed(String message) implements CommitMsg {

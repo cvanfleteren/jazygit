@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -32,7 +33,8 @@ public final class DiscardUpdate {
             case Requested(List<FileEntry> files) -> requested(model, files);
             case Cancelled() -> Next.of(model.withoutPopup(DiscardPopup.class));
             case Chosen(Scope scope) -> chosen(model, scope);
-            case Done() -> Update.refresh(model.withError(Optional.empty()));
+            case Done(List<String> commands) ->
+                    Update.refresh(CommandLog.append(model.withError(Optional.empty()), "log.title.discard", commands));
             case Failed(String message) ->
                     Update.refresh(model.withError(Optional.of(Messages.get("error.discard.failed", message))));
         };

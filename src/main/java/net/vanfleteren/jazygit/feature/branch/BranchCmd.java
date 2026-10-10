@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import java.util.Optional;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.LocalChangesException;
 import net.vanfleteren.jazygit.state.Cmd;
@@ -16,9 +17,13 @@ public sealed interface BranchCmd extends Cmd {
     record CreateBranch(String name, String base) implements BranchCmd {
 
         @Override
+        public Optional<String> logTitleKey() {
+            return Optional.of("log.title.newBranch");
+        }
+
+        @Override
         public Msg run(GitInfoProvider git) {
-            git.createBranch(name, base);
-            return new NewBranchMsg.Created(name);
+            return new NewBranchMsg.Created(name, git.createBranch(name, base));
         }
 
         @Override
@@ -36,9 +41,14 @@ public sealed interface BranchCmd extends Cmd {
         }
 
         @Override
+        public Optional<String> logTitleKey() {
+            return Optional.of("log.title.deleteBranch");
+        }
+
+        @Override
         public Msg run(GitInfoProvider git) {
-            git.deleteBranch(branch, scope != DeleteScope.REMOTE, scope != DeleteScope.LOCAL);
-            return new DeleteBranchMsg.Deleted(branch);
+            return new DeleteBranchMsg.Deleted(branch,
+                    git.deleteBranch(branch, scope != DeleteScope.REMOTE, scope != DeleteScope.LOCAL));
         }
 
         @Override
@@ -50,13 +60,17 @@ public sealed interface BranchCmd extends Cmd {
     record Checkout(String branch) implements BranchCmd {
 
         @Override
+        public Optional<String> logTitleKey() {
+            return Optional.of("log.title.checkout");
+        }
+
+        @Override
         public Msg run(GitInfoProvider git) {
             try {
-                git.checkout(branch);
+                return new CheckoutMsg.Done(branch, git.checkout(branch));
             } catch (LocalChangesException e) {
                 return new CheckoutMsg.NeedsStash(branch);
             }
-            return new CheckoutMsg.Done(branch);
         }
 
         @Override
@@ -71,9 +85,13 @@ public sealed interface BranchCmd extends Cmd {
     record CheckoutWithStash(String branch) implements BranchCmd {
 
         @Override
+        public Optional<String> logTitleKey() {
+            return Optional.of("log.title.checkout");
+        }
+
+        @Override
         public Msg run(GitInfoProvider git) {
-            git.checkoutWithStash(branch);
-            return new CheckoutMsg.Done(branch);
+            return new CheckoutMsg.Done(branch, git.checkoutWithStash(branch));
         }
 
         @Override
@@ -85,9 +103,13 @@ public sealed interface BranchCmd extends Cmd {
     record Push(String branch, boolean forceWithLease) implements BranchCmd {
 
         @Override
+        public Optional<String> logTitleKey() {
+            return Optional.of("log.title.push");
+        }
+
+        @Override
         public Msg run(GitInfoProvider git) {
-            git.push(branch, forceWithLease);
-            return new PushMsg.Done(branch);
+            return new PushMsg.Done(branch, git.push(branch, forceWithLease));
         }
 
         @Override

@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.feature.commit.CommitCmd.StageForCommit;
 
 import net.vanfleteren.jazygit.feature.commit.CommitCmd.Commit;
 
+import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -44,12 +45,14 @@ public final class CommitUpdate {
             case Requested() -> requested(model);
             case StageAllCancelled() -> Next.of(model.withoutPopup(StageAllPopup.class));
             case StageAllConfirmed() -> stageAllConfirmed(model);
-            case StagedForCommit() -> Update.refresh(model.openPopup(new CommitPopup()));
+            case StagedForCommit(List<String> commands) ->
+                    Update.refresh(CommandLog.append(model.openPopup(new CommitPopup()), "log.title.stage", commands));
             case StageForCommitFailed(String message) ->
                     Update.refresh(model.withError(Optional.of(Messages.get("error.staging.failed", message))));
             case Cancelled() -> Next.of(model.withoutPopup(CommitPopup.class));
             case Confirmed(String summary, String description) -> confirmed(model, summary, description);
-            case Done() -> Update.refresh(model.withError(Optional.empty()));
+            case Done(List<String> commands) ->
+                    Update.refresh(CommandLog.append(model.withError(Optional.empty()), "log.title.commit", commands));
             case Failed(String message) -> Update.refresh(model.withError(Optional.of(Messages.get("error.commit.failed", message))));
         };
     }

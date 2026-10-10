@@ -152,7 +152,7 @@ class CommitUpdateTest {
 
         assertEquals(List.of(new CommitCmd.StageForCommit(List.of("a.txt", "b.txt"))), next.cmds());
         assertEquals(false, next.model().popup(StageAllPopup.class).isPresent());
-        assertEquals(true, Update.update(next.model(), new CommitMsg.StagedForCommit()).model().popup(CommitPopup.class).isPresent());
+        assertEquals(true, Update.update(next.model(), new CommitMsg.StagedForCommit(List.of())).model().popup(CommitPopup.class).isPresent());
     }
 
     @Test

@@ -47,7 +47,7 @@ import java.util.concurrent.TimeUnit;
 public class JazygitApp extends ToolkitApp {
 
     // Rows of the command log panel, borders included.
-    private static final int COMMAND_LOG_HEIGHT = 8;
+    private static final int COMMAND_LOG_HEIGHT = CommandLogPanel.VISIBLE_LINES + 2;
     private static final Duration REFRESH_INTERVAL = Duration.ofMillis(500);
 
     private final GitInfoProvider provider;

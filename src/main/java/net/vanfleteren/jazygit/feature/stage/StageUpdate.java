@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.feature.stage.StageCmd.Stage;
 
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -30,7 +31,9 @@ public final class StageUpdate {
     public static Next update(Model model, StageMsg msg) {
         return switch (msg) {
             case Requested(List<FileEntry> files) -> toggle(model, files);
-            case Done() -> Update.refresh(model.withError(Optional.empty()));
+            case Done(StageMsg.Action action, List<String> commands) -> Update.refresh(CommandLog.append(
+                    model.withError(Optional.empty()),
+                    action == StageMsg.Action.STAGE ? "log.title.stage" : "log.title.unstage", commands));
             case Failed(String message) -> Update.refresh(model.withError(Optional.of(Messages.get("error.staging.failed", message))));
         };
     }

@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.state;
 
 import net.vanfleteren.jazygit.state.Update.Next;
 
+import net.vanfleteren.jazygit.git.GitCommandException;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 
 import java.util.concurrent.Executor;
@@ -61,7 +62,10 @@ public final class Program {
         try {
             return cmd.run(provider);
         } catch (RuntimeException e) {
-            return cmd.failed(e.getMessage() != null ? e.getMessage() : e.toString());
+            Msg failed = cmd.failed(e.getMessage() != null ? e.getMessage() : e.toString());
+            return e instanceof GitCommandException git && cmd.logTitleKey().isPresent()
+                    ? new LoggedMsg(cmd.logTitleKey().get(), git.commands(), failed)
+                    : failed;
         }
     }
 }

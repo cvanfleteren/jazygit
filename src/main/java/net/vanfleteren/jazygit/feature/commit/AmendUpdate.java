@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.feature.commit.AmendMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.commit.AmendMsg.Cancelled;
 
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -33,7 +34,8 @@ public final class AmendUpdate {
             case Requested() -> requested(model);
             case Cancelled() -> Next.of(model.withoutPopup(AmendPopup.class));
             case Confirmed() -> confirmed(model);
-            case Done() -> Update.refresh(model.withError(Optional.empty()));
+            case Done(List<String> commands) ->
+                    Update.refresh(CommandLog.append(model.withError(Optional.empty()), "log.title.amend", commands));
             case Failed(String message) -> Update.refresh(model.withError(Optional.of(Messages.get("error.amend.failed", message))));
         };
     }

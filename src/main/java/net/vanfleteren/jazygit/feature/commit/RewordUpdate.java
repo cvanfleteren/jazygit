@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.feature.commit.RewordMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.commit.CommitCmd.Reword;
 
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
@@ -34,7 +35,8 @@ public final class RewordUpdate {
             case Requested(int index) -> requested(model, index);
             case Cancelled() -> Next.of(model.withoutPopup(RewordPopup.class));
             case Confirmed(String summary, String description) -> confirmed(model, summary, description);
-            case Done() -> Update.refresh(model.withError(Optional.empty()));
+            case Done(List<String> commands) ->
+                    Update.refresh(CommandLog.append(model.withError(Optional.empty()), "log.title.reword", commands));
             case Failed(String message) -> Update.refresh(model.withError(Optional.of(Messages.get("error.reword.failed", message))));
         };
     }
