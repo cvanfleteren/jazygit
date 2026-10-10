@@ -9,10 +9,12 @@ import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.Panel;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Diffs;
+import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.state.BranchLog;
 import net.vanfleteren.jazygit.state.FileDiff;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Update;
 
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -48,6 +50,10 @@ public final class ContentPanel {
      * One panel for the staged changes and one for the unstaged changes, one above the other when both exist.
      */
     private static StyledElement<?> fileDiffView(Model model) {
+        // With no files there is nothing to highlight, so no diff is ever requested.
+        if (Update.files(model).isEmpty() && model.status() instanceof Loadable.Loaded<RepoStatus>) {
+            return panel(Messages.get("panel.diff.title"), text(Messages.get("content.noChangedFiles")).dim()).rounded();
+        }
         return model.fileDiff()
                 .map(ContentPanel::shown)
                 .map(d -> switch (d.diff()) {

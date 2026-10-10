@@ -36,6 +36,25 @@ class ContentPanelTest {
     }
 
     @Test
+    void filesFocusedWithoutChangedFilesSaysSoInsteadOfLoading() throws Exception {
+        Model clean = TestModels.loaded();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> ContentPanel.render(clean, FilesPanel.ID, 0))) {
+            String screen = RenderedText.of(testRunner, () -> ContentPanel.render(clean, FilesPanel.ID, 0));
+            assertTrue(screen.contains("No changed files"), screen);
+            assertFalse(screen.contains(Placeholders.loading()), screen);
+        }
+    }
+
+    @Test
+    void filesFocusedStillLoadsWhileTheStatusIsLoading() throws Exception {
+        Model loading = TestModels.loading("repo");
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> ContentPanel.render(loading, FilesPanel.ID, 0))) {
+            String screen = RenderedText.of(testRunner, () -> ContentPanel.render(loading, FilesPanel.ID, 0));
+            assertTrue(screen.contains(Placeholders.loading()), screen);
+        }
+    }
+
+    @Test
     void branchesFocusedRendersTheLogOfTheSelectedBranch() throws Exception {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> ContentPanel.render(model, BranchesPanel.ID, 0))) {
             String screen = RenderedText.of(testRunner, () -> ContentPanel.render(model, BranchesPanel.ID, 0));
