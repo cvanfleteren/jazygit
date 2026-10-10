@@ -45,7 +45,6 @@ public class JazygitApp extends ToolkitApp {
 
     private final GitInfoProvider provider;
     private final FilesPanel filesPanel = new FilesPanel(msg -> this.program.dispatch(msg));
-    // Key handlers run on the render thread, where the program may be used.
     private final BranchesPanel branchesPanel = new BranchesPanel(msg -> this.program.dispatch(msg));
     private final NewBranchDialog newBranchDialog = new NewBranchDialog(msg -> this.program.dispatch(msg));
     private final DeleteBranchDialog deleteBranchDialog = new DeleteBranchDialog(msg -> this.program.dispatch(msg));

@@ -50,6 +50,9 @@ class BranchUpdateTest {
 
         assertEquals(List.of(new BranchCmd.Push("feature")), next.cmds());
         assertEquals(Optional.empty(), next.model().error());
+        assertEquals(java.util.Set.of("feature"), next.model().pushing());
+        // Not pushed again while it is being pushed.
+        assertEquals(List.of(), Update.update(next.model(), new PushMsg.Requested("feature")).cmds());
         assertEquals(List.of(), Update.update(loaded(), new PushMsg.Requested("gone")).cmds());
     }
 
@@ -57,6 +60,10 @@ class BranchUpdateTest {
     void failedPushIsStoredAndASuccessfulOneReloadsTheBranches() {
         Model failed = Update.update(loaded(), new PushMsg.Failed("feature", "boom")).model();
         assertEquals(Optional.of("Pushing branch feature failed: boom"), failed.error());
+
+        Model pushing = Update.update(loaded(), new PushMsg.Requested("feature")).model();
+        assertEquals(java.util.Set.of(), Update.update(pushing, new PushMsg.Failed("feature", "boom")).model().pushing());
+        assertEquals(java.util.Set.of(), Update.update(pushing, new PushMsg.Done("feature")).model().pushing());
 
         Next done = Update.update(withError(loaded(), "boom"), new PushMsg.Done("feature"));
         assertEquals(Optional.empty(), done.model().error());

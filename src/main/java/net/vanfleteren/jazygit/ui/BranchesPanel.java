@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.feature.help.HelpTopic;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import dev.tamboui.style.Color;
+import dev.tamboui.widgets.spinner.SpinnerStyle;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyEvent;
@@ -20,9 +21,12 @@ import net.vanfleteren.jazygit.state.Msg;
 
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -34,9 +38,14 @@ public class BranchesPanel {
 
     public static final String ID = "branches";
 
+    private static final SpinnerStyle SPINNER = SpinnerStyle.BOUNCING_BAR;
+    private static final long SPINNER_FRAME_MILLIS = 120;
+
     private final LoadableList<List<Branch>> list;
     // The list's key handler also sees keys typed in other panes, so it must know whether it has focus.
     private boolean focused;
+    // The branches being pushed; the rows are built from it on every render.
+    private Set<String> pushing = Set.of();
 
     /**
      * The time since the last commit as a number and one unit: s, m, h or d.
@@ -49,10 +58,20 @@ public class BranchesPanel {
                 : Messages.get("branches.age.days", String.valueOf(seconds / 86400));
     }
 
-    private static LoadableList.Row row(Branch b, Duration since) {
-        return new LoadableList.Row(Stream.concat(
-                Stream.of(LoadableList.Seg.of("%4s ".formatted(age(since)) + (b.current() ? "* " : "  ") + b.name())),
-                sync(b).stream()).toList());
+    /**
+     * The frame of the push spinner to show at {@code now}.
+     */
+    static String spinnerFrame(Instant now) {
+        return SPINNER.frame((int) (now.toEpochMilli() / SPINNER_FRAME_MILLIS % SPINNER.frameCount()));
+    }
+
+    private static LoadableList.Row row(Branch b, Duration since, Optional<String> spinner) {
+        return new LoadableList.Row(Stream.of(
+                        Stream.of(LoadableList.Seg.of("%4s ".formatted(age(since)) + (b.current() ? "* " : "  ") + b.name())),
+                        sync(b).stream(),
+                        spinner.stream().map(frame -> LoadableList.Seg.colored(" " + frame, Color.YELLOW)))
+                .flatMap(Function.identity())
+                .toList());
     }
 
     /**
@@ -102,7 +121,8 @@ public class BranchesPanel {
     public BranchesPanel(Consumer<Msg> dispatch, Clock clock) {
         list = new LoadableList<>(Messages.get("panel.branches.title"), ID,
                 branches -> branches.stream()
-                        .map(b -> row(b, Duration.between(b.tipTime(), clock.instant())))
+                        .map(b -> row(b, Duration.between(b.tipTime(), clock.instant()),
+                                pushing.contains(b.name()) ? Optional.of(spinnerFrame(clock.instant())) : Optional.empty()))
                         .toList(),
                 BranchesPanel::reselect);
         // The highlight alone marks the selection; a symbol would indent the rows.
@@ -116,6 +136,7 @@ public class BranchesPanel {
      */
     public Panel render(Model model, String focusedId) {
         focused = ID.equals(focusedId);
+        pushing = model.pushing();
         return list.render(model.branches(), focused);
     }
 

@@ -56,6 +56,26 @@ class BranchesPanelTest {
     }
 
     @Test
+    void spinnerFramesBounceAsTimePasses() {
+        java.util.Set<String> frames = java.util.stream.IntStream.range(0, 20)
+                .mapToObj(i -> BranchesPanel.spinnerFrame(java.time.Instant.ofEpochMilli(i * 120L)))
+                .collect(java.util.stream.Collectors.toSet());
+        assertEquals(java.util.Set.copyOf(java.util.Arrays.asList(dev.tamboui.widgets.spinner.SpinnerStyle.BOUNCING_BAR.frames())), frames);
+    }
+
+    @Test
+    void aBranchBeingPushedShowsTheSpinnerNextToItsName() throws Exception {
+        Model pushing = Update.update(before, new net.vanfleteren.jazygit.feature.branch.PushMsg.Requested("feature")).model();
+        String frame = BranchesPanel.spinnerFrame(java.time.Instant.EPOCH);
+        BranchesPanel panel = new BranchesPanel(msg -> { }, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(pushing, BranchesPanel.ID))) {
+            String screen = RenderedText.of(testRunner, () -> panel.render(pushing, BranchesPanel.ID));
+            assertEquals(true, screen.contains("feature " + frame), screen);
+            assertEquals(false, screen.contains("main " + frame), screen);
+        }
+    }
+
+    @Test
     void ageIsShownInTheLargestFittingUnit() {
         assertEquals("45s", BranchesPanel.age(java.time.Duration.ofSeconds(45)));
         assertEquals("2m", BranchesPanel.age(java.time.Duration.ofSeconds(150)));
