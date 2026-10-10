@@ -112,7 +112,8 @@ public class FilesPanel {
                     .map(data -> new DiscardMsg.Requested(data.entries()));
             case " " -> Optional.ofNullable(tree.selectedNode())
                     .map(TreeNode::data)
-                    .map(data -> new StageMsg.Requested(data.entries()));
+                    .map(data -> new StageMsg.Requested(data.entries(),
+                            data instanceof FileTree.Dir dir ? Optional.of(dir.path()) : Optional.empty()));
             default -> Optional.empty();
         };
     }
