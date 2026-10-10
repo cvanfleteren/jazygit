@@ -18,6 +18,24 @@ public sealed interface CheckoutMsg extends Msg {
     record Requested(String branch) implements CheckoutMsg {
     }
 
+    /**
+     * Git refused to check out {@code branch} because uncommitted changes would be overwritten.
+     */
+    record NeedsStash(String branch) implements CheckoutMsg {
+    }
+
+    /**
+     * The user agreed to stash the uncommitted changes, check out and pop them again.
+     */
+    record StashConfirmed() implements CheckoutMsg {
+    }
+
+    /**
+     * The user cancelled the checkout that needed the changes stashed.
+     */
+    record StashCancelled() implements CheckoutMsg {
+    }
+
     record Done(String branch) implements CheckoutMsg {
     }
 

@@ -8,9 +8,19 @@ public interface GitBranches {
     /**
      * Checks out the local branch {@code branch}.
      *
+     * @throws LocalChangesException if git refuses because uncommitted changes would be overwritten
      * @throws IllegalStateException if the checkout fails, with git's explanation as message
      */
     void checkout(String branch);
+
+    /**
+     * Checks out the local branch {@code branch}, taking the uncommitted changes along: they are stashed
+     * first and popped again afterwards. When the checkout itself fails, the changes are popped back
+     * where they were.
+     *
+     * @throws IllegalStateException if git fails, with git's explanation as message
+     */
+    void checkoutWithStash(String branch);
 
     /**
      * Creates the local branch {@code name} at {@code startPoint} and checks it out.

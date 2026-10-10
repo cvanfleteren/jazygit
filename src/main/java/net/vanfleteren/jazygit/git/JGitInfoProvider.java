@@ -182,6 +182,11 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
         CliCheckout.checkout(workTree, branch);
     }
 
+    @Override
+    public void checkoutWithStash(String branch) {
+        CliCheckout.checkoutWithStash(workTree, branch);
+    }
+
     /**
      * The main branch: the one {@code origin/HEAD} points to, as set by a clone. Without it, the
      * first of {@code main} and {@code master} that exists.

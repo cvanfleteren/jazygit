@@ -51,6 +51,11 @@ class PanePositionTest {
         }
 
         @Override
+        public void checkoutWithStash(String branch) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public void push(String branch, boolean forceWithLease) {
         }
 

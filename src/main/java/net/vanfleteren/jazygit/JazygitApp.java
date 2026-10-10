@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.feature.branch.DeleteBranchDialog;
 import net.vanfleteren.jazygit.ui.ContentPanel;
 import net.vanfleteren.jazygit.ui.FilesPanel;
 import net.vanfleteren.jazygit.feature.branch.ForcePushDialog;
+import net.vanfleteren.jazygit.feature.branch.StashCheckoutDialog;
 import net.vanfleteren.jazygit.feature.branch.NewBranchDialog;
 import net.vanfleteren.jazygit.ui.StashPanel;
 import net.vanfleteren.jazygit.ui.StatusPanel;
@@ -52,6 +53,7 @@ public class JazygitApp extends ToolkitApp {
     private final NewBranchDialog newBranchDialog = new NewBranchDialog(msg -> this.program.dispatch(msg));
     private final DeleteBranchDialog deleteBranchDialog = new DeleteBranchDialog(msg -> this.program.dispatch(msg));
     private final ForcePushDialog forcePushDialog = new ForcePushDialog(msg -> this.program.dispatch(msg));
+    private final StashCheckoutDialog stashCheckoutDialog = new StashCheckoutDialog(msg -> this.program.dispatch(msg));
     private final AmendDialog amendDialog = new AmendDialog(msg -> this.program.dispatch(msg));
     private final CommitDialog rewordDialog = CommitDialog.reword(msg -> this.program.dispatch(msg));
     private final StageAllDialog stageAllDialog = new StageAllDialog(msg -> this.program.dispatch(msg));
@@ -141,6 +143,7 @@ public class JazygitApp extends ToolkitApp {
                 new Popup(newBranchDialog.render(model), List.of(NewBranchDialog.ID), BranchesPanel.ID),
                 new Popup(deleteBranchDialog.render(model), List.of(DeleteBranchDialog.ID), BranchesPanel.ID),
                 new Popup(forcePushDialog.render(model), List.of(ForcePushDialog.ID), BranchesPanel.ID),
+                new Popup(stashCheckoutDialog.render(model), List.of(StashCheckoutDialog.ID), BranchesPanel.ID),
                 new Popup(amendDialog.render(model), List.of(AmendDialog.ID), FilesPanel.ID),
                 new Popup(stageAllDialog.render(model), List.of(StageAllDialog.ID), FilesPanel.ID),
                 new Popup(commitDialog.render(model), commitDialog.ids(), FilesPanel.ID),

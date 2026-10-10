@@ -107,6 +107,14 @@ class ProgramTest {
         }
 
         @Override
+        public void checkoutWithStash(String branch) {
+            if (checkoutError != null) {
+                throw checkoutError;
+            }
+            status = new RepoStatus(branch, branch + "-head", List.of());
+        }
+
+        @Override
         public void push(String branch, boolean forceWithLease) {
             pushed.add(branch + (forceWithLease ? " force" : ""));
         }

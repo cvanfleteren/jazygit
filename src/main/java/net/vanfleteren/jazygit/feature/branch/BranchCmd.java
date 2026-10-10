@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
 import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.LocalChangesException;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Msg;
 
@@ -50,7 +51,28 @@ public sealed interface BranchCmd extends Cmd {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            git.checkout(branch);
+            try {
+                git.checkout(branch);
+            } catch (LocalChangesException e) {
+                return new CheckoutMsg.NeedsStash(branch);
+            }
+            return new CheckoutMsg.Done(branch);
+        }
+
+        @Override
+        public Msg failed(String message) {
+            return new CheckoutMsg.Failed(branch, message);
+        }
+    }
+
+    /**
+     * Checks out {@code branch}, taking the uncommitted changes along through a stash.
+     */
+    record CheckoutWithStash(String branch) implements BranchCmd {
+
+        @Override
+        public Msg run(GitInfoProvider git) {
+            git.checkoutWithStash(branch);
             return new CheckoutMsg.Done(branch);
         }
 

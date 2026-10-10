@@ -2,6 +2,11 @@ package net.vanfleteren.jazygit.feature.branch;
 
 
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.Checkout;
+import net.vanfleteren.jazygit.feature.branch.BranchCmd.CheckoutWithStash;
+import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
@@ -31,6 +36,48 @@ class BranchUpdateTest {
 
         assertEquals(List.of(new Checkout("feature")), next.cmds());
         assertEquals(Optional.empty(), next.model().error());
+    }
+
+    @Test
+    void checkoutRefusedForLocalChangesAsksToStashThem() {
+        Next next = Update.update(loaded(), new CheckoutMsg.NeedsStash("feature"));
+
+        assertEquals(List.of(), next.cmds());
+        assertEquals(Optional.of(new StashCheckoutPopup("feature")), next.model().popup(StashCheckoutPopup.class));
+    }
+
+    @Test
+    void checkoutRequestWithChangedFilesStillTriesTheCheckoutFirst() {
+        Model dirty = Update.update(loaded(), new LoadMsg.StatusLoaded(new RepoStatus("main", "aaaa",
+                List.of(new FileEntry("a.txt", ChangeType.MODIFIED))))).model();
+
+        assertEquals(List.of(new Checkout("feature")),
+                Update.update(dirty, new CheckoutMsg.Requested("feature")).cmds());
+    }
+
+    @Test
+    void confirmingTheStashChecksOutThroughAStashAndClosesThePopup() {
+        Model asked = Update.update(loaded(), new CheckoutMsg.NeedsStash("feature")).model();
+
+        Next next = Update.update(asked, new CheckoutMsg.StashConfirmed());
+
+        assertEquals(List.of(new CheckoutWithStash("feature")), next.cmds());
+        assertEquals(Optional.empty(), next.model().popup());
+    }
+
+    @Test
+    void cancellingTheStashClosesThePopupWithoutCheckingOut() {
+        Model asked = Update.update(loaded(), new CheckoutMsg.NeedsStash("feature")).model();
+
+        Next next = Update.update(asked, new CheckoutMsg.StashCancelled());
+
+        assertEquals(List.of(), next.cmds());
+        assertEquals(Optional.empty(), next.model().popup());
+    }
+
+    @Test
+    void confirmingWithoutAnOpenPopupDoesNothing() {
+        assertEquals(List.of(), Update.update(loaded(), new CheckoutMsg.StashConfirmed()).cmds());
     }
 
     @Test

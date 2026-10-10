@@ -8,6 +8,10 @@ import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.Failed;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.Done;
 
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.Checkout;
+import net.vanfleteren.jazygit.feature.branch.BranchCmd.CheckoutWithStash;
+import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.StashCancelled;
+import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.StashConfirmed;
+import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.NeedsStash;
 
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Model;
@@ -28,6 +32,12 @@ public final class CheckoutUpdate {
     public static Next update(Model model, CheckoutMsg msg) {
         return switch (msg) {
             case Requested(String branch) -> requested(model, branch);
+            case NeedsStash(String branch) -> Next.of(model.openPopup(new StashCheckoutPopup(branch)));
+            case StashCancelled() -> Next.of(model.withoutPopup(StashCheckoutPopup.class));
+            case StashConfirmed() -> model.popup(StashCheckoutPopup.class).map(StashCheckoutPopup::branch)
+                    .map(branch -> Next.of(model.withoutPopup(StashCheckoutPopup.class).withError(Optional.empty()),
+                            new CheckoutWithStash(branch)))
+                    .orElseGet(() -> Next.of(model));
             // Status and branches show the new HEAD; the moved HEAD then reloads the commits.
             case Done(String branch) -> Update.refresh(model.withError(Optional.empty()));
             case Failed(String branch, String message) ->

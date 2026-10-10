@@ -18,6 +18,10 @@ import java.util.concurrent.TimeoutException;
 public final class CliCheckout {
 
     private static final long TIMEOUT_SECONDS = 30;
+    // What git says when stashing the changes would let the checkout go through. It is matched in
+    // English, so git is run with the C locale.
+    private static final String LOCAL_CHANGES =
+            "Your local changes to the following files would be overwritten by checkout";
 
     private CliCheckout() {
     }
@@ -25,11 +29,54 @@ public final class CliCheckout {
     /**
      * Runs {@code git checkout <branch>} in {@code workTree}.
      *
-     * @throws IllegalStateException if git cannot be run or refuses the checkout; the message then
-     *                               is git's own explanation
+     * @throws LocalChangesException if git refuses because uncommitted changes would be overwritten
+     * @throws IllegalStateException  if git cannot be run or refuses the checkout; the message then
+     *                                is git's own explanation
      */
     public static void checkout(Path workTree, String branch) {
-        run(workTree, "git", "checkout", "--quiet", branch, "--");
+        try {
+            run(workTree, "git", "checkout", "--quiet", branch, "--");
+        } catch (IllegalStateException e) {
+            if (e.getMessage().contains(LOCAL_CHANGES)) {
+                throw new LocalChangesException(e.getMessage());
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * Stashes the uncommitted changes, checks out {@code branch} and pops the stash again. If the
+     * checkout fails the stash is popped back, so the changes are never left stashed by a failure of
+     * this method itself; only a conflict while popping on the new branch leaves them in the stash.
+     *
+     * @throws IllegalStateException if git cannot be run or refuses; the message then is git's own
+     *                               explanation
+     */
+    public static void checkoutWithStash(Path workTree, String branch) {
+        // Git succeeds without stashing when there is nothing to stash; then there is nothing to pop
+        // either, and popping would apply an older, unrelated stash.
+        long before = stashCount(workTree);
+        run(workTree, "git", "stash", "push", "--quiet");
+        boolean stashed = stashCount(workTree) > before;
+        try {
+            checkout(workTree, branch);
+        } catch (RuntimeException e) {
+            if (stashed) {
+                run(workTree, "git", "stash", "pop", "--quiet");
+            }
+            throw e;
+        }
+        if (stashed) {
+            try {
+                run(workTree, "git", "stash", "pop", "--quiet");
+            } catch (IllegalStateException e) {
+                throw new IllegalStateException(Messages.get("git.stashPopFailed", e.getMessage()), e);
+            }
+        }
+    }
+
+    private static long stashCount(Path workTree) {
+        return run(workTree, "git", "stash", "list").lines().count();
     }
 
     /**
@@ -51,6 +98,7 @@ public final class CliCheckout {
                     .directory(workTree.toFile())
                     // Fail instead of waiting for credentials that cannot be typed.
                     .environment("GIT_TERMINAL_PROMPT", "0")
+                    .environment("LC_ALL", "C")
                     .readOutput(true)
                     .redirectErrorStream(true)
                     .exitValueAny()

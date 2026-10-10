@@ -93,6 +93,10 @@ public final class SampleData implements GitInfoProvider {
     }
 
     @Override
+    public void checkoutWithStash(String branch) {
+    }
+
+    @Override
     public void createBranch(String name, String startPoint) {
     }
 
