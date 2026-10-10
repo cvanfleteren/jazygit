@@ -9,9 +9,16 @@ import java.time.Instant;
  * @param tipTime when that commit was made
  * @param hasRemote whether the branch also exists on its remote, according to the remote-tracking refs
  * @param isDefault whether this is the repository's main branch, i.e. the default branch of the remote
+ * @param ahead     the commits not yet pushed to the upstream branch; 0 without an upstream
+ * @param behind    the commits on the upstream branch not yet in this branch; 0 without an upstream
  */
 public record Branch(String name, boolean current, String tipOid, Instant tipTime, boolean hasRemote,
-                     boolean isDefault) {
+                     boolean isDefault, int ahead, int behind) {
+
+    public Branch(String name, boolean current, String tipOid, Instant tipTime, boolean hasRemote,
+                  boolean isDefault) {
+        this(name, current, tipOid, tipTime, hasRemote, isDefault, 0, 0);
+    }
 
     public Branch(String name, boolean current, String tipOid, Instant tipTime, boolean hasRemote) {
         this(name, current, tipOid, tipTime, hasRemote, false);

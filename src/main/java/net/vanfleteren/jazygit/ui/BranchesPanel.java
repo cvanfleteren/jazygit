@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.feature.branch.NewBranchMsg;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.feature.help.HelpTopic;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
+import dev.tamboui.style.Color;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyEvent;
@@ -22,6 +23,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 /**
  * Left-side panel listing the local branches, with the current branch marked. Space checks out
@@ -44,6 +46,26 @@ public class BranchesPanel {
                 : seconds < 3600 ? Messages.get("branches.age.minutes", String.valueOf(seconds / 60))
                 : seconds < 86400 ? Messages.get("branches.age.hours", String.valueOf(seconds / 3600))
                 : Messages.get("branches.age.days", String.valueOf(seconds / 86400));
+    }
+
+    private static LoadableList.Row row(Branch b, Duration since) {
+        return new LoadableList.Row(Stream.concat(
+                Stream.of(LoadableList.Seg.of("%4s ".formatted(age(since)) + (b.current() ? "* " : "  ") + b.name())),
+                sync(b).stream()).toList());
+    }
+
+    /**
+     * The commits not yet pushed in green and not yet pulled in red, as an arrow and a count each,
+     * with a leading space; nothing for a branch that is in sync.
+     */
+    static List<LoadableList.Seg> sync(Branch branch) {
+        return Stream.of(
+                        Optional.of(branch.ahead()).filter(n -> n > 0)
+                                .map(n -> LoadableList.Seg.colored(" ↑" + n, Color.GREEN)),
+                        Optional.of(branch.behind()).filter(n -> n > 0)
+                                .map(n -> LoadableList.Seg.colored(" ↓" + n, Color.RED)))
+                .flatMap(Optional::stream)
+                .toList();
     }
 
     /**
@@ -79,8 +101,7 @@ public class BranchesPanel {
     public BranchesPanel(Consumer<Msg> dispatch, Clock clock) {
         list = new LoadableList<>(Messages.get("panel.branches.title"), ID,
                 branches -> branches.stream()
-                        .map(b -> "%4s ".formatted(age(Duration.between(b.tipTime(), clock.instant())))
-                                + (b.current() ? "* " : "  ") + b.name())
+                        .map(b -> row(b, Duration.between(b.tipTime(), clock.instant())))
                         .toList(),
                 BranchesPanel::reselect);
         // The highlight alone marks the selection; a symbol would indent the rows.

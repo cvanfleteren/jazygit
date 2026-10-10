@@ -4,6 +4,8 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.git.model.*;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.lib.BranchConfig;
+import org.eclipse.jgit.lib.BranchTrackingStatus;
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.PersonIdent;
@@ -22,6 +24,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.Optional;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -38,6 +41,15 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     private final Repository repository;
     private final Git git;
     private final Path workTree;
+    // The ahead/behind counts per branch, so the revwalk only reruns when a tip moves. Replaced on
+    // every read, which drops deleted branches.
+    private volatile Map<String, Tracking> trackingCache = Map.of();
+
+    /**
+     * The ahead/behind counts of a branch, valid for these tips of the branch and its upstream.
+     */
+    private record Tracking(String trackingRef, String localOid, String remoteOid, int ahead, int behind) {
+    }
 
     /**
      * Opens the repository containing {@code startDir}, searching parent directories like
@@ -91,13 +103,20 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
             }
             Optional<String> defaultBranch = defaultBranch();
             List<Branch> branches = new ArrayList<>();
+            Map<String, Tracking> tracking = new ConcurrentHashMap<>();
             for (Ref ref : git.branchList().call()) {
-                branches.add(new Branch(Repository.shortenRefName(ref.getName()),
+                String name = Repository.shortenRefName(ref.getName());
+                Optional<Tracking> counts = tracking(name, ref.getObjectId().name());
+                counts.ifPresent(t -> tracking.put(name, t));
+                branches.add(new Branch(name,
                         ref.getName().equals(fullBranch), ref.getObjectId().name(),
                         Instant.ofEpochSecond(modified.get(ref.getObjectId().name())),
-                        hasRemote(Repository.shortenRefName(ref.getName())),
-                        defaultBranch.equals(Optional.of(Repository.shortenRefName(ref.getName())))));
+                        hasRemote(name),
+                        defaultBranch.equals(Optional.of(name)),
+                        counts.map(Tracking::ahead).orElse(0),
+                        counts.map(Tracking::behind).orElse(0)));
             }
+            trackingCache = Map.copyOf(tracking);
             // The checked out branch first, then the most recently committed to.
             return branches.stream()
                     .sorted(Comparator.comparing(Branch::current).reversed()
@@ -182,6 +201,28 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
                     }
                 })
                 .findFirst();
+    }
+
+    /**
+     * How far {@code branch} is ahead of and behind its upstream, when it has one that exists. The
+     * counts of the previous read are reused while neither tip has moved.
+     */
+    private Optional<Tracking> tracking(String branch, String localOid) throws IOException {
+        String trackingRef = new BranchConfig(repository.getConfig(), branch).getRemoteTrackingBranch();
+        Ref remote = trackingRef == null ? null : repository.exactRef(trackingRef);
+        if (remote == null || remote.getObjectId() == null) {
+            return Optional.empty();
+        }
+        String remoteOid = remote.getObjectId().name();
+        Optional<Tracking> cached = Optional.ofNullable(trackingCache.get(branch))
+                .filter(t -> t.trackingRef().equals(trackingRef) && t.localOid().equals(localOid)
+                        && t.remoteOid().equals(remoteOid));
+        if (cached.isPresent()) {
+            return cached;
+        }
+        return Optional.ofNullable(BranchTrackingStatus.of(repository, branch))
+                .map(status -> new Tracking(trackingRef, localOid, remoteOid,
+                        status.getAheadCount(), status.getBehindCount()));
     }
 
     /**

@@ -23,7 +23,7 @@ public class CommitsPanel {
 
     private final LoadableList<List<Commit>> list = new LoadableList<>(Messages.get("panel.commits.title"), ID,
             commits -> commits.stream()
-                    .map(c -> c.shortSha() + " " + c.message())
+                    .map(c -> LoadableList.Row.of(c.shortSha() + " " + c.message()))
                     .toList());
     // The list's key handler also sees keys typed in other panes, so it must know whether it has focus.
     private boolean focused;

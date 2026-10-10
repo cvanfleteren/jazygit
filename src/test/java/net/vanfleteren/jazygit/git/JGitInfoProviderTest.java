@@ -217,6 +217,38 @@ class JGitInfoProviderTest {
     }
 
     @Test
+    void branchesCountTheCommitsNotYetPushedAndNotYetPulled() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        git("push", "-q", "-u", "origin", "main");
+        assertEquals(List.of(0, 0), counts("main"));
+
+        git("commit", "-q", "--allow-empty", "-m", "local one");
+        git("commit", "-q", "--allow-empty", "-m", "local two");
+        assertEquals(List.of(2, 0), counts("main"));
+
+        // Someone else pushes a commit; fetching makes it incoming.
+        java.nio.file.Path other = Files.createTempDirectory("other");
+        gitIn(other, "clone", "-q", bare.toString(), "clone");
+        gitIn(other.resolve("clone"), "commit", "-q", "--allow-empty", "-m", "theirs");
+        gitIn(other.resolve("clone"), "push", "-q", "origin", "main");
+        git("fetch", "-q", "origin");
+        assertEquals(List.of(2, 1), counts("main"));
+    }
+
+    @Test
+    void branchesWithoutAnUpstreamAreNeitherAheadNorBehind() throws Exception {
+        git("branch", "local-only");
+        assertEquals(List.of(0, 0), counts("local-only"));
+    }
+
+    private List<Integer> counts(String branch) {
+        return provider.branches().stream().filter(b -> b.name().equals(branch))
+                .map(b -> List.of(b.ahead(), b.behind())).findFirst().orElseThrow();
+    }
+
+    @Test
     void theDefaultBranchIsTheOneOriginHeadPointsToElseMainOrMaster() throws Exception {
         git("branch", "trunk");
         assertEquals(List.of("main"), defaultBranches());
