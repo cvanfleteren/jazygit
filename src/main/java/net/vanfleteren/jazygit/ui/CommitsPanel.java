@@ -2,6 +2,8 @@ package net.vanfleteren.jazygit.ui;
 
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.feature.commit.RewordMsg;
+import net.vanfleteren.jazygit.feature.help.HelpMsg;
+import net.vanfleteren.jazygit.feature.help.HelpTopic;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyEvent;
@@ -55,6 +57,10 @@ public class CommitsPanel {
     }
 
     private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {
+        if (focused && event.isChar('?')) {
+            dispatch.accept(new HelpMsg.Requested(HelpTopic.COMMITS));
+            return EventResult.HANDLED;
+        }
         if (focused && event.isChar('r')) {
             dispatch.accept(new RewordMsg.Requested(selectedIndex()));
             return EventResult.HANDLED;

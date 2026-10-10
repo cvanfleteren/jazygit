@@ -71,6 +71,22 @@ class BranchesPanelTest {
         assertEquals(List.of(new NewBranchMsg.Requested("feature")), dispatched);
     }
 
+    @Test
+    void questionMarkAsksForTheKeybindingsOfThePanel() throws Exception {
+        List<Msg> dispatched = new java.util.ArrayList<>();
+        BranchesPanel panel = new BranchesPanel(dispatched::add);
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
+            testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
+            RenderedText.of(testRunner, () -> panel.render(before, BranchesPanel.ID));
+            testRunner.pilot().press('?');
+            testRunner.pilot().pause();
+            testRunner.pilot().quit();
+        }
+
+        assertEquals(List.of(new net.vanfleteren.jazygit.feature.help.HelpMsg.Requested(
+                net.vanfleteren.jazygit.feature.help.HelpTopic.BRANCHES)), dispatched);
+    }
+
     private String highlightedAfterMovingTo(int index, Model after) throws Exception {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
             testRunner.runner().focusManager().setFocus(BranchesPanel.ID);

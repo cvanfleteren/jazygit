@@ -3,6 +3,8 @@ package net.vanfleteren.jazygit.ui;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.feature.commit.AmendMsg;
 import net.vanfleteren.jazygit.feature.commit.CommitMsg;
+import net.vanfleteren.jazygit.feature.help.HelpMsg;
+import net.vanfleteren.jazygit.feature.help.HelpTopic;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import net.vanfleteren.jazygit.feature.stage.StageMsg;
 import dev.tamboui.toolkit.Toolkit;
@@ -75,6 +77,10 @@ public class FilesPanel {
     private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {
         if (!focused) {
             return EventResult.UNHANDLED;
+        }
+        if (event.isChar('?')) {
+            dispatch.accept(new HelpMsg.Requested(HelpTopic.FILES));
+            return EventResult.HANDLED;
         }
         if (event.isChar('c')) {
             dispatch.accept(new CommitMsg.Requested());

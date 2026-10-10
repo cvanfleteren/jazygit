@@ -4,6 +4,8 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.NewBranchMsg;
+import net.vanfleteren.jazygit.feature.help.HelpMsg;
+import net.vanfleteren.jazygit.feature.help.HelpTopic;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
@@ -30,6 +32,8 @@ public class BranchesPanel {
     public static final String ID = "branches";
 
     private final LoadableList<List<Branch>> list;
+    // The list's key handler also sees keys typed in other panes, so it must know whether it has focus.
+    private boolean focused;
 
     /**
      * The time since the last commit as a number and one unit: s, m, h or d.
@@ -89,7 +93,8 @@ public class BranchesPanel {
      *                  {@code runner().focusManager().focusedId()}
      */
     public Panel render(Model model, String focusedId) {
-        return list.render(model.branches(), ID.equals(focusedId));
+        focused = ID.equals(focusedId);
+        return list.render(model.branches(), focused);
     }
 
     /**
@@ -118,6 +123,10 @@ public class BranchesPanel {
     }
 
     private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {
+        if (focused && event.isChar('?')) {
+            dispatch.accept(new HelpMsg.Requested(HelpTopic.BRANCHES));
+            return EventResult.HANDLED;
+        }
         return selectedBranch()
                 .flatMap(branch -> request(event, branch))
                 .map(msg -> {

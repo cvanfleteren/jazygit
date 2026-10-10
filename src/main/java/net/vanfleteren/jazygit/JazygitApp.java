@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Program;
 import net.vanfleteren.jazygit.feature.commit.AmendDialog;
+import net.vanfleteren.jazygit.feature.help.HelpDialog;
 import net.vanfleteren.jazygit.ui.BranchesPanel;
 import net.vanfleteren.jazygit.feature.commit.CommitDialog;
 import net.vanfleteren.jazygit.ui.CommitsPanel;
@@ -53,6 +54,9 @@ public class JazygitApp extends ToolkitApp {
     private final StageAllDialog stageAllDialog = new StageAllDialog(msg -> this.program.dispatch(msg));
     private final CommitDialog commitDialog = new CommitDialog(msg -> this.program.dispatch(msg));
     private final CommitsPanel commitsPanel = new CommitsPanel(msg -> this.program.dispatch(msg));
+    private final HelpDialog helpDialog = new HelpDialog(msg -> this.program.dispatch(msg));
+    // The panel the help popup was opened from, which gets the focus back.
+    private String helpOrigin = FilesPanel.ID;
     private ExecutorService io;
     private Program program;
 
@@ -111,13 +115,19 @@ public class JazygitApp extends ToolkitApp {
                 ContentPanel.render(program.model(), focusedId, commitsPanel.selectedIndex())
                         .fill());
         // The open popup takes the focus, and gives it back to the pane it was opened from.
+        model.help().ifPresent(topic -> helpOrigin = switch (topic) {
+            case FILES -> FilesPanel.ID;
+            case BRANCHES -> BranchesPanel.ID;
+            case COMMITS -> CommitsPanel.ID;
+        });
         List<Popup> popups = List.of(
                 new Popup(newBranchDialog.render(model), List.of(NewBranchDialog.ID), BranchesPanel.ID),
                 new Popup(deleteBranchDialog.render(model), List.of(DeleteBranchDialog.ID), BranchesPanel.ID),
                 new Popup(amendDialog.render(model), List.of(AmendDialog.ID), FilesPanel.ID),
                 new Popup(stageAllDialog.render(model), List.of(StageAllDialog.ID), FilesPanel.ID),
                 new Popup(commitDialog.render(model), commitDialog.ids(), FilesPanel.ID),
-                new Popup(rewordDialog.render(model), rewordDialog.ids(), CommitsPanel.ID));
+                new Popup(rewordDialog.render(model), rewordDialog.ids(), CommitsPanel.ID),
+                new Popup(helpDialog.render(model), List.of(HelpDialog.ID), helpOrigin));
         Optional<Popup> open = popups.stream().filter(p -> p.element().isPresent()).findFirst();
         if (open.isPresent()) {
             if (!open.get().ids().contains(focusedId)) {
