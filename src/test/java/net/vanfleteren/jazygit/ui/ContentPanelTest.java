@@ -62,7 +62,7 @@ class ContentPanelTest {
     @Test
     void branchesFocusedRendersTheLogOfTheSelectedBranch() throws Exception {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> ContentPanel.render(model, BranchesPanel.ID, 0))) {
-            String screen = RenderedText.of(testRunner, () -> ContentPanel.render(model, BranchesPanel.ID, 0));
+            String screen = RenderedText.ofLarge(testRunner, () -> ContentPanel.render(model, BranchesPanel.ID, 0));
             assertTrue(screen.contains("Log: feature/initial-layout"), screen);
             assertTrue(screen.contains("commit 0a1b2c3"), screen);
             assertFalse(screen.contains("a1b2c3d"), screen);
@@ -142,7 +142,7 @@ class ContentPanelTest {
         assertEquals("commit a1b2c3d4e5f6", lines.get(0));
         assertEquals("Author: Ada Lovelace <ada@example.com>", lines.get(1));
         assertTrue(lines.get(2).startsWith("Date: "), lines.get(2));
-        assertEquals(List.of("Subject", "", "More", "text", "---", " a.txt | 1 +", " 1 file changed", "", "+added"),
+        assertEquals(List.of("", "    Subject", "", "    More", "    text", "---", " a.txt | 1 +", " 1 file changed", "", "+added"),
                 lines.subList(3, lines.size()));
     }
 
@@ -154,7 +154,7 @@ class ContentPanelTest {
                 .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
                 .toList();
 
-        assertEquals(List.of("Subject", "---", "x"), lines.subList(3, lines.size()));
+        assertEquals(List.of("", "    Subject", "---", "x"), lines.subList(3, lines.size()));
     }
 
     @Test
@@ -169,15 +169,15 @@ class ContentPanelTest {
                 Instant.parse("2026-10-09T12:30:05Z"), "Add layout", "First detail\nSecond detail");
 
         assertEquals(List.of(
-                "commit a1b2c3d",
-                "Ada Lovelace <ada@example.com>",
-                "2026-10-09 14:30:05",
-                "",
-                "Add layout",
-                "",
-                "First detail",
-                "Second detail",
-                ""), ContentPanel.logLines(List.of(commit), ZoneId.of("Europe/Brussels")));
+                "* commit a1b2c3d",
+                "| Ada Lovelace <ada@example.com>",
+                "| 2026-10-09 14:30:05",
+                "| ",
+                "|     Add layout",
+                "| ",
+                "|     First detail",
+                "|     Second detail",
+                "| "), ContentPanel.logLines(List.of(commit), ZoneId.of("Europe/Brussels")));
     }
 
     @Test
@@ -187,8 +187,8 @@ class ContentPanelTest {
                 new Commit("b2c3d4e", "b2c3d4e", "Ada", "ada@example.com", Instant.parse("2026-10-08T12:30:00Z"), "First", ""));
 
         assertEquals(List.of(
-                "commit a1b2c3d", "Ada <ada@example.com>", "2026-10-09 12:30:00", "", "Second", "",
-                "commit b2c3d4e", "Ada <ada@example.com>", "2026-10-08 12:30:00", "", "First", ""),
+                "* commit a1b2c3d", "| Ada <ada@example.com>", "| 2026-10-09 12:30:00", "| ", "|     Second", "| ",
+                "* commit b2c3d4e", "| Ada <ada@example.com>", "| 2026-10-08 12:30:00", "| ", "|     First", "| "),
                 ContentPanel.logLines(commits, ZoneOffset.UTC));
     }
 
