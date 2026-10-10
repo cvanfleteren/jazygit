@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.feature.commit.CommitDialog;
 import net.vanfleteren.jazygit.ui.CommitsPanel;
 import net.vanfleteren.jazygit.feature.stage.StageAllDialog;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchDialog;
+import net.vanfleteren.jazygit.feature.discard.DiscardDialog;
 import net.vanfleteren.jazygit.ui.ContentPanel;
 import net.vanfleteren.jazygit.ui.FilesPanel;
 import net.vanfleteren.jazygit.feature.branch.ForcePushDialog;
@@ -51,6 +52,7 @@ public class JazygitApp extends ToolkitApp {
             () -> openContent(FilesPanel.ID));
     private final BranchesPanel branchesPanel = new BranchesPanel(msg -> this.program.dispatch(msg));
     private final NewBranchDialog newBranchDialog = new NewBranchDialog(msg -> this.program.dispatch(msg));
+    private final DiscardDialog discardDialog = new DiscardDialog(msg -> this.program.dispatch(msg));
     private final DeleteBranchDialog deleteBranchDialog = new DeleteBranchDialog(msg -> this.program.dispatch(msg));
     private final ForcePushDialog forcePushDialog = new ForcePushDialog(msg -> this.program.dispatch(msg));
     private final StashCheckoutDialog stashCheckoutDialog = new StashCheckoutDialog(msg -> this.program.dispatch(msg));
@@ -141,6 +143,7 @@ public class JazygitApp extends ToolkitApp {
         });
         List<Popup> popups = List.of(
                 new Popup(newBranchDialog.render(model), List.of(NewBranchDialog.ID), BranchesPanel.ID),
+                new Popup(discardDialog.render(model), List.of(DiscardDialog.ID), FilesPanel.ID),
                 new Popup(deleteBranchDialog.render(model), List.of(DeleteBranchDialog.ID), BranchesPanel.ID),
                 new Popup(forcePushDialog.render(model), List.of(ForcePushDialog.ID), BranchesPanel.ID),
                 new Popup(stashCheckoutDialog.render(model), List.of(StashCheckoutDialog.ID), BranchesPanel.ID),

@@ -117,6 +117,11 @@ public final class SampleData implements GitInfoProvider {
     }
 
     @Override
+    public void discard(DiscardPlan plan) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public void unstage(List<String> paths) {
     }
 

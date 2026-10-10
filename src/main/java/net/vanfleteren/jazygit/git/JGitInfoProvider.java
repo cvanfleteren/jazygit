@@ -290,6 +290,14 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     }
 
     @Override
+    public void discard(DiscardPlan plan) {
+        CliIndex.removeAdded(workTree, plan.added());
+        CliIndex.checkoutFromHead(workTree, plan.fromHead());
+        CliIndex.checkoutFromIndex(workTree, plan.fromIndex());
+        CliIndex.deleteUntracked(workTree, plan.untracked());
+    }
+
+    @Override
     public String commitChanges(String sha) {
         return CliShow.changes(workTree, sha);
     }

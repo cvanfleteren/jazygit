@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.FileTree;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
@@ -95,6 +96,11 @@ class FilesPanelTest {
 
         @Override
         public void commit(String summary, String description) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void discard(DiscardPlan plan) {
             throw new UnsupportedOperationException();
         }
 

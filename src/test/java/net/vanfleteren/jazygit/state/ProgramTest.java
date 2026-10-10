@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
@@ -56,6 +57,7 @@ class ProgramTest {
         RuntimeException checkoutError;
         RuntimeException indexError;
         String commitFailure;
+        final List<DiscardPlan> discarded = new ArrayList<>();
         final List<String> commits = new ArrayList<>();
         final List<String> deleted = new ArrayList<>();
         final List<String> pushed = new ArrayList<>();
@@ -158,6 +160,11 @@ class ProgramTest {
                 throw new IllegalStateException(commitFailure);
             }
             commits.add(summary + "|" + description);
+        }
+
+        @Override
+        public void discard(DiscardPlan plan) {
+            discarded.add(plan);
         }
 
         @Override

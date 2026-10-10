@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.git.model.DiscardPlan;
+
 import java.util.List;
 
 /**
@@ -20,6 +22,13 @@ public interface GitIndex {
      * @throws IllegalStateException if git fails, with git's explanation as message
      */
     void unstageNew(List<String> paths);
+
+    /**
+     * Throws changes away as described by {@code plan}. This cannot be undone.
+     *
+     * @throws IllegalStateException if git fails, with git's explanation as message
+     */
+    void discard(DiscardPlan plan);
 
     /**
      * Resets the index entries of {@code paths} to HEAD.

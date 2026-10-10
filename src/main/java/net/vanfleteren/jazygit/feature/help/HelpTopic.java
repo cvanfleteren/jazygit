@@ -10,7 +10,8 @@ public enum HelpTopic {
     FILES("panel.files.title", List.of(
             new Binding("space", "help.files.stage"),
             new Binding("c", "help.files.commit"),
-            new Binding("A", "help.files.amend"))),
+            new Binding("A", "help.files.amend"),
+            new Binding("d", "help.files.discard"))),
     BRANCHES("panel.branches.title", List.of(
             new Binding("space", "help.branches.checkout"),
             new Binding("P", "help.branches.push"),
