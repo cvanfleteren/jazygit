@@ -15,8 +15,8 @@ public final class HelpUpdate {
 
     public static Next update(Model model, HelpMsg msg) {
         return switch (msg) {
-            case HelpMsg.Requested(HelpTopic topic) -> Next.of(model.withHelp(Optional.of(topic)));
-            case HelpMsg.Closed() -> Next.of(model.withHelp(Optional.empty()));
+            case HelpMsg.Requested(HelpTopic topic) -> Next.of(model.openPopup(new HelpPopup(topic)));
+            case HelpMsg.Closed() -> Next.of(model.withoutPopup(HelpPopup.class));
         };
     }
 }

@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Program;
 import net.vanfleteren.jazygit.feature.commit.AmendDialog;
 import net.vanfleteren.jazygit.feature.help.HelpDialog;
+import net.vanfleteren.jazygit.feature.help.HelpPopup;
 import net.vanfleteren.jazygit.ui.BranchesPanel;
 import net.vanfleteren.jazygit.feature.commit.CommitDialog;
 import net.vanfleteren.jazygit.ui.CommitsPanel;
@@ -116,7 +117,7 @@ public class JazygitApp extends ToolkitApp {
                 ContentPanel.render(program.model(), focusedId, commitsPanel.selectedIndex())
                         .fill());
         // The open popup takes the focus, and gives it back to the pane it was opened from.
-        model.help().ifPresent(topic -> helpOrigin = switch (topic) {
+        model.popup(HelpPopup.class).map(HelpPopup::topic).ifPresent(topic -> helpOrigin = switch (topic) {
             case FILES -> FilesPanel.ID;
             case BRANCHES -> BranchesPanel.ID;
             case COMMITS -> CommitsPanel.ID;

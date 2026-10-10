@@ -76,7 +76,7 @@ public final class DeleteBranchDialog {
      * The popup, while the model asks where to delete a branch.
      */
     public Optional<Element> render(Model model) {
-        return model.deleteTarget().map(branch -> {
+        return model.popup(DeleteBranchPopup.class).map(DeleteBranchPopup::branch).map(branch -> {
             showOptions(remoteDeletable(model, branch));
             return branch;
         }).map(branch -> dialog(Messages.get("dialog.deleteBranch.title", branch), list)

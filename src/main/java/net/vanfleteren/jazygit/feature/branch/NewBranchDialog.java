@@ -37,7 +37,7 @@ public final class NewBranchDialog {
      * The popup, while the model asks for a branch name.
      */
     public Optional<Element> render(Model model) {
-        return model.newBranchBase().map(base -> dialog(Messages.get("dialog.newBranch.title", base),
+        return model.popup(NewBranchPopup.class).map(NewBranchPopup::base).map(base -> dialog(Messages.get("dialog.newBranch.title", base),
                         textInput(input)
                                 .id(ID)
                                 .placeholder(Messages.get("dialog.newBranch.placeholder"))

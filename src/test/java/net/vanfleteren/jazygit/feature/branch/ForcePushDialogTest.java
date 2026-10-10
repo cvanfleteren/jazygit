@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+
 import net.vanfleteren.jazygit.ui.RenderedText;
 
 import net.vanfleteren.jazygit.state.LoadMsg;
@@ -73,7 +74,7 @@ class ForcePushDialogTest {
     }
 
     private ToolkitTestRunner start() throws Exception {
-        assertEquals(true, open.forcePushTarget().isPresent());
+        assertEquals(true, open.popup(ForcePushPopup.class).isPresent());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
         runner.runner().focusManager().setFocus(ForcePushDialog.ID);
         RenderedText.of(runner, this::view);

@@ -1,5 +1,8 @@
 package net.vanfleteren.jazygit.state;
 
+import net.vanfleteren.jazygit.feature.commit.CommitPopup;
+import net.vanfleteren.jazygit.feature.commit.AmendPopup;
+
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
 
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
@@ -243,7 +246,7 @@ class ProgramTest {
 
         Model model = program.model();
         assertEquals("topic", ((Loaded<RepoStatus>) model.status()).value().head());
-        assertEquals(Optional.empty(), model.newBranchBase());
+        assertEquals(Optional.empty(), model.popup());
         assertEquals(Optional.empty(), model.error());
     }
 
@@ -268,7 +271,7 @@ class ProgramTest {
         settle();
 
         assertEquals(List.of("other local remote"), provider.deleted);
-        assertEquals(Optional.empty(), program.model().deleteTarget());
+        assertEquals(Optional.empty(), program.model().popup());
         assertEquals(Optional.empty(), program.model().error());
     }
 
@@ -296,13 +299,13 @@ class ProgramTest {
         settle();
 
         assertEquals(List.of("stage[a.txt]"), provider.indexCalls);
-        assertEquals(true, program.model().commitOpen());
+        assertEquals(true, program.model().popup(CommitPopup.class).isPresent());
 
         program.dispatch(new CommitMsg.Confirmed("summary", "more"));
         settle();
 
         assertEquals(List.of("summary|more"), provider.commits);
-        assertEquals(false, program.model().commitOpen());
+        assertEquals(false, program.model().popup(CommitPopup.class).isPresent());
         assertEquals(Optional.empty(), program.model().error());
     }
 
@@ -316,7 +319,7 @@ class ProgramTest {
         settle();
 
         assertEquals(List.of("stage[a.txt]", "amend[]"), provider.indexCalls);
-        assertEquals(false, program.model().amendPrompt());
+        assertEquals(false, program.model().popup(AmendPopup.class).isPresent());
         assertEquals(Optional.empty(), program.model().error());
     }
 
@@ -329,7 +332,7 @@ class ProgramTest {
         settle();
 
         assertEquals(List.of("reword new summary|new body"), provider.commits);
-        assertEquals(Optional.empty(), program.model().rewording());
+        assertEquals(Optional.empty(), program.model().popup());
         assertEquals(Optional.empty(), program.model().error());
     }
 

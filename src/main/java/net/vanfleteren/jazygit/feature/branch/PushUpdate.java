@@ -25,9 +25,9 @@ public final class PushUpdate {
     public static Next update(Model model, PushMsg msg) {
         return switch (msg) {
             case PushMsg.Requested(String branch) -> requested(model, branch);
-            case PushMsg.ForceCancelled() -> Next.of(model.withForcePushTarget(Optional.empty()));
-            case PushMsg.ForceConfirmed() -> model.forcePushTarget()
-                    .map(branch -> push(model.withForcePushTarget(Optional.empty()), branch, true))
+            case PushMsg.ForceCancelled() -> Next.of(model.withoutPopup(ForcePushPopup.class));
+            case PushMsg.ForceConfirmed() -> model.popup(ForcePushPopup.class).map(ForcePushPopup::branch)
+                    .map(branch -> push(model.withoutPopup(ForcePushPopup.class), branch, true))
                     .orElseGet(() -> Next.of(model));
             // The branches then show the new ahead/behind counts.
             case PushMsg.Done(String branch) ->
@@ -47,7 +47,7 @@ public final class PushUpdate {
         }
         // Pushing a diverged branch needs a force push, which the user must confirm.
         return diverged(model, branch)
-                ? Next.of(model.withForcePushTarget(Optional.of(branch)).withError(Optional.empty()))
+                ? Next.of(model.openPopup(new ForcePushPopup(branch)).withError(Optional.empty()))
                 : push(model, branch, false);
     }
 

@@ -7,6 +7,7 @@ import static dev.tamboui.toolkit.Toolkit.*;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.style.Overflow;
 import dev.tamboui.widgets.paragraph.Paragraph;
+import net.vanfleteren.jazygit.feature.commit.StageAllPopup;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import java.util.Optional;
@@ -39,8 +40,8 @@ public final class StageAllDialog {
      * The popup, while the model asks whether to stage all files.
      */
     public Optional<Element> render(Model model) {
-        return Optional.of(model).filter(Model::stageAllPrompt)
-                .map(m -> dialog(Messages.get("dialog.stageAll.title"),
+        return model.popup(StageAllPopup.class)
+                .map(popup -> dialog(Messages.get("dialog.stageAll.title"),
                         widget(Paragraph.builder().text(Messages.get("dialog.stageAll.message")).overflow(Overflow.WRAP_WORD).build())
                                 .length(MESSAGE_HEIGHT),
                         text(""),

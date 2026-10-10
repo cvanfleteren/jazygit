@@ -33,7 +33,7 @@ public final class RewordUpdate {
     public static Next update(Model model, RewordMsg msg) {
         return switch (msg) {
             case Requested(int index) -> requested(model, index);
-            case Cancelled() -> Next.of(model.withRewording(Optional.empty()));
+            case Cancelled() -> Next.of(model.withoutPopup(RewordPopup.class));
             case Confirmed(String summary, String description) -> confirmed(model, summary, description);
             case Done() -> Update.refresh(model.withError(Optional.empty()));
             case Failed(String message) -> Update.refresh(model.withError(Optional.of(Messages.get("error.reword.failed", message))));
@@ -49,15 +49,15 @@ public final class RewordUpdate {
             return Next.of(model);
         }
         return index == 0
-                ? Next.of(model.withError(Optional.empty()).withRewording(Optional.of(commits.getFirst())))
+                ? Next.of(model.withError(Optional.empty()).openPopup(new RewordPopup(commits.getFirst())))
                 : Next.of(model.withError(Optional.of(Messages.get("error.reword.onlyLast"))));
     }
 
     private static Next confirmed(Model model, String summary, String description) {
         String trimmed = summary.strip();
         // A blank summary keeps the dialog open.
-        return model.rewording().isPresent() && !trimmed.isEmpty()
-                ? Next.of(model.withRewording(Optional.empty()).withError(Optional.empty()),
+        return model.popup(RewordPopup.class).isPresent() && !trimmed.isEmpty()
+                ? Next.of(model.withoutPopup(RewordPopup.class).withError(Optional.empty()),
                 new Reword(trimmed, description.strip()))
                 : Next.of(model);
     }

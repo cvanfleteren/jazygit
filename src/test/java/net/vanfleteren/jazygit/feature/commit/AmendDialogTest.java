@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+
 import net.vanfleteren.jazygit.ui.RenderedText;
 
 import net.vanfleteren.jazygit.feature.commit.AmendMsg;
@@ -75,7 +76,7 @@ class AmendDialogTest {
     }
 
     private ToolkitTestRunner start() throws Exception {
-        assertEquals(true, open.amendPrompt());
+        assertEquals(true, open.popup(AmendPopup.class).isPresent());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
         runner.runner().focusManager().setFocus(AmendDialog.ID);
         RenderedText.of(runner, this::view);

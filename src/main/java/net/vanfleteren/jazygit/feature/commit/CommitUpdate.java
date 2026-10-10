@@ -42,12 +42,12 @@ public final class CommitUpdate {
     public static Next update(Model model, CommitMsg msg) {
         return switch (msg) {
             case Requested() -> requested(model);
-            case StageAllCancelled() -> Next.of(model.withStageAllPrompt(false));
+            case StageAllCancelled() -> Next.of(model.withoutPopup(StageAllPopup.class));
             case StageAllConfirmed() -> stageAllConfirmed(model);
-            case StagedForCommit() -> Update.refresh(model.withCommitOpen(true));
+            case StagedForCommit() -> Update.refresh(model.openPopup(new CommitPopup()));
             case StageForCommitFailed(String message) ->
                     Update.refresh(model.withError(Optional.of(Messages.get("error.staging.failed", message))));
-            case Cancelled() -> Next.of(model.withCommitOpen(false));
+            case Cancelled() -> Next.of(model.withoutPopup(CommitPopup.class));
             case Confirmed(String summary, String description) -> confirmed(model, summary, description);
             case Done() -> Update.refresh(model.withError(Optional.empty()));
             case Failed(String message) -> Update.refresh(model.withError(Optional.of(Messages.get("error.commit.failed", message))));
@@ -60,26 +60,26 @@ public final class CommitUpdate {
     private static Next requested(Model model) {
         List<FileEntry> files = Update.files(model);
         if (files.stream().anyMatch(FileEntry::staged)) {
-            return Next.of(model.withError(Optional.empty()).withCommitOpen(true));
+            return Next.of(model.withError(Optional.empty()).openPopup(new CommitPopup()));
         }
         if (files.isEmpty()) {
             return Next.of(model.withError(Optional.of(Messages.get("error.commit.nothing"))));
         }
-        return Next.of(model.withError(Optional.empty()).withStageAllPrompt(true));
+        return Next.of(model.withError(Optional.empty()).openPopup(new StageAllPopup()));
     }
 
     private static Next stageAllConfirmed(Model model) {
         List<String> paths = Update.files(model).stream().filter(FileEntry::unstaged).map(FileEntry::path).toList();
-        return model.stageAllPrompt()
-                ? Next.of(model.withStageAllPrompt(false), new StageForCommit(paths))
+        return model.popup(StageAllPopup.class).isPresent()
+                ? Next.of(model.withoutPopup(StageAllPopup.class), new StageForCommit(paths))
                 : Next.of(model);
     }
 
     private static Next confirmed(Model model, String summary, String description) {
         String trimmed = summary.strip();
         // A blank summary keeps the dialog open.
-        return model.commitOpen() && !trimmed.isEmpty()
-                ? Next.of(model.withCommitOpen(false).withError(Optional.empty()),
+        return model.popup(CommitPopup.class).isPresent() && !trimmed.isEmpty()
+                ? Next.of(model.withoutPopup(CommitPopup.class).withError(Optional.empty()),
                 new Commit(trimmed, description.strip()))
                 : Next.of(model);
     }

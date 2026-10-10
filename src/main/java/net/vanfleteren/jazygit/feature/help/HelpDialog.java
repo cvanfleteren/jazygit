@@ -41,7 +41,7 @@ public final class HelpDialog {
      * The popup, while the model asks for the keybindings of a panel.
      */
     public Optional<Element> render(Model model) {
-        return model.help().map(topic -> {
+        return model.popup(HelpPopup.class).map(HelpPopup::topic).map(topic -> {
             StyledElement<?>[] rows = Stream.concat(
                     topic.bindings().stream()
                             .map(b -> text(KEY_FORMAT.formatted(b.key(), Messages.get(b.descriptionKey())))),

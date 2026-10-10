@@ -29,8 +29,8 @@ public final class NewBranchUpdate {
 
     public static Next update(Model model, NewBranchMsg msg) {
         return switch (msg) {
-            case Requested(String base) -> Next.of(model.withNewBranchBase(Optional.of(base)));
-            case Cancelled() -> Next.of(model.withNewBranchBase(Optional.empty()));
+            case Requested(String base) -> Next.of(model.openPopup(new NewBranchPopup(base)));
+            case Cancelled() -> Next.of(model.withoutPopup(NewBranchPopup.class));
             case Confirmed(String name) -> confirmed(model, name);
             // Like a checkout: status and branches show the new HEAD.
             case Created(String name) -> Update.refresh(model.withError(Optional.empty()));
@@ -42,9 +42,9 @@ public final class NewBranchUpdate {
     private static Next confirmed(Model model, String name) {
         String trimmed = name.strip();
         // A blank name keeps the dialog open.
-        return model.newBranchBase()
+        return model.popup(NewBranchPopup.class).map(NewBranchPopup::base)
                 .filter(base -> !trimmed.isEmpty())
-                .map(base -> Next.of(model.withNewBranchBase(Optional.empty()).withError(Optional.empty()),
+                .map(base -> Next.of(model.withoutPopup(NewBranchPopup.class).withError(Optional.empty()),
                         new CreateBranch(trimmed, base)))
                 .orElseGet(() -> Next.of(model));
     }

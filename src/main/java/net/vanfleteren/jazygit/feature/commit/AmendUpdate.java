@@ -31,7 +31,7 @@ public final class AmendUpdate {
     public static Next update(Model model, AmendMsg msg) {
         return switch (msg) {
             case Requested() -> requested(model);
-            case Cancelled() -> Next.of(model.withAmendPrompt(false));
+            case Cancelled() -> Next.of(model.withoutPopup(AmendPopup.class));
             case Confirmed() -> confirmed(model);
             case Done() -> Update.refresh(model.withError(Optional.empty()));
             case Failed(String message) -> Update.refresh(model.withError(Optional.of(Messages.get("error.amend.failed", message))));
@@ -44,7 +44,7 @@ public final class AmendUpdate {
     private static Next requested(Model model) {
         return Update.files(model).isEmpty()
                 ? Next.of(model.withError(Optional.of(Messages.get("error.amend.nothing"))))
-                : Next.of(model.withError(Optional.empty()).withAmendPrompt(true));
+                : Next.of(model.withError(Optional.empty()).openPopup(new AmendPopup()));
     }
 
     /**
@@ -55,8 +55,8 @@ public final class AmendUpdate {
         List<String> stage = files.stream().anyMatch(FileEntry::staged)
                 ? List.of()
                 : files.stream().filter(FileEntry::unstaged).map(FileEntry::path).toList();
-        return model.amendPrompt()
-                ? Next.of(model.withAmendPrompt(false), new Amend(stage))
+        return model.popup(AmendPopup.class).isPresent()
+                ? Next.of(model.withoutPopup(AmendPopup.class), new Amend(stage))
                 : Next.of(model);
     }
 }

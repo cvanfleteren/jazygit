@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.stage;
 
+import net.vanfleteren.jazygit.feature.commit.StageAllPopup;
+
 import net.vanfleteren.jazygit.ui.RenderedText;
 
 import net.vanfleteren.jazygit.feature.commit.CommitMsg;
@@ -65,7 +67,7 @@ class StageAllDialogTest {
     }
 
     private ToolkitTestRunner start() throws Exception {
-        assertEquals(true, open.stageAllPrompt(), "nothing is staged");
+        assertEquals(true, open.popup(StageAllPopup.class).isPresent(), "nothing is staged");
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
         runner.runner().focusManager().setFocus(StageAllDialog.ID);
         RenderedText.of(runner, this::view);

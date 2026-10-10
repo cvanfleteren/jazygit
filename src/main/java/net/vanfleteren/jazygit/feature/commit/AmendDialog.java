@@ -39,8 +39,8 @@ public final class AmendDialog {
      * The popup, while the model asks to confirm the amend.
      */
     public Optional<Element> render(Model model) {
-        return Optional.of(model).filter(Model::amendPrompt)
-                .map(m -> dialog(Messages.get("dialog.amend.title"),
+        return model.popup(AmendPopup.class)
+                .map(popup -> dialog(Messages.get("dialog.amend.title"),
                         widget(Paragraph.builder().text(Messages.get("dialog.amend.message")).overflow(Overflow.WRAP_WORD).build())
                                 .length(MESSAGE_HEIGHT),
                         text(""),

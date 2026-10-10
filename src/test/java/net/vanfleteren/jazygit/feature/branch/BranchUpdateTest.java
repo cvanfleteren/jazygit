@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.Checkout;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
@@ -65,17 +66,17 @@ class BranchUpdateTest {
         Next asked = Update.update(diverged, new PushMsg.Requested("feature"));
 
         assertEquals(List.of(), asked.cmds());
-        assertEquals(Optional.of("feature"), asked.model().forcePushTarget());
+        assertEquals(Optional.of(new ForcePushPopup("feature")), asked.model().popup());
         assertEquals(java.util.Set.of(), asked.model().pushing());
 
         Next confirmed = Update.update(asked.model(), new PushMsg.ForceConfirmed());
         assertEquals(List.of(new BranchCmd.Push("feature", true)), confirmed.cmds());
-        assertEquals(Optional.empty(), confirmed.model().forcePushTarget());
+        assertEquals(Optional.empty(), confirmed.model().popup());
         assertEquals(java.util.Set.of("feature"), confirmed.model().pushing());
 
         Next cancelled = Update.update(asked.model(), new PushMsg.ForceCancelled());
         assertEquals(List.of(), cancelled.cmds());
-        assertEquals(Optional.empty(), cancelled.model().forcePushTarget());
+        assertEquals(Optional.empty(), cancelled.model().popup());
     }
 
     @Test
@@ -100,10 +101,10 @@ class BranchUpdateTest {
     @Test
     void newBranchRequestOpensTheDialogAndCancelClosesIt() {
         Model open = Update.update(loaded(), new NewBranchMsg.Requested("feature")).model();
-        assertEquals(Optional.of("feature"), open.newBranchBase());
+        assertEquals(Optional.of(new NewBranchPopup("feature")), open.popup());
 
         Next cancelled = Update.update(open, new NewBranchMsg.Cancelled());
-        assertEquals(Optional.empty(), cancelled.model().newBranchBase());
+        assertEquals(Optional.empty(), cancelled.model().popup());
         assertEquals(List.of(), cancelled.cmds());
     }
 
@@ -114,7 +115,7 @@ class BranchUpdateTest {
         Next next = Update.update(open, new NewBranchMsg.Confirmed(" topic "));
 
         assertEquals(List.of(new BranchCmd.CreateBranch("topic", "feature")), next.cmds());
-        assertEquals(Optional.empty(), next.model().newBranchBase());
+        assertEquals(Optional.empty(), next.model().popup());
     }
 
     @Test
@@ -124,7 +125,7 @@ class BranchUpdateTest {
         Next next = Update.update(open, new NewBranchMsg.Confirmed("  "));
 
         assertEquals(List.of(), next.cmds());
-        assertEquals(Optional.of("feature"), next.model().newBranchBase());
+        assertEquals(Optional.of(new NewBranchPopup("feature")), next.model().popup());
     }
 
     @Test
@@ -138,10 +139,10 @@ class BranchUpdateTest {
     void deleteRequestOpensThePopupOnlyForAnotherKnownBranch() {
         Model model = loaded();
 
-        assertEquals(Optional.of("feature"),
-                Update.update(model, new DeleteBranchMsg.Requested("feature")).model().deleteTarget());
-        assertEquals(Optional.empty(), Update.update(model, new DeleteBranchMsg.Requested("main")).model().deleteTarget());
-        assertEquals(Optional.empty(), Update.update(model, new DeleteBranchMsg.Requested("gone")).model().deleteTarget());
+        assertEquals(Optional.of(new DeleteBranchPopup("feature")),
+                Update.update(model, new DeleteBranchMsg.Requested("feature")).model().popup());
+        assertEquals(Optional.empty(), Update.update(model, new DeleteBranchMsg.Requested("main")).model().popup());
+        assertEquals(Optional.empty(), Update.update(model, new DeleteBranchMsg.Requested("gone")).model().popup());
     }
 
     @Test
@@ -151,7 +152,7 @@ class BranchUpdateTest {
         for (BranchCmd.DeleteBranch.DeleteScope scope : List.of(BranchCmd.DeleteBranch.DeleteScope.REMOTE, BranchCmd.DeleteBranch.DeleteScope.BOTH)) {
             Next next = Update.update(open, new DeleteBranchMsg.Chosen(scope));
             assertEquals(List.of(), next.cmds());
-            assertEquals(Optional.of("feature"), next.model().deleteTarget());
+            assertEquals(Optional.of(new DeleteBranchPopup("feature")), next.model().popup());
         }
         assertEquals(List.of(new BranchCmd.DeleteBranch("feature", BranchCmd.DeleteBranch.DeleteScope.LOCAL)),
                 Update.update(open, new DeleteBranchMsg.Chosen(BranchCmd.DeleteBranch.DeleteScope.LOCAL)).cmds());
@@ -178,7 +179,7 @@ class BranchUpdateTest {
         Next next = Update.update(open, new DeleteBranchMsg.Chosen(BranchCmd.DeleteBranch.DeleteScope.REMOTE));
 
         assertEquals(List.of(new BranchCmd.DeleteBranch("feature", BranchCmd.DeleteBranch.DeleteScope.REMOTE)), next.cmds());
-        assertEquals(Optional.empty(), next.model().deleteTarget());
+        assertEquals(Optional.empty(), next.model().popup());
     }
 
     @Test
@@ -188,7 +189,7 @@ class BranchUpdateTest {
         Next next = Update.update(open, new DeleteBranchMsg.Cancelled());
 
         assertEquals(List.of(), next.cmds());
-        assertEquals(Optional.empty(), next.model().deleteTarget());
+        assertEquals(Optional.empty(), next.model().popup());
     }
 
     @Test

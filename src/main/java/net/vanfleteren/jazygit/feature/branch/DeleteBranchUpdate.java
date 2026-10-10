@@ -33,7 +33,7 @@ public final class DeleteBranchUpdate {
     public static Next update(Model model, DeleteBranchMsg msg) {
         return switch (msg) {
             case Requested(String branch) -> requested(model, branch);
-            case Cancelled() -> Next.of(model.withDeleteTarget(Optional.empty()));
+            case Cancelled() -> Next.of(model.withoutPopup(DeleteBranchPopup.class));
             case Chosen(DeleteBranch.DeleteScope scope) -> chosen(model, scope);
             case Deleted(String branch) -> Update.refresh(model.withError(Optional.empty()));
             case Failed(String branch, String message) ->
@@ -47,14 +47,14 @@ public final class DeleteBranchUpdate {
     private static Next requested(Model model, String branch) {
         boolean deletable = model.branches() instanceof Loaded<List<Branch>>(List<Branch> branches)
                 && branches.stream().anyMatch(b -> b.name().equals(branch) && !b.current());
-        return deletable ? Next.of(model.withDeleteTarget(Optional.of(branch))) : Next.of(model);
+        return deletable ? Next.of(model.openPopup(new DeleteBranchPopup(branch))) : Next.of(model);
     }
 
     private static Next chosen(Model model, DeleteBranch.DeleteScope scope) {
-        return model.deleteTarget()
+        return model.popup(DeleteBranchPopup.class).map(DeleteBranchPopup::branch)
                 // Deleting on the remote is not possible for a local-only branch, nor for the default one.
                 .filter(branch -> scope == DeleteBranch.DeleteScope.LOCAL || remoteDeletable(model, branch))
-                .map(branch -> Next.of(model.withDeleteTarget(Optional.empty()).withError(Optional.empty()),
+                .map(branch -> Next.of(model.withoutPopup(DeleteBranchPopup.class).withError(Optional.empty()),
                         new DeleteBranch(branch, scope)))
                 .orElseGet(() -> Next.of(model));
     }

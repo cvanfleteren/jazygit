@@ -71,7 +71,7 @@ public final class CommitDialog {
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public CommitDialog(Consumer<Msg> dispatch) {
-        this(ID, DESCRIPTION_ID, Model::commitOpen, model -> Optional.empty(), CommitMsg.Confirmed::new,
+        this(ID, DESCRIPTION_ID, model -> model.popup(CommitPopup.class).isPresent(), model -> Optional.empty(), CommitMsg.Confirmed::new,
                 CommitMsg.Cancelled::new, dispatch);
     }
 
@@ -81,8 +81,8 @@ public final class CommitDialog {
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public static CommitDialog reword(Consumer<Msg> dispatch) {
-        return new CommitDialog(REWORD_ID, REWORD_DESCRIPTION_ID, model -> model.rewording().isPresent(),
-                Model::rewording, RewordMsg.Confirmed::new, RewordMsg.Cancelled::new, dispatch);
+        return new CommitDialog(REWORD_ID, REWORD_DESCRIPTION_ID, model -> model.popup(RewordPopup.class).isPresent(),
+                model -> model.popup(RewordPopup.class).map(RewordPopup::last), RewordMsg.Confirmed::new, RewordMsg.Cancelled::new, dispatch);
     }
 
     /**

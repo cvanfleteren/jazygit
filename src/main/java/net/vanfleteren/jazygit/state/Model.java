@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
 import lombok.With;
-import net.vanfleteren.jazygit.feature.help.HelpTopic;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
@@ -23,15 +22,8 @@ import java.util.Set;
  * @param refreshing     periodic loads that have been started and not finished yet, so a tick does
  *                       not queue them again
  * @param error          why the last operation failed, until the next one is started
- * @param newBranchBase  the branch a new branch is being created from, while its name is asked
- * @param deleteTarget   the branch being deleted, while the user chooses where to delete it
- * @param stageAllPrompt whether the user is asked to stage all files, because none is staged yet
- * @param commitOpen     whether the commit message is being asked
- * @param amendPrompt    whether the user is asked to confirm amending the last commit
- * @param rewording      the last commit, while its message is being reworded
- * @param help           the panel whose keybindings are listed in the help popup, while it is open
  * @param pushing        the branches being pushed right now
- * @param forcePushTarget the diverged branch being pushed, while the user is asked to confirm a force push
+ * @param popup          the popup that is open, if any; only one can be
  */
 @With
 public record Model(String repositoryName,
@@ -42,15 +34,8 @@ public record Model(String repositoryName,
                     Optional<FileDiff> fileDiff,
                     Set<Cmd.Load> refreshing,
                     Optional<String> error,
-                    Optional<String> newBranchBase,
-                    Optional<String> deleteTarget,
-                    boolean stageAllPrompt,
-                    boolean commitOpen,
-                    boolean amendPrompt,
-                    Optional<Commit> rewording,
-                    Optional<HelpTopic> help,
                     Set<String> pushing,
-                    Optional<String> forcePushTarget) {
+                    Optional<Popup> popup) {
 
     public Model {
         refreshing = Set.copyOf(refreshing);
@@ -59,7 +44,28 @@ public record Model(String repositoryName,
 
     public static Model initial(String repositoryName) {
         return new Model(repositoryName, Loadable.loading(), Loadable.loading(), Loadable.loading(), Optional.empty(),
-                Optional.empty(), Set.of(),
-                Optional.empty(), Optional.empty(), Optional.empty(), false, false, false, Optional.empty(), Optional.empty(), Set.of(), Optional.empty());
+                Optional.empty(), Set.of(), Optional.empty(), Set.of(), Optional.empty());
+    }
+
+    /**
+     * The open popup, if it is a {@code type}.
+     */
+    public <P extends Popup> Optional<P> popup(Class<P> type) {
+        return popup.filter(type::isInstance).map(type::cast);
+    }
+
+    /**
+     * This model with {@code popup} open, replacing the one that was open.
+     */
+    public Model openPopup(Popup popup) {
+        return withPopup(Optional.of(popup));
+    }
+
+    /**
+     * This model with the popup closed, if the open one is a {@code type}; a different popup that
+     * opened in the meantime stays open.
+     */
+    public Model withoutPopup(Class<? extends Popup> type) {
+        return popup(type).isPresent() ? withPopup(Optional.empty()) : this;
     }
 }

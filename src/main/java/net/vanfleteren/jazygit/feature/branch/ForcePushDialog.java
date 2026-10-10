@@ -39,7 +39,7 @@ public final class ForcePushDialog {
      * The popup, while the model asks to confirm a force push.
      */
     public Optional<Element> render(Model model) {
-        return model.forcePushTarget()
+        return model.popup(ForcePushPopup.class).map(ForcePushPopup::branch)
                 .map(branch -> dialog(Messages.get("dialog.forcePush.title", branch),
                         widget(Paragraph.builder().text(Messages.get("dialog.forcePush.message")).overflow(Overflow.WRAP_WORD).build())
                                 .length(MESSAGE_HEIGHT))

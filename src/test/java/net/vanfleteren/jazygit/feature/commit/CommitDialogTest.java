@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+
 import net.vanfleteren.jazygit.ui.RenderedText;
 
 import net.vanfleteren.jazygit.git.model.Commit;
@@ -38,7 +39,7 @@ class CommitDialogTest {
         // The sample data has staged files, so the commit popup opens directly.
         Model loaded = TestModels.loaded(new SampleData());
         Model asked = Update.update(loaded, new CommitMsg.Requested()).model();
-        return asked.commitOpen() ? asked : Update.update(asked, new CommitMsg.StagedForCommit()).model();
+        return asked.popup(CommitPopup.class).isPresent() ? asked : Update.update(asked, new CommitMsg.StagedForCommit()).model();
     }
 
     @Test
@@ -92,7 +93,7 @@ class CommitDialogTest {
     void rewordStartsOutWithTheCurrentMessageAndConfirmsIt() throws Exception {
         CommitDialog reword = CommitDialog.reword(dispatched::add);
         Model rewording = Update.update(TestModels.loaded(new SampleData()), new RewordMsg.Requested(0)).model();
-        Commit last = rewording.rewording().orElseThrow();
+        Commit last = rewording.popup(RewordPopup.class).orElseThrow().last();
 
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> reword.render(rewording).orElseThrow())) {
             runner.runner().focusManager().setFocus(CommitDialog.REWORD_ID);
@@ -106,7 +107,7 @@ class CommitDialogTest {
     }
 
     private ToolkitTestRunner start() throws Exception {
-        assertTrue(open.commitOpen());
+        assertTrue(open.popup(CommitPopup.class).isPresent());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
         runner.runner().focusManager().setFocus(CommitDialog.ID);
         RenderedText.of(runner, this::view);
