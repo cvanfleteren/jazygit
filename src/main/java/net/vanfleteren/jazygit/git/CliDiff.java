@@ -101,6 +101,8 @@ public final class CliDiff {
         return run(workTree, subcommand, paths, Map.of());
     }
 
+
+    
     private static String run(Path workTree, List<String> subcommand, List<String> paths,
                               Map<String, String> env) {
         List<String> command = new ArrayList<>();

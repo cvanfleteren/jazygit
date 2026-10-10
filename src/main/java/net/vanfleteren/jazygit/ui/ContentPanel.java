@@ -11,6 +11,9 @@ import dev.tamboui.text.Text;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.Panel;
+import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.toolkit.elements.RichTextAreaElement;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
@@ -24,7 +27,9 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 /**
@@ -33,7 +38,71 @@ import java.util.stream.Stream;
  */
 public final class ContentPanel {
 
+    /**
+     * The scrollable diff areas. They are kept between renders because an area holds its own scroll
+     * position; a new element every frame would jump back to the top. Only used from the render thread.
+     */
+    private static final DiffArea STAGED_AREA = new DiffArea("diff-staged");
+    private static final DiffArea UNSTAGED_AREA = new DiffArea("diff-unstaged");
+    // Called when Escape is pressed; gives the focus back to the file tree if a diff area had it, and
+    // says whether it did.
+    private static Supplier<Boolean> leaveDiff = () -> false;
+
+    public static void onLeaveDiff(Supplier<Boolean> leave) {
+        leaveDiff = leave;
+    }
+
+    public static boolean isDiffId(String id) {
+        return STAGED_AREA.id().equals(id) || UNSTAGED_AREA.id().equals(id);
+    }
+
+    /**
+     * The id of the diff area to focus: the staged one if it shows anything, else the unstaged one.
+     */
+    public static Optional<String> diffFocusId() {
+        return Stream.of(STAGED_AREA, UNSTAGED_AREA).filter(DiffArea::hasContent).map(DiffArea::id).findFirst();
+    }
+
     private ContentPanel() {
+    }
+
+    private static final class DiffArea {
+        private final String id;
+        private final RichTextAreaElement element;
+        private String diff = "";
+
+        DiffArea(String id) {
+            this.id = id;
+            element = richTextArea().id(id).focusable().rounded().scrollbar().fill();
+            element.onKeyEvent(event -> {
+                // Key handlers also see keys typed elsewhere; the callback checks that a diff has focus.
+                return event.code() == KeyCode.ESCAPE && leaveDiff.get() ? EventResult.HANDLED : EventResult.UNHANDLED;
+            });
+        }
+
+        String id() {
+            return id;
+        }
+
+        /**
+         * Shows {@code newDiff}, scrolling back to the top when it differs from what was shown.
+         */
+        DiffArea with(String newDiff) {
+            if (!newDiff.equals(diff)) {
+                diff = newDiff;
+                element.text(diffText(newDiff));
+                element.state().scrollToTop();
+            }
+            return this;
+        }
+
+        boolean hasContent() {
+            return !diff.isBlank();
+        }
+
+        RichTextAreaElement show(String title) {
+            return element.title(title);
+        }
     }
 
     private static DateTimeFormatter dateTime() {
@@ -74,10 +143,10 @@ public final class ContentPanel {
             return panel(Messages.get("panel.diff.title"), text(Messages.get("content.noChanges")).dim()).rounded();
         }
         List<Element> panels = Stream.of(
-                        Map.entry(Messages.get("content.staged"), diffs.staged()),
-                        Map.entry(Messages.get("content.unstaged"), diffs.unstaged()))
-                .filter(e -> !e.getValue().isBlank())
-                .map(e -> (Element) richTextArea(diffText(e.getValue())).title(e.getKey()).rounded().scrollbar().fill())
+                        Map.entry(Messages.get("content.staged"), STAGED_AREA.with(diffs.staged())),
+                        Map.entry(Messages.get("content.unstaged"), UNSTAGED_AREA.with(diffs.unstaged())))
+                .filter(e -> e.getValue().hasContent())
+                .map(e -> (Element) e.getValue().show(e.getKey()))
                 .toList();
         return column(panels.toArray(Element[]::new));
     }

@@ -13,6 +13,7 @@ import dev.tamboui.toolkit.elements.TreeElement;
 import dev.tamboui.style.Color;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.widgets.tree.TreeNode;
 import net.vanfleteren.jazygit.git.model.ChangeType;
@@ -55,11 +56,21 @@ public class FilesPanel {
     private Loadable<RepoStatus> shown;
     // The tree's key handler also sees keys typed in other panes, so it must know whether it has focus.
     private boolean focused;
+    private final Runnable openDiff;
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public FilesPanel(Consumer<Msg> dispatch) {
+        this(dispatch, () -> { });
+    }
+
+    /**
+     * @param dispatch  receives the messages for the user's actions, on the render thread
+     * @param openDiff  called when Enter is pressed on a file or directory, to move focus to its diff
+     */
+    public FilesPanel(Consumer<Msg> dispatch, Runnable openDiff) {
+        this.openDiff = openDiff;
         tree.onKeyEvent(event -> handleKey(event, dispatch));
     }
 
@@ -75,6 +86,10 @@ public class FilesPanel {
     }
 
     private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {
+        if (focused && event.code() == KeyCode.ENTER && tree.selectedNode() != null) {
+            openDiff.run();
+            return EventResult.HANDLED;
+        }
         return Optional.of(event)
                 .filter(e -> focused)
                 .flatMap(this::request)

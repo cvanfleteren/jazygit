@@ -46,7 +46,8 @@ public class JazygitApp extends ToolkitApp {
     private static final Duration REFRESH_INTERVAL = Duration.ofMillis(500);
 
     private final GitInfoProvider provider;
-    private final FilesPanel filesPanel = new FilesPanel(msg -> this.program.dispatch(msg));
+    private final FilesPanel filesPanel = new FilesPanel(msg -> this.program.dispatch(msg),
+            () -> ContentPanel.diffFocusId().ifPresent(id -> runner().focusManager().setFocus(id)));
     private final BranchesPanel branchesPanel = new BranchesPanel(msg -> this.program.dispatch(msg));
     private final NewBranchDialog newBranchDialog = new NewBranchDialog(msg -> this.program.dispatch(msg));
     private final DeleteBranchDialog deleteBranchDialog = new DeleteBranchDialog(msg -> this.program.dispatch(msg));
@@ -70,6 +71,13 @@ public class JazygitApp extends ToolkitApp {
     protected void onStart() {
         ToolkitRunner runner = runner();
         runner.focusManager().setFocus(FilesPanel.ID);
+        ContentPanel.onLeaveDiff(() -> {
+            boolean inDiff = ContentPanel.isDiffId(runner.focusManager().focusedId());
+            if (inDiff) {
+                runner.focusManager().setFocus(FilesPanel.ID);
+            }
+            return inDiff;
+        });
         io = Executors.newSingleThreadExecutor(Thread.ofPlatform().name("git-io").daemon().factory());
         program = Program.start(provider, io, runner::runOnRenderThread);
         runner.scheduleRepeating(() -> runner.runOnRenderThread(() -> program.dispatch(new Msg.Tick())),
@@ -133,12 +141,12 @@ public class JazygitApp extends ToolkitApp {
                 new Popup(helpDialog.render(model), List.of(HelpDialog.ID), helpOrigin));
         Optional<Popup> open = popups.stream().filter(p -> p.element().isPresent()).findFirst();
         if (open.isPresent()) {
-            if (!open.get().ids().contains(focusedId)) {
+            if (focusedId == null || !open.get().ids().contains(focusedId)) {
                 runner().focusManager().setFocus(open.get().ids().getFirst());
             }
         } else {
             popups.stream()
-                    .filter(p -> p.ids().contains(focusedId))
+                    .filter(p -> focusedId != null && p.ids().contains(focusedId))
                     .findFirst()
                     .ifPresent(p -> runner().focusManager().setFocus(p.returnTo()));
         }
