@@ -137,9 +137,9 @@ class BranchUpdateTest {
 
         Model pushing = Update.update(loaded(), new PushMsg.Requested("feature")).model();
         assertEquals(java.util.Set.of(), Update.update(pushing, new PushMsg.Failed("feature", "boom")).model().pushing());
-        assertEquals(java.util.Set.of(), Update.update(pushing, new PushMsg.Done("feature")).model().pushing());
+        assertEquals(java.util.Set.of(), Update.update(pushing, new PushMsg.Done("feature", List.of())).model().pushing());
 
-        Next done = Update.update(withError(loaded(), "boom"), new PushMsg.Done("feature"));
+        Next done = Update.update(withError(loaded(), "boom"), new PushMsg.Done("feature", List.of()));
         assertEquals(Optional.empty(), done.model().error());
         assertEquals(true, done.cmds().contains(new LoadBranches()));
     }
@@ -247,7 +247,7 @@ class BranchUpdateTest {
 
     @Test
     void checkedOutReloadsStatusAndBranches() {
-        Next next = Update.update(loaded(), new CheckoutMsg.Done("feature"));
+        Next next = Update.update(loaded(), new CheckoutMsg.Done("feature", List.of("git checkout feature")));
 
         assertEquals(List.of(new LoadStatus(), new LoadBranches()), next.cmds());
         assertEquals(Optional.empty(), next.model().error());

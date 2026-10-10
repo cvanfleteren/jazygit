@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
+import net.vanfleteren.jazygit.state.LogEntry;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -57,9 +58,22 @@ class StageUpdateTest {
     }
 
     @Test
+    void doneLogsTheExecutedCommands() {
+        Next staged = Update.update(loaded(), new StageMsg.Done(StageMsg.Action.STAGE, List.of("git add -- a.txt")));
+        assertEquals(List.of(new LogEntry("Stage", List.of("git add -- a.txt"))), staged.model().commandLog());
+
+        Next unstaged = Update.update(staged.model(),
+                new StageMsg.Done(StageMsg.Action.UNSTAGE, List.of("git reset --quiet HEAD -- a.txt")));
+        assertEquals(List.of("Stage", "Unstage"), unstaged.model().commandLog().stream().map(LogEntry::title).toList());
+
+        assertEquals(List.of(), Update.update(loaded(), new StageMsg.Done(StageMsg.Action.STAGE, List.of()))
+                .model().commandLog());
+    }
+
+    @Test
     void toggledReloadsAndFailureIsReported() {
         assertEquals(List.of(new LoadStatus(), new LoadBranches()),
-                Update.update(loaded(), new StageMsg.Done()).cmds());
+                Update.update(loaded(), new StageMsg.Done(StageMsg.Action.STAGE, List.of())).cmds());
 
         Next failed = Update.update(loaded(), new StageMsg.Failed("fatal: pathspec"));
         assertEquals(Optional.of("Staging failed: fatal: pathspec"), failed.model().error());

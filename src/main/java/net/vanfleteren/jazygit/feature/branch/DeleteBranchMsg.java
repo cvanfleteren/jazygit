@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import java.util.List;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Model;
 
@@ -24,7 +25,7 @@ public sealed interface DeleteBranchMsg extends Msg {
     record Chosen(BranchCmd.DeleteBranch.DeleteScope scope) implements DeleteBranchMsg {
     }
 
-    record Deleted(String branch) implements DeleteBranchMsg {
+    record Deleted(String branch, List<String> commands) implements DeleteBranchMsg {
     }
 
     record Failed(String branch, String message) implements DeleteBranchMsg {

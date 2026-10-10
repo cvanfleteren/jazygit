@@ -54,59 +54,62 @@ class FilesPanelTest {
         }
 
         @Override
-        public void checkout(String branch) {
+        public List<String> checkout(String branch) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void checkoutWithStash(String branch) {
+        public List<String> checkoutWithStash(String branch) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void push(String branch, boolean forceWithLease) {
+        public List<String> push(String branch, boolean forceWithLease) {
+            return List.of();
         }
 
         @Override
-        public void deleteBranch(String name, boolean local, boolean remote) {
+        public List<String> deleteBranch(String name, boolean local, boolean remote) {
+            return List.of();
         }
 
         @Override
-        public void createBranch(String name, String startPoint) {
+        public List<String> createBranch(String name, String startPoint) {
+            return List.of();
         }
 
         @Override
-        public void stage(List<String> paths) {
+        public List<String> stage(List<String> paths) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void unstageNew(List<String> paths) {
+        public List<String> unstageNew(List<String> paths) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void reword(String summary, String description) {
+        public List<String> reword(String summary, String description) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void amendLastCommit() {
+        public List<String> amendLastCommit() {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void commit(String summary, String description) {
+        public List<String> commit(String summary, String description) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void discard(DiscardPlan plan) {
+        public List<String> discard(DiscardPlan plan) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void unstage(List<String> paths) {
+        public List<String> unstage(List<String> paths) {
             throw new UnsupportedOperationException();
         }
 

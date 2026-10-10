@@ -4,6 +4,7 @@ import net.vanfleteren.jazygit.feature.branch.BranchCmd.Push;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
+import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -30,8 +31,10 @@ public final class PushUpdate {
                     .map(branch -> push(model.withoutPopup(ForcePushPopup.class), branch, true))
                     .orElseGet(() -> Next.of(model));
             // The branches then show the new ahead/behind counts.
-            case PushMsg.Done(String branch) ->
-                    Update.refresh(model.withPushing(without(model, branch)).withError(Optional.empty()));
+            case PushMsg.Done(String branch, List<String> commands) ->
+                    Update.refresh(CommandLog.append(
+                            model.withPushing(without(model, branch)).withError(Optional.empty()),
+                            "log.title.push", commands));
             case PushMsg.Failed(String branch, String message) ->
                     Update.refresh(model.withPushing(without(model, branch))
                             .withError(Optional.of(Messages.get("error.push.failed", branch, message))));

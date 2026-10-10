@@ -77,6 +77,10 @@ public final class TestModels {
     /**
      * {@code model} after an operation failed with {@code error}.
      */
+    public static Model withLog(Model model, LogEntry... entries) {
+        return model.withCommandLog(List.of(entries));
+    }
+
     public static Model withError(Model model, String error) {
         return model.withError(Optional.of(error));
     }

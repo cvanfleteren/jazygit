@@ -178,13 +178,13 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     }
 
     @Override
-    public void checkout(String branch) {
-        CliCheckout.checkout(workTree, branch);
+    public List<String> checkout(String branch) {
+        return CliCheckout.checkout(workTree, branch);
     }
 
     @Override
-    public void checkoutWithStash(String branch) {
-        CliCheckout.checkoutWithStash(workTree, branch);
+    public List<String> checkoutWithStash(String branch) {
+        return CliCheckout.checkoutWithStash(workTree, branch);
     }
 
     /**
@@ -240,61 +240,59 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     }
 
     @Override
-    public void createBranch(String name, String startPoint) {
-        CliCheckout.createBranch(workTree, name, startPoint);
+    public List<String> createBranch(String name, String startPoint) {
+        return CliCheckout.createBranch(workTree, name, startPoint);
     }
 
     @Override
-    public void push(String branch, boolean forceWithLease) {
-        CliBranch.push(workTree, branch, forceWithLease);
+    public List<String> push(String branch, boolean forceWithLease) {
+        return CliBranch.push(workTree, branch, forceWithLease);
     }
 
     @Override
-    public void deleteBranch(String name, boolean local, boolean remote) {
-        if (remote) {
-            CliBranch.deleteRemote(workTree, name);
-        }
-        if (local) {
-            CliBranch.deleteLocal(workTree, name);
-        }
+    public List<String> deleteBranch(String name, boolean local, boolean remote) {
+        return GitCommandException.chain(
+                () -> remote ? CliBranch.deleteRemote(workTree, name) : List.of(),
+                () -> local ? CliBranch.deleteLocal(workTree, name) : List.of());
     }
 
     @Override
-    public void stage(List<String> paths) {
-        CliIndex.add(workTree, paths);
+    public List<String> stage(List<String> paths) {
+        return CliIndex.add(workTree, paths);
     }
 
     @Override
-    public void unstageNew(List<String> paths) {
-        CliIndex.removeCached(workTree, paths);
+    public List<String> unstageNew(List<String> paths) {
+        return CliIndex.removeCached(workTree, paths);
     }
 
     @Override
-    public void unstage(List<String> paths) {
-        CliIndex.reset(workTree, paths);
+    public List<String> unstage(List<String> paths) {
+        return CliIndex.reset(workTree, paths);
     }
 
     @Override
-    public void commit(String summary, String description) {
-        CliIndex.commit(workTree, summary, description);
+    public List<String> commit(String summary, String description) {
+        return CliIndex.commit(workTree, summary, description);
     }
 
     @Override
-    public void amendLastCommit() {
-        CliIndex.amend(workTree);
+    public List<String> amendLastCommit() {
+        return CliIndex.amend(workTree);
     }
 
     @Override
-    public void reword(String summary, String description) {
-        CliIndex.reword(workTree, summary, description);
+    public List<String> reword(String summary, String description) {
+        return CliIndex.reword(workTree, summary, description);
     }
 
     @Override
-    public void discard(DiscardPlan plan) {
-        CliIndex.removeAdded(workTree, plan.added());
-        CliIndex.checkoutFromHead(workTree, plan.fromHead());
-        CliIndex.checkoutFromIndex(workTree, plan.fromIndex());
-        CliIndex.deleteUntracked(workTree, plan.untracked());
+    public List<String> discard(DiscardPlan plan) {
+        return GitCommandException.chain(
+                () -> CliIndex.removeAdded(workTree, plan.added()),
+                () -> CliIndex.checkoutFromHead(workTree, plan.fromHead()),
+                () -> CliIndex.checkoutFromIndex(workTree, plan.fromIndex()),
+                () -> CliIndex.deleteUntracked(workTree, plan.untracked()));
     }
 
     @Override

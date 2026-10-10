@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
+import java.util.List;
+
 /**
  * Operations on branches.
  */
@@ -11,7 +13,7 @@ public interface GitBranches {
      * @throws LocalChangesException if git refuses because uncommitted changes would be overwritten
      * @throws IllegalStateException if the checkout fails, with git's explanation as message
      */
-    void checkout(String branch);
+    List<String> checkout(String branch);
 
     /**
      * Checks out the local branch {@code branch}, taking the uncommitted changes along: they are stashed
@@ -20,14 +22,14 @@ public interface GitBranches {
      *
      * @throws IllegalStateException if git fails, with git's explanation as message
      */
-    void checkoutWithStash(String branch);
+    List<String> checkoutWithStash(String branch);
 
     /**
      * Creates the local branch {@code name} at {@code startPoint} and checks it out.
      *
      * @throws IllegalStateException if git fails, with git's explanation as message
      */
-    void createBranch(String name, String startPoint);
+    List<String> createBranch(String name, String startPoint);
 
     /**
      * Deletes the branch {@code name}, locally and/or on its remote. With both, the remote one goes
@@ -35,7 +37,7 @@ public interface GitBranches {
      *
      * @throws IllegalStateException if git fails, with git's explanation as message
      */
-    void deleteBranch(String name, boolean local, boolean remote);
+    List<String> deleteBranch(String name, boolean local, boolean remote);
 
     /**
      * Pushes the local branch {@code branch} to its remote, setting that as the upstream when the
@@ -45,5 +47,5 @@ public interface GitBranches {
      *                       repository last saw it ({@code --force-with-lease})
      * @throws IllegalStateException if git fails, with git's explanation as message
      */
-    void push(String branch, boolean forceWithLease);
+    List<String> push(String branch, boolean forceWithLease);
 }

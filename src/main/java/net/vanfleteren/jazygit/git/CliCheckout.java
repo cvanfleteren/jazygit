@@ -6,6 +6,7 @@ import org.zeroturnaround.exec.ProcessResult;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -33,12 +34,12 @@ public final class CliCheckout {
      * @throws IllegalStateException  if git cannot be run or refuses the checkout; the message then
      *                                is git's own explanation
      */
-    public static void checkout(Path workTree, String branch) {
+    public static List<String> checkout(Path workTree, String branch) {
         try {
-            run(workTree, "git", "checkout", "--quiet", branch, "--");
-        } catch (IllegalStateException e) {
+            return List.of(exec(workTree, "git", "checkout", "--quiet", branch, "--").command());
+        } catch (GitCommandException e) {
             if (e.getMessage().contains(LOCAL_CHANGES)) {
-                throw new LocalChangesException(e.getMessage());
+                throw new LocalChangesException(e.getMessage(), e.commands());
             }
             throw e;
         }
@@ -52,27 +53,41 @@ public final class CliCheckout {
      * @throws IllegalStateException if git cannot be run or refuses; the message then is git's own
      *                               explanation
      */
-    public static void checkoutWithStash(Path workTree, String branch) {
+    public static List<String> checkoutWithStash(Path workTree, String branch) {
+        List<String> executed = new ArrayList<>();
         // Git succeeds without stashing when there is nothing to stash; then there is nothing to pop
         // either, and popping would apply an older, unrelated stash.
         long before = stashCount(workTree);
-        run(workTree, "git", "stash", "push", "--quiet");
+        executed.add(exec(workTree, "git", "stash", "push", "--quiet").command());
         boolean stashed = stashCount(workTree) > before;
         try {
-            checkout(workTree, branch);
-        } catch (RuntimeException e) {
+            executed.addAll(checkout(workTree, branch));
+        } catch (GitCommandException e) {
+            List<String> all = concat(executed, e.commands());
             if (stashed) {
-                run(workTree, "git", "stash", "pop", "--quiet");
+                try {
+                    all.add(exec(workTree, "git", "stash", "pop", "--quiet").command());
+                } catch (GitCommandException popFailure) {
+                    all.addAll(popFailure.commands());
+                }
             }
-            throw e;
+            throw new GitCommandException(e.getMessage(), all, e);
         }
         if (stashed) {
             try {
-                run(workTree, "git", "stash", "pop", "--quiet");
-            } catch (IllegalStateException e) {
-                throw new IllegalStateException(Messages.get("git.stashPopFailed", e.getMessage()), e);
+                executed.add(exec(workTree, "git", "stash", "pop", "--quiet").command());
+            } catch (GitCommandException e) {
+                throw new GitCommandException(Messages.get("git.stashPopFailed", e.getMessage()),
+                        concat(executed, e.commands()), e);
             }
         }
+        return executed;
+    }
+
+    private static List<String> concat(List<String> first, List<String> second) {
+        List<String> all = new ArrayList<>(first);
+        all.addAll(second);
+        return all;
     }
 
     private static long stashCount(Path workTree) {
@@ -86,11 +101,22 @@ public final class CliCheckout {
      * @throws IllegalStateException if git cannot be run or refuses; the message then is git's own
      *                               explanation
      */
-    public static void createBranch(Path workTree, String name, String startPoint) {
-        run(workTree, "git", "checkout", "--quiet", "-b", name, startPoint, "--");
+    public static List<String> createBranch(Path workTree, String name, String startPoint) {
+        return List.of(exec(workTree, "git", "checkout", "--quiet", "-b", name, startPoint, "--").command());
+    }
+
+    /**
+     * The output of a finished command, and the command line it was run as.
+     */
+    record Result(String output, String command) {
     }
 
     static String run(Path workTree, String... command) {
+        return exec(workTree, command).output();
+    }
+
+    static Result exec(Path workTree, String... command) {
+        List<String> line = List.of(CommandLine.format(List.of(command)));
         try {
             ProcessResult result = new ProcessExecutor()
                     // A trailing "--" keeps git from treating branch names as paths.
@@ -105,16 +131,16 @@ public final class CliCheckout {
                     .timeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
                     .execute();
             if (result.getExitValue() != 0) {
-                throw new IllegalStateException(explanation(result.outputUTF8(), result.getExitValue()));
+                throw new GitCommandException(explanation(result.outputUTF8(), result.getExitValue()), line);
             }
-            return result.outputUTF8().strip();
+            return new Result(result.outputUTF8().strip(), CommandLine.format(List.of(command)));
         } catch (IOException e) {
-            throw new IllegalStateException(Messages.get("git.notInstalled"), e);
+            throw new GitCommandException(Messages.get("git.notInstalled"), line, e);
         } catch (TimeoutException e) {
-            throw new IllegalStateException(Messages.get("git.timedOut", "checkout", workTree), e);
+            throw new GitCommandException(Messages.get("git.timedOut", "checkout", workTree), line, e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException(Messages.get("git.interrupted", "checkout"), e);
+            throw new GitCommandException(Messages.get("git.interrupted", "checkout"), line, e);
         }
     }
 

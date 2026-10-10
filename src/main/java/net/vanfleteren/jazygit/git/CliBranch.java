@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
 import java.nio.file.Path;
+import java.util.List;
 
 /**
  * Deletes branches through the {@code git} command line tool, so the remote is reached with the
@@ -18,8 +19,8 @@ public final class CliBranch {
      *
      * @throws IllegalStateException if git refuses; the message then is git's own explanation
      */
-    public static void deleteLocal(Path workTree, String name) {
-        CliCheckout.run(workTree, "git", "branch", "--delete", "--force", name);
+    public static List<String> deleteLocal(Path workTree, String name) {
+        return one(workTree, "git", "branch", "--delete", "--force", name);
     }
 
     /**
@@ -28,8 +29,8 @@ public final class CliBranch {
      *
      * @throws IllegalStateException if git refuses; the message then is git's own explanation
      */
-    public static void deleteRemote(Path workTree, String name) {
-        CliCheckout.run(workTree, "git", "push", remoteOf(workTree, name), "--delete", name);
+    public static List<String> deleteRemote(Path workTree, String name) {
+        return one(workTree, "git", "push", remoteOf(workTree, name), "--delete", name);
     }
 
     /**
@@ -41,15 +42,18 @@ public final class CliBranch {
      *                       pushed to it since the last fetch
      * @throws IllegalStateException if git refuses; the message then is git's own explanation
      */
-    public static void push(Path workTree, String name, boolean forceWithLease) {
+    public static List<String> push(Path workTree, String name, boolean forceWithLease) {
         String remote = remoteOf(workTree, name);
         if (hasUpstream(workTree, name)) {
-            CliCheckout.run(workTree, forceWithLease
+            return one(workTree, forceWithLease
                     ? new String[]{"git", "push", "--force-with-lease", remote, name}
                     : new String[]{"git", "push", remote, name});
-        } else {
-            CliCheckout.run(workTree, "git", "push", "--set-upstream", remote, name);
         }
+        return one(workTree, "git", "push", "--set-upstream", remote, name);
+    }
+
+    private static List<String> one(Path workTree, String... command) {
+        return List.of(CliCheckout.exec(workTree, command).command());
     }
 
     private static boolean hasUpstream(Path workTree, String name) {

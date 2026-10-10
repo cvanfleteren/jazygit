@@ -28,52 +28,53 @@ public final class CliIndex {
     /**
      * {@code git add -- <paths>}: stages the changes of the paths.
      */
-    public static void add(Path workTree, List<String> paths) {
-        run(workTree, List.of("add"), paths);
+    public static List<String> add(Path workTree, List<String> paths) {
+        return run(workTree, List.of("add"), paths);
     }
 
     /**
      * {@code git rm --cached --force -- <paths>}: removes newly added paths from the index, leaving
      * them untracked in the working tree.
      */
-    public static void removeCached(Path workTree, List<String> paths) {
-        run(workTree, List.of("rm", "--cached", "--force", "--quiet"), paths);
+    public static List<String> removeCached(Path workTree, List<String> paths) {
+        return run(workTree, List.of("rm", "--cached", "--force", "--quiet"), paths);
     }
 
     /**
      * {@code git reset HEAD -- <paths>}: resets the index entries of the paths to HEAD.
      */
-    public static void reset(Path workTree, List<String> paths) {
-        run(workTree, List.of("reset", "--quiet", "HEAD"), paths);
+    public static List<String> reset(Path workTree, List<String> paths) {
+        return run(workTree, List.of("reset", "--quiet", "HEAD"), paths);
     }
 
     /**
      * {@code git checkout -- <paths>}: resets the working tree of the paths to the index.
      */
-    public static void checkoutFromIndex(Path workTree, List<String> paths) {
-        run(workTree, List.of("checkout", "--quiet"), paths);
+    public static List<String> checkoutFromIndex(Path workTree, List<String> paths) {
+        return run(workTree, List.of("checkout", "--quiet"), paths);
     }
 
     /**
      * {@code git checkout HEAD -- <paths>}: resets the index and the working tree of the paths to HEAD.
      */
-    public static void checkoutFromHead(Path workTree, List<String> paths) {
-        run(workTree, List.of("checkout", "--quiet", "HEAD"), paths);
+    public static List<String> checkoutFromHead(Path workTree, List<String> paths) {
+        return run(workTree, List.of("checkout", "--quiet", "HEAD"), paths);
     }
 
     /**
      * {@code git rm --force -- <paths>}: removes newly added paths from the index and the working tree.
      */
-    public static void removeAdded(Path workTree, List<String> paths) {
-        run(workTree, List.of("rm", "--force", "--quiet"), paths);
+    public static List<String> removeAdded(Path workTree, List<String> paths) {
+        return run(workTree, List.of("rm", "--force", "--quiet"), paths);
     }
 
     /**
      * Deletes untracked files and directories (like {@code rm -r}). Paths outside the working tree, and
      * the working tree itself, are refused.
      */
-    public static void deleteUntracked(Path workTree, List<String> paths) {
+    public static List<String> deleteUntracked(Path workTree, List<String> paths) {
         Path root = workTree.toAbsolutePath().normalize();
+        List<String> executed = new ArrayList<>();
         for (String path : paths) {
             Path target = root.resolve(path).normalize();
             if (target.equals(root) || !target.startsWith(root) || target.startsWith(root.resolve(".git"))) {
@@ -89,53 +90,56 @@ public final class CliIndex {
             } catch (IOException e) {
                 throw new IllegalStateException(Messages.get("git.deleteFailed", path, e.getMessage()), e);
             }
+            executed.add(CommandLine.format(List.of("rm", "-r", "--", path)));
         }
+        return executed;
     }
 
     /**
      * {@code git commit -m <summary> [-m <description>]}: commits the index.
      */
-    public static void commit(Path workTree, String summary, String description) {
+    public static List<String> commit(Path workTree, String summary, String description) {
         List<String> command = new ArrayList<>(List.of("git", "commit", "--quiet", "-m", summary));
         if (!description.isBlank()) {
             command.addAll(List.of("-m", description));
         }
-        execute(workTree, command, "commit");
+        return execute(workTree, command, "commit");
     }
 
     /**
      * {@code git commit --amend --no-edit}: amends the last commit with the index.
      */
-    public static void amend(Path workTree) {
-        execute(workTree, List.of("git", "commit", "--quiet", "--amend", "--no-edit"), "commit");
+    public static List<String> amend(Path workTree) {
+        return execute(workTree, List.of("git", "commit", "--quiet", "--amend", "--no-edit"), "commit");
     }
 
     /**
      * {@code git commit --allow-empty --amend --only -m <summary> [-m <description>]}: replaces the
      * message of the last commit, whatever is staged.
      */
-    public static void reword(Path workTree, String summary, String description) {
+    public static List<String> reword(Path workTree, String summary, String description) {
         List<String> command = new ArrayList<>(
                 List.of("git", "commit", "--quiet", "--allow-empty", "--amend", "--only", "-m", summary));
         if (!description.isBlank()) {
             command.addAll(List.of("-m", description));
         }
-        execute(workTree, command, "commit");
+        return execute(workTree, command, "commit");
     }
 
-    private static void run(Path workTree, List<String> subcommand, List<String> paths) {
+    private static List<String> run(Path workTree, List<String> subcommand, List<String> paths) {
         if (paths.isEmpty()) {
-            return;
+            return List.of();
         }
         List<String> command = new ArrayList<>();
         command.add("git");
         command.addAll(subcommand);
         command.add("--");
         command.addAll(paths);
-        execute(workTree, command, subcommand.getFirst());
+        return execute(workTree, command, subcommand.getFirst());
     }
 
-    private static void execute(Path workTree, List<String> command, String name) {
+    private static List<String> execute(Path workTree, List<String> command, String name) {
+        List<String> line = List.of(CommandLine.format(command));
         try {
             ProcessResult result = new ProcessExecutor()
                     .command(command)
@@ -146,16 +150,17 @@ public final class CliIndex {
                     .timeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
                     .execute();
             if (result.getExitValue() != 0) {
-                throw new IllegalStateException(
-                        CliCheckout.explanation(result.outputUTF8(), result.getExitValue()));
+                throw new GitCommandException(
+                        CliCheckout.explanation(result.outputUTF8(), result.getExitValue()), line);
             }
+            return line;
         } catch (IOException e) {
-            throw new IllegalStateException(Messages.get("git.notInstalled"), e);
+            throw new GitCommandException(Messages.get("git.notInstalled"), line, e);
         } catch (TimeoutException e) {
-            throw new IllegalStateException(Messages.get("git.timedOut", name, workTree), e);
+            throw new GitCommandException(Messages.get("git.timedOut", name, workTree), line, e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException(Messages.get("git.interrupted", name), e);
+            throw new GitCommandException(Messages.get("git.interrupted", name), line, e);
         }
     }
 }

@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import java.util.List;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Model;
 
@@ -25,7 +26,7 @@ public sealed interface RewordMsg extends Msg {
     record Confirmed(String summary, String description) implements RewordMsg {
     }
 
-    record Done() implements RewordMsg {
+    record Done(List<String> commands) implements RewordMsg {
     }
 
     record Failed(String message) implements RewordMsg {

@@ -4,6 +4,7 @@ import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * IO that {@link Update} asks for. Commands are immutable data that know how to run themselves and
@@ -22,6 +23,14 @@ public interface Cmd {
      * The {@link Msg} that reports this command failing with {@code message}.
      */
     Msg failed(String message);
+
+    /**
+     * The message key of the command log title for this command's git commands, if it runs any that
+     * change the repository.
+     */
+    default Optional<String> logTitleKey() {
+        return Optional.empty();
+    }
 
     /**
      * Reads part of the repository state into the {@link Model}.

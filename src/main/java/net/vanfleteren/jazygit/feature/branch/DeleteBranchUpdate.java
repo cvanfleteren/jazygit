@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Cancelled;
 
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.DeleteBranch;
 
+import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -34,7 +35,8 @@ public final class DeleteBranchUpdate {
             case Requested(String branch) -> requested(model, branch);
             case Cancelled() -> Next.of(model.withoutPopup(DeleteBranchPopup.class));
             case Chosen(DeleteBranch.DeleteScope scope) -> chosen(model, scope);
-            case Deleted(String branch) -> Update.refresh(model.withError(Optional.empty()));
+            case Deleted(String branch, List<String> commands) ->
+                    Update.refresh(CommandLog.append(model.withError(Optional.empty()), "log.title.deleteBranch", commands));
             case Failed(String branch, String message) ->
                     Update.refresh(model.withError(Optional.of(Messages.get("error.deleteBranch.failed", branch, message))));
         };

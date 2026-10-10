@@ -24,7 +24,15 @@ public sealed interface StageMsg extends Msg {
         }
     }
 
-    record Done() implements StageMsg {
+    record Done(Action action, List<String> commands) implements StageMsg {
+
+        public Done {
+            commands = List.copyOf(commands);
+        }
+    }
+
+    enum Action {
+        STAGE, UNSTAGE
     }
 
     record Failed(String message) implements StageMsg {
