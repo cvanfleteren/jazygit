@@ -47,7 +47,7 @@ public class JazygitApp extends ToolkitApp {
 
     private final GitInfoProvider provider;
     private final FilesPanel filesPanel = new FilesPanel(msg -> this.program.dispatch(msg),
-            () -> ContentPanel.diffFocusId().ifPresent(id -> runner().focusManager().setFocus(id)));
+            () -> ContentPanel.firstFocusableAreaId().ifPresent(id -> runner().focusManager().setFocus(id)));
     private final BranchesPanel branchesPanel = new BranchesPanel(msg -> this.program.dispatch(msg));
     private final NewBranchDialog newBranchDialog = new NewBranchDialog(msg -> this.program.dispatch(msg));
     private final DeleteBranchDialog deleteBranchDialog = new DeleteBranchDialog(msg -> this.program.dispatch(msg));
@@ -71,12 +71,12 @@ public class JazygitApp extends ToolkitApp {
     protected void onStart() {
         ToolkitRunner runner = runner();
         runner.focusManager().setFocus(FilesPanel.ID);
-        ContentPanel.onLeaveDiff(() -> {
-            boolean inDiff = ContentPanel.isDiffId(runner.focusManager().focusedId());
-            if (inDiff) {
+        ContentPanel.onLeaveScrollArea(() -> {
+            boolean inArea = ContentPanel.isFocusableAreaId(runner.focusManager().focusedId());
+            if (inArea) {
                 runner.focusManager().setFocus(FilesPanel.ID);
             }
-            return inDiff;
+            return inArea;
         });
         io = Executors.newSingleThreadExecutor(Thread.ofPlatform().name("git-io").daemon().factory());
         program = Program.start(provider, io, runner::runOnRenderThread);

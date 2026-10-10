@@ -39,44 +39,51 @@ import java.util.stream.Stream;
 public final class ContentPanel {
 
     /**
-     * The scrollable diff areas. They are kept between renders because an area holds its own scroll
+     * The scrollable areas for the diffs and the branch log. They are kept between renders because an area holds its own scroll
      * position; a new element every frame would jump back to the top. Only used from the render thread.
      */
-    private static final DiffArea STAGED_AREA = new DiffArea("diff-staged");
-    private static final DiffArea UNSTAGED_AREA = new DiffArea("diff-unstaged");
-    // Called when Escape is pressed; gives the focus back to the file tree if a diff area had it, and
+    private static final ScrollArea STAGED_AREA = new ScrollArea("diff-staged", true, ContentPanel::diffText);
+    private static final ScrollArea UNSTAGED_AREA = new ScrollArea("diff-unstaged", true, ContentPanel::diffText);
+    // Not focusable: clicking the log must not take the focus from the branches pane it mirrors.
+    private static final ScrollArea LOG_AREA = new ScrollArea("branch-log", false, ContentPanel::plainText);
+    // Called when Escape is pressed; gives the focus back to the file tree if a focusable area had it, and
     // says whether it did.
-    private static Supplier<Boolean> leaveDiff = () -> false;
+    private static Supplier<Boolean> leaveScrollArea = () -> false;
 
-    public static void onLeaveDiff(Supplier<Boolean> leave) {
-        leaveDiff = leave;
+    public static void onLeaveScrollArea(Supplier<Boolean> leave) {
+        leaveScrollArea = leave;
     }
 
-    public static boolean isDiffId(String id) {
+    public static boolean isFocusableAreaId(String id) {
         return STAGED_AREA.id().equals(id) || UNSTAGED_AREA.id().equals(id);
     }
 
     /**
-     * The id of the diff area to focus: the staged one if it shows anything, else the unstaged one.
+     * The id of the focusable area to focus: the staged one if it shows anything, else the unstaged one.
      */
-    public static Optional<String> diffFocusId() {
-        return Stream.of(STAGED_AREA, UNSTAGED_AREA).filter(DiffArea::hasContent).map(DiffArea::id).findFirst();
+    public static Optional<String> firstFocusableAreaId() {
+        return Stream.of(STAGED_AREA, UNSTAGED_AREA).filter(ScrollArea::hasContent).map(ScrollArea::id).findFirst();
     }
 
     private ContentPanel() {
     }
 
-    private static final class DiffArea {
+    private static final class ScrollArea {
         private final String id;
         private final RichTextAreaElement element;
-        private String diff = "";
+        private final Function<String, Text> styling;
+        private String content = "";
 
-        DiffArea(String id) {
+        ScrollArea(String id, boolean focusable, Function<String, Text> styling) {
             this.id = id;
-            element = richTextArea().id(id).focusable().rounded().scrollbar().fill();
+            this.styling = styling;
+            element = richTextArea().id(id).rounded().scrollbar().fill();
+            if (focusable) {
+                element.focusable();
+            }
             element.onKeyEvent(event -> {
                 // Key handlers also see keys typed elsewhere; the callback checks that a diff has focus.
-                return event.code() == KeyCode.ESCAPE && leaveDiff.get() ? EventResult.HANDLED : EventResult.UNHANDLED;
+                return event.code() == KeyCode.ESCAPE && leaveScrollArea.get() ? EventResult.HANDLED : EventResult.UNHANDLED;
             });
         }
 
@@ -85,19 +92,19 @@ public final class ContentPanel {
         }
 
         /**
-         * Shows {@code newDiff}, scrolling back to the top when it differs from what was shown.
+         * Shows {@code newContent}, scrolling back to the top when it differs from what was shown.
          */
-        DiffArea with(String newDiff) {
-            if (!newDiff.equals(diff)) {
-                diff = newDiff;
-                element.text(diffText(newDiff));
+        ScrollArea with(String newContent) {
+            if (!newContent.equals(content)) {
+                content = newContent;
+                element.text(styling.apply(newContent));
                 element.state().scrollToTop();
             }
             return this;
         }
 
         boolean hasContent() {
-            return !diff.isBlank();
+            return !content.isBlank();
         }
 
         RichTextAreaElement show(String title) {
@@ -165,6 +172,10 @@ public final class ContentPanel {
         return Text.from(diff.lines().map(ContentPanel::diffLine).toList());
     }
 
+    static Text plainText(String content) {
+        return Text.from(content.lines().map(line -> Line.from(Span.raw(line))).toList());
+    }
+
     /**
      * A line of a unified diff, colored by what it is: added, removed, a hunk header or a file header.
      */
@@ -184,11 +195,11 @@ public final class ContentPanel {
         return Line.from(Span.raw(line));
     }
 
-    private static Panel branchLogView(Model model) {
+    private static StyledElement<?> branchLogView(Model model) {
         return model.branchLog()
                 .map(ContentPanel::shown)
-                .map(log -> whenLoaded(Messages.get("panel.log.titleFor", log.branch()), log.commits(), commits ->
-                        panel(Messages.get("panel.log.titleFor", log.branch()), rows(logLines(commits, ZoneId.systemDefault()))).rounded()))
+                .<StyledElement<?>>map(log -> whenLoaded(Messages.get("panel.log.titleFor", log.branch()), log.commits(), commits ->
+                        LOG_AREA.with(String.join("\n", logLines(commits, ZoneId.systemDefault()))).show(Messages.get("panel.log.titleFor", log.branch()))))
                 .orElseGet(() -> panel(Messages.get("panel.log.title"), text(Placeholders.loading()).dim()).rounded());
     }
 
@@ -215,7 +226,7 @@ public final class ContentPanel {
         return Messages.get("content.author", commit.authorName(), commit.authorEmail());
     }
 
-    private static Panel commitDiffView(Model model, int commitsSelection) {
+    private static StyledElement<?> commitDiffView(Model model, int commitsSelection) {
         return whenLoaded(Messages.get("panel.commit.title"), model.commits(), commits -> {
             if (commits.isEmpty()) {
                 return panel(Messages.get("panel.commit.title"), text(Messages.get("content.noCommits"))).rounded();
@@ -233,16 +244,12 @@ public final class ContentPanel {
     }
 
 
-    private static <T> Panel whenLoaded(String title, Loadable<T> loadable, Function<T, Panel> view) {
+    private static <T> StyledElement<?> whenLoaded(String title, Loadable<T> loadable, Function<T, StyledElement<?>> view) {
         return switch (loadable) {
             case Loadable.Loaded<T>(T value) -> view.apply(value);
             case Loadable.Loading<T>() -> panel(title, text(Placeholders.loading()).dim()).rounded();
             case Loadable.Failed<T>(String message) -> panel(title, text(Placeholders.error(message))).rounded();
         };
-    }
-
-    private static Element[] rows(List<String> lines) {
-        return lines.stream().map(line -> (Element) text(line)).toArray(Element[]::new);
     }
 
     private static int clamp(int index, int size) {
