@@ -20,6 +20,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -134,7 +135,7 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     public List<Commit> commits() {
         try {
             ObjectId head = repository.resolve(Constants.HEAD);
-            return head == null ? List.of() : log(head);
+            return head == null ? List.of() : CommitGraph.arrange(log(head));
         } catch (IOException e) {
             throw new UncheckedIOException(Messages.get("git.readLogFailed"), e);
         }
@@ -166,7 +167,8 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     private static Commit toCommit(RevCommit c) {
         PersonIdent author = c.getAuthorIdent();
         return new Commit(c.name(), c.abbreviate(7).name(), author.getName(), author.getEmailAddress(),
-                author.getWhenAsInstant(), c.getShortMessage(), extendedMessage(c.getFullMessage()));
+                author.getWhenAsInstant(), c.getShortMessage(), extendedMessage(c.getFullMessage()),
+                Arrays.stream(c.getParents()).map(RevCommit::name).toList());
     }
 
     /**

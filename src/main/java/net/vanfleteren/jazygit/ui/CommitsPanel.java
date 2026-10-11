@@ -9,15 +9,18 @@ import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import net.vanfleteren.jazygit.state.CommitDetail;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * Left-side panel listing the commit log.
@@ -27,9 +30,7 @@ public class CommitsPanel {
     public static final String ID = "commits";
 
     private final LoadableList<List<Commit>> list = new LoadableList<>(Messages.get("panel.commits.title"), ID,
-            commits -> commits.stream()
-                    .map(c -> LoadableList.Row.of(c.shortSha() + " " + c.message()))
-                    .toList());
+            commits -> CommitGraph.layout(commits).stream().map(CommitsPanel::row).toList());
     // The list's key handler also sees keys typed in other panes, so it must know whether it has focus.
     private boolean focused;
     private final Runnable openCommit;
@@ -89,6 +90,32 @@ public class CommitsPanel {
                 .map(Commit::sha)
                 .filter(sha -> !model.commitDetail().map(CommitDetail::sha).equals(Optional.of(sha)))
                 .map(SelectionMsg.CommitSelected::new);
+    }
+
+    /**
+     * The row of a commit. Commits brought in by a merge are drawn as a branch with rails, and a merge
+     * names its parents on a line of its own.
+     */
+    static LoadableList.Row row(CommitGraph.Node node) {
+        Commit commit = node.commit();
+        String rails = node.depth() == 0 ? "" : "| ".repeat(node.depth() + 1);
+        String lead = node.closesBranch() ? rails.substring(0, rails.length() - 2) + "/ " : rails;
+        LoadableList.Row row = LoadableList.Row.of(lead + commit.shortSha() + " " + initials(commit.authorName()) + " ○ "
+                + commit.message());
+        return commit.isMerge()
+                ? row.withDetail(rails + "\\ merge " + commit.parents().stream()
+                        .map(sha -> sha.substring(0, Math.min(7, sha.length()))).collect(Collectors.joining(" ")))
+                : row;
+    }
+
+    /**
+     * The first letters of the words of {@code name}, capitalized.
+     */
+    static String initials(String name) {
+        return Arrays.stream(name.strip().split("\\s+"))
+                .filter(word -> !word.isEmpty())
+                .map(word -> word.substring(0, word.offsetByCodePoints(0, 1)).toUpperCase())
+                .collect(Collectors.joining());
     }
 
     private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {

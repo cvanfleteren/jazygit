@@ -7,6 +7,7 @@ import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.KeyEventHandler;
+import dev.tamboui.widgets.common.ScrollBarPolicy;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
 
@@ -45,7 +46,11 @@ final class LoadableList<T> {
     /**
      * A row of the list: consecutive pieces, each with its own colour.
      */
-    record Row(List<Seg> segs) {
+    record Row(List<Seg> segs, Optional<String> detail) {
+
+        Row(List<Seg> segs) {
+            this(segs, Optional.empty());
+        }
 
         static Row of(String text) {
             return new Row(List.of(Seg.of(text)));
@@ -55,11 +60,24 @@ final class LoadableList<T> {
             return new Row(List.of(segs));
         }
 
+        /**
+         * This row with a dimmed line below it, still one item of the list.
+         */
+        Row withDetail(String line) {
+            return new Row(segs, Optional.of(line));
+        }
+
         String text() {
             return segs.stream().map(Seg::text).collect(java.util.stream.Collectors.joining());
         }
 
         StyledElement<?> element() {
+            StyledElement<?> first = firstLine();
+            return detail.<StyledElement<?>>map(line -> column(first, dev.tamboui.toolkit.Toolkit.text(line).dim()))
+                    .orElse(first);
+        }
+
+        private StyledElement<?> firstLine() {
             return segs.size() == 1 && segs.getFirst().color().isEmpty()
                     ? dev.tamboui.toolkit.Toolkit.text(segs.getFirst().text())
                     : row(segs.stream()
@@ -92,7 +110,10 @@ final class LoadableList<T> {
         this.reselect = reselect;
         this.list = list()
                 .id(id)
-                .focusable();
+                .focusable()
+                .autoScroll()
+                .scrollbar(ScrollBarPolicy.AS_NEEDED)
+                .fill();
     }
 
     Panel render(Loadable<T> value, boolean focused) {

@@ -184,6 +184,26 @@ class JGitInfoProviderTest {
     }
 
     @Test
+    void commitsKnowTheirParentsAndMergesAreFollowedByTheirBranch() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Feature work");
+        git("checkout", "-q", "main");
+        Files.writeString(repo.resolve("m.txt"), "m\n");
+        git("add", "m.txt");
+        git("commit", "-q", "-m", "Main work");
+        git("merge", "-q", "--no-ff", "-m", "Merge feature", "feature");
+
+        List<Commit> commits = provider.commits();
+
+        assertEquals(List.of("Merge feature", "Feature work", "Main work"),
+                commits.stream().map(Commit::message).limit(3).toList());
+        assertEquals(2, commits.getFirst().parents().size());
+        assertTrue(commits.getFirst().isMerge());
+    }
+
+    @Test
     void aFailingCommandReportsTheCommandsRunUpToAndIncludingIt() {
         GitCommandException e = assertThrows(GitCommandException.class,
                 () -> provider.deleteBranch("missing", true, false));

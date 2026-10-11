@@ -16,6 +16,7 @@ import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.widgets.common.ScrollBarPolicy;
 import dev.tamboui.widgets.tree.TreeNode;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Conflict;
@@ -53,6 +54,7 @@ public class FilesPanel {
     private final TreeElement<FileTree> tree = Toolkit.<FileTree>tree()
             .id(ID)
             .focusable()
+            .scrollbar(ScrollBarPolicy.AS_NEEDED)
             .nodeRenderer(FilesPanel::renderNode);
     private List<TreeNode<FileTree>> roots = List.of();
     private Loadable<RepoStatus> shown;
