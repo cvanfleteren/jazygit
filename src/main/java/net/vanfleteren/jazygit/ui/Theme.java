@@ -20,6 +20,9 @@ public final class Theme {
     private static final String RESOURCE_DIR = "/net/vanfleteren/jazygit/themes/";
     public static final String DARK = "dark";
     public static final String LIGHT = "light";
+    public static final String DARCULA = "darcula";
+    /** The themes, in the order they are offered. */
+    public static final List<String> NAMES = List.of(DARK, LIGHT, DARCULA);
 
     /** CSS class names referenced from the stylesheets. */
     public static final class Classes {
@@ -53,7 +56,7 @@ public final class Theme {
     public static StyleEngine createEngine() {
         StyleEngine engine = StyleEngine.create();
         try {
-            for (String name : List.of(DARK, LIGHT)) {
+            for (String name : NAMES) {
                 engine.loadStylesheet(name, RESOURCE_DIR + name + ".tcss");
             }
         } catch (IOException e) {
@@ -64,18 +67,21 @@ public final class Theme {
         return engine;
     }
 
-    /** Whether {@code event} is the shortcut that switches between the dark and the light theme. */
-    public static boolean isToggleKey(KeyEvent event) {
+    /** Whether {@code event} is the shortcut that asks which theme to use. */
+    public static boolean isThemeKey(KeyEvent event) {
         return event.hasCtrl() && event.isCharIgnoreCase('t');
     }
 
-    /** Switches between the dark and the light theme; the next render picks it up. */
-    public static void toggle() {
+    /**
+     * Makes {@code name} the active theme, if it is not yet; the next render picks it up. An unknown name
+     * leaves the theme as it is.
+     */
+    public static void activate(String name) {
         StyleEngine engine = active;
-        if (engine == null) {
+        if (engine == null || !NAMES.contains(name) || engine.getActiveStylesheet().filter(name::equals).isPresent()) {
             return;
         }
-        engine.setActiveStylesheet(engine.getActiveStylesheet().filter(DARK::equals).isPresent() ? LIGHT : DARK);
+        engine.setActiveStylesheet(name);
     }
 
     /**

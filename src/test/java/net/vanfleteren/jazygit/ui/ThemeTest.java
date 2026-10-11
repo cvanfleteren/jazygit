@@ -36,20 +36,32 @@ class ThemeTest {
     }
 
     @Test
-    void toggleSwitchesBetweenTheDarkAndTheLightTheme() {
+    void activateSwitchesTheStyles() {
         var engine = Theme.createEngine();
         assertEquals(Optional.of(Theme.DARK), engine.getActiveStylesheet());
 
-        Theme.toggle();
+        Theme.activate(Theme.LIGHT);
         assertEquals(Optional.of(Theme.LIGHT), engine.getActiveStylesheet());
-        Theme.toggle();
-        assertEquals(Optional.of(Theme.DARK), engine.getActiveStylesheet());
+        Theme.activate(Theme.DARCULA);
+        assertEquals(Optional.of(Theme.DARCULA), engine.getActiveStylesheet());
+        Theme.activate("nonsense");
+        assertEquals(Optional.of(Theme.DARCULA), engine.getActiveStylesheet());
+    }
+
+    @Test
+    void everyThemeStylesThePanelBorders() {
+        for (String name : Theme.NAMES) {
+            var engine = Theme.createEngine();
+            Theme.activate(name);
+
+            assertTrue(engine.resolve(new Node("Panel", Set.of())).borderColor().isPresent(), name);
+        }
     }
 
     @Test
     void ctrlTIsTheToggleKey() {
-        assertTrue(Theme.isToggleKey(KeyEvent.ofChar('t', KeyModifiers.CTRL)));
-        assertFalse(Theme.isToggleKey(KeyEvent.ofChar('t')));
-        assertFalse(Theme.isToggleKey(KeyEvent.ofChar('x', KeyModifiers.CTRL)));
+        assertTrue(Theme.isThemeKey(KeyEvent.ofChar('t', KeyModifiers.CTRL)));
+        assertFalse(Theme.isThemeKey(KeyEvent.ofChar('t')));
+        assertFalse(Theme.isThemeKey(KeyEvent.ofChar('x', KeyModifiers.CTRL)));
     }
 }

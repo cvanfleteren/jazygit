@@ -71,15 +71,17 @@ public final class Keymap {
      * @param label          how the key is shown to the user
      * @param descriptionKey the message key of what the key does
      * @param matches        whether an event is this key; never for a key that the framework handles
-     * @param action         what it does
+     * @param msg            the message to send for it
      */
-    public record Global(String label, String descriptionKey, Predicate<KeyEvent> matches, Runnable action) {
+    public record Global(String label, String descriptionKey, Predicate<KeyEvent> matches, Supplier<Msg> msg) {
 
         /**
          * A key that is only listed, because the framework handles it.
          */
         public static Global documented(String label, String descriptionKey) {
-            return new Global(label, descriptionKey, event -> false, () -> { });
+            return new Global(label, descriptionKey, event -> false, () -> {
+                throw new IllegalStateException("Handled by the framework: " + label);
+            });
         }
     }
 

@@ -28,6 +28,7 @@ import java.util.Set;
  * @param pushing        the branches being pushed right now
  * @param commandLog     the mutating git commands that were executed, oldest first
  * @param popup          the popup that is open, if any; only one can be
+ * @param theme          the name of the theme the UI is drawn in
  */
 @With
 public record Model(String repositoryName,
@@ -42,7 +43,11 @@ public record Model(String repositoryName,
                     Optional<String> error,
                     Set<String> pushing,
                     List<LogEntry> commandLog,
-                    Optional<Popup> popup) {
+                    Optional<Popup> popup,
+                    String theme) {
+
+    /** The theme of a new session; one of the themes of {@code ui.Theme}. */
+    public static final String DEFAULT_THEME = "dark";
 
     public Model {
         refreshing = Set.copyOf(refreshing);
@@ -53,7 +58,7 @@ public record Model(String repositoryName,
     public static Model initial(String repositoryName) {
         return new Model(repositoryName, Loadable.loading(), Loadable.loading(), Loadable.loading(),
                 Loadable.loading(), Optional.empty(),
-                Optional.empty(), Optional.empty(), Set.of(), Optional.empty(), Set.of(), List.of(), Optional.empty());
+                Optional.empty(), Optional.empty(), Set.of(), Optional.empty(), Set.of(), List.of(), Optional.empty(), DEFAULT_THEME);
     }
 
     /**

@@ -25,6 +25,8 @@ import net.vanfleteren.jazygit.feature.commit.SquashPopup;
 import net.vanfleteren.jazygit.feature.commit.StageAllPopup;
 import net.vanfleteren.jazygit.feature.stash.StashDropPopup;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchPopup;
+import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
+import net.vanfleteren.jazygit.feature.theme.ThemePopup;
 import net.vanfleteren.jazygit.feature.branch.RebaseDialog;
 import net.vanfleteren.jazygit.feature.branch.RebasePopup;
 import net.vanfleteren.jazygit.feature.discard.DiscardPopup;
@@ -83,6 +85,7 @@ public class JazygitApp extends ToolkitApp {
     private final BranchesPanel branchesPanel = new BranchesPanel(msg -> this.program.dispatch(msg));
     private final NewBranchDialog newBranchDialog = new NewBranchDialog(msg -> this.program.dispatch(msg));
     private final ChoiceDialog<DiscardPopup> discardDialog = DiscardDialog.create(msg -> this.program.dispatch(msg));
+    private final ChoiceDialog<ThemePopup> themeDialog = ThemeDialog.create(msg -> this.program.dispatch(msg));
     private final ChoiceDialog<RebasePopup> rebaseDialog = RebaseDialog.create(msg -> this.program.dispatch(msg));
     private final ChoiceDialog<DeleteBranchPopup> deleteBranchDialog = DeleteBranchDialog.create(msg -> this.program.dispatch(msg));
     private final ConfirmDialog<ForcePushPopup> forcePushDialog = ForcePushDialog.create(msg -> this.program.dispatch(msg));
@@ -100,6 +103,8 @@ public class JazygitApp extends ToolkitApp {
     private final HelpDialog helpDialog = new HelpDialog(msg -> this.program.dispatch(msg));
     // The panel the help popup was opened from, which gets the focus back.
     private String helpOrigin = FilesPanel.ID;
+    // Where the focus was when no popup had it, which the theme popup, opened from anywhere, gives it back to.
+    private String lastFocus = FilesPanel.ID;
     private ExecutorService io;
     private Program program;
 
@@ -122,7 +127,7 @@ public class JazygitApp extends ToolkitApp {
             if (event instanceof KeyEvent key) {
                 for (Keymap.Global global : Keymap.standard().globals()) {
                     if (global.matches().test(key)) {
-                        global.action().run();
+                        program.dispatch(global.msg().get());
                         return EventResult.HANDLED;
                     }
                 }
@@ -164,6 +169,7 @@ public class JazygitApp extends ToolkitApp {
     @Override
     protected Element render() {
         Model model = program.model();
+        Theme.activate(model.theme());
         String focusedId = runner().focusManager().focusedId();
         Panel branches = branchesPanel.render(model, focusedId);
         // The highlighted branch lives in the list widget, which knows it once rendered; the
@@ -195,6 +201,7 @@ public class JazygitApp extends ToolkitApp {
         List<Popup> popups = List.of(
                 new Popup(newBranchDialog.render(model), List.of(NewBranchDialog.ID), BranchesPanel.ID),
                 new Popup(discardDialog.render(model), List.of(DiscardDialog.ID), FilesPanel.ID),
+                new Popup(themeDialog.render(model), List.of(ThemeDialog.ID), lastFocus),
                 new Popup(rebaseDialog.render(model), List.of(RebaseDialog.ID), BranchesPanel.ID),
                 new Popup(deleteBranchDialog.render(model), List.of(DeleteBranchDialog.ID), BranchesPanel.ID),
                 new Popup(forcePushDialog.render(model), List.of(ForcePushDialog.ID), BranchesPanel.ID),
@@ -207,6 +214,9 @@ public class JazygitApp extends ToolkitApp {
                 new Popup(squashDialog.render(model), List.of(SquashDialog.ID), CommitsPanel.ID),
                 new Popup(rewordDialog.render(model), rewordDialog.ids(), CommitsPanel.ID),
                 new Popup(helpDialog.render(model), List.of(HelpDialog.ID), helpOrigin));
+        if (focusedId != null && popups.stream().noneMatch(p -> p.ids().contains(focusedId))) {
+            lastFocus = focusedId;
+        }
         Optional<Popup> open = popups.stream().filter(p -> p.element().isPresent()).findFirst();
         if (open.isPresent()) {
             if (focusedId == null || !open.get().ids().contains(focusedId)) {

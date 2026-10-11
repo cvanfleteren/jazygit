@@ -1,0 +1,48 @@
+/* Inspired by IntelliJ's Darcula. */
+$fg: #a9b7c6;
+$bg: #2b2b2b;
+$border: #5a5d5f;
+$accent: #cc7832;
+$muted: #808080;
+$selection: #214283;
+$added: #6a8759;
+$removed: #bc3f3c;
+$hunk: #6897bb;
+$meta: #9876aa;
+$warn: #ffc66d;
+
+* {
+    color: $fg;
+    background: $bg;
+}
+
+Panel, TextInputElement, TextAreaElement, RichTextAreaElement {
+    border-type: rounded;
+    border-color: $border;
+}
+
+Panel.focused {
+    border-color: $accent;
+}
+
+ListElement-item:selected, TreeElement-node:selected {
+    background: $selection;
+}
+
+.bold { text-style: bold; }
+.dim { color: $muted; }
+.error { color: $removed; }
+.disabled { color: $muted; text-style: crossed-out; }
+.staged { color: $added; }
+.unstaged { color: $removed; }
+.spinner { color: $warn; }
+.ahead { color: $added; }
+.behind { color: $removed; }
+
+Span.diff-header { color: $meta; text-style: bold; }
+Span.diff-added { color: $added; }
+Span.diff-removed { color: $removed; }
+Span.diff-hunk { color: $hunk; }
+Span.current-branch { color: $warn; }
+Span.sha { color: $warn; }
+Span.bold { text-style: bold; }

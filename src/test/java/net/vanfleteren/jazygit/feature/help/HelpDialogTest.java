@@ -57,7 +57,7 @@ class HelpDialogTest {
         for (String scope : List.of(Scopes.FILES.id(), Scopes.BRANCHES.id(), Scopes.COMMITS.id(), Scopes.STASH.id())) {
             String screen = screen(scope);
             assertTrue(screen.contains("Global"), screen);
-            assertTrue(screen.contains("      ctrl+t Switch between dark and light theme"), screen);
+            assertTrue(screen.contains("      ctrl+t Choose the theme"), screen);
         }
     }
 
