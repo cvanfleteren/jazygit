@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * The pure state transitions of the app: given a model and a message, the next model and the IO
@@ -77,15 +79,28 @@ public final class Update {
         model.commitDetail()
                 .filter(detail -> detail.changes() instanceof Failed)
                 .ifPresent(detail -> cmds.add(new LoadCommitDetail(detail.sha())));
-        // The files can change on disk without their status changing, so the diff is read again.
-        model.fileDiff()
-                .map(d -> new LoadFileDiff(d.files()))
-                .filter(cmd -> !refreshing.contains(cmd))
-                .ifPresent(cmd -> {
-                    refreshing.add(cmd);
-                    cmds.add(cmd);
-                });
         return new Next(model.withRefreshing(refreshing), cmds);
+    }
+
+    /**
+     * Reads the highlighted diff again, as files can change on disk without their status changing. This waits
+     * for the status: right after (un)staging, the entries the diff was read for are outdated, and reading
+     * them again would show their changes as gone for as long as the new status takes to arrive.
+     */
+    static Model reloadDiff(Model model, List<Cmd> cmds) {
+        if (!(model.status() instanceof Loaded<RepoStatus>(RepoStatus status))) {
+            return model;
+        }
+        return model.fileDiff()
+                .filter(d -> status.files().containsAll(d.files()))
+                .map(d -> new LoadFileDiff(d.files()))
+                .filter(cmd -> !model.refreshing().contains(cmd))
+                .map(cmd -> {
+                    cmds.add(cmd);
+                    return model.withRefreshing(Stream.concat(model.refreshing().stream(), Stream.of(cmd))
+                            .collect(Collectors.toUnmodifiableSet()));
+                })
+                .orElse(model);
     }
 
     public static List<FileEntry> files(Model model) {

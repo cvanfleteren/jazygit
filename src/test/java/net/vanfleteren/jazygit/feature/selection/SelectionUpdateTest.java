@@ -4,6 +4,7 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.state.BranchLog;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
@@ -179,12 +180,27 @@ class SelectionUpdateTest {
         Model model = Update.update(loaded(), new SelectionMsg.FilesSelected(DIRTY.files())).model();
         model = Update.update(model, new LoadMsg.FileDiffLoaded(DIRTY.files(), new Diffs("", "+a"))).model();
 
-        Next tick = Update.update(model, new Tick());
-        assertEquals(true, tick.cmds().contains(new Cmd.LoadFileDiff(DIRTY.files())));
+        // The diff is read again once the status confirms that its files are still as they were.
+        Model refreshed = Update.update(model, new Tick()).model();
+        Next statusLoaded = Update.update(refreshed, new LoadMsg.StatusLoaded(DIRTY));
+        assertEquals(true, statusLoaded.cmds().contains(new Cmd.LoadFileDiff(DIRTY.files())));
 
         List<FileEntry> next = List.of(new FileEntry("b.txt", ChangeType.UNTRACKED));
         FileDiff loading = Update.update(model, new SelectionMsg.FilesSelected(next)).model().fileDiff().orElseThrow();
         assertEquals(Optional.of(new FileDiff(DIRTY.files(), new Loaded<>(new Diffs("", "+a")))), loading.previous());
+    }
+
+    @Test
+    void aDiffIsNotReloadedForFilesWhoseStatusChanged() {
+        Model model = Update.update(loaded(), new SelectionMsg.FilesSelected(DIRTY.files())).model();
+        model = Update.update(model, new LoadMsg.FileDiffLoaded(DIRTY.files(), new Diffs("", "+a"))).model();
+        List<FileEntry> restaged = DIRTY.files().stream()
+                .map(f -> new FileEntry(f.path(), f.type(), !f.staged(), !f.unstaged()))
+                .toList();
+
+        Next statusLoaded = Update.update(model, new LoadMsg.StatusLoaded(new RepoStatus("main", "aaaa", restaged)));
+
+        assertEquals(false, statusLoaded.cmds().contains(new Cmd.LoadFileDiff(DIRTY.files())));
     }
 
     @Test

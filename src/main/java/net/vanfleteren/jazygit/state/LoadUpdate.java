@@ -33,6 +33,7 @@ import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -72,7 +73,11 @@ public final class LoadUpdate {
                 && previous.headOid().equals(status.headOid()));
         // Commit loads are not deduplicated: one queued after HEAD moved must still run, even if
         // an earlier one is in progress.
-        return headMoved ? Next.of(next, new LoadCommits()) : Next.of(next);
+        List<Cmd> cmds = new ArrayList<>();
+        if (headMoved) {
+            cmds.add(new LoadCommits());
+        }
+        return new Next(Update.reloadDiff(next, cmds), cmds);
     }
 
     private static Next branchesLoaded(Model model, List<Branch> branches) {
