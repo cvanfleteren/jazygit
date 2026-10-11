@@ -8,7 +8,6 @@ import net.vanfleteren.jazygit.feature.branch.PushMsg;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.feature.help.HelpTopic;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
-import dev.tamboui.style.Color;
 import dev.tamboui.widgets.spinner.SpinnerStyle;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
@@ -69,7 +68,7 @@ public class BranchesPanel {
         return new LoadableList.Row(Stream.of(
                         Stream.of(LoadableList.Seg.of("%4s ".formatted(age(since)) + (b.current() ? "* " : "  ") + b.name())),
                         sync(b).stream(),
-                        spinner.stream().map(frame -> LoadableList.Seg.colored(" " + frame, Color.YELLOW)))
+                        spinner.stream().map(frame -> LoadableList.Seg.styled(" " + frame, Theme.Classes.SPINNER)))
                 .flatMap(Function.identity())
                 .toList());
     }
@@ -81,9 +80,9 @@ public class BranchesPanel {
     static List<LoadableList.Seg> sync(Branch branch) {
         return Stream.of(
                         Optional.of(branch.ahead()).filter(n -> n > 0)
-                                .map(n -> LoadableList.Seg.colored(" ↑" + n, Color.GREEN)),
+                                .map(n -> LoadableList.Seg.styled(" ↑" + n, Theme.Classes.AHEAD)),
                         Optional.of(branch.behind()).filter(n -> n > 0)
-                                .map(n -> LoadableList.Seg.colored(" ↓" + n, Color.RED)))
+                                .map(n -> LoadableList.Seg.styled(" ↓" + n, Theme.Classes.BEHIND)))
                 .flatMap(Optional::stream)
                 .toList();
     }

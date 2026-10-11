@@ -3,8 +3,6 @@ package net.vanfleteren.jazygit.ui;
 import net.vanfleteren.jazygit.i18n.Messages;
 import static dev.tamboui.toolkit.Toolkit.*;
 
-import dev.tamboui.style.Color;
-import dev.tamboui.style.Style;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import dev.tamboui.text.Text;
@@ -169,22 +167,22 @@ public final class ContentPanel {
     private static StyledElement<?> fileDiffView(Model model) {
         // With no files there is nothing to highlight, so no diff is ever requested.
         if (Update.files(model).isEmpty() && model.status() instanceof Loadable.Loaded<RepoStatus>) {
-            return panel(Messages.get("panel.diff.title"), text(Messages.get("content.noChangedFiles")).dim()).rounded();
+            return panel(Messages.get("panel.diff.title"), text(Messages.get("content.noChangedFiles")).addClass(Theme.Classes.DIM));
         }
         return model.fileDiff()
                 .map(ContentPanel::shown)
                 .map(d -> switch (d.diff()) {
                     case Loadable.Loaded<Diffs>(Diffs diffs) -> diffPanels(diffs);
-                    case Loadable.Loading<Diffs>() -> panel(Messages.get("panel.diff.title"), text(Placeholders.loading()).dim()).rounded();
+                    case Loadable.Loading<Diffs>() -> panel(Messages.get("panel.diff.title"), text(Placeholders.loading()).addClass(Theme.Classes.DIM));
                     case Loadable.Failed<Diffs>(String message) ->
-                            panel(Messages.get("panel.diff.title"), text(Placeholders.error(message))).rounded();
+                            panel(Messages.get("panel.diff.title"), text(Placeholders.error(message)));
                 })
-                .orElseGet(() -> panel(Messages.get("panel.diff.title"), text(Placeholders.loading()).dim()).rounded());
+                .orElseGet(() -> panel(Messages.get("panel.diff.title"), text(Placeholders.loading()).addClass(Theme.Classes.DIM)));
     }
 
     private static StyledElement<?> diffPanels(Diffs diffs) {
         if (diffs.isEmpty()) {
-            return panel(Messages.get("panel.diff.title"), text(Messages.get("content.noChanges")).dim()).rounded();
+            return panel(Messages.get("panel.diff.title"), text(Messages.get("content.noChanges")).addClass(Theme.Classes.DIM));
         }
         List<Element> panels = Stream.of(
                         Map.entry(Messages.get("content.staged"), STAGED_AREA.with(diffs.staged())),
@@ -214,7 +212,7 @@ public final class ContentPanel {
      */
     static Text logText(String content) {
         return Text.from(content.lines().map(line -> line.startsWith("* ")
-                        ? Line.from(Span.raw("* "), Span.styled(line.substring(2), Style.EMPTY.fg(Color.YELLOW)))
+                        ? Line.from(Span.raw("* "), Span.styled(line.substring(2), Theme.spanStyle(Theme.Classes.CURRENT_BRANCH)))
                         : Line.from(Span.raw(line)))
                 .toList());
     }
@@ -228,16 +226,16 @@ public final class ContentPanel {
      */
     static Line diffLine(String line) {
         if (line.startsWith("+++") || line.startsWith("---") || line.startsWith("diff ") || line.startsWith("index ")) {
-            return Line.from(Span.styled(line, Style.EMPTY.bold()));
+            return Line.from(Span.styled(line, Theme.spanStyle(Theme.Classes.DIFF_HEADER)));
         }
         if (line.startsWith("+")) {
-            return Line.from(Span.styled(line, Style.EMPTY.fg(Color.GREEN)));
+            return Line.from(Span.styled(line, Theme.spanStyle(Theme.Classes.DIFF_ADDED)));
         }
         if (line.startsWith("-")) {
-            return Line.from(Span.styled(line, Style.EMPTY.fg(Color.RED)));
+            return Line.from(Span.styled(line, Theme.spanStyle(Theme.Classes.DIFF_REMOVED)));
         }
         if (line.startsWith("@@")) {
-            return Line.from(Span.styled(line, Style.EMPTY.fg(Color.CYAN)));
+            return Line.from(Span.styled(line, Theme.spanStyle(Theme.Classes.DIFF_HUNK)));
         }
         return Line.from(Span.raw(line));
     }
@@ -247,7 +245,7 @@ public final class ContentPanel {
                 .map(ContentPanel::shown)
                 .<StyledElement<?>>map(log -> whenLoaded(Messages.get("panel.log.titleFor", log.branch()), log.commits(), commits ->
                         LOG_AREA.with(String.join("\n", logLines(commits, ZoneId.systemDefault()))).show(Messages.get("panel.log.titleFor", log.branch()))))
-                .orElseGet(() -> panel(Messages.get("panel.log.title"), text(Placeholders.loading()).dim()).rounded());
+                .orElseGet(() -> panel(Messages.get("panel.log.title"), text(Placeholders.loading()).addClass(Theme.Classes.DIM)));
     }
 
     /**
@@ -294,15 +292,15 @@ public final class ContentPanel {
                             .<StyledElement<?>>map(commit -> COMMIT_AREA
                                     .with(new CommitContent(commit, changes), () -> commitText(commit, changes))
                                     .show(Messages.get("panel.commit.titleFor", commit.shortSha())))
-                            .orElseGet(() -> panel(title, text(Placeholders.loading()).dim()).rounded());
-                    case Loadable.Loading<String>() -> panel(title, text(Placeholders.loading()).dim()).rounded();
+                            .orElseGet(() -> panel(title, text(Placeholders.loading()).addClass(Theme.Classes.DIM)));
+                    case Loadable.Loading<String>() -> panel(title, text(Placeholders.loading()).addClass(Theme.Classes.DIM));
                     case Loadable.Failed<String>(String message) ->
-                            panel(title, text(Placeholders.error(message))).rounded();
+                            panel(title, text(Placeholders.error(message)));
                 })
                 .orElseGet(() -> model.commits() instanceof Loadable.Loaded<List<Commit>>(List<Commit> commits)
                         && commits.isEmpty()
-                        ? panel(title, text(Messages.get("content.noCommits"))).rounded()
-                        : panel(title, text(Placeholders.loading()).dim()).rounded());
+                        ? panel(title, text(Messages.get("content.noCommits")))
+                        : panel(title, text(Placeholders.loading()).addClass(Theme.Classes.DIM)));
     }
 
     private static Optional<Commit> commit(Model model, String sha) {
@@ -324,12 +322,12 @@ public final class ContentPanel {
      */
     static Text commitText(Commit commit, String changes) {
         Stream<Line> header = Stream.of(
-                Line.from(Span.styled(Messages.get("content.commitSha", commit.sha()), Style.EMPTY.fg(Color.YELLOW))),
+                Line.from(Span.styled(Messages.get("content.commitSha", commit.sha()), Theme.spanStyle(Theme.Classes.SHA))),
                 Line.from(Span.raw(Messages.get("content.commitAuthor", commit.authorName(), commit.authorEmail()))),
                 Line.from(Span.raw(Messages.get("content.commitDate", commitDate().format(
                         commit.authorTime().atZone(ZoneId.systemDefault()))))),
                 Line.from(Span.raw("")),
-                Line.from(Span.styled(MESSAGE_INDENT + commit.message(), Style.EMPTY.bold())));
+                Line.from(Span.styled(MESSAGE_INDENT + commit.message(), Theme.spanStyle(Theme.Classes.BOLD))));
         Stream<Line> body = commit.body().isBlank()
                 ? Stream.empty()
                 : Stream.concat(Stream.of(Line.from(Span.raw(""))), commit.body().lines().map(l -> Line.from(Span.raw(l.isBlank() ? l : MESSAGE_INDENT + l))));
@@ -345,8 +343,8 @@ public final class ContentPanel {
     private static <T> StyledElement<?> whenLoaded(String title, Loadable<T> loadable, Function<T, StyledElement<?>> view) {
         return switch (loadable) {
             case Loadable.Loaded<T>(T value) -> view.apply(value);
-            case Loadable.Loading<T>() -> panel(title, text(Placeholders.loading()).dim()).rounded();
-            case Loadable.Failed<T>(String message) -> panel(title, text(Placeholders.error(message))).rounded();
+            case Loadable.Loading<T>() -> panel(title, text(Placeholders.loading()).addClass(Theme.Classes.DIM));
+            case Loadable.Failed<T>(String message) -> panel(title, text(Placeholders.error(message)));
         };
     }
 }

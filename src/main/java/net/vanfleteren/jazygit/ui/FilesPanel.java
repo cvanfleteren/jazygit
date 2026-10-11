@@ -12,7 +12,6 @@ import net.vanfleteren.jazygit.feature.stage.StageMsg;
 import dev.tamboui.toolkit.Toolkit;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.elements.TreeElement;
-import dev.tamboui.style.Color;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
@@ -49,8 +48,6 @@ public class FilesPanel {
     // A virtual directory holding everything, so that all changes can be (un)staged at once.
     private static final String ROOT_NAME = "/";
 
-    private static final Color STAGED = Color.GREEN;
-    private static final Color UNSTAGED = Color.RED;
 
     private final TreeElement<FileTree> tree = Toolkit.<FileTree>tree()
             .id(ID)
@@ -193,16 +190,16 @@ public class FilesPanel {
         }
         FileEntry entry = file.entry();
         if (entry.type() == ChangeType.UNTRACKED) {
-            return Toolkit.row(Toolkit.text("??").fg(UNSTAGED), Toolkit.text(" " + file.name()));
+            return Toolkit.row(Toolkit.text("??").addClass(Theme.Classes.UNSTAGED), Toolkit.text(" " + file.name()));
         }
         if (entry.conflict().isPresent()) {
             Conflict conflict = entry.conflict().get();
-            return Toolkit.row(Toolkit.text(marker(conflict.ours())).fg(STAGED),
-                    Toolkit.text(marker(conflict.theirs())).fg(UNSTAGED), Toolkit.text(" " + file.name()));
+            return Toolkit.row(Toolkit.text(marker(conflict.ours())).addClass(Theme.Classes.STAGED),
+                    Toolkit.text(marker(conflict.theirs())).addClass(Theme.Classes.UNSTAGED), Toolkit.text(" " + file.name()));
         }
         String staged = entry.staged() ? entry.type().marker() : " ";
         String unstaged = !entry.unstaged() ? " " : entry.type() == ChangeType.DELETED ? "D" : "M";
-        return Toolkit.row(Toolkit.text(staged).fg(STAGED), Toolkit.text(unstaged).fg(UNSTAGED),
+        return Toolkit.row(Toolkit.text(staged).addClass(Theme.Classes.STAGED), Toolkit.text(unstaged).addClass(Theme.Classes.UNSTAGED),
                 Toolkit.text(" " + file.name()));
     }
 

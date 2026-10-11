@@ -40,6 +40,7 @@ import net.vanfleteren.jazygit.feature.stash.StashDialog;
 import net.vanfleteren.jazygit.feature.stash.StashDropDialog;
 import net.vanfleteren.jazygit.ui.StashPanel;
 import net.vanfleteren.jazygit.ui.StatusPanel;
+import net.vanfleteren.jazygit.ui.Theme;
 
 import java.nio.file.Path;
 import java.time.Duration;
@@ -99,6 +100,7 @@ public class JazygitApp extends ToolkitApp {
     @Override
     protected void onStart() {
         ToolkitRunner runner = runner();
+        runner.styleEngine(Theme.createEngine());
         runner.focusManager().setFocus(FilesPanel.ID);
         ContentPanel.onLeaveScrollArea(() -> {
             Optional<String> pane = ContentPanel.paneOfArea(runner.focusManager().focusedId());

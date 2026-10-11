@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.ui.widgets;
 
 import static dev.tamboui.toolkit.Toolkit.*;
 
+import net.vanfleteren.jazygit.ui.Theme;
 import dev.tamboui.style.Overflow;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.widgets.paragraph.Paragraph;
@@ -71,7 +72,7 @@ public final class ConfirmDialog<P extends Popup> {
             return dialog(title.apply(popup),
                     widget(Paragraph.builder().text(text).overflow(Overflow.WRAP_WORD).build()).length(messageHeight),
                     text(""),
-                    text(Messages.get("dialog.hint.confirmCancel")).dim())
+                    text(Messages.get("dialog.hint.confirmCancel")).addClass(Theme.Classes.DIM))
                     .id(id)
                     .focusable()
                     .rounded()

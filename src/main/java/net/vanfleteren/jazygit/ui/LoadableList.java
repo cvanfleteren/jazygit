@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.ui;
 
 import static dev.tamboui.toolkit.Toolkit.*;
 
-import dev.tamboui.style.Color;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.elements.Panel;
@@ -32,14 +31,14 @@ final class LoadableList<T> {
     /**
      * A piece of a row, in a colour of its own when it has one.
      */
-    record Seg(String text, Optional<Color> color) {
+    record Seg(String text, Optional<String> cssClass) {
 
         static Seg of(String text) {
             return new Seg(text, Optional.empty());
         }
 
-        static Seg colored(String text, Color color) {
-            return new Seg(text, Optional.of(color));
+        static Seg styled(String text, String cssClass) {
+            return new Seg(text, Optional.of(cssClass));
         }
     }
 
@@ -73,15 +72,15 @@ final class LoadableList<T> {
 
         StyledElement<?> element() {
             StyledElement<?> first = firstLine();
-            return detail.<StyledElement<?>>map(line -> column(first, dev.tamboui.toolkit.Toolkit.text(line).dim()))
+            return detail.<StyledElement<?>>map(line -> column(first, dev.tamboui.toolkit.Toolkit.text(line).addClass(Theme.Classes.DIM)))
                     .orElse(first);
         }
 
         private StyledElement<?> firstLine() {
-            return segs.size() == 1 && segs.getFirst().color().isEmpty()
+            return segs.size() == 1 && segs.getFirst().cssClass().isEmpty()
                     ? dev.tamboui.toolkit.Toolkit.text(segs.getFirst().text())
                     : row(segs.stream()
-                            .map(seg -> seg.color().map(c -> dev.tamboui.toolkit.Toolkit.text(seg.text()).fg(c))
+                            .map(seg -> seg.cssClass().map(c -> dev.tamboui.toolkit.Toolkit.text(seg.text()).addClass(c))
                                     .orElseGet(() -> dev.tamboui.toolkit.Toolkit.text(seg.text())))
                             .toArray(StyledElement[]::new));
         }

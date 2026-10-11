@@ -1,0 +1,29 @@
+$border: white;
+$accent: cyan;
+
+Panel, TextInputElement, TextAreaElement {
+    border-type: rounded;
+    border-color: $border;
+}
+
+Panel.focused {
+    border-color: $accent;
+}
+
+.bold { text-style: bold; }
+.dim { text-style: dim; }
+.error { color: red; }
+.disabled { text-style: crossed-out dim; }
+.staged { color: green; }
+.unstaged { color: red; }
+.spinner { color: yellow; }
+.ahead { color: green; }
+.behind { color: red; }
+
+Span.diff-header { text-style: bold; }
+Span.diff-added { color: green; }
+Span.diff-removed { color: red; }
+Span.diff-hunk { color: cyan; }
+Span.current-branch { color: yellow; }
+Span.sha { color: yellow; }
+Span.bold { text-style: bold; }

@@ -111,14 +111,13 @@ public final class CommitDialog {
                         textInput(summary)
                                 .id(summaryId)
                                 .title(Messages.get("dialog.commit.summary.title"))
-                                .rounded()
                                 .placeholder(Messages.get("dialog.commit.summary.placeholder"))
                                 .length(INPUT_HEIGHT)
                                 .onSubmit(this::confirm),
                         new SubmittableTextArea(textArea(description)
                                 .title(Messages.get("dialog.commit.description.title"))
-                                .placeholder(Messages.get("dialog.commit.description.placeholder"))
-                                .rounded(), descriptionId, this::confirm)
+                                .placeholder(Messages.get("dialog.commit.description.placeholder")),
+                                descriptionId, this::confirm)
                                 .rows(DESCRIPTION_HEIGHT))
                 .borderType(BorderType.NONE)
                 .width(WIDTH)

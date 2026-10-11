@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.ui;
 
 import static dev.tamboui.toolkit.Toolkit.*;
 
-import dev.tamboui.style.Color;
 import dev.tamboui.style.Overflow;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Panel;
@@ -33,15 +32,13 @@ public final class CommandLogPanel {
     public static Panel render(Model model) {
         List<Element> lines = new ArrayList<>();
         for (LogEntry entry : model.commandLog()) {
-            lines.add(text(entry.title()).bold());
-            entry.commands().forEach(command -> lines.add(text(INDENT + command).dim()));
+            lines.add(text(entry.title()).addClass(Theme.Classes.BOLD));
+            entry.commands().forEach(command -> lines.add(text(INDENT + command).addClass(Theme.Classes.DIM)));
         }
         // The error may wrap, so it is kept out of the tail cut and always shown.
         int room = Math.max(0, VISIBLE_LINES - (model.error().isPresent() ? 1 : 0));
         List<Element> shown = new ArrayList<>(lines.subList(Math.max(0, lines.size() - room), lines.size()));
-        model.error().ifPresent(error -> shown.add(text(error).red().overflow(Overflow.WRAP_WORD)));
-        return panel(Messages.get("panel.commandLog.title"), shown.toArray(Element[]::new))
-                .rounded()
-                .borderColor(Color.WHITE);
+        model.error().ifPresent(error -> shown.add(text(error).addClass(Theme.Classes.ERROR).overflow(Overflow.WRAP_WORD)));
+        return panel(Messages.get("panel.commandLog.title"), shown.toArray(Element[]::new));
     }
 }

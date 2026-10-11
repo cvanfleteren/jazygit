@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.help;
 
 import static dev.tamboui.toolkit.Toolkit.*;
 
+import net.vanfleteren.jazygit.ui.Theme;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.event.EventResult;
@@ -45,7 +46,7 @@ public final class HelpDialog {
             StyledElement<?>[] rows = Stream.concat(
                     topic.bindings().stream()
                             .map(b -> text(KEY_FORMAT.formatted(b.key(), Messages.get(b.descriptionKey())))),
-                    Stream.of(text(""), text(Messages.get("dialog.help.hint")).dim()))
+                    Stream.of(text(""), text(Messages.get("dialog.help.hint")).addClass(Theme.Classes.DIM)))
                     .toArray(StyledElement[]::new);
             return dialog(Messages.get("dialog.help.title", Messages.get(topic.titleKey())), rows)
                     .id(ID)

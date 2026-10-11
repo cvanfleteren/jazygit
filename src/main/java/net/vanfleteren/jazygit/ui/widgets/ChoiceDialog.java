@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.ui.widgets;
 
 import static dev.tamboui.toolkit.Toolkit.*;
 
+import net.vanfleteren.jazygit.ui.Theme;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.ListElement;
@@ -100,7 +101,7 @@ public final class ChoiceDialog<P extends Popup> {
             return dialog(title.apply(popup),
                     list.length(choices.size()),
                     text(""),
-                    text(Messages.get("dialog.hint.selectCancel")).dim())
+                    text(Messages.get("dialog.hint.selectCancel")).addClass(Theme.Classes.DIM))
                     .rounded()
                     .width(WIDTH)
                     .padding(1)
@@ -120,7 +121,7 @@ public final class ChoiceDialog<P extends Popup> {
 
     private static StyledElement<?> row(Choice<?> choice, boolean enabled) {
         String text = Messages.get("dialog.choice.row", String.valueOf(choice.key()), Messages.get(choice.labelKey()));
-        return enabled ? text(text) : text(text).crossedOut().dim();
+        return enabled ? text(text) : text(text).addClass(Theme.Classes.DISABLED);
     }
 
     private EventResult handleKey(KeyEvent event) {

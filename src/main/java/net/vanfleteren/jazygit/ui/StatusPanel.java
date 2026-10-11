@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.ui;
 import net.vanfleteren.jazygit.i18n.Messages;
 import static dev.tamboui.toolkit.Toolkit.*;
 
-import dev.tamboui.style.Color;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.elements.TextElement;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
@@ -27,8 +26,6 @@ public final class StatusPanel {
         };
         TextElement repository = text(Messages.get("status.line", model.repositoryName(), branch));
         return panel(Messages.get("panel.status.title"), repository)
-                .length(3)
-                .rounded()
-                .borderColor(Color.WHITE);
+                .length(3);
     }
 }

@@ -43,15 +43,15 @@ class BranchesPanelTest {
     }
 
     @Test
-    void syncShowsAGreenArrowForUnpushedAndARedOneForIncomingCommits() {
+    void syncShowsAnAheadArrowForUnpushedAndABehindOneForIncomingCommits() {
         java.time.Instant t = java.time.Instant.EPOCH;
         assertEquals(List.of(), BranchesPanel.sync(new Branch("b", false, "1", t, true, false, 0, 0)));
-        assertEquals(List.of(LoadableList.Seg.colored(" ↑2", dev.tamboui.style.Color.GREEN)),
+        assertEquals(List.of(LoadableList.Seg.styled(" ↑2", Theme.Classes.AHEAD)),
                 BranchesPanel.sync(new Branch("b", false, "1", t, true, false, 2, 0)));
-        assertEquals(List.of(LoadableList.Seg.colored(" ↓1", dev.tamboui.style.Color.RED)),
+        assertEquals(List.of(LoadableList.Seg.styled(" ↓1", Theme.Classes.BEHIND)),
                 BranchesPanel.sync(new Branch("b", false, "1", t, true, false, 0, 1)));
-        assertEquals(List.of(LoadableList.Seg.colored(" ↑2", dev.tamboui.style.Color.GREEN),
-                        LoadableList.Seg.colored(" ↓1", dev.tamboui.style.Color.RED)),
+        assertEquals(List.of(LoadableList.Seg.styled(" ↑2", Theme.Classes.AHEAD),
+                        LoadableList.Seg.styled(" ↓1", Theme.Classes.BEHIND)),
                 BranchesPanel.sync(new Branch("b", false, "1", t, true, false, 2, 1)));
     }
 
