@@ -46,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class JazygitAppPilotTest {
 
     private record Fixture(SampleData data, Model model, List<Msg> dispatched, List<Msg> selections, FilesPanel files,
-                            BranchesPanel branches, CommitsPanel commits,
+                            BranchesPanel branches, CommitsPanel commits, StashPanel stash,
                             AtomicReference<FocusManager> focusManagerRef) {
 
         private Fixture() {
@@ -55,7 +55,7 @@ class JazygitAppPilotTest {
 
         private Fixture(SampleData data, List<Msg> dispatched) {
             this(data, TestModels.loaded(data), dispatched, new ArrayList<>(), new FilesPanel(dispatched::add), new BranchesPanel(dispatched::add),
-                    new CommitsPanel(dispatched::add), new AtomicReference<>());
+                    new CommitsPanel(dispatched::add), new StashPanel(dispatched::add), new AtomicReference<>());
         }
 
         Supplier<Element> renderer() {
@@ -65,9 +65,9 @@ class JazygitAppPilotTest {
                 Panel branchesPane = branches.render(model, focusedId);
                 branches.selectionChange(model).ifPresent(selections::add);
                 return row(
-                        column(StatusPanel.render(model), files.render(model, focusedId).percent(30),
-                                branchesPane.percent(30), commits.render(model, focusedId).percent(30),
-                                StashPanel.render().fill())
+                        column(StatusPanel.render(model), files.render(model, focusedId).percent(25),
+                                branchesPane.percent(20), commits.render(model, focusedId).percent(30),
+                                stash.render(model, focusedId).fill())
                                 .percent(30),
                         ContentPanel.render(model, focusedId, commits.selectedIndex())
                                 .fill());
@@ -76,7 +76,7 @@ class JazygitAppPilotTest {
     }
 
     @Test
-    void tabCyclesFocusThroughAllThreePanesAndWrapsAround() throws Exception {
+    void tabCyclesFocusThroughAllFourPanesAndWrapsAround() throws Exception {
         Fixture fixture = new Fixture();
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
@@ -98,15 +98,19 @@ class JazygitAppPilotTest {
 
             pilot.press(KeyCode.TAB);
             pilot.pause();
+            assertEquals(StashPanel.ID, focusManager.focusedId());
+
+            pilot.press(KeyCode.TAB);
+            pilot.pause();
             assertEquals(FilesPanel.ID, focusManager.focusedId(), "Tab should wrap back to Files");
 
             pilot.press(KeyCode.TAB, KeyModifiers.SHIFT);
             pilot.pause();
-            assertEquals(CommitsPanel.ID, focusManager.focusedId(), "Shift+Tab should cycle in reverse");
+            assertEquals(StashPanel.ID, focusManager.focusedId(), "Shift+Tab should cycle in reverse");
 
             pilot.press(KeyCode.TAB, KeyModifiers.SHIFT);
             pilot.pause();
-            assertEquals(BranchesPanel.ID, focusManager.focusedId());
+            assertEquals(CommitsPanel.ID, focusManager.focusedId());
 
             pilot.quit();
         }

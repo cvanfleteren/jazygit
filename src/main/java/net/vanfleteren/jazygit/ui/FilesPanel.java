@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.feature.commit.AmendMsg;
 import net.vanfleteren.jazygit.feature.commit.CommitMsg;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
+import net.vanfleteren.jazygit.feature.stash.StashMsg;
 import net.vanfleteren.jazygit.feature.help.HelpTopic;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import net.vanfleteren.jazygit.feature.stage.StageMsg;
@@ -109,6 +110,7 @@ public class FilesPanel {
             case "?" -> Optional.of(new HelpMsg.Requested(HelpTopic.FILES));
             case "c" -> Optional.of(new CommitMsg.Requested());
             case "A" -> Optional.of(new AmendMsg.Requested());
+            case "s" -> Optional.of(new StashMsg.Requested());
             case "d" -> Optional.ofNullable(tree.selectedNode())
                     .map(TreeNode::data)
                     .map(data -> new DiscardMsg.Requested(data.entries()));

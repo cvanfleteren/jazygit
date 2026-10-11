@@ -30,7 +30,7 @@ class UpdateTest {
         assertEquals("repo", next.model().repositoryName());
         assertInstanceOf(Loading.class, next.model().status());
         assertInstanceOf(Loading.class, next.model().commits());
-        assertEquals(List.of(new LoadStatus(), new LoadBranches()), next.cmds());
+        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadStashes()), next.cmds());
     }
 
     @Test
@@ -93,7 +93,7 @@ class UpdateTest {
     void failuresAreStoredAndRetriedOnTheNextTick() {
         Model model = Update.update(loaded(), new LoadMsg.Failed(new LoadCommits(), "boom")).model();
         assertEquals(new Failed<>("boom"), model.commits());
-        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new LoadCommits()),
+        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadStashes(), new LoadCommits()),
                 Update.update(model, new Tick()).cmds());
 
         Model statusFailed = Update.update(Update.init("repo").model(), new LoadMsg.Failed(new LoadStatus(), "no git"))

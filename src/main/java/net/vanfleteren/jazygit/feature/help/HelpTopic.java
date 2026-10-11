@@ -11,14 +11,18 @@ public enum HelpTopic {
             new Binding("space", "help.files.stage"),
             new Binding("c", "help.files.commit"),
             new Binding("A", "help.files.amend"),
-            new Binding("d", "help.files.discard"))),
+            new Binding("d", "help.files.discard"),
+            new Binding("s", "help.files.stash"))),
     BRANCHES("panel.branches.title", List.of(
             new Binding("space", "help.branches.checkout"),
             new Binding("P", "help.branches.push"),
             new Binding("n", "help.branches.new"),
             new Binding("d", "help.branches.delete"))),
     COMMITS("panel.commits.title", List.of(
-            new Binding("r", "help.commits.reword")));
+            new Binding("r", "help.commits.reword"))),
+    STASH("panel.stash.title", List.of(
+            new Binding("g", "help.stash.pop"),
+            new Binding("d", "help.stash.drop")));
 
     /**
      * A key and the message key of the text describing its action.

@@ -50,6 +50,8 @@ public final class LoadUpdate {
         return switch (msg) {
             case StatusLoaded(RepoStatus status) -> statusLoaded(model, status);
             case BranchesLoaded(var branches) -> branchesLoaded(model, branches);
+            case LoadMsg.StashesLoaded(var stashes) ->
+                    Next.of(finished(model, new Cmd.LoadStashes()).withStashes(model.stashes().reload(stashes)));
             case CommitsLoaded(var commits) -> Next.of(model.withCommits(model.commits().reload(commits)));
             // A log that arrives after another branch was highlighted is dropped.
             case BranchLogLoaded(String branch, var commits) ->
@@ -124,6 +126,7 @@ public final class LoadUpdate {
         return switch (cmd) {
             case LoadStatus() -> model.withStatus(new Failed<>(message));
             case LoadBranches() -> model.withBranches(new Failed<>(message));
+            case Cmd.LoadStashes() -> model.withStashes(new Failed<>(message));
             case LoadCommits() -> model.withCommits(new Failed<>(message));
             case LoadCommitDetail(String sha) ->
                     updateCommitDetail(model, sha, d -> new CommitDetail(sha, new Failed<>(message)));

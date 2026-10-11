@@ -20,6 +20,13 @@ public interface GitRead {
     List<Branch> branches();
 
     /**
+     * The stashes, newest first.
+     *
+     * @throws IllegalStateException if git fails, with git's explanation as message
+     */
+    List<Stash> stashes();
+
+    /**
      * The log of HEAD, newest first.
      */
     List<Commit> commits();

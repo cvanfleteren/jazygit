@@ -79,6 +79,26 @@ class ProgramTest {
         }
 
         @Override
+        public List<net.vanfleteren.jazygit.git.model.Stash> stashes() {
+            return List.of();
+        }
+
+        @Override
+        public List<String> drop(String ref) {
+            return List.of("git stash drop " + ref);
+        }
+
+        @Override
+        public List<String> pop(String ref) {
+            return List.of("git stash pop " + ref);
+        }
+
+        @Override
+        public List<String> stash(String message) {
+            return List.of("git stash");
+        }
+
+        @Override
         public List<Branch> branches() {
             return List.of(new Branch("main", status.head().equals("main"), "main-tip"),
                     new Branch("other", status.head().equals("other"), "other-tip", Instant.EPOCH, true));

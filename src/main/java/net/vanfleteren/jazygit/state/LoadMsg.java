@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.Stash;
 
 import java.util.List;
 
@@ -22,6 +23,9 @@ public sealed interface LoadMsg extends Msg {
     }
 
     record BranchesLoaded(List<Branch> branches) implements LoadMsg {
+    }
+
+    record StashesLoaded(List<Stash> stashes) implements LoadMsg {
     }
 
     record CommitsLoaded(List<Commit> commits) implements LoadMsg {

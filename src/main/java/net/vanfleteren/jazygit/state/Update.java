@@ -33,7 +33,7 @@ public final class Update {
     /**
      * Loads that a tick repeats. They are skipped while a previous one is still running.
      */
-    private static final List<Cmd.Load> PERIODIC = List.of(new LoadStatus(), new LoadBranches());
+    private static final List<Cmd.Load> PERIODIC = List.of(new LoadStatus(), new LoadBranches(), new Cmd.LoadStashes());
 
     private Update() {
     }

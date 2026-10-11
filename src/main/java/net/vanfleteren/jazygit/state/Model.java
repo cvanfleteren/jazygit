@@ -4,6 +4,7 @@ import lombok.With;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.Stash;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,6 +17,7 @@ import java.util.Set;
  * @param status         the working tree status and HEAD
  * @param branches       the local branches
  * @param commits        the commit log of HEAD
+ * @param stashes        the stashes, newest first
  * @param branchLog      the log of the branch highlighted in the branches pane, once one is
  *                       highlighted
  * @param commitDetail   what the commit highlighted in the commits pane changed, once one is highlighted
@@ -32,6 +34,7 @@ public record Model(String repositoryName,
                     Loadable<RepoStatus> status,
                     Loadable<List<Branch>> branches,
                     Loadable<List<Commit>> commits,
+                    Loadable<List<Stash>> stashes,
                     Optional<BranchLog> branchLog,
                     Optional<CommitDetail> commitDetail,
                     Optional<FileDiff> fileDiff,
@@ -48,7 +51,8 @@ public record Model(String repositoryName,
     }
 
     public static Model initial(String repositoryName) {
-        return new Model(repositoryName, Loadable.loading(), Loadable.loading(), Loadable.loading(), Optional.empty(),
+        return new Model(repositoryName, Loadable.loading(), Loadable.loading(), Loadable.loading(),
+                Loadable.loading(), Optional.empty(),
                 Optional.empty(), Optional.empty(), Set.of(), Optional.empty(), Set.of(), List.of(), Optional.empty());
     }
 

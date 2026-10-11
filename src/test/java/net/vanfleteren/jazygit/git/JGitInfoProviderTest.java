@@ -281,6 +281,63 @@ class JGitInfoProviderTest {
     }
 
     @Test
+    void stashSavesTrackedAndUntrackedChangesUnderTheGivenName() throws Exception {
+        Files.writeString(repo.resolve("README.md"), "changed\n");
+        Files.writeString(repo.resolve("new.txt"), "new\n");
+
+        List<String> executed = provider.stash("my work");
+
+        assertEquals(List.of("git stash push --include-untracked --message 'my work'"), executed);
+        assertEquals(List.of(), provider.status().files());
+        assertEquals(List.of(new Stash("stash@{0}", "my work")), provider.stashes());
+    }
+
+    @Test
+    void popRestoresTheChangesAndDropsTheStash() throws Exception {
+        Files.writeString(repo.resolve("README.md"), "changed\n");
+        provider.stash("work");
+
+        List<String> executed = provider.pop("stash@{0}");
+
+        assertEquals(1, executed.size());
+        assertTrue(executed.getFirst().startsWith("git stash pop"), executed.toString());
+        assertEquals("changed\n", Files.readString(repo.resolve("README.md")));
+        assertEquals(List.of(), provider.stashes());
+    }
+
+    @Test
+    void dropDeletesTheStashWithoutApplyingIt() throws Exception {
+        Files.writeString(repo.resolve("README.md"), "changed\n");
+        provider.stash("work");
+
+        List<String> executed = provider.drop("stash@{0}");
+
+        assertEquals(1, executed.size());
+        assertTrue(executed.getFirst().startsWith("git stash drop"), executed.toString());
+        assertEquals(List.of(), provider.stashes());
+        assertEquals("hello\n", Files.readString(repo.resolve("README.md")));
+    }
+
+    @Test
+    void popOfAnUnknownStashFailsWithTheCommand() {
+        GitCommandException e = assertThrows(GitCommandException.class, () -> provider.pop("stash@{3}"));
+
+        assertEquals(1, e.commands().size());
+    }
+
+    @Test
+    void stashesListTheNewestFirstAndThereAreNoneInACleanRepository() throws Exception {
+        assertEquals(List.of(), provider.stashes());
+        Files.writeString(repo.resolve("README.md"), "one\n");
+        provider.stash("first");
+        Files.writeString(repo.resolve("README.md"), "two\n");
+        provider.stash("second");
+
+        assertEquals(List.of(new Stash("stash@{0}", "second"), new Stash("stash@{1}", "first")),
+                provider.stashes());
+    }
+
+    @Test
     void aFailingCommandReportsTheCommandsRunUpToAndIncludingIt() {
         GitCommandException e = assertThrows(GitCommandException.class,
                 () -> provider.deleteBranch("missing", true, false));

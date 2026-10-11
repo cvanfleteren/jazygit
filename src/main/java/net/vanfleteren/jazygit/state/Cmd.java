@@ -59,6 +59,14 @@ public interface Cmd {
         }
     }
 
+    record LoadStashes() implements Load {
+
+        @Override
+        public Msg run(GitInfoProvider git) {
+            return new LoadMsg.StashesLoaded(git.stashes());
+        }
+    }
+
     record LoadCommits() implements Load {
 
         @Override

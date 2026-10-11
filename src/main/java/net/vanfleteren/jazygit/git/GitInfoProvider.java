@@ -5,5 +5,5 @@ package net.vanfleteren.jazygit.git;
  * is only the composition of the capability interfaces; new operations belong in one of those,
  * or in a new one added here.
  */
-public interface GitInfoProvider extends GitRead, GitBranches, GitIndex, GitCommits {
+public interface GitInfoProvider extends GitRead, GitBranches, GitIndex, GitCommits, GitStash {
 }

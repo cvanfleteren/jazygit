@@ -39,6 +39,7 @@ public final class TestModels {
         Model model = Update.init("repo").model();
         model = Update.update(model, new LoadMsg.StatusLoaded(CLEAN)).model();
         model = Update.update(model, new LoadMsg.BranchesLoaded(BRANCHES)).model();
+        model = Update.update(model, new LoadMsg.StashesLoaded(java.util.List.of())).model();
         return Update.update(model, new LoadMsg.CommitsLoaded(COMMITS)).model();
     }
 

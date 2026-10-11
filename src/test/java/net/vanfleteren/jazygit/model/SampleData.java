@@ -29,6 +29,26 @@ public final class SampleData implements GitInfoProvider {
     }
 
     @Override
+    public List<net.vanfleteren.jazygit.git.model.Stash> stashes() {
+        return List.of();
+    }
+
+    @Override
+    public List<String> drop(String ref) {
+            return List.of("git stash drop " + ref);
+        }
+
+        @Override
+        public List<String> pop(String ref) {
+            return List.of("git stash pop " + ref);
+        }
+
+        @Override
+        public List<String> stash(String message) {
+        return List.of("git stash");
+    }
+
+    @Override
     public List<Branch> branches() {
         return List.of(
                 new Branch("main", true, "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678", Instant.EPOCH, true, true),

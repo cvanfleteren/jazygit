@@ -27,6 +27,8 @@ import net.vanfleteren.jazygit.ui.FilesPanel;
 import net.vanfleteren.jazygit.feature.branch.ForcePushDialog;
 import net.vanfleteren.jazygit.feature.branch.StashCheckoutDialog;
 import net.vanfleteren.jazygit.feature.branch.NewBranchDialog;
+import net.vanfleteren.jazygit.feature.stash.StashDialog;
+import net.vanfleteren.jazygit.feature.stash.StashDropDialog;
 import net.vanfleteren.jazygit.ui.StashPanel;
 import net.vanfleteren.jazygit.ui.StatusPanel;
 
@@ -61,10 +63,13 @@ public class JazygitApp extends ToolkitApp {
     private final StashCheckoutDialog stashCheckoutDialog = new StashCheckoutDialog(msg -> this.program.dispatch(msg));
     private final AmendDialog amendDialog = new AmendDialog(msg -> this.program.dispatch(msg));
     private final CommitDialog rewordDialog = CommitDialog.reword(msg -> this.program.dispatch(msg));
+    private final StashDropDialog stashDropDialog = new StashDropDialog(msg -> this.program.dispatch(msg));
+    private final StashDialog stashDialog = new StashDialog(msg -> this.program.dispatch(msg));
     private final StageAllDialog stageAllDialog = new StageAllDialog(msg -> this.program.dispatch(msg));
     private final CommitDialog commitDialog = new CommitDialog(msg -> this.program.dispatch(msg));
     private final CommitsPanel commitsPanel = new CommitsPanel(msg -> this.program.dispatch(msg),
             () -> openContent(CommitsPanel.ID));
+    private final StashPanel stashPanel = new StashPanel(msg -> this.program.dispatch(msg));
     private final HelpDialog helpDialog = new HelpDialog(msg -> this.program.dispatch(msg));
     // The panel the help popup was opened from, which gets the focus back.
     private String helpOrigin = FilesPanel.ID;
@@ -130,11 +135,11 @@ public class JazygitApp extends ToolkitApp {
         Element layout = row(
                 column(
                         StatusPanel.render(model),
-                        filesPanel.render(model, focusedId).percent(30),
-                        branches.percent(30),
+                        filesPanel.render(model, focusedId).percent(25),
+                        branches.percent(20),
                         commitsPanel.render(model, focusedId).percent(30),
-                        // The remaining ~10%, after the fixed-height status panel.
-                        StashPanel.render().fill())
+                        // The remaining 25%, less the fixed-height status panel.
+                        stashPanel.render(model, focusedId).fill())
                         .percent(30),
                 column(
                         ContentPanel.render(program.model(), focusedId, commitsPanel.selectedIndex())
@@ -146,6 +151,7 @@ public class JazygitApp extends ToolkitApp {
             case FILES -> FilesPanel.ID;
             case BRANCHES -> BranchesPanel.ID;
             case COMMITS -> CommitsPanel.ID;
+            case STASH -> StashPanel.ID;
         });
         List<Popup> popups = List.of(
                 new Popup(newBranchDialog.render(model), List.of(NewBranchDialog.ID), BranchesPanel.ID),
@@ -154,6 +160,8 @@ public class JazygitApp extends ToolkitApp {
                 new Popup(forcePushDialog.render(model), List.of(ForcePushDialog.ID), BranchesPanel.ID),
                 new Popup(stashCheckoutDialog.render(model), List.of(StashCheckoutDialog.ID), BranchesPanel.ID),
                 new Popup(amendDialog.render(model), List.of(AmendDialog.ID), FilesPanel.ID),
+                new Popup(stashDropDialog.render(model), List.of(StashDropDialog.ID), StashPanel.ID),
+                new Popup(stashDialog.render(model), List.of(StashDialog.ID), FilesPanel.ID),
                 new Popup(stageAllDialog.render(model), List.of(StageAllDialog.ID), FilesPanel.ID),
                 new Popup(commitDialog.render(model), commitDialog.ids(), FilesPanel.ID),
                 new Popup(rewordDialog.render(model), rewordDialog.ids(), CommitsPanel.ID),

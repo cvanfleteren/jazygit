@@ -132,6 +132,26 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     }
 
     @Override
+    public List<Stash> stashes() {
+        return CliStash.list(workTree);
+    }
+
+    @Override
+    public List<String> drop(String ref) {
+        return CliStash.drop(workTree, ref);
+    }
+
+    @Override
+    public List<String> pop(String ref) {
+        return CliStash.pop(workTree, ref);
+    }
+
+    @Override
+    public List<String> stash(String message) {
+        return CliStash.push(workTree, message);
+    }
+
+    @Override
     public List<Commit> commits() {
         try {
             ObjectId head = repository.resolve(Constants.HEAD);
