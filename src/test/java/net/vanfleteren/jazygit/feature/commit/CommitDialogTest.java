@@ -92,7 +92,7 @@ class CommitDialogTest {
     void rewordStartsOutWithTheCurrentMessageAndConfirmsIt() throws Exception {
         CommitDialog reword = CommitDialog.reword(dispatched::add);
         Model rewording = Update.update(TestModels.loaded(new SampleData()), new RewordMsg.Requested(0)).model();
-        Commit last = rewording.popup(RewordPopup.class).orElseThrow().last();
+        Commit last = rewording.popup(RewordPopup.class).orElseThrow().commit();
 
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> reword.render(rewording).orElseThrow())) {
             runner.runner().focusManager().setFocus(CommitDialog.REWORD_ID);

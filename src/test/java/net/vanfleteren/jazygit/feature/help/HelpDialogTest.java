@@ -48,7 +48,7 @@ class HelpDialogTest {
 
     @Test
     void listsTheKeysOfTheCommitsPanel() throws Exception {
-        assertTrue(screen(HelpTopic.COMMITS).contains("           r Reword last commit"));
+        assertTrue(screen(HelpTopic.COMMITS).contains("           r Reword commit"));
     }
 
     @Test

@@ -283,9 +283,20 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
         return CliIndex.amend(workTree);
     }
 
+    private String headOid() {
+        try {
+            ObjectId head = repository.resolve(Constants.HEAD);
+            return head == null ? "" : head.name();
+        } catch (IOException e) {
+            throw new UncheckedIOException(Messages.get("git.readLogFailed"), e);
+        }
+    }
+
     @Override
-    public List<String> reword(String summary, String description) {
-        return CliIndex.reword(workTree, summary, description);
+    public List<String> reword(String sha, String summary, String description) {
+        return sha.equals(headOid())
+                ? CliIndex.reword(workTree, summary, description)
+                : CliRebase.reword(workTree, sha, summary, description);
     }
 
     @Override

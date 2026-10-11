@@ -152,7 +152,7 @@ class ProgramTest {
         }
 
         @Override
-        public List<String> reword(String summary, String description) {
+        public List<String> reword(String sha, String summary, String description) {
             commits.add("reword " + summary + "|" + description);
             return List.of("git reword");
         }

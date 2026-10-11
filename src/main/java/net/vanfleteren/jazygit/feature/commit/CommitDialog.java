@@ -82,7 +82,7 @@ public final class CommitDialog {
      */
     public static CommitDialog reword(Consumer<Msg> dispatch) {
         return new CommitDialog(REWORD_ID, REWORD_DESCRIPTION_ID, model -> model.popup(RewordPopup.class).isPresent(),
-                model -> model.popup(RewordPopup.class).map(RewordPopup::last), RewordMsg.Confirmed::new, RewordMsg.Cancelled::new, dispatch);
+                model -> model.popup(RewordPopup.class).map(RewordPopup::commit), RewordMsg.Confirmed::new, RewordMsg.Cancelled::new, dispatch);
     }
 
     /**

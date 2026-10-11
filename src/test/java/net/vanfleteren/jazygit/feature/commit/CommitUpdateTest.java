@@ -44,12 +44,18 @@ class CommitUpdateTest {
     }
 
     @Test
-    void onlyTheLastCommitCanBeReworded() {
-        Model model = Update.update(withCommits(commit("last", ""), commit("older", "")), new RewordMsg.Requested(1))
-                .model();
+    void anyCommitCanBeReworded() {
+        Commit older = commit("older", "why");
+        Model model = Update.update(withCommits(commit("last", ""), older), new RewordMsg.Requested(1)).model();
+
+        assertEquals(Optional.of(new RewordPopup(older)), model.popup());
+    }
+
+    @Test
+    void rewordOfAnUnknownCommitDoesNothing() {
+        Model model = Update.update(withCommits(commit("last", "")), new RewordMsg.Requested(3)).model();
 
         assertEquals(Optional.empty(), model.popup());
-        assertEquals(Optional.of("Only the last commit can be reworded"), model.error());
     }
 
     @Test
@@ -58,7 +64,7 @@ class CommitUpdateTest {
 
         Next next = Update.update(open, new RewordMsg.Confirmed(" better ", "\nwhy\n"));
 
-        assertEquals(List.of(new CommitCmd.Reword("better", "why")), next.cmds());
+        assertEquals(List.of(new CommitCmd.Reword("abc1234", "better", "why")), next.cmds());
         assertEquals(Optional.empty(), next.model().popup());
     }
 

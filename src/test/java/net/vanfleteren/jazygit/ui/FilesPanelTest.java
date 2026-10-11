@@ -89,7 +89,7 @@ class FilesPanelTest {
         }
 
         @Override
-        public List<String> reword(String summary, String description) {
+        public List<String> reword(String sha, String summary, String description) {
             throw new UnsupportedOperationException();
         }
 

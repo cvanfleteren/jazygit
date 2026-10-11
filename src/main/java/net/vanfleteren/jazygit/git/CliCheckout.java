@@ -116,6 +116,10 @@ public final class CliCheckout {
     }
 
     static Result exec(Path workTree, String... command) {
+        return exec(workTree, java.util.Map.of(), command);
+    }
+
+    static Result exec(Path workTree, java.util.Map<String, String> environment, String... command) {
         List<String> line = List.of(CommandLine.format(List.of(command)));
         try {
             ProcessResult result = new ProcessExecutor()
@@ -125,6 +129,7 @@ public final class CliCheckout {
                     // Fail instead of waiting for credentials that cannot be typed.
                     .environment("GIT_TERMINAL_PROMPT", "0")
                     .environment("LC_ALL", "C")
+                    .environment(environment)
                     .readOutput(true)
                     .redirectErrorStream(true)
                     .exitValueAny()

@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
  */
 public final class CommandLine {
 
-    private static final Pattern SAFE = Pattern.compile("[A-Za-z0-9_@%+=:,./-]+");
+    private static final Pattern SAFE = Pattern.compile("[A-Za-z0-9_@%+=:,./^-]+");
 
     private CommandLine() {
     }

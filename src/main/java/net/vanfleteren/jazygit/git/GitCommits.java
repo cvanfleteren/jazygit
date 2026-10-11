@@ -23,10 +23,14 @@ public interface GitCommits {
     List<String> amendLastCommit();
 
     /**
-     * Replaces the message of the last commit, leaving its content alone.
+     * Replaces the message of the commit {@code sha}, leaving its content alone. Other than for the last commit,
+     * this rebases the commits after it, uncommitted changes being stashed meanwhile; the rebase is aborted
+     * when it fails.
+     *
+     * @param sha the full object id of the commit
      *
      * @param description the extended message; may be blank
      * @throws IllegalStateException if git fails, with git's explanation as message
      */
-    List<String> reword(String summary, String description);
+    List<String> reword(String sha, String summary, String description);
 }

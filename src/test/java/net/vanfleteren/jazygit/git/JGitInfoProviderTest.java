@@ -204,6 +204,83 @@ class JGitInfoProviderTest {
     }
 
     @Test
+    void rewordChangesTheMessageOfAnyCommitAndKeepsTheRest() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "-m", "Third");
+        Files.writeString(repo.resolve("README.md"), "dirty\n");
+        List<Commit> before = provider.commits();
+
+        List<String> executed = provider.reword(before.get(1).sha(), "Second, better", "because");
+
+        assertEquals(List.of("git rebase --interactive --autostash --rebase-merges " + before.get(1).sha() + "^"),
+                executed);
+        List<Commit> after = provider.commits();
+        assertEquals(List.of("Third", "Second, better", "Initial commit"),
+                after.stream().map(Commit::message).toList());
+        assertEquals("because", after.get(1).body());
+        assertEquals("hello\n".replace("hello", "dirty"), Files.readString(repo.resolve("README.md")));
+        assertTrue(Files.exists(repo.resolve("a.txt")) && Files.exists(repo.resolve("b.txt")));
+    }
+
+    @Test
+    void rewordOfTheFirstCommitRebasesFromTheRoot() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+
+        provider.reword(provider.commits().get(1).sha(), "Start", "");
+
+        assertEquals(List.of("Second", "Start"), provider.commits().stream().map(Commit::message).toList());
+    }
+
+    @Test
+    void rewordOfALastCommitAmendsIt() throws Exception {
+        List<String> executed = provider.reword(provider.commits().getFirst().sha(), "Renamed", "");
+
+        assertEquals(1, executed.size());
+        assertTrue(executed.getFirst().startsWith("git commit"), executed.toString());
+        assertEquals("Renamed", provider.commits().getFirst().message());
+    }
+
+    @Test
+    void rewordOfAMergeKeepsItsParents() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Feature work");
+        git("checkout", "-q", "main");
+        Files.writeString(repo.resolve("m.txt"), "m\n");
+        git("add", "m.txt");
+        git("commit", "-q", "-m", "Main work");
+        git("merge", "-q", "--no-ff", "-m", "Merge feature", "feature");
+        Files.writeString(repo.resolve("after.txt"), "x\n");
+        git("add", "after.txt");
+        git("commit", "-q", "-m", "After merge");
+        Commit merge = provider.commits().get(1);
+
+        provider.reword(merge.sha(), "Merged the feature", "");
+
+        List<Commit> after = provider.commits();
+        assertEquals("After merge", after.getFirst().message());
+        assertEquals("Merged the feature", after.get(1).message());
+        assertTrue(after.get(1).isMerge());
+    }
+
+    @Test
+    void aFailingRebaseIsAbortedAndReported() throws Exception {
+        GitCommandException e = assertThrows(GitCommandException.class,
+                () -> provider.reword("0123456789012345678901234567890123456789", "x", ""));
+
+        assertTrue(e.commands().getFirst().startsWith("git rev-list"), e.commands().toString());
+        assertEquals("Initial commit", provider.commits().getFirst().message());
+        assertTrue(Files.notExists(repo.resolve(".git/rebase-merge")));
+    }
+
+    @Test
     void aFailingCommandReportsTheCommandsRunUpToAndIncludingIt() {
         GitCommandException e = assertThrows(GitCommandException.class,
                 () -> provider.deleteBranch("missing", true, false));

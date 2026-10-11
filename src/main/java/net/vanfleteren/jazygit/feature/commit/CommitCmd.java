@@ -83,7 +83,7 @@ public sealed interface CommitCmd extends Cmd {
     /**
      * Replaces the message of the last commit.
      */
-    record Reword(String summary, String description) implements CommitCmd {
+    record Reword(String sha, String summary, String description) implements CommitCmd {
 
         @Override
         public Optional<String> logTitleKey() {
@@ -92,7 +92,7 @@ public sealed interface CommitCmd extends Cmd {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            return new RewordMsg.Done(git.reword(summary, description));
+            return new RewordMsg.Done(git.reword(sha, summary, description));
         }
 
         @Override
