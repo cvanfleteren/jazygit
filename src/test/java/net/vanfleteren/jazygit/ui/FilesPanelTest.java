@@ -89,6 +89,11 @@ class FilesPanelTest {
         }
 
         @Override
+        public List<String> rebase(String onto) {
+            return List.of();
+        }
+
+        @Override
         public List<String> deleteBranch(String name, boolean local, boolean remote) {
             return List.of();
         }
@@ -195,7 +200,9 @@ class FilesPanelTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(empty, FilesPanel.ID))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(empty, FilesPanel.ID));
             assertTrue(screen.contains("Files"), screen);
-            assertFalse(screen.contains("/"), screen);
+            assertTrue(screen.contains("0/0"), screen);
+            // Apart from the position, there is no "/" root row.
+            assertFalse(screen.replace("0/0", "").contains("/"), screen);
 
             testRunner.pilot().quit();
         }

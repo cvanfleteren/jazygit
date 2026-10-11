@@ -4,6 +4,7 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.NewBranchMsg;
+import net.vanfleteren.jazygit.feature.branch.RebaseMsg;
 import net.vanfleteren.jazygit.feature.branch.PushMsg;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.feature.help.HelpTopic;
@@ -183,6 +184,7 @@ public class BranchesPanel {
             case " " -> Optional.of(new CheckoutMsg.Requested(branch));
             case "d" -> Optional.of(new DeleteBranchMsg.Requested(branch));
             case "P" -> Optional.of(new PushMsg.Requested(branch));
+            case "r" -> Optional.of(new RebaseMsg.Requested(branch));
             case "n" -> Optional.of(new NewBranchMsg.Requested(branch));
             default -> Optional.empty();
         };

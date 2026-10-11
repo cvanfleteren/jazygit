@@ -57,6 +57,27 @@ public sealed interface BranchCmd extends Cmd {
         }
     }
 
+    /**
+     * Rebases the checked out branch onto {@code onto}.
+     */
+    record Rebase(String onto) implements BranchCmd {
+
+        @Override
+        public Optional<String> logTitleKey() {
+            return Optional.of("log.title.rebase");
+        }
+
+        @Override
+        public Msg run(GitInfoProvider git) {
+            return new RebaseMsg.Done(onto, git.rebase(onto));
+        }
+
+        @Override
+        public Msg failed(String message) {
+            return new RebaseMsg.Failed(onto, message);
+        }
+    }
+
     record Checkout(String branch) implements BranchCmd {
 
         @Override

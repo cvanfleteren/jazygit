@@ -17,6 +17,7 @@ public enum HelpTopic {
             new Binding("space", "help.branches.checkout"),
             new Binding("P", "help.branches.push"),
             new Binding("n", "help.branches.new"),
+            new Binding("r", "help.branches.rebase"),
             new Binding("d", "help.branches.delete"))),
     COMMITS("panel.commits.title", List.of(
             new Binding("r", "help.commits.reword"))),

@@ -261,4 +261,43 @@ class BranchUpdateTest {
                 next.model().error());
         assertEquals(List.of(), next.cmds());
     }
+
+    @Test
+    void rebaseRequestOfAnotherBranchOpensTheChoiceForTheCheckedOutOne() {
+        Model model = Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(
+                new Branch("main", true, "1"), new Branch("feature", false, "2")))).model();
+
+        Next next = Update.update(model, new RebaseMsg.Requested("feature"));
+
+        assertEquals(Optional.of(new RebasePopup("main", "feature")), next.model().popup(RebasePopup.class));
+        assertEquals(List.of(), next.cmds());
+    }
+
+    @Test
+    void theCheckedOutBranchAndUnknownBranchesCannotBeRebasedOnto() {
+        Model model = Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(
+                new Branch("main", true, "1"), new Branch("feature", false, "2")))).model();
+
+        assertEquals(Optional.empty(), Update.update(model, new RebaseMsg.Requested("main")).model().popup(RebasePopup.class));
+        assertEquals(Optional.empty(), Update.update(model, new RebaseMsg.Requested("nope")).model().popup(RebasePopup.class));
+    }
+
+    @Test
+    void choosingARebaseClosesThePopupAndRebases() {
+        Model open = Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(
+                new Branch("main", true, "1"), new Branch("feature", false, "2")))).model();
+        open = Update.update(open, new RebaseMsg.Requested("feature")).model();
+
+        Next next = Update.update(open, new RebaseMsg.Chosen());
+
+        assertEquals(List.of(new BranchCmd.Rebase("feature")), next.cmds());
+        assertEquals(Optional.empty(), next.model().popup(RebasePopup.class));
+    }
+
+    @Test
+    void aFailedRebaseShowsTheError() {
+        Next next = Update.update(loaded(), new RebaseMsg.Failed("feature", "conflict"));
+
+        assertEquals(Optional.of("Rebasing onto feature failed: conflict"), next.model().error());
+    }
 }

@@ -272,6 +272,11 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     }
 
     @Override
+    public List<String> rebase(String onto) {
+        return CliRebase.onto(workTree, onto);
+    }
+
+    @Override
     public List<String> deleteBranch(String name, boolean local, boolean remote) {
         return GitCommandException.chain(
                 () -> remote ? CliBranch.deleteRemote(workTree, name) : List.of(),

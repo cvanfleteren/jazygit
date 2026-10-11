@@ -129,6 +129,11 @@ public final class SampleData implements GitInfoProvider {
     }
 
     @Override
+    public List<String> rebase(String onto) {
+        return List.of("git rebase");
+    }
+
+    @Override
     public List<String> deleteBranch(String name, boolean local, boolean remote) {
         return List.of("git deleteBranch");
     }

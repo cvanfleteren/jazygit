@@ -40,6 +40,14 @@ public interface GitBranches {
     List<String> deleteBranch(String name, boolean local, boolean remote);
 
     /**
+     * Rebases the checked out branch onto {@code onto}, bringing uncommitted changes along. When the rebase
+     * fails, it is aborted again, so the repository is left as it was.
+     *
+     * @throws IllegalStateException if git fails, with git's explanation as message
+     */
+    List<String> rebase(String onto);
+
+    /**
      * Pushes the local branch {@code branch} to its remote, setting that as the upstream when the
      * branch has none yet.
      *

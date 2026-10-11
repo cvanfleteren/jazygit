@@ -60,6 +60,32 @@ public final class CliRebase {
         }
     }
 
+    /**
+     * Rebases the checked out branch onto {@code onto}:
+     * {@code git rebase --autostash --rebase-merges --no-autosquash <onto>}. Merges are recreated instead of
+     * flattened, and fixup commits stay where they are whatever {@code rebase.autoSquash} says. When the
+     * rebase fails, for instance on a conflict, it is aborted again, so the repository is left as it was.
+     *
+     * @return the command lines that were run
+     * @throws GitCommandException if git refuses, with git's explanation as message
+     */
+    public static List<String> onto(Path workTree, String onto) {
+        List<String> executed = new ArrayList<>();
+        try {
+            executed.add(CliCheckout.exec(workTree, "git", "rebase", "--autostash", "--rebase-merges",
+                    "--no-autosquash", onto).command());
+        } catch (GitCommandException e) {
+            executed.addAll(e.commands());
+            try {
+                executed.add(CliCheckout.exec(workTree, "git", "rebase", "--abort").command());
+            } catch (GitCommandException abortFailure) {
+                executed.addAll(abortFailure.commands());
+            }
+            throw new GitCommandException(e.getMessage(), executed, e);
+        }
+        return executed;
+    }
+
     private static boolean hasParent(Path workTree, String sha) {
         // "<sha> <parents...>": only the sha when it is a root commit.
         return CliCheckout.run(workTree, "git", "rev-list", "--parents", "-n", "1", sha).strip().contains(" ");

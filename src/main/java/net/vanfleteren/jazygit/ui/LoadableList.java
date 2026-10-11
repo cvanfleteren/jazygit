@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.ui.widgets.Pane;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.function.Function;
 
 /**
@@ -26,7 +27,7 @@ final class LoadableList<T> {
     private final Reselect<T> reselect;
     private Loadable<T> shown;
     private List<Row> shownRows = List.of();
-    private int count;
+    private OptionalInt count = OptionalInt.empty();
 
     /**
      * A piece of a row, in a colour of its own when it has one.
@@ -131,7 +132,7 @@ final class LoadableList<T> {
             if (list.selected() >= rows.size()) {
                 list.selected(Math.max(0, rows.size() - 1));
             }
-            count = value instanceof Loadable.Loaded<T> ? rows.size() : 0;
+            count = value instanceof Loadable.Loaded<T> ? OptionalInt.of(rows.size()) : OptionalInt.empty();
         } else if (!rows.equals(shownRows)) {
             // The rows can depend on more than the value, e.g. on the time.
             show(rows);

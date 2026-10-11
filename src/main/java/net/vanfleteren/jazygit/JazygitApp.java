@@ -23,6 +23,8 @@ import net.vanfleteren.jazygit.feature.commit.AmendPopup;
 import net.vanfleteren.jazygit.feature.commit.StageAllPopup;
 import net.vanfleteren.jazygit.feature.stash.StashDropPopup;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchPopup;
+import net.vanfleteren.jazygit.feature.branch.RebaseDialog;
+import net.vanfleteren.jazygit.feature.branch.RebasePopup;
 import net.vanfleteren.jazygit.feature.discard.DiscardPopup;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
@@ -78,6 +80,7 @@ public class JazygitApp extends ToolkitApp {
     private final BranchesPanel branchesPanel = new BranchesPanel(msg -> this.program.dispatch(msg));
     private final NewBranchDialog newBranchDialog = new NewBranchDialog(msg -> this.program.dispatch(msg));
     private final ChoiceDialog<DiscardPopup> discardDialog = DiscardDialog.create(msg -> this.program.dispatch(msg));
+    private final ChoiceDialog<RebasePopup> rebaseDialog = RebaseDialog.create(msg -> this.program.dispatch(msg));
     private final ChoiceDialog<DeleteBranchPopup> deleteBranchDialog = DeleteBranchDialog.create(msg -> this.program.dispatch(msg));
     private final ConfirmDialog<ForcePushPopup> forcePushDialog = ForcePushDialog.create(msg -> this.program.dispatch(msg));
     private final ConfirmDialog<StashCheckoutPopup> stashCheckoutDialog = StashCheckoutDialog.create(msg -> this.program.dispatch(msg));
@@ -189,6 +192,7 @@ public class JazygitApp extends ToolkitApp {
         List<Popup> popups = List.of(
                 new Popup(newBranchDialog.render(model), List.of(NewBranchDialog.ID), BranchesPanel.ID),
                 new Popup(discardDialog.render(model), List.of(DiscardDialog.ID), FilesPanel.ID),
+                new Popup(rebaseDialog.render(model), List.of(RebaseDialog.ID), BranchesPanel.ID),
                 new Popup(deleteBranchDialog.render(model), List.of(DeleteBranchDialog.ID), BranchesPanel.ID),
                 new Popup(forcePushDialog.render(model), List.of(ForcePushDialog.ID), BranchesPanel.ID),
                 new Popup(stashCheckoutDialog.render(model), List.of(StashCheckoutDialog.ID), BranchesPanel.ID),

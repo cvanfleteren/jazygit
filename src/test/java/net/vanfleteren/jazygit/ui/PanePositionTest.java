@@ -82,6 +82,11 @@ class PanePositionTest {
         }
 
         @Override
+        public List<String> rebase(String onto) {
+            return List.of();
+        }
+
+        @Override
         public List<String> deleteBranch(String name, boolean local, boolean remote) {
             return List.of();
         }

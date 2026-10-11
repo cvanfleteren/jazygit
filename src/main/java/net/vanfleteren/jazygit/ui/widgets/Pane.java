@@ -5,6 +5,7 @@ import static dev.tamboui.toolkit.Toolkit.*;
 import dev.tamboui.layout.Alignment;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Panel;
+import java.util.OptionalInt;
 import net.vanfleteren.jazygit.ui.Theme;
 
 /**
@@ -18,15 +19,16 @@ public final class Pane {
 
     /**
      * @param selected the index of the selected row
-     * @param count    the number of rows, or 0 to show no position
+     * @param count    the number of rows, or empty to show no position, as long as they are not known
      */
-    public static Panel bordered(String title, Element content, boolean focused, int selected, int count) {
+    public static Panel bordered(String title, Element content, boolean focused, int selected, OptionalInt count) {
         Panel panel = panel(title, content);
         if (focused) {
             panel.addClass(Theme.Classes.FOCUSED);
         }
-        if (count > 0) {
-            panel.bottomTitle((selected + 1) + "/" + count)
+        if (count.isPresent()) {
+            int total = count.getAsInt();
+            panel.bottomTitle((total == 0 ? 0 : selected + 1) + "/" + total)
                     .bottomTitleAlignment(Alignment.RIGHT);
         }
         return panel;

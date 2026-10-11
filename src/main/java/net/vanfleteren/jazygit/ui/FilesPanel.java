@@ -31,6 +31,7 @@ import net.vanfleteren.jazygit.ui.widgets.Pane;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -131,7 +132,9 @@ public class FilesPanel {
         }
         // Counted on every render: expanding or collapsing a directory changes the visible rows
         // without a rebuild.
-        int count = shown instanceof Loadable.Loaded<RepoStatus> ? (int) visible(roots).count() : 0;
+        OptionalInt count = shown instanceof Loadable.Loaded<RepoStatus>
+                ? OptionalInt.of((int) visible(roots).count())
+                : OptionalInt.empty();
         return Pane.bordered(Messages.get("panel.files.title"), tree, ID.equals(focusedId), Math.max(0, tree.selected()), count);
     }
 

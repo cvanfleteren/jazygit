@@ -34,22 +34,38 @@ public final class ChoiceDialog<P extends Popup> {
 
     private static final int WIDTH = 40;
     private static final char CANCEL_KEY = 'c';
+    // The "(k) " before a label, the padding and the border.
+    private static final int ROW_OVERHEAD = 4 + 2 + 2;
 
     /**
      * An option of the dialog.
      *
      * @param key      the letter that chooses it
-     * @param labelKey the message key of its text
+     * @param label    its text, given the open popup
      * @param msg      the message for choosing it
      * @param enabled  whether it applies, given the model and the open popup
      */
-    public record Choice<P>(char key, String labelKey, Supplier<Msg> msg, BiPredicate<Model, P> enabled) {
+    public record Choice<P>(char key, Function<P, String> label, Supplier<Msg> msg, BiPredicate<Model, P> enabled) {
 
         /**
-         * An option that always applies.
+         * An option with a fixed text, given by its message key.
+         */
+        public Choice(char key, String labelKey, Supplier<Msg> msg, BiPredicate<Model, P> enabled) {
+            this(key, popup -> Messages.get(labelKey), msg, enabled);
+        }
+
+        /**
+         * An option with a fixed text that always applies.
          */
         public Choice(char key, String labelKey, Supplier<Msg> msg) {
             this(key, labelKey, msg, (model, popup) -> true);
+        }
+
+        /**
+         * An option with a text that depends on the popup, that always applies.
+         */
+        public Choice(char key, Function<P, String> label, Supplier<Msg> msg) {
+            this(key, label, msg, (model, popup) -> true);
         }
     }
 
@@ -61,6 +77,7 @@ public final class ChoiceDialog<P extends Popup> {
     private final ListElement<?> list;
     // What the rows show; null before the first render.
     private List<Boolean> shownEnabled;
+    private List<String> shownLabels;
     // Whether each option applies, as of the last render.
     private List<Boolean> enabled = List.of();
 
@@ -78,7 +95,7 @@ public final class ChoiceDialog<P extends Popup> {
         this.popupType = popupType;
         this.title = title;
         List<Choice<P>> all = new ArrayList<>(choices);
-        all.add(new Choice<>(CANCEL_KEY, "dialog.choice.cancel", onCancel));
+        all.add(new Choice<P>(CANCEL_KEY, "dialog.choice.cancel", onCancel));
         this.choices = List.copyOf(all);
         this.dispatch = dispatch;
         this.list = list()
@@ -97,30 +114,36 @@ public final class ChoiceDialog<P extends Popup> {
      */
     public Optional<Element> render(Model model) {
         return model.popup(popupType).map(popup -> {
-            showOptions(choices.stream().map(choice -> choice.enabled().test(model, popup)).toList());
+            List<String> labels = choices.stream().map(choice -> choice.label().apply(popup)).toList();
+            showOptions(labels, choices.stream().map(choice -> choice.enabled().test(model, popup)).toList());
             return dialog(title.apply(popup),
                     list.length(choices.size()),
                     text(""),
                     text(Messages.get("dialog.hint.selectCancel")).addClass(Theme.Classes.DIM))
                     .rounded()
-                    .width(WIDTH)
+                    .width(Math.max(WIDTH, widest(labels) + ROW_OVERHEAD))
                     .padding(1)
                     .onCancel(() -> choose(choices.getLast()));
         });
     }
 
-    private void showOptions(List<Boolean> nowEnabled) {
+    private static int widest(List<String> labels) {
+        return labels.stream().mapToInt(String::length).max().orElse(0);
+    }
+
+    private void showOptions(List<String> labels, List<Boolean> nowEnabled) {
         enabled = nowEnabled;
-        if (!nowEnabled.equals(shownEnabled)) {
+        if (!nowEnabled.equals(shownEnabled) || !labels.equals(shownLabels)) {
             shownEnabled = nowEnabled;
+            shownLabels = labels;
             list.elements(java.util.stream.IntStream.range(0, choices.size())
-                    .mapToObj(i -> row(choices.get(i), nowEnabled.get(i)))
+                    .mapToObj(i -> row(choices.get(i), labels.get(i), nowEnabled.get(i)))
                     .toArray(StyledElement[]::new));
         }
     }
 
-    private static StyledElement<?> row(Choice<?> choice, boolean enabled) {
-        String text = Messages.get("dialog.choice.row", String.valueOf(choice.key()), Messages.get(choice.labelKey()));
+    private static StyledElement<?> row(Choice<?> choice, String label, boolean enabled) {
+        String text = Messages.get("dialog.choice.row", String.valueOf(choice.key()), label);
         return enabled ? text(text) : text(text).addClass(Theme.Classes.DISABLED);
     }
 

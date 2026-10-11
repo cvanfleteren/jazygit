@@ -227,6 +227,76 @@ class JGitInfoProviderTest {
     }
 
     @Test
+    void rebaseReplaysTheCheckedOutBranchOntoAnotherOne() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Feature work");
+        git("checkout", "-q", "main");
+        Files.writeString(repo.resolve("m.txt"), "m\n");
+        git("add", "m.txt");
+        git("commit", "-q", "-m", "Main work");
+        git("checkout", "-q", "feature");
+
+        List<String> executed = provider.rebase("main");
+
+        assertEquals(List.of("git rebase --autostash --rebase-merges --no-autosquash main"), executed);
+        assertEquals(List.of("Feature work", "Main work", "Initial commit"),
+                provider.commits().stream().map(Commit::message).toList());
+    }
+
+    @Test
+    void rebaseKeepsMergesAndFixupCommitsInPlace() throws Exception {
+        git("config", "rebase.autoSquash", "true");
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Feature work");
+        git("checkout", "-q", "-b", "side");
+        Files.writeString(repo.resolve("s.txt"), "s\n");
+        git("add", "s.txt");
+        git("commit", "-q", "-m", "Side work");
+        git("checkout", "-q", "feature");
+        Files.writeString(repo.resolve("g.txt"), "g\n");
+        git("add", "g.txt");
+        git("commit", "-q", "-m", "More feature work");
+        git("merge", "-q", "--no-ff", "-m", "Merge side", "side");
+        Files.writeString(repo.resolve("f2.txt"), "f2\n");
+        git("add", "f2.txt");
+        git("commit", "-q", "-m", "fixup! Feature work");
+        git("checkout", "-q", "main");
+        Files.writeString(repo.resolve("m.txt"), "m\n");
+        git("add", "m.txt");
+        git("commit", "-q", "-m", "Main work");
+        git("checkout", "-q", "feature");
+
+        provider.rebase("main");
+
+        List<Commit> after = provider.commits();
+        assertEquals(List.of("fixup! Feature work", "Merge side"),
+                after.stream().limit(2).map(Commit::message).toList());
+        assertTrue(after.get(1).isMerge());
+        assertTrue(after.stream().anyMatch(c -> c.message().equals("Main work")));
+    }
+
+    @Test
+    void aConflictingRebaseIsAbortedAndLeavesTheBranchAsItWas() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("README.md"), "feature\n");
+        git("commit", "-q", "-am", "Feature edit");
+        git("checkout", "-q", "main");
+        Files.writeString(repo.resolve("README.md"), "main\n");
+        git("commit", "-q", "-am", "Main edit");
+        git("checkout", "-q", "feature");
+
+        assertThrows(IllegalStateException.class, () -> provider.rebase("main"));
+
+        assertEquals(List.of("Feature edit", "Initial commit"),
+                provider.commits().stream().map(Commit::message).toList());
+        assertEquals("feature\n", Files.readString(repo.resolve("README.md")));
+    }
+
+    @Test
     void rewordOfTheFirstCommitRebasesFromTheRoot() throws Exception {
         Files.writeString(repo.resolve("a.txt"), "a\n");
         git("add", "a.txt");
