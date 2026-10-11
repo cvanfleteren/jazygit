@@ -114,6 +114,11 @@ class FilesPanelTest {
         }
 
         @Override
+        public List<String> squash(String sha) {
+            return List.of();
+        }
+
+        @Override
         public List<String> reword(String sha, String summary, String description) {
             throw new UnsupportedOperationException();
         }

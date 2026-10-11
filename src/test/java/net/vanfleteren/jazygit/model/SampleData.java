@@ -169,6 +169,11 @@ public final class SampleData implements GitInfoProvider {
     }
 
     @Override
+    public List<String> squash(String sha) {
+        return List.of("git squash");
+    }
+
+    @Override
     public List<String> reword(String sha, String summary, String description) {
         return List.of("git reword");
     }

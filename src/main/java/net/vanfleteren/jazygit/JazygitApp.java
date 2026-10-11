@@ -20,6 +20,8 @@ import net.vanfleteren.jazygit.feature.branch.ForcePushPopup;
 import net.vanfleteren.jazygit.feature.branch.StashCheckoutPopup;
 import net.vanfleteren.jazygit.feature.commit.AmendDialog;
 import net.vanfleteren.jazygit.feature.commit.AmendPopup;
+import net.vanfleteren.jazygit.feature.commit.SquashDialog;
+import net.vanfleteren.jazygit.feature.commit.SquashPopup;
 import net.vanfleteren.jazygit.feature.commit.StageAllPopup;
 import net.vanfleteren.jazygit.feature.stash.StashDropPopup;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchPopup;
@@ -86,6 +88,7 @@ public class JazygitApp extends ToolkitApp {
     private final ConfirmDialog<ForcePushPopup> forcePushDialog = ForcePushDialog.create(msg -> this.program.dispatch(msg));
     private final ConfirmDialog<StashCheckoutPopup> stashCheckoutDialog = StashCheckoutDialog.create(msg -> this.program.dispatch(msg));
     private final ConfirmDialog<AmendPopup> amendDialog = AmendDialog.create(msg -> this.program.dispatch(msg));
+    private final ConfirmDialog<SquashPopup> squashDialog = SquashDialog.create(msg -> this.program.dispatch(msg));
     private final CommitDialog rewordDialog = CommitDialog.reword(msg -> this.program.dispatch(msg));
     private final ConfirmDialog<StashDropPopup> stashDropDialog = StashDropDialog.create(msg -> this.program.dispatch(msg));
     private final StashDialog stashDialog = new StashDialog(msg -> this.program.dispatch(msg));
@@ -201,6 +204,7 @@ public class JazygitApp extends ToolkitApp {
                 new Popup(stashDialog.render(model), List.of(StashDialog.ID), FilesPanel.ID),
                 new Popup(stageAllDialog.render(model), List.of(StageAllDialog.ID), FilesPanel.ID),
                 new Popup(commitDialog.render(model), commitDialog.ids(), FilesPanel.ID),
+                new Popup(squashDialog.render(model), List.of(SquashDialog.ID), CommitsPanel.ID),
                 new Popup(rewordDialog.render(model), rewordDialog.ids(), CommitsPanel.ID),
                 new Popup(helpDialog.render(model), List.of(HelpDialog.ID), helpOrigin));
         Optional<Popup> open = popups.stream().filter(p -> p.element().isPresent()).findFirst();

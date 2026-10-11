@@ -17,7 +17,7 @@ public final class CliRebase {
 
     /**
      * Replaces the message of {@code sha} with an interactive rebase that is told to stop at that commit
-     * and which message to use: {@code git rebase --interactive --autostash --rebase-merges <sha>^}, or
+     * and which message to use: {@code git rebase --interactive --autostash --keep-empty --rebase-merges <sha>^}, or
      * {@code --root} for a commit without parent. Merges after the commit are recreated, uncommitted changes
      * are stashed and brought back. When the rebase fails, it is aborted again, so the repository is left as
      * it was.
@@ -40,7 +40,7 @@ public final class CliRebase {
             List<String> executed = new ArrayList<>();
             try {
                 executed.add(CliCheckout.exec(workTree, environment, "git", "rebase", "--interactive",
-                        "--autostash", "--rebase-merges", base).command());
+                        "--autostash", "--keep-empty", "--rebase-merges", base).command());
             } catch (GitCommandException e) {
                 executed.addAll(e.commands());
                 try {
@@ -62,7 +62,7 @@ public final class CliRebase {
 
     /**
      * Rebases the checked out branch onto {@code onto}:
-     * {@code git rebase --autostash --rebase-merges --no-autosquash <onto>}. Merges are recreated instead of
+     * {@code git rebase --autostash --keep-empty --rebase-merges --no-autosquash <onto>}. Merges are recreated instead of
      * flattened, and fixup commits stay where they are whatever {@code rebase.autoSquash} says. When the
      * rebase fails, for instance on a conflict, it is aborted again, so the repository is left as it was.
      *
@@ -72,8 +72,42 @@ public final class CliRebase {
     public static List<String> onto(Path workTree, String onto) {
         List<String> executed = new ArrayList<>();
         try {
-            executed.add(CliCheckout.exec(workTree, "git", "rebase", "--autostash", "--rebase-merges",
+            executed.add(CliCheckout.exec(workTree, "git", "rebase", "--autostash", "--keep-empty", "--rebase-merges",
                     "--no-autosquash", onto).command());
+        } catch (GitCommandException e) {
+            executed.addAll(e.commands());
+            try {
+                executed.add(CliCheckout.exec(workTree, "git", "rebase", "--abort").command());
+            } catch (GitCommandException abortFailure) {
+                executed.addAll(abortFailure.commands());
+            }
+            throw new GitCommandException(e.getMessage(), executed, e);
+        }
+        return executed;
+    }
+
+    /**
+     * Squashes the commit {@code sha} into its parent with an interactive rebase that is told to turn that
+     * commit's {@code pick} into {@code squash} and to keep the combined message as git proposes it:
+     * {@code git rebase --interactive --autostash --keep-empty --rebase-merges --no-autosquash <parent>^}, or
+     * {@code --root} when the parent has no parent. Uncommitted changes are stashed and brought back. When the
+     * rebase fails, it is aborted again, so the repository is left as it was.
+     *
+     * @param sha the full object id of a commit that has exactly one parent
+     * @return the command lines that were run
+     * @throws GitCommandException if git refuses, with git's explanation as message
+     */
+    public static List<String> squash(Path workTree, String sha) {
+        String parent = CliCheckout.run(workTree, "git", "rev-parse", sha + "^").strip();
+        String abbreviated = sha.substring(0, Math.min(7, sha.length()));
+        Map<String, String> environment = Map.of(
+                "GIT_SEQUENCE_EDITOR", "sed -i -e 's/^pick " + abbreviated + "/squash " + abbreviated + "/'",
+                "GIT_EDITOR", "true");
+        String base = hasParent(workTree, parent) ? parent + "^" : "--root";
+        List<String> executed = new ArrayList<>();
+        try {
+            executed.add(CliCheckout.exec(workTree, environment, "git", "rebase", "--interactive",
+                    "--autostash", "--keep-empty", "--rebase-merges", "--no-autosquash", base).command());
         } catch (GitCommandException e) {
             executed.addAll(e.commands());
             try {

@@ -81,6 +81,27 @@ public sealed interface CommitCmd extends Cmd {
     }
 
     /**
+     * Squashes a commit into its parent.
+     */
+    record Squash(String sha) implements CommitCmd {
+
+        @Override
+        public Optional<String> logTitleKey() {
+            return Optional.of("log.title.squash");
+        }
+
+        @Override
+        public Msg run(GitInfoProvider git) {
+            return new SquashMsg.Done(git.squash(sha));
+        }
+
+        @Override
+        public Msg failed(String message) {
+            return new SquashMsg.Failed(message);
+        }
+    }
+
+    /**
      * Replaces the message of the last commit.
      */
     record Reword(String sha, String summary, String description) implements CommitCmd {

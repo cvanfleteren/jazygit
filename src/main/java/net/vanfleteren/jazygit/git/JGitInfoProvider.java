@@ -325,6 +325,11 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     }
 
     @Override
+    public List<String> squash(String sha) {
+        return CliRebase.squash(workTree, sha);
+    }
+
+    @Override
     public List<String> discard(DiscardPlan plan) {
         return GitCommandException.chain(
                 () -> CliIndex.removeAdded(workTree, plan.added()),

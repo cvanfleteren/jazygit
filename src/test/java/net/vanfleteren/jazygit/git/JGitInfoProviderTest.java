@@ -216,7 +216,7 @@ class JGitInfoProviderTest {
 
         List<String> executed = provider.reword(before.get(1).sha(), "Second, better", "because");
 
-        assertEquals(List.of("git rebase --interactive --autostash --rebase-merges " + before.get(1).sha() + "^"),
+        assertEquals(List.of("git rebase --interactive --autostash --keep-empty --rebase-merges " + before.get(1).sha() + "^"),
                 executed);
         List<Commit> after = provider.commits();
         assertEquals(List.of("Third", "Second, better", "Initial commit"),
@@ -240,7 +240,7 @@ class JGitInfoProviderTest {
 
         List<String> executed = provider.rebase("main");
 
-        assertEquals(List.of("git rebase --autostash --rebase-merges --no-autosquash main"), executed);
+        assertEquals(List.of("git rebase --autostash --keep-empty --rebase-merges --no-autosquash main"), executed);
         assertEquals(List.of("Feature work", "Main work", "Initial commit"),
                 provider.commits().stream().map(Commit::message).toList());
     }
@@ -294,6 +294,42 @@ class JGitInfoProviderTest {
         assertEquals(List.of("Feature edit", "Initial commit"),
                 provider.commits().stream().map(Commit::message).toList());
         assertEquals("feature\n", Files.readString(repo.resolve("README.md")));
+    }
+
+    @Test
+    void squashFoldsACommitIntoItsParentAndKeepsBothMessages() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "-m", "Third");
+        Files.writeString(repo.resolve("c.txt"), "c\n");
+        git("add", "c.txt");
+        git("commit", "-q", "-m", "Fourth");
+        Files.writeString(repo.resolve("README.md"), "dirty\n");
+        List<Commit> before = provider.commits();
+
+        List<String> executed = provider.squash(before.get(1).sha());
+
+        assertTrue(executed.getFirst().startsWith("git rebase --interactive --autostash --keep-empty --rebase-merges"),
+                executed.toString());
+        List<Commit> after = provider.commits();
+        assertEquals(List.of("Fourth", "Second", "Initial commit"), after.stream().map(Commit::message).toList());
+        assertTrue(after.get(1).body().contains("Third"), after.get(1).body());
+        assertTrue(Files.exists(repo.resolve("b.txt")));
+        assertEquals("dirty\n", Files.readString(repo.resolve("README.md")));
+    }
+
+    @Test
+    void squashOfTheFirstCommitsChildRebasesFromTheRoot() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+
+        provider.squash(provider.commits().getFirst().sha());
+
+        assertEquals(List.of("Initial commit"), provider.commits().stream().map(Commit::message).toList());
     }
 
     @Test

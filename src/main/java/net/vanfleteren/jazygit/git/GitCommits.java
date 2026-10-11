@@ -33,4 +33,13 @@ public interface GitCommits {
      * @throws IllegalStateException if git fails, with git's explanation as message
      */
     List<String> reword(String sha, String summary, String description);
+
+    /**
+     * Squashes the commit {@code sha} into its parent, keeping both messages. This rebases the commits after
+     * it, uncommitted changes being stashed meanwhile; the rebase is aborted when it fails.
+     *
+     * @param sha the full object id of a commit that has exactly one parent
+     * @throws IllegalStateException if git fails, with git's explanation as message
+     */
+    List<String> squash(String sha);
 }

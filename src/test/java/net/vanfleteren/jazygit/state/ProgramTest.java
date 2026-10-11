@@ -177,6 +177,11 @@ class ProgramTest {
         }
 
         @Override
+        public List<String> squash(String sha) {
+            return List.of("git squash");
+        }
+
+        @Override
         public List<String> reword(String sha, String summary, String description) {
             commits.add("reword " + summary + "|" + description);
             return List.of("git reword");
