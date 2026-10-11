@@ -1,0 +1,41 @@
+$fg: #1f2328;
+$bg: #ffffff;
+$border: #6e7781;
+$accent: #0969da;
+$muted: #6e7781;
+$added: #1a7f37;
+$removed: #cf222e;
+$warn: #9a6700;
+$hunk: #0969da;
+
+* {
+    color: $fg;
+    background: $bg;
+}
+
+Panel, TextInputElement, TextAreaElement {
+    border-type: rounded;
+    border-color: $border;
+}
+
+Panel.focused {
+    border-color: $accent;
+}
+
+.bold { text-style: bold; }
+.dim { color: $muted; }
+.error { color: $removed; }
+.disabled { color: $muted; text-style: crossed-out; }
+.staged { color: $added; }
+.unstaged { color: $removed; }
+.spinner { color: $warn; }
+.ahead { color: $added; }
+.behind { color: $removed; }
+
+Span.diff-header { text-style: bold; }
+Span.diff-added { color: $added; }
+Span.diff-removed { color: $removed; }
+Span.diff-hunk { color: $hunk; }
+Span.current-branch { color: $warn; }
+Span.sha { color: $warn; }
+Span.bold { text-style: bold; }

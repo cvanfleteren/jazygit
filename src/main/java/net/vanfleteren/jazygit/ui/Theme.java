@@ -3,9 +3,11 @@ package net.vanfleteren.jazygit.ui;
 import dev.tamboui.css.Styleable;
 import dev.tamboui.css.engine.StyleEngine;
 import dev.tamboui.style.Style;
+import dev.tamboui.tui.event.KeyEvent;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -17,6 +19,7 @@ public final class Theme {
 
     private static final String RESOURCE_DIR = "/net/vanfleteren/jazygit/themes/";
     public static final String DARK = "dark";
+    public static final String LIGHT = "light";
 
     /** CSS class names referenced from the stylesheets. */
     public static final class Classes {
@@ -50,13 +53,29 @@ public final class Theme {
     public static StyleEngine createEngine() {
         StyleEngine engine = StyleEngine.create();
         try {
-            engine.loadStylesheet(DARK, RESOURCE_DIR + DARK + ".tcss");
+            for (String name : List.of(DARK, LIGHT)) {
+                engine.loadStylesheet(name, RESOURCE_DIR + name + ".tcss");
+            }
         } catch (IOException e) {
-            throw new UncheckedIOException("Cannot load theme " + DARK, e);
+            throw new UncheckedIOException("Cannot load themes", e);
         }
         engine.setActiveStylesheet(DARK);
         active = engine;
         return engine;
+    }
+
+    /** Whether {@code event} is the shortcut that switches between the dark and the light theme. */
+    public static boolean isToggleKey(KeyEvent event) {
+        return event.hasCtrl() && event.isCharIgnoreCase('t');
+    }
+
+    /** Switches between the dark and the light theme; the next render picks it up. */
+    public static void toggle() {
+        StyleEngine engine = active;
+        if (engine == null) {
+            return;
+        }
+        engine.setActiveStylesheet(engine.getActiveStylesheet().filter(DARK::equals).isPresent() ? LIGHT : DARK);
     }
 
     /**

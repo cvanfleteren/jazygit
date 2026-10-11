@@ -6,7 +6,9 @@ import dev.tamboui.toolkit.app.ToolkitApp;
 import dev.tamboui.toolkit.app.ToolkitRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Panel;
+import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.TuiConfig;
+import dev.tamboui.tui.event.KeyEvent;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.JGitInfoProvider;
 import net.vanfleteren.jazygit.state.Model;
@@ -101,6 +103,13 @@ public class JazygitApp extends ToolkitApp {
     protected void onStart() {
         ToolkitRunner runner = runner();
         runner.styleEngine(Theme.createEngine());
+        runner.eventRouter().addGlobalHandler(event -> {
+            if (event instanceof KeyEvent key && Theme.isToggleKey(key)) {
+                Theme.toggle();
+                return EventResult.HANDLED;
+            }
+            return EventResult.UNHANDLED;
+        });
         runner.focusManager().setFocus(FilesPanel.ID);
         ContentPanel.onLeaveScrollArea(() -> {
             Optional<String> pane = ContentPanel.paneOfArea(runner.focusManager().focusedId());
