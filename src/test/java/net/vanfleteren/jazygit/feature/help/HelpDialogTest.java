@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.help;
 
+import net.vanfleteren.jazygit.keys.Scopes;
 import static dev.tamboui.toolkit.Toolkit.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -25,13 +26,13 @@ class HelpDialogTest {
     private final List<Msg> dispatched = new ArrayList<>();
     private final HelpDialog dialog = new HelpDialog(dispatched::add);
 
-    private static Model open(HelpTopic topic) {
+    private static Model open(String topic) {
         return Update.update(TestModels.loaded(), new HelpMsg.Requested(topic)).model();
     }
 
     @Test
     void listsTheKeysOfTheFilesPanel() throws Exception {
-        String screen = screen(HelpTopic.FILES);
+        String screen = screen(Scopes.FILES.id());
         assertTrue(screen.contains("Keybindings: Files"), screen);
         assertTrue(screen.contains("       space Stage/unstage"), screen);
         assertTrue(screen.contains("           c Commit"), screen);
@@ -40,7 +41,7 @@ class HelpDialogTest {
 
     @Test
     void listsTheKeysOfTheBranchesPanel() throws Exception {
-        String screen = screen(HelpTopic.BRANCHES);
+        String screen = screen(Scopes.BRANCHES.id());
         assertTrue(screen.contains("       space Checkout branch"), screen);
         assertTrue(screen.contains("           n New branch"), screen);
         assertTrue(screen.contains("           d Delete branch"), screen);
@@ -48,7 +49,16 @@ class HelpDialogTest {
 
     @Test
     void listsTheKeysOfTheCommitsPanel() throws Exception {
-        assertTrue(screen(HelpTopic.COMMITS).contains("           r Reword commit"));
+        assertTrue(screen(Scopes.COMMITS.id()).contains("           r Reword commit"));
+    }
+
+    @Test
+    void everyPanelListsTheGlobalKeysAfterItsOwn() throws Exception {
+        for (String scope : List.of(Scopes.FILES.id(), Scopes.BRANCHES.id(), Scopes.COMMITS.id(), Scopes.STASH.id())) {
+            String screen = screen(scope);
+            assertTrue(screen.contains("Global"), screen);
+            assertTrue(screen.contains("      ctrl+t Switch between dark and light theme"), screen);
+        }
     }
 
     @Test
@@ -65,7 +75,7 @@ class HelpDialogTest {
 
     private List<Msg> press(java.util.function.Consumer<ToolkitTestRunner> keys) throws Exception {
         dispatched.clear();
-        Model open = open(HelpTopic.FILES);
+        Model open = open(Scopes.FILES.id());
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(open))) {
             runner.runner().focusManager().setFocus(HelpDialog.ID);
             RenderedText.of(runner, () -> view(open));
@@ -75,7 +85,7 @@ class HelpDialogTest {
         return List.copyOf(dispatched);
     }
 
-    private String screen(HelpTopic topic) throws Exception {
+    private String screen(String topic) throws Exception {
         Model open = open(topic);
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(open))) {
             return RenderedText.ofLarge(runner, () -> view(open));

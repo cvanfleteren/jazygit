@@ -13,7 +13,7 @@ public final class HelpUpdate {
 
     public static Next update(Model model, HelpMsg msg) {
         return switch (msg) {
-            case HelpMsg.Requested(HelpTopic topic) -> Next.of(model.openPopup(new HelpPopup(topic)));
+            case HelpMsg.Requested(String scopeId) -> Next.of(model.openPopup(new HelpPopup(scopeId)));
             case HelpMsg.Closed() -> Next.of(model.withoutPopup(HelpPopup.class));
         };
     }

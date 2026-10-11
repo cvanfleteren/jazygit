@@ -133,7 +133,7 @@ class BranchesPanelTest {
         }
 
         assertEquals(List.of(new net.vanfleteren.jazygit.feature.help.HelpMsg.Requested(
-                net.vanfleteren.jazygit.feature.help.HelpTopic.BRANCHES)), dispatched);
+                net.vanfleteren.jazygit.keys.Scopes.BRANCHES.id())), dispatched);
     }
 
     private String highlightedAfterMovingTo(int index, Model after) throws Exception {

@@ -46,6 +46,7 @@ import net.vanfleteren.jazygit.feature.stash.StashDialog;
 import net.vanfleteren.jazygit.feature.stash.StashDropDialog;
 import net.vanfleteren.jazygit.ui.StashPanel;
 import net.vanfleteren.jazygit.ui.StatusPanel;
+import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.ui.Theme;
 
 import java.io.IOException;
@@ -115,9 +116,13 @@ public class JazygitApp extends ToolkitApp {
         ToolkitRunner runner = runner();
         runner.styleEngine(Theme.createEngine());
         runner.eventRouter().addGlobalHandler(event -> {
-            if (event instanceof KeyEvent key && Theme.isToggleKey(key)) {
-                Theme.toggle();
-                return EventResult.HANDLED;
+            if (event instanceof KeyEvent key) {
+                for (Keymap.Global global : Keymap.standard().globals()) {
+                    if (global.matches().test(key)) {
+                        global.action().run();
+                        return EventResult.HANDLED;
+                    }
+                }
             }
             return EventResult.UNHANDLED;
         });
@@ -183,12 +188,7 @@ public class JazygitApp extends ToolkitApp {
                         CommandLogPanel.render(model).length(COMMAND_LOG_HEIGHT))
                         .fill());
         // The open popup takes the focus, and gives it back to the pane it was opened from.
-        model.popup(HelpPopup.class).map(HelpPopup::topic).ifPresent(topic -> helpOrigin = switch (topic) {
-            case FILES -> FilesPanel.ID;
-            case BRANCHES -> BranchesPanel.ID;
-            case COMMITS -> CommitsPanel.ID;
-            case STASH -> StashPanel.ID;
-        });
+        model.popup(HelpPopup.class).map(HelpPopup::scopeId).ifPresent(scopeId -> helpOrigin = scopeId);
         List<Popup> popups = List.of(
                 new Popup(newBranchDialog.render(model), List.of(NewBranchDialog.ID), BranchesPanel.ID),
                 new Popup(discardDialog.render(model), List.of(DiscardDialog.ID), FilesPanel.ID),

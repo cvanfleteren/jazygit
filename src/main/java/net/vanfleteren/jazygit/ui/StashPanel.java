@@ -3,13 +3,12 @@ package net.vanfleteren.jazygit.ui;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyEvent;
-import net.vanfleteren.jazygit.feature.help.HelpMsg;
-import net.vanfleteren.jazygit.feature.help.HelpTopic;
-import net.vanfleteren.jazygit.feature.stash.StashMsg;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.keys.Keymap;
+import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Msg;
 
 import java.util.List;
@@ -22,7 +21,7 @@ import java.util.stream.IntStream;
  */
 public final class StashPanel {
 
-    public static final String ID = "stash";
+    public static final String ID = Scopes.STASH.id();
 
     private final LoadableList<List<Stash>> list = new LoadableList<>(Messages.get("panel.stash.title"), ID,
             stashes -> IntStream.range(0, stashes.size())
@@ -30,6 +29,7 @@ public final class StashPanel {
                     .toList());
     // The list's key handler also sees keys typed in other panes, so it must know whether it has focus.
     private boolean focused;
+    private final Keymap keymap = Keymap.standard();
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
@@ -75,11 +75,6 @@ public final class StashPanel {
     }
 
     private Optional<Msg> request(KeyEvent event) {
-        return switch (event.string()) {
-            case "?" -> Optional.of(new HelpMsg.Requested(HelpTopic.STASH));
-            case "d" -> selectedStash().map(stash -> new StashMsg.DropRequested(stash.ref()));
-            case "g" -> selectedStash().map(stash -> new StashMsg.PopRequested(stash.ref()));
-            default -> Optional.empty();
-        };
+        return keymap.handle(Scopes.STASH, event, selectedStash());
     }
 }

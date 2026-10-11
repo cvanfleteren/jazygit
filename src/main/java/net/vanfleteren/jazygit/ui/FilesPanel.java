@@ -1,14 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
 import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.feature.commit.AmendMsg;
-import net.vanfleteren.jazygit.feature.commit.CommitMsg;
-import net.vanfleteren.jazygit.feature.discard.DiscardMsg;
-import net.vanfleteren.jazygit.feature.help.HelpMsg;
-import net.vanfleteren.jazygit.feature.stash.StashMsg;
-import net.vanfleteren.jazygit.feature.help.HelpTopic;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
-import net.vanfleteren.jazygit.feature.stage.StageMsg;
 import dev.tamboui.toolkit.Toolkit;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.elements.TreeElement;
@@ -26,6 +19,8 @@ import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.state.FileDiff;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.keys.Keymap;
+import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
 
@@ -44,7 +39,7 @@ import java.util.stream.Stream;
  */
 public class FilesPanel {
 
-    public static final String ID = "files";
+    public static final String ID = Scopes.FILES.id();
 
     // A virtual directory holding everything, so that all changes can be (un)staged at once.
     private static final String ROOT_NAME = "/";
@@ -59,6 +54,7 @@ public class FilesPanel {
     private Loadable<RepoStatus> shown;
     // The tree's key handler also sees keys typed in other panes, so it must know whether it has focus.
     private boolean focused;
+    private final Keymap keymap = Keymap.standard();
     private final Runnable openDiff;
 
     /**
@@ -104,20 +100,7 @@ public class FilesPanel {
     }
 
     private Optional<Msg> request(KeyEvent event) {
-        return switch (event.string()) {
-            case "?" -> Optional.of(new HelpMsg.Requested(HelpTopic.FILES));
-            case "c" -> Optional.of(new CommitMsg.Requested());
-            case "A" -> Optional.of(new AmendMsg.Requested());
-            case "s" -> Optional.of(new StashMsg.Requested());
-            case "d" -> Optional.ofNullable(tree.selectedNode())
-                    .map(TreeNode::data)
-                    .map(data -> new DiscardMsg.Requested(data.entries()));
-            case " " -> Optional.ofNullable(tree.selectedNode())
-                    .map(TreeNode::data)
-                    .map(data -> new StageMsg.Requested(data.entries(),
-                            data instanceof FileTree.Dir dir ? Optional.of(dir.path()) : Optional.empty()));
-            default -> Optional.empty();
-        };
+        return keymap.handle(Scopes.FILES, event, Optional.ofNullable(tree.selectedNode()).map(TreeNode::data));
     }
 
     /**

@@ -1,13 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
 import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
-import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg;
-import net.vanfleteren.jazygit.feature.branch.NewBranchMsg;
-import net.vanfleteren.jazygit.feature.branch.RebaseMsg;
-import net.vanfleteren.jazygit.feature.branch.PushMsg;
-import net.vanfleteren.jazygit.feature.help.HelpMsg;
-import net.vanfleteren.jazygit.feature.help.HelpTopic;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import dev.tamboui.widgets.spinner.SpinnerStyle;
 import dev.tamboui.toolkit.elements.Panel;
@@ -17,6 +10,8 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.BranchLog;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.keys.Keymap;
+import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Msg;
 
 import java.time.Clock;
@@ -36,7 +31,7 @@ import java.util.stream.Stream;
  */
 public class BranchesPanel {
 
-    public static final String ID = "branches";
+    public static final String ID = Scopes.BRANCHES.id();
 
     private static final SpinnerStyle SPINNER = SpinnerStyle.BOUNCING_BAR;
     private static final long SPINNER_FRAME_MILLIS = 120;
@@ -44,6 +39,7 @@ public class BranchesPanel {
     private final LoadableList<List<Branch>> list;
     // The list's key handler also sees keys typed in other panes, so it must know whether it has focus.
     private boolean focused;
+    private final Keymap keymap = Keymap.standard();
     // The branches being pushed; the rows are built from it on every render.
     private Set<String> pushing = Set.of();
 
@@ -166,27 +162,13 @@ public class BranchesPanel {
     }
 
     private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {
-        if (focused && event.isChar('?')) {
-            dispatch.accept(new HelpMsg.Requested(HelpTopic.BRANCHES));
-            return EventResult.HANDLED;
-        }
-        return selectedBranch()
-                .flatMap(branch -> request(event, branch))
+        return Optional.of(event)
+                .filter(e -> focused)
+                .flatMap(e -> keymap.handle(Scopes.BRANCHES, e, selectedBranch()))
                 .map(msg -> {
                     dispatch.accept(msg);
                     return EventResult.HANDLED;
                 })
                 .orElse(EventResult.UNHANDLED);
-    }
-
-    private static Optional<Msg> request(KeyEvent event, String branch) {
-        return switch (event.string()) {
-            case " " -> Optional.of(new CheckoutMsg.Requested(branch));
-            case "d" -> Optional.of(new DeleteBranchMsg.Requested(branch));
-            case "P" -> Optional.of(new PushMsg.Requested(branch));
-            case "r" -> Optional.of(new RebaseMsg.Requested(branch));
-            case "n" -> Optional.of(new NewBranchMsg.Requested(branch));
-            default -> Optional.empty();
-        };
     }
 }

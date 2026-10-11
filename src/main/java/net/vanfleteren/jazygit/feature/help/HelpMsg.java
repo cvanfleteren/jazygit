@@ -12,9 +12,9 @@ public sealed interface HelpMsg extends Msg {
     }
 
     /**
-     * The user asked to see the keybindings of a panel.
+     * The user asked to see the keybindings of the panel with the id {@code scopeId}.
      */
-    record Requested(HelpTopic topic) implements HelpMsg {
+    record Requested(String scopeId) implements HelpMsg {
     }
 
     record Closed() implements HelpMsg {

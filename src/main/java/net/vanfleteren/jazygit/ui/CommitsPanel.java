@@ -1,9 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
 import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.feature.commit.RewordMsg;
-import net.vanfleteren.jazygit.feature.help.HelpMsg;
-import net.vanfleteren.jazygit.feature.help.HelpTopic;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
@@ -14,6 +11,8 @@ import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import net.vanfleteren.jazygit.state.CommitDetail;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.keys.Keymap;
+import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Msg;
 
 import java.util.Arrays;
@@ -27,12 +26,13 @@ import java.util.stream.Collectors;
  */
 public class CommitsPanel {
 
-    public static final String ID = "commits";
+    public static final String ID = Scopes.COMMITS.id();
 
     private final LoadableList<List<Commit>> list = new LoadableList<>(Messages.get("panel.commits.title"), ID,
             commits -> CommitGraph.layout(commits).stream().map(CommitsPanel::row).toList());
     // The list's key handler also sees keys typed in other panes, so it must know whether it has focus.
     private boolean focused;
+    private final Keymap keymap = Keymap.standard();
     private final Runnable openCommit;
 
     public CommitsPanel() {
@@ -134,10 +134,6 @@ public class CommitsPanel {
     }
 
     private Optional<Msg> request(KeyEvent event) {
-        return switch (event.string()) {
-            case "?" -> Optional.of(new HelpMsg.Requested(HelpTopic.COMMITS));
-            case "r" -> Optional.of(new RewordMsg.Requested(selectedIndex()));
-            default -> Optional.empty();
-        };
+        return keymap.handle(Scopes.COMMITS, event, Optional.of(selectedIndex()));
     }
 }

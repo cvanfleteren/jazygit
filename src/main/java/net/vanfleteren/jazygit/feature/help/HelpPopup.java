@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.feature.help;
 import net.vanfleteren.jazygit.state.Popup;
 
 /**
- * Listing the keybindings of the panel {@code topic}.
+ * Listing the keybindings of the panel with the id {@code scopeId}, and the global ones.
  */
-public record HelpPopup(HelpTopic topic) implements Popup {
+public record HelpPopup(String scopeId) implements Popup {
 }
