@@ -1,7 +1,7 @@
 $border: white;
 $accent: cyan;
 
-Panel, TextInputElement, TextAreaElement {
+Panel, TextInputElement, TextAreaElement, RichTextAreaElement {
     border-type: rounded;
     border-color: $border;
 }

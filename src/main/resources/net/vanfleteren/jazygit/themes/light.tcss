@@ -13,7 +13,7 @@ $hunk: #0969da;
     background: $bg;
 }
 
-Panel, TextInputElement, TextAreaElement {
+Panel, TextInputElement, TextAreaElement, RichTextAreaElement {
     border-type: rounded;
     border-color: $border;
 }
