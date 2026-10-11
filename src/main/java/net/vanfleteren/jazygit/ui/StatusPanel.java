@@ -15,6 +15,9 @@ import net.vanfleteren.jazygit.state.Model;
  */
 public final class StatusPanel {
 
+    /** Rows of the panel, borders included. */
+    public static final int HEIGHT = 3;
+
     private StatusPanel() {
     }
 
@@ -26,6 +29,6 @@ public final class StatusPanel {
         };
         TextElement repository = text(Messages.get("status.line", model.repositoryName(), branch));
         return panel(Messages.get("panel.status.title"), repository)
-                .length(3);
+                .length(HEIGHT);
     }
 }

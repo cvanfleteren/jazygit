@@ -11,6 +11,8 @@ import dev.tamboui.tui.TuiConfig;
 import dev.tamboui.tui.event.KeyEvent;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.JGitInfoProvider;
+import net.vanfleteren.jazygit.git.model.Stash;
+import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Program;
@@ -44,6 +46,7 @@ import net.vanfleteren.jazygit.ui.StashPanel;
 import net.vanfleteren.jazygit.ui.StatusPanel;
 import net.vanfleteren.jazygit.ui.Theme;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
@@ -62,6 +65,11 @@ public class JazygitApp extends ToolkitApp {
 
     // Rows of the command log panel, borders included.
     private static final int COMMAND_LOG_HEIGHT = CommandLogPanel.VISIBLE_LINES + 2;
+    private static final int FILES_PERCENT = 25;
+    private static final int BRANCHES_PERCENT = 20;
+    private static final int COMMITS_PERCENT = 30;
+    // A border around a single blank line.
+    private static final int MIN_STASH_HEIGHT = 3;
     private static final Duration REFRESH_INTERVAL = Duration.ofMillis(500);
 
     private final GitInfoProvider provider;
@@ -152,14 +160,19 @@ public class JazygitApp extends ToolkitApp {
         branchesPanel.selectionChange(model).ifPresent(program::dispatch);
         commitsPanel.selectionChange(model).ifPresent(program::dispatch);
         filesPanel.selectionChange(model).ifPresent(program::dispatch);
+        Panel stash = stashPanel.render(model, focusedId);
+        Optional<Integer> stashHeight = stashHeight(model);
         Element layout = row(
                 column(
                         StatusPanel.render(model),
-                        filesPanel.render(model, focusedId).percent(25),
-                        branches.percent(20),
-                        commitsPanel.render(model, focusedId).percent(30),
-                        // The remaining 25%, less the fixed-height status panel.
-                        stashPanel.render(model, focusedId).fill())
+                        filesPanel.render(model, focusedId).percent(FILES_PERCENT),
+                        branches.percent(BRANCHES_PERCENT),
+                        // With the stash sized to its content, the commits take what is left, which is
+                        // their share when the stash is as tall as it may get.
+                        stashHeight.isPresent()
+                                ? commitsPanel.render(model, focusedId).fill()
+                                : commitsPanel.render(model, focusedId).percent(COMMITS_PERCENT),
+                        stashHeight.map(stash::length).orElseGet(stash::fill))
                         .percent(30),
                 column(
                         ContentPanel.render(program.model(), focusedId, commitsPanel.selectedIndex())
@@ -199,6 +212,25 @@ public class JazygitApp extends ToolkitApp {
         }
         Optional<Element> dialog = open.flatMap(Popup::element);
         return dialog.<Element>map(d -> stack(layout, d)).orElse(layout);
+    }
+
+    /**
+     * The height of the stash pane: just its rows, but at most the share of the left column that is
+     * left once the other panes have theirs, and at least an empty pane (a blank line in a border).
+     * Empty when the terminal size is not known.
+     */
+    private Optional<Integer> stashHeight(Model model) {
+        int rows = model.stashes() instanceof Loadable.Loaded<List<Stash>>(List<Stash> stashes)
+                ? Math.max(1, stashes.size())
+                : 1;
+        try {
+            int height = runner().tuiRunner().backend().size().height();
+            int share = height - StatusPanel.HEIGHT
+                    - height * (FILES_PERCENT + BRANCHES_PERCENT + COMMITS_PERCENT) / 100;
+            return Optional.of(Math.max(MIN_STASH_HEIGHT, Math.min(rows + 2, share)));
+        } catch (IOException e) {
+            return Optional.empty();
+        }
     }
 
     private record Popup(Optional<Element> element, List<String> ids, String returnTo) {
