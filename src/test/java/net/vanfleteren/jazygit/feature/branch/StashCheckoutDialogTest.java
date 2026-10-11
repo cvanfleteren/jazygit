@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class StashCheckoutDialogTest {
 
     private final List<Msg> dispatched = new ArrayList<>();
-    private final StashCheckoutDialog dialog = new StashCheckoutDialog(dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<StashCheckoutPopup> dialog = StashCheckoutDialog.create(dispatched::add);
     private final Model open = openModel();
 
     private static Model openModel() {
@@ -64,7 +64,7 @@ class StashCheckoutDialogTest {
             String screen = RenderedText.ofLarge(runner, this::view);
             org.junit.jupiter.api.Assertions.assertTrue(screen.contains("Checkout feature"), screen);
             org.junit.jupiter.api.Assertions.assertTrue(screen.contains("You must stash and pop your changes"), screen);
-            org.junit.jupiter.api.Assertions.assertTrue(screen.contains("(enter/esc)"), screen);
+            org.junit.jupiter.api.Assertions.assertTrue(screen.contains("(enter) confirm   (esc) cancel"), screen);
         }
     }
 

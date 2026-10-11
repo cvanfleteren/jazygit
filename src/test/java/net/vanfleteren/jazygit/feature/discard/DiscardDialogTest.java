@@ -30,7 +30,7 @@ class DiscardDialogTest {
     private static final FileEntry STAGED = new FileEntry("b.txt", ChangeType.ADDED);
 
     private final List<Msg> dispatched = new ArrayList<>();
-    private final DiscardDialog dialog = new DiscardDialog(dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<DiscardPopup> dialog = DiscardDialog.create(dispatched::add);
 
     private static Model open(FileEntry... files) {
         return Update.update(TestModels.loaded(), new DiscardMsg.Requested(List.of(files))).model();
@@ -87,6 +87,7 @@ class DiscardDialogTest {
             assertTrue(screen.contains("(x) Discard all changes"), screen);
             assertTrue(screen.contains("(u) Discard unstaged changes"), screen);
             assertTrue(screen.contains("(c) Cancel"), screen);
+            assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
         }
     }
 

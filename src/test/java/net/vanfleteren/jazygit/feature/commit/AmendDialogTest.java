@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class AmendDialogTest {
 
     private final List<Msg> dispatched = new ArrayList<>();
-    private final AmendDialog dialog = new AmendDialog(dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<AmendPopup> dialog = AmendDialog.create(dispatched::add);
     private final Model open = openModel();
 
     private static Model openModel() {

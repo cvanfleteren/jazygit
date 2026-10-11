@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class StashDropDialogTest {
 
     private final List<Msg> dispatched = new ArrayList<>();
-    private final StashDropDialog dialog = new StashDropDialog(dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<StashDropPopup> dialog = StashDropDialog.create(dispatched::add);
     private final Model open = Update.update(
             Update.update(TestModels.loaded(), new LoadMsg.StashesLoaded(List.of(new Stash("stash@{0}", "x")))).model(),
             new StashMsg.DropRequested("stash@{0}")).model();
@@ -57,7 +57,7 @@ class StashDropDialogTest {
             String screen = RenderedText.ofLarge(runner, this::view);
             assertTrue(screen.contains("Stash drop"), screen);
             assertTrue(screen.contains("Are you sure you want to drop the selected stash entry?"), screen);
-            assertTrue(screen.contains("(enter/esc)"), screen);
+            assertTrue(screen.contains("(enter) confirm   (esc) cancel"), screen);
         }
     }
 

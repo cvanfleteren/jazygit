@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class ForcePushDialogTest {
 
     private final List<Msg> dispatched = new ArrayList<>();
-    private final ForcePushDialog dialog = new ForcePushDialog(dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<ForcePushPopup> dialog = ForcePushDialog.create(dispatched::add);
     private final Model open = openModel();
 
     private static Model openModel() {
@@ -63,8 +63,7 @@ class ForcePushDialogTest {
             String screen = RenderedText.ofLarge(runner, this::view);
             org.junit.jupiter.api.Assertions.assertTrue(screen.contains("Force push main"), screen);
             org.junit.jupiter.api.Assertions.assertTrue(screen.contains("Your branch has diverged from the remote branch."), screen);
-            org.junit.jupiter.api.Assertions.assertTrue(screen.contains("<esc> to cancel"), screen);
-            org.junit.jupiter.api.Assertions.assertTrue(screen.contains("<enter> to force push"), screen);
+            org.junit.jupiter.api.Assertions.assertTrue(screen.contains("(enter) confirm   (esc) cancel"), screen);
         }
     }
 

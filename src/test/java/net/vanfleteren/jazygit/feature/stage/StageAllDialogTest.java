@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class StageAllDialogTest {
 
     private final List<Msg> dispatched = new ArrayList<>();
-    private final StageAllDialog dialog = new StageAllDialog(dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<net.vanfleteren.jazygit.feature.commit.StageAllPopup> dialog = StageAllDialog.create(dispatched::add);
     private final Model open = openModel();
 
     private static Model openModel() {

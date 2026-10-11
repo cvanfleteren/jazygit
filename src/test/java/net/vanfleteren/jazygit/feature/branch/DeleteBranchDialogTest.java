@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class DeleteBranchDialogTest {
 
     private final List<Msg> dispatched = new ArrayList<>();
-    private final DeleteBranchDialog dialog = new DeleteBranchDialog(dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<DeleteBranchPopup> dialog = DeleteBranchDialog.create(dispatched::add);
     private final Model open = Update.update(TestModels.loaded(new SampleData()),
             new DeleteBranchMsg.Requested("feature/initial-layout")).model();
 
@@ -81,6 +81,17 @@ class DeleteBranchDialogTest {
             r.pilot().press('r');
             r.pilot().press('b');
         }));
+    }
+
+    @Test
+    void listsAllOptionsWithCancelAndTheKeyHint() throws Exception {
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(open))) {
+            String screen = RenderedText.ofLarge(runner, () -> view(open));
+            org.junit.jupiter.api.Assertions.assertTrue(screen.contains("(d) delete local branch"), screen);
+            org.junit.jupiter.api.Assertions.assertTrue(screen.contains("(b) delete local and remote branch"), screen);
+            org.junit.jupiter.api.Assertions.assertTrue(screen.contains("(c) Cancel"), screen);
+            org.junit.jupiter.api.Assertions.assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
+        }
     }
 
     @FunctionalInterface
