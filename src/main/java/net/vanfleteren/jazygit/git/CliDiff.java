@@ -61,7 +61,10 @@ public final class CliDiff {
                 .flatMap(index -> TempFiles.using("jazygit-index",
                                 copy -> {
                                     if (Files.exists(index)) {
-                                        Files.copy(index, copy, StandardCopyOption.REPLACE_EXISTING);
+                                        // Keeping the modification time keeps git's check for files changed
+                                        // within the same second as the index working on the copy.
+                                        Files.copy(index, copy, StandardCopyOption.REPLACE_EXISTING,
+                                                StandardCopyOption.COPY_ATTRIBUTES);
                                     }
                                 },
                                 copy -> withUntracked(workTree, unstaged, untracked,
