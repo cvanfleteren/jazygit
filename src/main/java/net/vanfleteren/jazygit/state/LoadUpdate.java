@@ -105,7 +105,7 @@ public final class LoadUpdate {
     }
 
     private static Model finished(Model model, Cmd.Load cmd) {
-        return model.withRefreshing(model.refreshing().remove(cmd));
+        return model.withRefreshing(model.refreshing().remove(cmd.key()));
     }
 
     private static Model failed(Model model, Cmd.Load cmd, String message) {

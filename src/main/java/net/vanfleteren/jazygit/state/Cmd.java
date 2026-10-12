@@ -56,6 +56,14 @@ public interface Cmd {
      */
     sealed interface Load extends Cmd {
 
+        /**
+         * What this load reads, so one that is still running is not started again: loads with the same
+         * key read the same thing. That is the load itself, unless it carries data that only helps reading.
+         */
+        default Load key() {
+            return this;
+        }
+
         @Override
         default Msg failed(String message) {
             return new LoadMsg.Failed(this, message);
@@ -74,8 +82,8 @@ public interface Cmd {
      * Reads the branches.
      *
      * @param known the branches as shown now, which spare the provider recounting how far unchanged
-     *              branches are from their upstream. They are not part of what is loaded: every
-     *              {@code LoadBranches} equals every other, so a running one is not queued again.
+     *              branches are from their upstream. They do not change what is loaded, so they are not
+     *              part of the {@link #key()}.
      */
     record LoadBranches(List<Branch> known) implements Load {
 
@@ -89,13 +97,8 @@ public interface Cmd {
         }
 
         @Override
-        public boolean equals(Object other) {
-            return other instanceof LoadBranches;
-        }
-
-        @Override
-        public int hashCode() {
-            return LoadBranches.class.hashCode();
+        public Load key() {
+            return new LoadBranches();
         }
     }
 

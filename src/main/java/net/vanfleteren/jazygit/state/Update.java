@@ -54,7 +54,7 @@ public final class Update {
     }
 
     public static Next refresh(Model model) {
-        List<Cmd.Load> loads = periodic(model).filter(cmd -> !model.refreshing().contains(cmd));
+        List<Cmd.Load> loads = periodic(model).filter(cmd -> !model.refreshing().contains(cmd.key()));
         List<Cmd> cmds = List.<Cmd>empty()
                 .appendAll(loads)
                 .appendAll(model.commits() instanceof Failed ? List.of(new LoadCommits()) : List.empty())
@@ -66,7 +66,7 @@ public final class Update {
                         .filter(detail -> detail.changes() instanceof Failed)
                         .map(detail -> new LoadCommitDetail(detail.sha()))
                         .map(List::<Cmd>of).getOrElse(List.empty()));
-        return new Next(model.withRefreshing(model.refreshing().addAll(loads)), cmds);
+        return new Next(model.withRefreshing(model.refreshing().addAll(loads.map(Cmd.Load::key))), cmds);
     }
 
     /**
@@ -81,9 +81,9 @@ public final class Update {
         return model.fileDiff()
                 .filter(d -> status.files().containsAll(d.files()))
                 .map(d -> new LoadFileDiff(d.files()))
-                .filter(cmd -> !model.refreshing().contains(cmd))
+                .filter(cmd -> !model.refreshing().contains(cmd.key()))
                 .map(cmd -> new Next(
-                        model.withRefreshing(model.refreshing().add(cmd)),
+                        model.withRefreshing(model.refreshing().add(cmd.key())),
                         cmds.append(cmd)))
                 .getOrElse(() -> new Next(model, cmds));
     }

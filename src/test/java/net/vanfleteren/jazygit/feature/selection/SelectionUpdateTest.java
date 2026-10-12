@@ -138,7 +138,7 @@ class SelectionUpdateTest {
         model = Update.update(model, new LoadMsg.Failed(new LoadBranchLog("feature"), "boom")).model();
 
         assertEquals(Option.of(new BranchLog("feature", new Failed<>("boom"))), model.branchLog());
-        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadStashes(), new LoadBranchLog("feature")),
+        assertEquals(List.of(new LoadStatus(), new LoadBranches(BRANCHES), new net.vanfleteren.jazygit.state.Cmd.LoadStashes(), new LoadBranchLog("feature")),
                 Update.update(model, new Tick()).cmds());
     }
 

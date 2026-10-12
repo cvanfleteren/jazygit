@@ -143,7 +143,7 @@ class BranchUpdateTest {
 
         Next done = Update.update(withError(loaded(), "boom"), new PushMsg.Done("feature", List.of()));
         assertEquals(Option.none(), done.model().error());
-        assertEquals(true, done.cmds().contains(new LoadBranches()));
+        assertEquals(true, done.cmds().contains(new LoadBranches(BRANCHES)));
     }
 
     @Test
@@ -262,7 +262,7 @@ class BranchUpdateTest {
     void checkedOutReloadsStatusAndBranches() {
         Next next = Update.update(loaded(), new CheckoutMsg.Done("feature", List.of("git checkout feature")));
 
-        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadStashes()), next.cmds());
+        assertEquals(List.of(new LoadStatus(), new LoadBranches(BRANCHES), new net.vanfleteren.jazygit.state.Cmd.LoadStashes()), next.cmds());
         assertEquals(Option.none(), next.model().error());
     }
 
