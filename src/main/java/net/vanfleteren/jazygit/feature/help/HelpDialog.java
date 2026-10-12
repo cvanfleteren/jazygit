@@ -13,6 +13,8 @@ import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.Theme;
+import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
+import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
 import java.util.function.Consumer;
 
@@ -20,7 +22,7 @@ import java.util.function.Consumer;
  * Popup listing the keys of a panel and what they do. Escape, Enter or ? closes it. Whether it is
  * open lives in the {@link Model}.
  */
-public final class HelpDialog {
+public final class HelpDialog implements PopupView {
 
     public static final String ID = "help";
 
@@ -49,6 +51,12 @@ public final class HelpDialog {
      * The popup, while the model asks for the keybindings of a panel: the keys of that panel, then the
      * global ones.
      */
+    @Override
+    public List<String> ids() {
+        return List.of(ID);
+    }
+
+    @Override
     public Option<Element> render(Model model) {
         return model.popup(HelpPopup.class).map(HelpPopup::scopeId).flatMap(scopeId ->
                 keymap.titleKey(scopeId).map(titleKey -> {
@@ -56,18 +64,13 @@ public final class HelpDialog {
                             .<StyledElement<?>>map(b -> row(b.label(), b.descriptionKey()))
                             .append(text(""))
                             .append(text(Messages.get("dialog.help.global")).addClass(Theme.Classes.BOLD))
-                            .appendAll(keymap.globals().map(g -> row(g.label(), g.descriptionKey())))
-                            .append(text(""))
-                            .append(text(Messages.get("dialog.help.hint")).addClass(Theme.Classes.DIM));
-                    return dialog(Messages.get("dialog.help.title", Messages.get(titleKey)),
-                            rows.toJavaArray(StyledElement[]::new))
+                            .appendAll(keymap.globals().map(g -> row(g.label(), g.descriptionKey())));
+                    return DialogFrame.withHint(Messages.get("dialog.help.title", Messages.get(titleKey)), WIDTH,
+                                    "dialog.help.hint", rows)
                             .id(ID)
                             .focusable()
-                            .rounded()
-                            .width(WIDTH)
-                            // The rows, plus the border.
-                            .length(rows.size() + 2)
-                            .padding(1)
+                            // The rows, the blank line and the hint, plus the border.
+                            .length(rows.size() + 2 + 2)
                             .onKeyEvent(this::handleKey)
                             .onConfirm(this::close)
                             .onCancel(this::close);

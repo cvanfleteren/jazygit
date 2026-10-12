@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class MergeDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<MergePopup> dialog = MergeDialog.create(dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<MergePopup> dialog = new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(BranchDialogs.MERGE, dispatched::add);
     // In the test models, main is checked out.
     private final Model open = Update.update(TestModels.loaded(), new MergeMsg.Requested("feature")).model();
 
@@ -72,7 +72,7 @@ class MergeDialogTest {
     private ToolkitTestRunner start() throws Exception {
         assertEquals(true, open.popup(MergePopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        runner.runner().focusManager().setFocus(MergeDialog.ID);
+        runner.runner().focusManager().setFocus(BranchDialogs.MERGE.id());
         RenderedText.of(runner, this::view);
         return runner;
     }

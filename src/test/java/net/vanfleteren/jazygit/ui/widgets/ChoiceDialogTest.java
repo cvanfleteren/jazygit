@@ -33,12 +33,12 @@ class ChoiceDialogTest {
     }
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final ChoiceDialog<PickPopup> dialog = new ChoiceDialog<>("pick", PickPopup.class,
+    private final ChoiceDialog<PickPopup> dialog = new ChoiceDialog<>(new ChoiceDialog.Spec<>("pick", PickPopup.class,
             popup -> "Pick one",
             List.of(new Choice<>('a', "dialog.discard.all", () -> new Picked("a")),
                     new Choice<>('b', "dialog.discard.unstaged", () -> new Picked("b"),
                             (model, popup) -> popup.second())),
-            () -> new Picked("cancel"), dispatched::add);
+            () -> new Picked("cancel")), dispatched::add);
 
     private static Model open(boolean second) {
         return TestModels.loaded().openPopup(new PickPopup(second));

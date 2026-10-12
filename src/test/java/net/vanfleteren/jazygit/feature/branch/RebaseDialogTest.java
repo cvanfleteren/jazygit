@@ -25,7 +25,7 @@ import java.util.ArrayList;
 class RebaseDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final ChoiceDialog<RebasePopup> dialog = RebaseDialog.create(dispatched::add);
+    private final ChoiceDialog<RebasePopup> dialog = new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(BranchDialogs.REBASE, dispatched::add);
     private final Model open = Update.update(TestModels.loaded(new SampleData()),
             new RebaseMsg.Requested("feature/initial-layout")).model();
 
@@ -63,7 +63,7 @@ class RebaseDialogTest {
 
     private List<Msg> pressing(Keys keys) throws Exception {
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view())) {
-            runner.runner().focusManager().setFocus(RebaseDialog.ID);
+            runner.runner().focusManager().setFocus(BranchDialogs.REBASE.id());
             RenderedText.of(runner, () -> view());
             keys.press(runner);
             runner.pilot().pause();

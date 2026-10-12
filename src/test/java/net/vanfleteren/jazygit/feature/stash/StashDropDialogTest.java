@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class StashDropDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<StashDropPopup> dialog = StashDropDialog.create(dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<StashDropPopup> dialog = new net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<>(StashDialogs.DROP, dispatched::add);
     private final Model open = Update.update(
             Update.update(TestModels.loaded(), new LoadMsg.StashesLoaded(List.of(new Stash("stash@{0}", "x")))).model(),
             new StashMsg.DropRequested("stash@{0}")).model();
@@ -69,7 +69,7 @@ class StashDropDialogTest {
     private ToolkitTestRunner start() throws Exception {
         assertTrue(open.popup(StashDropPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        runner.runner().focusManager().setFocus(StashDropDialog.ID);
+        runner.runner().focusManager().setFocus(StashDialogs.DROP.id());
         RenderedText.of(runner, this::view);
         return runner;
     }

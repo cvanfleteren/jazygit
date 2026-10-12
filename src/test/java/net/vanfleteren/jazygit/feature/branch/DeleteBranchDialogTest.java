@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class DeleteBranchDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<DeleteBranchPopup> dialog = DeleteBranchDialog.create(dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<DeleteBranchPopup> dialog = new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(BranchDialogs.DELETE_BRANCH, dispatched::add);
     private final Model open = Update.update(TestModels.loaded(new SampleData()),
             new DeleteBranchMsg.Requested("feature/initial-layout")).model();
 
@@ -104,7 +104,7 @@ class DeleteBranchDialogTest {
 
     private List<Msg> pressing(Model model, Keys keys) throws Exception {
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(model))) {
-            runner.runner().focusManager().setFocus(DeleteBranchDialog.ID);
+            runner.runner().focusManager().setFocus(BranchDialogs.DELETE_BRANCH.id());
             RenderedText.of(runner, () -> view(model));
             keys.press(runner);
             runner.pilot().pause();

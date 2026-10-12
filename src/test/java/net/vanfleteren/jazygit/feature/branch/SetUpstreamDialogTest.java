@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class SetUpstreamDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final SetUpstreamDialog dialog = new SetUpstreamDialog(dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.TextInputDialog<SetUpstreamPopup> dialog = new net.vanfleteren.jazygit.ui.widgets.TextInputDialog<>(BranchDialogs.SET_UPSTREAM, dispatched::add);
     // In the test models, feature has no upstream.
     private final Model open = Update.update(TestModels.loaded(), new PushMsg.Requested("feature")).model();
 
@@ -80,7 +80,7 @@ class SetUpstreamDialogTest {
     private ToolkitTestRunner start() throws Exception {
         assertEquals(true, open.popup(SetUpstreamPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        runner.runner().focusManager().setFocus(SetUpstreamDialog.ID);
+        runner.runner().focusManager().setFocus(BranchDialogs.SET_UPSTREAM.id());
         RenderedText.of(runner, this::view);
         return runner;
     }

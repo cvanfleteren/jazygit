@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class AmendDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<AmendPopup> dialog = AmendDialog.create(dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<AmendPopup> dialog = new net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<>(CommitDialogs.AMEND, dispatched::add);
     private final Model open = openModel();
 
     private static Model openModel() {
@@ -77,7 +77,7 @@ class AmendDialogTest {
     private ToolkitTestRunner start() throws Exception {
         assertEquals(true, open.popup(AmendPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        runner.runner().focusManager().setFocus(AmendDialog.ID);
+        runner.runner().focusManager().setFocus(CommitDialogs.AMEND.id());
         RenderedText.of(runner, this::view);
         return runner;
     }

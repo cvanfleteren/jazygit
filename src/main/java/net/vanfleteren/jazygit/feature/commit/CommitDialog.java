@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.SubmittableTextArea;
+import net.vanfleteren.jazygit.ui.widgets.PopupView;
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import java.util.function.Consumer;
@@ -27,7 +28,7 @@ import java.util.function.Supplier;
  * <p>There are two flavours: {@link #commit} asks for the message of a new commit, {@link #reword}
  * for a new message of the last commit, starting out with the current one.
  */
-public final class CommitDialog {
+public final class CommitDialog implements PopupView {
 
     /**
      * The id of the summary field of the commit popup, which gets the focus when the popup opens.
@@ -88,6 +89,7 @@ public final class CommitDialog {
     /**
      * The ids of the fields of the popup; the first one gets the focus when it opens.
      */
+    @Override
     public List<String> ids() {
         return List.of(summaryId, descriptionId);
     }
@@ -95,6 +97,7 @@ public final class CommitDialog {
     /**
      * The popup, while the model asks for a commit message.
      */
+    @Override
     public Option<Element> render(Model model) {
         if (!open.test(model)) {
             shown = false;

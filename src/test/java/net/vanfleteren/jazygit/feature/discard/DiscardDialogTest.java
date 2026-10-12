@@ -30,7 +30,7 @@ class DiscardDialogTest {
     private static final FileEntry STAGED = new FileEntry("b.txt", ChangeType.ADDED);
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<DiscardPopup> dialog = DiscardDialog.create(dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<DiscardPopup> dialog = new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(DiscardDialog.SPEC, dispatched::add);
 
     private static Model open(FileEntry... files) {
         return Update.update(TestModels.loaded(), new DiscardMsg.Requested(List.of(files))).model();
@@ -98,7 +98,7 @@ class DiscardDialogTest {
 
     private List<Msg> pressing(Model model, Keys keys) throws Exception {
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(model))) {
-            runner.runner().focusManager().setFocus(DiscardDialog.ID);
+            runner.runner().focusManager().setFocus(DiscardDialog.SPEC.id());
             RenderedText.of(runner, () -> view(model));
             keys.press(runner);
             runner.pilot().pause();

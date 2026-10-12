@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class ForcePushDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<ForcePushPopup> dialog = ForcePushDialog.create(dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<ForcePushPopup> dialog = new net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<>(BranchDialogs.FORCE_PUSH, dispatched::add);
     private final Model open = openModel();
 
     private static Model openModel() {
@@ -76,7 +76,7 @@ class ForcePushDialogTest {
     private ToolkitTestRunner start() throws Exception {
         assertEquals(true, open.popup(ForcePushPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        runner.runner().focusManager().setFocus(ForcePushDialog.ID);
+        runner.runner().focusManager().setFocus(BranchDialogs.FORCE_PUSH.id());
         RenderedText.of(runner, this::view);
         return runner;
     }

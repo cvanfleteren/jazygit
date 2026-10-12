@@ -25,7 +25,7 @@ import java.util.ArrayList;
 class ThemeDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final ChoiceDialog<ThemePopup> dialog = ThemeDialog.create(dispatched::add);
+    private final ChoiceDialog<ThemePopup> dialog = new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(ThemeDialog.SPEC, dispatched::add);
     private final Model open = Update.update(TestModels.loaded(new SampleData()),
             new ThemeMsg.Requested()).model();
 
@@ -71,7 +71,7 @@ class ThemeDialogTest {
 
     private List<Msg> pressing(Keys keys) throws Exception {
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view())) {
-            runner.runner().focusManager().setFocus(ThemeDialog.ID);
+            runner.runner().focusManager().setFocus(ThemeDialog.SPEC.id());
             RenderedText.of(runner, () -> view());
             keys.press(runner);
             runner.pilot().pause();

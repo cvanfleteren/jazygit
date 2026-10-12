@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class StashCheckoutDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<StashCheckoutPopup> dialog = StashCheckoutDialog.create(dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<StashCheckoutPopup> dialog = new net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<>(BranchDialogs.STASH_CHECKOUT, dispatched::add);
     private final Model open = openModel();
 
     private static Model openModel() {
@@ -68,7 +68,7 @@ class StashCheckoutDialogTest {
     private ToolkitTestRunner start() throws Exception {
         assertEquals(true, open.popup(StashCheckoutPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        runner.runner().focusManager().setFocus(StashCheckoutDialog.ID);
+        runner.runner().focusManager().setFocus(BranchDialogs.STASH_CHECKOUT.id());
         RenderedText.of(runner, this::view);
         return runner;
     }

@@ -43,8 +43,8 @@ class ConfirmDialogTest {
     private final java.util.List<Msg> dispatched = new ArrayList<>();
 
     private ConfirmDialog<AskPopup> dialog(String message) {
-        return new ConfirmDialog<>("ask", AskPopup.class, popup -> "Delete " + popup.thing(), popup -> message,
-                Yes::new, No::new, dispatched::add);
+        return new ConfirmDialog<>(new ConfirmDialog.Spec<>("ask", AskPopup.class, popup -> "Delete " + popup.thing(),
+                popup -> message, Yes::new, No::new), dispatched::add);
     }
 
     private static Model open() {

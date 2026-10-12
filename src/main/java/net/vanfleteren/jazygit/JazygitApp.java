@@ -15,35 +15,15 @@ import io.vavr.control.Option;
 import io.vavr.control.Try;
 import dev.tamboui.css.engine.StyleEngine;
 import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.feature.branch.DeleteBranchDialog;
-import net.vanfleteren.jazygit.feature.branch.DeleteBranchPopup;
-import net.vanfleteren.jazygit.feature.branch.ForcePushDialog;
-import net.vanfleteren.jazygit.feature.branch.ForcePushPopup;
-import net.vanfleteren.jazygit.feature.branch.NewBranchDialog;
-import net.vanfleteren.jazygit.feature.branch.MergeDialog;
-import net.vanfleteren.jazygit.feature.branch.MergePopup;
-import net.vanfleteren.jazygit.feature.branch.RebaseDialog;
-import net.vanfleteren.jazygit.feature.branch.RebasePopup;
-import net.vanfleteren.jazygit.feature.branch.SetUpstreamDialog;
-import net.vanfleteren.jazygit.feature.branch.StashCheckoutDialog;
-import net.vanfleteren.jazygit.feature.branch.StashCheckoutPopup;
-import net.vanfleteren.jazygit.feature.commit.AmendDialog;
-import net.vanfleteren.jazygit.feature.commit.AmendPopup;
+import net.vanfleteren.jazygit.feature.branch.BranchDialogs;
 import net.vanfleteren.jazygit.feature.commit.CommitDialog;
-import net.vanfleteren.jazygit.feature.commit.SquashDialog;
-import net.vanfleteren.jazygit.feature.commit.SquashPopup;
-import net.vanfleteren.jazygit.feature.commit.StageAllPopup;
+import net.vanfleteren.jazygit.feature.commit.CommitDialogs;
 import net.vanfleteren.jazygit.feature.discard.DiscardDialog;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
-import net.vanfleteren.jazygit.feature.discard.DiscardPopup;
 import net.vanfleteren.jazygit.feature.help.HelpDialog;
 import net.vanfleteren.jazygit.feature.help.HelpPopup;
-import net.vanfleteren.jazygit.feature.stage.StageAllDialog;
-import net.vanfleteren.jazygit.feature.stash.StashDialog;
-import net.vanfleteren.jazygit.feature.stash.StashDropDialog;
-import net.vanfleteren.jazygit.feature.stash.StashDropPopup;
+import net.vanfleteren.jazygit.feature.stash.StashDialogs;
 import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
-import net.vanfleteren.jazygit.feature.theme.ThemePopup;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.CliGitInfoProvider;
 import net.vanfleteren.jazygit.keys.Keymap;
@@ -62,12 +42,16 @@ import net.vanfleteren.jazygit.ui.StatusPanel;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
+import net.vanfleteren.jazygit.ui.widgets.PopupView;
+import net.vanfleteren.jazygit.ui.widgets.TextInputDialog;
 
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Entry point for jazygit, a lazygit-style terminal UI for Git built with TamboUI.
@@ -89,29 +73,30 @@ public class JazygitApp extends ToolkitApp {
 
     private final GitInfoProvider provider;
     private final StyleEngine styleEngine;
-    private final FilesPanel filesPanel = new FilesPanel(msg -> this.program.dispatch(msg),
-            () -> openContent(FilesPanel.ID));
-    private final BranchesPanel branchesPanel = new BranchesPanel(msg -> this.program.dispatch(msg));
-    private final NewBranchDialog newBranchDialog = new NewBranchDialog(msg -> this.program.dispatch(msg));
-    private final ChoiceDialog<DiscardPopup> discardDialog = DiscardDialog.create(msg -> this.program.dispatch(msg));
-    private final ChoiceDialog<ThemePopup> themeDialog = ThemeDialog.create(msg -> this.program.dispatch(msg));
-    private final ChoiceDialog<RebasePopup> rebaseDialog = RebaseDialog.create(msg -> this.program.dispatch(msg));
-    private final ChoiceDialog<MergePopup> mergeDialog = MergeDialog.create(msg -> this.program.dispatch(msg));
-    private final ChoiceDialog<DeleteBranchPopup> deleteBranchDialog = DeleteBranchDialog.create(msg -> this.program.dispatch(msg));
-    private final ConfirmDialog<ForcePushPopup> forcePushDialog = ForcePushDialog.create(msg -> this.program.dispatch(msg));
-    private final SetUpstreamDialog setUpstreamDialog = new SetUpstreamDialog(msg -> this.program.dispatch(msg));
-    private final ConfirmDialog<StashCheckoutPopup> stashCheckoutDialog = StashCheckoutDialog.create(msg -> this.program.dispatch(msg));
-    private final ConfirmDialog<AmendPopup> amendDialog = AmendDialog.create(msg -> this.program.dispatch(msg));
-    private final ConfirmDialog<SquashPopup> squashDialog = SquashDialog.create(msg -> this.program.dispatch(msg));
-    private final CommitDialog rewordDialog = CommitDialog.reword(msg -> this.program.dispatch(msg));
-    private final ConfirmDialog<StashDropPopup> stashDropDialog = StashDropDialog.create(msg -> this.program.dispatch(msg));
-    private final StashDialog stashDialog = new StashDialog(msg -> this.program.dispatch(msg));
-    private final ConfirmDialog<StageAllPopup> stageAllDialog = StageAllDialog.create(msg -> this.program.dispatch(msg));
-    private final CommitDialog commitDialog = new CommitDialog(msg -> this.program.dispatch(msg));
-    private final CommitsPanel commitsPanel = new CommitsPanel(msg -> this.program.dispatch(msg),
-            () -> openContent(CommitsPanel.ID));
-    private final StashPanel stashPanel = new StashPanel(msg -> this.program.dispatch(msg));
-    private final HelpDialog helpDialog = new HelpDialog(msg -> this.program.dispatch(msg));
+    private final Consumer<Msg> dispatch = msg -> this.program.dispatch(msg);
+    private final FilesPanel filesPanel = new FilesPanel(dispatch, () -> openContent(FilesPanel.ID));
+    private final BranchesPanel branchesPanel = new BranchesPanel(dispatch);
+    private final CommitsPanel commitsPanel = new CommitsPanel(dispatch, () -> openContent(CommitsPanel.ID));
+    private final StashPanel stashPanel = new StashPanel(dispatch);
+    // Every popup, with where the focus goes when it closes. At most one is open.
+    private final List<PopupSlot> popups = List.of(
+            new PopupSlot(new TextInputDialog<>(BranchDialogs.NEW_BRANCH, dispatch), () -> this.lastFocus),
+            new PopupSlot(new ChoiceDialog<>(DiscardDialog.SPEC, dispatch), () -> FilesPanel.ID),
+            new PopupSlot(new ChoiceDialog<>(ThemeDialog.SPEC, dispatch), () -> this.lastFocus),
+            new PopupSlot(new ChoiceDialog<>(BranchDialogs.REBASE, dispatch), () -> BranchesPanel.ID),
+            new PopupSlot(new ChoiceDialog<>(BranchDialogs.MERGE, dispatch), () -> BranchesPanel.ID),
+            new PopupSlot(new ChoiceDialog<>(BranchDialogs.DELETE_BRANCH, dispatch), () -> BranchesPanel.ID),
+            new PopupSlot(new ConfirmDialog<>(BranchDialogs.FORCE_PUSH, dispatch), () -> BranchesPanel.ID),
+            new PopupSlot(new TextInputDialog<>(BranchDialogs.SET_UPSTREAM, dispatch), () -> BranchesPanel.ID),
+            new PopupSlot(new ConfirmDialog<>(BranchDialogs.STASH_CHECKOUT, dispatch), () -> BranchesPanel.ID),
+            new PopupSlot(new ConfirmDialog<>(CommitDialogs.AMEND, dispatch), () -> FilesPanel.ID),
+            new PopupSlot(new ConfirmDialog<>(StashDialogs.DROP, dispatch), () -> StashPanel.ID),
+            new PopupSlot(new TextInputDialog<>(StashDialogs.STASH, dispatch), () -> FilesPanel.ID),
+            new PopupSlot(new ConfirmDialog<>(CommitDialogs.STAGE_ALL, dispatch), () -> FilesPanel.ID),
+            new PopupSlot(new CommitDialog(dispatch), () -> FilesPanel.ID),
+            new PopupSlot(new ConfirmDialog<>(CommitDialogs.SQUASH, dispatch), () -> CommitsPanel.ID),
+            new PopupSlot(CommitDialog.reword(dispatch), () -> CommitsPanel.ID),
+            new PopupSlot(new HelpDialog(dispatch), () -> this.helpOrigin));
     // The panel the help popup was opened from, which gets the focus back.
     private String helpOrigin = FilesPanel.ID;
     // Where the focus was when no popup had it, which the theme popup, opened from anywhere, gives it back to.
@@ -214,36 +199,20 @@ public class JazygitApp extends ToolkitApp {
         Element layout = column(panes.fill(), FetchLine.render(model).length(FetchLine.HEIGHT));
         // The open popup takes the focus, and gives it back to the pane it was opened from.
         model.popup(HelpPopup.class).map(HelpPopup::scopeId).forEach(scopeId -> helpOrigin = scopeId);
-        List<Popup> popups = List.of(
-                new Popup(newBranchDialog.render(model), List.of(NewBranchDialog.ID), lastFocus),
-                new Popup(discardDialog.render(model), List.of(DiscardDialog.ID), FilesPanel.ID),
-                new Popup(themeDialog.render(model), List.of(ThemeDialog.ID), lastFocus),
-                new Popup(rebaseDialog.render(model), List.of(RebaseDialog.ID), BranchesPanel.ID),
-                new Popup(mergeDialog.render(model), List.of(MergeDialog.ID), BranchesPanel.ID),
-                new Popup(deleteBranchDialog.render(model), List.of(DeleteBranchDialog.ID), BranchesPanel.ID),
-                new Popup(forcePushDialog.render(model), List.of(ForcePushDialog.ID), BranchesPanel.ID),
-                new Popup(setUpstreamDialog.render(model), List.of(SetUpstreamDialog.ID), BranchesPanel.ID),
-                new Popup(stashCheckoutDialog.render(model), List.of(StashCheckoutDialog.ID), BranchesPanel.ID),
-                new Popup(amendDialog.render(model), List.of(AmendDialog.ID), FilesPanel.ID),
-                new Popup(stashDropDialog.render(model), List.of(StashDropDialog.ID), StashPanel.ID),
-                new Popup(stashDialog.render(model), List.of(StashDialog.ID), FilesPanel.ID),
-                new Popup(stageAllDialog.render(model), List.of(StageAllDialog.ID), FilesPanel.ID),
-                new Popup(commitDialog.render(model), commitDialog.ids(), FilesPanel.ID),
-                new Popup(squashDialog.render(model), List.of(SquashDialog.ID), CommitsPanel.ID),
-                new Popup(rewordDialog.render(model), rewordDialog.ids(), CommitsPanel.ID),
-                new Popup(helpDialog.render(model), List.of(HelpDialog.ID), helpOrigin));
-        if (focusedId != null && popups.forAll(p -> !p.ids().contains(focusedId))) {
+        List<Shown> shown = popups.map(slot -> new Shown(slot.view().render(model), slot.view().ids(),
+                slot.returnTo().get()));
+        if (focusedId != null && shown.forAll(p -> !p.ids().contains(focusedId))) {
             lastFocus = focusedId;
         }
-        Option<Popup> open = popups.find(p -> p.element().isDefined());
+        Option<Shown> open = shown.find(p -> p.element().isDefined());
         Option<String> focus = Option.of(focusedId);
         open.fold(
                         // A popup that just closed gives the focus back.
-                        () -> popups.find(p -> focus.exists(p.ids()::contains)).map(Popup::returnTo),
+                        () -> shown.find(p -> focus.exists(p.ids()::contains)).map(Shown::returnTo),
                         // A popup that just opened takes the focus.
                         p -> focus.exists(p.ids()::contains) ? Option.<String>none() : p.ids().headOption())
                 .forEach(runner().focusManager()::setFocus);
-        return open.flatMap(Popup::element).<Element>map(d -> stack(layout, d)).getOrElse(layout);
+        return open.flatMap(Shown::element).<Element>map(d -> stack(layout, d)).getOrElse(layout);
     }
 
     /**
@@ -261,7 +230,16 @@ public class JazygitApp extends ToolkitApp {
                 .map(share -> Math.max(MIN_STASH_HEIGHT, Math.min(rows + 2, share)));
     }
 
-    private record Popup(Option<Element> element, List<String> ids, String returnTo) {
+    /**
+     * A popup, and the pane that gets the focus back when it closes.
+     */
+    private record PopupSlot(PopupView view, Supplier<String> returnTo) {
+    }
+
+    /**
+     * A popup as rendered: its dialog while it is open.
+     */
+    private record Shown(Option<Element> element, List<String> ids, String returnTo) {
     }
 
     /**

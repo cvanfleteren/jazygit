@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class StageAllDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<net.vanfleteren.jazygit.feature.commit.StageAllPopup> dialog = StageAllDialog.create(dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<net.vanfleteren.jazygit.feature.commit.StageAllPopup> dialog = new net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<>(net.vanfleteren.jazygit.feature.commit.CommitDialogs.STAGE_ALL, dispatched::add);
     private final Model open = openModel();
 
     private static Model openModel() {
@@ -68,7 +68,7 @@ class StageAllDialogTest {
     private ToolkitTestRunner start() throws Exception {
         assertEquals(true, open.popup(StageAllPopup.class).isDefined(), "nothing is staged");
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        runner.runner().focusManager().setFocus(StageAllDialog.ID);
+        runner.runner().focusManager().setFocus(net.vanfleteren.jazygit.feature.commit.CommitDialogs.STAGE_ALL.id());
         RenderedText.of(runner, this::view);
         return runner;
     }

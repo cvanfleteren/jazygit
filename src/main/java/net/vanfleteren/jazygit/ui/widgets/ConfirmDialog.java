@@ -5,12 +5,11 @@ import static dev.tamboui.toolkit.Toolkit.*;
 import dev.tamboui.style.Overflow;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.widgets.paragraph.Paragraph;
+import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
-import net.vanfleteren.jazygit.ui.Theme;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -22,7 +21,7 @@ import java.util.function.Supplier;
  *
  * @param <P> the popup that makes this dialog show
  */
-public final class ConfirmDialog<P extends Popup> {
+public final class ConfirmDialog<P extends Popup> implements PopupView {
 
     private static final int WIDTH = 60;
     // The popup's border and padding on both sides.
@@ -30,57 +29,55 @@ public final class ConfirmDialog<P extends Popup> {
     // The blank line and the hint below the message, plus the top and bottom border.
     private static final int EXTRA_HEIGHT = 2 + 2;
 
-    private final String id;
-    private final Class<P> popupType;
-    private final Function<P, String> title;
-    private final Function<P, String> message;
-    private final Supplier<Msg> onConfirm;
-    private final Supplier<Msg> onCancel;
-    private final Consumer<Msg> dispatch;
-
     /**
+     * What the dialog shows and sends.
+     *
      * @param id        the id of the dialog, which takes the focus while it is open
      * @param popupType the popup that makes the dialog show
      * @param title     the title, from the popup
      * @param message   the question, from the popup; it is wrapped at the dialog's width
      * @param onConfirm the message for Enter
      * @param onCancel  the message for Escape
-     * @param dispatch  receives the messages for the user's actions, on the render thread
      */
-    public ConfirmDialog(String id, Class<P> popupType, Function<P, String> title, Function<P, String> message,
-                         Supplier<Msg> onConfirm, Supplier<Msg> onCancel, Consumer<Msg> dispatch) {
-        this.id = id;
-        this.popupType = popupType;
-        this.title = title;
-        this.message = message;
-        this.onConfirm = onConfirm;
-        this.onCancel = onCancel;
+    public record Spec<P>(String id, Class<P> popupType, Function<P, String> title, Function<P, String> message,
+                          Supplier<Msg> onConfirm, Supplier<Msg> onCancel) {
+    }
+
+    private final Spec<P> spec;
+    private final Consumer<Msg> dispatch;
+
+    /**
+     * @param dispatch receives the messages for the user's actions, on the render thread
+     */
+    public ConfirmDialog(Spec<P> spec, Consumer<Msg> dispatch) {
+        this.spec = spec;
         this.dispatch = dispatch;
     }
 
     public String id() {
-        return id;
+        return spec.id();
+    }
+
+    @Override
+    public List<String> ids() {
+        return List.of(spec.id());
     }
 
     /**
      * The popup, while the model has {@code P} open.
      */
+    @Override
     public Option<Element> render(Model model) {
-        return model.popup(popupType).map(popup -> {
-            String text = message.apply(popup);
+        return model.popup(spec.popupType()).map(popup -> {
+            String text = spec.message().apply(popup);
             int messageHeight = lines(text, INNER_WIDTH);
-            return dialog(title.apply(popup),
-                    widget(Paragraph.builder().text(text).overflow(Overflow.WRAP_WORD).build()).length(messageHeight),
-                    text(""),
-                    text(Messages.get("dialog.hint.confirmCancel")).addClass(Theme.Classes.DIM))
-                    .id(id)
+            return DialogFrame.withHint(spec.title().apply(popup), WIDTH, "dialog.hint.confirmCancel", List.of(
+                            widget(Paragraph.builder().text(text).overflow(Overflow.WRAP_WORD).build()).length(messageHeight)))
+                    .id(spec.id())
                     .focusable()
-                    .rounded()
-                    .width(WIDTH)
                     .length(messageHeight + EXTRA_HEIGHT)
-                    .padding(1)
-                    .onConfirm(() -> dispatch.accept(onConfirm.get()))
-                    .onCancel(() -> dispatch.accept(onCancel.get()));
+                    .onConfirm(() -> dispatch.accept(spec.onConfirm().get()))
+                    .onCancel(() -> dispatch.accept(spec.onCancel().get()));
         });
     }
 
@@ -88,16 +85,12 @@ public final class ConfirmDialog<P extends Popup> {
      * How many lines {@code text} takes when wrapped at {@code width} on spaces.
      */
     static int lines(String text, int width) {
-        int lines = 1;
-        int used = 0;
-        for (String word : text.split(" ")) {
-            if (used > 0 && used + 1 + word.length() > width) {
-                lines++;
-                used = word.length();
-            } else {
-                used += (used > 0 ? 1 : 0) + word.length();
-            }
+        record Wrapped(int lines, int used) {
         }
-        return lines;
+        return List.of(text.split(" "))
+                .foldLeft(new Wrapped(1, 0), (wrapped, word) -> wrapped.used() > 0 && wrapped.used() + 1 + word.length() > width
+                        ? new Wrapped(wrapped.lines() + 1, word.length())
+                        : new Wrapped(wrapped.lines(), wrapped.used() + (wrapped.used() > 0 ? 1 : 0) + word.length()))
+                .lines();
     }
 }

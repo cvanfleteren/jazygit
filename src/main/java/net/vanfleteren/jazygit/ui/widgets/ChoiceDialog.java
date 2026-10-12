@@ -29,7 +29,7 @@ import java.util.function.Supplier;
  *
  * @param <P> the popup that makes this dialog show
  */
-public final class ChoiceDialog<P extends Popup> {
+public final class ChoiceDialog<P extends Popup> implements PopupView {
 
     private static final int WIDTH = 40;
     private static final char CANCEL_KEY = 'c';
@@ -68,105 +68,97 @@ public final class ChoiceDialog<P extends Popup> {
         }
     }
 
-    private final String id;
-    private final Class<P> popupType;
-    private final Function<P, String> title;
-    private final List<Choice<P>> choices;
-    private final Consumer<Msg> dispatch;
-    private final ListElement<?> list;
-    // What the rows show; null before the first render.
-    private List<Boolean> shownEnabled;
-    private List<String> shownLabels;
-    // Whether each option applies, as of the last render.
-    private List<Boolean> enabled = List.of();
-
     /**
+     * What the dialog shows and sends.
+     *
      * @param id        the id of the list, which takes the focus while the dialog is open
      * @param popupType the popup that makes the dialog show
      * @param title     the title, from the popup
      * @param choices   the options, in order; a cancel option is added after them
      * @param onCancel  the message for cancelling, by the cancel option or by Escape
-     * @param dispatch  receives the messages for the user's actions, on the render thread
      */
-    public ChoiceDialog(String id, Class<P> popupType, Function<P, String> title, List<Choice<P>> choices,
-                        Supplier<Msg> onCancel, Consumer<Msg> dispatch) {
-        this.id = id;
-        this.popupType = popupType;
-        this.title = title;
-        this.choices = choices.append(new Choice<P>(CANCEL_KEY, "dialog.choice.cancel", onCancel));
+    public record Spec<P>(String id, Class<P> popupType, Function<P, String> title, List<Choice<P>> choices,
+                          Supplier<Msg> onCancel) {
+    }
+
+    /**
+     * An option as it is shown: its text, and whether it applies.
+     */
+    private record Row(String label, boolean enabled) {
+    }
+
+    private final Spec<P> spec;
+    private final List<Choice<P>> choices;
+    private final Consumer<Msg> dispatch;
+    private final ListElement<?> list;
+    // What the rows show, as of the last render.
+    private List<Row> shown = List.empty();
+
+    /**
+     * @param dispatch receives the messages for the user's actions, on the render thread
+     */
+    public ChoiceDialog(Spec<P> spec, Consumer<Msg> dispatch) {
+        this.spec = spec;
+        this.choices = spec.choices().append(new Choice<P>(CANCEL_KEY, "dialog.choice.cancel", spec.onCancel()));
         this.dispatch = dispatch;
         this.list = list()
-                .id(id)
+                .id(spec.id())
                 .focusable()
                 .highlightSymbol("")
                 .onKeyEvent(this::handleKey);
     }
 
     public String id() {
-        return id;
+        return spec.id();
+    }
+
+    @Override
+    public List<String> ids() {
+        return List.of(spec.id());
     }
 
     /**
      * The popup, while the model has {@code P} open.
      */
+    @Override
     public Option<Element> render(Model model) {
-        return model.popup(popupType).map(popup -> {
-            List<String> labels = choices.map(choice -> choice.label().apply(popup));
-            showOptions(labels, choices.map(choice -> choice.enabled().test(model, popup)));
-            return dialog(title.apply(popup),
-                    list.length(choices.size()),
-                    text(""),
-                    text(Messages.get("dialog.hint.selectCancel")).addClass(Theme.Classes.DIM))
-                    .rounded()
-                    .width(Math.max(WIDTH, widest(labels) + ROW_OVERHEAD))
-                    .padding(1)
-                    .onCancel(() -> choose(choices.last()));
+        return model.popup(spec.popupType()).map(popup -> {
+            show(choices.map(choice -> new Row(choice.label().apply(popup), choice.enabled().test(model, popup))));
+            return DialogFrame.withHint(spec.title().apply(popup), Math.max(WIDTH, widest() + ROW_OVERHEAD),
+                    "dialog.hint.selectCancel", List.of(list.length(choices.size())));
         });
     }
 
-    private static int widest(List<String> labels) {
-        return labels.map(String::length).max().getOrElse(0);
+    private int widest() {
+        return shown.map(row -> row.label().length()).max().getOrElse(0);
     }
 
-    private void showOptions(List<String> labels, List<Boolean> nowEnabled) {
-        enabled = nowEnabled;
-        if (!nowEnabled.equals(shownEnabled) || !labels.equals(shownLabels)) {
-            shownEnabled = nowEnabled;
-            shownLabels = labels;
-            list.elements(List.range(0, choices.size())
-                    .map(i -> row(choices.get(i), labels.get(i), nowEnabled.get(i)))
-                    .toJavaArray(StyledElement[]::new));
+    private void show(List<Row> rows) {
+        if (!rows.equals(shown)) {
+            shown = rows;
+            list.elements(choices.zipWith(rows, ChoiceDialog::row).toJavaArray(StyledElement[]::new));
         }
     }
 
-    private static StyledElement<?> row(Choice<?> choice, String label, boolean enabled) {
-        String text = Messages.get("dialog.choice.row", String.valueOf(choice.key()), label);
-        return enabled ? text(text) : text(text).addClass(Theme.Classes.DISABLED);
+    private static StyledElement<?> row(Choice<?> choice, Row row) {
+        String text = Messages.get("dialog.choice.row", String.valueOf(choice.key()), row.label());
+        return row.enabled() ? text(text) : text(text).addClass(Theme.Classes.DISABLED);
     }
 
     private EventResult handleKey(KeyEvent event) {
-        if (event.code() == KeyCode.ESCAPE) {
-            choose(choices.last());
-            return EventResult.HANDLED;
-        }
-        if (event.isConfirm()) {
-            choose(choices.get(Math.clamp(list.selected(), 0, choices.size() - 1)));
-            return EventResult.HANDLED;
-        }
-        return choices.find(choice -> event.isChar(choice.key()))
-                .map(choice -> {
-                    choose(choice);
-                    return EventResult.HANDLED;
-                })
-                .getOrElse(EventResult.UNHANDLED);
+        Option<Choice<P>> chosen = event.code() == KeyCode.ESCAPE ? Option.of(choices.last())
+                : event.isConfirm() ? choices.lift().apply(Math.clamp(list.selected(), 0, choices.size() - 1))
+                : choices.find(choice -> event.isChar(choice.key()));
+        chosen.forEach(this::choose);
+        return chosen.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
     }
 
     private void choose(Choice<P> choice) {
         // A disabled option is not actionable.
-        if (enabled.lift().apply(choices.indexOf(choice)).contains(false)) {
-            return;
+        boolean disabled = shown.lift().apply(choices.indexOf(choice)).exists(row -> !row.enabled());
+        if (!disabled) {
+            list.selected(0);
+            dispatch.accept(choice.msg().get());
         }
-        list.selected(0);
-        dispatch.accept(choice.msg().get());
     }
 }

@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class NewBranchDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final NewBranchDialog dialog = new NewBranchDialog(dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.TextInputDialog<NewBranchPopup> dialog = new net.vanfleteren.jazygit.ui.widgets.TextInputDialog<>(BranchDialogs.NEW_BRANCH, dispatched::add);
     private final Model open = Update.update(TestModels.loaded(new SampleData()), new NewBranchMsg.Requested("main"))
             .model();
 
@@ -56,7 +56,7 @@ class NewBranchDialogTest {
 
     private ToolkitTestRunner start() throws Exception {
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        runner.runner().focusManager().setFocus(NewBranchDialog.ID);
+        runner.runner().focusManager().setFocus(BranchDialogs.NEW_BRANCH.id());
         RenderedText.of(runner, this::view);
         return runner;
     }
