@@ -13,8 +13,7 @@ public sealed interface RewordMsg extends Msg {
     }
 
     /**
-     * The user asked to reword the commit at {@code index} in the commit log. Only the last commit
-     * (index 0) can be reworded.
+     * The user asked to reword the commit at {@code index} in the commit log; any commit can be.
      */
     record Requested(int index) implements RewordMsg {
     }
