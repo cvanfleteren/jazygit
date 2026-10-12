@@ -14,12 +14,14 @@ import net.vanfleteren.jazygit.git.GitError.DiscardError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
 import net.vanfleteren.jazygit.git.GitError.LogError;
+import net.vanfleteren.jazygit.git.GitError.NoWorkTree;
+import net.vanfleteren.jazygit.git.GitError.NotARepository;
+import net.vanfleteren.jazygit.git.GitError.OpenError;
+import net.vanfleteren.jazygit.git.GitError.OpenFailed;
 import net.vanfleteren.jazygit.git.GitError.RepositoryUnreadable;
 import net.vanfleteren.jazygit.git.GitError.RewordError;
 import net.vanfleteren.jazygit.git.GitError.UnknownBranch;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.state.GitErrorText;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.lib.BranchConfig;
 import org.eclipse.jgit.lib.BranchTrackingStatus;
@@ -33,7 +35,6 @@ import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Comparator;
@@ -63,34 +64,38 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     private record Tracking(String trackingRef, String localOid, String remoteOid, int ahead, int behind) {
     }
 
+    private JGitInfoProvider(Repository repository, Path workTree) {
+        this.repository = repository;
+        this.git = new Git(repository);
+        this.workTree = workTree;
+    }
+
     /**
      * Opens the repository containing {@code startDir}, searching parent directories like
-     * {@code git} itself does.
-     *
-     * @throws IllegalStateException if {@code startDir} is not inside a git repository, the
-     *                               repository has no working tree, or git cannot be run
+     * {@code git} itself does. It fails when {@code startDir} is not inside a git repository, the
+     * repository has no working tree, or git cannot be run.
      */
-    public JGitInfoProvider(Path startDir) {
+    public static Either<OpenError, JGitInfoProvider> open(Path startDir) {
         FileRepositoryBuilder builder = new FileRepositoryBuilder()
                 .readEnvironment()
                 .findGitDir(startDir.toFile());
-        if (builder.getGitDir() == null) {
-            throw new IllegalStateException(Messages.get("git.notRepository", startDir));
-        }
-        try {
-            this.repository = builder.setMustExist(true).build();
-        } catch (IOException e) {
-            throw new UncheckedIOException(Messages.get("git.openFailed", builder.getGitDir()), e);
-        }
-        this.git = new Git(repository);
-        try {
-            this.workTree = repository.getWorkTree().toPath();
-            // Fail at startup rather than on first use when git is not available.
-            CliStatus.read(workTree).getOrElseThrow(error -> new IllegalStateException(GitErrorText.of(error)));
-        } catch (RuntimeException e) {
-            close();
-            throw e;
-        }
+        return Option.of(builder.getGitDir())
+                .<OpenError>toEither(() -> new NotARepository(startDir))
+                .flatMap(gitDir -> Try.of(() -> builder.setMustExist(true).build())
+                        .toEither()
+                        .<OpenError>mapLeft(e -> new OpenFailed(gitDir.toPath(), String.valueOf(e.getMessage()))))
+                .flatMap(JGitInfoProvider::withWorkTree)
+                // Fail at startup rather than on first use when git is not available.
+                .flatMap(provider -> Either.<OpenError, JGitInfoProvider>narrow(CliStatus.read(provider.workTree)
+                                .map(status -> provider))
+                        .peekLeft(error -> provider.close()));
+    }
+
+    private static Either<OpenError, JGitInfoProvider> withWorkTree(Repository repository) {
+        return repository.isBare()
+                ? Either.<OpenError, JGitInfoProvider>left(new NoWorkTree(repository.getDirectory().toPath()))
+                .peekLeft(error -> repository.close())
+                : Either.right(new JGitInfoProvider(repository, repository.getWorkTree().toPath()));
     }
 
     @Override

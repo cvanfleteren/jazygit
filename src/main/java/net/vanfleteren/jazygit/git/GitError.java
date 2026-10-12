@@ -48,9 +48,15 @@ public sealed interface GitError {
     }
 
     /**
+     * The failures of opening a repository.
+     */
+    sealed interface OpenError extends GitError {
+    }
+
+    /**
      * A failure that running any git command can have.
      */
-    sealed interface ProcessError extends CheckoutError, RewordError, DiscardError, DiffError {
+    sealed interface ProcessError extends CheckoutError, RewordError, DiscardError, DiffError, OpenError {
     }
 
     /**
@@ -78,6 +84,24 @@ public sealed interface GitError {
      *                    printed nothing
      */
     record CommandFailed(String explanation, int exitCode) implements ProcessError {
+    }
+
+    /**
+     * No git repository contains the directory.
+     */
+    record NotARepository(Path directory) implements OpenError {
+    }
+
+    /**
+     * The repository was found, but could not be opened.
+     */
+    record OpenFailed(Path gitDir, String reason) implements OpenError {
+    }
+
+    /**
+     * The repository is bare: there are no files to show.
+     */
+    record NoWorkTree(Path gitDir) implements OpenError {
     }
 
     /**

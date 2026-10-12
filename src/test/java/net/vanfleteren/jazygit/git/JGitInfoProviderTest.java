@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.git;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.*;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,7 +40,19 @@ class JGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "hello\n");
         git("add", "README.md");
         git("commit", "-q", "-m", "Initial commit");
-        provider = new JGitInfoProvider(repo);
+        provider = JGitInfoProvider.open(repo).get();
+    }
+
+    @Test
+    void openingFailsOutsideARepositoryAndForABareOne(@TempDir Path elsewhere) throws Exception {
+        Path plain = Files.createDirectories(elsewhere.resolve("plain"));
+        Path bare = elsewhere.resolve("bare.git");
+        gitIn(elsewhere, "init", "-q", "--bare", bare.toString());
+
+        assertInstanceOf(GitError.NoWorkTree.class, JGitInfoProvider.open(bare).getLeft());
+        assumeTrue(new FileRepositoryBuilder().findGitDir(plain.toFile()).getGitDir() == null,
+                "the temporary directory is inside a repository");
+        assertEquals(new GitError.NotARepository(plain), JGitInfoProvider.open(plain).getLeft());
     }
 
     @AfterEach
@@ -670,7 +683,7 @@ class JGitInfoProviderTest {
         Path empty = repo.resolve("empty");
         Files.createDirectories(empty);
         gitIn(empty, "init", "-q", "-b", "main");
-        try (JGitInfoProvider emptyProvider = new JGitInfoProvider(empty)) {
+        try (JGitInfoProvider emptyProvider = JGitInfoProvider.open(empty).get()) {
             assertEquals(RepoStatus.INITIAL, emptyProvider.status().get().headOid());
             assertEquals(List.of(), emptyProvider.commits().get());
         }

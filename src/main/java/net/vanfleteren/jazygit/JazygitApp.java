@@ -10,6 +10,7 @@ import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.TuiConfig;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchDialog;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchPopup;
@@ -36,10 +37,12 @@ import net.vanfleteren.jazygit.feature.stash.StashDropDialog;
 import net.vanfleteren.jazygit.feature.stash.StashDropPopup;
 import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
 import net.vanfleteren.jazygit.feature.theme.ThemePopup;
+import net.vanfleteren.jazygit.git.GitError.OpenError;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.JGitInfoProvider;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.keys.Keymap;
+import net.vanfleteren.jazygit.state.GitErrorText;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -257,15 +260,13 @@ public class JazygitApp extends ToolkitApp {
      */
     public static void main(String[] args) throws Exception {
         Path start = (args.length > 0 ? Path.of(args[0]) : Path.of("")).toAbsolutePath();
-        JGitInfoProvider provider;
-        try {
-            provider = new JGitInfoProvider(start);
-        } catch (IllegalStateException e) {
-            System.err.println(e.getMessage());
+        Either<OpenError, JGitInfoProvider> opened = JGitInfoProvider.open(start);
+        if (opened.isLeft()) {
+            System.err.println(GitErrorText.of(opened.getLeft()));
             System.exit(1);
             return;
         }
-        try (provider) {
+        try (JGitInfoProvider provider = opened.get()) {
             new JazygitApp(provider).run();
         }
     }
