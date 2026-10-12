@@ -66,53 +66,51 @@ public final class Keymap {
 
     /**
      * A key that works wherever the focus is.
-     *
-     * @param label          how the key is shown to the user
-     * @param descriptionKey the message key of what the key does
-     * @param matches        whether an event is this key; never for a key that the framework handles
-     * @param msg            the message to send for it
      */
-    public record Global(String label, String descriptionKey, Predicate<KeyEvent> matches, Supplier<Msg> msg) {
+    public sealed interface Global {
+
+        /**
+         * How the key is shown to the user.
+         */
+        String label();
+
+        /**
+         * The message key of what the key does.
+         */
+        String descriptionKey();
+
+        /**
+         * The message to send for {@code event}, if it is this key.
+         */
+        Option<Msg> handle(KeyEvent event);
+
+        /**
+         * A key that sends {@code msg}.
+         *
+         * @param matches whether an event is this key
+         */
+        record Dispatching(String label, String descriptionKey, Predicate<KeyEvent> matches, Supplier<Msg> msg)
+                implements Global {
+
+            @Override
+            public Option<Msg> handle(KeyEvent event) {
+                return matches.test(event) ? Option.of(msg.get()) : Option.none();
+            }
+        }
 
         /**
          * A key that is only listed, because the framework handles it.
          */
-        public static Global documented(String label, String descriptionKey) {
-            return new Global(label, descriptionKey, event -> false, () -> {
-                throw new IllegalStateException("Handled by the framework: " + label);
-            });
+        record Documented(String label, String descriptionKey) implements Global {
+
+            @Override
+            public Option<Msg> handle(KeyEvent event) {
+                return Option.none();
+            }
         }
     }
 
     private record Section(Scope<?> scope, List<Binding<?>> bindings) {
-    }
-
-    /**
-     * Collects the keys of the features.
-     */
-    public static final class Builder {
-
-        private Map<String, Section> sections = LinkedHashMap.empty();
-        private List<Global> globals = List.empty();
-
-        private Builder() {
-        }
-
-        @SafeVarargs
-        public final <S> Builder add(Scope<S> scope, Binding<S>... bindings) {
-            List<Binding<?>> existing = sections.get(scope.id()).map(Section::bindings).getOrElse(List.empty());
-            sections = sections.put(scope.id(), new Section(scope, existing.appendAll(List.of(bindings))));
-            return this;
-        }
-
-        public Builder global(Global global) {
-            globals = globals.append(global);
-            return this;
-        }
-
-        public Keymap build() {
-            return new Keymap(sections, globals);
-        }
     }
 
     private final Map<String, Section> sections;
@@ -123,8 +121,27 @@ public final class Keymap {
         this.globals = globals;
     }
 
-    public static Builder builder() {
-        return new Builder();
+    /**
+     * A keymap without keys, for the features to add theirs to.
+     */
+    public static Keymap empty() {
+        return new Keymap(LinkedHashMap.empty(), List.empty());
+    }
+
+    /**
+     * This keymap with {@code bindings} added to the keys of {@code scope}.
+     */
+    @SafeVarargs
+    public final <S> Keymap add(Scope<S> scope, Binding<S>... bindings) {
+        List<Binding<?>> existing = bindings(scope.id());
+        return new Keymap(sections.put(scope.id(), new Section(scope, existing.appendAll(List.of(bindings)))), globals);
+    }
+
+    /**
+     * This keymap with the key {@code global} added.
+     */
+    public Keymap global(Global global) {
+        return new Keymap(sections, globals.append(global));
     }
 
     /**
@@ -163,6 +180,13 @@ public final class Keymap {
 
     public List<Global> globals() {
         return globals;
+    }
+
+    /**
+     * The message of the global key {@code event} is, if it is one.
+     */
+    public Option<Msg> handleGlobal(KeyEvent event) {
+        return globals.iterator().flatMap(global -> global.handle(event)).headOption();
     }
 
     /**

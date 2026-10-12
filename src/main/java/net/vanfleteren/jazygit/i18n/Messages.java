@@ -1,8 +1,10 @@
 package net.vanfleteren.jazygit.i18n;
 
+import io.vavr.control.Option;
+import io.vavr.control.Try;
+
 import java.text.MessageFormat;
 import java.util.Locale;
-import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 
 /**
@@ -49,12 +51,13 @@ public final class Messages {
         return messages.format(key, args);
     }
 
+    /**
+     * The message {@code key} with {@code args} filled in; {@code !key!} when there is no such message, or
+     * when its pattern is malformed.
+     */
     public String format(String key, Object... args) {
-        try {
-            String pattern = bundle.getString(key);
-            return new MessageFormat(pattern, locale).format(args);
-        } catch (MissingResourceException e) {
-            return "!" + key + "!";
-        }
+        return Option.when(bundle.containsKey(key), () -> bundle.getString(key))
+                .flatMap(pattern -> Try.of(() -> new MessageFormat(pattern, locale).format(args)).toOption())
+                .getOrElse(() -> "!" + key + "!");
     }
 }

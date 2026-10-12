@@ -163,8 +163,7 @@ public final class ChoiceDialog<P extends Popup> {
 
     private void choose(Choice<P> choice) {
         // A disabled option is not actionable.
-        int index = choices.indexOf(choice);
-        if (index < enabled.size() && !enabled.get(index)) {
+        if (enabled.lift().apply(choices.indexOf(choice)).contains(false)) {
             return;
         }
         list.selected(0);

@@ -2,9 +2,7 @@ package net.vanfleteren.jazygit.feature.branch;
 
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
@@ -38,7 +36,6 @@ public final class DeleteBranchDialog {
     }
 
     private static boolean remoteDeletable(Model model, DeleteBranchPopup popup) {
-        return model.branches() instanceof Loadable.Loaded<List<Branch>>(List<Branch> branches)
-                && branches.exists(b -> b.name().equals(popup.branch()) && b.remoteDeletable());
+        return DeleteBranchUpdate.remoteDeletable(model, popup.branch());
     }
 }

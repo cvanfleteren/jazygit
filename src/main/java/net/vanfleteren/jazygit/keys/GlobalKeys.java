@@ -11,9 +11,10 @@ final class GlobalKeys {
     private GlobalKeys() {
     }
 
-    static void register(Keymap.Builder keys) {
-        keys.global(Keymap.Global.documented("?", "help.global.help"))
-                .global(new Keymap.Global("ctrl+t", "help.global.theme", Theme::isThemeKey, ThemeMsg.Requested::new))
-                .global(Keymap.Global.documented("q", "help.global.quit"));
+    static Keymap register(Keymap keys) {
+        return keys.global(new Keymap.Global.Documented("?", "help.global.help"))
+                .global(new Keymap.Global.Dispatching("ctrl+t", "help.global.theme", Theme::isThemeKey,
+                        ThemeMsg.Requested::new))
+                .global(new Keymap.Global.Documented("q", "help.global.quit"));
     }
 }

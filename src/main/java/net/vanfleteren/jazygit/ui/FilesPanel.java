@@ -176,15 +176,12 @@ public class FilesPanel {
         if (entry.type() == ChangeType.UNTRACKED) {
             return Toolkit.row(Toolkit.text("??").addClass(Theme.Classes.UNSTAGED), Toolkit.text(" " + file.name()));
         }
-        if (entry.conflict().isDefined()) {
-            Conflict conflict = entry.conflict().get();
-            return Toolkit.row(Toolkit.text(marker(conflict.ours())).addClass(Theme.Classes.STAGED),
-                    Toolkit.text(marker(conflict.theirs())).addClass(Theme.Classes.UNSTAGED), Toolkit.text(" " + file.name()));
-        }
-        String staged = entry.staged() ? entry.type().marker() : " ";
-        String unstaged = !entry.unstaged() ? " " : entry.type() == ChangeType.DELETED ? "D" : "M";
-        return Toolkit.row(Toolkit.text(staged).addClass(Theme.Classes.STAGED), Toolkit.text(unstaged).addClass(Theme.Classes.UNSTAGED),
-                Toolkit.text(" " + file.name()));
+        String staged = entry.conflict().map(conflict -> marker(conflict.ours()))
+                .getOrElse(() -> entry.staged() ? entry.type().marker() : " ");
+        String unstaged = entry.conflict().map(conflict -> marker(conflict.theirs()))
+                .getOrElse(() -> !entry.unstaged() ? " " : entry.type() == ChangeType.DELETED ? "D" : "M");
+        return Toolkit.row(Toolkit.text(staged).addClass(Theme.Classes.STAGED),
+                Toolkit.text(unstaged).addClass(Theme.Classes.UNSTAGED), Toolkit.text(" " + file.name()));
     }
 
     /**

@@ -6,8 +6,9 @@ import dev.tamboui.style.Style;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
+import io.vavr.control.Either;
+import io.vavr.control.Try;
+
 import java.util.Set;
 
 /**
@@ -52,18 +53,26 @@ public final class Theme {
     private Theme() {
     }
 
-    public static StyleEngine createEngine() {
+    /**
+     * A stylesheet of a theme could not be read.
+     */
+    public record LoadFailed(String theme, Throwable cause) {
+    }
+
+    /**
+     * The style engine with all themes loaded, the dark one active.
+     */
+    public static Either<LoadFailed, StyleEngine> createEngine() {
         StyleEngine engine = StyleEngine.create();
-        try {
-            for (String name : NAMES) {
-                engine.loadStylesheet(name, RESOURCE_DIR + name + ".tcss");
-            }
-        } catch (IOException e) {
-            throw new UncheckedIOException("Cannot load themes", e);
-        }
-        engine.setActiveStylesheet(DARK);
-        active = engine;
-        return engine;
+        return NAMES.foldLeft(Either.<LoadFailed, StyleEngine>right(engine), (loaded, name) -> loaded.flatMap(e ->
+                        Try.run(() -> e.loadStylesheet(name, RESOURCE_DIR + name + ".tcss"))
+                                .toEither()
+                                .<LoadFailed>mapLeft(cause -> new LoadFailed(name, cause))
+                                .map(done -> e)))
+                .peek(e -> {
+                    e.setActiveStylesheet(DARK);
+                    active = e;
+                });
     }
 
     /** Whether {@code event} is the shortcut that asks which theme to use. */

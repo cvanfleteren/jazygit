@@ -67,6 +67,27 @@ public record Model(String repositoryName,
     }
 
     /**
+     * The commit at {@code index} in the log of HEAD, if it is loaded and has one there.
+     */
+    public Option<Commit> commitAt(int index) {
+        return commits.toOption().flatMap(loaded -> loaded.lift().apply(index));
+    }
+
+    /**
+     * The local branch {@code name}, if the branches are loaded and it is one of them.
+     */
+    public Option<Branch> branch(String name) {
+        return branches.toOption().flatMap(loaded -> loaded.find(branch -> branch.name().equals(name)));
+    }
+
+    /**
+     * The checked out branch, if the branches are loaded and one is checked out.
+     */
+    public Option<Branch> currentBranch() {
+        return branches.toOption().flatMap(loaded -> loaded.find(Branch::current));
+    }
+
+    /**
      * This model without an error shown.
      */
     public Model clearError() {

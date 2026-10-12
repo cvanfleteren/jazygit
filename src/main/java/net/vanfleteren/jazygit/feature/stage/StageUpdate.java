@@ -45,10 +45,10 @@ public final class StageUpdate {
         // Resetting a directory takes every staged change below it out of the index. That is only right
         // when none of them is a newly added file, which has to be removed from the index instead: doing
         // that for the directory would remove all its tracked files.
-        if (directory.isDefined() && added.isEmpty()) {
-            return Next.of(model.clearError(), new Unstage(List.of(), List.of(pathspec(directory.get()))));
-        }
-        return Next.of(model.clearError(), new Unstage(added, others));
+        Unstage unstage = directory.filter(d -> added.isEmpty())
+                .map(d -> new Unstage(List.of(), List.of(pathspec(d))))
+                .getOrElse(() -> new Unstage(added, others));
+        return Next.of(model.clearError(), unstage);
     }
 
     /**

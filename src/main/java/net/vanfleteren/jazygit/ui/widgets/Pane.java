@@ -26,11 +26,8 @@ public final class Pane {
         if (focused) {
             panel.addClass(Theme.Classes.FOCUSED);
         }
-        if (count.isDefined()) {
-            int total = count.get();
-            panel.bottomTitle((total == 0 ? 0 : selected + 1) + "/" + total)
-                    .bottomTitleAlignment(Alignment.RIGHT);
-        }
+        count.forEach(total -> panel.bottomTitle((total == 0 ? 0 : selected + 1) + "/" + total)
+                .bottomTitleAlignment(Alignment.RIGHT));
         return panel;
     }
 }

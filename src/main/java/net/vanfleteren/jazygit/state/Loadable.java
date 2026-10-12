@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.control.Option;
+
 import java.util.function.Function;
 
 /**
@@ -29,13 +31,24 @@ public sealed interface Loadable<T> {
     }
 
     /**
+     * The value, once it is loaded.
+     */
+    default Option<T> toOption() {
+        return this instanceof Loaded<T>(T value) ? Option.of(value) : Option.none();
+    }
+
+    /**
+     * The value once it is loaded, {@code otherwise} until then or when it failed to load.
+     */
+    default T getOrElse(T otherwise) {
+        return toOption().getOrElse(otherwise);
+    }
+
+    /**
      * Returns this instance when it already holds an equal value, so unchanged data keeps its
      * identity and views can skip rebuilding it.
      */
     default Loadable<T> reload(T value) {
-        if (this instanceof Loaded<T>(T current) && current.equals(value)) {
-            return this;
-        }
-        return new Loaded<>(value);
+        return toOption().contains(value) ? this : new Loaded<>(value);
     }
 }

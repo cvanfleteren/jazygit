@@ -1,13 +1,10 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.Push;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.PushSettingUpstream;
-import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.AppError;
-import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -32,28 +29,17 @@ public final class PushUpdate {
     }
 
     private static Next requested(Model model, String branch) {
-        boolean known = model.branches() instanceof Loaded<List<Branch>>(List<Branch> branches)
-                && branches.exists(b -> b.name().equals(branch));
-        // A branch that is being pushed or deleted is not pushed meanwhile.
-        if (!known || model.busy().contains(branch)) {
-            return Next.of(model);
-        }
-        // A branch without an upstream is pushed where the user says. Pushing a diverged branch needs a
-        // force push, which the user must confirm.
-        return !hasUpstream(model, branch)
-                ? Next.of(model.openPopup(new SetUpstreamPopup(branch)).clearError())
-                : diverged(model, branch)
-                ? Next.of(model.openPopup(new ForcePushPopup(branch)).clearError())
-                : push(model, branch, PushMode.FAST_FORWARD);
-    }
-
-    /**
-     * Whether {@code branch} tracks a remote branch that exists. One whose upstream is gone is asked for
-     * a new one too.
-     */
-    private static boolean hasUpstream(Model model, String branch) {
-        return model.branches() instanceof Loaded<List<Branch>>(List<Branch> branches)
-                && branches.exists(b -> b.name().equals(branch) && b.upstream().isDefined());
+        // A branch that is being pushed or deleted is not pushed meanwhile. A branch without an upstream (or
+        // whose upstream is gone) is pushed where the user says. Pushing a diverged branch needs a force push,
+        // which the user must confirm.
+        return model.branch(branch)
+                .filter(known -> !model.busy().contains(branch))
+                .map(known -> known.upstream().isEmpty()
+                        ? Next.of(model.openPopup(new SetUpstreamPopup(branch)).clearError())
+                        : known.behind() > 0
+                        ? Next.of(model.openPopup(new ForcePushPopup(branch)).clearError())
+                        : push(model, branch, PushMode.FAST_FORWARD))
+                .getOrElse(() -> Next.of(model));
     }
 
     /**
@@ -68,11 +54,6 @@ public final class PushUpdate {
                                 new PushSettingUpstream(branch, upstream)))
                         .getOrElse(() -> Next.of(model.fail(new AppError.InvalidUpstream(text)))))
                 .getOrElse(() -> Next.of(model));
-    }
-
-    private static boolean diverged(Model model, String branch) {
-        return model.branches() instanceof Loaded<List<Branch>>(List<Branch> branches)
-                && branches.exists(b -> b.name().equals(branch) && b.behind() > 0);
     }
 
     private static Next push(Model model, String branch, PushMode mode) {

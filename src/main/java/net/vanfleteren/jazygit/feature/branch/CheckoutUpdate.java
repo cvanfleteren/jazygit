@@ -1,14 +1,11 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.Checkout;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.CheckoutWithStash;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.NeedsStash;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.Requested;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.StashCancelled;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.StashConfirmed;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -33,8 +30,6 @@ public final class CheckoutUpdate {
     }
 
     private static Next requested(Model model, String branch) {
-        boolean known = model.branches() instanceof Loaded<List<Branch>>(List<Branch> branches)
-                && branches.exists(b -> b.name().equals(branch) && !b.current());
-        return known ? Next.of(model.clearError(), new Checkout(branch)) : Next.of(model);
+        return Branches.isOtherBranch(model, branch) ? Next.of(model.clearError(), new Checkout(branch)) : Next.of(model);
     }
 }

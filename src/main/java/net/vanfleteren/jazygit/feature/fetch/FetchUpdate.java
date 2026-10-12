@@ -39,9 +39,9 @@ public final class FetchUpdate {
      * came in.
      */
     private static Next next(Model model, List<String> remotes) {
-        return remotes.isEmpty()
-                ? Update.refresh(model.withFetching(Option.none()))
-                : Next.of(model.withFetching(Option.of(new Fetching(Option.of(remotes.head()), remotes.tail()))),
-                new FetchCmd.Fetch(remotes.head()));
+        return remotes.pop2Option()
+                .map(next -> Next.of(model.withFetching(Option.of(new Fetching(Option.of(next._1), next._2))),
+                        new FetchCmd.Fetch(next._1)))
+                .getOrElse(() -> Update.refresh(model.withFetching(Option.none())));
     }
 }

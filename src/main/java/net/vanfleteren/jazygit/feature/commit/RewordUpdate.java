@@ -1,13 +1,10 @@
 package net.vanfleteren.jazygit.feature.commit;
 
-import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.commit.CommitCmd.Reword;
 import net.vanfleteren.jazygit.feature.commit.RewordMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.commit.RewordMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.commit.RewordMsg.Requested;
-import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
-import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -31,9 +28,9 @@ public final class RewordUpdate {
      * Any commit can be reworded; the dialog starts out with its message.
      */
     private static Next requested(Model model, int index) {
-        return model.commits() instanceof Loaded<List<Commit>>(var commits) && index >= 0 && index < commits.size()
-                ? Next.of(model.clearError().openPopup(new RewordPopup(commits.get(index))))
-                : Next.of(model);
+        return model.commitAt(index)
+                .map(commit -> Next.of(model.clearError().openPopup(new RewordPopup(commit))))
+                .getOrElse(() -> Next.of(model));
     }
 
     private static Next confirmed(Model model, CommitMessage message) {

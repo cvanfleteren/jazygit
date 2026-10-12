@@ -12,6 +12,9 @@ import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import io.vavr.control.Try;
+import dev.tamboui.css.engine.StyleEngine;
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchDialog;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchPopup;
 import net.vanfleteren.jazygit.feature.branch.ForcePushDialog;
@@ -41,7 +44,6 @@ import net.vanfleteren.jazygit.feature.stash.StashDropDialog;
 import net.vanfleteren.jazygit.feature.stash.StashDropPopup;
 import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
 import net.vanfleteren.jazygit.feature.theme.ThemePopup;
-import net.vanfleteren.jazygit.git.GitError.OpenError;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.CliGitInfoProvider;
 import net.vanfleteren.jazygit.git.model.Stash;
@@ -63,7 +65,6 @@ import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.ExecutorService;
@@ -89,6 +90,7 @@ public class JazygitApp extends ToolkitApp {
     private static final Duration FETCH_INTERVAL = Duration.ofMinutes(1);
 
     private final GitInfoProvider provider;
+    private final StyleEngine styleEngine;
     private final FilesPanel filesPanel = new FilesPanel(msg -> this.program.dispatch(msg),
             () -> openContent(FilesPanel.ID));
     private final BranchesPanel branchesPanel = new BranchesPanel(msg -> this.program.dispatch(msg));
@@ -120,8 +122,9 @@ public class JazygitApp extends ToolkitApp {
     private ExecutorService fetch;
     private Program program;
 
-    public JazygitApp(GitInfoProvider provider) {
+    public JazygitApp(GitInfoProvider provider, StyleEngine styleEngine) {
         this.provider = provider;
+        this.styleEngine = styleEngine;
     }
 
     /**
@@ -134,18 +137,15 @@ public class JazygitApp extends ToolkitApp {
     @Override
     protected void onStart() {
         ToolkitRunner runner = runner();
-        runner.styleEngine(Theme.createEngine());
-        runner.eventRouter().addGlobalHandler(event -> {
-            if (event instanceof KeyEvent key) {
-                for (Keymap.Global global : Keymap.standard().globals()) {
-                    if (global.matches().test(key)) {
-                        program.dispatch(global.msg().get());
-                        return EventResult.HANDLED;
-                    }
-                }
-            }
-            return EventResult.UNHANDLED;
-        });
+        runner.styleEngine(styleEngine);
+        runner.eventRouter().addGlobalHandler(event -> Option.of(event)
+                .filter(KeyEvent.class::isInstance)
+                .flatMap(key -> Keymap.standard().handleGlobal((KeyEvent) key))
+                .map(msg -> {
+                    program.dispatch(msg);
+                    return EventResult.HANDLED;
+                })
+                .getOrElse(EventResult.UNHANDLED));
         runner.focusManager().setFocus(FilesPanel.ID);
         ContentPanel.onLeaveScrollArea(() -> {
             Option<String> pane = ContentPanel.paneOfArea(runner.focusManager().focusedId());
@@ -238,16 +238,14 @@ public class JazygitApp extends ToolkitApp {
             lastFocus = focusedId;
         }
         Option<Popup> open = popups.find(p -> p.element().isDefined());
-        if (open.isDefined()) {
-            if (focusedId == null || !open.get().ids().contains(focusedId)) {
-                runner().focusManager().setFocus(open.get().ids().head());
-            }
-        } else {
-            popups.find(p -> focusedId != null && p.ids().contains(focusedId))
-                    .forEach(p -> runner().focusManager().setFocus(p.returnTo()));
-        }
-        Option<Element> dialog = open.flatMap(Popup::element);
-        return dialog.<Element>map(d -> stack(layout, d)).getOrElse(layout);
+        Option<String> focus = Option.of(focusedId);
+        open.fold(
+                        // A popup that just closed gives the focus back.
+                        () -> popups.find(p -> focus.exists(p.ids()::contains)).map(Popup::returnTo),
+                        // A popup that just opened takes the focus.
+                        p -> focus.exists(p.ids()::contains) ? Option.<String>none() : p.ids().headOption())
+                .forEach(runner().focusManager()::setFocus);
+        return open.flatMap(Popup::element).<Element>map(d -> stack(layout, d)).getOrElse(layout);
     }
 
     /**
@@ -259,15 +257,12 @@ public class JazygitApp extends ToolkitApp {
         int rows = model.stashes() instanceof Loadable.Loaded<List<Stash>>(List<Stash> stashes)
                 ? Math.max(1, stashes.size())
                 : 1;
-        try {
-            // The left column is the screen without the fetch line.
-            int height = runner().tuiRunner().backend().size().height() - FetchLine.HEIGHT;
-            int share = height - StatusPanel.HEIGHT
-                    - height * (FILES_PERCENT + BRANCHES_PERCENT + COMMITS_PERCENT) / 100;
-            return Option.of(Math.max(MIN_STASH_HEIGHT, Math.min(rows + 2, share)));
-        } catch (IOException e) {
-            return Option.none();
-        }
+        // The left column is the screen without the fetch line.
+        return Try.of(() -> runner().tuiRunner().backend().size().height() - FetchLine.HEIGHT)
+                .toOption()
+                .map(height -> height - StatusPanel.HEIGHT
+                        - height * (FILES_PERCENT + BRANCHES_PERCENT + COMMITS_PERCENT) / 100)
+                .map(share -> Math.max(MIN_STASH_HEIGHT, Math.min(rows + 2, share)));
     }
 
     private record Popup(Option<Element> element, List<String> ids, String returnTo) {
@@ -276,14 +271,17 @@ public class JazygitApp extends ToolkitApp {
     /**
      * @param args optional path inside the repository to open; defaults to the current directory
      */
-    public static void main(String[] args) throws Exception {
-        Path start = (args.length > 0 ? Path.of(args[0]) : Path.of("")).toAbsolutePath();
-        Either<OpenError, CliGitInfoProvider> opened = CliGitInfoProvider.open(start);
-        if (opened.isLeft()) {
-            System.err.println(ErrorText.of(opened.getLeft()));
-            System.exit(1);
-            return;
-        }
-        new JazygitApp(opened.get()).run();
+    public static void main(String[] args) {
+        Path start = List.of(args).headOption().map(Path::of).getOrElse(Path.of("")).toAbsolutePath();
+        Either<String, JazygitApp> app = CliGitInfoProvider.open(start)
+                .mapLeft(ErrorText::of)
+                .flatMap(provider -> Theme.createEngine()
+                        .mapLeft(failed -> Messages.get("theme.loadFailed", failed.theme(), failed.cause()))
+                        .map(engine -> new JazygitApp(provider, engine)));
+        app.flatMap(jazygit -> Try.run(jazygit::run).toEither().mapLeft(Throwable::toString))
+                .orElseRun(problem -> {
+                    System.err.println(problem);
+                    System.exit(1);
+                });
     }
 }

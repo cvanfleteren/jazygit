@@ -47,11 +47,11 @@ public final class SetUpstreamDialog {
             shown = false;
             return Option.none();
         }
-        if (!shown) {
+        branch.filter(b -> !shown).forEach(b -> {
             shown = true;
-            input.setText(new RemoteBranch(DEFAULT_REMOTE, branch.get()).text());
+            input.setText(new RemoteBranch(DEFAULT_REMOTE, b).text());
             input.moveCursorToEnd();
-        }
+        });
         return Option.of(dialog(Messages.get("dialog.setUpstream.title"),
                         textInput(input)
                                 .id(ID)

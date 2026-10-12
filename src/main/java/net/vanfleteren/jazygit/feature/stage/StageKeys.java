@@ -14,8 +14,8 @@ public final class StageKeys {
     private StageKeys() {
     }
 
-    public static void register(Keymap.Builder keys) {
-        keys.add(Scopes.FILES, Binding.<FileTree>onSelected(" ", "help.files.stage",
+    public static Keymap register(Keymap keys) {
+        return keys.add(Scopes.FILES, Binding.<FileTree>onSelected(" ", "help.files.stage",
                 node -> new StageMsg.Requested(node.entries(),
                         node instanceof FileTree.Dir dir ? Option.of(dir.path()) : Option.none())));
     }

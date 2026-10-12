@@ -12,8 +12,8 @@ public final class BranchKeys {
     private BranchKeys() {
     }
 
-    public static void register(Keymap.Builder keys) {
-        keys.add(Scopes.BRANCHES,
+    public static Keymap register(Keymap keys) {
+        return keys.add(Scopes.BRANCHES,
                 Binding.<String>onSelected(" ", "help.branches.checkout", CheckoutMsg.Requested::new),
                 Binding.<String>onSelected("P", "help.branches.push", PushMsg.Requested::new),
                 Binding.<String>onSelected("n", "help.branches.new", NewBranchMsg.Requested::new),

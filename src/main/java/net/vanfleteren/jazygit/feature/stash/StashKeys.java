@@ -14,9 +14,9 @@ public final class StashKeys {
     private StashKeys() {
     }
 
-    public static void register(Keymap.Builder keys) {
-        keys.add(Scopes.FILES, Binding.<FileTree>always("s", "help.files.stash", StashMsg.Requested::new));
-        keys.add(Scopes.STASH,
+    public static Keymap register(Keymap keys) {
+        return keys.add(Scopes.FILES, Binding.<FileTree>always("s", "help.files.stash", StashMsg.Requested::new))
+                .add(Scopes.STASH,
                 Binding.<Stash>onSelected("g", "help.stash.pop", stash -> new StashMsg.PopRequested(stash.ref())),
                 Binding.<Stash>onSelected("d", "help.stash.drop", stash -> new StashMsg.DropRequested(stash.ref())));
     }

@@ -13,8 +13,8 @@ public final class DiscardKeys {
     private DiscardKeys() {
     }
 
-    public static void register(Keymap.Builder keys) {
-        keys.add(Scopes.FILES, Binding.<FileTree>onSelected("d", "help.files.discard",
+    public static Keymap register(Keymap keys) {
+        return keys.add(Scopes.FILES, Binding.<FileTree>onSelected("d", "help.files.discard",
                 node -> new DiscardMsg.Requested(node.entries())));
     }
 }

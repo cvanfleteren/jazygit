@@ -26,7 +26,7 @@ class ThemeTest {
 
     @Test
     void focusedPanelBorderUsesTheAccentColor() {
-        var engine = Theme.createEngine();
+        var engine = Theme.createEngine().get();
 
         var plain = engine.resolve(new Node("Panel", Set.of()));
         var focused = engine.resolve(new Node("Panel", Set.of(Theme.Classes.FOCUSED)));
@@ -37,7 +37,7 @@ class ThemeTest {
 
     @Test
     void activateSwitchesTheStyles() {
-        var engine = Theme.createEngine();
+        var engine = Theme.createEngine().get();
         assertEquals(java.util.Optional.of(Theme.DARK), engine.getActiveStylesheet());
 
         Theme.activate(Theme.LIGHT);
@@ -51,7 +51,7 @@ class ThemeTest {
     @Test
     void everyThemeStylesThePanelBorders() {
         for (String name : Theme.NAMES) {
-            var engine = Theme.createEngine();
+            var engine = Theme.createEngine().get();
             Theme.activate(name);
 
             assertTrue(engine.resolve(new Node("Panel", Set.of())).borderColor().isPresent(), name);

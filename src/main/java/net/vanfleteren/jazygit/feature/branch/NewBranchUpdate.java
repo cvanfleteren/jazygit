@@ -1,12 +1,9 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.CreateBranch;
 import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Requested;
-import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -28,9 +25,9 @@ public final class NewBranchUpdate {
     }
 
     private static Next atCommit(Model model, int index) {
-        return model.commits() instanceof Loadable.Loaded<List<Commit>>(var commits) && index >= 0 && index < commits.size()
-                ? Next.of(model.openPopup(new NewBranchPopup(commits.get(index).sha().value(), commits.get(index).shortSha())))
-                : Next.of(model);
+        return model.commitAt(index)
+                .map(commit -> Next.of(model.openPopup(new NewBranchPopup(commit.sha().value(), commit.shortSha()))))
+                .getOrElse(() -> Next.of(model));
     }
 
     private static Next confirmed(Model model, String name) {

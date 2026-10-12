@@ -1,11 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import io.vavr.collection.List;
-import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.Merge;
-import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.MergeMode;
-import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -32,13 +28,8 @@ public final class MergeUpdate {
      * Only a known branch other than the checked out one can be merged, and only into a checked out branch.
      */
     private static Next requested(Model model, String branch) {
-        if (!(model.branches() instanceof Loaded<List<Branch>>(List<Branch> branches))) {
-            return Next.of(model);
-        }
-        Option<Branch> current = branches.find(Branch::current);
-        boolean known = branches.exists(b -> b.name().equals(branch) && !b.current());
-        return known && current.isDefined()
-                ? Next.of(model.openPopup(new MergePopup(current.get().name(), branch)).clearError())
-                : Next.of(model);
+        return Branches.checkedOutAnd(model, branch)
+                .map(both -> Next.of(model.openPopup(new MergePopup(both._1, both._2)).clearError()))
+                .getOrElse(() -> Next.of(model));
     }
 }
