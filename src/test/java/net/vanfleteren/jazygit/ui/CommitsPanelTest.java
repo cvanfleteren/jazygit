@@ -30,12 +30,10 @@ class CommitsPanelTest {
                 commit("fffffff2", "fffffff1"), commit("bbbbbbb", "aaaaaaa"), commit("fffffff1", "aaaaaaa"),
                 commit("aaaaaaa")));
 
-        List<LoadableList.Row> rows = CommitGraph.layout(log).stream().map(CommitsPanel::row).toList();
+        List<LoadableList.Row> rows = CommitsPanel.rows(CommitGraph.layout(log));
 
-        assertEquals(List.of("mmmmmmm A ○ msg mmmmmmm", "| | fffffff2 A ○ msg fffffff2",
-                "| / fffffff1 A ○ msg fffffff1", "bbbbbbb A ○ msg bbbbbbb", "aaaaaaa A ○ msg aaaaaaa"), rows.stream().map(LoadableList.Row::text).toList());
-        assertEquals(java.util.Optional.of("\\ merge bbbbbbb fffffff"), rows.getFirst().detail());
-        assertEquals(java.util.Optional.empty(), rows.get(1).detail());
+        assertEquals(List.of("mmmmmmm A ◎─╮ msg mmmmmmm", "fffffff2 A │ ○ msg fffffff2", "fffffff1 A │ ○ msg fffffff1",
+                "bbbbbbb A ○─╯ msg bbbbbbb", "aaaaaaa A ○ msg aaaaaaa"), rows.stream().map(LoadableList.Row::text).toList());
     }
 
     @Test

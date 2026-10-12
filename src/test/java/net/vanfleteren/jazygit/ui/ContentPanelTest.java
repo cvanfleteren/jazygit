@@ -181,6 +181,27 @@ class ContentPanelTest {
     }
 
     @Test
+    void logLinesDrawMergedBranchesWithRails() {
+        List<Commit> log = net.vanfleteren.jazygit.git.model.CommitGraph.arrange(List.of(
+                merge("m", "b", "f"), plain("f", "a"), plain("b", "a"), plain("a")));
+
+        List<String> lines = ContentPanel.logLines(log, ZoneOffset.UTC);
+
+        assertEquals(true, lines.contains("*   commit m"));
+        assertEquals(true, lines.contains("|\\  Merge: b f"));
+        assertEquals(true, lines.contains("| * commit f"));
+        assertEquals(true, lines.contains("|/  Ada <a@e.com>"));
+    }
+
+    private static Commit plain(String sha, String... parents) {
+        return new Commit(sha, sha, "Ada", "a@e.com", Instant.EPOCH, sha, "", List.of(parents));
+    }
+
+    private static Commit merge(String sha, String... parents) {
+        return plain(sha, parents);
+    }
+
+    @Test
     void logLinesWithoutExtendedMessageEndAfterTheSubject() {
         List<Commit> commits = List.of(
                 new Commit("a1b2c3d", "a1b2c3d", "Ada", "ada@example.com", Instant.parse("2026-10-09T12:30:00Z"), "Second", ""),

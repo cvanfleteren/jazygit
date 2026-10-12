@@ -13,6 +13,7 @@ import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.toolkit.elements.RichTextAreaElement;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.state.BranchLog;
@@ -30,6 +31,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -261,14 +263,29 @@ public final class ContentPanel {
      * indented.
      */
     static List<String> logLines(List<Commit> commits, ZoneId zone) {
-        return commits.stream()
-                .flatMap(c -> {
+        return CommitGraph.layout(commits).stream()
+                .flatMap(node -> {
+                    Commit c = node.commit();
+                    String rails = "| ".repeat(node.depth());
                     List<String> lines = Stream.concat(
                             Stream.of(Messages.get("content.commitSha", c.shortSha()), author(c), dateTime().format(c.authorTime().atZone(zone)),
                                     "", MESSAGE_INDENT + c.message(), ""),
                             c.body().isBlank() ? Stream.empty() : Stream.concat(
                                     c.body().lines().map(line -> line.isBlank() ? line : MESSAGE_INDENT + line), Stream.of(""))).toList();
-                    return IntStream.range(0, lines.size()).mapToObj(i -> (i == 0 ? "* " : "| ") + lines.get(i));
+                    // Like git's graph: a merge opens a rail with a "\\" line, the last commit of a merged
+                    // branch closes it with a "/" in place of its second line.
+                    if (c.isMerge()) {
+                        List<String> rows = new java.util.ArrayList<>();
+                        rows.add(rails + "*   " + lines.getFirst());
+                        rows.add(rails + "|\\  " + Messages.get("content.merge", c.parents().stream()
+                                .map(sha -> sha.substring(0, Math.min(7, sha.length()))).collect(Collectors.joining(" "))));
+                        lines.stream().skip(1).forEach(line -> rows.add(rails + "| | " + line));
+                        return rows.stream();
+                    }
+                    String closing = "| ".repeat(Math.max(0, node.depth() - 1));
+                    return IntStream.range(0, lines.size()).mapToObj(i -> i == 0 ? rails + "* " + lines.get(i)
+                            : node.closesBranch() ? closing + (i == 1 ? "|/  " : "|   ") + lines.get(i)
+                            : rails + "| " + lines.get(i));
                 })
                 .toList();
     }

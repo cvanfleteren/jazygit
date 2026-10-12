@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Left-side panel listing the commit log.
@@ -29,7 +30,7 @@ public class CommitsPanel {
     public static final String ID = Scopes.COMMITS.id();
 
     private final LoadableList<List<Commit>> list = new LoadableList<>(Messages.get("panel.commits.title"), ID,
-            commits -> CommitGraph.layout(commits).stream().map(CommitsPanel::row).toList());
+            commits -> rows(CommitGraph.layout(commits)));
     // The list's key handler also sees keys typed in other panes, so it must know whether it has focus.
     private boolean focused;
     private final Keymap keymap = Keymap.standard();
@@ -92,20 +93,23 @@ public class CommitsPanel {
                 .map(SelectionMsg.CommitSelected::new);
     }
 
+    static List<LoadableList.Row> rows(List<CommitGraph.Node> nodes) {
+        return IntStream.range(0, nodes.size())
+                .mapToObj(i -> row(nodes.get(i), i > 0 && nodes.get(i - 1).closesBranch()))
+                .toList();
+    }
+
     /**
-     * The row of a commit. Commits brought in by a merge are drawn as a branch with rails, and a merge
-     * names its parents on a line of its own.
+     * The row of a commit. Commits brought in by a merge are drawn on a rail beside the merge, which opens
+     * it with {@code ◎─╮}; the commit after the branch, where it joins the main line, is {@code ○─╯}.
+     *
+     * @param joins whether the branch before this commit joins the main line at it
      */
-    static LoadableList.Row row(CommitGraph.Node node) {
+    static LoadableList.Row row(CommitGraph.Node node, boolean joins) {
         Commit commit = node.commit();
-        String rails = node.depth() == 0 ? "" : "| ".repeat(node.depth() + 1);
-        String lead = node.closesBranch() ? rails.substring(0, rails.length() - 2) + "/ " : rails;
-        LoadableList.Row row = LoadableList.Row.of(lead + commit.shortSha() + " " + initials(commit.authorName()) + " ○ "
-                + commit.message());
-        return commit.isMerge()
-                ? row.withDetail(rails + "\\ merge " + commit.parents().stream()
-                        .map(sha -> sha.substring(0, Math.min(7, sha.length()))).collect(Collectors.joining(" ")))
-                : row;
+        String rails = "│ ".repeat(node.depth());
+        String graph = commit.isMerge() ? rails + "◎─╮ " : joins ? rails + "○─╯ " : rails + "○ ";
+        return LoadableList.Row.of(commit.shortSha() + " " + initials(commit.authorName()) + " " + graph + commit.message());
     }
 
     /**

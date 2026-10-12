@@ -168,7 +168,7 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
             if (tip == null) {
                 throw new IllegalStateException(Messages.get("git.unknownBranch", branch));
             }
-            return log(tip);
+            return CommitGraph.arrange(log(tip));
         } catch (IOException e) {
             throw new UncheckedIOException(Messages.get("git.readBranchLogFailed", branch), e);
         }
