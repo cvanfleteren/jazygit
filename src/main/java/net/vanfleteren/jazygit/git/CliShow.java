@@ -1,12 +1,12 @@
 package net.vanfleteren.jazygit.git;
 
-import io.vavr.collection.HashMap;
-import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.Sha;
 
 import java.nio.file.Path;
+
+import static net.vanfleteren.jazygit.git.GitCommand.git;
 
 /**
  * Reads what a commit changed through the git command line tool.
@@ -21,9 +21,8 @@ final class CliShow {
      * git call however many files the commit touches. Long output is cut off.
      */
     static Either<ProcessError, String> changes(Path workTree, Sha sha) {
-        return CliDiff.run(workTree,
-                        List.of("show", "--format=", "--stat=1000", "--patch", "--no-color", "--no-ext-diff", sha.value()),
-                        HashMap.empty())
-                .map(CliDiff::truncated);
+        return GitProcess.read(workTree,
+                git("show", "--format=", "--stat=1000", "--patch", "--no-color", "--no-ext-diff", sha.value()),
+                output -> Either.right(CliDiff.truncated(output)));
     }
 }

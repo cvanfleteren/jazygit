@@ -49,6 +49,14 @@ final class GitOutput {
     }
 
     /**
+     * {@code output} cut off after {@code maxLines} lines, which are then followed by {@code marker}.
+     */
+    static String truncated(String output, int maxLines, String marker) {
+        List<String> lines = lines(output);
+        return lines.size() <= maxLines ? output : lines.take(maxLines).append(marker).mkString("", "\n", "\n");
+    }
+
+    /**
      * The NUL-terminated records of {@code -z} output, without the blank ones.
      */
     static List<String> records(String raw) {

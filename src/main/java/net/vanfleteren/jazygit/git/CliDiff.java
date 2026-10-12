@@ -81,14 +81,10 @@ public final class CliDiff {
     }
 
     static String truncated(String diff) {
-        List<String> lines = GitOutput.lines(diff);
-        return lines.size() <= MAX_LINES
-                ? diff
-                : lines.take(MAX_LINES).append(Messages.get("git.diff.truncated"))
-                .mkString("", "\n", "\n");
+        return GitOutput.truncated(diff, MAX_LINES, Messages.get("git.diff.truncated"));
     }
 
-    static Either<ProcessError, String> run(Path workTree, List<String> args, Map<String, String> env) {
+    private static Either<ProcessError, String> run(Path workTree, List<String> args, Map<String, String> env) {
         return GitProcess.read(workTree, git(args).withEnvironment(env), Either::right);
     }
 }
