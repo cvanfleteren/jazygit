@@ -1,13 +1,10 @@
 package net.vanfleteren.jazygit.git.model;
 
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
-
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import io.vavr.collection.Map;
+import io.vavr.collection.Set;
+import io.vavr.control.Option;
 
 /**
  * Lays out a commit log with its merges: the commits a merge brought in follow it, so they can be shown
@@ -34,28 +31,31 @@ public final class CommitGraph {
      */
     public static List<Commit> arrange(List<Commit> commits) {
         Map<Sha, Commit> bySha = index(commits);
-        java.util.List<Commit> arranged = new ArrayList<>(commits.size());
-        Set<Sha> placed = new HashSet<>();
-        for (Commit commit : commits) {
-            place(commit, commits, bySha, placed, arranged);
-        }
-        return List.ofAll(arranged);
+        return commits
+                .foldLeft(new Placed(HashSet.empty(), List.empty()),
+                        (state, commit) -> place(commit, commits, bySha, state))
+                .latestFirst()
+                .reverse();
     }
 
-    private static void place(Commit commit, List<Commit> commits, Map<Sha, Commit> bySha, Set<Sha> placed,
-                              java.util.List<Commit> arranged) {
-        if (!placed.add(commit.sha())) {
-            return;
+    /**
+     * The shas placed so far, and the commits in the order they were placed, last placed first.
+     */
+    private record Placed(Set<Sha> shas, List<Commit> latestFirst) {
+    }
+
+    private static Placed place(Commit commit, List<Commit> commits, Map<Sha, Commit> bySha, Placed state) {
+        if (state.shas().contains(commit.sha())) {
+            return state;
         }
-        arranged.add(commit);
-        if (commit.isMerge()) {
-            Set<Sha> brought = broughtIn(commit, bySha);
-            for (Commit candidate : commits) {
-                if (brought.contains(candidate.sha())) {
-                    place(candidate, commits, bySha, placed, arranged);
-                }
-            }
+        Placed placed = new Placed(state.shas().add(commit.sha()), state.latestFirst().prepend(commit));
+        if (!commit.isMerge()) {
+            return placed;
         }
+        Set<Sha> brought = broughtIn(commit, bySha);
+        return commits
+                .filter(candidate -> brought.contains(candidate.sha()))
+                .foldLeft(placed, (next, candidate) -> place(candidate, commits, bySha, next));
     }
 
     /**
@@ -63,33 +63,20 @@ public final class CommitGraph {
      */
     public static List<Node> layout(List<Commit> arranged) {
         Map<Sha, Commit> bySha = index(arranged);
-        int[] depth = new int[arranged.size()];
-        boolean[] closes = new boolean[arranged.size()];
-        Map<Sha, Integer> position = new HashMap<>();
-        for (int i = 0; i < arranged.size(); i++) {
-            position.put(arranged.get(i).sha(), i);
-        }
-        for (Commit merge : arranged) {
-            if (!merge.isMerge()) {
-                continue;
-            }
-            int last = -1;
-            for (Sha sha : broughtIn(merge, bySha)) {
-                int at = position.get(sha);
-                depth[at]++;
-                last = Math.max(last, at);
-            }
-            if (last >= 0) {
-                closes[last] = true;
-            }
-        }
-        return List.range(0, arranged.size()).map(i -> new Node(arranged.get(i), depth[i], closes[i]));
+        Map<Sha, Integer> position = arranged.zipWithIndex().toMap(entry -> entry._1.sha(), entry -> entry._2);
+        List<Set<Sha>> brought = arranged.filter(Commit::isMerge).map(merge -> broughtIn(merge, bySha));
+        // The last commit of each merged branch closes it.
+        Set<Integer> closing = brought
+                .filter(shas -> !shas.isEmpty())
+                .map(shas -> shas.map(position::apply).max().get())
+                .toSet();
+        return arranged.zipWithIndex().map(entry -> new Node(entry._1,
+                brought.count(shas -> shas.contains(entry._1.sha())),
+                closing.contains(entry._2)));
     }
 
     private static Map<Sha, Commit> index(List<Commit> commits) {
-        Map<Sha, Commit> bySha = new HashMap<>();
-        commits.forEach(c -> bySha.put(c.sha(), c));
-        return bySha;
+        return commits.toMap(Commit::sha, commit -> commit);
     }
 
     /**
@@ -97,20 +84,19 @@ public final class CommitGraph {
      * its first parent.
      */
     private static Set<Sha> broughtIn(Commit merge, Map<Sha, Commit> bySha) {
-        Set<Sha> main = reachable(merge.parents().take(1), bySha);
-        Set<Sha> brought = reachable(merge.parents().drop(1), bySha);
-        brought.removeAll(main);
-        return brought;
+        return reachable(merge.parents().drop(1), bySha).removeAll(reachable(merge.parents().take(1), bySha));
     }
 
     private static Set<Sha> reachable(List<Sha> from, Map<Sha, Commit> bySha) {
-        Set<Sha> seen = new HashSet<>();
-        ArrayDeque<Sha> todo = new ArrayDeque<>(from.asJava());
+        Set<Sha> seen = HashSet.empty();
+        List<Sha> todo = from;
         while (!todo.isEmpty()) {
-            Sha sha = todo.pop();
-            Commit commit = bySha.get(sha);
-            if (commit != null && seen.add(sha)) {
-                todo.addAll(commit.parents().asJava());
+            Sha sha = todo.head();
+            todo = todo.tail();
+            Option<Commit> commit = bySha.get(sha);
+            if (commit.isDefined() && !seen.contains(sha)) {
+                seen = seen.add(sha);
+                todo = todo.prependAll(commit.get().parents());
             }
         }
         return seen;

@@ -1,12 +1,13 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import net.vanfleteren.jazygit.git.model.Sha;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
 
 /**
  * Rewrites history through {@code git rebase}, driven without an interactive editor.
@@ -34,7 +35,7 @@ public final class CliRebase {
             // is "merge -C <commit>", which has to become "-c" for git to ask for a message.
             String sequenceEditor = "sed -i -e 's/^pick " + abbreviated + "/reword " + abbreviated + "/'"
                     + " -e 's/^merge -C " + abbreviated + "/merge -c " + abbreviated + "/'";
-            Map<String, String> environment = Map.of(
+            Map<String, String> environment = HashMap.of(
                     "GIT_SEQUENCE_EDITOR", sequenceEditor,
                     "GIT_EDITOR", "cp '" + message + "'");
             String base = hasParent(workTree, sha.value()) ? sha + "^" : "--root";
@@ -97,7 +98,7 @@ public final class CliRebase {
     public static List<String> squash(Path workTree, Sha sha) {
         String parent = CliCheckout.run(workTree, "git", "rev-parse", sha + "^").strip();
         String abbreviated = sha.shortSha();
-        Map<String, String> environment = Map.of(
+        Map<String, String> environment = HashMap.of(
                 "GIT_SEQUENCE_EDITOR", "sed -i -e 's/^pick " + abbreviated + "/squash " + abbreviated + "/'",
                 "GIT_EDITOR", "true");
         String base = hasParent(workTree, parent) ? parent + "^" : "--root";

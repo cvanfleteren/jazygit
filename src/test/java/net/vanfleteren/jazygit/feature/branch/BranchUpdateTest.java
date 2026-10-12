@@ -96,7 +96,7 @@ class BranchUpdateTest {
 
         assertEquals(List.of(new BranchCmd.Push("feature", false)), next.cmds());
         assertEquals(Option.none(), next.model().error());
-        assertEquals(java.util.Set.of("feature"), next.model().pushing());
+        assertEquals(io.vavr.collection.HashSet.of("feature"), next.model().pushing());
         // Not pushed again while it is being pushed.
         assertEquals(List.of(), Update.update(next.model(), new PushMsg.Requested("feature")).cmds());
         assertEquals(List.of(), Update.update(loaded(), new PushMsg.Requested("gone")).cmds());
@@ -112,12 +112,12 @@ class BranchUpdateTest {
 
         assertEquals(List.of(), asked.cmds());
         assertEquals(Option.of(new ForcePushPopup("feature")), asked.model().popup());
-        assertEquals(java.util.Set.of(), asked.model().pushing());
+        assertEquals(io.vavr.collection.HashSet.empty(), asked.model().pushing());
 
         Next confirmed = Update.update(asked.model(), new PushMsg.ForceConfirmed());
         assertEquals(List.of(new BranchCmd.Push("feature", true)), confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());
-        assertEquals(java.util.Set.of("feature"), confirmed.model().pushing());
+        assertEquals(io.vavr.collection.HashSet.of("feature"), confirmed.model().pushing());
 
         Next cancelled = Update.update(asked.model(), new PushMsg.ForceCancelled());
         assertEquals(List.of(), cancelled.cmds());
@@ -135,8 +135,8 @@ class BranchUpdateTest {
         assertEquals(Option.of("Pushing branch feature failed: boom"), failed.error());
 
         Model pushing = Update.update(loaded(), new PushMsg.Requested("feature")).model();
-        assertEquals(java.util.Set.of(), Update.update(pushing, new PushMsg.Failed("feature", "boom")).model().pushing());
-        assertEquals(java.util.Set.of(), Update.update(pushing, new PushMsg.Done("feature", List.of())).model().pushing());
+        assertEquals(io.vavr.collection.HashSet.empty(), Update.update(pushing, new PushMsg.Failed("feature", "boom")).model().pushing());
+        assertEquals(io.vavr.collection.HashSet.empty(), Update.update(pushing, new PushMsg.Done("feature", List.of())).model().pushing());
 
         Next done = Update.update(withError(loaded(), "boom"), new PushMsg.Done("feature", List.of()));
         assertEquals(Option.none(), done.model().error());

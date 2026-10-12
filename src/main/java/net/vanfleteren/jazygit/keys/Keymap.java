@@ -1,13 +1,13 @@
 package net.vanfleteren.jazygit.keys;
 
 import dev.tamboui.tui.event.KeyEvent;
+import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.state.Msg;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -92,7 +92,7 @@ public final class Keymap {
      */
     public static final class Builder {
 
-        private final Map<String, Section> sections = new LinkedHashMap<>();
+        private Map<String, Section> sections = LinkedHashMap.empty();
         private List<Global> globals = List.empty();
 
         private Builder() {
@@ -100,8 +100,8 @@ public final class Keymap {
 
         @SafeVarargs
         public final <S> Builder add(Scope<S> scope, Binding<S>... bindings) {
-            sections.compute(scope.id(), (id, existing) -> new Section(scope,
-                    (existing == null ? List.<Binding<?>>empty() : existing.bindings()).appendAll(List.of(bindings))));
+            List<Binding<?>> existing = sections.get(scope.id()).map(Section::bindings).getOrElse(List.empty());
+            sections = sections.put(scope.id(), new Section(scope, existing.appendAll(List.of(bindings))));
             return this;
         }
 
@@ -111,7 +111,7 @@ public final class Keymap {
         }
 
         public Keymap build() {
-            return new Keymap(Map.copyOf(sections), globals);
+            return new Keymap(sections, globals);
         }
     }
 
@@ -138,7 +138,7 @@ public final class Keymap {
         if (HELP_KEY.equals(text)) {
             return Option.of(new HelpMsg.Requested(scope.id()));
         }
-        return Option.of(sections.get(scope.id()))
+        return sections.get(scope.id())
                 .flatMap(section -> section.bindings().find(binding -> binding.key().equals(text)))
                 .flatMap(binding -> {
                     @SuppressWarnings("unchecked")
@@ -151,14 +151,14 @@ public final class Keymap {
      * The message key of the title of the panel {@code scopeId}, if it has keys.
      */
     public Option<String> titleKey(String scopeId) {
-        return Option.of(sections.get(scopeId)).map(section -> section.scope().titleKey());
+        return sections.get(scopeId).map(section -> section.scope().titleKey());
     }
 
     /**
      * The keys of the panel {@code scopeId}, in the order the features declared them.
      */
     public List<Binding<?>> bindings(String scopeId) {
-        return Option.of(sections.get(scopeId)).map(Section::bindings).getOrElse(List.of());
+        return sections.get(scopeId).map(Section::bindings).getOrElse(List.of());
     }
 
     public List<Global> globals() {

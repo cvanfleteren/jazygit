@@ -179,6 +179,17 @@ class FilesPanelTest {
     }
 
     @Test
+    void aPlaceholderRowIsNotASelection() throws Exception {
+        Model loading = TestModels.loading("repo");
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(loading, FilesPanel.ID))) {
+            RenderedText.of(testRunner, () -> panel.render(loading, FilesPanel.ID));
+
+            assertTrue(panel.selectionChange(loading).isEmpty());
+        }
+    }
+
+    @Test
     void rendersLoadingThenStatusChanges() throws Exception {
         Model untracked = TestModels.loaded(new FixedProvider(List.of(new FileEntry("a.txt", ChangeType.UNTRACKED))));
         Model added = TestModels.loaded(new FixedProvider(List.of(new FileEntry("a.txt", ChangeType.ADDED))));

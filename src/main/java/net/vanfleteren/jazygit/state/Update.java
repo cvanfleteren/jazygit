@@ -12,10 +12,6 @@ import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * The pure state transitions of the app: given a model and a message, the next model and the IO
@@ -53,8 +49,6 @@ public final class Update {
 
     public static Next refresh(Model model) {
         List<Cmd.Load> loads = PERIODIC.filter(cmd -> !model.refreshing().contains(cmd));
-        Set<Cmd.Load> refreshing = new HashSet<>(model.refreshing());
-        refreshing.addAll(loads.asJava());
         List<Cmd> cmds = List.<Cmd>empty()
                 .appendAll(loads)
                 .appendAll(model.commits() instanceof Failed ? List.of(new LoadCommits()) : List.empty())
@@ -66,7 +60,7 @@ public final class Update {
                         .filter(detail -> detail.changes() instanceof Failed)
                         .map(detail -> new LoadCommitDetail(detail.sha()))
                         .map(List::<Cmd>of).getOrElse(List.empty()));
-        return new Next(model.withRefreshing(refreshing), cmds);
+        return new Next(model.withRefreshing(model.refreshing().addAll(loads)), cmds);
     }
 
     /**
@@ -83,8 +77,7 @@ public final class Update {
                 .map(d -> new LoadFileDiff(d.files()))
                 .filter(cmd -> !model.refreshing().contains(cmd))
                 .map(cmd -> new Next(
-                        model.withRefreshing(Stream.concat(model.refreshing().stream(), Stream.of(cmd))
-                                .collect(Collectors.toUnmodifiableSet())),
+                        model.withRefreshing(model.refreshing().add(cmd)),
                         cmds.append(cmd)))
                 .getOrElse(() -> new Next(model, cmds));
     }

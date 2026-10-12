@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -12,7 +14,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
@@ -38,12 +39,12 @@ public final class CliDiff {
         List<String> untracked = paths(files, f -> f.type() == ChangeType.UNTRACKED);
         return new Diffs(
                 truncated(tracked(workTree, List.of("diff", "--cached", "--no-color", "--no-ext-diff", "--"),
-                        staged, Map.of())),
+                        staged, HashMap.empty())),
                 truncated(unstagedAndUntracked(workTree, unstaged, untracked)));
     }
 
     private static List<String> paths(List<FileEntry> files, Predicate<FileEntry> filter) {
-        return files.filter(filter).map(FileEntry::path).toList();
+        return files.filter(filter).map(FileEntry::path);
     }
 
     /**
@@ -53,7 +54,7 @@ public final class CliDiff {
     private static String unstagedAndUntracked(Path workTree, List<String> unstaged, List<String> untracked) {
         List<String> diff = List.of("diff", "--no-color", "--no-ext-diff", "--");
         if (untracked.isEmpty()) {
-            return tracked(workTree, diff, unstaged, Map.of());
+            return tracked(workTree, diff, unstaged, HashMap.empty());
         }
         Path tempIndex = null;
         try {
@@ -62,7 +63,7 @@ public final class CliDiff {
             if (Files.exists(index)) {
                 Files.copy(index, tempIndex, StandardCopyOption.REPLACE_EXISTING);
             }
-            Map<String, String> env = Map.of("GIT_INDEX_FILE", tempIndex.toString());
+            Map<String, String> env = HashMap.of("GIT_INDEX_FILE", tempIndex.toString());
             run(workTree, List.of("add", "--intent-to-add", "--"), untracked, env);
             return tracked(workTree, diff, unstaged.appendAll(untracked), env);
         } catch (IOException e) {
@@ -95,7 +96,7 @@ public final class CliDiff {
      * Exit code 1 is fine: {@code --no-index} uses it to say the files differ.
      */
     static String run(Path workTree, List<String> subcommand, List<String> paths) {
-        return run(workTree, subcommand, paths, Map.of());
+        return run(workTree, subcommand, paths, HashMap.empty());
     }
 
     static String run(Path workTree, List<String> subcommand, List<String> paths,
@@ -105,7 +106,7 @@ public final class CliDiff {
             ProcessResult result = new ProcessExecutor()
                     .command(command)
                     .directory(workTree.toFile())
-                    .environment(env)
+                    .environment(env.toJavaMap())
                     .readOutput(true)
                     .redirectErrorStream(true)
                     .exitValueAny()

@@ -10,6 +10,7 @@ import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.widgets.common.ScrollBarPolicy;
 import dev.tamboui.widgets.tree.TreeNode;
 import io.vavr.collection.List;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import net.vanfleteren.jazygit.git.model.ChangeType;
@@ -26,9 +27,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
 
-import java.util.Set;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 /**
  * Left-side panel showing the changed files, as in {@code git status}, as a directory tree. The tree
@@ -76,7 +75,7 @@ public class FilesPanel {
      */
     public Option<Msg> selectionChange(Model model) {
         return Option.of(tree.selectedNode())
-                .map(TreeNode::data)
+                .flatMap(node -> Option.of(node.data()))
                 .map(FileTree::directEntries)
                 .filter(files -> !model.fileDiff().map(FileDiff::files).equals(Option.of(files)))
                 .map(SelectionMsg.FilesSelected::new);
@@ -98,7 +97,7 @@ public class FilesPanel {
     }
 
     private Option<Msg> request(KeyEvent event) {
-        return keymap.handle(Scopes.FILES, event, Option.of(tree.selectedNode()).map(TreeNode::data));
+        return keymap.handle(Scopes.FILES, event, Option.of(tree.selectedNode()).flatMap(node -> Option.of(node.data())));
     }
 
     /**
@@ -131,9 +130,9 @@ public class FilesPanel {
         Set<String> collapsed = nodes(roots)
                 .filter(n -> n.data() instanceof FileTree.Dir && !n.isExpanded())
                 .map(n -> path(n.data()))
-                .collect(Collectors.toUnmodifiableSet());
+                .toSet();
         Option<String> selected = Option.of(tree.selectedNode())
-                .map(TreeNode::data)
+                .flatMap(node -> Option.of(node.data()))
                 .map(FilesPanel::path);
 
         roots = switch (status) {

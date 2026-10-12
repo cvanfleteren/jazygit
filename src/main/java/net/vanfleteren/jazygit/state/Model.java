@@ -1,14 +1,14 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Stash;
-
-import java.util.Set;
 
 /**
  * The complete, immutable state of the repository as shown by the UI.
@@ -49,15 +49,10 @@ public record Model(String repositoryName,
     /** The theme of a new session; one of the themes of {@code ui.Theme}. */
     public static final String DEFAULT_THEME = "dark";
 
-    public Model {
-        refreshing = Set.copyOf(refreshing);
-        pushing = Set.copyOf(pushing);
-    }
-
     public static Model initial(String repositoryName) {
         return new Model(repositoryName, Loadable.loading(), Loadable.loading(), Loadable.loading(),
                 Loadable.loading(), Option.none(),
-                Option.none(), Option.none(), Set.of(), Option.none(), Set.of(), List.of(), Option.none(), DEFAULT_THEME);
+                Option.none(), Option.none(), HashSet.empty(), Option.none(), HashSet.empty(), List.empty(), Option.none(), DEFAULT_THEME);
     }
 
     /**

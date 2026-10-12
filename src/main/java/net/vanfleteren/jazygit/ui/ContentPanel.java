@@ -8,6 +8,7 @@ import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.RichTextAreaElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
+import io.vavr.Tuple;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Commit;
@@ -27,7 +28,6 @@ import static dev.tamboui.toolkit.Toolkit.*;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
-import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -184,10 +184,10 @@ public final class ContentPanel {
             return panel(Messages.get("panel.diff.title"), text(Messages.get("content.noChanges")).addClass(Theme.Classes.DIM));
         }
         List<Element> panels = List.of(
-                        Map.entry(Messages.get("content.staged"), STAGED_AREA.with(diffs.staged())),
-                        Map.entry(Messages.get("content.unstaged"), UNSTAGED_AREA.with(diffs.unstaged())))
-                .filter(e -> e.getValue().hasContent())
-                .map(e -> (Element) e.getValue().show(e.getKey()));
+                        Tuple.of(Messages.get("content.staged"), STAGED_AREA.with(diffs.staged())),
+                        Tuple.of(Messages.get("content.unstaged"), UNSTAGED_AREA.with(diffs.unstaged())))
+                .filter(e -> e._2.hasContent())
+                .map(e -> (Element) e._2.show(e._1));
         return column(panels.toJavaArray(Element[]::new));
     }
 

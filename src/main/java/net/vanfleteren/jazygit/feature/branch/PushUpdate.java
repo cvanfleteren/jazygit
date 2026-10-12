@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
 import io.vavr.collection.List;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.Push;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -10,10 +11,6 @@ import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.Update;
-
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Pushing a branch.
@@ -65,10 +62,10 @@ public final class PushUpdate {
     }
 
     private static Set<String> with(Model model, String branch) {
-        return Stream.concat(model.pushing().stream(), Stream.of(branch)).collect(Collectors.toUnmodifiableSet());
+        return model.pushing().add(branch);
     }
 
     private static Set<String> without(Model model, String branch) {
-        return model.pushing().stream().filter(b -> !b.equals(branch)).collect(Collectors.toUnmodifiableSet());
+        return model.pushing().remove(branch);
     }
 }

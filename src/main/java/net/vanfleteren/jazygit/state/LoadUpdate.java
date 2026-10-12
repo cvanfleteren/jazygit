@@ -23,7 +23,6 @@ import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Update.Next;
 
-import java.util.Set;
 import java.util.function.UnaryOperator;
 
 /**
@@ -106,9 +105,7 @@ public final class LoadUpdate {
     }
 
     private static Model finished(Model model, Cmd.Load cmd) {
-        return model.withRefreshing(Set.copyOf(model.refreshing().stream()
-                .filter(c -> !c.equals(cmd))
-                .toList()));
+        return model.withRefreshing(model.refreshing().remove(cmd));
     }
 
     private static Model failed(Model model, Cmd.Load cmd, String message) {

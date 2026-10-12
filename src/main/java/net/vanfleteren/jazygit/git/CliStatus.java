@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
-import io.vavr.collection.List;
+import io.vavr.collection.Map;
+import io.vavr.collection.TreeMap;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Conflict;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -12,8 +13,6 @@ import org.zeroturnaround.exec.ProcessExecutor;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Path;
-import java.util.Map;
-import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -64,7 +63,7 @@ public final class CliStatus {
     static RepoStatus parse(String raw) {
         String head = "";
         String oid = "";
-        Map<String, FileEntry> byPath = new TreeMap<>();
+        Map<String, FileEntry> byPath = TreeMap.empty();
         String[] fields = raw.split("\0");
         for (int i = 0; i < fields.length; i++) {
             String field = fields[i];
@@ -79,11 +78,11 @@ public final class CliStatus {
                         oid = field.substring("# branch.oid ".length());
                     }
                 }
-                case '?' -> put(byPath, new FileEntry(field.substring(2), ChangeType.UNTRACKED, false, true));
+                case '?' -> byPath = put(byPath, new FileEntry(field.substring(2), ChangeType.UNTRACKED, false, true));
                 // 1 XY sub mH mI mW hH hI path
                 case '1' -> {
                     String xy = field.substring(2, 4);
-                    put(byPath, new FileEntry(pathAfter(field, 8), ordinaryChange(xy),
+                    byPath = put(byPath, new FileEntry(pathAfter(field, 8), ordinaryChange(xy),
                             xy.charAt(0) != '.', xy.charAt(1) != '.'));
                 }
                 // 2 XY sub mH mI mW hH hI Xscore path, followed by the original path as its own field
@@ -91,23 +90,23 @@ public final class CliStatus {
                     String xy = field.substring(2, 4);
                     boolean staged = xy.charAt(0) != '.';
                     boolean unstaged = xy.charAt(1) != '.';
-                    put(byPath, new FileEntry(pathAfter(field, 9), ChangeType.ADDED, staged, unstaged));
+                    byPath = put(byPath, new FileEntry(pathAfter(field, 9), ChangeType.ADDED, staged, unstaged));
                     if (i + 1 < fields.length) {
-                        put(byPath, new FileEntry(fields[++i], ChangeType.DELETED, staged, unstaged));
+                        byPath = put(byPath, new FileEntry(fields[++i], ChangeType.DELETED, staged, unstaged));
                     }
                 }
                 // u XY sub m1 m2 m3 mW h1 h2 h3 path
-                case 'u' -> put(byPath, FileEntry.conflicted(pathAfter(field, 10), Conflict.of(field.substring(2, 4))));
+                case 'u' -> byPath = put(byPath, FileEntry.conflicted(pathAfter(field, 10), Conflict.of(field.substring(2, 4))));
                 default -> {
                     // Ignored entries ('!') and anything unknown are not shown.
                 }
             }
         }
-        return new RepoStatus(head, oid, List.ofAll(byPath.values()));
+        return new RepoStatus(head, oid, byPath.values().toList());
     }
 
-    private static void put(Map<String, FileEntry> byPath, FileEntry entry) {
-        byPath.put(entry.path(), entry);
+    private static Map<String, FileEntry> put(Map<String, FileEntry> byPath, FileEntry entry) {
+        return byPath.put(entry.path(), entry);
     }
 
     private static ChangeType ordinaryChange(String xy) {

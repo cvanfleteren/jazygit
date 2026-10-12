@@ -4,7 +4,9 @@ import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.widgets.spinner.SpinnerStyle;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -19,7 +21,6 @@ import net.vanfleteren.jazygit.state.Msg;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Set;
 import java.util.function.Consumer;
 
 /**
@@ -38,7 +39,7 @@ public class BranchesPanel {
     private boolean focused;
     private final Keymap keymap = Keymap.standard();
     // The branches being pushed; the rows are built from it on every render.
-    private Set<String> pushing = Set.of();
+    private Set<String> pushing = HashSet.empty();
 
     /**
      * The time since the last commit as a number and one unit: s, m, h or d.

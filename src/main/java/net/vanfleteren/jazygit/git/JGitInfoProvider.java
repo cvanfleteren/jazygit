@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -22,9 +24,6 @@ import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * {@link GitInfoProvider} backed by a real repository. The working tree status comes from the
@@ -40,7 +39,7 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     private final Path workTree;
     // The ahead/behind counts per branch, so the revwalk only reruns when a tip moves. Replaced on
     // every read, which drops deleted branches.
-    private volatile Map<String, Tracking> trackingCache = Map.of();
+    private volatile Map<String, Tracking> trackingCache = HashMap.empty();
 
     /**
      * The ahead/behind counts of a branch, valid for these tips of the branch and its upstream.
@@ -92,32 +91,29 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     public List<Branch> branches() {
         try {
             String fullBranch = repository.getFullBranch();
-            Map<String, Integer> modified = new HashMap<>();
-            try (RevWalk walk = new RevWalk(repository)) {
-                for (Ref ref : git.branchList().call()) {
-                    modified.put(ref.getObjectId().name(), walk.parseCommit(ref.getObjectId()).getCommitTime());
-                }
-            }
+            Map<String, Integer> modified = commitTimes();
             Option<String> defaultBranch = defaultBranch();
             List<Branch> branches = List.empty();
-            Map<String, Tracking> tracking = new ConcurrentHashMap<>();
+            Map<String, Tracking> tracking = HashMap.empty();
             for (Ref ref : git.branchList().call()) {
                 String name = Repository.shortenRefName(ref.getName());
                 Option<Tracking> counts = tracking(name, ref.getObjectId().name());
-                counts.forEach(t -> tracking.put(name, t));
+                if (counts.isDefined()) {
+                    tracking = tracking.put(name, counts.get());
+                }
                 branches = branches.append(new Branch(name,
                         ref.getName().equals(fullBranch), ref.getObjectId().name(),
-                        Instant.ofEpochSecond(modified.get(ref.getObjectId().name())),
+                        Instant.ofEpochSecond(modified.apply(ref.getObjectId().name())),
                         hasRemote(name),
                         defaultBranch.equals(Option.of(name)),
                         counts.map(Tracking::ahead).getOrElse(0),
                         counts.map(Tracking::behind).getOrElse(0)));
             }
-            trackingCache = Map.copyOf(tracking);
+            trackingCache = tracking;
             // The checked out branch first, then the most recently committed to.
             return branches
                     .sorted(Comparator.comparing(Branch::current).reversed()
-                            .thenComparing(Comparator.comparingInt((Branch b) -> modified.get(b.tipOid())).reversed())
+                            .thenComparing(Comparator.comparingInt((Branch b) -> modified.apply(b.tipOid())).reversed())
                             .thenComparing(Branch::name));
         } catch (IOException e) {
             throw new UncheckedIOException(Messages.get("git.readBranchesFailed"), e);
@@ -204,6 +200,19 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     }
 
     /**
+     * The commit time of the tip of every local branch, by object id.
+     */
+    private Map<String, Integer> commitTimes() throws IOException, GitAPIException {
+        Map<String, Integer> modified = HashMap.empty();
+        try (RevWalk walk = new RevWalk(repository)) {
+            for (Ref ref : git.branchList().call()) {
+                modified = modified.put(ref.getObjectId().name(), walk.parseCommit(ref.getObjectId()).getCommitTime());
+            }
+        }
+        return modified;
+    }
+
+    /**
      * The main branch: the one {@code origin/HEAD} points to, as set by a clone. Without it, the
      * first of {@code main} and {@code master} that exists.
      */
@@ -234,7 +243,7 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
             return Option.none();
         }
         String remoteOid = remote.getObjectId().name();
-        Option<Tracking> cached = Option.of(trackingCache.get(branch))
+        Option<Tracking> cached = trackingCache.get(branch)
                 .filter(t -> t.trackingRef().equals(trackingRef) && t.localOid().equals(localOid)
                         && t.remoteOid().equals(remoteOid));
         if (cached.isDefined()) {

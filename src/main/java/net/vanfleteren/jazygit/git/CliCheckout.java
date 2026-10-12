@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import net.vanfleteren.jazygit.i18n.Messages;
 import org.zeroturnaround.exec.ProcessExecutor;
 import org.zeroturnaround.exec.ProcessResult;
@@ -112,10 +114,10 @@ public final class CliCheckout {
     }
 
     static Result exec(Path workTree, String... command) {
-        return exec(workTree, java.util.Map.of(), command);
+        return exec(workTree, HashMap.empty(), command);
     }
 
-    static Result exec(Path workTree, java.util.Map<String, String> environment, String... command) {
+    static Result exec(Path workTree, Map<String, String> environment, String... command) {
         List<String> line = List.of(CommandLine.format(List.of(command)));
         try {
             ProcessResult result = new ProcessExecutor()
@@ -125,7 +127,7 @@ public final class CliCheckout {
                     // Fail instead of waiting for credentials that cannot be typed.
                     .environment("GIT_TERMINAL_PROMPT", "0")
                     .environment("LC_ALL", "C")
-                    .environment(environment)
+                    .environment(environment.toJavaMap())
                     .readOutput(true)
                     .redirectErrorStream(true)
                     .exitValueAny()
