@@ -29,6 +29,14 @@ record GitCommand(List<String> args, Map<String, String> environment, Duration t
         return new GitCommand(args, DEFAULT_ENVIRONMENT, DEFAULT_TIMEOUT);
     }
 
+    /**
+     * A command that only reads. It takes no optional locks, so it does not get in the way of git commands
+     * the user runs meanwhile, as the periodic reads would otherwise do.
+     */
+    static GitCommand reading(String... args) {
+        return git(List.of(args).prepend("--no-optional-locks"));
+    }
+
     GitCommand withEnvironment(Map<String, String> variables) {
         return new GitCommand(args, environment.merge(variables, (current, given) -> given), timeout);
     }

@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.git;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.CommandFailed;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -30,16 +31,16 @@ class GitProcessTest {
         GitFailure<GitError.ProcessError> failure = GitProcess.run(dir, git("rev-parse", "HEAD")).getLeft();
 
         CommandFailed failed = (CommandFailed) failure.error();
-        assertTrue(failed.explanation().startsWith("fatal: not a git repository"), failed.explanation());
+        assertTrue(failed.says("fatal: not a git repository"), failed.toString());
         assertEquals(128, failed.exitCode());
         assertEquals(List.of("git rev-parse HEAD"), failure.commands());
     }
 
     @Test
     void theExplanationPrefersTheErrorOutput() {
-        assertEquals("error: boom", GitProcess.explanation("\n error: boom\nmore", "On branch main"));
-        assertEquals("On branch main", GitProcess.explanation("", "\nOn branch main\n"));
-        assertEquals("", GitProcess.explanation("", ""));
+        assertEquals(Option.of("error: boom"), GitProcess.explanation("\n error: boom\nmore", "On branch main"));
+        assertEquals(Option.of("On branch main"), GitProcess.explanation("", "\nOn branch main\n"));
+        assertEquals(Option.none(), GitProcess.explanation("", ""));
     }
 
     @Test

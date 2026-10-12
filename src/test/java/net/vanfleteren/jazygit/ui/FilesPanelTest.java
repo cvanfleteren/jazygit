@@ -38,11 +38,11 @@ class FilesPanelTest {
     @Test
     void conflictedFilesShowAMarkerForEachBranchThatChangedThem() throws Exception {
         Model updated = TestModels.loaded(new FixedProvider(List.of(
-                FileEntry.conflicted("both.txt", Conflict.of("UU")),
-                FileEntry.conflicted("added.txt", Conflict.of("AA")))));
+                FileEntry.conflicted("both.txt", Conflict.of('U', 'U')),
+                FileEntry.conflicted("added.txt", Conflict.of('A', 'A')))));
         Model deleted = TestModels.loaded(new FixedProvider(List.of(
-                FileEntry.conflicted("theirs-deleted.txt", Conflict.of("UD")),
-                FileEntry.conflicted("ours-deleted.txt", Conflict.of("DU")))));
+                FileEntry.conflicted("theirs-deleted.txt", Conflict.of('U', 'D')),
+                FileEntry.conflicted("ours-deleted.txt", Conflict.of('D', 'U')))));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(updated, FilesPanel.ID))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(updated, FilesPanel.ID));

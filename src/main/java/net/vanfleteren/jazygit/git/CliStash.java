@@ -1,9 +1,10 @@
 package net.vanfleteren.jazygit.git;
 
 import io.vavr.collection.List;
+import io.vavr.collection.Seq;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.GitProcess.Output;
+import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.model.Stash;
 
 import java.nio.file.Path;
@@ -16,7 +17,6 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
  */
 public final class CliStash {
 
-    private static final char SEPARATOR = '\u001f';
     // What git prefixes the message of a stash with when it is given one.
     private static final Pattern BRANCH_PREFIX = Pattern.compile("^On [^:]+: ");
 
@@ -27,14 +27,18 @@ public final class CliStash {
      * Runs {@code git stash list}, newest stash first.
      */
     public static Either<ProcessError, List<Stash>> list(Path workTree) {
-        return GitProcess.run(workTree, git("--no-optional-locks", "stash", "list", "--format=%gd" + SEPARATOR + "%gs"))
-                .map(output -> List.ofAll(output.stdout().lines()).filter(line -> !line.isBlank()).map(CliStash::parse))
-                .mapLeft(GitFailure::error);
+        return GitProcess.read(workTree,
+                GitCommand.reading("stash", "list", "--format=%gd" + GitOutput.PRETTY_FIELD_SEPARATOR + "%gs"),
+                CliStash::parse);
     }
 
-    static Stash parse(String line) {
-        int at = line.indexOf(SEPARATOR);
-        return new Stash(line.substring(0, at), BRANCH_PREFIX.matcher(line.substring(at + 1)).replaceFirst(""));
+    static Either<UnexpectedOutput, List<Stash>> parse(String raw) {
+        return Either.sequenceRight(GitOutput.nonBlankLines(raw).map(CliStash::stash)).map(Seq::toList);
+    }
+
+    private static Either<UnexpectedOutput, Stash> stash(String line) {
+        return GitOutput.fields(line, 2)
+                .map(fields -> new Stash(fields.get(0), BRANCH_PREFIX.matcher(fields.get(1)).replaceFirst("")));
     }
 
     /**
@@ -42,14 +46,14 @@ public final class CliStash {
      * when the stash conflicts, which keeps it.
      */
     public static Either<GitFailure<ProcessError>, List<String>> pop(Path workTree, String ref) {
-        return GitProcess.run(workTree, git("stash", "pop", ref)).map(Output::log);
+        return GitProcess.log(workTree, git("stash", "pop", ref));
     }
 
     /**
      * Runs {@code git stash drop <ref>}.
      */
     public static Either<GitFailure<ProcessError>, List<String>> drop(Path workTree, String ref) {
-        return GitProcess.run(workTree, git("stash", "drop", ref)).map(Output::log);
+        return GitProcess.log(workTree, git("stash", "drop", ref));
     }
 
     /**
@@ -57,7 +61,34 @@ public final class CliStash {
      * unstaged, and the untracked files.
      */
     public static Either<GitFailure<ProcessError>, List<String>> push(Path workTree, String message) {
-        return GitProcess.run(workTree, git("stash", "push", "--include-untracked", "--message", message))
-                .map(Output::log);
+        return GitProcess.log(workTree, git("stash", "push", "--include-untracked", "--message", message));
+    }
+
+    /**
+     * Whether {@code git stash push} stashed anything, and the commands that found out.
+     */
+    record Stashed(boolean any, List<String> commands) {
+    }
+
+    /**
+     * Runs {@code git stash push --quiet}: stashes the changes to tracked files, to take them elsewhere.
+     */
+    static Either<GitFailure<ProcessError>, Stashed> pushQuietly(Path workTree) {
+        // Git succeeds without stashing when there is nothing to stash; then there is nothing to pop
+        // either, and popping would apply an older, unrelated stash. Only the push is logged.
+        return count(workTree).flatMap(before ->
+                GitProcess.log(workTree, git("stash", "push", "--quiet")).flatMap(pushed ->
+                        count(workTree).map(after -> new Stashed(after > before, pushed))));
+    }
+
+    /**
+     * Runs {@code git stash pop --quiet}: brings back what {@link #pushQuietly} stashed.
+     */
+    static Either<GitFailure<ProcessError>, List<String>> popQuietly(Path workTree) {
+        return GitProcess.log(workTree, git("stash", "pop", "--quiet"));
+    }
+
+    private static Either<GitFailure<ProcessError>, Integer> count(Path workTree) {
+        return GitProcess.run(workTree, git("stash", "list")).map(output -> GitOutput.nonBlankLines(output.stdout()).size());
     }
 }

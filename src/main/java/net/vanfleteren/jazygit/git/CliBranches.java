@@ -5,6 +5,7 @@ import io.vavr.collection.Set;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Upstream;
@@ -12,25 +13,23 @@ import net.vanfleteren.jazygit.git.model.Upstream;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Comparator;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static net.vanfleteren.jazygit.git.GitCommand.git;
+import static net.vanfleteren.jazygit.git.Refs.DEFAULT_REMOTE;
+import static net.vanfleteren.jazygit.git.Refs.HEADS;
+import static net.vanfleteren.jazygit.git.Refs.REMOTES;
 
 /**
  * Reads the branches through {@code git for-each-ref}, in one call for all of them.
  */
 public final class CliBranches {
 
-    static final String DEFAULT_REMOTE = "origin";
-    private static final String SEPARATOR = "\u001f";
-    private static final String HEADS = "refs/heads/";
-    private static final String REMOTES = "refs/remotes/";
-    private static final String ORIGIN = REMOTES + DEFAULT_REMOTE + "/";
-    private static final String FORMAT = List.of("%(refname)", "%(objectname)", "%(committerdate:unix)", "%(HEAD)",
-            "%(upstream:short)", "%(upstream:track)", "%(symref)", "%(upstream)").mkString("%1f");
-    private static final Pattern AHEAD = Pattern.compile("ahead (\\d+)");
-    private static final Pattern BEHIND = Pattern.compile("behind (\\d+)");
+    private static final String ORIGIN = Refs.remote(DEFAULT_REMOTE, "");
+    private static final List<String> FIELDS = List.of("%(refname)", "%(objectname)", "%(committerdate:unix)",
+            "%(HEAD)", "%(upstream:short)", "%(upstream:track)", "%(symref)", "%(upstream)");
+    private static final String FORMAT = FIELDS.mkString(GitOutput.REF_FIELD_SEPARATOR);
+    private static final Pattern AHEAD = Pattern.compile("ahead (\\d{1,9})");
+    private static final Pattern BEHIND = Pattern.compile("behind (\\d{1,9})");
     // The checked out branch first, then the most recently committed to.
     private static final Comparator<Branch> ORDER = Comparator.comparing(Branch::current).reversed()
             .thenComparing(Comparator.comparing(Branch::tipTime).reversed())
@@ -43,53 +42,61 @@ public final class CliBranches {
      * The local branches: the checked out one first, then the most recently committed to.
      */
     public static Either<ProcessError, List<Branch>> list(Path workTree) {
-        return GitProcess.run(workTree, git("--no-optional-locks", "for-each-ref", "--format=" + FORMAT, HEADS, REMOTES))
-                .map(output -> parse(output.stdout()))
-                .mapLeft(GitFailure::error);
+        return GitProcess.read(workTree, GitCommand.reading("for-each-ref", "--format=" + FORMAT, HEADS, REMOTES),
+                CliBranches::parse);
     }
 
     /**
      * One line of {@code for-each-ref} output.
      *
-     * @param upstream   the short name of the upstream, e.g. {@code origin/main}; empty without one
-     * @param track      how far the branch is from its upstream, e.g. {@code [ahead 1, behind 2]}; empty when
-     *                   they are equal, {@code [gone]} when the upstream does not exist
-     * @param symref     what a symbolic ref points to, e.g. {@code refs/remotes/origin/main}
-     * @param upstreamRef the remote-tracking ref of the upstream, e.g. {@code refs/remotes/origin/main}; empty
-     *                    without one
+     * @param upstream    the short name of the upstream, e.g. {@code origin/main}
+     * @param track       how far the branch is from its upstream, e.g. {@code [ahead 1, behind 2]}; none when
+     *                    they are equal, {@code [gone]} when the upstream does not exist
+     * @param symref      what a symbolic ref points to, e.g. {@code refs/remotes/origin/main}
+     * @param upstreamRef the remote-tracking ref of the upstream, e.g. {@code refs/remotes/origin/main}
      */
-    private record Ref(String name, Sha tip, Instant time, boolean head, String upstream, String track,
-                       String symref, String upstreamRef) {
+    private record Ref(String name, Sha tip, Instant time, boolean head, Option<String> upstream,
+                       Option<String> track, Option<String> symref, Option<String> upstreamRef) {
 
-        static Ref parse(String line) {
-            String[] f = line.split(SEPARATOR, -1);
-            return new Ref(f[0], new Sha(f[1]), Instant.ofEpochSecond(Long.parseLong(f[2])), f[3].equals("*"),
-                    f[4], f[5], f[6], f[7]);
+        static Either<UnexpectedOutput, Ref> parse(String line) {
+            return GitOutput.fields(line, FIELDS.size()).flatMap(f -> GitOutput.sha(f.get(1)).flatMap(tip ->
+                    GitOutput.epochSeconds(f.get(2)).map(time -> new Ref(f.get(0), tip, time, f.get(3).equals("*"),
+                            present(f.get(4)), present(f.get(5)), present(f.get(6)), present(f.get(7))))));
         }
 
-        String shortName() {
-            return name.substring(HEADS.length());
+        private static Option<String> present(String field) {
+            return Option.of(field).filter(text -> !text.isEmpty());
+        }
+
+        /**
+         * The name of the local branch, if this is one.
+         */
+        Option<String> localName() {
+            return GitOutput.after(name, HEADS);
         }
 
         /**
          * The remote-tracking ref of the branch it is pushed to: its upstream, or the one of the same name
          * on {@code origin}.
          */
-        String pushedTo() {
-            return upstreamRef.isEmpty() ? REMOTES + DEFAULT_REMOTE + "/" + shortName() : upstreamRef;
+        String pushedTo(String branch) {
+            return upstreamRef.getOrElse(() -> ORIGIN + branch);
         }
     }
 
-    static List<Branch> parse(String raw) {
-        List<Ref> refs = List.ofAll(raw.lines()).filter(line -> !line.isBlank()).map(Ref::parse);
-        List<Ref> local = refs.filter(ref -> ref.name().startsWith(HEADS));
+    static Either<UnexpectedOutput, List<Branch>> parse(String raw) {
+        return Either.sequenceRight(GitOutput.nonBlankLines(raw).map(Ref::parse)).map(refs -> branches(refs.toList()));
+    }
+
+    private static List<Branch> branches(List<Ref> refs) {
         Set<String> remote = refs.map(Ref::name).filter(name -> name.startsWith(REMOTES)).toSet();
-        Option<String> defaultBranch = defaultBranch(refs, local.map(Ref::shortName));
-        return local
-                .map(ref -> new Branch(ref.shortName(), ref.head(), ref.tip(), ref.time(),
-                        remote.contains(ref.pushedTo()),
-                        defaultBranch.contains(ref.shortName()),
-                        upstream(ref)))
+        List<String> local = refs.flatMap(Ref::localName);
+        Option<String> defaultBranch = defaultBranch(refs, local);
+        return refs
+                .flatMap(ref -> ref.localName().map(name -> new Branch(name, ref.head(), ref.tip(), ref.time(),
+                        remote.contains(ref.pushedTo(name)),
+                        defaultBranch.contains(name),
+                        upstream(ref))))
                 .sorted(ORDER);
     }
 
@@ -99,20 +106,22 @@ public final class CliBranches {
      */
     private static Option<String> defaultBranch(List<Ref> refs, List<String> branches) {
         return refs.find(ref -> ref.name().equals(ORIGIN + "HEAD"))
-                .map(Ref::symref)
-                .filter(target -> target.startsWith(ORIGIN))
-                .map(target -> target.substring(ORIGIN.length()))
+                .flatMap(Ref::symref)
+                .flatMap(target -> GitOutput.after(target, ORIGIN))
                 .orElse(() -> List.of("main", "master").find(branches::contains));
     }
 
     private static Option<Upstream> upstream(Ref ref) {
-        return ref.upstream().isEmpty() || ref.track().equals("[gone]")
-                ? Option.none()
-                : Option.of(new Upstream(ref.upstream(), count(AHEAD, ref.track()), count(BEHIND, ref.track())));
+        String track = ref.track().getOrElse("");
+        return ref.upstream()
+                .filter(name -> !track.equals("[gone]"))
+                .map(name -> new Upstream(name, count(AHEAD, track), count(BEHIND, track)));
     }
 
     private static int count(Pattern pattern, String track) {
-        Matcher matcher = pattern.matcher(track);
-        return matcher.find() ? Integer.parseInt(matcher.group(1)) : 0;
+        // At most 9 digits, so the count fits an int.
+        return Option.ofOptional(pattern.matcher(track).results().findFirst())
+                .map(match -> Integer.parseInt(match.group(1)))
+                .getOrElse(0);
     }
 }

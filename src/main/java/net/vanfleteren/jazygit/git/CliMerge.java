@@ -2,9 +2,7 @@ package net.vanfleteren.jazygit.git;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
-import net.vanfleteren.jazygit.git.GitError.CommandFailed;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.GitProcess.Output;
 import net.vanfleteren.jazygit.git.model.MergeMode;
 
 import java.nio.file.Path;
@@ -18,6 +16,10 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
  */
 public final class CliMerge {
 
+    private static final GitCommand ABORT = git("merge", "--abort");
+    // A squash leaves no merge to abort, so its conflicts are undone by resetting the merge.
+    private static final GitCommand RESET = git("reset", "--merge");
+
     private CliMerge() {
     }
 
@@ -28,41 +30,32 @@ public final class CliMerge {
      */
     public static Either<GitFailure<ProcessError>, List<String>> merge(Path workTree, String branch, MergeMode mode) {
         return switch (mode) {
-            case FAST_FORWARD -> merge(workTree, git("merge", "--ff", "--no-edit", branch), git("merge", "--abort"));
-            case MERGE_COMMIT -> merge(workTree, git("merge", "--no-ff", "--no-edit", branch), git("merge", "--abort"));
+            case FAST_FORWARD -> merge(workTree, git("merge", "--ff", "--no-edit", branch), ABORT);
+            case MERGE_COMMIT -> merge(workTree, git("merge", "--no-ff", "--no-edit", branch), ABORT);
             case SQUASH -> squash(workTree, branch);
-            case SQUASH_AND_COMMIT -> squash(workTree, branch).flatMap(squashed -> commitStaged(workTree)
-                    .map(squashed::appendAll)
-                    .mapLeft(failure -> failure.after(squashed)));
+            case SQUASH_AND_COMMIT -> GitFailure.sequence(() -> squash(workTree, branch), () -> commitStaged(workTree));
         };
     }
 
-    /**
-     * A squash leaves no merge to abort, so its conflicts are undone by resetting the merge.
-     */
     private static Either<GitFailure<ProcessError>, List<String>> squash(Path workTree, String branch) {
-        return merge(workTree, git("merge", "--squash", branch), git("reset", "--merge"));
+        return merge(workTree, git("merge", "--squash", branch), RESET);
     }
 
     /**
      * Runs {@code merge}, and {@code undo} when it stopped on conflicts. Git's exit code does not tell that
-     * apart from refusing to start, which leaves nothing to undo; the conflicted files in the index do.
+     * apart from refusing to start, which leaves nothing to undo; the conflicted files in the index do. When
+     * that cannot be found out, the undo runs anyway: it does nothing harmful when there is nothing to undo.
      */
     private static Either<GitFailure<ProcessError>, List<String>> merge(Path workTree, GitCommand merge,
                                                                       GitCommand undo) {
-        return GitProcess.run(workTree, merge)
-                .map(Output::log)
-                .mapLeft(failure -> conflicted(workTree)
-                        ? failure.followedBy(GitProcess.attempt(workTree, undo))
-                        : failure);
+        return GitProcess.runOrUndo(workTree, merge, undo, () -> conflicted(workTree).getOrElse(true));
     }
 
     /**
      * Whether the index holds conflicted files. Only asked, so not logged.
      */
-    private static boolean conflicted(Path workTree) {
-        return GitProcess.run(workTree, git("ls-files", "--unmerged"))
-                .exists(output -> !output.stdout().isBlank());
+    private static Either<ProcessError, Boolean> conflicted(Path workTree) {
+        return GitProcess.read(workTree, git("ls-files", "--unmerged"), raw -> Either.right(!raw.isBlank()));
     }
 
     /**
@@ -71,11 +64,9 @@ public final class CliMerge {
      */
     private static Either<GitFailure<ProcessError>, List<String>> commitStaged(Path workTree) {
         // diff --cached --quiet exits with 1, saying nothing, when something is staged.
-        return GitProcess.run(workTree, git("diff", "--cached", "--quiet"))
-                .fold(failure -> failure.error() instanceof CommandFailed(String explanation, int exitCode)
-                                && exitCode == 1 && explanation.isEmpty()
-                                ? GitProcess.run(workTree, git("commit", "--quiet", "--no-edit")).map(Output::log)
-                                : Either.left(failure),
-                        nothingStaged -> Either.right(List.empty()));
+        return GitProcess.ask(workTree, git("diff", "--cached", "--quiet"))
+                .flatMap(nothingStaged -> nothingStaged.isDefined()
+                        ? GitFailure.nothing()
+                        : GitProcess.log(workTree, git("commit", "--quiet", "--no-edit")));
     }
 }

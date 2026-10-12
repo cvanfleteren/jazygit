@@ -8,7 +8,6 @@ import net.vanfleteren.jazygit.git.GitError.LocalChanges;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
 import net.vanfleteren.jazygit.git.GitError.StashNotRestored;
-import net.vanfleteren.jazygit.git.GitProcess.Output;
 
 import java.nio.file.Path;
 
@@ -25,7 +24,6 @@ public final class CliCheckout {
     // English, so git is run with the C locale.
     private static final String LOCAL_CHANGES =
             "Your local changes to the following files would be overwritten by checkout";
-    private static final GitCommand STASH_POP = git("stash", "pop", "--quiet");
 
     private CliCheckout() {
     }
@@ -38,14 +36,13 @@ public final class CliCheckout {
      */
     public static Either<GitFailure<CheckoutError>, List<String>> checkout(Path workTree, String branch) {
         // A trailing "--" keeps git from treating branch names as paths.
-        return GitProcess.run(workTree, git("checkout", "--quiet", branch, "--"))
-                .map(Output::log)
+        return GitProcess.log(workTree, git("checkout", "--quiet", branch, "--"))
                 .mapLeft(failure -> failure.map(CliCheckout::classify));
     }
 
     static CheckoutError classify(ProcessError error) {
-        return error instanceof CommandFailed(String explanation, int ignored) && explanation.contains(LOCAL_CHANGES)
-                ? new LocalChanges(explanation)
+        return error instanceof CommandFailed failed && failed.says(LOCAL_CHANGES)
+                ? new LocalChanges(failed.explanation().getOrElse(""))
                 : error;
     }
 
@@ -56,39 +53,19 @@ public final class CliCheckout {
      * which is a {@link StashNotRestored}.
      */
     public static Either<GitFailure<StashCheckoutError>, List<String>> checkoutWithStash(Path workTree, String branch) {
-        return GitFailure.<StashCheckoutError, Stashed>widen(stash(workTree)).flatMap(stashed ->
-                checkout(workTree, branch).fold(
-                        failure -> Either.left(GitFailure.<StashCheckoutError>widen(failure)
-                                .after(stashed.commands())
-                                .followedBy(stashed.any() ? GitProcess.attempt(workTree, STASH_POP) : List.empty())),
-                        checkedOut -> restore(workTree, stashed, stashed.commands().appendAll(checkedOut))));
+        return GitFailure.<StashCheckoutError, CliStash.Stashed>widen(CliStash.pushQuietly(workTree)).flatMap(stashed ->
+                GitFailure.sequence(
+                        () -> Either.right(stashed.commands()),
+                        () -> GitFailure.<StashCheckoutError, List<String>>widen(checkout(workTree, branch)).mapLeft(failure ->
+                                stashed.any() ? failure.followedBy(CliStash.popQuietly(workTree)) : failure),
+                        () -> stashed.any() ? restore(workTree) : GitFailure.nothing()));
     }
 
     /**
-     * Whether {@code git stash push} stashed anything, and the commands that found out.
+     * Pops the changes that were stashed for the checkout.
      */
-    private record Stashed(boolean any, List<String> commands) {
-    }
-
-    private static Either<GitFailure<ProcessError>, Stashed> stash(Path workTree) {
-        // Git succeeds without stashing when there is nothing to stash; then there is nothing to pop
-        // either, and popping would apply an older, unrelated stash.
-        return stashCount(workTree).flatMap(before ->
-                GitProcess.run(workTree, git("stash", "push", "--quiet")).flatMap(push ->
-                        stashCount(workTree).map(after -> new Stashed(after > before, push.log()))));
-    }
-
-    private static Either<GitFailure<StashCheckoutError>, List<String>> restore(Path workTree, Stashed stashed,
-                                                                              List<String> executed) {
-        return stashed.any()
-                ? GitProcess.run(workTree, STASH_POP)
-                .map(popped -> executed.appendAll(popped.log()))
-                .mapLeft(failure -> failure.after(executed).map(StashNotRestored::new))
-                : Either.right(executed);
-    }
-
-    private static Either<GitFailure<ProcessError>, Long> stashCount(Path workTree) {
-        return GitProcess.run(workTree, git("stash", "list")).map(output -> output.stdout().lines().count());
+    private static Either<GitFailure<StashCheckoutError>, List<String>> restore(Path workTree) {
+        return CliStash.popQuietly(workTree).mapLeft(failure -> failure.map(StashNotRestored::new));
     }
 
     /**
@@ -97,6 +74,6 @@ public final class CliCheckout {
      */
     public static Either<GitFailure<ProcessError>, List<String>> createBranch(Path workTree, String name,
                                                                             String startPoint) {
-        return GitProcess.run(workTree, git("checkout", "--quiet", "-b", name, startPoint, "--")).map(Output::log);
+        return GitProcess.log(workTree, git("checkout", "--quiet", "-b", name, startPoint, "--"));
     }
 }

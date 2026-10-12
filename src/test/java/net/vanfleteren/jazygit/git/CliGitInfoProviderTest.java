@@ -695,8 +695,7 @@ class CliGitInfoProviderTest {
     void stageFailsWithGitsExplanationForAnUnknownPath() {
         GitError.ProcessError error = provider.stage(List.of("missing.txt")).getLeft().error();
 
-        assertTrue(error instanceof GitError.CommandFailed(String explanation, int ignored)
-                && explanation.contains("missing.txt"), error.toString());
+        assertTrue(error instanceof GitError.CommandFailed failed && failed.says("missing.txt"), error.toString());
     }
 
     @Test

@@ -1,16 +1,18 @@
 package net.vanfleteren.jazygit.git;
 
 import io.vavr.collection.List;
+import io.vavr.collection.Seq;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.GitError.CommandFailed;
+import net.vanfleteren.jazygit.git.GitError.LogError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
+import net.vanfleteren.jazygit.git.GitError.UnknownBranch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.git.model.Sha;
 
 import java.nio.file.Path;
-import java.time.Instant;
 
 import static net.vanfleteren.jazygit.git.GitCommand.git;
 
@@ -20,9 +22,9 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
 public final class CliLog {
 
     static final int MAX_COMMITS = 300;
-    private static final String SEPARATOR = "\u001f";
     // sha, parents, author name, author email, author time, subject, raw message
-    private static final String FORMAT = "%H%x1f%P%x1f%an%x1f%ae%x1f%at%x1f%s%x1f%B";
+    private static final List<String> FIELDS = List.of("%H", "%P", "%an", "%ae", "%at", "%s", "%B");
+    private static final String FORMAT = FIELDS.mkString(GitOutput.PRETTY_FIELD_SEPARATOR);
 
     private CliLog() {
     }
@@ -31,49 +33,60 @@ public final class CliLog {
      * The commit {@code revision} names; none when it names nothing, e.g. {@code HEAD} in a repository
      * without commits.
      */
-    public static Either<ProcessError, Option<Sha>> resolve(Path workTree, String revision) {
-        return GitProcess.run(workTree, git("rev-parse", "--verify", "--quiet", revision + "^{commit}"))
-                .fold(failure -> unknown(failure.error()) ? Either.right(Option.none()) : Either.left(failure.error()),
-                        output -> Either.right(Option.of(new Sha(output.stdout().strip()))));
+    public static Either<GitFailure<ProcessError>, Option<Sha>> resolve(Path workTree, String revision) {
+        // rev-parse --verify --quiet exits with 1, saying nothing, when the revision names nothing.
+        return GitProcess.ask(workTree, git("rev-parse", "--verify", "--quiet", revision + "^{commit}"))
+                .flatMap(answer -> answer.fold(
+                        () -> Either.right(Option.none()),
+                        found -> GitOutput.sha(found.stdout())
+                                .map(Option::of)
+                                .mapLeft(error -> new GitFailure<ProcessError>(error, found.log()))));
     }
 
     /**
-     * Whether {@code rev-parse --verify --quiet} failed because the revision names nothing: it then exits
-     * with 1, saying nothing.
+     * The log of HEAD, newest first; empty in a repository without commits.
      */
-    private static boolean unknown(ProcessError error) {
-        return error instanceof CommandFailed(String explanation, int exitCode) && exitCode == 1 && explanation.isEmpty();
+    public static Either<ProcessError, List<Commit>> commits(Path workTree) {
+        return resolve(workTree, "HEAD").mapLeft(GitFailure::error)
+                .flatMap(head -> head.fold(() -> Either.right(List.empty()), tip -> log(workTree, tip)));
+    }
+
+    /**
+     * The log of the local branch {@code branch}, newest first.
+     */
+    public static Either<LogError, List<Commit>> log(Path workTree, String branch) {
+        return Either.<LogError, Option<Sha>>narrow(resolve(workTree, Refs.head(branch)).mapLeft(GitFailure::error))
+                .flatMap(tip -> tip.<LogError>toEither(() -> new UnknownBranch(branch)))
+                .flatMap(tip -> Either.narrow(log(workTree, tip)));
     }
 
     /**
      * The newest commits reachable from {@code start}, newest first, laid out by {@link CommitGraph#arrange}.
      */
     public static Either<ProcessError, List<Commit>> log(Path workTree, Sha start) {
-        return GitProcess.run(workTree, git("--no-optional-locks", "log", "--no-color", "--no-show-signature", "-z",
-                        "--max-count=" + MAX_COMMITS, "--format=" + FORMAT, start.value(), "--"))
-                .map(output -> CommitGraph.arrange(parse(output.stdout())))
-                .mapLeft(GitFailure::error);
+        return GitProcess.read(workTree, GitCommand.reading("log", "--no-color", "--no-show-signature", "-z",
+                        "--max-count=" + MAX_COMMITS, "--format=" + FORMAT, start.value(), "--"),
+                raw -> parse(raw).map(CommitGraph::arrange));
     }
 
     /**
-     * Parses {@code git log -z --format=}{@value #FORMAT} output.
+     * Parses {@code git log -z} output in the format of {@link #FIELDS}.
      */
-    static List<Commit> parse(String raw) {
-        return List.of(raw.split("\0")).filter(record -> !record.isBlank()).map(CliLog::commit);
+    static Either<UnexpectedOutput, List<Commit>> parse(String raw) {
+        return Either.sequenceRight(GitOutput.records(raw).map(CliLog::commit)).map(Seq::toList);
     }
 
-    private static Commit commit(String record) {
-        String[] f = record.split(SEPARATOR, 7);
-        return new Commit(new Sha(f[0]), f[2], f[3], Instant.ofEpochSecond(Long.parseLong(f[4])), f[5],
-                extendedMessage(f[6]),
-                List.of(f[1].split(" ")).filter(parent -> !parent.isEmpty()).map(Sha::new));
+    private static Either<UnexpectedOutput, Commit> commit(String record) {
+        return GitOutput.fields(record, FIELDS.size()).flatMap(f -> GitOutput.sha(f.get(0)).flatMap(sha ->
+                GitOutput.epochSeconds(f.get(4)).map(time -> new Commit(sha, f.get(2), f.get(3), time, f.get(5),
+                        extendedMessage(f.get(6)),
+                        List.of(f.get(1).split(" ")).flatMap(Sha::parse)))));
     }
 
     /**
      * The commit message after the subject paragraph, or an empty string if there is none.
      */
     static String extendedMessage(String fullMessage) {
-        String[] parts = fullMessage.split("\\R\\s*\\R", 2);
-        return parts.length < 2 ? "" : parts[1].strip();
+        return List.of(fullMessage.split("\\R\\s*\\R", 2)).drop(1).headOption().map(String::strip).getOrElse("");
     }
 }

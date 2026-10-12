@@ -1,5 +1,8 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.control.Option;
+
+import java.io.IOException;
 import java.nio.file.Path;
 
 /**
@@ -54,6 +57,12 @@ public sealed interface GitError {
     }
 
     /**
+     * The failures of deleting untracked files.
+     */
+    sealed interface DeleteUntrackedError extends DiscardError {
+    }
+
+    /**
      * A failure that running any git command can have.
      */
     sealed interface ProcessError extends CheckoutError, RewordError, DiscardError, DiffError, LogError, OpenError {
@@ -61,8 +70,10 @@ public sealed interface GitError {
 
     /**
      * The {@code git} executable could not be started.
+     *
+     * @param cause why the process could not be started
      */
-    record GitUnavailable() implements ProcessError {
+    record GitUnavailable(IOException cause) implements ProcessError {
     }
 
     /**
@@ -80,10 +91,37 @@ public sealed interface GitError {
     /**
      * Git ran, but refused.
      *
-     * @param explanation the first line git printed about why, preferring its error output; empty if it
+     * @param explanation the first line git printed about why, preferring its error output; none if it
      *                    printed nothing
      */
-    record CommandFailed(String explanation, int exitCode) implements ProcessError {
+    record CommandFailed(Option<String> explanation, int exitCode) implements ProcessError {
+
+        public CommandFailed(String explanation, int exitCode) {
+            this(Option.of(explanation).filter(text -> !text.isEmpty()), exitCode);
+        }
+
+        /**
+         * Whether git refused without saying anything, with exit code 1. That is how commands that answer
+         * a question say "no", e.g. {@code git diff --quiet} when there are differences.
+         */
+        public boolean silent() {
+            return exitCode == 1 && explanation.isEmpty();
+        }
+
+        /**
+         * Whether git's explanation contains {@code text}.
+         */
+        public boolean says(String text) {
+            return explanation.exists(line -> line.contains(text));
+        }
+    }
+
+    /**
+     * Git printed something that could not be made sense of.
+     *
+     * @param output the part of the output that could not be parsed
+     */
+    record UnexpectedOutput(String output) implements ProcessError {
     }
 
     /**
@@ -125,18 +163,18 @@ public sealed interface GitError {
     /**
      * A temporary file git needed could not be written.
      */
-    record TempFileFailed(String reason) implements RewordError, DiffError {
+    record TempFileFailed(Throwable cause) implements RewordError, DiffError {
     }
 
     /**
      * An untracked path that was not deleted because it is not inside the working tree.
      */
-    record RefusedPath(String path) implements DiscardError {
+    record RefusedPath(String path) implements DeleteUntrackedError {
     }
 
     /**
      * An untracked path that could not be deleted.
      */
-    record DeleteFailed(String path, String reason) implements DiscardError {
+    record DeleteFailed(String path, Throwable cause) implements DeleteUntrackedError {
     }
 }

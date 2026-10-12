@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.git;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import io.vavr.control.Try;
 import net.vanfleteren.jazygit.git.GitError.CheckoutError;
 import net.vanfleteren.jazygit.git.GitError.CommandFailed;
 import net.vanfleteren.jazygit.git.GitError.DiffError;
@@ -14,7 +15,7 @@ import net.vanfleteren.jazygit.git.GitError.OpenError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.RewordError;
 import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
-import net.vanfleteren.jazygit.git.GitError.UnknownBranch;
+import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
@@ -52,31 +53,32 @@ public final class CliGitInfoProvider implements GitInfoProvider {
      * repository has no working tree, or git cannot be run.
      */
     public static Either<OpenError, CliGitInfoProvider> open(Path startDir) {
-        if (!Files.isDirectory(startDir)) {
-            return Either.left(new NotARepository(startDir));
-        }
-        return Either.<OpenError, GitProcess.Output>narrow(run(startDir, git("rev-parse", "--is-bare-repository"))
+        return !Files.isDirectory(startDir)
+                ? Either.left(new NotARepository(startDir))
+                : Either.<OpenError, Boolean>narrow(GitProcess.read(startDir, git("rev-parse", "--is-bare-repository"),
+                                raw -> Either.right(raw.strip().equals("true")))
                         .mapLeft(error -> notARepository(error, startDir)))
-                .flatMap(bare -> bare.stdout().strip().equals("true")
+                .flatMap(bare -> bare
                         ? Either.left(new NoWorkTree(startDir))
-                        : Either.narrow(run(startDir, git("rev-parse", "--show-toplevel"))))
-                .map(toplevel -> new CliGitInfoProvider(Path.of(toplevel.stdout().strip())));
+                        : Either.narrow(GitProcess.read(startDir, git("rev-parse", "--show-toplevel"),
+                        CliGitInfoProvider::path)))
+                .map(CliGitInfoProvider::new);
+    }
+
+    private static Either<UnexpectedOutput, Path> path(String raw) {
+        return Try.of(() -> Path.of(raw.strip())).toEither().mapLeft(e -> new UnexpectedOutput(raw));
     }
 
     private static OpenError notARepository(ProcessError error, Path startDir) {
-        return error instanceof CommandFailed(String explanation, int exitCode)
-                && explanation.contains("not a git repository")
+        return error instanceof CommandFailed failed && failed.says("not a git repository")
                 ? new NotARepository(startDir)
                 : error;
     }
 
-    private static Either<ProcessError, GitProcess.Output> run(Path dir, GitCommand command) {
-        return GitProcess.run(dir, command).mapLeft(GitFailure::error);
-    }
-
     @Override
     public String repositoryName() {
-        return workTree.getFileName().toString();
+        // The root directory has no name.
+        return Option.of(workTree.getFileName()).map(Path::toString).getOrElse(workTree::toString);
     }
 
     @Override
@@ -111,15 +113,12 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<ProcessError, List<Commit>> commits() {
-        return CliLog.resolve(workTree, "HEAD")
-                .flatMap(head -> head.fold(() -> Either.right(List.empty()), tip -> CliLog.log(workTree, tip)));
+        return CliLog.commits(workTree);
     }
 
     @Override
     public Either<LogError, List<Commit>> log(String branch) {
-        return Either.<LogError, Option<Sha>>narrow(CliLog.resolve(workTree, "refs/heads/" + branch))
-                .flatMap(tip -> tip.<LogError>toEither(() -> new UnknownBranch(branch)))
-                .flatMap(tip -> Either.narrow(CliLog.log(workTree, tip)));
+        return CliLog.log(workTree, branch);
     }
 
     @Override
@@ -159,7 +158,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<GitFailure<ProcessError>, List<String>> fetch(String remote) {
-        return CliRemote.fetch(workTree, remote);
+        return CliRemote.fetch(workTree, remote, Option.of(System.getenv("GIT_SSH_COMMAND")));
     }
 
     @Override
@@ -169,9 +168,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<GitFailure<ProcessError>, List<String>> deleteBranch(String name, DeleteScope scope) {
-        return GitFailure.sequence(
-                () -> scope.remote() ? CliBranch.deleteRemote(workTree, name) : Either.right(List.empty()),
-                () -> scope.local() ? CliBranch.deleteLocal(workTree, name) : Either.right(List.empty()));
+        return CliBranch.delete(workTree, name, scope);
     }
 
     @Override
@@ -201,11 +198,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<GitFailure<RewordError>, List<String>> reword(Sha sha, CommitMessage message) {
-        return CliLog.resolve(workTree, "HEAD")
-                .mapLeft(error -> new GitFailure<RewordError>(error, List.empty()))
-                .flatMap(head -> head.contains(sha)
-                        ? GitFailure.widen(CliIndex.reword(workTree, message))
-                        : CliRebase.reword(workTree, sha, message));
+        return CliRebase.rewordAny(workTree, sha, message);
     }
 
     @Override
@@ -215,11 +208,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<GitFailure<DiscardError>, List<String>> discard(DiscardPlan plan) {
-        return GitFailure.<DiscardError>sequence(
-                () -> GitFailure.widen(CliIndex.removeAdded(workTree, plan.added())),
-                () -> GitFailure.widen(CliIndex.checkoutFromHead(workTree, plan.fromHead())),
-                () -> GitFailure.widen(CliIndex.checkoutFromIndex(workTree, plan.fromIndex())),
-                () -> CliIndex.deleteUntracked(workTree, plan.untracked()));
+        return CliIndex.discard(workTree, plan);
     }
 
     @Override

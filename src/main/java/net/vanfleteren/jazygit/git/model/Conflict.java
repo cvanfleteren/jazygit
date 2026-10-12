@@ -23,8 +23,8 @@ public record Conflict(Side ours, Side theirs) {
      * The conflict described by the two status letters of {@code git status --porcelain=v2}
      * ({@code DD AU UD UA DU AA UU}): the first is for the current branch, the second for the other one.
      */
-    public static Conflict of(String xy) {
-        return new Conflict(side(xy.charAt(0)), side(xy.charAt(1)));
+    public static Conflict of(char ours, char theirs) {
+        return new Conflict(side(ours), side(theirs));
     }
 
     private static Side side(char letter) {

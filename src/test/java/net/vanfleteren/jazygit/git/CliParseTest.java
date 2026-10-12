@@ -40,7 +40,7 @@ class CliParseTest {
                         new Branch("feature", false, new Sha(B), Instant.ofEpochSecond(200), true, false,
                                 Option.of(new Upstream("origin/feature", 1, 2))),
                         new Branch("gone", false, new Sha(B), Instant.ofEpochSecond(100), false, false, Option.none())),
-                CliBranches.parse(raw));
+                CliBranches.parse(raw).get());
     }
 
     @Test
@@ -48,14 +48,14 @@ class CliParseTest {
         String raw = ref("refs/heads/local", A, "1", "*", "origin/elsewhere", "", "", "refs/remotes/origin/elsewhere")
                 + ref("refs/remotes/origin/elsewhere", A, "1", " ", "", "", "", "");
 
-        assertEquals(List.of(true), CliBranches.parse(raw).map(Branch::hasRemote));
+        assertEquals(List.of(true), CliBranches.parse(raw).get().map(Branch::hasRemote));
     }
 
     @Test
     void withoutOriginHeadMainOrMasterIsTheDefault() {
         String raw = ref("refs/heads/master", A, "1", "*", "", "", "", "");
 
-        assertEquals(List.of(true), CliBranches.parse(raw).map(Branch::isDefault));
+        assertEquals(List.of(true), CliBranches.parse(raw).get().map(Branch::isDefault));
     }
 
     @Test
@@ -67,6 +67,26 @@ class CliParseTest {
                         new Commit(new Sha(A), "Ada", "ada@example.com", Instant.ofEpochSecond(60), "Subject",
                                 "Body\nmore", List.of(new Sha(B))),
                         new Commit(new Sha(B), "Bob", "bob@example.com", Instant.EPOCH, "Root", "", List.empty())),
-                CliLog.parse(raw));
+                CliLog.parse(raw).get());
+    }
+
+    @Test
+    void malformedOutputIsAnErrorRatherThanAnException() {
+        assertEquals(new GitError.UnexpectedOutput("refs/heads/main\u001f" + A),
+                CliBranches.parse(ref("refs/heads/main", A)).getLeft());
+        assertEquals(new GitError.UnexpectedOutput("soon"),
+                CliBranches.parse(ref("refs/heads/main", A, "soon", "*", "", "", "", "")).getLeft());
+        assertEquals(new GitError.UnexpectedOutput(" "),
+                CliLog.parse(String.join("\u001f", " ", "", "Ada", "ada@example.com", "60", "S", "S\n")).getLeft());
+        assertEquals(new GitError.UnexpectedOutput("stash@{0} without a separator"),
+                CliStash.parse("stash@{0} without a separator\n").getLeft());
+        assertEquals(new GitError.UnexpectedOutput("1 M"), CliStatus.parse("# branch.head main\0001 M\0").getLeft());
+    }
+
+    @Test
+    void aShaIsNeitherBlankNorSpaced() {
+        assertEquals(Option.of(new Sha(A)), Sha.parse(" " + A + "\n"));
+        assertEquals(Option.none(), Sha.parse("  "));
+        assertEquals(Option.none(), Sha.parse(A + " " + B));
     }
 }

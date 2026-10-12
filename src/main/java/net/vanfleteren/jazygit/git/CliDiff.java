@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.i18n.Messages;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -53,23 +54,23 @@ public final class CliDiff {
      */
     private static Either<DiffError, String> unstagedAndUntracked(Path workTree, List<String> unstaged,
                                                                   List<String> untracked) {
-        if (untracked.isEmpty()) {
-            return Either.narrow(tracked(workTree, UNSTAGED, unstaged, HashMap.empty()));
-        }
-        return Either.<DiffError, String>narrow(run(workTree, List.of("rev-parse", "--git-path", "index"), HashMap.empty()))
+        return untracked.isEmpty()
+                ? Either.narrow(tracked(workTree, UNSTAGED, unstaged, HashMap.empty()))
+                : Either.<DiffError, String>narrow(run(workTree, List.of("rev-parse", "--git-path", "index"), HashMap.empty()))
                 .map(index -> workTree.resolve(index.strip()))
-                .flatMap(index -> TempFiles.using("jazygit-index",
-                                copy -> {
-                                    if (Files.exists(index)) {
-                                        // Keeping the modification time keeps git's check for files changed
-                                        // within the same second as the index working on the copy.
-                                        Files.copy(index, copy, StandardCopyOption.REPLACE_EXISTING,
-                                                StandardCopyOption.COPY_ATTRIBUTES);
-                                    }
-                                },
-                                copy -> withUntracked(workTree, unstaged, untracked,
-                                        HashMap.of("GIT_INDEX_FILE", copy.toString())))
-                        .fold(Either::left, Either::narrow));
+                .flatMap(index -> TempFiles.<DiffError, String>using("jazygit-index", copy -> copyIndex(index, copy), failed -> failed,
+                        copy -> withUntracked(workTree, unstaged, untracked,
+                                HashMap.of("GIT_INDEX_FILE", copy.toString()))));
+    }
+
+    /**
+     * Copies the {@code index} file, if there is one yet, keeping its modification time: that keeps git's
+     * check for files changed within the same second as the index working on the copy.
+     */
+    private static void copyIndex(Path index, Path copy) throws IOException {
+        if (Files.exists(index)) {
+            Files.copy(index, copy, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
+        }
     }
 
     private static Either<ProcessError, String> withUntracked(Path workTree, List<String> unstaged,
@@ -84,7 +85,7 @@ public final class CliDiff {
     }
 
     static String truncated(String diff) {
-        List<String> lines = diff.lines().collect(List.collector());
+        List<String> lines = GitOutput.lines(diff);
         return lines.size() <= MAX_LINES
                 ? diff
                 : lines.take(MAX_LINES).append(Messages.get("git.diff.truncated"))
@@ -92,8 +93,6 @@ public final class CliDiff {
     }
 
     static Either<ProcessError, String> run(Path workTree, List<String> args, Map<String, String> env) {
-        return GitProcess.run(workTree, git(args).withEnvironment(env))
-                .map(GitProcess.Output::stdout)
-                .mapLeft(GitFailure::error);
+        return GitProcess.read(workTree, git(args).withEnvironment(env), Either::right);
     }
 }

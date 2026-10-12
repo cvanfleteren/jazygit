@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.git.model;
 
+import io.vavr.control.Option;
+
 /**
  * The full object id of a git commit.
  */
@@ -7,10 +9,15 @@ public record Sha(String value) {
 
     private static final int SHORT_LENGTH = 7;
 
-    public Sha {
-        if (value.isBlank()) {
-            throw new IllegalArgumentException("A sha cannot be blank");
-        }
+    /**
+     * The sha {@code text} spells, ignoring surrounding whitespace; none when it is blank or has whitespace
+     * inside.
+     */
+    public static Option<Sha> parse(String text) {
+        String stripped = text.strip();
+        return stripped.isEmpty() || stripped.chars().anyMatch(Character::isWhitespace)
+                ? Option.none()
+                : Option.of(new Sha(stripped));
     }
 
     /**

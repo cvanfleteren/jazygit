@@ -22,6 +22,8 @@ class CliStatusTest {
     @Test
     void parsesWhichSideOfAConflictChangedTheFile() {
         String raw = String.join("\0",
+                "# branch.oid (initial)",
+                "# branch.head main",
                 "u UU N... 100644 100644 100644 100644 aaaaaaa bbbbbbb ccccccc both.txt",
                 "u AU N... 100644 100644 100644 100644 aaaaaaa bbbbbbb ccccccc ours.txt",
                 "u DU N... 100644 100644 100644 100644 aaaaaaa bbbbbbb ccccccc ours-deleted.txt",
@@ -29,7 +31,7 @@ class CliStatusTest {
                 "u DD N... 100644 100644 100644 100644 aaaaaaa bbbbbbb ccccccc deleted.txt",
                 "");
 
-        List<Conflict> conflicts = CliStatus.parse(raw).files()
+        List<Conflict> conflicts = CliStatus.parse(raw).get().files()
                 .map(f -> f.conflict().get());
 
         assertEquals(List.of(
@@ -43,7 +45,7 @@ class CliStatusTest {
     @Test
     void parsesBranchHeaders() {
         RepoStatus status = CliStatus.parse(
-                "# branch.oid 0123abcd\0# branch.head main\0# branch.upstream origin/main\0");
+                "# branch.oid 0123abcd\0# branch.head main\0# branch.upstream origin/main\0").get();
         assertEquals(Head.onBranch("main", new Sha("0123abcd")), status.head());
         assertEquals(List.of(), status.files());
     }
@@ -51,9 +53,9 @@ class CliStatusTest {
     @Test
     void parsesInitialAndDetachedHeads() {
         assertEquals(new Head.OnBranch("main", Option.none()),
-                CliStatus.parse("# branch.oid (initial)\0# branch.head main\0").head());
+                CliStatus.parse("# branch.oid (initial)\0# branch.head main\0").get().head());
         assertEquals(new Head.Detached(new Sha("0123abcd")),
-                CliStatus.parse("# branch.oid 0123abcd\0# branch.head (detached)\0").head());
+                CliStatus.parse("# branch.oid 0123abcd\0# branch.head (detached)\0").get().head());
     }
 
     @Test
@@ -82,14 +84,14 @@ class CliStatusTest {
                 new FileEntry("removed.txt", ChangeType.DELETED, true, false),
                 new FileEntry("staged.txt", ChangeType.MODIFIED, true, false),
                 new FileEntry("unstaged.txt", ChangeType.MODIFIED)),
-                CliStatus.parse(raw).files());
+                CliStatus.parse(raw).get().files());
     }
 
     @Test
     void parsesStagedAndUnstagedChangesOfOneFile() {
-        String raw = "1 MM N... " + HASHES + " both.txt\0";
+        String raw = "# branch.head main\0" + "1 MM N... " + HASHES + " both.txt\0";
         assertEquals(List.of(new FileEntry("both.txt", ChangeType.MODIFIED, true, true)),
-                CliStatus.parse(raw).files());
+                CliStatus.parse(raw).get().files());
     }
 
     @Test
