@@ -5,6 +5,7 @@ import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.Push;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
@@ -25,7 +26,7 @@ public final class PushUpdate {
             case PushMsg.Requested(String branch) -> requested(model, branch);
             case PushMsg.ForceCancelled() -> Next.of(model.withoutPopup(ForcePushPopup.class));
             case PushMsg.ForceConfirmed() -> model.popup(ForcePushPopup.class).map(ForcePushPopup::branch)
-                    .map(branch -> push(model.withoutPopup(ForcePushPopup.class), branch, true))
+                    .map(branch -> push(model.withoutPopup(ForcePushPopup.class), branch, PushMode.FORCE_WITH_LEASE))
                     .getOrElse(() -> Next.of(model));
             // The branches then show the new ahead/behind counts.
             case PushMsg.Done(String branch, List<String> commands) ->
@@ -48,7 +49,7 @@ public final class PushUpdate {
         // Pushing a diverged branch needs a force push, which the user must confirm.
         return diverged(model, branch)
                 ? Next.of(model.openPopup(new ForcePushPopup(branch)).withError(Option.none()))
-                : push(model, branch, false);
+                : push(model, branch, PushMode.FAST_FORWARD);
     }
 
     private static boolean diverged(Model model, String branch) {
@@ -56,9 +57,9 @@ public final class PushUpdate {
                 && branches.exists(b -> b.name().equals(branch) && b.behind() > 0);
     }
 
-    private static Next push(Model model, String branch, boolean forceWithLease) {
+    private static Next push(Model model, String branch, PushMode mode) {
         return Next.of(model.withPushing(with(model, branch)).withError(Option.none()),
-                new Push(branch, forceWithLease));
+                new Push(branch, mode));
     }
 
     private static Set<String> with(Model model, String branch) {

@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.feature.branch;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.PushMode;
+import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Option;
@@ -95,7 +97,7 @@ class BranchUpdateTest {
 
         Next next = Update.update(failedBefore, new PushMsg.Requested("feature"));
 
-        assertEquals(List.of(new BranchCmd.Push("feature", false)), next.cmds());
+        assertEquals(List.of(new BranchCmd.Push("feature", PushMode.FAST_FORWARD)), next.cmds());
         assertEquals(Option.none(), next.model().error());
         assertEquals(io.vavr.collection.HashSet.of("feature"), next.model().pushing());
         // Not pushed again while it is being pushed.
@@ -116,7 +118,7 @@ class BranchUpdateTest {
         assertEquals(io.vavr.collection.HashSet.empty(), asked.model().pushing());
 
         Next confirmed = Update.update(asked.model(), new PushMsg.ForceConfirmed());
-        assertEquals(List.of(new BranchCmd.Push("feature", true)), confirmed.cmds());
+        assertEquals(List.of(new BranchCmd.Push("feature", PushMode.FORCE_WITH_LEASE)), confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());
         assertEquals(io.vavr.collection.HashSet.of("feature"), confirmed.model().pushing());
 
@@ -206,13 +208,13 @@ class BranchUpdateTest {
     void remoteScopesAreRefusedForALocalOnlyBranch() {
         Model open = Update.update(loaded(), new DeleteBranchMsg.Requested("feature")).model();
 
-        for (BranchCmd.DeleteBranch.DeleteScope scope : List.of(BranchCmd.DeleteBranch.DeleteScope.REMOTE, BranchCmd.DeleteBranch.DeleteScope.BOTH)) {
+        for (DeleteScope scope : List.of(DeleteScope.REMOTE, DeleteScope.BOTH)) {
             Next next = Update.update(open, new DeleteBranchMsg.Chosen(scope));
             assertEquals(List.of(), next.cmds());
             assertEquals(Option.of(new DeleteBranchPopup("feature")), next.model().popup());
         }
-        assertEquals(List.of(new BranchCmd.DeleteBranch("feature", BranchCmd.DeleteBranch.DeleteScope.LOCAL)),
-                Update.update(open, new DeleteBranchMsg.Chosen(BranchCmd.DeleteBranch.DeleteScope.LOCAL)).cmds());
+        assertEquals(List.of(new BranchCmd.DeleteBranch("feature", DeleteScope.LOCAL)),
+                Update.update(open, new DeleteBranchMsg.Chosen(DeleteScope.LOCAL)).cmds());
     }
 
     @Test
@@ -221,10 +223,10 @@ class BranchUpdateTest {
                 new Branch("trunk", false, new Sha("tttt"), java.time.Instant.EPOCH, true, true)))).model();
         Model open = Update.update(model, new DeleteBranchMsg.Requested("trunk")).model();
 
-        assertEquals(List.of(), Update.update(open, new DeleteBranchMsg.Chosen(BranchCmd.DeleteBranch.DeleteScope.REMOTE)).cmds());
-        assertEquals(List.of(), Update.update(open, new DeleteBranchMsg.Chosen(BranchCmd.DeleteBranch.DeleteScope.BOTH)).cmds());
-        assertEquals(List.of(new BranchCmd.DeleteBranch("trunk", BranchCmd.DeleteBranch.DeleteScope.LOCAL)),
-                Update.update(open, new DeleteBranchMsg.Chosen(BranchCmd.DeleteBranch.DeleteScope.LOCAL)).cmds());
+        assertEquals(List.of(), Update.update(open, new DeleteBranchMsg.Chosen(DeleteScope.REMOTE)).cmds());
+        assertEquals(List.of(), Update.update(open, new DeleteBranchMsg.Chosen(DeleteScope.BOTH)).cmds());
+        assertEquals(List.of(new BranchCmd.DeleteBranch("trunk", DeleteScope.LOCAL)),
+                Update.update(open, new DeleteBranchMsg.Chosen(DeleteScope.LOCAL)).cmds());
     }
 
     @Test
@@ -233,9 +235,9 @@ class BranchUpdateTest {
                 List.of(new Branch("main", true, new Sha("aaaa")), new Branch("feature", false, new Sha("ffff"), java.time.Instant.EPOCH, true)))).model();
         Model open = Update.update(withRemote, new DeleteBranchMsg.Requested("feature")).model();
 
-        Next next = Update.update(open, new DeleteBranchMsg.Chosen(BranchCmd.DeleteBranch.DeleteScope.REMOTE));
+        Next next = Update.update(open, new DeleteBranchMsg.Chosen(DeleteScope.REMOTE));
 
-        assertEquals(List.of(new BranchCmd.DeleteBranch("feature", BranchCmd.DeleteBranch.DeleteScope.REMOTE)), next.cmds());
+        assertEquals(List.of(new BranchCmd.DeleteBranch("feature", DeleteScope.REMOTE)), next.cmds());
         assertEquals(Option.none(), next.model().popup());
     }
 

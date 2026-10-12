@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import net.vanfleteren.jazygit.git.model.DeleteScope;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.DeleteBranch;
@@ -28,7 +29,7 @@ public final class DeleteBranchUpdate {
         return switch (msg) {
             case Requested(String branch) -> requested(model, branch);
             case Cancelled() -> Next.of(model.withoutPopup(DeleteBranchPopup.class));
-            case Chosen(DeleteBranch.DeleteScope scope) -> chosen(model, scope);
+            case Chosen(DeleteScope scope) -> chosen(model, scope);
             case Deleted(String branch, List<String> commands) ->
                     Update.refresh(CommandLog.append(model.withError(Option.none()), "log.title.deleteBranch", commands));
             case Failed(String branch, String message) ->
@@ -45,10 +46,10 @@ public final class DeleteBranchUpdate {
         return deletable ? Next.of(model.openPopup(new DeleteBranchPopup(branch))) : Next.of(model);
     }
 
-    private static Next chosen(Model model, DeleteBranch.DeleteScope scope) {
+    private static Next chosen(Model model, DeleteScope scope) {
         return model.popup(DeleteBranchPopup.class).map(DeleteBranchPopup::branch)
                 // Deleting on the remote is not possible for a local-only branch, nor for the default one.
-                .filter(branch -> scope == DeleteBranch.DeleteScope.LOCAL || remoteDeletable(model, branch))
+                .filter(branch -> scope == DeleteScope.LOCAL || remoteDeletable(model, branch))
                 .map(branch -> Next.of(model.withoutPopup(DeleteBranchPopup.class).withError(Option.none()),
                         new DeleteBranch(branch, scope)))
                 .getOrElse(() -> Next.of(model));

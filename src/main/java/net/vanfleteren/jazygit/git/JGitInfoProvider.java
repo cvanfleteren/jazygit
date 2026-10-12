@@ -257,8 +257,8 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<String>> push(String branch, boolean forceWithLease) {
-        return CliBranch.push(workTree, remoteOf(branch), branch, hasUpstream(branch), forceWithLease);
+    public Either<GitFailure<ProcessError>, List<String>> push(String branch, PushMode mode) {
+        return CliBranch.push(workTree, remoteOf(branch), branch, hasUpstream(branch), mode);
     }
 
     @Override
@@ -267,10 +267,10 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<String>> deleteBranch(String name, boolean local, boolean remote) {
+    public Either<GitFailure<ProcessError>, List<String>> deleteBranch(String name, DeleteScope scope) {
         return GitFailure.sequence(
-                () -> remote ? CliBranch.deleteRemote(workTree, remoteOf(name), name) : Either.right(List.empty()),
-                () -> local ? CliBranch.deleteLocal(workTree, name) : Either.right(List.empty()));
+                () -> scope.remote() ? CliBranch.deleteRemote(workTree, remoteOf(name), name) : Either.right(List.empty()),
+                () -> scope.local() ? CliBranch.deleteLocal(workTree, name) : Either.right(List.empty()));
     }
 
     @Override

@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import net.vanfleteren.jazygit.git.model.DeleteScope;
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd.DeleteBranch.DeleteScope;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Loadable;

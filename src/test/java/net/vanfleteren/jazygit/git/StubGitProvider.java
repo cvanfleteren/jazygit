@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.git;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.PushMode;
+import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.CheckoutError;
@@ -97,7 +99,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<String>> deleteBranch(String name, boolean local, boolean remote) {
+    default Either<GitFailure<ProcessError>, List<String>> deleteBranch(String name, DeleteScope scope) {
         return ran();
     }
 
@@ -107,7 +109,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<String>> push(String branch, boolean forceWithLease) {
+    default Either<GitFailure<ProcessError>, List<String>> push(String branch, PushMode mode) {
         return ran();
     }
 

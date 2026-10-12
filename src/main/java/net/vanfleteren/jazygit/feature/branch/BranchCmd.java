@@ -2,6 +2,8 @@ package net.vanfleteren.jazygit.feature.branch;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.model.DeleteScope;
+import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Msg;
@@ -33,12 +35,6 @@ public sealed interface BranchCmd extends Cmd {
     }
 
     record DeleteBranch(String branch, DeleteScope scope) implements BranchCmd {
-        /**
-         * Where a branch is deleted.
-         */
-        public enum DeleteScope {
-            LOCAL, REMOTE, BOTH
-        }
 
         @Override
         public Option<String> logTitleKey() {
@@ -47,7 +43,7 @@ public sealed interface BranchCmd extends Cmd {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            return git.deleteBranch(branch, scope != DeleteScope.REMOTE, scope != DeleteScope.LOCAL)
+            return git.deleteBranch(branch, scope)
                     .fold(this::failedWith, executed -> new DeleteBranchMsg.Deleted(branch, executed));
         }
 
@@ -121,7 +117,7 @@ public sealed interface BranchCmd extends Cmd {
         }
     }
 
-    record Push(String branch, boolean forceWithLease) implements BranchCmd {
+    record Push(String branch, PushMode mode) implements BranchCmd {
 
         @Override
         public Option<String> logTitleKey() {
@@ -130,7 +126,7 @@ public sealed interface BranchCmd extends Cmd {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            return git.push(branch, forceWithLease).fold(this::failedWith, executed -> new PushMsg.Done(branch, executed));
+            return git.push(branch, mode).fold(this::failedWith, executed -> new PushMsg.Done(branch, executed));
         }
 
         @Override

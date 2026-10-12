@@ -458,7 +458,7 @@ class JGitInfoProviderTest {
     @Test
     void aFailingCommandReportsTheCommandsRunUpToAndIncludingIt() {
         assertEquals(List.of("git branch --delete --force missing"),
-                provider.deleteBranch("missing", true, false).getLeft().commands());
+                provider.deleteBranch("missing", DeleteScope.LOCAL).getLeft().commands());
         assertEquals(List.of("git add -- missing.txt"), provider.stage(List.of("missing.txt")).getLeft().commands());
     }
 
@@ -559,13 +559,13 @@ class JGitInfoProviderTest {
         git("init", "-q", "--bare", "-b", "main", bare.toString());
         git("remote", "add", "origin", bare.toString());
 
-        provider.push("main", false).get();
+        provider.push("main", PushMode.FAST_FORWARD).get();
         assertEquals(List.of(0, 0), counts("main"));
         assertTrue(provider.branches(List.empty()).get().filter(b -> b.name().equals("main")).forAll(Branch::hasRemote));
 
         git("commit", "-q", "--allow-empty", "-m", "local");
         assertEquals(List.of(1, 0), counts("main"));
-        provider.push("main", false).get();
+        provider.push("main", PushMode.FAST_FORWARD).get();
         assertEquals(List.of(0, 0), counts("main"));
     }
 
@@ -585,16 +585,16 @@ class JGitInfoProviderTest {
         git("commit", "-q", "--allow-empty", "-m", "ours");
         assertEquals(List.of(1, 1), counts("main"));
 
-        assertTrue(provider.push("main", false).isLeft());
+        assertTrue(provider.push("main", PushMode.FAST_FORWARD).isLeft());
 
-        provider.push("main", true).get();
+        provider.push("main", PushMode.FORCE_WITH_LEASE).get();
         git("fetch", "-q", "origin");
         assertEquals(List.of(0, 0), counts("main"));
     }
 
     @Test
     void pushFailsWithGitsExplanationWithoutARemote() {
-        assertTrue(provider.push("main", false).isLeft());
+        assertTrue(provider.push("main", PushMode.FAST_FORWARD).isLeft());
     }
 
     @Test
@@ -626,14 +626,14 @@ class JGitInfoProviderTest {
     void deleteBranchRemovesTheLocalBranch() throws Exception {
         git("branch", "topic");
 
-        provider.deleteBranch("topic", true, false).get();
+        provider.deleteBranch("topic", DeleteScope.LOCAL).get();
 
         assertEquals(List.of("main"), provider.branches(List.empty()).get().map(Branch::name).toList());
     }
 
     @Test
     void deleteBranchFailsForTheCheckedOutBranch() {
-        assertTrue(provider.deleteBranch("main", true, false).isLeft());
+        assertTrue(provider.deleteBranch("main", DeleteScope.LOCAL).isLeft());
     }
 
     @Test

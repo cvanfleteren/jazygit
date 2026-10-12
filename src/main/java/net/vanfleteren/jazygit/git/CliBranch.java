@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitProcess.Output;
+import net.vanfleteren.jazygit.git.model.PushMode;
 
 import java.nio.file.Path;
 
@@ -37,15 +38,15 @@ public final class CliBranch {
      * Runs {@code git push <remote> <name>} in {@code workTree}. A branch without an upstream gets one,
      * as with {@code --set-upstream}.
      *
-     * @param hasUpstream    whether the branch already tracks a remote branch
-     * @param forceWithLease also overwrite a remote branch that has diverged, unless somebody
-     *                       pushed to it since the last fetch
+     * @param hasUpstream whether the branch already tracks a remote branch
      */
     public static Either<GitFailure<ProcessError>, List<String>> push(Path workTree, String remote, String name,
-                                                                    boolean hasUpstream, boolean forceWithLease) {
+                                                                    boolean hasUpstream, PushMode mode) {
         GitCommand push = !hasUpstream ? git("push", "--set-upstream", remote, name)
-                : forceWithLease ? git("push", "--force-with-lease", remote, name)
-                : git("push", remote, name);
+                : switch (mode) {
+                    case FAST_FORWARD -> git("push", remote, name);
+                    case FORCE_WITH_LEASE -> git("push", "--force-with-lease", remote, name);
+                };
         return GitProcess.run(workTree, push).map(Output::log);
     }
 }

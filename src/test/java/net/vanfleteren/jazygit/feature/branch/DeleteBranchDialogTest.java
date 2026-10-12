@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.Sha;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
@@ -28,17 +29,17 @@ class DeleteBranchDialogTest {
 
     @Test
     void lettersChooseAnOption() throws Exception {
-        assertEquals(List.of(new DeleteBranchMsg.Chosen(BranchCmd.DeleteBranch.DeleteScope.LOCAL)), pressing(r -> r.pilot().press('d')));
+        assertEquals(List.of(new DeleteBranchMsg.Chosen(DeleteScope.LOCAL)), pressing(r -> r.pilot().press('d')));
     }
 
     @Test
     void bDeletesLocalAndRemote() throws Exception {
-        assertEquals(List.of(new DeleteBranchMsg.Chosen(BranchCmd.DeleteBranch.DeleteScope.BOTH)), pressing(r -> r.pilot().press('b')));
+        assertEquals(List.of(new DeleteBranchMsg.Chosen(DeleteScope.BOTH)), pressing(r -> r.pilot().press('b')));
     }
 
     @Test
     void arrowsAndEnterChooseTheSelectedLine() throws Exception {
-        assertEquals(List.of(new DeleteBranchMsg.Chosen(BranchCmd.DeleteBranch.DeleteScope.REMOTE)), pressing(r -> {
+        assertEquals(List.of(new DeleteBranchMsg.Chosen(DeleteScope.REMOTE)), pressing(r -> {
             r.pilot().press(KeyCode.DOWN);
             r.pilot().press(KeyCode.ENTER);
         }));
@@ -65,7 +66,7 @@ class DeleteBranchDialogTest {
             r.pilot().press(KeyCode.ENTER);
         }));
         dispatched.clear();
-        assertEquals(List.of(new DeleteBranchMsg.Chosen(BranchCmd.DeleteBranch.DeleteScope.LOCAL)), pressing(localOnly, r -> r.pilot().press('d')));
+        assertEquals(List.of(new DeleteBranchMsg.Chosen(DeleteScope.LOCAL)), pressing(localOnly, r -> r.pilot().press('d')));
     }
 
     @Test

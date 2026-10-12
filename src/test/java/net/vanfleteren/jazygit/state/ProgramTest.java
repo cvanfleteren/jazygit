@@ -1,9 +1,10 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.PushMode;
+import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.NewBranchMsg;
@@ -133,8 +134,8 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<ProcessError>, List<String>> push(String branch, boolean forceWithLease) {
-            pushed.add(branch + (forceWithLease ? " force" : ""));
+        public Either<GitFailure<ProcessError>, List<String>> push(String branch, PushMode mode) {
+            pushed.add(branch + (mode == PushMode.FORCE_WITH_LEASE ? " force" : ""));
             return StubGitProvider.ran("git push");
         }
 
@@ -144,8 +145,8 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<ProcessError>, List<String>> deleteBranch(String name, boolean local, boolean remote) {
-            deleted.add(name + (local ? " local" : "") + (remote ? " remote" : ""));
+        public Either<GitFailure<ProcessError>, List<String>> deleteBranch(String name, DeleteScope scope) {
+            deleted.add(name + (scope.local() ? " local" : "") + (scope.remote() ? " remote" : ""));
             return StubGitProvider.ran("git deleteBranch");
         }
 
@@ -312,7 +313,7 @@ class ProgramTest {
         settle();
 
         program.dispatch(new DeleteBranchMsg.Requested("other"));
-        program.dispatch(new DeleteBranchMsg.Chosen(BranchCmd.DeleteBranch.DeleteScope.BOTH));
+        program.dispatch(new DeleteBranchMsg.Chosen(DeleteScope.BOTH));
         settle();
 
         assertEquals(java.util.List.of("other local remote"), provider.deleted);

@@ -5,6 +5,8 @@ import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.CheckoutError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
+import net.vanfleteren.jazygit.git.model.DeleteScope;
+import net.vanfleteren.jazygit.git.model.PushMode;
 
 /**
  * Operations on branches. Each returns the command lines it ran, or why it failed together with the
@@ -35,7 +37,7 @@ public interface GitBranches {
      * Deletes the branch {@code name}, locally and/or on its remote. With both, the remote one goes
      * first, so a failure leaves the local branch in place.
      */
-    Either<GitFailure<ProcessError>, List<String>> deleteBranch(String name, boolean local, boolean remote);
+    Either<GitFailure<ProcessError>, List<String>> deleteBranch(String name, DeleteScope scope);
 
     /**
      * Rebases the checked out branch onto {@code onto}, bringing uncommitted changes along. When the rebase
@@ -46,9 +48,6 @@ public interface GitBranches {
     /**
      * Pushes the local branch {@code branch} to its remote, setting that as the upstream when the
      * branch has none yet.
-     *
-     * @param forceWithLease overwrite the remote branch, but only if it is still where this
-     *                       repository last saw it ({@code --force-with-lease})
      */
-    Either<GitFailure<ProcessError>, List<String>> push(String branch, boolean forceWithLease);
+    Either<GitFailure<ProcessError>, List<String>> push(String branch, PushMode mode);
 }
