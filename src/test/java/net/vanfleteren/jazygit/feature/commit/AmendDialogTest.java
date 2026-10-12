@@ -73,7 +73,7 @@ class AmendDialogTest {
     }
 
     private ToolkitTestRunner start() throws Exception {
-        assertEquals(true, open.popup(AmendPopup.class).isPresent());
+        assertEquals(true, open.popup(AmendPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
         runner.runner().focusManager().setFocus(AmendDialog.ID);
         RenderedText.of(runner, this::view);
@@ -81,6 +81,6 @@ class AmendDialogTest {
     }
 
     private Element view() {
-        return stack(text("background"), dialog.render(open).orElseThrow());
+        return stack(text("background"), dialog.render(open).get());
     }
 }

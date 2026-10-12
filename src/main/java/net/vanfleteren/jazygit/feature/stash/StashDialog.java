@@ -1,16 +1,15 @@
 package net.vanfleteren.jazygit.feature.stash;
 
-import net.vanfleteren.jazygit.i18n.Messages;
-import static dev.tamboui.toolkit.Toolkit.*;
-
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.widgets.input.TextInputState;
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import static dev.tamboui.toolkit.Toolkit.*;
 
-import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
@@ -37,7 +36,7 @@ public final class StashDialog {
     /**
      * The popup, while the model asks for a branch name.
      */
-    public Optional<Element> render(Model model) {
+    public Option<Element> render(Model model) {
         return model.popup(StashPopup.class).map(popup -> dialog(Messages.get("dialog.stash.title"),
                         textInput(input)
                                 .id(ID)

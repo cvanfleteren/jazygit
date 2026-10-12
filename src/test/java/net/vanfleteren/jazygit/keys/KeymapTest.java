@@ -5,12 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.state.Msg;
 import org.junit.jupiter.api.Test;
-
-import java.util.Optional;
 
 class KeymapTest {
 
@@ -18,25 +17,25 @@ class KeymapTest {
 
     @Test
     void aKeyActsOnTheSelection() {
-        assertEquals(Optional.of(new CheckoutMsg.Requested("x")),
-                keymap.handle(Scopes.BRANCHES, KeyEvent.ofChar(' '), Optional.of("x")));
+        assertEquals(Option.of(new CheckoutMsg.Requested("x")),
+                keymap.handle(Scopes.BRANCHES, KeyEvent.ofChar(' '), Option.of("x")));
     }
 
     @Test
     void aKeyThatNeedsASelectionDoesNothingWithoutOne() {
-        assertEquals(Optional.empty(), keymap.handle(Scopes.BRANCHES, KeyEvent.ofChar(' '), Optional.empty()));
+        assertEquals(Option.none(), keymap.handle(Scopes.BRANCHES, KeyEvent.ofChar(' '), Option.none()));
     }
 
     @Test
     void unknownKeysDoNothing() {
-        assertEquals(Optional.empty(), keymap.handle(Scopes.BRANCHES, KeyEvent.ofChar('Z'), Optional.of("x")));
+        assertEquals(Option.none(), keymap.handle(Scopes.BRANCHES, KeyEvent.ofChar('Z'), Option.of("x")));
     }
 
     @Test
     void questionMarkAsksForTheHelpOfThePanel() {
-        Optional<Msg> msg = keymap.handle(Scopes.STASH, KeyEvent.ofChar('?'), Optional.empty());
+        Option<Msg> msg = keymap.handle(Scopes.STASH, KeyEvent.ofChar('?'), Option.none());
 
-        assertEquals(Optional.of(new HelpMsg.Requested(Scopes.STASH.id())), msg);
+        assertEquals(Option.of(new HelpMsg.Requested(Scopes.STASH.id())), msg);
     }
 
     @Test
@@ -44,7 +43,7 @@ class KeymapTest {
         for (Keymap.Scope<?> scope : List.of(Scopes.FILES, Scopes.BRANCHES, Scopes.COMMITS, Scopes.STASH)) {
             List<String> keys = keymap.bindings(scope.id()).map(Keymap.Binding::key);
             assertEquals(keys.size(), keys.distinct().size(), scope.id() + " " + keys);
-            assertTrue(keymap.titleKey(scope.id()).isPresent());
+            assertTrue(keymap.titleKey(scope.id()).isDefined());
         }
     }
 }

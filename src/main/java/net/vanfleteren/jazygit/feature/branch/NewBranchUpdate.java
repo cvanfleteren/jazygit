@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.CreateBranch;
 import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Confirmed;
@@ -14,8 +15,6 @@ import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.Update;
-
-import java.util.Optional;
 
 /**
  * Creating a branch.
@@ -33,9 +32,9 @@ public final class NewBranchUpdate {
             case Confirmed(String name) -> confirmed(model, name);
             // Like a checkout: status and branches show the new HEAD.
             case Created(String name, List<String> commands) ->
-                    Update.refresh(CommandLog.append(model.withError(Optional.empty()), "log.title.newBranch", commands));
+                    Update.refresh(CommandLog.append(model.withError(Option.none()), "log.title.newBranch", commands));
             case Failed(String name, String message) ->
-                    Next.of(model.withError(Optional.of(Messages.get("error.newBranch.failed", name, message))));
+                    Next.of(model.withError(Option.of(Messages.get("error.newBranch.failed", name, message))));
         };
     }
 
@@ -50,8 +49,8 @@ public final class NewBranchUpdate {
         // A blank name keeps the dialog open.
         return model.popup(NewBranchPopup.class).map(NewBranchPopup::base)
                 .filter(base -> !trimmed.isEmpty())
-                .map(base -> Next.of(model.withoutPopup(NewBranchPopup.class).withError(Optional.empty()),
+                .map(base -> Next.of(model.withoutPopup(NewBranchPopup.class).withError(Option.none()),
                         new CreateBranch(trimmed, base)))
-                .orElseGet(() -> Next.of(model));
+                .getOrElse(() -> Next.of(model));
     }
 }

@@ -64,7 +64,7 @@ class StageAllDialogTest {
     }
 
     private ToolkitTestRunner start() throws Exception {
-        assertEquals(true, open.popup(StageAllPopup.class).isPresent(), "nothing is staged");
+        assertEquals(true, open.popup(StageAllPopup.class).isDefined(), "nothing is staged");
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
         runner.runner().focusManager().setFocus(StageAllDialog.ID);
         RenderedText.of(runner, this::view);
@@ -72,6 +72,6 @@ class StageAllDialogTest {
     }
 
     private Element view() {
-        return stack(text("background"), dialog.render(open).orElseThrow());
+        return stack(text("background"), dialog.render(open).get());
     }
 }

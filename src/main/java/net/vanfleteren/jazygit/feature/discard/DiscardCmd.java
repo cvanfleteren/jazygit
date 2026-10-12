@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.discard;
 
-import java.util.Optional;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.state.Cmd;
@@ -14,8 +14,8 @@ public sealed interface DiscardCmd extends Cmd {
     record Discard(DiscardPlan plan) implements DiscardCmd {
 
         @Override
-        public Optional<String> logTitleKey() {
-            return Optional.of("log.title.discard");
+        public Option<String> logTitleKey() {
+            return Option.of("log.title.discard");
         }
 
         @Override

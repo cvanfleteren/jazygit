@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.discard;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.discard.DiscardCmd.Discard;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Chosen;
@@ -17,7 +18,6 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.Update;
 
-import java.util.Optional;
 import java.util.function.Predicate;
 
 /**
@@ -34,9 +34,9 @@ public final class DiscardUpdate {
             case Cancelled() -> Next.of(model.withoutPopup(DiscardPopup.class));
             case Chosen(Scope scope) -> chosen(model, scope);
             case Done(List<String> commands) ->
-                    Update.refresh(CommandLog.append(model.withError(Optional.empty()), "log.title.discard", commands));
+                    Update.refresh(CommandLog.append(model.withError(Option.none()), "log.title.discard", commands));
             case Failed(String message) ->
-                    Update.refresh(model.withError(Optional.of(Messages.get("error.discard.failed", message))));
+                    Update.refresh(model.withError(Option.of(Messages.get("error.discard.failed", message))));
         };
     }
 
@@ -48,9 +48,9 @@ public final class DiscardUpdate {
         return model.popup(DiscardPopup.class)
                 // Without unstaged changes there is nothing to discard of that kind.
                 .filter(popup -> scope == Scope.ALL || popup.hasUnstaged())
-                .map(popup -> Next.of(model.withoutPopup(DiscardPopup.class).withError(Optional.empty()),
+                .map(popup -> Next.of(model.withoutPopup(DiscardPopup.class).withError(Option.none()),
                         new Discard(plan(popup.files(), scope))))
-                .orElseGet(() -> Next.of(model));
+                .getOrElse(() -> Next.of(model));
     }
 
     /**

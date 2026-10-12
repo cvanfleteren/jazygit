@@ -8,7 +8,6 @@ import io.vavr.collection.List;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -102,13 +101,13 @@ public final class Theme {
         }
 
         @Override
-        public Optional<String> cssId() {
-            return Optional.empty();
+        public java.util.Optional<String> cssId() {
+            return java.util.Optional.empty();
         }
 
         @Override
-        public Optional<Styleable> cssParent() {
-            return Optional.empty();
+        public java.util.Optional<Styleable> cssParent() {
+            return java.util.Optional.empty();
         }
     }
 }

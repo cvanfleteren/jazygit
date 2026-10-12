@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -22,7 +23,6 @@ import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Update.Next;
 
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.UnaryOperator;
 
@@ -74,14 +74,14 @@ public final class LoadUpdate {
                 .map(BranchLog::branch)
                 .filter(branch -> !tip(previous, branch).equals(tip(branches, branch)))
                 .map(branch -> Next.of(next, new LoadBranchLog(branch)))
-                .orElseGet(() -> Next.of(next));
+                .getOrElse(() -> Next.of(next));
     }
 
-    private static Optional<String> tip(List<Branch> branches, String name) {
+    private static Option<String> tip(List<Branch> branches, String name) {
         return branches
                 .find(b -> b.name().equals(name))
                 .map(Branch::tipOid)
-                .toJavaOptional();
+                ;
     }
 
     /**

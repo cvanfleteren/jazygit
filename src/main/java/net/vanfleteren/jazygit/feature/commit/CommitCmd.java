@@ -1,13 +1,12 @@
 package net.vanfleteren.jazygit.feature.commit;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitCommandException;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Msg;
-
-import java.util.Optional;
 
 /**
  * Commands that create or rewrite commits.
@@ -20,8 +19,8 @@ public sealed interface CommitCmd extends Cmd {
     record StageForCommit(List<String> paths) implements CommitCmd {
 
         @Override
-        public Optional<String> logTitleKey() {
-            return Optional.of("log.title.stage");
+        public Option<String> logTitleKey() {
+            return Option.of("log.title.stage");
         }
 
         @Override
@@ -38,8 +37,8 @@ public sealed interface CommitCmd extends Cmd {
     record Commit(String summary, String description) implements CommitCmd {
 
         @Override
-        public Optional<String> logTitleKey() {
-            return Optional.of("log.title.commit");
+        public Option<String> logTitleKey() {
+            return Option.of("log.title.commit");
         }
 
         @Override
@@ -59,8 +58,8 @@ public sealed interface CommitCmd extends Cmd {
     record Amend(List<String> stage) implements CommitCmd {
 
         @Override
-        public Optional<String> logTitleKey() {
-            return Optional.of("log.title.amend");
+        public Option<String> logTitleKey() {
+            return Option.of("log.title.amend");
         }
 
         @Override
@@ -80,8 +79,8 @@ public sealed interface CommitCmd extends Cmd {
     record Squash(Sha sha) implements CommitCmd {
 
         @Override
-        public Optional<String> logTitleKey() {
-            return Optional.of("log.title.squash");
+        public Option<String> logTitleKey() {
+            return Option.of("log.title.squash");
         }
 
         @Override
@@ -101,8 +100,8 @@ public sealed interface CommitCmd extends Cmd {
     record Reword(Sha sha, String summary, String description) implements CommitCmd {
 
         @Override
-        public Optional<String> logTitleKey() {
-            return Optional.of("log.title.reword");
+        public Option<String> logTitleKey() {
+            return Option.of("log.title.reword");
         }
 
         @Override

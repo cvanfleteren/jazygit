@@ -8,11 +8,10 @@ import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.KeyEventHandler;
 import dev.tamboui.widgets.common.ScrollBarPolicy;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
 
-import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.function.Function;
 
 /**
@@ -27,29 +26,29 @@ final class LoadableList<T> {
     private final Reselect<T> reselect;
     private Loadable<T> shown;
     private List<Row> shownRows = List.of();
-    private OptionalInt count = OptionalInt.empty();
+    private Option<Integer> count = Option.none();
 
     /**
      * A piece of a row, in a colour of its own when it has one.
      */
-    record Seg(String text, Optional<String> cssClass) {
+    record Seg(String text, Option<String> cssClass) {
 
         static Seg of(String text) {
-            return new Seg(text, Optional.empty());
+            return new Seg(text, Option.none());
         }
 
         static Seg styled(String text, String cssClass) {
-            return new Seg(text, Optional.of(cssClass));
+            return new Seg(text, Option.of(cssClass));
         }
     }
 
     /**
      * A row of the list: consecutive pieces, each with its own colour.
      */
-    record Row(List<Seg> segs, Optional<String> detail) {
+    record Row(List<Seg> segs, Option<String> detail) {
 
         Row(List<Seg> segs) {
-            this(segs, Optional.empty());
+            this(segs, Option.none());
         }
 
         static Row of(String text) {
@@ -64,7 +63,7 @@ final class LoadableList<T> {
          * This row with a dimmed line below it, still one item of the list.
          */
         Row withDetail(String line) {
-            return new Row(segs, Optional.of(line));
+            return new Row(segs, Option.of(line));
         }
 
         String text() {
@@ -74,7 +73,7 @@ final class LoadableList<T> {
         StyledElement<?> element() {
             StyledElement<?> first = firstLine();
             return detail.<StyledElement<?>>map(line -> column(first, dev.tamboui.toolkit.Toolkit.text(line).addClass(Theme.Classes.DIM)))
-                    .orElse(first);
+                    .getOrElse(first);
         }
 
         private StyledElement<?> firstLine() {
@@ -82,7 +81,7 @@ final class LoadableList<T> {
                     ? dev.tamboui.toolkit.Toolkit.text(segs.head().text())
                     : row(segs
                             .<StyledElement<?>>map(seg -> seg.cssClass().<StyledElement<?>>map(c -> dev.tamboui.toolkit.Toolkit.text(seg.text()).addClass(c))
-                                    .orElseGet(() -> dev.tamboui.toolkit.Toolkit.text(seg.text())))
+                                    .getOrElse(() -> dev.tamboui.toolkit.Toolkit.text(seg.text())))
                             .toJavaArray(StyledElement[]::new));
         }
     }
@@ -132,7 +131,7 @@ final class LoadableList<T> {
             if (list.selected() >= rows.size()) {
                 list.selected(Math.max(0, rows.size() - 1));
             }
-            count = value instanceof Loadable.Loaded<T> ? OptionalInt.of(rows.size()) : OptionalInt.empty();
+            count = value instanceof Loadable.Loaded<T> ? Option.some(rows.size()) : Option.none();
         } else if (!rows.equals(shownRows)) {
             // The rows can depend on more than the value, e.g. on the time.
             show(rows);

@@ -107,6 +107,6 @@ class DiscardDialogTest {
     }
 
     private Element view(Model model) {
-        return stack(text("background"), dialog.render(model).orElseThrow());
+        return stack(text("background"), dialog.render(model).get());
     }
 }

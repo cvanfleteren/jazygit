@@ -1,12 +1,11 @@
 package net.vanfleteren.jazygit.feature.stage;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
-
-import java.util.Optional;
 
 public sealed interface StageMsg extends Msg {
 
@@ -23,10 +22,10 @@ public sealed interface StageMsg extends Msg {
      *                  root; empty when a single file is selected. Git is then given the directory
      *                  instead of every file in it, where that does the same.
      */
-    record Requested(List<FileEntry> files, Optional<String> directory) implements StageMsg {
+    record Requested(List<FileEntry> files, Option<String> directory) implements StageMsg {
 
         public Requested(List<FileEntry> files) {
-            this(files, Optional.empty());
+            this(files, Option.none());
         }
     }
 

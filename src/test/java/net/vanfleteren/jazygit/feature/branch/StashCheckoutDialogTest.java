@@ -66,7 +66,7 @@ class StashCheckoutDialogTest {
     }
 
     private ToolkitTestRunner start() throws Exception {
-        assertEquals(true, open.popup(StashCheckoutPopup.class).isPresent());
+        assertEquals(true, open.popup(StashCheckoutPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
         runner.runner().focusManager().setFocus(StashCheckoutDialog.ID);
         RenderedText.of(runner, this::view);
@@ -74,6 +74,6 @@ class StashCheckoutDialogTest {
     }
 
     private Element view() {
-        return stack(text("background"), dialog.render(open).orElseThrow());
+        return stack(text("background"), dialog.render(open).get());
     }
 }

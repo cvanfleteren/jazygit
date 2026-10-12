@@ -4,6 +4,7 @@ import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
@@ -12,7 +13,6 @@ import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 
-import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
@@ -48,10 +48,10 @@ public final class StashPanel {
     /**
      * The highlighted stash, once the stashes are shown.
      */
-    public Optional<Stash> selectedStash() {
+    public Option<Stash> selectedStash() {
         return list.shown() instanceof Loadable.Loaded<List<Stash>>(List<Stash> stashes) && !stashes.isEmpty()
-                ? Optional.of(stashes.get(Math.min(list.selectedIndex(), stashes.size() - 1)))
-                : Optional.empty();
+                ? Option.of(stashes.get(Math.min(list.selectedIndex(), stashes.size() - 1)))
+                : Option.none();
     }
 
     /**
@@ -62,17 +62,17 @@ public final class StashPanel {
     }
 
     private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {
-        return Optional.of(event)
+        return Option.of(event)
                 .filter(e -> focused)
                 .flatMap(this::request)
                 .map(msg -> {
                     dispatch.accept(msg);
                     return EventResult.HANDLED;
                 })
-                .orElse(EventResult.UNHANDLED);
+                .getOrElse(EventResult.UNHANDLED);
     }
 
-    private Optional<Msg> request(KeyEvent event) {
+    private Option<Msg> request(KeyEvent event) {
         return keymap.handle(Scopes.STASH, event, selectedStash());
     }
 }

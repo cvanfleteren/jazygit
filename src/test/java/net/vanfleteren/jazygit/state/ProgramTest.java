@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg;
@@ -28,7 +29,6 @@ import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Optional;
 import java.util.Queue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -284,7 +284,7 @@ class ProgramTest {
         assertEquals(new Loaded<>(provider.status), model.status());
         assertEquals(new Loaded<>(List.of(new Branch("main", false, "main-tip"), new Branch("other", true, "other-tip", Instant.EPOCH, true))), model.branches());
         assertEquals("other-head", ((Loaded<List<Commit>>) model.commits()).value().get(0).sha().value());
-        assertEquals(Optional.empty(), model.error());
+        assertEquals(Option.none(), model.error());
     }
 
     @Test
@@ -297,8 +297,8 @@ class ProgramTest {
 
         Model model = program.model();
         assertEquals("topic", ((Loaded<RepoStatus>) model.status()).value().head());
-        assertEquals(Optional.empty(), model.popup());
-        assertEquals(Optional.empty(), model.error());
+        assertEquals(Option.none(), model.popup());
+        assertEquals(Option.none(), model.error());
     }
 
     @Test
@@ -310,7 +310,7 @@ class ProgramTest {
         program.dispatch(new NewBranchMsg.Confirmed("topic"));
         settle();
 
-        assertEquals(Optional.of("Creating branch topic failed: fatal: exists"), program.model().error());
+        assertEquals(Option.of("Creating branch topic failed: fatal: exists"), program.model().error());
     }
 
     @Test
@@ -322,8 +322,8 @@ class ProgramTest {
         settle();
 
         assertEquals(java.util.List.of("other local remote"), provider.deleted);
-        assertEquals(Optional.empty(), program.model().popup());
-        assertEquals(Optional.empty(), program.model().error());
+        assertEquals(Option.none(), program.model().popup());
+        assertEquals(Option.none(), program.model().error());
     }
 
     @Test
@@ -337,7 +337,7 @@ class ProgramTest {
         settle();
 
         assertEquals(java.util.List.of("stage[a.txt]", "unstageNew[b.txt]", "unstage[c.txt]"), provider.indexCalls);
-        assertEquals(Optional.empty(), program.model().error());
+        assertEquals(Option.none(), program.model().error());
     }
 
     @Test
@@ -350,14 +350,14 @@ class ProgramTest {
         settle();
 
         assertEquals(java.util.List.of("stage[a.txt]"), provider.indexCalls);
-        assertEquals(true, program.model().popup(CommitPopup.class).isPresent());
+        assertEquals(true, program.model().popup(CommitPopup.class).isDefined());
 
         program.dispatch(new CommitMsg.Confirmed("summary", "more"));
         settle();
 
         assertEquals(java.util.List.of("summary|more"), provider.commits);
-        assertEquals(false, program.model().popup(CommitPopup.class).isPresent());
-        assertEquals(Optional.empty(), program.model().error());
+        assertEquals(false, program.model().popup(CommitPopup.class).isDefined());
+        assertEquals(Option.none(), program.model().error());
     }
 
     @Test
@@ -370,8 +370,8 @@ class ProgramTest {
         settle();
 
         assertEquals(java.util.List.of("stage[a.txt]", "amend[]"), provider.indexCalls);
-        assertEquals(false, program.model().popup(AmendPopup.class).isPresent());
-        assertEquals(Optional.empty(), program.model().error());
+        assertEquals(false, program.model().popup(AmendPopup.class).isDefined());
+        assertEquals(Option.none(), program.model().error());
     }
 
     @Test
@@ -383,8 +383,8 @@ class ProgramTest {
         settle();
 
         assertEquals(java.util.List.of("reword new summary|new body"), provider.commits);
-        assertEquals(Optional.empty(), program.model().popup());
-        assertEquals(Optional.empty(), program.model().error());
+        assertEquals(Option.none(), program.model().popup());
+        assertEquals(Option.none(), program.model().error());
     }
 
     @Test
@@ -397,7 +397,7 @@ class ProgramTest {
         program.dispatch(new CommitMsg.Confirmed("summary", ""));
         settle();
 
-        assertEquals(Optional.of("Commit failed: boom"), program.model().error());
+        assertEquals(Option.of("Commit failed: boom"), program.model().error());
     }
 
     @Test
@@ -408,7 +408,7 @@ class ProgramTest {
         program.dispatch(new SelectionMsg.FilesSelected(files));
         settle();
 
-        assertEquals(new Loaded<>(new Diffs("", "diff of 1")), program.model().fileDiff().orElseThrow().diff());
+        assertEquals(new Loaded<>(new Diffs("", "diff of 1")), program.model().fileDiff().get().diff());
     }
 
     @Test
@@ -419,7 +419,7 @@ class ProgramTest {
         program.dispatch(new StageMsg.Requested(List.of(new FileEntry("a.txt", ChangeType.UNTRACKED))));
         settle();
 
-        assertEquals(Optional.of("Staging failed: fatal: pathspec 'a.txt' did not match"), program.model().error());
+        assertEquals(Option.of("Staging failed: fatal: pathspec 'a.txt' did not match"), program.model().error());
     }
 
     @Test
@@ -429,14 +429,14 @@ class ProgramTest {
         provider.checkoutError = new IllegalStateException("error: Your local changes would be overwritten");
         program.dispatch(new CheckoutMsg.Requested("other"));
         settle();
-        assertEquals(Optional.of("Checkout of other failed: error: Your local changes would be overwritten"),
+        assertEquals(Option.of("Checkout of other failed: error: Your local changes would be overwritten"),
                 program.model().error());
         assertEquals("main", ((Loaded<RepoStatus>) program.model().status()).value().head());
 
         provider.checkoutError = null;
         program.dispatch(new CheckoutMsg.Requested("other"));
         settle();
-        assertEquals(Optional.empty(), program.model().error());
+        assertEquals(Option.none(), program.model().error());
         assertEquals("other", ((Loaded<RepoStatus>) program.model().status()).value().head());
     }
 
@@ -447,7 +447,7 @@ class ProgramTest {
         program.dispatch(new SelectionMsg.BranchSelected("other"));
         settle();
 
-        assertEquals(Optional.of(new BranchLog("other", new Loaded<>(List.of(FakeProvider.commit("other-tip"))))),
+        assertEquals(Option.of(new BranchLog("other", new Loaded<>(List.of(FakeProvider.commit("other-tip"))))),
                 program.model().branchLog());
         assertEquals(java.util.List.of("other"), provider.logLoads);
     }

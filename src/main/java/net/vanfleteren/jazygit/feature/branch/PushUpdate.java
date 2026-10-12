@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.Push;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -10,7 +11,6 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.Update;
 
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -29,15 +29,15 @@ public final class PushUpdate {
             case PushMsg.ForceCancelled() -> Next.of(model.withoutPopup(ForcePushPopup.class));
             case PushMsg.ForceConfirmed() -> model.popup(ForcePushPopup.class).map(ForcePushPopup::branch)
                     .map(branch -> push(model.withoutPopup(ForcePushPopup.class), branch, true))
-                    .orElseGet(() -> Next.of(model));
+                    .getOrElse(() -> Next.of(model));
             // The branches then show the new ahead/behind counts.
             case PushMsg.Done(String branch, List<String> commands) ->
                     Update.refresh(CommandLog.append(
-                            model.withPushing(without(model, branch)).withError(Optional.empty()),
+                            model.withPushing(without(model, branch)).withError(Option.none()),
                             "log.title.push", commands));
             case PushMsg.Failed(String branch, String message) ->
                     Update.refresh(model.withPushing(without(model, branch))
-                            .withError(Optional.of(Messages.get("error.push.failed", branch, message))));
+                            .withError(Option.of(Messages.get("error.push.failed", branch, message))));
         };
     }
 
@@ -50,7 +50,7 @@ public final class PushUpdate {
         }
         // Pushing a diverged branch needs a force push, which the user must confirm.
         return diverged(model, branch)
-                ? Next.of(model.openPopup(new ForcePushPopup(branch)).withError(Optional.empty()))
+                ? Next.of(model.openPopup(new ForcePushPopup(branch)).withError(Option.none()))
                 : push(model, branch, false);
     }
 
@@ -60,7 +60,7 @@ public final class PushUpdate {
     }
 
     private static Next push(Model model, String branch, boolean forceWithLease) {
-        return Next.of(model.withPushing(with(model, branch)).withError(Optional.empty()),
+        return Next.of(model.withPushing(with(model, branch)).withError(Option.none()),
                 new Push(branch, forceWithLease));
     }
 

@@ -119,16 +119,16 @@ class ContentPanelTest {
         // Rendering gives the area its content; the commits pane has the focus while doing so.
         ContentPanel.render(selected, CommitsPanel.ID, 0);
 
-        String area = ContentPanel.areaOfPane(CommitsPanel.ID).orElseThrow();
-        assertEquals(java.util.Optional.of(CommitsPanel.ID), ContentPanel.paneOfArea(area));
+        String area = ContentPanel.areaOfPane(CommitsPanel.ID).get();
+        assertEquals(io.vavr.control.Option.of(CommitsPanel.ID), ContentPanel.paneOfArea(area));
         assertNotNull(ContentPanel.render(selected, area, 0));
     }
 
     @Test
     void theDiffAreasReturnToTheFilesPane() {
-        assertEquals(java.util.Optional.empty(), ContentPanel.paneOfArea("unknown"));
-        assertEquals(java.util.Optional.of(FilesPanel.ID), ContentPanel.paneOfArea("diff-staged"));
-        assertEquals(java.util.Optional.of(FilesPanel.ID), ContentPanel.paneOfArea("diff-unstaged"));
+        assertEquals(io.vavr.control.Option.none(), ContentPanel.paneOfArea("unknown"));
+        assertEquals(io.vavr.control.Option.of(FilesPanel.ID), ContentPanel.paneOfArea("diff-staged"));
+        assertEquals(io.vavr.control.Option.of(FilesPanel.ID), ContentPanel.paneOfArea("diff-unstaged"));
     }
 
     @Test

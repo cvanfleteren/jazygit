@@ -96,7 +96,7 @@ class StashPanelTest {
             testRunner.pilot().pause();
 
             String screen = RenderedText.ofLarge(testRunner, () -> panel.render(model, StashPanel.ID));
-            assertEquals("work 45", panel.selectedStash().orElseThrow().message());
+            assertEquals("work 45", panel.selectedStash().get().message());
             assertTrue(screen.contains("45 work 45"), screen);
             assertFalse(screen.contains("0 work 0"), screen);
             testRunner.pilot().quit();

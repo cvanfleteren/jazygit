@@ -71,7 +71,7 @@ class ForcePushDialogTest {
     }
 
     private ToolkitTestRunner start() throws Exception {
-        assertEquals(true, open.popup(ForcePushPopup.class).isPresent());
+        assertEquals(true, open.popup(ForcePushPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
         runner.runner().focusManager().setFocus(ForcePushDialog.ID);
         RenderedText.of(runner, this::view);
@@ -79,6 +79,6 @@ class ForcePushDialogTest {
     }
 
     private Element view() {
-        return stack(text("background"), dialog.render(open).orElseThrow());
+        return stack(text("background"), dialog.render(open).get());
     }
 }

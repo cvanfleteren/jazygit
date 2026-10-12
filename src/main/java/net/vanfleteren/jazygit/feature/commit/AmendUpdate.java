@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.commit;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.commit.AmendMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.commit.AmendMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.commit.AmendMsg.Done;
@@ -13,8 +14,6 @@ import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.Update;
-
-import java.util.Optional;
 
 /**
  * Amending the last commit.
@@ -30,8 +29,8 @@ public final class AmendUpdate {
             case Cancelled() -> Next.of(model.withoutPopup(AmendPopup.class));
             case Confirmed() -> confirmed(model);
             case Done(List<String> commands) ->
-                    Update.refresh(CommandLog.append(model.withError(Optional.empty()), "log.title.amend", commands));
-            case Failed(String message) -> Update.refresh(model.withError(Optional.of(Messages.get("error.amend.failed", message))));
+                    Update.refresh(CommandLog.append(model.withError(Option.none()), "log.title.amend", commands));
+            case Failed(String message) -> Update.refresh(model.withError(Option.of(Messages.get("error.amend.failed", message))));
         };
     }
 
@@ -40,8 +39,8 @@ public final class AmendUpdate {
      */
     private static Next requested(Model model) {
         return Update.files(model).isEmpty()
-                ? Next.of(model.withError(Optional.of(Messages.get("error.amend.nothing"))))
-                : Next.of(model.withError(Optional.empty()).openPopup(new AmendPopup()));
+                ? Next.of(model.withError(Option.of(Messages.get("error.amend.nothing"))))
+                : Next.of(model.withError(Option.none()).openPopup(new AmendPopup()));
     }
 
     /**
@@ -52,7 +51,7 @@ public final class AmendUpdate {
         List<String> stage = files.exists(FileEntry::staged)
                 ? List.of()
                 : files.filter(FileEntry::unstaged).map(FileEntry::path).toList();
-        return model.popup(AmendPopup.class).isPresent()
+        return model.popup(AmendPopup.class).isDefined()
                 ? Next.of(model.withoutPopup(AmendPopup.class), new Amend(stage))
                 : Next.of(model);
     }

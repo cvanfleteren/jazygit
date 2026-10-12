@@ -7,13 +7,13 @@ import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.Theme;
 
-import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
@@ -49,7 +49,7 @@ public final class HelpDialog {
      * The popup, while the model asks for the keybindings of a panel: the keys of that panel, then the
      * global ones.
      */
-    public Optional<Element> render(Model model) {
+    public Option<Element> render(Model model) {
         return model.popup(HelpPopup.class).map(HelpPopup::scopeId).flatMap(scopeId ->
                 keymap.titleKey(scopeId).map(titleKey -> {
                     List<StyledElement<?>> rows = keymap.bindings(scopeId)

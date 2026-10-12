@@ -35,7 +35,7 @@ class CommitDialogTest {
         // The sample data has staged files, so the commit popup opens directly.
         Model loaded = TestModels.loaded(new SampleData());
         Model asked = Update.update(loaded, new CommitMsg.Requested()).model();
-        return asked.popup(CommitPopup.class).isPresent() ? asked : Update.update(asked, new CommitMsg.StagedForCommit(List.of())).model();
+        return asked.popup(CommitPopup.class).isDefined() ? asked : Update.update(asked, new CommitMsg.StagedForCommit(List.of())).model();
     }
 
     @Test
@@ -89,11 +89,11 @@ class CommitDialogTest {
     void rewordStartsOutWithTheCurrentMessageAndConfirmsIt() throws Exception {
         CommitDialog reword = CommitDialog.reword(dispatched::add);
         Model rewording = Update.update(TestModels.loaded(new SampleData()), new RewordMsg.Requested(0)).model();
-        Commit last = rewording.popup(RewordPopup.class).orElseThrow().commit();
+        Commit last = rewording.popup(RewordPopup.class).get().commit();
 
-        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> reword.render(rewording).orElseThrow())) {
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> reword.render(rewording).get())) {
             runner.runner().focusManager().setFocus(CommitDialog.REWORD_ID);
-            String screen = RenderedText.ofLarge(runner, () -> reword.render(rewording).orElseThrow());
+            String screen = RenderedText.ofLarge(runner, () -> reword.render(rewording).get());
             assertTrue(screen.contains(last.message()), screen);
             runner.pilot().press(KeyCode.ENTER);
             runner.pilot().pause();
@@ -103,7 +103,7 @@ class CommitDialogTest {
     }
 
     private ToolkitTestRunner start() throws Exception {
-        assertTrue(open.popup(CommitPopup.class).isPresent());
+        assertTrue(open.popup(CommitPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
         runner.runner().focusManager().setFocus(CommitDialog.ID);
         RenderedText.of(runner, this::view);
@@ -111,7 +111,7 @@ class CommitDialogTest {
     }
 
     private Element view() {
-        return stack(text("background"), dialog.render(open).orElseThrow());
+        return stack(text("background"), dialog.render(open).get());
     }
 
     private static void type(ToolkitTestRunner runner, String text) throws Exception {

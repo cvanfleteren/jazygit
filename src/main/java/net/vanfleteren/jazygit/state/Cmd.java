@@ -1,11 +1,10 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Sha;
-
-import java.util.Optional;
 
 /**
  * IO that {@link Update} asks for. Commands are immutable data that know how to run themselves and
@@ -29,8 +28,8 @@ public interface Cmd {
      * The message key of the command log title for this command's git commands, if it runs any that
      * change the repository.
      */
-    default Optional<String> logTitleKey() {
-        return Optional.empty();
+    default Option<String> logTitleKey() {
+        return Option.none();
     }
 
     /**

@@ -104,6 +104,6 @@ class ConfirmDialogTest {
     }
 
     private Element view(ConfirmDialog<AskPopup> dialog) {
-        return stack(text("background"), dialog.render(open()).orElseThrow());
+        return stack(text("background"), dialog.render(open()).get());
     }
 }

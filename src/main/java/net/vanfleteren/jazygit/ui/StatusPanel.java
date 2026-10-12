@@ -1,13 +1,12 @@
 package net.vanfleteren.jazygit.ui;
 
-import net.vanfleteren.jazygit.i18n.Messages;
-import static dev.tamboui.toolkit.Toolkit.*;
-
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.elements.TextElement;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
+import static dev.tamboui.toolkit.Toolkit.*;
 
 /**
  * Top-left panel showing the repository name and the current branch. It is display-only and does not

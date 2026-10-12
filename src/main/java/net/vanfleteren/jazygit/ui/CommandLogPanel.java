@@ -30,9 +30,9 @@ public final class CommandLogPanel {
         List<Element> lines = model.commandLog().flatMap(entry -> List.<Element>of(text(entry.title()).addClass(Theme.Classes.BOLD))
                 .appendAll(entry.commands().map(command -> text(INDENT + command).addClass(Theme.Classes.DIM))));
         // The error may wrap, so it is kept out of the tail cut and always shown.
-        int room = Math.max(0, VISIBLE_LINES - (model.error().isPresent() ? 1 : 0));
+        int room = Math.max(0, VISIBLE_LINES - (model.error().isDefined() ? 1 : 0));
         List<Element> shown = lines.takeRight(room)
-                .appendAll(model.error().map(error -> text(error).addClass(Theme.Classes.ERROR).overflow(Overflow.WRAP_WORD)).stream().collect(List.collector()));
+                .appendAll(model.error().map(error -> text(error).addClass(Theme.Classes.ERROR).overflow(Overflow.WRAP_WORD)));
         return panel(Messages.get("panel.commandLog.title"), shown.toJavaArray(Element[]::new));
     }
 }

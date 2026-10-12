@@ -67,7 +67,7 @@ class StashDropDialogTest {
     }
 
     private ToolkitTestRunner start() throws Exception {
-        assertTrue(open.popup(StashDropPopup.class).isPresent());
+        assertTrue(open.popup(StashDropPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
         runner.runner().focusManager().setFocus(StashDropDialog.ID);
         RenderedText.of(runner, this::view);
@@ -75,6 +75,6 @@ class StashDropDialogTest {
     }
 
     private Element view() {
-        return stack(text("background"), dialog.render(open).orElseThrow());
+        return stack(text("background"), dialog.render(open).get());
     }
 }

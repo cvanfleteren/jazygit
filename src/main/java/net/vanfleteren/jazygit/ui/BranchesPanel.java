@@ -19,7 +19,6 @@ import net.vanfleteren.jazygit.state.Msg;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -59,11 +58,11 @@ public class BranchesPanel {
         return SPINNER.frame((int) (now.toEpochMilli() / SPINNER_FRAME_MILLIS % SPINNER.frameCount()));
     }
 
-    private static LoadableList.Row row(Branch b, Duration since, Optional<String> spinner) {
+    private static LoadableList.Row row(Branch b, Duration since, Option<String> spinner) {
         return new LoadableList.Row(
                 List.of(LoadableList.Seg.of("%4s ".formatted(age(since)) + (b.current() ? "* " : "  ") + b.name()))
                         .appendAll(sync(b))
-                        .appendAll(Option.ofOptional(spinner).map(frame -> LoadableList.Seg.styled(" " + frame, Theme.Classes.SPINNER))));
+                        .appendAll(spinner.map(frame -> LoadableList.Seg.styled(" " + frame, Theme.Classes.SPINNER))));
     }
 
     /**
@@ -72,11 +71,11 @@ public class BranchesPanel {
      */
     static List<LoadableList.Seg> sync(Branch branch) {
         return List.of(
-                        Optional.of(branch.ahead()).filter(n -> n > 0)
+                        Option.of(branch.ahead()).filter(n -> n > 0)
                                 .map(n -> LoadableList.Seg.styled(" ↑" + n, Theme.Classes.AHEAD)),
-                        Optional.of(branch.behind()).filter(n -> n > 0)
+                        Option.of(branch.behind()).filter(n -> n > 0)
                                 .map(n -> LoadableList.Seg.styled(" ↓" + n, Theme.Classes.BEHIND)))
-                .flatMap(Option::ofOptional);
+                .flatMap(o -> o);
     }
 
     /**
@@ -84,18 +83,18 @@ public class BranchesPanel {
      * current branch, which is listed first.
      */
     private static int reselect(List<Branch> previous, List<Branch> next, int selected) {
-        Optional<String> before = current(previous);
-        Optional<String> target = before.equals(current(next))
-                ? Optional.of(selected).filter(i -> i < previous.size()).map(i -> previous.get(i).name())
+        Option<String> before = current(previous);
+        Option<String> target = before.equals(current(next))
+                ? Option.of(selected).filter(i -> i < previous.size()).map(i -> previous.get(i).name())
                 : current(next);
         return target
                 .map(name -> next.indexWhere(b -> b.name().equals(name)))
                 .filter(i -> i >= 0)
-                .orElse(selected);
+                .getOrElse(selected);
     }
 
-    private static Optional<String> current(List<Branch> branches) {
-        return branches.find(Branch::current).map(Branch::name).toJavaOptional();
+    private static Option<String> current(List<Branch> branches) {
+        return branches.find(Branch::current).map(Branch::name);
     }
 
     /**
@@ -112,7 +111,7 @@ public class BranchesPanel {
         list = new LoadableList<>(Messages.get("panel.branches.title"), ID,
                 branches -> branches
                         .map(b -> row(b, Duration.between(b.tipTime(), clock.instant()),
-                                pushing.contains(b.name()) ? Optional.of(spinnerFrame(clock.instant())) : Optional.empty())),
+                                pushing.contains(b.name()) ? Option.of(spinnerFrame(clock.instant())) : Option.none())),
                 BranchesPanel::reselect);
         // The highlight alone marks the selection; a symbol would indent the rows.
         list.highlightSymbol("");
@@ -139,29 +138,29 @@ public class BranchesPanel {
     /**
      * The name of the highlighted branch, once the branches are shown.
      */
-    public Optional<String> selectedBranch() {
+    public Option<String> selectedBranch() {
         return list.shown() instanceof Loadable.Loaded<List<Branch>>(List<Branch> branches) && !branches.isEmpty()
-                ? Optional.of(branches.get(Math.min(selectedIndex(), branches.size() - 1)).name())
-                : Optional.empty();
+                ? Option.of(branches.get(Math.min(selectedIndex(), branches.size() - 1)).name())
+                : Option.none();
     }
 
     /**
      * The message to send when the highlighted branch is not the one whose log {@code model} holds.
      */
-    public Optional<Msg> selectionChange(Model model) {
+    public Option<Msg> selectionChange(Model model) {
         return selectedBranch()
-                .filter(branch -> !model.branchLog().map(BranchLog::branch).equals(Optional.of(branch)))
+                .filter(branch -> !model.branchLog().map(BranchLog::branch).equals(Option.of(branch)))
                 .map(SelectionMsg.BranchSelected::new);
     }
 
     private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {
-        return Optional.of(event)
+        return Option.of(event)
                 .filter(e -> focused)
                 .flatMap(e -> keymap.handle(Scopes.BRANCHES, e, selectedBranch()))
                 .map(msg -> {
                     dispatch.accept(msg);
                     return EventResult.HANDLED;
                 })
-                .orElse(EventResult.UNHANDLED);
+                .getOrElse(EventResult.UNHANDLED);
     }
 }

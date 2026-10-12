@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.selection;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg.BranchSelected;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg.CommitSelected;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg.FilesSelected;
@@ -14,8 +15,6 @@ import net.vanfleteren.jazygit.state.CommitDetail;
 import net.vanfleteren.jazygit.state.FileDiff;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
-
-import java.util.Optional;
 
 /**
  * The panes' highlights, and the data loaded for them.
@@ -34,26 +33,26 @@ public final class SelectionUpdate {
     }
 
     private static Next branchSelected(Model model, String branch) {
-        if (model.branchLog().map(BranchLog::branch).filter(branch::equals).isPresent()) {
+        if (model.branchLog().map(BranchLog::branch).filter(branch::equals).isDefined()) {
             return Next.of(model);
         }
-        return Next.of(model.withBranchLog(Optional.of(BranchLog.loading(branch, model.branchLog()))),
+        return Next.of(model.withBranchLog(Option.of(BranchLog.loading(branch, model.branchLog()))),
                 new LoadBranchLog(branch));
     }
 
     private static Next commitSelected(Model model, Sha sha) {
-        if (model.commitDetail().map(CommitDetail::sha).filter(sha::equals).isPresent()) {
+        if (model.commitDetail().map(CommitDetail::sha).filter(sha::equals).isDefined()) {
             return Next.of(model);
         }
-        return Next.of(model.withCommitDetail(Optional.of(CommitDetail.loading(sha, model.commitDetail()))),
+        return Next.of(model.withCommitDetail(Option.of(CommitDetail.loading(sha, model.commitDetail()))),
                 new LoadCommitDetail(sha));
     }
 
     private static Next filesSelected(Model model, List<FileEntry> files) {
-        if (model.fileDiff().map(FileDiff::files).filter(files::equals).isPresent()) {
+        if (model.fileDiff().map(FileDiff::files).filter(files::equals).isDefined()) {
             return Next.of(model);
         }
-        return Next.of(model.withFileDiff(Optional.of(FileDiff.loading(files, model.fileDiff()))),
+        return Next.of(model.withFileDiff(Option.of(FileDiff.loading(files, model.fileDiff()))),
                 new LoadFileDiff(files));
     }
 }

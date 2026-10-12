@@ -2,12 +2,12 @@ package net.vanfleteren.jazygit.keys;
 
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.state.Msg;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -40,7 +40,7 @@ public final class Keymap {
      * @param action         the message to send for the key, given the selection if there is one
      * @param <S>            what is selected in the panel
      */
-    public record Binding<S>(String key, String descriptionKey, Function<Optional<S>, Optional<Msg>> action) {
+    public record Binding<S>(String key, String descriptionKey, Function<Option<S>, Option<Msg>> action) {
 
         /**
          * A key that acts on the selection, and does nothing when nothing is selected.
@@ -53,7 +53,7 @@ public final class Keymap {
          * A key that does the same whatever is selected.
          */
         public static <S> Binding<S> always(String key, String descriptionKey, Supplier<Msg> msg) {
-            return new Binding<>(key, descriptionKey, selection -> Optional.of(msg.get()));
+            return new Binding<>(key, descriptionKey, selection -> Option.of(msg.get()));
         }
 
         /**
@@ -133,13 +133,13 @@ public final class Keymap {
      *
      * @param selection what is selected in the panel, if anything
      */
-    public <S> Optional<Msg> handle(Scope<S> scope, KeyEvent event, Optional<S> selection) {
+    public <S> Option<Msg> handle(Scope<S> scope, KeyEvent event, Option<S> selection) {
         String text = event.string();
         if (HELP_KEY.equals(text)) {
-            return Optional.of(new HelpMsg.Requested(scope.id()));
+            return Option.of(new HelpMsg.Requested(scope.id()));
         }
-        return Optional.ofNullable(sections.get(scope.id()))
-                .flatMap(section -> section.bindings().find(binding -> binding.key().equals(text)).toJavaOptional())
+        return Option.of(sections.get(scope.id()))
+                .flatMap(section -> section.bindings().find(binding -> binding.key().equals(text)))
                 .flatMap(binding -> {
                     @SuppressWarnings("unchecked")
                     Binding<S> typed = (Binding<S>) binding;
@@ -150,15 +150,15 @@ public final class Keymap {
     /**
      * The message key of the title of the panel {@code scopeId}, if it has keys.
      */
-    public Optional<String> titleKey(String scopeId) {
-        return Optional.ofNullable(sections.get(scopeId)).map(section -> section.scope().titleKey());
+    public Option<String> titleKey(String scopeId) {
+        return Option.of(sections.get(scopeId)).map(section -> section.scope().titleKey());
     }
 
     /**
      * The keys of the panel {@code scopeId}, in the order the features declared them.
      */
     public List<Binding<?>> bindings(String scopeId) {
-        return Optional.ofNullable(sections.get(scopeId)).map(Section::bindings).orElse(List.of());
+        return Option.of(sections.get(scopeId)).map(Section::bindings).getOrElse(List.of());
     }
 
     public List<Global> globals() {

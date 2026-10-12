@@ -1,12 +1,11 @@
 package net.vanfleteren.jazygit.feature.stage;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitCommandException;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Msg;
-
-import java.util.Optional;
 
 /**
  * Commands that change what is staged.
@@ -16,8 +15,8 @@ public sealed interface StageCmd extends Cmd {
     record Stage(List<String> paths) implements StageCmd {
 
         @Override
-        public Optional<String> logTitleKey() {
-            return Optional.of("log.title.stage");
+        public Option<String> logTitleKey() {
+            return Option.of("log.title.stage");
         }
 
         @Override
@@ -38,8 +37,8 @@ public sealed interface StageCmd extends Cmd {
     record Unstage(List<String> added, List<String> others) implements StageCmd {
 
         @Override
-        public Optional<String> logTitleKey() {
-            return Optional.of("log.title.unstage");
+        public Option<String> logTitleKey() {
+            return Option.of("log.title.unstage");
         }
 
         @Override

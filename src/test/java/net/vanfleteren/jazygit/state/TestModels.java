@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -11,7 +12,6 @@ import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
 
 import java.time.Instant;
-import java.util.Optional;
 
 /**
  * Builds models for tests: with fixed sample data through {@link Update}, or by running the real
@@ -84,13 +84,13 @@ public final class TestModels {
     }
 
     public static Model withError(Model model, String error) {
-        return model.withError(Optional.of(error));
+        return model.withError(Option.of(error));
     }
 
     /**
      * {@code model} with the log of {@code branch} still loading, while the log it replaced stays visible.
      */
     public static Model switchingBranch(Model model, String branch) {
-        return model.withBranchLog(Optional.of(BranchLog.loading(branch, model.branchLog())));
+        return model.withBranchLog(Option.of(BranchLog.loading(branch, model.branchLog())));
     }
 }

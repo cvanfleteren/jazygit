@@ -61,11 +61,11 @@ public final class Update {
                 .appendAll(model.branchLog()
                         .filter(log -> log.commits() instanceof Failed)
                         .map(log -> new LoadBranchLog(log.branch()))
-                        .map(List::<Cmd>of).orElse(List.empty()))
+                        .map(List::<Cmd>of).getOrElse(List.empty()))
                 .appendAll(model.commitDetail()
                         .filter(detail -> detail.changes() instanceof Failed)
                         .map(detail -> new LoadCommitDetail(detail.sha()))
-                        .map(List::<Cmd>of).orElse(List.empty()));
+                        .map(List::<Cmd>of).getOrElse(List.empty()));
         return new Next(model.withRefreshing(refreshing), cmds);
     }
 
@@ -86,7 +86,7 @@ public final class Update {
                         model.withRefreshing(Stream.concat(model.refreshing().stream(), Stream.of(cmd))
                                 .collect(Collectors.toUnmodifiableSet())),
                         cmds.append(cmd)))
-                .orElseGet(() -> new Next(model, cmds));
+                .getOrElse(() -> new Next(model, cmds));
     }
 
     public static List<FileEntry> files(Model model) {

@@ -27,7 +27,7 @@ class CliStatusTest {
                 "");
 
         List<Conflict> conflicts = CliStatus.parse(raw).files()
-                .map(f -> f.conflict().orElseThrow());
+                .map(f -> f.conflict().get());
 
         assertEquals(List.of(
                 new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED),

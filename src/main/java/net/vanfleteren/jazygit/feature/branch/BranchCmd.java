@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import java.util.Optional;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.LocalChangesException;
 import net.vanfleteren.jazygit.state.Cmd;
@@ -17,8 +17,8 @@ public sealed interface BranchCmd extends Cmd {
     record CreateBranch(String name, String base) implements BranchCmd {
 
         @Override
-        public Optional<String> logTitleKey() {
-            return Optional.of("log.title.newBranch");
+        public Option<String> logTitleKey() {
+            return Option.of("log.title.newBranch");
         }
 
         @Override
@@ -41,8 +41,8 @@ public sealed interface BranchCmd extends Cmd {
         }
 
         @Override
-        public Optional<String> logTitleKey() {
-            return Optional.of("log.title.deleteBranch");
+        public Option<String> logTitleKey() {
+            return Option.of("log.title.deleteBranch");
         }
 
         @Override
@@ -63,8 +63,8 @@ public sealed interface BranchCmd extends Cmd {
     record Rebase(String onto) implements BranchCmd {
 
         @Override
-        public Optional<String> logTitleKey() {
-            return Optional.of("log.title.rebase");
+        public Option<String> logTitleKey() {
+            return Option.of("log.title.rebase");
         }
 
         @Override
@@ -81,8 +81,8 @@ public sealed interface BranchCmd extends Cmd {
     record Checkout(String branch) implements BranchCmd {
 
         @Override
-        public Optional<String> logTitleKey() {
-            return Optional.of("log.title.checkout");
+        public Option<String> logTitleKey() {
+            return Option.of("log.title.checkout");
         }
 
         @Override
@@ -106,8 +106,8 @@ public sealed interface BranchCmd extends Cmd {
     record CheckoutWithStash(String branch) implements BranchCmd {
 
         @Override
-        public Optional<String> logTitleKey() {
-            return Optional.of("log.title.checkout");
+        public Option<String> logTitleKey() {
+            return Option.of("log.title.checkout");
         }
 
         @Override
@@ -124,8 +124,8 @@ public sealed interface BranchCmd extends Cmd {
     record Push(String branch, boolean forceWithLease) implements BranchCmd {
 
         @Override
-        public Optional<String> logTitleKey() {
-            return Optional.of("log.title.push");
+        public Option<String> logTitleKey() {
+            return Option.of("log.title.push");
         }
 
         @Override

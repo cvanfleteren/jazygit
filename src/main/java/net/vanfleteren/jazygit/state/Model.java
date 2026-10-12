@@ -1,13 +1,13 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Stash;
 
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -36,14 +36,14 @@ public record Model(String repositoryName,
                     Loadable<List<Branch>> branches,
                     Loadable<List<Commit>> commits,
                     Loadable<List<Stash>> stashes,
-                    Optional<BranchLog> branchLog,
-                    Optional<CommitDetail> commitDetail,
-                    Optional<FileDiff> fileDiff,
+                    Option<BranchLog> branchLog,
+                    Option<CommitDetail> commitDetail,
+                    Option<FileDiff> fileDiff,
                     Set<Cmd.Load> refreshing,
-                    Optional<String> error,
+                    Option<String> error,
                     Set<String> pushing,
                     List<LogEntry> commandLog,
-                    Optional<Popup> popup,
+                    Option<Popup> popup,
                     String theme) {
 
     /** The theme of a new session; one of the themes of {@code ui.Theme}. */
@@ -56,14 +56,14 @@ public record Model(String repositoryName,
 
     public static Model initial(String repositoryName) {
         return new Model(repositoryName, Loadable.loading(), Loadable.loading(), Loadable.loading(),
-                Loadable.loading(), Optional.empty(),
-                Optional.empty(), Optional.empty(), Set.of(), Optional.empty(), Set.of(), List.of(), Optional.empty(), DEFAULT_THEME);
+                Loadable.loading(), Option.none(),
+                Option.none(), Option.none(), Set.of(), Option.none(), Set.of(), List.of(), Option.none(), DEFAULT_THEME);
     }
 
     /**
      * The open popup, if it is a {@code type}.
      */
-    public <P extends Popup> Optional<P> popup(Class<P> type) {
+    public <P extends Popup> Option<P> popup(Class<P> type) {
         return popup.filter(type::isInstance).map(type::cast);
     }
 
@@ -71,7 +71,7 @@ public record Model(String repositoryName,
      * This model with {@code popup} open, replacing the one that was open.
      */
     public Model openPopup(Popup popup) {
-        return withPopup(Optional.of(popup));
+        return withPopup(Option.of(popup));
     }
 
     /**
@@ -79,6 +79,6 @@ public record Model(String repositoryName,
      * opened in the meantime stays open.
      */
     public Model withoutPopup(Class<? extends Popup> type) {
-        return popup(type).isPresent() ? withPopup(Optional.empty()) : this;
+        return popup(type).isDefined() ? withPopup(Option.none()) : this;
     }
 }

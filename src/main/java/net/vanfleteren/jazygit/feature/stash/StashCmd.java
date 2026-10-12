@@ -1,10 +1,9 @@
 package net.vanfleteren.jazygit.feature.stash;
 
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Msg;
-
-import java.util.Optional;
 
 /**
  * Commands that create stashes.
@@ -17,8 +16,8 @@ public sealed interface StashCmd extends Cmd {
     record Stash(String name) implements StashCmd {
 
         @Override
-        public Optional<String> logTitleKey() {
-            return Optional.of("log.title.stash");
+        public Option<String> logTitleKey() {
+            return Option.of("log.title.stash");
         }
 
         @Override
@@ -38,8 +37,8 @@ public sealed interface StashCmd extends Cmd {
     record Drop(String ref) implements StashCmd {
 
         @Override
-        public Optional<String> logTitleKey() {
-            return Optional.of("log.title.stashDrop");
+        public Option<String> logTitleKey() {
+            return Option.of("log.title.stashDrop");
         }
 
         @Override
@@ -59,8 +58,8 @@ public sealed interface StashCmd extends Cmd {
     record Pop(String ref) implements StashCmd {
 
         @Override
-        public Optional<String> logTitleKey() {
-            return Optional.of("log.title.stashPop");
+        public Option<String> logTitleKey() {
+            return Option.of("log.title.stashPop");
         }
 
         @Override

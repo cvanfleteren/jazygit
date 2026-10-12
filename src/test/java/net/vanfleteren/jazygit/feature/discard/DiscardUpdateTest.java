@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.discard;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.discard.DiscardCmd.Discard;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Scope;
 import net.vanfleteren.jazygit.git.model.ChangeType;
@@ -10,8 +11,6 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.Update;
 import org.junit.jupiter.api.Test;
-
-import java.util.Optional;
 
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,13 +30,13 @@ class DiscardUpdateTest {
     void requestOpensThePopupWithTheFiles() {
         Next next = Update.update(loaded(), new DiscardMsg.Requested(ALL));
 
-        assertEquals(Optional.of(new DiscardPopup(ALL)), next.model().popup(DiscardPopup.class));
+        assertEquals(Option.of(new DiscardPopup(ALL)), next.model().popup(DiscardPopup.class));
         assertEquals(List.of(), next.cmds());
     }
 
     @Test
     void requestWithoutFilesDoesNothing() {
-        assertEquals(Optional.empty(), Update.update(loaded(), new DiscardMsg.Requested(List.of())).model().popup());
+        assertEquals(Option.none(), Update.update(loaded(), new DiscardMsg.Requested(List.of())).model().popup());
     }
 
     @Test
@@ -46,7 +45,7 @@ class DiscardUpdateTest {
 
         Next next = Update.update(open, new DiscardMsg.Cancelled());
 
-        assertEquals(Optional.empty(), next.model().popup());
+        assertEquals(Option.none(), next.model().popup());
         assertEquals(List.of(), next.cmds());
     }
 
@@ -77,7 +76,7 @@ class DiscardUpdateTest {
         Next next = Update.update(open, new DiscardMsg.Chosen(Scope.ALL));
 
         assertEquals(List.of(new Discard(DiscardUpdate.plan(List.of(UNSTAGED_MOD), Scope.ALL))), next.cmds());
-        assertEquals(Optional.empty(), next.model().popup());
+        assertEquals(Option.none(), next.model().popup());
     }
 
     @Test
@@ -87,7 +86,7 @@ class DiscardUpdateTest {
         Next next = Update.update(open, new DiscardMsg.Chosen(Scope.UNSTAGED));
 
         assertEquals(List.of(), next.cmds());
-        assertTrue(next.model().popup(DiscardPopup.class).isPresent());
+        assertTrue(next.model().popup(DiscardPopup.class).isDefined());
     }
 
     @Test
@@ -99,6 +98,6 @@ class DiscardUpdateTest {
     void aFailureIsStoredAsAnError() {
         Next next = Update.update(loaded(), new DiscardMsg.Failed("boom"));
 
-        assertEquals(Optional.of("Discarding changes failed: boom"), next.model().error());
+        assertEquals(Option.of("Discarding changes failed: boom"), next.model().error());
     }
 }

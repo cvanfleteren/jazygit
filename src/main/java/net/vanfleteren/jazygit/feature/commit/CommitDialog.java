@@ -5,6 +5,7 @@ import dev.tamboui.widgets.block.BorderType;
 import dev.tamboui.widgets.input.TextAreaState;
 import dev.tamboui.widgets.input.TextInputState;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
@@ -12,7 +13,6 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.SubmittableTextArea;
 import static dev.tamboui.toolkit.Toolkit.*;
 
-import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -46,7 +46,7 @@ public final class CommitDialog {
     private final String summaryId;
     private final String descriptionId;
     // The commit whose message the popup starts out with, while it is open.
-    private final Function<Model, Optional<Commit>> current;
+    private final Function<Model, Option<Commit>> current;
     private final Predicate<Model> open;
     private final BiFunction<String, String, Msg> confirmed;
     private final Supplier<Msg> cancelled;
@@ -54,7 +54,7 @@ public final class CommitDialog {
     private boolean shown;
 
     private CommitDialog(String summaryId, String descriptionId, Predicate<Model> open,
-                         Function<Model, Optional<Commit>> current, BiFunction<String, String, Msg> confirmed,
+                         Function<Model, Option<Commit>> current, BiFunction<String, String, Msg> confirmed,
                          Supplier<Msg> cancelled, Consumer<Msg> dispatch) {
         this.summaryId = summaryId;
         this.descriptionId = descriptionId;
@@ -71,7 +71,7 @@ public final class CommitDialog {
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public CommitDialog(Consumer<Msg> dispatch) {
-        this(ID, DESCRIPTION_ID, model -> model.popup(CommitPopup.class).isPresent(), model -> Optional.empty(), CommitMsg.Confirmed::new,
+        this(ID, DESCRIPTION_ID, model -> model.popup(CommitPopup.class).isDefined(), model -> Option.none(), CommitMsg.Confirmed::new,
                 CommitMsg.Cancelled::new, dispatch);
     }
 
@@ -81,7 +81,7 @@ public final class CommitDialog {
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public static CommitDialog reword(Consumer<Msg> dispatch) {
-        return new CommitDialog(REWORD_ID, REWORD_DESCRIPTION_ID, model -> model.popup(RewordPopup.class).isPresent(),
+        return new CommitDialog(REWORD_ID, REWORD_DESCRIPTION_ID, model -> model.popup(RewordPopup.class).isDefined(),
                 model -> model.popup(RewordPopup.class).map(RewordPopup::commit), RewordMsg.Confirmed::new, RewordMsg.Cancelled::new, dispatch);
     }
 
@@ -95,19 +95,19 @@ public final class CommitDialog {
     /**
      * The popup, while the model asks for a commit message.
      */
-    public Optional<Element> render(Model model) {
+    public Option<Element> render(Model model) {
         if (!open.test(model)) {
             shown = false;
-            return Optional.empty();
+            return Option.none();
         }
         if (!shown) {
             shown = true;
-            current.apply(model).ifPresent(commit -> {
+            current.apply(model).forEach(commit -> {
                 summary.setText(commit.message());
                 description.setText(commit.body());
             });
         }
-        return Optional.of(dialog(
+        return Option.of(dialog(
                         textInput(summary)
                                 .id(summaryId)
                                 .title(Messages.get("dialog.commit.summary.title"))

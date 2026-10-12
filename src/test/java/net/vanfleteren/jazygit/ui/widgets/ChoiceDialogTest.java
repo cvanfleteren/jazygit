@@ -106,6 +106,6 @@ class ChoiceDialogTest {
     }
 
     private Element view(boolean second) {
-        return stack(text("background"), dialog.render(open(second)).orElseThrow());
+        return stack(text("background"), dialog.render(open(second)).get());
     }
 }

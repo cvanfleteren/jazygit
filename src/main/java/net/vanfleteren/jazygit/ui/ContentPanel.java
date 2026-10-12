@@ -9,6 +9,7 @@ import dev.tamboui.toolkit.elements.RichTextAreaElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.git.model.Diffs;
@@ -27,7 +28,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -50,7 +50,7 @@ public final class ContentPanel {
             new ScrollArea("commit-changes", CommitsPanel.ID, ContentPanel::plainText);
     // Not focusable: clicking the log must not take the focus from the branches pane it mirrors.
     private static final ScrollArea LOG_AREA =
-            new ScrollArea("branch-log", Optional.empty(), ContentPanel::logText);
+            new ScrollArea("branch-log", Option.none(), ContentPanel::logText);
     // Called when Escape is pressed; gives the focus back to the file tree if a focusable area had it, and
     // says whether it did.
     private static Supplier<Boolean> leaveScrollArea = () -> false;
@@ -63,22 +63,22 @@ public final class ContentPanel {
      * The pane that gets the focus back when Escape is pressed in the area with id {@code areaId}, if that
      * is a focusable area.
      */
-    public static Optional<String> paneOfArea(String areaId) {
-        return Stream.of(STAGED_AREA, UNSTAGED_AREA, COMMIT_AREA)
+    public static Option<String> paneOfArea(String areaId) {
+        return List.of(STAGED_AREA, UNSTAGED_AREA, COMMIT_AREA)
                 .filter(area -> area.id().equals(areaId))
-                .flatMap(area -> area.pane.stream())
-                .findFirst();
+                .flatMap(area -> area.pane)
+                .headOption();
     }
 
     /**
      * The id of the area that shows what the pane {@code paneId} has highlighted, to move the focus into:
      * the staged diff if it shows anything, else the unstaged one, or the commit.
      */
-    public static Optional<String> areaOfPane(String paneId) {
-        return Stream.of(STAGED_AREA, UNSTAGED_AREA, COMMIT_AREA)
-                .filter(area -> area.pane.filter(paneId::equals).isPresent() && area.hasContent())
+    public static Option<String> areaOfPane(String paneId) {
+        return List.of(STAGED_AREA, UNSTAGED_AREA, COMMIT_AREA)
+                .filter(area -> area.pane.filter(paneId::equals).isDefined() && area.hasContent())
                 .map(ScrollArea::id)
-                .findFirst();
+                .headOption();
     }
 
     private static final String MESSAGE_INDENT = "    ";
@@ -90,21 +90,21 @@ public final class ContentPanel {
         private final String id;
         // The pane this area shows the content of, which gets the focus back from it; none if the area
         // cannot be focused.
-        private final Optional<String> pane;
+        private final Option<String> pane;
         private final RichTextAreaElement element;
         private final Function<String, Text> styling;
         private Object key = "";
 
         ScrollArea(String id, String pane, Function<String, Text> styling) {
-            this(id, Optional.of(pane), styling);
+            this(id, Option.of(pane), styling);
         }
 
-        ScrollArea(String id, Optional<String> pane, Function<String, Text> styling) {
+        ScrollArea(String id, Option<String> pane, Function<String, Text> styling) {
             this.id = id;
             this.pane = pane;
             this.styling = styling;
             element = richTextArea().id(id).rounded().scrollbar().fill();
-            if (pane.isPresent()) {
+            if (pane.isDefined()) {
                 element.focusable();
             }
             element.onKeyEvent(event -> {
@@ -176,7 +176,7 @@ public final class ContentPanel {
                     case Loadable.Failed<Diffs>(String message) ->
                             panel(Messages.get("panel.diff.title"), text(Placeholders.error(message)));
                 })
-                .orElseGet(() -> panel(Messages.get("panel.diff.title"), text(Placeholders.loading()).addClass(Theme.Classes.DIM)));
+                .getOrElse(() -> panel(Messages.get("panel.diff.title"), text(Placeholders.loading()).addClass(Theme.Classes.DIM)));
     }
 
     private static StyledElement<?> diffPanels(Diffs diffs) {
@@ -195,7 +195,7 @@ public final class ContentPanel {
      * While a diff is loading, keep showing the previously loaded one rather than flashing a placeholder.
      */
     private static FileDiff shown(FileDiff diff) {
-        return diff.diff() instanceof Loadable.Loading<Diffs> ? diff.previous().orElse(diff) : diff;
+        return diff.diff() instanceof Loadable.Loading<Diffs> ? diff.previous().getOrElse(diff) : diff;
     }
 
     /**
@@ -243,14 +243,14 @@ public final class ContentPanel {
                 .map(ContentPanel::shown)
                 .<StyledElement<?>>map(log -> whenLoaded(Messages.get("panel.log.titleFor", log.branch()), log.commits(), commits ->
                         LOG_AREA.with(String.join("\n", logLines(commits, ZoneId.systemDefault()))).show(Messages.get("panel.log.titleFor", log.branch()))))
-                .orElseGet(() -> panel(Messages.get("panel.log.title"), text(Placeholders.loading()).addClass(Theme.Classes.DIM)));
+                .getOrElse(() -> panel(Messages.get("panel.log.title"), text(Placeholders.loading()).addClass(Theme.Classes.DIM)));
     }
 
     /**
      * While a log is loading, keep showing the previously loaded one rather than flashing a placeholder.
      */
     private static BranchLog shown(BranchLog log) {
-        return log.commits() instanceof Loadable.Loading<List<Commit>> ? log.previous().orElse(log) : log;
+        return log.commits() instanceof Loadable.Loading<List<Commit>> ? log.previous().getOrElse(log) : log;
     }
 
     /**
@@ -301,21 +301,21 @@ public final class ContentPanel {
                             .<StyledElement<?>>map(commit -> COMMIT_AREA
                                     .with(new CommitContent(commit, changes), () -> commitText(commit, changes))
                                     .show(Messages.get("panel.commit.titleFor", commit.shortSha())))
-                            .orElseGet(() -> panel(title, text(Placeholders.loading()).addClass(Theme.Classes.DIM)));
+                            .getOrElse(() -> panel(title, text(Placeholders.loading()).addClass(Theme.Classes.DIM)));
                     case Loadable.Loading<String>() -> panel(title, text(Placeholders.loading()).addClass(Theme.Classes.DIM));
                     case Loadable.Failed<String>(String message) ->
                             panel(title, text(Placeholders.error(message)));
                 })
-                .orElseGet(() -> model.commits() instanceof Loadable.Loaded<List<Commit>>(List<Commit> commits)
+                .getOrElse(() -> model.commits() instanceof Loadable.Loaded<List<Commit>>(List<Commit> commits)
                         && commits.isEmpty()
                         ? panel(title, text(Messages.get("content.noCommits")))
                         : panel(title, text(Placeholders.loading()).addClass(Theme.Classes.DIM)));
     }
 
-    private static Optional<Commit> commit(Model model, Sha sha) {
+    private static Option<Commit> commit(Model model, Sha sha) {
         return model.commits() instanceof Loadable.Loaded<List<Commit>>(List<Commit> commits)
-                ? commits.find(c -> c.sha().equals(sha)).toJavaOptional()
-                : Optional.empty();
+                ? commits.find(c -> c.sha().equals(sha))
+                : Option.none();
     }
 
     /**
@@ -323,7 +323,7 @@ public final class ContentPanel {
      * flashing a placeholder.
      */
     private static CommitDetail shown(CommitDetail detail) {
-        return detail.changes() instanceof Loadable.Loading<String> ? detail.previous().orElse(detail) : detail;
+        return detail.changes() instanceof Loadable.Loading<String> ? detail.previous().getOrElse(detail) : detail;
     }
 
     /**

@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.stage;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.stage.StageCmd.Stage;
 import net.vanfleteren.jazygit.feature.stage.StageCmd.Unstage;
 import net.vanfleteren.jazygit.git.model.ChangeType;
@@ -11,8 +12,6 @@ import net.vanfleteren.jazygit.state.LogEntry;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.Update;
 import org.junit.jupiter.api.Test;
-
-import java.util.Optional;
 
 import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -58,9 +57,9 @@ class StageUpdateTest {
         FileEntry staged = new FileEntry("src/c.txt", ChangeType.MODIFIED, true, false);
 
         assertEquals(List.of(new Stage(List.of("src"))), Update.update(loaded(),
-                new StageMsg.Requested(List.of(unstaged, staged), Optional.of("src"))).cmds());
+                new StageMsg.Requested(List.of(unstaged, staged), Option.of("src"))).cmds());
         assertEquals(List.of(new Stage(List.of("."))), Update.update(loaded(),
-                new StageMsg.Requested(List.of(unstaged, staged), Optional.of(""))).cmds());
+                new StageMsg.Requested(List.of(unstaged, staged), Option.of(""))).cmds());
     }
 
     @Test
@@ -70,9 +69,9 @@ class StageUpdateTest {
         FileEntry added = new FileEntry("src/a.txt", ChangeType.ADDED);
 
         assertEquals(List.of(new Unstage(List.of(), List.of("."))), Update.update(loaded(),
-                new StageMsg.Requested(List.of(modified, deleted), Optional.of(""))).cmds());
+                new StageMsg.Requested(List.of(modified, deleted), Option.of(""))).cmds());
         assertEquals(List.of(new Unstage(List.of("src/a.txt"), List.of("src/b.txt"))), Update.update(loaded(),
-                new StageMsg.Requested(List.of(added, modified), Optional.of("src"))).cmds());
+                new StageMsg.Requested(List.of(added, modified), Option.of("src"))).cmds());
     }
 
     @Test
@@ -99,7 +98,7 @@ class StageUpdateTest {
                 Update.update(loaded(), new StageMsg.Done(StageMsg.Action.STAGE, List.of())).cmds());
 
         Next failed = Update.update(loaded(), new StageMsg.Failed("fatal: pathspec"));
-        assertEquals(Optional.of("Staging failed: fatal: pathspec"), failed.model().error());
+        assertEquals(Option.of("Staging failed: fatal: pathspec"), failed.model().error());
         assertEquals(List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadStashes()), failed.cmds());
     }
 }

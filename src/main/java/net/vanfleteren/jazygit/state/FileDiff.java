@@ -1,10 +1,9 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
-
-import java.util.Optional;
 
 /**
  * The diff of the node highlighted in the files pane.
@@ -13,18 +12,18 @@ import java.util.Optional;
  * @param previous the last fully loaded diff of other files, kept while this one is loading
  *                 so the UI can keep showing it instead of flashing a placeholder
  */
-public record FileDiff(List<FileEntry> files, Loadable<Diffs> diff, Optional<FileDiff> previous) {
+public record FileDiff(List<FileEntry> files, Loadable<Diffs> diff, Option<FileDiff> previous) {
 
     public FileDiff(List<FileEntry> files, Loadable<Diffs> diff) {
-        this(files, diff, Optional.empty());
+        this(files, diff, Option.none());
     }
 
     /**
      * A diff that is loading, falling back to the diff that was shown before it.
      */
-    public static FileDiff loading(List<FileEntry> files, Optional<FileDiff> shown) {
-        Optional<FileDiff> previous = shown.flatMap(d ->
-                d.diff() instanceof Loadable.Loaded<Diffs> ? Optional.of(d) : d.previous());
+    public static FileDiff loading(List<FileEntry> files, Option<FileDiff> shown) {
+        Option<FileDiff> previous = shown.flatMap(d ->
+                d.diff() instanceof Loadable.Loaded<Diffs> ? Option.of(d) : d.previous());
         return new FileDiff(files, Loadable.loading(), previous);
     }
 

@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.git.model;
 
-import java.util.Optional;
+import io.vavr.control.Option;
 
 /**
  * A single file entry as it would appear in {@code git status}.
@@ -9,17 +9,17 @@ import java.util.Optional;
  * @param unstaged whether the working tree holds a change that is not in the index (untracked files included)
  * @param conflict what each side of the merge did, for a {@link ChangeType#CONFLICTED} file
  */
-public record FileEntry(String path, ChangeType type, boolean staged, boolean unstaged, Optional<Conflict> conflict) {
+public record FileEntry(String path, ChangeType type, boolean staged, boolean unstaged, Option<Conflict> conflict) {
 
     public FileEntry(String path, ChangeType type, boolean staged, boolean unstaged) {
-        this(path, type, staged, unstaged, Optional.empty());
+        this(path, type, staged, unstaged, Option.none());
     }
 
     /**
      * A file that is in conflict; it is not staged until the conflict is resolved.
      */
     public static FileEntry conflicted(String path, Conflict conflict) {
-        return new FileEntry(path, ChangeType.CONFLICTED, false, true, Optional.of(conflict));
+        return new FileEntry(path, ChangeType.CONFLICTED, false, true, Option.of(conflict));
     }
 
     /**

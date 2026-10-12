@@ -72,7 +72,7 @@ class SquashDialogTest {
     }
 
     private ToolkitTestRunner start() throws Exception {
-        assertEquals(true, open.popup(SquashPopup.class).isPresent());
+        assertEquals(true, open.popup(SquashPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
         runner.runner().focusManager().setFocus(SquashDialog.ID);
         RenderedText.of(runner, this::view);
@@ -80,6 +80,6 @@ class SquashDialogTest {
     }
 
     private Element view() {
-        return stack(text("background"), dialog.render(open).orElseThrow());
+        return stack(text("background"), dialog.render(open).get());
     }
 }

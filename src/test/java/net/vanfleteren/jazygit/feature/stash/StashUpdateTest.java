@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.stash;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.stash.StashCmd.Stash;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -11,8 +12,6 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.Update;
 import org.junit.jupiter.api.Test;
-
-import java.util.Optional;
 
 import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,7 +28,7 @@ class StashUpdateTest {
 
     @Test
     void requestingOpensTheDialogWhenThereAreChanges() {
-        assertEquals(Optional.of(new StashPopup()),
+        assertEquals(Option.of(new StashPopup()),
                 Update.update(withChanges(), new StashMsg.Requested()).model().popup());
     }
 
@@ -37,8 +36,8 @@ class StashUpdateTest {
     void requestingWithoutChangesReportsThat() {
         Model model = Update.update(loaded(), new StashMsg.Requested()).model();
 
-        assertEquals(Optional.empty(), model.popup());
-        assertEquals(Optional.of("No changes to stash"), model.error());
+        assertEquals(Option.none(), model.popup());
+        assertEquals(Option.of("No changes to stash"), model.error());
     }
 
     @Test
@@ -47,7 +46,7 @@ class StashUpdateTest {
 
         Next next = Update.update(open, new StashMsg.Cancelled());
 
-        assertEquals(Optional.empty(), next.model().popup());
+        assertEquals(Option.none(), next.model().popup());
         assertEquals(List.of(), next.cmds());
     }
 
@@ -58,7 +57,7 @@ class StashUpdateTest {
         Next next = Update.update(open, new StashMsg.Confirmed("  my work "));
 
         assertEquals(List.of(new Stash("my work")), next.cmds());
-        assertEquals(Optional.empty(), next.model().popup());
+        assertEquals(Option.none(), next.model().popup());
     }
 
     @Test
@@ -89,7 +88,7 @@ class StashUpdateTest {
         assertEquals(List.of(new LogEntry("Stash", List.of("git stash push --message x"))), done.model().commandLog());
 
         Next failed = Update.update(loaded(), new StashMsg.Failed("boom"));
-        assertEquals(Optional.of("Stash failed: boom"), failed.model().error());
+        assertEquals(Option.of("Stash failed: boom"), failed.model().error());
     }
 
     @Test
@@ -109,13 +108,13 @@ class StashUpdateTest {
 
         Next asked = Update.update(model, new StashMsg.DropRequested("stash@{0}"));
         assertEquals(List.of(), asked.cmds());
-        assertEquals(Optional.of(new StashDropPopup("stash@{0}")), asked.model().popup());
+        assertEquals(Option.of(new StashDropPopup("stash@{0}")), asked.model().popup());
 
         Next confirmed = Update.update(asked.model(), new StashMsg.DropConfirmed());
         assertEquals(List.of(new StashCmd.Drop("stash@{0}")), confirmed.cmds());
-        assertEquals(Optional.empty(), confirmed.model().popup());
+        assertEquals(Option.none(), confirmed.model().popup());
 
-        assertEquals(Optional.empty(), Update.update(model, new StashMsg.DropRequested("stash@{5}")).model().popup());
+        assertEquals(Option.none(), Update.update(model, new StashMsg.DropRequested("stash@{5}")).model().popup());
     }
 
     @Test
@@ -126,7 +125,7 @@ class StashUpdateTest {
 
         Next cancelled = Update.update(asked, new StashMsg.DropCancelled());
 
-        assertEquals(Optional.empty(), cancelled.model().popup());
+        assertEquals(Option.none(), cancelled.model().popup());
         assertEquals(List.of(), cancelled.cmds());
         assertEquals(List.of(), Update.update(model, new StashMsg.DropConfirmed()).cmds());
     }
@@ -138,7 +137,7 @@ class StashUpdateTest {
                 dropped.model().commandLog());
 
         Next failed = Update.update(loaded(), new StashMsg.DropFailed("no such stash"));
-        assertEquals(Optional.of("Dropping the stash failed: no such stash"), failed.model().error());
+        assertEquals(Option.of("Dropping the stash failed: no such stash"), failed.model().error());
     }
 
     @Test
@@ -148,6 +147,6 @@ class StashUpdateTest {
                 popped.model().commandLog());
 
         Next failed = Update.update(loaded(), new StashMsg.PopFailed("conflict"));
-        assertEquals(Optional.of("Unstash failed: conflict"), failed.model().error());
+        assertEquals(Option.of("Unstash failed: conflict"), failed.model().error());
     }
 }

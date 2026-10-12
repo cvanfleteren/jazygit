@@ -10,6 +10,7 @@ import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.TuiConfig;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchDialog;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchPopup;
 import net.vanfleteren.jazygit.feature.branch.ForcePushDialog;
@@ -57,7 +58,6 @@ import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -116,7 +116,7 @@ public class JazygitApp extends ToolkitApp {
      * Moves the focus to the content shown for the pane {@code paneId}, so it can be scrolled by key.
      */
     private void openContent(String paneId) {
-        ContentPanel.areaOfPane(paneId).ifPresent(id -> runner().focusManager().setFocus(id));
+        ContentPanel.areaOfPane(paneId).forEach(id -> runner().focusManager().setFocus(id));
     }
 
     @Override
@@ -136,9 +136,9 @@ public class JazygitApp extends ToolkitApp {
         });
         runner.focusManager().setFocus(FilesPanel.ID);
         ContentPanel.onLeaveScrollArea(() -> {
-            Optional<String> pane = ContentPanel.paneOfArea(runner.focusManager().focusedId());
-            pane.ifPresent(runner.focusManager()::setFocus);
-            return pane.isPresent();
+            Option<String> pane = ContentPanel.paneOfArea(runner.focusManager().focusedId());
+            pane.forEach(runner.focusManager()::setFocus);
+            return pane.isDefined();
         });
         io = Executors.newSingleThreadExecutor(Thread.ofPlatform().name("git-io").daemon().factory());
         program = Program.start(provider, io, runner::runOnRenderThread);
@@ -174,11 +174,11 @@ public class JazygitApp extends ToolkitApp {
         Panel branches = branchesPanel.render(model, focusedId);
         // The highlighted branch lives in the list widget, which knows it once rendered; the
         // content panel then shows the log of that branch.
-        branchesPanel.selectionChange(model).ifPresent(program::dispatch);
-        commitsPanel.selectionChange(model).ifPresent(program::dispatch);
-        filesPanel.selectionChange(model).ifPresent(program::dispatch);
+        branchesPanel.selectionChange(model).forEach(program::dispatch);
+        commitsPanel.selectionChange(model).forEach(program::dispatch);
+        filesPanel.selectionChange(model).forEach(program::dispatch);
         Panel stash = stashPanel.render(model, focusedId);
-        Optional<Integer> stashHeight = stashHeight(model);
+        Option<Integer> stashHeight = stashHeight(model);
         Element layout = row(
                 column(
                         StatusPanel.render(model),
@@ -186,10 +186,10 @@ public class JazygitApp extends ToolkitApp {
                         branches.percent(BRANCHES_PERCENT),
                         // With the stash sized to its content, the commits take what is left, which is
                         // their share when the stash is as tall as it may get.
-                        stashHeight.isPresent()
+                        stashHeight.isDefined()
                                 ? commitsPanel.render(model, focusedId).fill()
                                 : commitsPanel.render(model, focusedId).percent(COMMITS_PERCENT),
-                        stashHeight.map(stash::length).orElseGet(stash::fill))
+                        stashHeight.map(stash::length).getOrElse(stash::fill))
                         .percent(30),
                 column(
                         ContentPanel.render(program.model(), focusedId, commitsPanel.selectedIndex())
@@ -197,7 +197,7 @@ public class JazygitApp extends ToolkitApp {
                         CommandLogPanel.render(model).length(COMMAND_LOG_HEIGHT))
                         .fill());
         // The open popup takes the focus, and gives it back to the pane it was opened from.
-        model.popup(HelpPopup.class).map(HelpPopup::scopeId).ifPresent(scopeId -> helpOrigin = scopeId);
+        model.popup(HelpPopup.class).map(HelpPopup::scopeId).forEach(scopeId -> helpOrigin = scopeId);
         List<Popup> popups = List.of(
                 new Popup(newBranchDialog.render(model), List.of(NewBranchDialog.ID), lastFocus),
                 new Popup(discardDialog.render(model), List.of(DiscardDialog.ID), FilesPanel.ID),
@@ -217,8 +217,8 @@ public class JazygitApp extends ToolkitApp {
         if (focusedId != null && popups.forAll(p -> !p.ids().contains(focusedId))) {
             lastFocus = focusedId;
         }
-        Optional<Popup> open = popups.find(p -> p.element().isPresent()).toJavaOptional();
-        if (open.isPresent()) {
+        Option<Popup> open = popups.find(p -> p.element().isDefined());
+        if (open.isDefined()) {
             if (focusedId == null || !open.get().ids().contains(focusedId)) {
                 runner().focusManager().setFocus(open.get().ids().head());
             }
@@ -226,8 +226,8 @@ public class JazygitApp extends ToolkitApp {
             popups.find(p -> focusedId != null && p.ids().contains(focusedId))
                     .forEach(p -> runner().focusManager().setFocus(p.returnTo()));
         }
-        Optional<Element> dialog = open.flatMap(Popup::element);
-        return dialog.<Element>map(d -> stack(layout, d)).orElse(layout);
+        Option<Element> dialog = open.flatMap(Popup::element);
+        return dialog.<Element>map(d -> stack(layout, d)).getOrElse(layout);
     }
 
     /**
@@ -235,7 +235,7 @@ public class JazygitApp extends ToolkitApp {
      * left once the other panes have theirs, and at least an empty pane (a blank line in a border).
      * Empty when the terminal size is not known.
      */
-    private Optional<Integer> stashHeight(Model model) {
+    private Option<Integer> stashHeight(Model model) {
         int rows = model.stashes() instanceof Loadable.Loaded<List<Stash>>(List<Stash> stashes)
                 ? Math.max(1, stashes.size())
                 : 1;
@@ -243,13 +243,13 @@ public class JazygitApp extends ToolkitApp {
             int height = runner().tuiRunner().backend().size().height();
             int share = height - StatusPanel.HEIGHT
                     - height * (FILES_PERCENT + BRANCHES_PERCENT + COMMITS_PERCENT) / 100;
-            return Optional.of(Math.max(MIN_STASH_HEIGHT, Math.min(rows + 2, share)));
+            return Option.of(Math.max(MIN_STASH_HEIGHT, Math.min(rows + 2, share)));
         } catch (IOException e) {
-            return Optional.empty();
+            return Option.none();
         }
     }
 
-    private record Popup(Optional<Element> element, List<String> ids, String returnTo) {
+    private record Popup(Option<Element> element, List<String> ids, String returnTo) {
     }
 
     /**

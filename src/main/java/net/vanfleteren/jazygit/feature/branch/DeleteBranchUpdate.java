@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.DeleteBranch;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Chosen;
@@ -14,8 +15,6 @@ import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.Update;
-
-import java.util.Optional;
 
 /**
  * Deleting a branch.
@@ -31,9 +30,9 @@ public final class DeleteBranchUpdate {
             case Cancelled() -> Next.of(model.withoutPopup(DeleteBranchPopup.class));
             case Chosen(DeleteBranch.DeleteScope scope) -> chosen(model, scope);
             case Deleted(String branch, List<String> commands) ->
-                    Update.refresh(CommandLog.append(model.withError(Optional.empty()), "log.title.deleteBranch", commands));
+                    Update.refresh(CommandLog.append(model.withError(Option.none()), "log.title.deleteBranch", commands));
             case Failed(String branch, String message) ->
-                    Update.refresh(model.withError(Optional.of(Messages.get("error.deleteBranch.failed", branch, message))));
+                    Update.refresh(model.withError(Option.of(Messages.get("error.deleteBranch.failed", branch, message))));
         };
     }
 
@@ -50,9 +49,9 @@ public final class DeleteBranchUpdate {
         return model.popup(DeleteBranchPopup.class).map(DeleteBranchPopup::branch)
                 // Deleting on the remote is not possible for a local-only branch, nor for the default one.
                 .filter(branch -> scope == DeleteBranch.DeleteScope.LOCAL || remoteDeletable(model, branch))
-                .map(branch -> Next.of(model.withoutPopup(DeleteBranchPopup.class).withError(Optional.empty()),
+                .map(branch -> Next.of(model.withoutPopup(DeleteBranchPopup.class).withError(Option.none()),
                         new DeleteBranch(branch, scope)))
-                .orElseGet(() -> Next.of(model));
+                .getOrElse(() -> Next.of(model));
     }
 
     private static boolean remoteDeletable(Model model, String branch) {

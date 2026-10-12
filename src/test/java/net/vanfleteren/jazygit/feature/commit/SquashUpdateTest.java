@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.commit;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.LoadMsg;
@@ -12,7 +13,6 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.Instant;
-import java.util.Optional;
 
 /**
  * Squashing a commit into the one below it.
@@ -38,7 +38,7 @@ class SquashUpdateTest {
 
         Next next = Update.update(model, new SquashMsg.Requested(0));
 
-        assertEquals(Optional.of(new SquashPopup(TIP, MIDDLE)), next.model().popup(SquashPopup.class));
+        assertEquals(Option.of(new SquashPopup(TIP, MIDDLE)), next.model().popup(SquashPopup.class));
         assertEquals(List.of(), next.cmds());
     }
 
@@ -46,21 +46,21 @@ class SquashUpdateTest {
     void theFirstCommitHasNothingToSquashInto() {
         Model model = withCommits(MIDDLE, ROOT);
 
-        assertEquals(Optional.empty(), Update.update(model, new SquashMsg.Requested(1)).model().popup(SquashPopup.class));
+        assertEquals(Option.none(), Update.update(model, new SquashMsg.Requested(1)).model().popup(SquashPopup.class));
     }
 
     @Test
     void aMergeCannotBeSquashed() {
         Model model = withCommits(MERGE, TIP, MIDDLE, ROOT);
 
-        assertEquals(Optional.empty(), Update.update(model, new SquashMsg.Requested(0)).model().popup(SquashPopup.class));
+        assertEquals(Option.none(), Update.update(model, new SquashMsg.Requested(0)).model().popup(SquashPopup.class));
     }
 
     @Test
     void anUnknownIndexDoesNothing() {
         Model model = withCommits(TIP, MIDDLE, ROOT);
 
-        assertEquals(Optional.empty(), Update.update(model, new SquashMsg.Requested(7)).model().popup(SquashPopup.class));
+        assertEquals(Option.none(), Update.update(model, new SquashMsg.Requested(7)).model().popup(SquashPopup.class));
     }
 
     @Test
@@ -70,7 +70,7 @@ class SquashUpdateTest {
         Next next = Update.update(open, new SquashMsg.Confirmed());
 
         assertEquals(List.of(new CommitCmd.Squash(new Sha("c3"))), next.cmds());
-        assertEquals(Optional.empty(), next.model().popup(SquashPopup.class));
+        assertEquals(Option.none(), next.model().popup(SquashPopup.class));
     }
 
     @Test
@@ -80,13 +80,13 @@ class SquashUpdateTest {
         Next next = Update.update(open, new SquashMsg.Cancelled());
 
         assertEquals(List.of(), next.cmds());
-        assertEquals(Optional.empty(), next.model().popup(SquashPopup.class));
+        assertEquals(Option.none(), next.model().popup(SquashPopup.class));
     }
 
     @Test
     void aFailureShowsTheError() {
         Next next = Update.update(TestModels.loaded(), new SquashMsg.Failed("conflict"));
 
-        assertEquals(Optional.of("Squash failed: conflict"), next.model().error());
+        assertEquals(Option.of("Squash failed: conflict"), next.model().error());
     }
 }

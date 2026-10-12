@@ -62,7 +62,7 @@ class NewBranchDialogTest {
     }
 
     private Element view() {
-        return stack(text("background"), dialog.render(open).orElseThrow());
+        return stack(text("background"), dialog.render(open).get());
     }
 
     private static void type(ToolkitTestRunner runner, String text) throws Exception {

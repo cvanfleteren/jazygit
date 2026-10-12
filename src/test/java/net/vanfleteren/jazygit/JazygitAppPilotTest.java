@@ -63,7 +63,7 @@ class JazygitAppPilotTest {
                 FocusManager focusManager = focusManagerRef.get();
                 String focusedId = focusManager == null ? null : focusManager.focusedId();
                 Panel branchesPane = branches.render(model, focusedId);
-                branches.selectionChange(model).ifPresent(selections::add);
+                branches.selectionChange(model).forEach(selections::add);
                 return row(
                         column(StatusPanel.render(model), files.render(model, focusedId).percent(25),
                                 branchesPane.percent(20), commits.render(model, focusedId).percent(30),

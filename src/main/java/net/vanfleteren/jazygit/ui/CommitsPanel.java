@@ -5,6 +5,7 @@ import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
@@ -16,7 +17,6 @@ import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 
-import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
@@ -74,19 +74,19 @@ public class CommitsPanel {
     /**
      * The highlighted commit, once the commits are shown.
      */
-    public Optional<Commit> selectedCommit() {
+    public Option<Commit> selectedCommit() {
         return list.shown() instanceof Loadable.Loaded<List<Commit>>(List<Commit> commits) && !commits.isEmpty()
-                ? Optional.of(commits.get(Math.min(selectedIndex(), commits.size() - 1)))
-                : Optional.empty();
+                ? Option.of(commits.get(Math.min(selectedIndex(), commits.size() - 1)))
+                : Option.none();
     }
 
     /**
      * The message to send when the highlighted commit is not the one whose changes {@code model} holds.
      */
-    public Optional<Msg> selectionChange(Model model) {
+    public Option<Msg> selectionChange(Model model) {
         return selectedCommit()
                 .map(Commit::sha)
-                .filter(sha -> !model.commitDetail().map(CommitDetail::sha).equals(Optional.of(sha)))
+                .filter(sha -> !model.commitDetail().map(CommitDetail::sha).equals(Option.of(sha)))
                 .map(SelectionMsg.CommitSelected::new);
     }
 
@@ -124,21 +124,21 @@ public class CommitsPanel {
     }
 
     private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {
-        if (focused && event.code() == KeyCode.ENTER && selectedCommit().isPresent()) {
+        if (focused && event.code() == KeyCode.ENTER && selectedCommit().isDefined()) {
             openCommit.run();
             return EventResult.HANDLED;
         }
-        return Optional.of(event)
+        return Option.of(event)
                 .filter(e -> focused)
                 .flatMap(this::request)
                 .map(msg -> {
                     dispatch.accept(msg);
                     return EventResult.HANDLED;
                 })
-                .orElse(EventResult.UNHANDLED);
+                .getOrElse(EventResult.UNHANDLED);
     }
 
-    private Optional<Msg> request(KeyEvent event) {
-        return keymap.handle(Scopes.COMMITS, event, Optional.of(selectedIndex()));
+    private Option<Msg> request(KeyEvent event) {
+        return keymap.handle(Scopes.COMMITS, event, Option.of(selectedIndex()));
     }
 }

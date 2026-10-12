@@ -147,7 +147,7 @@ class BranchesPanelTest {
 
             RenderedText.of(testRunner, () -> panel.render(after, BranchesPanel.ID));
             testRunner.pilot().quit();
-            return panel.selectedBranch().orElseThrow();
+            return panel.selectedBranch().get();
         }
     }
 

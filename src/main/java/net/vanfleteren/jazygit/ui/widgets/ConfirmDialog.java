@@ -2,16 +2,16 @@ package net.vanfleteren.jazygit.ui.widgets;
 
 import static dev.tamboui.toolkit.Toolkit.*;
 
-import net.vanfleteren.jazygit.ui.Theme;
 import dev.tamboui.style.Overflow;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.widgets.paragraph.Paragraph;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.ui.Theme;
 
-import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -65,7 +65,7 @@ public final class ConfirmDialog<P extends Popup> {
     /**
      * The popup, while the model has {@code P} open.
      */
-    public Optional<Element> render(Model model) {
+    public Option<Element> render(Model model) {
         return model.popup(popupType).map(popup -> {
             String text = message.apply(popup);
             int messageHeight = lines(text, INNER_WIDTH);

@@ -10,6 +10,7 @@ import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.widgets.common.ScrollBarPolicy;
 import dev.tamboui.widgets.tree.TreeNode;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Conflict;
@@ -25,8 +26,6 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
 
-import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -75,11 +74,11 @@ public class FilesPanel {
     /**
      * The message to send when the highlighted node is not the one whose diff {@code model} holds.
      */
-    public Optional<Msg> selectionChange(Model model) {
-        return Optional.ofNullable(tree.selectedNode())
+    public Option<Msg> selectionChange(Model model) {
+        return Option.of(tree.selectedNode())
                 .map(TreeNode::data)
                 .map(FileTree::directEntries)
-                .filter(files -> !model.fileDiff().map(FileDiff::files).equals(Optional.of(files)))
+                .filter(files -> !model.fileDiff().map(FileDiff::files).equals(Option.of(files)))
                 .map(SelectionMsg.FilesSelected::new);
     }
 
@@ -88,18 +87,18 @@ public class FilesPanel {
             openDiff.run();
             return EventResult.HANDLED;
         }
-        return Optional.of(event)
+        return Option.of(event)
                 .filter(e -> focused)
                 .flatMap(this::request)
                 .map(msg -> {
                     dispatch.accept(msg);
                     return EventResult.HANDLED;
                 })
-                .orElse(EventResult.UNHANDLED);
+                .getOrElse(EventResult.UNHANDLED);
     }
 
-    private Optional<Msg> request(KeyEvent event) {
-        return keymap.handle(Scopes.FILES, event, Optional.ofNullable(tree.selectedNode()).map(TreeNode::data));
+    private Option<Msg> request(KeyEvent event) {
+        return keymap.handle(Scopes.FILES, event, Option.of(tree.selectedNode()).map(TreeNode::data));
     }
 
     /**
@@ -114,9 +113,9 @@ public class FilesPanel {
         }
         // Counted on every render: expanding or collapsing a directory changes the visible rows
         // without a rebuild.
-        OptionalInt count = shown instanceof Loadable.Loaded<RepoStatus>
-                ? OptionalInt.of(visible(roots).size())
-                : OptionalInt.empty();
+        Option<Integer> count = shown instanceof Loadable.Loaded<RepoStatus>
+                ? Option.some(visible(roots).size())
+                : Option.none();
         return Pane.bordered(Messages.get("panel.files.title"), tree, ID.equals(focusedId), Math.max(0, tree.selected()), count);
     }
 
@@ -133,7 +132,7 @@ public class FilesPanel {
                 .filter(n -> n.data() instanceof FileTree.Dir && !n.isExpanded())
                 .map(n -> path(n.data()))
                 .collect(Collectors.toUnmodifiableSet());
-        Optional<String> selected = Optional.ofNullable(tree.selectedNode())
+        Option<String> selected = Option.of(tree.selectedNode())
                 .map(TreeNode::data)
                 .map(FilesPanel::path);
 
@@ -149,7 +148,7 @@ public class FilesPanel {
 
         List<String> visible = visible(roots).map(n -> path(n.data()));
         int fallback = Math.min(Math.max(0, tree.selected()), Math.max(0, visible.size() - 1));
-        tree.selected(selected.map(visible::indexOf).filter(i -> i >= 0).orElse(fallback));
+        tree.selected(selected.map(visible::indexOf).filter(i -> i >= 0).getOrElse(fallback));
     }
 
     private static TreeNode<FileTree> node(FileTree node, Set<String> collapsed) {
@@ -177,7 +176,7 @@ public class FilesPanel {
         if (entry.type() == ChangeType.UNTRACKED) {
             return Toolkit.row(Toolkit.text("??").addClass(Theme.Classes.UNSTAGED), Toolkit.text(" " + file.name()));
         }
-        if (entry.conflict().isPresent()) {
+        if (entry.conflict().isDefined()) {
             Conflict conflict = entry.conflict().get();
             return Toolkit.row(Toolkit.text(marker(conflict.ours())).addClass(Theme.Classes.STAGED),
                     Toolkit.text(marker(conflict.theirs())).addClass(Theme.Classes.UNSTAGED), Toolkit.text(" " + file.name()));

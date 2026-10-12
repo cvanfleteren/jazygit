@@ -8,19 +8,19 @@ import dev.tamboui.css.Styleable;
 import dev.tamboui.style.Color;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
-import java.util.Optional;
-import java.util.Set;
 import org.junit.jupiter.api.Test;
+
+import java.util.Set;
 
 class ThemeTest {
 
     private record Node(String styleType, Set<String> cssClasses) implements Styleable {
-        public Optional<String> cssId() {
-            return Optional.empty();
+        public java.util.Optional<String> cssId() {
+            return java.util.Optional.empty();
         }
 
-        public Optional<Styleable> cssParent() {
-            return Optional.empty();
+        public java.util.Optional<Styleable> cssParent() {
+            return java.util.Optional.empty();
         }
     }
 
@@ -31,21 +31,21 @@ class ThemeTest {
         var plain = engine.resolve(new Node("Panel", Set.of()));
         var focused = engine.resolve(new Node("Panel", Set.of(Theme.Classes.FOCUSED)));
 
-        assertEquals(Optional.of(Color.WHITE), plain.borderColor());
-        assertEquals(Optional.of(Color.CYAN), focused.borderColor());
+        assertEquals(java.util.Optional.of(Color.WHITE), plain.borderColor());
+        assertEquals(java.util.Optional.of(Color.CYAN), focused.borderColor());
     }
 
     @Test
     void activateSwitchesTheStyles() {
         var engine = Theme.createEngine();
-        assertEquals(Optional.of(Theme.DARK), engine.getActiveStylesheet());
+        assertEquals(java.util.Optional.of(Theme.DARK), engine.getActiveStylesheet());
 
         Theme.activate(Theme.LIGHT);
-        assertEquals(Optional.of(Theme.LIGHT), engine.getActiveStylesheet());
+        assertEquals(java.util.Optional.of(Theme.LIGHT), engine.getActiveStylesheet());
         Theme.activate(Theme.DARCULA);
-        assertEquals(Optional.of(Theme.DARCULA), engine.getActiveStylesheet());
+        assertEquals(java.util.Optional.of(Theme.DARCULA), engine.getActiveStylesheet());
         Theme.activate("nonsense");
-        assertEquals(Optional.of(Theme.DARCULA), engine.getActiveStylesheet());
+        assertEquals(java.util.Optional.of(Theme.DARCULA), engine.getActiveStylesheet());
     }
 
     @Test
