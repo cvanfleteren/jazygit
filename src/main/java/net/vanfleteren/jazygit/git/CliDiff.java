@@ -1,24 +1,21 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.i18n.Messages;
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.i18n.Messages;
 import org.zeroturnaround.exec.ProcessExecutor;
 import org.zeroturnaround.exec.ProcessResult;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.file.StandardCopyOption;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Reads the diff of changed files through the git command line tool.
@@ -46,7 +43,7 @@ public final class CliDiff {
     }
 
     private static List<String> paths(List<FileEntry> files, Predicate<FileEntry> filter) {
-        return files.stream().filter(filter).map(FileEntry::path).toList();
+        return files.filter(filter).map(FileEntry::path).toList();
     }
 
     /**
@@ -67,7 +64,7 @@ public final class CliDiff {
             }
             Map<String, String> env = Map.of("GIT_INDEX_FILE", tempIndex.toString());
             run(workTree, List.of("add", "--intent-to-add", "--"), untracked, env);
-            return tracked(workTree, diff, Stream.concat(unstaged.stream(), untracked.stream()).toList(), env);
+            return tracked(workTree, diff, unstaged.appendAll(untracked), env);
         } catch (IOException e) {
             throw new IllegalStateException(Messages.get("git.notInstalled"), e);
         } finally {
@@ -87,11 +84,11 @@ public final class CliDiff {
     }
 
     static String truncated(String diff) {
-        List<String> lines = diff.lines().toList();
+        List<String> lines = diff.lines().collect(List.collector());
         return lines.size() <= MAX_LINES
                 ? diff
-                : Stream.concat(lines.stream().limit(MAX_LINES), Stream.of(Messages.get("git.diff.truncated")))
-                .collect(Collectors.joining("\n", "", "\n"));
+                : lines.take(MAX_LINES).append(Messages.get("git.diff.truncated"))
+                .mkString("", "\n", "\n");
     }
 
     /**
@@ -103,10 +100,7 @@ public final class CliDiff {
 
     static String run(Path workTree, List<String> subcommand, List<String> paths,
                       Map<String, String> env) {
-        List<String> command = new ArrayList<>();
-        command.add("git");
-        command.addAll(subcommand);
-        command.addAll(paths);
+        List<String> command = List.of("git").appendAll(subcommand).appendAll(paths);
         try {
             ProcessResult result = new ProcessExecutor()
                     .command(command)

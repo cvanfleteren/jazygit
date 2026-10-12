@@ -1,25 +1,24 @@
 package net.vanfleteren.jazygit.ui;
 
-import net.vanfleteren.jazygit.git.model.Sha;
-
 import dev.tamboui.text.Span;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.StyledElement;
+import io.vavr.collection.List;
+import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.model.SampleData;
-import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.Update;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -139,13 +138,13 @@ class ContentPanelTest {
 
         List<String> lines = ContentPanel.commitText(commit, " a.txt | 1 +\n 1 file changed\n\n+added\n").lines().stream()
                 .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
-                .toList();
+                .collect(List.collector());
 
         assertEquals("commit a1b2c3d4e5f6", lines.get(0));
         assertEquals("Author: Ada Lovelace <ada@example.com>", lines.get(1));
         assertTrue(lines.get(2).startsWith("Date: "), lines.get(2));
         assertEquals(List.of("", "    Subject", "", "    More", "    text", "---", " a.txt | 1 +", " 1 file changed", "", "+added"),
-                lines.subList(3, lines.size()));
+                lines.drop(3));
     }
 
     @Test
@@ -154,9 +153,9 @@ class ContentPanelTest {
 
         List<String> lines = ContentPanel.commitText(commit, "x").lines().stream()
                 .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
-                .toList();
+                .collect(List.collector());
 
-        assertEquals(List.of("", "    Subject", "---", "x"), lines.subList(3, lines.size()));
+        assertEquals(List.of("", "    Subject", "---", "x"), lines.drop(3));
     }
 
     @Test
@@ -196,7 +195,7 @@ class ContentPanelTest {
     }
 
     private static Commit plain(String sha, String... parents) {
-        return new Commit(new Sha(sha), "Ada", "a@e.com", Instant.EPOCH, sha, "", java.util.Arrays.stream(parents).map(Sha::new).toList());
+        return new Commit(new Sha(sha), "Ada", "a@e.com", Instant.EPOCH, sha, "", List.of(parents).map(Sha::new));
     }
 
     private static Commit merge(String sha, String... parents) {

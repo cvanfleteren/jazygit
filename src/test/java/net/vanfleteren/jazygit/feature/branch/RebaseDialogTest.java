@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -17,14 +18,13 @@ import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * The popup asking how to rebase the checked out branch.
  */
 class RebaseDialogTest {
 
-    private final List<Msg> dispatched = new ArrayList<>();
+    private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final ChoiceDialog<RebasePopup> dialog = RebaseDialog.create(dispatched::add);
     private final Model open = Update.update(TestModels.loaded(new SampleData()),
             new RebaseMsg.Requested("feature/initial-layout")).model();
@@ -68,7 +68,7 @@ class RebaseDialogTest {
             keys.press(runner);
             runner.pilot().pause();
         }
-        return List.copyOf(dispatched);
+        return List.ofAll(dispatched);
     }
 
     private Element view() {

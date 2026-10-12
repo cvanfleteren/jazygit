@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.stash;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.stash.StashCmd.Stash;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
@@ -7,10 +8,9 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.Update;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -65,7 +65,7 @@ public final class StashUpdate {
      */
     private static boolean listed(Model model, String ref) {
         return model.stashes() instanceof Loaded<List<net.vanfleteren.jazygit.git.model.Stash>>(var stashes)
-                && stashes.stream().anyMatch(s -> s.ref().equals(ref));
+                && stashes.exists(s -> s.ref().equals(ref));
     }
 
     private static Next confirmed(Model model, String name) {
@@ -87,7 +87,7 @@ public final class StashUpdate {
                 ? ""
                 : status.headOid().substring(0, Math.min(7, status.headOid().length()));
         String message = model.commits() instanceof Loaded<List<Commit>>(List<Commit> commits)
-                ? commits.stream().filter(c -> c.sha().value().equals(status.headOid())).map(Commit::message).findFirst().orElse("")
+                ? commits.find(c -> c.sha().value().equals(status.headOid())).map(Commit::message).getOrElse("")
                 : "";
         return Stream.of(Messages.get("stash.defaultName", status.branchLabel()), sha, message)
                 .filter(part -> !part.isEmpty())

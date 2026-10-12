@@ -1,7 +1,8 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.collection.List;
+
 import java.nio.file.Path;
-import java.util.List;
 
 /**
  * Deletes branches through the {@code git} command line tool, so the remote is reached with the

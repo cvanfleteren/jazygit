@@ -58,6 +58,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>io.vavr</groupId>
+            <artifactId>vavr</artifactId>
+            <version>1.0.1</version>
+        </dependency>
+        <dependency>
             <groupId>dev.tamboui</groupId>
             <artifactId>tamboui-toolkit</artifactId>
         </dependency>

@@ -1,11 +1,12 @@
 package net.vanfleteren.jazygit.ui;
 
-import net.vanfleteren.jazygit.keys.Scopes;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.tui.event.KeyCode;
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.feature.stash.StashMsg;
 import net.vanfleteren.jazygit.git.model.Stash;
+import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -14,8 +15,6 @@ import net.vanfleteren.jazygit.state.Update;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -46,7 +45,7 @@ class StashPanelTest {
     @Test
     void gUnstashesAndDDeletesTheHighlightedStashAndQuestionMarkShowsHelp() throws Exception {
         Model model = withStashes(List.of(new Stash("stash@{0}", "newest"), new Stash("stash@{1}", "older")));
-        List<Msg> dispatched = new ArrayList<>();
+        java.util.List<Msg> dispatched = new ArrayList<>();
         StashPanel panel = new StashPanel(dispatched::add);
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, StashPanel.ID))) {
@@ -59,7 +58,7 @@ class StashPanelTest {
             testRunner.pilot().press('?');
             testRunner.pilot().pause();
 
-            assertEquals(List.of(new StashMsg.PopRequested("stash@{1}"), new StashMsg.DropRequested("stash@{1}"),
+            assertEquals(java.util.List.of(new StashMsg.PopRequested("stash@{1}"), new StashMsg.DropRequested("stash@{1}"),
                     new HelpMsg.Requested(Scopes.STASH.id())), dispatched);
             testRunner.pilot().quit();
         }
@@ -68,7 +67,7 @@ class StashPanelTest {
     @Test
     void gAndDDoNothingWithoutStashes() throws Exception {
         Model model = withStashes(List.of());
-        List<Msg> dispatched = new ArrayList<>();
+        java.util.List<Msg> dispatched = new ArrayList<>();
         StashPanel panel = new StashPanel(dispatched::add);
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, StashPanel.ID))) {
@@ -78,14 +77,14 @@ class StashPanelTest {
             testRunner.pilot().press('d');
             testRunner.pilot().pause();
 
-            assertEquals(List.of(), dispatched);
+            assertEquals(java.util.List.of(), dispatched);
             testRunner.pilot().quit();
         }
     }
 
     @Test
     void theListScrollsAlongWithTheSelection() throws Exception {
-        Model model = withStashes(IntStream.range(0, 80).mapToObj(i -> new Stash("stash@{" + i + "}", "work " + i)).toList());
+        Model model = withStashes(List.range(0, 80).map(i -> new Stash("stash@{" + i + "}", "work " + i)));
         StashPanel panel = new StashPanel(msg -> { });
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, StashPanel.ID))) {

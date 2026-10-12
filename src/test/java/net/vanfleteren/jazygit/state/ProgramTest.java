@@ -1,46 +1,33 @@
 package net.vanfleteren.jazygit.state;
 
-import net.vanfleteren.jazygit.git.model.Sha;
-
-import net.vanfleteren.jazygit.feature.commit.CommitPopup;
-import net.vanfleteren.jazygit.feature.commit.AmendPopup;
-
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
-
-import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
-
-import net.vanfleteren.jazygit.feature.commit.RewordMsg;
-
-import net.vanfleteren.jazygit.feature.commit.AmendMsg;
-
-import net.vanfleteren.jazygit.feature.commit.CommitMsg;
-
-import net.vanfleteren.jazygit.feature.stage.StageMsg;
-
-import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg;
-
-import net.vanfleteren.jazygit.feature.branch.NewBranchMsg;
-
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
-
-import net.vanfleteren.jazygit.state.Loadable.Loaded;
-
-import net.vanfleteren.jazygit.state.Loadable.Failed;
-
-import net.vanfleteren.jazygit.git.model.Diffs;
+import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg;
+import net.vanfleteren.jazygit.feature.branch.NewBranchMsg;
+import net.vanfleteren.jazygit.feature.commit.AmendMsg;
+import net.vanfleteren.jazygit.feature.commit.AmendPopup;
+import net.vanfleteren.jazygit.feature.commit.CommitMsg;
+import net.vanfleteren.jazygit.feature.commit.CommitPopup;
+import net.vanfleteren.jazygit.feature.commit.RewordMsg;
+import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
+import net.vanfleteren.jazygit.feature.stage.StageMsg;
+import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.state.Loadable.Failed;
+import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
 
@@ -59,13 +46,13 @@ class ProgramTest {
         RuntimeException checkoutError;
         RuntimeException indexError;
         String commitFailure;
-        final List<DiscardPlan> discarded = new ArrayList<>();
-        final List<String> commits = new ArrayList<>();
-        final List<String> deleted = new ArrayList<>();
-        final List<String> pushed = new ArrayList<>();
-        final List<String> indexCalls = new ArrayList<>();
+        final java.util.List<DiscardPlan> discarded = new ArrayList<>();
+        final java.util.List<String> commits = new ArrayList<>();
+        final java.util.List<String> deleted = new ArrayList<>();
+        final java.util.List<String> pushed = new ArrayList<>();
+        final java.util.List<String> indexCalls = new ArrayList<>();
         int commitLoads;
-        final List<String> logLoads = new ArrayList<>();
+        final java.util.List<String> logLoads = new ArrayList<>();
 
         @Override
         public String repositoryName() {
@@ -230,7 +217,7 @@ class ProgramTest {
             if (indexError != null) {
                 throw indexError;
             }
-            indexCalls.add(operation + paths);
+            indexCalls.add(operation + paths.asJava());
         }
     }
 
@@ -334,7 +321,7 @@ class ProgramTest {
         program.dispatch(new DeleteBranchMsg.Chosen(BranchCmd.DeleteBranch.DeleteScope.BOTH));
         settle();
 
-        assertEquals(List.of("other local remote"), provider.deleted);
+        assertEquals(java.util.List.of("other local remote"), provider.deleted);
         assertEquals(Optional.empty(), program.model().popup());
         assertEquals(Optional.empty(), program.model().error());
     }
@@ -349,7 +336,7 @@ class ProgramTest {
                 new FileEntry("b.txt", ChangeType.ADDED), new FileEntry("c.txt", ChangeType.MODIFIED, true, false))));
         settle();
 
-        assertEquals(List.of("stage[a.txt]", "unstageNew[b.txt]", "unstage[c.txt]"), provider.indexCalls);
+        assertEquals(java.util.List.of("stage[a.txt]", "unstageNew[b.txt]", "unstage[c.txt]"), provider.indexCalls);
         assertEquals(Optional.empty(), program.model().error());
     }
 
@@ -362,13 +349,13 @@ class ProgramTest {
         program.dispatch(new CommitMsg.StageAllConfirmed());
         settle();
 
-        assertEquals(List.of("stage[a.txt]"), provider.indexCalls);
+        assertEquals(java.util.List.of("stage[a.txt]"), provider.indexCalls);
         assertEquals(true, program.model().popup(CommitPopup.class).isPresent());
 
         program.dispatch(new CommitMsg.Confirmed("summary", "more"));
         settle();
 
-        assertEquals(List.of("summary|more"), provider.commits);
+        assertEquals(java.util.List.of("summary|more"), provider.commits);
         assertEquals(false, program.model().popup(CommitPopup.class).isPresent());
         assertEquals(Optional.empty(), program.model().error());
     }
@@ -382,7 +369,7 @@ class ProgramTest {
         program.dispatch(new AmendMsg.Confirmed());
         settle();
 
-        assertEquals(List.of("stage[a.txt]", "amend[]"), provider.indexCalls);
+        assertEquals(java.util.List.of("stage[a.txt]", "amend[]"), provider.indexCalls);
         assertEquals(false, program.model().popup(AmendPopup.class).isPresent());
         assertEquals(Optional.empty(), program.model().error());
     }
@@ -395,7 +382,7 @@ class ProgramTest {
         program.dispatch(new RewordMsg.Confirmed("new summary", "new body"));
         settle();
 
-        assertEquals(List.of("reword new summary|new body"), provider.commits);
+        assertEquals(java.util.List.of("reword new summary|new body"), provider.commits);
         assertEquals(Optional.empty(), program.model().popup());
         assertEquals(Optional.empty(), program.model().error());
     }
@@ -462,7 +449,7 @@ class ProgramTest {
 
         assertEquals(Optional.of(new BranchLog("other", new Loaded<>(List.of(FakeProvider.commit("other-tip"))))),
                 program.model().branchLog());
-        assertEquals(List.of("other"), provider.logLoads);
+        assertEquals(java.util.List.of("other"), provider.logLoads);
     }
 
     /**

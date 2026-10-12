@@ -7,10 +7,10 @@ import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.KeyEventHandler;
 import dev.tamboui.widgets.common.ScrollBarPolicy;
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.function.Function;
@@ -68,7 +68,7 @@ final class LoadableList<T> {
         }
 
         String text() {
-            return segs.stream().map(Seg::text).collect(java.util.stream.Collectors.joining());
+            return segs.map(Seg::text).mkString();
         }
 
         StyledElement<?> element() {
@@ -78,12 +78,12 @@ final class LoadableList<T> {
         }
 
         private StyledElement<?> firstLine() {
-            return segs.size() == 1 && segs.getFirst().cssClass().isEmpty()
-                    ? dev.tamboui.toolkit.Toolkit.text(segs.getFirst().text())
-                    : row(segs.stream()
-                            .map(seg -> seg.cssClass().map(c -> dev.tamboui.toolkit.Toolkit.text(seg.text()).addClass(c))
+            return segs.size() == 1 && segs.head().cssClass().isEmpty()
+                    ? dev.tamboui.toolkit.Toolkit.text(segs.head().text())
+                    : row(segs
+                            .<StyledElement<?>>map(seg -> seg.cssClass().<StyledElement<?>>map(c -> dev.tamboui.toolkit.Toolkit.text(seg.text()).addClass(c))
                                     .orElseGet(() -> dev.tamboui.toolkit.Toolkit.text(seg.text())))
-                            .toArray(StyledElement[]::new));
+                            .toJavaArray(StyledElement[]::new));
         }
     }
 
@@ -142,7 +142,7 @@ final class LoadableList<T> {
     }
 
     private void show(List<Row> rows) {
-        list.elements(rows.stream().map(Row::element).toArray(StyledElement[]::new));
+        list.elements(rows.map(Row::element).toJavaArray(StyledElement[]::new));
     }
 
     /**

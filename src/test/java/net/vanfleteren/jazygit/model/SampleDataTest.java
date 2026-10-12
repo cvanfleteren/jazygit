@@ -1,11 +1,10 @@
 package net.vanfleteren.jazygit.model;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import org.junit.jupiter.api.Test;
-
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -30,7 +29,7 @@ class SampleDataTest {
     @Test
     void exactlyOneBranchIsCurrent() {
         List<Branch> branches = data.branches();
-        long currentCount = branches.stream().filter(Branch::current).count();
+        long currentCount = branches.count(Branch::current);
         assertEquals(1, currentCount);
     }
 

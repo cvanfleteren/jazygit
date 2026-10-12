@@ -1,31 +1,30 @@
 package net.vanfleteren.jazygit.feature.selection;
 
-import net.vanfleteren.jazygit.git.model.Sha;
-
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.BranchLog;
-import net.vanfleteren.jazygit.state.Cmd;
-import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
+import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
-import net.vanfleteren.jazygit.state.CommitDetail;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
+import net.vanfleteren.jazygit.state.Cmd;
+import net.vanfleteren.jazygit.state.CommitDetail;
 import net.vanfleteren.jazygit.state.FileDiff;
+import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Loadable.Loading;
-import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg.Tick;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.Update;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.Optional;
 
 import static net.vanfleteren.jazygit.state.TestModels.*;
@@ -196,9 +195,8 @@ class SelectionUpdateTest {
     void aDiffIsNotReloadedForFilesWhoseStatusChanged() {
         Model model = Update.update(loaded(), new SelectionMsg.FilesSelected(DIRTY.files())).model();
         model = Update.update(model, new LoadMsg.FileDiffLoaded(DIRTY.files(), new Diffs("", "+a"))).model();
-        List<FileEntry> restaged = DIRTY.files().stream()
-                .map(f -> new FileEntry(f.path(), f.type(), !f.staged(), !f.unstaged()))
-                .toList();
+        List<FileEntry> restaged = DIRTY.files()
+                .map(f -> new FileEntry(f.path(), f.type(), !f.staged(), !f.unstaged()));
 
         Next statusLoaded = Update.update(model, new LoadMsg.StatusLoaded(new RepoStatus("main", "aaaa", restaged)));
 

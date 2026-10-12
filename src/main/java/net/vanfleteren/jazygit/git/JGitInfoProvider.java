@@ -1,7 +1,8 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.i18n.Messages;
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.i18n.Messages;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.BranchConfig;
@@ -19,16 +20,12 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 /**
  * {@link GitInfoProvider} backed by a real repository. The working tree status comes from the
@@ -103,13 +100,13 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
                 }
             }
             Optional<String> defaultBranch = defaultBranch();
-            List<Branch> branches = new ArrayList<>();
+            List<Branch> branches = List.empty();
             Map<String, Tracking> tracking = new ConcurrentHashMap<>();
             for (Ref ref : git.branchList().call()) {
                 String name = Repository.shortenRefName(ref.getName());
                 Optional<Tracking> counts = tracking(name, ref.getObjectId().name());
                 counts.ifPresent(t -> tracking.put(name, t));
-                branches.add(new Branch(name,
+                branches = branches.append(new Branch(name,
                         ref.getName().equals(fullBranch), ref.getObjectId().name(),
                         Instant.ofEpochSecond(modified.get(ref.getObjectId().name())),
                         hasRemote(name),
@@ -119,11 +116,10 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
             }
             trackingCache = Map.copyOf(tracking);
             // The checked out branch first, then the most recently committed to.
-            return branches.stream()
+            return branches
                     .sorted(Comparator.comparing(Branch::current).reversed()
                             .thenComparing(Comparator.comparingInt((Branch b) -> modified.get(b.tipOid())).reversed())
-                            .thenComparing(Branch::name))
-                    .toList();
+                            .thenComparing(Branch::name));
         } catch (IOException e) {
             throw new UncheckedIOException(Messages.get("git.readBranchesFailed"), e);
         } catch (GitAPIException e) {
@@ -176,9 +172,8 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
 
     private List<Commit> log(ObjectId start) throws IOException {
         try {
-            return StreamSupport.stream(git.log().add(start).setMaxCount(MAX_COMMITS).call().spliterator(), false)
-                    .map(JGitInfoProvider::toCommit)
-                    .toList();
+            return List.ofAll(git.log().add(start).setMaxCount(MAX_COMMITS).call())
+                    .map(JGitInfoProvider::toCommit);
         } catch (GitAPIException e) {
             throw new IllegalStateException(Messages.get("git.readLogFailed"), e);
         }
@@ -188,7 +183,7 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
         PersonIdent author = c.getAuthorIdent();
         return new Commit(new Sha(c.name()), author.getName(), author.getEmailAddress(),
                 author.getWhenAsInstant(), c.getShortMessage(), extendedMessage(c.getFullMessage()),
-                Arrays.stream(c.getParents()).map(parent -> new Sha(parent.name())).toList());
+                List.of(c.getParents()).map(parent -> new Sha(parent.name())));
     }
 
     /**

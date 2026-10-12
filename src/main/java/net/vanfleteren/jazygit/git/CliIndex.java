@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.i18n.Messages;
 import org.zeroturnaround.exec.ProcessExecutor;
 import org.zeroturnaround.exec.ProcessResult;
@@ -8,9 +9,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
@@ -74,7 +73,7 @@ public final class CliIndex {
      */
     public static List<String> deleteUntracked(Path workTree, List<String> paths) {
         Path root = workTree.toAbsolutePath().normalize();
-        List<String> executed = new ArrayList<>();
+        List<String> executed = List.empty();
         for (String path : paths) {
             Path target = root.resolve(path).normalize();
             if (target.equals(root) || !target.startsWith(root) || target.startsWith(root.resolve(".git"))) {
@@ -90,7 +89,7 @@ public final class CliIndex {
             } catch (IOException e) {
                 throw new IllegalStateException(Messages.get("git.deleteFailed", path, e.getMessage()), e);
             }
-            executed.add(CommandLine.format(List.of("rm", "-r", "--", path)));
+            executed = executed.append(CommandLine.format(List.of("rm", "-r", "--", path)));
         }
         return executed;
     }
@@ -99,9 +98,9 @@ public final class CliIndex {
      * {@code git commit -m <summary> [-m <description>]}: commits the index.
      */
     public static List<String> commit(Path workTree, String summary, String description) {
-        List<String> command = new ArrayList<>(List.of("git", "commit", "--quiet", "-m", summary));
+        List<String> command = List.of("git", "commit", "--quiet", "-m", summary);
         if (!description.isBlank()) {
-            command.addAll(List.of("-m", description));
+            command = command.appendAll(List.of("-m", description));
         }
         return execute(workTree, command, "commit");
     }
@@ -118,10 +117,10 @@ public final class CliIndex {
      * message of the last commit, whatever is staged.
      */
     public static List<String> reword(Path workTree, String summary, String description) {
-        List<String> command = new ArrayList<>(
-                List.of("git", "commit", "--quiet", "--allow-empty", "--amend", "--only", "-m", summary));
+        List<String> command =
+                List.of("git", "commit", "--quiet", "--allow-empty", "--amend", "--only", "-m", summary);
         if (!description.isBlank()) {
-            command.addAll(List.of("-m", description));
+            command = command.appendAll(List.of("-m", description));
         }
         return execute(workTree, command, "commit");
     }
@@ -130,12 +129,8 @@ public final class CliIndex {
         if (paths.isEmpty()) {
             return List.of();
         }
-        List<String> command = new ArrayList<>();
-        command.add("git");
-        command.addAll(subcommand);
-        command.add("--");
-        command.addAll(paths);
-        return execute(workTree, command, subcommand.getFirst());
+        List<String> command = List.of("git").appendAll(subcommand).append("--").appendAll(paths);
+        return execute(workTree, command, subcommand.head());
     }
 
     private static List<String> execute(Path workTree, List<String> command, String name) {

@@ -5,6 +5,7 @@ import static dev.tamboui.toolkit.Toolkit.*;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Scope;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -16,7 +17,6 @@ import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -29,7 +29,7 @@ class DiscardDialogTest {
     private static final FileEntry MODIFIED = new FileEntry("a.txt", ChangeType.MODIFIED);
     private static final FileEntry STAGED = new FileEntry("b.txt", ChangeType.ADDED);
 
-    private final List<Msg> dispatched = new ArrayList<>();
+    private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<DiscardPopup> dialog = DiscardDialog.create(dispatched::add);
 
     private static Model open(FileEntry... files) {
@@ -103,7 +103,7 @@ class DiscardDialogTest {
             keys.press(runner);
             runner.pilot().pause();
         }
-        return List.copyOf(dispatched);
+        return List.ofAll(dispatched);
     }
 
     private Element view(Model model) {

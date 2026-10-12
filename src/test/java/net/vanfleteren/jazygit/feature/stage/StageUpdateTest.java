@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.stage;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.stage.StageCmd.Stage;
 import net.vanfleteren.jazygit.feature.stage.StageCmd.Unstage;
 import net.vanfleteren.jazygit.git.model.ChangeType;
@@ -7,11 +8,10 @@ import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.LogEntry;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.Update;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.Optional;
 
 import static net.vanfleteren.jazygit.state.TestModels.*;
@@ -87,7 +87,7 @@ class StageUpdateTest {
 
         Next unstaged = Update.update(staged.model(),
                 new StageMsg.Done(StageMsg.Action.UNSTAGE, List.of("git reset --quiet HEAD -- a.txt")));
-        assertEquals(List.of("Stage", "Unstage"), unstaged.model().commandLog().stream().map(LogEntry::title).toList());
+        assertEquals(List.of("Stage", "Unstage"), unstaged.model().commandLog().map(LogEntry::title).toList());
 
         assertEquals(List.of(), Update.update(loaded(), new StageMsg.Done(StageMsg.Action.STAGE, List.of()))
                 .model().commandLog());

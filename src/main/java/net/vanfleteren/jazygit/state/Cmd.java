@@ -1,11 +1,10 @@
 package net.vanfleteren.jazygit.state;
 
-import net.vanfleteren.jazygit.git.model.Sha;
-
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.Sha;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -94,10 +93,6 @@ public interface Cmd {
     }
 
     record LoadFileDiff(List<FileEntry> files) implements Load {
-
-        public LoadFileDiff {
-            files = List.copyOf(files);
-        }
 
         @Override
         public Msg run(GitInfoProvider git) {

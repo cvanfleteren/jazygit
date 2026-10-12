@@ -1,21 +1,19 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import net.vanfleteren.jazygit.ui.RenderedText;
-
-import static dev.tamboui.toolkit.Toolkit.*;
-
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
+import static dev.tamboui.toolkit.Toolkit.*;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -24,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 class NewBranchDialogTest {
 
-    private final List<Msg> dispatched = new ArrayList<>();
+    private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final NewBranchDialog dialog = new NewBranchDialog(dispatched::add);
     private final Model open = Update.update(TestModels.loaded(new SampleData()), new NewBranchMsg.Requested("main"))
             .model();
@@ -37,7 +35,7 @@ class NewBranchDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new NewBranchMsg.Confirmed("topic")), dispatched);
+        assertEquals(java.util.List.of(new NewBranchMsg.Confirmed("topic")), dispatched);
     }
 
     @Test
@@ -48,7 +46,7 @@ class NewBranchDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new NewBranchMsg.Cancelled()), dispatched);
+        assertEquals(java.util.List.of(new NewBranchMsg.Cancelled()), dispatched);
     }
 
     @Test

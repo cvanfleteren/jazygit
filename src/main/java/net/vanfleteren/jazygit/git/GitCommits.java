@@ -1,8 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.Sha;
-
-import java.util.List;
 
 /**
  * Operations that create or rewrite commits.

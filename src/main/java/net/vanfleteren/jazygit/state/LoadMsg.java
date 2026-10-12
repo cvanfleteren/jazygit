@@ -1,15 +1,13 @@
 package net.vanfleteren.jazygit.state;
 
-import net.vanfleteren.jazygit.git.model.Sha;
-
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
-
-import java.util.List;
 
 /**
  * The outcome of reading from the repository.
@@ -40,10 +38,6 @@ public sealed interface LoadMsg extends Msg {
     }
 
     record FileDiffLoaded(List<FileEntry> files, Diffs diff) implements LoadMsg {
-
-        public FileDiffLoaded {
-            files = List.copyOf(files);
-        }
     }
 
     record Failed(Cmd.Load cmd, String message) implements LoadMsg {

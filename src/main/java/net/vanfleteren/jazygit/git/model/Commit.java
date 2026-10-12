@@ -1,7 +1,8 @@
 package net.vanfleteren.jazygit.git.model;
 
+import io.vavr.collection.List;
+
 import java.time.Instant;
-import java.util.List;
 
 /**
  * A git commit.
@@ -14,10 +15,6 @@ import java.util.List;
  */
 public record Commit(Sha sha, String authorName, String authorEmail, Instant authorTime,
                      String message, String body, List<Sha> parents) {
-
-    public Commit {
-        parents = List.copyOf(parents);
-    }
 
     public Commit(Sha sha, String authorName, String authorEmail, Instant authorTime, String message, String body) {
         this(sha, authorName, authorEmail, authorTime, message, body, List.of());

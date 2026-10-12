@@ -1,15 +1,15 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.Push;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.CommandLog;
+import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.Update;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -43,7 +43,7 @@ public final class PushUpdate {
 
     private static Next requested(Model model, String branch) {
         boolean known = model.branches() instanceof Loaded<List<Branch>>(List<Branch> branches)
-                && branches.stream().anyMatch(b -> b.name().equals(branch));
+                && branches.exists(b -> b.name().equals(branch));
         // A branch that is being pushed is not pushed again.
         if (!known || model.pushing().contains(branch)) {
             return Next.of(model);
@@ -56,7 +56,7 @@ public final class PushUpdate {
 
     private static boolean diverged(Model model, String branch) {
         return model.branches() instanceof Loaded<List<Branch>>(List<Branch> branches)
-                && branches.stream().anyMatch(b -> b.name().equals(branch) && b.behind() > 0);
+                && branches.exists(b -> b.name().equals(branch) && b.behind() > 0);
     }
 
     private static Next push(Model model, String branch, boolean forceWithLease) {

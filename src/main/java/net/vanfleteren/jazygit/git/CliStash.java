@@ -1,9 +1,9 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.Stash;
 
 import java.nio.file.Path;
-import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -26,7 +26,7 @@ public final class CliStash {
     public static List<Stash> list(Path workTree) {
         String output = CliCheckout.run(workTree, "git", "--no-optional-locks", "stash", "list",
                 "--format=%gd" + SEPARATOR + "%gs");
-        return output.lines().filter(line -> !line.isBlank()).map(CliStash::parse).toList();
+        return List.ofAll(output.lines()).filter(line -> !line.isBlank()).map(CliStash::parse);
     }
 
     static Stash parse(String line) {

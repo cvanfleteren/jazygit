@@ -1,39 +1,35 @@
 package net.vanfleteren.jazygit.ui;
 
-import net.vanfleteren.jazygit.i18n.Messages;
-import static dev.tamboui.toolkit.Toolkit.*;
-
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import dev.tamboui.text.Text;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
-import dev.tamboui.toolkit.elements.Panel;
+import dev.tamboui.toolkit.elements.RichTextAreaElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
-import dev.tamboui.toolkit.elements.RichTextAreaElement;
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.BranchLog;
 import net.vanfleteren.jazygit.state.CommitDetail;
 import net.vanfleteren.jazygit.state.FileDiff;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
+import static dev.tamboui.toolkit.Toolkit.*;
 
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
@@ -187,13 +183,12 @@ public final class ContentPanel {
         if (diffs.isEmpty()) {
             return panel(Messages.get("panel.diff.title"), text(Messages.get("content.noChanges")).addClass(Theme.Classes.DIM));
         }
-        List<Element> panels = Stream.of(
+        List<Element> panels = List.of(
                         Map.entry(Messages.get("content.staged"), STAGED_AREA.with(diffs.staged())),
                         Map.entry(Messages.get("content.unstaged"), UNSTAGED_AREA.with(diffs.unstaged())))
                 .filter(e -> e.getValue().hasContent())
-                .map(e -> (Element) e.getValue().show(e.getKey()))
-                .toList();
-        return column(panels.toArray(Element[]::new));
+                .map(e -> (Element) e.getValue().show(e.getKey()));
+        return column(panels.toJavaArray(Element[]::new));
     }
 
     /**
@@ -264,31 +259,27 @@ public final class ContentPanel {
      * indented.
      */
     static List<String> logLines(List<Commit> commits, ZoneId zone) {
-        return CommitGraph.layout(commits).stream()
+        return CommitGraph.layout(commits)
                 .flatMap(node -> {
                     Commit c = node.commit();
                     String rails = "| ".repeat(node.depth());
-                    List<String> lines = Stream.concat(
-                            Stream.of(Messages.get("content.commitSha", c.shortSha()), author(c), dateTime().format(c.authorTime().atZone(zone)),
-                                    "", MESSAGE_INDENT + c.message(), ""),
-                            c.body().isBlank() ? Stream.empty() : Stream.concat(
-                                    c.body().lines().map(line -> line.isBlank() ? line : MESSAGE_INDENT + line), Stream.of(""))).toList();
+                    List<String> lines = List.of(Messages.get("content.commitSha", c.shortSha()), author(c), dateTime().format(c.authorTime().atZone(zone)),
+                                    "", MESSAGE_INDENT + c.message(), "")
+                            .appendAll(c.body().isBlank() ? List.<String>empty()
+                                    : List.ofAll(c.body().lines()).map(line -> line.isBlank() ? line : MESSAGE_INDENT + line).append(""));
                     // Like git's graph: a merge opens a rail with a "\\" line, the last commit of a merged
                     // branch closes it with a "/" in place of its second line.
                     if (c.isMerge()) {
-                        List<String> rows = new java.util.ArrayList<>();
-                        rows.add(rails + "*   " + lines.getFirst());
-                        rows.add(rails + "|\\  " + Messages.get("content.merge", c.parents().stream()
-                                .map(Sha::shortSha).collect(Collectors.joining(" "))));
-                        lines.stream().skip(1).forEach(line -> rows.add(rails + "| | " + line));
-                        return rows.stream();
+                        return List.of(rails + "*   " + lines.head(),
+                                        rails + "|\\  " + Messages.get("content.merge", c.parents()
+                                                .map(Sha::shortSha).mkString(" ")))
+                                .appendAll(lines.tail().map(line -> rails + "| | " + line));
                     }
                     String closing = "| ".repeat(Math.max(0, node.depth() - 1));
-                    return IntStream.range(0, lines.size()).mapToObj(i -> i == 0 ? rails + "* " + lines.get(i)
+                    return List.range(0, lines.size()).map(i -> i == 0 ? rails + "* " + lines.get(i)
                             : node.closesBranch() ? closing + (i == 1 ? "|/  " : "|   ") + lines.get(i)
                             : rails + "| " + lines.get(i));
-                })
-                .toList();
+                });
     }
 
     private static String author(Commit commit) {
@@ -323,7 +314,7 @@ public final class ContentPanel {
 
     private static Optional<Commit> commit(Model model, Sha sha) {
         return model.commits() instanceof Loadable.Loaded<List<Commit>>(List<Commit> commits)
-                ? commits.stream().filter(c -> c.sha().equals(sha)).findFirst()
+                ? commits.find(c -> c.sha().equals(sha)).toJavaOptional()
                 : Optional.empty();
     }
 

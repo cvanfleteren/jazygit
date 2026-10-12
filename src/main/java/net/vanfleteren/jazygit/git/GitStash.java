@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
-import java.util.List;
+import io.vavr.collection.List;
 
 /**
  * Operations on stashes.

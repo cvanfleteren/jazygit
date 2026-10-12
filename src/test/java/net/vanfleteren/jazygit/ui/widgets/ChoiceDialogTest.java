@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.ui.widgets;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
@@ -13,7 +14,6 @@ import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import static dev.tamboui.toolkit.Toolkit.stack;
 import static dev.tamboui.toolkit.Toolkit.text;
@@ -32,7 +32,7 @@ class ChoiceDialogTest {
         }
     }
 
-    private final List<Msg> dispatched = new ArrayList<>();
+    private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final ChoiceDialog<PickPopup> dialog = new ChoiceDialog<>("pick", PickPopup.class,
             popup -> "Pick one",
             List.of(new Choice<>('a', "dialog.discard.all", () -> new Picked("a")),
@@ -73,7 +73,7 @@ class ChoiceDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new Picked("b"), new Picked("a"), new Picked("cancel")), dispatched);
+        assertEquals(java.util.List.of(new Picked("b"), new Picked("a"), new Picked("cancel")), dispatched);
     }
 
     @Test
@@ -85,7 +85,7 @@ class ChoiceDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new Picked("cancel"), new Picked("cancel")), dispatched);
+        assertEquals(java.util.List.of(new Picked("cancel"), new Picked("cancel")), dispatched);
     }
 
     @Test
@@ -95,7 +95,7 @@ class ChoiceDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(), dispatched);
+        assertEquals(java.util.List.of(), dispatched);
     }
 
     private ToolkitTestRunner start(boolean second) throws Exception {

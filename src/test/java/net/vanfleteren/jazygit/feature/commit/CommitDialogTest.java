@@ -1,25 +1,22 @@
 package net.vanfleteren.jazygit.feature.commit;
 
 
-import net.vanfleteren.jazygit.ui.RenderedText;
-
-import net.vanfleteren.jazygit.git.model.Commit;
-
-import static dev.tamboui.toolkit.Toolkit.*;
-
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyModifiers;
+import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
+import static dev.tamboui.toolkit.Toolkit.*;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -30,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class CommitDialogTest {
 
-    private final List<Msg> dispatched = new ArrayList<>();
+    private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final CommitDialog dialog = new CommitDialog(dispatched::add);
     private final Model open = openModel();
 
@@ -58,7 +55,7 @@ class CommitDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new CommitMsg.Confirmed("fix it", "")), dispatched);
+        assertEquals(java.util.List.of(new CommitMsg.Confirmed("fix it", "")), dispatched);
     }
 
     @Test
@@ -73,7 +70,7 @@ class CommitDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new CommitMsg.Confirmed("fix it", "because\nreasons")), dispatched);
+        assertEquals(java.util.List.of(new CommitMsg.Confirmed("fix it", "because\nreasons")), dispatched);
     }
 
     @Test
@@ -85,7 +82,7 @@ class CommitDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new CommitMsg.Cancelled(), new CommitMsg.Cancelled()), dispatched);
+        assertEquals(java.util.List.of(new CommitMsg.Cancelled(), new CommitMsg.Cancelled()), dispatched);
     }
 
     @Test
@@ -102,7 +99,7 @@ class CommitDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new RewordMsg.Confirmed(last.message(), last.body())), dispatched);
+        assertEquals(java.util.List.of(new RewordMsg.Confirmed(last.message(), last.body())), dispatched);
     }
 
     private ToolkitTestRunner start() throws Exception {

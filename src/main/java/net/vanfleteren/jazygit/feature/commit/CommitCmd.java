@@ -1,12 +1,12 @@
 package net.vanfleteren.jazygit.feature.commit;
 
-import net.vanfleteren.jazygit.git.model.Sha;
-
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.GitCommandException;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Msg;
-import java.util.List;
+
 import java.util.Optional;
 
 /**
@@ -18,10 +18,6 @@ public sealed interface CommitCmd extends Cmd {
      * Stages the paths so they can be committed; the commit dialog opens afterwards.
      */
     record StageForCommit(List<String> paths) implements CommitCmd {
-
-        public StageForCommit {
-            paths = List.copyOf(paths);
-        }
 
         @Override
         public Optional<String> logTitleKey() {
@@ -61,10 +57,6 @@ public sealed interface CommitCmd extends Cmd {
      * Stages the paths, if any, then amends the last commit with the index, keeping its message.
      */
     record Amend(List<String> stage) implements CommitCmd {
-
-        public Amend {
-            stage = List.copyOf(stage);
-        }
 
         @Override
         public Optional<String> logTitleKey() {

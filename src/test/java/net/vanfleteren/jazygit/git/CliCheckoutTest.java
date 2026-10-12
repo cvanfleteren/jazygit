@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.collection.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -8,7 +9,6 @@ import org.zeroturnaround.exec.ProcessExecutor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -107,8 +107,8 @@ class CliCheckoutTest {
     }
 
     private String git(String... args) throws Exception {
-        List<String> command = new ArrayList<>(List.of("git"));
-        command.addAll(List.of(args));
+        java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of("git"));
+        command.addAll(java.util.List.of(args));
         return new ProcessExecutor().command(command).directory(repo.toFile())
                 .readOutput(true).redirectErrorStream(true).exitValueNormal().execute().outputUTF8();
     }

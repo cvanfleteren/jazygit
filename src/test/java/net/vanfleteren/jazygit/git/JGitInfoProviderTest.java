@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,7 +13,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -102,11 +102,11 @@ class JGitInfoProviderTest {
         commitAt("newest", "2020-01-09T00:00:00Z");
 
         assertEquals(List.of("main", "newest", "middle", "old"),
-                provider.branches().stream().map(Branch::name).toList());
+                provider.branches().map(Branch::name).toList());
 
         git("checkout", "-q", "old");
         assertEquals(List.of("old", "newest", "middle", "main"),
-                provider.branches().stream().map(Branch::name).toList());
+                provider.branches().map(Branch::name).toList());
     }
 
     private void commitAt(String branch, String date) throws Exception {
@@ -131,13 +131,13 @@ class JGitInfoProviderTest {
         git("checkout", "-q", "main");
 
         List<Commit> side = provider.log("side");
-        assertEquals(List.of("Side subject", "Initial commit"), side.stream().map(Commit::message).toList());
+        assertEquals(List.of("Side subject", "Initial commit"), side.map(Commit::message).toList());
         assertEquals("Side detail\nsecond line", side.get(0).body());
         assertEquals("", side.get(1).body());
         assertEquals("Test", side.get(0).authorName());
         assertEquals("test@example.com", side.get(0).authorEmail());
 
-        assertEquals(List.of("Initial commit"), provider.log("main").stream().map(Commit::message).toList());
+        assertEquals(List.of("Initial commit"), provider.log("main").map(Commit::message).toList());
         assertThrows(IllegalStateException.class, () -> provider.log("gone"));
     }
 
@@ -198,9 +198,9 @@ class JGitInfoProviderTest {
         List<Commit> commits = provider.commits();
 
         assertEquals(List.of("Merge feature", "Feature work", "Main work"),
-                commits.stream().map(Commit::message).limit(3).toList());
-        assertEquals(2, commits.getFirst().parents().size());
-        assertTrue(commits.getFirst().isMerge());
+                commits.map(Commit::message).take(3));
+        assertEquals(2, commits.head().parents().size());
+        assertTrue(commits.head().isMerge());
     }
 
     @Test
@@ -220,7 +220,7 @@ class JGitInfoProviderTest {
                 executed);
         List<Commit> after = provider.commits();
         assertEquals(List.of("Third", "Second, better", "Initial commit"),
-                after.stream().map(Commit::message).toList());
+                after.map(Commit::message).toList());
         assertEquals("because", after.get(1).body());
         assertEquals("hello\n".replace("hello", "dirty"), Files.readString(repo.resolve("README.md")));
         assertTrue(Files.exists(repo.resolve("a.txt")) && Files.exists(repo.resolve("b.txt")));
@@ -242,7 +242,7 @@ class JGitInfoProviderTest {
 
         assertEquals(List.of("git rebase --autostash --keep-empty --rebase-merges --no-autosquash main"), executed);
         assertEquals(List.of("Feature work", "Main work", "Initial commit"),
-                provider.commits().stream().map(Commit::message).toList());
+                provider.commits().map(Commit::message).toList());
     }
 
     @Test
@@ -274,9 +274,9 @@ class JGitInfoProviderTest {
 
         List<Commit> after = provider.commits();
         assertEquals(List.of("fixup! Feature work", "Merge side"),
-                after.stream().limit(2).map(Commit::message).toList());
+                after.take(2).map(Commit::message));
         assertTrue(after.get(1).isMerge());
-        assertTrue(after.stream().anyMatch(c -> c.message().equals("Main work")));
+        assertTrue(after.exists(c -> c.message().equals("Main work")));
     }
 
     @Test
@@ -292,7 +292,7 @@ class JGitInfoProviderTest {
         assertThrows(IllegalStateException.class, () -> provider.rebase("main"));
 
         assertEquals(List.of("Feature edit", "Initial commit"),
-                provider.commits().stream().map(Commit::message).toList());
+                provider.commits().map(Commit::message).toList());
         assertEquals("feature\n", Files.readString(repo.resolve("README.md")));
     }
 
@@ -312,10 +312,10 @@ class JGitInfoProviderTest {
 
         List<String> executed = provider.squash(before.get(1).sha());
 
-        assertTrue(executed.getFirst().startsWith("git rebase --interactive --autostash --keep-empty --rebase-merges"),
+        assertTrue(executed.head().startsWith("git rebase --interactive --autostash --keep-empty --rebase-merges"),
                 executed.toString());
         List<Commit> after = provider.commits();
-        assertEquals(List.of("Fourth", "Second", "Initial commit"), after.stream().map(Commit::message).toList());
+        assertEquals(List.of("Fourth", "Second", "Initial commit"), after.map(Commit::message).toList());
         assertTrue(after.get(1).body().contains("Third"), after.get(1).body());
         assertTrue(Files.exists(repo.resolve("b.txt")));
         assertEquals("dirty\n", Files.readString(repo.resolve("README.md")));
@@ -327,9 +327,9 @@ class JGitInfoProviderTest {
         git("add", "a.txt");
         git("commit", "-q", "-m", "Second");
 
-        provider.squash(provider.commits().getFirst().sha());
+        provider.squash(provider.commits().head().sha());
 
-        assertEquals(List.of("Initial commit"), provider.commits().stream().map(Commit::message).toList());
+        assertEquals(List.of("Initial commit"), provider.commits().map(Commit::message).toList());
     }
 
     @Test
@@ -340,16 +340,16 @@ class JGitInfoProviderTest {
 
         provider.reword(provider.commits().get(1).sha(), "Start", "");
 
-        assertEquals(List.of("Second", "Start"), provider.commits().stream().map(Commit::message).toList());
+        assertEquals(List.of("Second", "Start"), provider.commits().map(Commit::message).toList());
     }
 
     @Test
     void rewordOfALastCommitAmendsIt() throws Exception {
-        List<String> executed = provider.reword(provider.commits().getFirst().sha(), "Renamed", "");
+        List<String> executed = provider.reword(provider.commits().head().sha(), "Renamed", "");
 
         assertEquals(1, executed.size());
-        assertTrue(executed.getFirst().startsWith("git commit"), executed.toString());
-        assertEquals("Renamed", provider.commits().getFirst().message());
+        assertTrue(executed.head().startsWith("git commit"), executed.toString());
+        assertEquals("Renamed", provider.commits().head().message());
     }
 
     @Test
@@ -371,7 +371,7 @@ class JGitInfoProviderTest {
         provider.reword(merge.sha(), "Merged the feature", "");
 
         List<Commit> after = provider.commits();
-        assertEquals("After merge", after.getFirst().message());
+        assertEquals("After merge", after.head().message());
         assertEquals("Merged the feature", after.get(1).message());
         assertTrue(after.get(1).isMerge());
     }
@@ -381,8 +381,8 @@ class JGitInfoProviderTest {
         GitCommandException e = assertThrows(GitCommandException.class,
                 () -> provider.reword(new Sha("0123456789012345678901234567890123456789"), "x", ""));
 
-        assertTrue(e.commands().getFirst().startsWith("git rev-list"), e.commands().toString());
-        assertEquals("Initial commit", provider.commits().getFirst().message());
+        assertTrue(e.commands().head().startsWith("git rev-list"), e.commands().toString());
+        assertEquals("Initial commit", provider.commits().head().message());
         assertTrue(Files.notExists(repo.resolve(".git/rebase-merge")));
     }
 
@@ -406,7 +406,7 @@ class JGitInfoProviderTest {
         List<String> executed = provider.pop("stash@{0}");
 
         assertEquals(1, executed.size());
-        assertTrue(executed.getFirst().startsWith("git stash pop"), executed.toString());
+        assertTrue(executed.head().startsWith("git stash pop"), executed.toString());
         assertEquals("changed\n", Files.readString(repo.resolve("README.md")));
         assertEquals(List.of(), provider.stashes());
     }
@@ -419,7 +419,7 @@ class JGitInfoProviderTest {
         List<String> executed = provider.drop("stash@{0}");
 
         assertEquals(1, executed.size());
-        assertTrue(executed.getFirst().startsWith("git stash drop"), executed.toString());
+        assertTrue(executed.head().startsWith("git stash drop"), executed.toString());
         assertEquals(List.of(), provider.stashes());
         assertEquals("hello\n", Files.readString(repo.resolve("README.md")));
     }
@@ -468,7 +468,7 @@ class JGitInfoProviderTest {
     }
 
     private static List<Branch> withoutTimes(List<Branch> branches) {
-        return branches.stream().map(b -> new Branch(b.name(), b.current(), b.tipOid())).toList();
+        return branches.map(b -> new Branch(b.name(), b.current(), b.tipOid())).toList();
     }
 
     @Test
@@ -499,10 +499,10 @@ class JGitInfoProviderTest {
         git("remote", "add", "origin", bare.toString());
         git("push", "-q", "origin", "pushed");
 
-        assertEquals(List.of(true, false), provider.branches().stream()
+        assertEquals(List.of(true, false), provider.branches()
                 .filter(b -> !b.name().equals("main"))
                 .sorted(java.util.Comparator.comparing(Branch::name).reversed())
-                .map(Branch::hasRemote).toList());
+                .map(Branch::hasRemote));
     }
 
     @Test
@@ -534,7 +534,7 @@ class JGitInfoProviderTest {
 
         provider.push("main", false);
         assertEquals(List.of(0, 0), counts("main"));
-        assertTrue(provider.branches().stream().filter(b -> b.name().equals("main")).allMatch(Branch::hasRemote));
+        assertTrue(provider.branches().filter(b -> b.name().equals("main")).forAll(Branch::hasRemote));
 
         git("commit", "-q", "--allow-empty", "-m", "local");
         assertEquals(List.of(1, 0), counts("main"));
@@ -577,8 +577,8 @@ class JGitInfoProviderTest {
     }
 
     private List<Integer> counts(String branch) {
-        return provider.branches().stream().filter(b -> b.name().equals(branch))
-                .map(b -> List.of(b.ahead(), b.behind())).findFirst().orElseThrow();
+        return provider.branches().filter(b -> b.name().equals(branch))
+                .map(b -> List.of(b.ahead(), b.behind())).head();
     }
 
     @Test
@@ -592,7 +592,7 @@ class JGitInfoProviderTest {
     }
 
     private List<String> defaultBranches() {
-        return provider.branches().stream().filter(Branch::isDefault).map(Branch::name).toList();
+        return provider.branches().filter(Branch::isDefault).map(Branch::name).toList();
     }
 
     @Test
@@ -601,7 +601,7 @@ class JGitInfoProviderTest {
 
         provider.deleteBranch("topic", true, false);
 
-        assertEquals(List.of("main"), provider.branches().stream().map(Branch::name).toList());
+        assertEquals(List.of("main"), provider.branches().map(Branch::name).toList());
     }
 
     @Test
@@ -685,9 +685,9 @@ class JGitInfoProviderTest {
     }
 
     private static void gitIn(Path dir, String... args) throws IOException, InterruptedException, TimeoutException {
-        List<String> command = new ArrayList<>(List.of("git",
+        java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of("git",
                 "-c", "user.name=Test", "-c", "user.email=test@example.com", "-c", "commit.gpgsign=false"));
-        command.addAll(List.of(args));
+        command.addAll(java.util.List.of(args));
         ProcessResult result = new ProcessExecutor()
                 .command(command)
                 .directory(dir.toFile())

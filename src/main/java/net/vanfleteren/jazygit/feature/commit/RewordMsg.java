@@ -1,10 +1,9 @@
 package net.vanfleteren.jazygit.feature.commit;
 
-import java.util.List;
-import net.vanfleteren.jazygit.state.Update;
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.state.Model;
-
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Update;
 
 public sealed interface RewordMsg extends Msg {
 

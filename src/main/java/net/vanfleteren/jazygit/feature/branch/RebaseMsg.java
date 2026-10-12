@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import java.util.List;
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;

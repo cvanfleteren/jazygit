@@ -1,9 +1,9 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.Sha;
 
 import java.nio.file.Path;
-import java.util.List;
 
 /**
  * Reads what a commit changed through the git command line tool.

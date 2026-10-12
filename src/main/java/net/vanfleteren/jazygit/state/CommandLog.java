@@ -1,9 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.i18n.Messages;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Appends executed commands to the command log of the model.
@@ -23,8 +21,8 @@ public final class CommandLog {
         if (commands.isEmpty()) {
             return model;
         }
-        List<LogEntry> log = new ArrayList<>(model.commandLog());
-        log.add(new LogEntry(Messages.get(titleKey), commands));
-        return model.withCommandLog(log.subList(Math.max(0, log.size() - MAX_ENTRIES), log.size()));
+        return model.withCommandLog(model.commandLog()
+                .append(new LogEntry(Messages.get(titleKey), commands))
+                .takeRight(MAX_ENTRIES));
     }
 }

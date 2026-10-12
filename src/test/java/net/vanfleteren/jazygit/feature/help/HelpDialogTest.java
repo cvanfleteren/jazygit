@@ -1,29 +1,28 @@
 package net.vanfleteren.jazygit.feature.help;
 
-import net.vanfleteren.jazygit.keys.Scopes;
-import static dev.tamboui.toolkit.Toolkit.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
+import io.vavr.collection.List;
+import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
+import static dev.tamboui.toolkit.Toolkit.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * The popup listing the keys of a panel: Escape, Enter or ? closes it.
  */
 class HelpDialogTest {
 
-    private final List<Msg> dispatched = new ArrayList<>();
+    private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final HelpDialog dialog = new HelpDialog(dispatched::add);
 
     private static Model open(String topic) {
@@ -82,7 +81,7 @@ class HelpDialogTest {
             keys.accept(runner);
             runner.pilot().pause();
         }
-        return List.copyOf(dispatched);
+        return List.ofAll(dispatched);
     }
 
     private String screen(String topic) throws Exception {

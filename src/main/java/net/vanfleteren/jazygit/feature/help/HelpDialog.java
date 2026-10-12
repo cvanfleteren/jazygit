@@ -2,18 +2,17 @@ package net.vanfleteren.jazygit.feature.help;
 
 import static dev.tamboui.toolkit.Toolkit.*;
 
-import net.vanfleteren.jazygit.ui.Theme;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyEvent;
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.ui.Theme;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
@@ -53,15 +52,15 @@ public final class HelpDialog {
     public Optional<Element> render(Model model) {
         return model.popup(HelpPopup.class).map(HelpPopup::scopeId).flatMap(scopeId ->
                 keymap.titleKey(scopeId).map(titleKey -> {
-                    List<StyledElement<?>> rows = new ArrayList<>();
-                    keymap.bindings(scopeId).forEach(b -> rows.add(row(b.label(), b.descriptionKey())));
-                    rows.add(text(""));
-                    rows.add(text(Messages.get("dialog.help.global")).addClass(Theme.Classes.BOLD));
-                    keymap.globals().forEach(g -> rows.add(row(g.label(), g.descriptionKey())));
-                    rows.add(text(""));
-                    rows.add(text(Messages.get("dialog.help.hint")).addClass(Theme.Classes.DIM));
+                    List<StyledElement<?>> rows = keymap.bindings(scopeId)
+                            .<StyledElement<?>>map(b -> row(b.label(), b.descriptionKey()))
+                            .append(text(""))
+                            .append(text(Messages.get("dialog.help.global")).addClass(Theme.Classes.BOLD))
+                            .appendAll(keymap.globals().map(g -> row(g.label(), g.descriptionKey())))
+                            .append(text(""))
+                            .append(text(Messages.get("dialog.help.hint")).addClass(Theme.Classes.DIM));
                     return dialog(Messages.get("dialog.help.title", Messages.get(titleKey)),
-                            rows.toArray(StyledElement[]::new))
+                            rows.toJavaArray(StyledElement[]::new))
                             .id(ID)
                             .focusable()
                             .rounded()

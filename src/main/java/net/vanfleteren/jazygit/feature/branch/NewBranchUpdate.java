@@ -1,25 +1,19 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import java.util.List;
-import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Requested;
-
-import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Failed;
-
-import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Created;
-
-import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Confirmed;
-
-import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Cancelled;
-
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.CreateBranch;
-
+import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Cancelled;
+import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Confirmed;
+import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Created;
+import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Failed;
+import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Requested;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.Update;
 
 import java.util.Optional;
 

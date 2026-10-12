@@ -3,18 +3,17 @@ package net.vanfleteren.jazygit.ui;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyEvent;
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.state.Loadable;
-import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
+import net.vanfleteren.jazygit.state.Loadable;
+import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
-import java.util.stream.IntStream;
 
 /**
  * Bottom-left panel listing the stashes, newest first. The highlighted stash is unstashed with {@code g} and deleted with {@code d}.
@@ -24,9 +23,8 @@ public final class StashPanel {
     public static final String ID = Scopes.STASH.id();
 
     private final LoadableList<List<Stash>> list = new LoadableList<>(Messages.get("panel.stash.title"), ID,
-            stashes -> IntStream.range(0, stashes.size())
-                    .mapToObj(i -> LoadableList.Row.of(row(i, stashes.get(i))))
-                    .toList());
+            stashes -> List.range(0, stashes.size())
+                    .map(i -> LoadableList.Row.of(row(i, stashes.get(i)))));
     // The list's key handler also sees keys typed in other panes, so it must know whether it has focus.
     private boolean focused;
     private final Keymap keymap = Keymap.standard();

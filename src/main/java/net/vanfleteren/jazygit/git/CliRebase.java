@@ -1,12 +1,11 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.Sha;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -39,20 +38,18 @@ public final class CliRebase {
                     "GIT_SEQUENCE_EDITOR", sequenceEditor,
                     "GIT_EDITOR", "cp '" + message + "'");
             String base = hasParent(workTree, sha.value()) ? sha + "^" : "--root";
-            List<String> executed = new ArrayList<>();
             try {
-                executed.add(CliCheckout.exec(workTree, environment, "git", "rebase", "--interactive",
+                return List.of(CliCheckout.exec(workTree, environment, "git", "rebase", "--interactive",
                         "--autostash", "--keep-empty", "--rebase-merges", base).command());
             } catch (GitCommandException e) {
-                executed.addAll(e.commands());
+                List<String> executed = e.commands();
                 try {
-                    executed.add(CliCheckout.exec(workTree, "git", "rebase", "--abort").command());
+                    executed = executed.append(CliCheckout.exec(workTree, "git", "rebase", "--abort").command());
                 } catch (GitCommandException abortFailure) {
-                    executed.addAll(abortFailure.commands());
+                    executed = executed.appendAll(abortFailure.commands());
                 }
                 throw new GitCommandException(e.getMessage(), executed, e);
             }
-            return executed;
         } finally {
             try {
                 Files.deleteIfExists(message);
@@ -72,20 +69,18 @@ public final class CliRebase {
      * @throws GitCommandException if git refuses, with git's explanation as message
      */
     public static List<String> onto(Path workTree, String onto) {
-        List<String> executed = new ArrayList<>();
         try {
-            executed.add(CliCheckout.exec(workTree, "git", "rebase", "--autostash", "--keep-empty", "--rebase-merges",
-                    "--no-autosquash", onto).command());
+            return List.of(CliCheckout.exec(workTree, "git", "rebase", "--autostash", "--keep-empty",
+                    "--rebase-merges", "--no-autosquash", onto).command());
         } catch (GitCommandException e) {
-            executed.addAll(e.commands());
+            List<String> executed = e.commands();
             try {
-                executed.add(CliCheckout.exec(workTree, "git", "rebase", "--abort").command());
+                executed = executed.append(CliCheckout.exec(workTree, "git", "rebase", "--abort").command());
             } catch (GitCommandException abortFailure) {
-                executed.addAll(abortFailure.commands());
+                executed = executed.appendAll(abortFailure.commands());
             }
             throw new GitCommandException(e.getMessage(), executed, e);
         }
-        return executed;
     }
 
     /**
@@ -106,20 +101,18 @@ public final class CliRebase {
                 "GIT_SEQUENCE_EDITOR", "sed -i -e 's/^pick " + abbreviated + "/squash " + abbreviated + "/'",
                 "GIT_EDITOR", "true");
         String base = hasParent(workTree, parent) ? parent + "^" : "--root";
-        List<String> executed = new ArrayList<>();
         try {
-            executed.add(CliCheckout.exec(workTree, environment, "git", "rebase", "--interactive",
+            return List.of(CliCheckout.exec(workTree, environment, "git", "rebase", "--interactive",
                     "--autostash", "--keep-empty", "--rebase-merges", "--no-autosquash", base).command());
         } catch (GitCommandException e) {
-            executed.addAll(e.commands());
+            List<String> executed = e.commands();
             try {
-                executed.add(CliCheckout.exec(workTree, "git", "rebase", "--abort").command());
+                executed = executed.append(CliCheckout.exec(workTree, "git", "rebase", "--abort").command());
             } catch (GitCommandException abortFailure) {
-                executed.addAll(abortFailure.commands());
+                executed = executed.appendAll(abortFailure.commands());
             }
             throw new GitCommandException(e.getMessage(), executed, e);
         }
-        return executed;
     }
 
     private static boolean hasParent(Path workTree, String sha) {

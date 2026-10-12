@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
-import java.util.List;
+import io.vavr.collection.List;
 
 /**
  * One operation in the command log.
@@ -9,8 +9,4 @@ import java.util.List;
  * @param commands the command lines that were executed for it
  */
 public record LogEntry(String title, List<String> commands) {
-
-    public LogEntry {
-        commands = List.copyOf(commands);
-    }
 }

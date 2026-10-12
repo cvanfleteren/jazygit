@@ -1,24 +1,19 @@
 package net.vanfleteren.jazygit.feature.commit;
 
-import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.feature.commit.CommitCmd.Amend;
-
-import net.vanfleteren.jazygit.feature.commit.AmendMsg.Requested;
-
-import net.vanfleteren.jazygit.feature.commit.AmendMsg.Failed;
-
-import net.vanfleteren.jazygit.feature.commit.AmendMsg.Done;
-
-import net.vanfleteren.jazygit.feature.commit.AmendMsg.Confirmed;
-
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.commit.AmendMsg.Cancelled;
-
+import net.vanfleteren.jazygit.feature.commit.AmendMsg.Confirmed;
+import net.vanfleteren.jazygit.feature.commit.AmendMsg.Done;
+import net.vanfleteren.jazygit.feature.commit.AmendMsg.Failed;
+import net.vanfleteren.jazygit.feature.commit.AmendMsg.Requested;
+import net.vanfleteren.jazygit.feature.commit.CommitCmd.Amend;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
-import java.util.List;
+import net.vanfleteren.jazygit.state.Update;
+
 import java.util.Optional;
 
 /**
@@ -54,9 +49,9 @@ public final class AmendUpdate {
      */
     private static Next confirmed(Model model) {
         List<FileEntry> files = Update.files(model);
-        List<String> stage = files.stream().anyMatch(FileEntry::staged)
+        List<String> stage = files.exists(FileEntry::staged)
                 ? List.of()
-                : files.stream().filter(FileEntry::unstaged).map(FileEntry::path).toList();
+                : files.filter(FileEntry::unstaged).map(FileEntry::path).toList();
         return model.popup(AmendPopup.class).isPresent()
                 ? Next.of(model.withoutPopup(AmendPopup.class), new Amend(stage))
                 : Next.of(model);

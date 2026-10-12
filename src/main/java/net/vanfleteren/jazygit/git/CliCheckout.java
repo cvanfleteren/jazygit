@@ -1,13 +1,12 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.i18n.Messages;
 import org.zeroturnaround.exec.ProcessExecutor;
 import org.zeroturnaround.exec.ProcessResult;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -54,28 +53,27 @@ public final class CliCheckout {
      *                               explanation
      */
     public static List<String> checkoutWithStash(Path workTree, String branch) {
-        List<String> executed = new ArrayList<>();
         // Git succeeds without stashing when there is nothing to stash; then there is nothing to pop
         // either, and popping would apply an older, unrelated stash.
         long before = stashCount(workTree);
-        executed.add(exec(workTree, "git", "stash", "push", "--quiet").command());
+        List<String> executed = List.of(exec(workTree, "git", "stash", "push", "--quiet").command());
         boolean stashed = stashCount(workTree) > before;
         try {
-            executed.addAll(checkout(workTree, branch));
+            executed = executed.appendAll(checkout(workTree, branch));
         } catch (GitCommandException e) {
             List<String> all = concat(executed, e.commands());
             if (stashed) {
                 try {
-                    all.add(exec(workTree, "git", "stash", "pop", "--quiet").command());
+                    all = all.append(exec(workTree, "git", "stash", "pop", "--quiet").command());
                 } catch (GitCommandException popFailure) {
-                    all.addAll(popFailure.commands());
+                    all = all.appendAll(popFailure.commands());
                 }
             }
             throw new GitCommandException(e.getMessage(), all, e);
         }
         if (stashed) {
             try {
-                executed.add(exec(workTree, "git", "stash", "pop", "--quiet").command());
+                executed = executed.append(exec(workTree, "git", "stash", "pop", "--quiet").command());
             } catch (GitCommandException e) {
                 throw new GitCommandException(Messages.get("git.stashPopFailed", e.getMessage()),
                         concat(executed, e.commands()), e);
@@ -85,9 +83,7 @@ public final class CliCheckout {
     }
 
     private static List<String> concat(List<String> first, List<String> second) {
-        List<String> all = new ArrayList<>(first);
-        all.addAll(second);
-        return all;
+        return first.appendAll(second);
     }
 
     private static long stashCount(Path workTree) {
@@ -154,7 +150,7 @@ public final class CliCheckout {
      * changes to the following files would be overwritten by checkout:}.
      */
     static String explanation(String output, int exitValue) {
-        List<String> lines = output.lines().map(String::strip).filter(line -> !line.isEmpty()).toList();
-        return lines.isEmpty() ? Messages.get("git.exitedWithCode", String.valueOf(exitValue)) : lines.getFirst();
+        List<String> lines = output.lines().map(String::strip).filter(line -> !line.isEmpty()).collect(List.collector());
+        return lines.isEmpty() ? Messages.get("git.exitedWithCode", String.valueOf(exitValue)) : lines.head();
     }
 }

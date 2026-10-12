@@ -1,26 +1,24 @@
 package net.vanfleteren.jazygit.feature.commit;
 
 
-import net.vanfleteren.jazygit.ui.RenderedText;
-
-import net.vanfleteren.jazygit.state.LoadMsg;
-import static dev.tamboui.toolkit.Toolkit.*;
-
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.model.SampleData;
+import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
+import static dev.tamboui.toolkit.Toolkit.*;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -29,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 class AmendDialogTest {
 
-    private final List<Msg> dispatched = new ArrayList<>();
+    private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<AmendPopup> dialog = AmendDialog.create(dispatched::add);
     private final Model open = openModel();
 
@@ -46,7 +44,7 @@ class AmendDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new AmendMsg.Confirmed()), dispatched);
+        assertEquals(java.util.List.of(new AmendMsg.Confirmed()), dispatched);
     }
 
     @Test
@@ -56,7 +54,7 @@ class AmendDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new AmendMsg.Cancelled()), dispatched);
+        assertEquals(java.util.List.of(new AmendMsg.Cancelled()), dispatched);
     }
 
     @Test

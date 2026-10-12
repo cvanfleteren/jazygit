@@ -1,12 +1,12 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.collection.List;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Stash;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -52,7 +52,6 @@ public record Model(String repositoryName,
     public Model {
         refreshing = Set.copyOf(refreshing);
         pushing = Set.copyOf(pushing);
-        commandLog = List.copyOf(commandLog);
     }
 
     public static Model initial(String repositoryName) {

@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.git.model;
 
-import java.util.List;
+import io.vavr.collection.List;
 
 /**
  * What to do to throw changes away, by how each path has to be treated.
@@ -12,13 +12,6 @@ import java.util.List;
  */
 public record DiscardPlan(List<String> untracked, List<String> fromIndex, List<String> fromHead,
                           List<String> added) {
-
-    public DiscardPlan {
-        untracked = List.copyOf(untracked);
-        fromIndex = List.copyOf(fromIndex);
-        fromHead = List.copyOf(fromHead);
-        added = List.copyOf(added);
-    }
 
     public boolean isEmpty() {
         return untracked.isEmpty() && fromIndex.isEmpty() && fromHead.isEmpty() && added.isEmpty();

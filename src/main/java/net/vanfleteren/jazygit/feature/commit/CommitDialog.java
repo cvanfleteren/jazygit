@@ -1,17 +1,17 @@
 package net.vanfleteren.jazygit.feature.commit;
 
-import net.vanfleteren.jazygit.i18n.Messages;
-import static dev.tamboui.toolkit.Toolkit.*;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.widgets.block.BorderType;
 import dev.tamboui.widgets.input.TextAreaState;
 import dev.tamboui.widgets.input.TextInputState;
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.ui.SubmittableTextArea;
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.ui.SubmittableTextArea;
+import static dev.tamboui.toolkit.Toolkit.*;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;

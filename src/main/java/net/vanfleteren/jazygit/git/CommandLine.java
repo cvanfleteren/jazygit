@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
-import java.util.List;
+import io.vavr.collection.List;
+
 import java.util.regex.Pattern;
 
 /**
@@ -14,7 +15,7 @@ public final class CommandLine {
     }
 
     public static String format(List<String> command) {
-        return command.stream().map(CommandLine::quote).reduce((a, b) -> a + " " + b).orElse("");
+        return command.map(CommandLine::quote).mkString(" ");
     }
 
     private static String quote(String arg) {

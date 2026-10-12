@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.ui.widgets;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
@@ -11,7 +12,6 @@ import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import static dev.tamboui.toolkit.Toolkit.stack;
 import static dev.tamboui.toolkit.Toolkit.text;
@@ -40,7 +40,7 @@ class ConfirmDialogTest {
     private static final String LONG = "This is a long question that needs several lines at the width of the dialog, "
             + "so that the hint below it must still stay visible after the message has been wrapped. Really?";
 
-    private final List<Msg> dispatched = new ArrayList<>();
+    private final java.util.List<Msg> dispatched = new ArrayList<>();
 
     private ConfirmDialog<AskPopup> dialog(String message) {
         return new ConfirmDialog<>("ask", AskPopup.class, popup -> "Delete " + popup.thing(), popup -> message,
@@ -87,7 +87,7 @@ class ConfirmDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new Yes(), new No()), dispatched);
+        assertEquals(java.util.List.of(new Yes(), new No()), dispatched);
     }
 
     @Test

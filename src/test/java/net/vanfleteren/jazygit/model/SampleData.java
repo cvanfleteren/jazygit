@@ -1,10 +1,10 @@
 package net.vanfleteren.jazygit.model;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.*;
 
 import java.time.Instant;
-import java.util.List;
 
 /**
  * Fixed sample data used by tests, so they don't depend on the state of a real repository.
@@ -74,7 +74,7 @@ public final class SampleData implements GitInfoProvider {
             case "feature/jgit-backend" -> List.of(
                     commit("1a2b3c4", LINUS, "2026-10-08T21:15:00Z", "Read branches through JGit",
                             "Replaces the hard-coded branch list.\nThe current branch is marked."));
-            case "bugfix/focus-cycling" -> MAIN.subList(2, MAIN.size());
+            case "bugfix/focus-cycling" -> MAIN.drop(2);
             default -> throw new IllegalStateException("Unknown branch: " + branch);
         };
     }
@@ -189,9 +189,9 @@ public final class SampleData implements GitInfoProvider {
     }
 
     private static String sample(List<FileEntry> files, java.util.function.Predicate<FileEntry> filter) {
-        return files.stream()
+        return files
                 .filter(filter)
                 .map(f -> "diff --git a/" + f.path() + " b/" + f.path() + "\n@@ -1 +1 @@\n-old\n+new\n")
-                .collect(java.util.stream.Collectors.joining());
+                .mkString();
     }
 }

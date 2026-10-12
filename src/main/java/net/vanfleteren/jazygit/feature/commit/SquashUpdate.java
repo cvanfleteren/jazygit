@@ -1,15 +1,15 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.commit.CommitCmd.Squash;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.Update;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -48,7 +48,7 @@ public final class SquashUpdate {
         if (commit.parents().size() != 1) {
             return Next.of(model);
         }
-        return commits.stream().filter(c -> c.sha().equals(commit.parents().getFirst())).findFirst()
+        return commits.find(c -> c.sha().equals(commit.parents().head())).toJavaOptional()
                 .map(into -> Next.of(model.withError(Optional.empty()).openPopup(new SquashPopup(commit, into))))
                 .orElseGet(() -> Next.of(model));
     }

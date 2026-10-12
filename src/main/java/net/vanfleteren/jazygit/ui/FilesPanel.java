@@ -1,36 +1,35 @@
 package net.vanfleteren.jazygit.ui;
 
-import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import dev.tamboui.toolkit.Toolkit;
+import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.elements.TreeElement;
-import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.widgets.common.ScrollBarPolicy;
 import dev.tamboui.widgets.tree.TreeNode;
+import io.vavr.collection.List;
+import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Conflict;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.FileTree;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.keys.Keymap;
+import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.FileDiff;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.keys.Keymap;
-import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Left-side panel showing the changed files, as in {@code git status}, as a directory tree. The tree
@@ -116,7 +115,7 @@ public class FilesPanel {
         // Counted on every render: expanding or collapsing a directory changes the visible rows
         // without a rebuild.
         OptionalInt count = shown instanceof Loadable.Loaded<RepoStatus>
-                ? OptionalInt.of((int) visible(roots).count())
+                ? OptionalInt.of(visible(roots).size())
                 : OptionalInt.empty();
         return Pane.bordered(Messages.get("panel.files.title"), tree, ID.equals(focusedId), Math.max(0, tree.selected()), count);
     }
@@ -146,9 +145,9 @@ public class FilesPanel {
             case Loadable.Loaded<RepoStatus>(RepoStatus value) -> List.of(node(
                     new FileTree.Dir(ROOT_NAME, "", FileTree.of(value.files())), collapsed));
         };
-        tree.roots(roots.toArray(TreeNode[]::new));
+        tree.roots(roots.toJavaArray(TreeNode[]::new));
 
-        List<String> visible = visible(roots).map(n -> path(n.data())).toList();
+        List<String> visible = visible(roots).map(n -> path(n.data()));
         int fallback = Math.min(Math.max(0, tree.selected()), Math.max(0, visible.size() - 1));
         tree.selected(selected.map(visible::indexOf).filter(i -> i >= 0).orElse(fallback));
     }
@@ -210,15 +209,15 @@ public class FilesPanel {
     /**
      * All nodes, depth first.
      */
-    private static Stream<TreeNode<FileTree>> nodes(List<TreeNode<FileTree>> nodes) {
-        return nodes.stream().flatMap(n -> Stream.concat(Stream.of(n), nodes(n.children())));
+    private static List<TreeNode<FileTree>> nodes(List<TreeNode<FileTree>> nodes) {
+        return nodes.flatMap(n -> nodes(List.ofAll(n.children())).prepend(n));
     }
 
     /**
      * The nodes shown on screen, in order: those not inside a collapsed directory.
      */
-    private static Stream<TreeNode<FileTree>> visible(List<TreeNode<FileTree>> nodes) {
-        return nodes.stream().flatMap(n -> Stream.concat(Stream.of(n),
-                n.isExpanded() ? visible(n.children()) : Stream.empty()));
+    private static List<TreeNode<FileTree>> visible(List<TreeNode<FileTree>> nodes) {
+        return nodes.flatMap(n -> (n.isExpanded() ? visible(List.ofAll(n.children())) : List.<TreeNode<FileTree>>empty())
+                .prepend(n));
     }
 }

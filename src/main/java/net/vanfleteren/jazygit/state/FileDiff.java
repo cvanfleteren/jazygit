@@ -1,9 +1,9 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -14,10 +14,6 @@ import java.util.Optional;
  *                 so the UI can keep showing it instead of flashing a placeholder
  */
 public record FileDiff(List<FileEntry> files, Loadable<Diffs> diff, Optional<FileDiff> previous) {
-
-    public FileDiff {
-        files = List.copyOf(files);
-    }
 
     public FileDiff(List<FileEntry> files, Loadable<Diffs> diff) {
         this(files, diff, Optional.empty());

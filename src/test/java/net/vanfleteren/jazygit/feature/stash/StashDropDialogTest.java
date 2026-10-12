@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.stash;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
@@ -13,7 +14,6 @@ import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import static dev.tamboui.toolkit.Toolkit.stack;
 import static dev.tamboui.toolkit.Toolkit.text;
@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class StashDropDialogTest {
 
-    private final List<Msg> dispatched = new ArrayList<>();
+    private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<StashDropPopup> dialog = StashDropDialog.create(dispatched::add);
     private final Model open = Update.update(
             Update.update(TestModels.loaded(), new LoadMsg.StashesLoaded(List.of(new Stash("stash@{0}", "x")))).model(),
@@ -38,7 +38,7 @@ class StashDropDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new StashMsg.DropConfirmed()), dispatched);
+        assertEquals(java.util.List.of(new StashMsg.DropConfirmed()), dispatched);
     }
 
     @Test
@@ -48,7 +48,7 @@ class StashDropDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new StashMsg.DropCancelled()), dispatched);
+        assertEquals(java.util.List.of(new StashMsg.DropCancelled()), dispatched);
     }
 
     @Test

@@ -6,7 +6,7 @@ package net.vanfleteren.jazygit.git;
  */
 public final class LocalChangesException extends GitCommandException {
 
-    public LocalChangesException(String message, java.util.List<String> commands) {
+    public LocalChangesException(String message, io.vavr.collection.List<String> commands) {
         super(message, commands);
     }
 }

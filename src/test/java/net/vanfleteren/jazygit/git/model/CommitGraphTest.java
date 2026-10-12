@@ -1,22 +1,21 @@
 package net.vanfleteren.jazygit.git.model;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.Sha;
-
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class CommitGraphTest {
 
     private static Commit commit(String sha, String... parents) {
-        return new Commit(new Sha(sha), "Ada", "ada@example.com", Instant.EPOCH, sha, "", java.util.Arrays.stream(parents).map(Sha::new).toList());
+        return new Commit(new Sha(sha), "Ada", "ada@example.com", Instant.EPOCH, sha, "", List.of(parents).map(Sha::new));
     }
 
     private static List<String> shas(List<Commit> commits) {
-        return commits.stream().map(c -> c.sha().value()).toList();
+        return commits.map(c -> c.sha().value()).toList();
     }
 
     @Test
@@ -24,7 +23,7 @@ class CommitGraphTest {
         List<Commit> log = List.of(commit("c", "b"), commit("b", "a"), commit("a"));
 
         assertEquals(log, CommitGraph.arrange(log));
-        assertEquals(List.of(0, 0, 0), CommitGraph.layout(log).stream().map(CommitGraph.Node::depth).toList());
+        assertEquals(List.of(0, 0, 0), CommitGraph.layout(log).map(CommitGraph.Node::depth).toList());
     }
 
     @Test
@@ -40,9 +39,9 @@ class CommitGraphTest {
 
         assertEquals(List.of("m", "f2", "f1", "b", "a"), shas(arranged));
         List<CommitGraph.Node> nodes = CommitGraph.layout(arranged);
-        assertEquals(List.of(0, 1, 1, 0, 0), nodes.stream().map(CommitGraph.Node::depth).toList());
+        assertEquals(List.of(0, 1, 1, 0, 0), nodes.map(CommitGraph.Node::depth).toList());
         assertEquals(List.of(false, false, true, false, false),
-                nodes.stream().map(CommitGraph.Node::closesBranch).toList());
+                nodes.map(CommitGraph.Node::closesBranch).toList());
     }
 
     @Test
@@ -59,6 +58,6 @@ class CommitGraphTest {
 
         assertEquals(List.of("m", "f", "g", "e", "b", "a"), shas(arranged));
         assertEquals(List.of(0, 1, 2, 1, 0, 0),
-                CommitGraph.layout(arranged).stream().map(CommitGraph.Node::depth).toList());
+                CommitGraph.layout(arranged).map(CommitGraph.Node::depth).toList());
     }
 }

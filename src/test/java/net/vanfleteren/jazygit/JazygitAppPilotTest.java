@@ -1,10 +1,5 @@
 package net.vanfleteren.jazygit;
 
-import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
-import net.vanfleteren.jazygit.feature.commit.CommitMsg;
-import net.vanfleteren.jazygit.feature.commit.RewordMsg;
-import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
-import net.vanfleteren.jazygit.feature.stage.StageMsg;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Panel;
@@ -12,6 +7,12 @@ import dev.tamboui.toolkit.focus.FocusManager;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyModifiers;
 import dev.tamboui.tui.pilot.Pilot;
+import io.vavr.collection.List;
+import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
+import net.vanfleteren.jazygit.feature.commit.CommitMsg;
+import net.vanfleteren.jazygit.feature.commit.RewordMsg;
+import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
+import net.vanfleteren.jazygit.feature.stage.StageMsg;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -25,7 +26,6 @@ import net.vanfleteren.jazygit.ui.StatusPanel;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
@@ -45,7 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 class JazygitAppPilotTest {
 
-    private record Fixture(SampleData data, Model model, List<Msg> dispatched, List<Msg> selections, FilesPanel files,
+    private record Fixture(SampleData data, Model model, java.util.List<Msg> dispatched, java.util.List<Msg> selections, FilesPanel files,
                             BranchesPanel branches, CommitsPanel commits, StashPanel stash,
                             AtomicReference<FocusManager> focusManagerRef) {
 
@@ -53,7 +53,7 @@ class JazygitAppPilotTest {
             this(new SampleData(), new ArrayList<>());
         }
 
-        private Fixture(SampleData data, List<Msg> dispatched) {
+        private Fixture(SampleData data, java.util.List<Msg> dispatched) {
             this(data, TestModels.loaded(data), dispatched, new ArrayList<>(), new FilesPanel(dispatched::add), new BranchesPanel(dispatched::add),
                     new CommitsPanel(dispatched::add), new StashPanel(dispatched::add), new AtomicReference<>());
         }
@@ -185,7 +185,7 @@ class JazygitAppPilotTest {
             pilot.press(KeyCode.DOWN);
             pilot.press(' ');
             pilot.pause();
-            assertEquals(List.of(new CheckoutMsg.Requested("feature/initial-layout")), fixture.dispatched());
+            assertEquals(java.util.List.of(new CheckoutMsg.Requested("feature/initial-layout")), fixture.dispatched());
 
             focusManager.setFocus(CommitsPanel.ID);
             pilot.pause();
@@ -266,7 +266,7 @@ class JazygitAppPilotTest {
             assertEquals(1, fixture.dispatched().size());
             StageMsg.Requested all = (StageMsg.Requested) fixture.dispatched().get(0);
             // The virtual root is selected first, so every changed file is requested.
-            assertEquals(java.util.Set.copyOf(fixture.data().status().files()), java.util.Set.copyOf(all.files()));
+            assertEquals(fixture.data().status().files().toSet(), all.files().toSet());
 
             pilot.press(KeyCode.DOWN);
             pilot.press(KeyCode.DOWN);
@@ -276,7 +276,7 @@ class JazygitAppPilotTest {
             StageMsg.Requested requested = (StageMsg.Requested) fixture.dispatched().get(1);
             // DOWN highlights the "model" directory, so only its file is requested.
             assertEquals(List.of("src/main/java/net/vanfleteren/jazygit/model/SampleData.java"),
-                    requested.files().stream().map(f -> f.path()).toList());
+                    requested.files().map(f -> f.path()).toList());
 
             pilot.quit();
         }

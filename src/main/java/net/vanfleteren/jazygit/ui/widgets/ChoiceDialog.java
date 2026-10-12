@@ -2,20 +2,19 @@ package net.vanfleteren.jazygit.ui.widgets;
 
 import static dev.tamboui.toolkit.Toolkit.*;
 
-import net.vanfleteren.jazygit.ui.Theme;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.ui.Theme;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
@@ -94,9 +93,7 @@ public final class ChoiceDialog<P extends Popup> {
         this.id = id;
         this.popupType = popupType;
         this.title = title;
-        List<Choice<P>> all = new ArrayList<>(choices);
-        all.add(new Choice<P>(CANCEL_KEY, "dialog.choice.cancel", onCancel));
-        this.choices = List.copyOf(all);
+        this.choices = choices.append(new Choice<P>(CANCEL_KEY, "dialog.choice.cancel", onCancel));
         this.dispatch = dispatch;
         this.list = list()
                 .id(id)
@@ -114,8 +111,8 @@ public final class ChoiceDialog<P extends Popup> {
      */
     public Optional<Element> render(Model model) {
         return model.popup(popupType).map(popup -> {
-            List<String> labels = choices.stream().map(choice -> choice.label().apply(popup)).toList();
-            showOptions(labels, choices.stream().map(choice -> choice.enabled().test(model, popup)).toList());
+            List<String> labels = choices.map(choice -> choice.label().apply(popup));
+            showOptions(labels, choices.map(choice -> choice.enabled().test(model, popup)));
             return dialog(title.apply(popup),
                     list.length(choices.size()),
                     text(""),
@@ -123,12 +120,12 @@ public final class ChoiceDialog<P extends Popup> {
                     .rounded()
                     .width(Math.max(WIDTH, widest(labels) + ROW_OVERHEAD))
                     .padding(1)
-                    .onCancel(() -> choose(choices.getLast()));
+                    .onCancel(() -> choose(choices.last()));
         });
     }
 
     private static int widest(List<String> labels) {
-        return labels.stream().mapToInt(String::length).max().orElse(0);
+        return labels.map(String::length).max().getOrElse(0);
     }
 
     private void showOptions(List<String> labels, List<Boolean> nowEnabled) {
@@ -136,9 +133,9 @@ public final class ChoiceDialog<P extends Popup> {
         if (!nowEnabled.equals(shownEnabled) || !labels.equals(shownLabels)) {
             shownEnabled = nowEnabled;
             shownLabels = labels;
-            list.elements(java.util.stream.IntStream.range(0, choices.size())
-                    .mapToObj(i -> row(choices.get(i), labels.get(i), nowEnabled.get(i)))
-                    .toArray(StyledElement[]::new));
+            list.elements(List.range(0, choices.size())
+                    .map(i -> row(choices.get(i), labels.get(i), nowEnabled.get(i)))
+                    .toJavaArray(StyledElement[]::new));
         }
     }
 
@@ -149,21 +146,19 @@ public final class ChoiceDialog<P extends Popup> {
 
     private EventResult handleKey(KeyEvent event) {
         if (event.code() == KeyCode.ESCAPE) {
-            choose(choices.getLast());
+            choose(choices.last());
             return EventResult.HANDLED;
         }
         if (event.isConfirm()) {
             choose(choices.get(Math.clamp(list.selected(), 0, choices.size() - 1)));
             return EventResult.HANDLED;
         }
-        return choices.stream()
-                .filter(choice -> event.isChar(choice.key()))
-                .findFirst()
+        return choices.find(choice -> event.isChar(choice.key()))
                 .map(choice -> {
                     choose(choice);
                     return EventResult.HANDLED;
                 })
-                .orElse(EventResult.UNHANDLED);
+                .getOrElse(EventResult.UNHANDLED);
     }
 
     private void choose(Choice<P> choice) {

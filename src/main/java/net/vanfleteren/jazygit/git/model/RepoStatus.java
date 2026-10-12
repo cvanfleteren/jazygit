@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.git.model;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.i18n.Messages;
-import java.util.List;
 
 /**
  * The state of the working tree and HEAD, as reported by {@code git status}.
@@ -14,10 +14,6 @@ public record RepoStatus(String head, String headOid, List<FileEntry> files) {
 
     public static final String DETACHED = "(detached)";
     public static final String INITIAL = "(initial)";
-
-    public RepoStatus {
-        files = List.copyOf(files);
-    }
 
     /**
      * The checked-out branch, or a description of the detached HEAD.

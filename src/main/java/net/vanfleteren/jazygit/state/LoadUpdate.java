@@ -1,42 +1,27 @@
 package net.vanfleteren.jazygit.state;
 
-import net.vanfleteren.jazygit.git.model.Sha;
-
-import net.vanfleteren.jazygit.state.Update.Next;
-
-import net.vanfleteren.jazygit.state.LoadMsg.StatusLoaded;
-
-import net.vanfleteren.jazygit.state.LoadMsg.CommitDetailLoaded;
-import net.vanfleteren.jazygit.state.LoadMsg.FileDiffLoaded;
-
-import net.vanfleteren.jazygit.state.LoadMsg.CommitsLoaded;
-
-import net.vanfleteren.jazygit.state.LoadMsg.BranchesLoaded;
-
-import net.vanfleteren.jazygit.state.LoadMsg.BranchLogLoaded;
-
-import net.vanfleteren.jazygit.state.Loadable.Loaded;
-
-import net.vanfleteren.jazygit.state.Loadable.Failed;
-
-import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
-
-import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
-import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
-
-import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
-
-import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
-
-import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
-
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
+import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
+import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
+import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
+import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
+import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
+import net.vanfleteren.jazygit.state.LoadMsg.BranchLogLoaded;
+import net.vanfleteren.jazygit.state.LoadMsg.BranchesLoaded;
+import net.vanfleteren.jazygit.state.LoadMsg.CommitDetailLoaded;
+import net.vanfleteren.jazygit.state.LoadMsg.CommitsLoaded;
+import net.vanfleteren.jazygit.state.LoadMsg.FileDiffLoaded;
+import net.vanfleteren.jazygit.state.LoadMsg.StatusLoaded;
+import net.vanfleteren.jazygit.state.Loadable.Failed;
+import net.vanfleteren.jazygit.state.Loadable.Loaded;
+import net.vanfleteren.jazygit.state.Update.Next;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.UnaryOperator;
@@ -75,11 +60,8 @@ public final class LoadUpdate {
                 && previous.headOid().equals(status.headOid()));
         // Commit loads are not deduplicated: one queued after HEAD moved must still run, even if
         // an earlier one is in progress.
-        List<Cmd> cmds = new ArrayList<>();
-        if (headMoved) {
-            cmds.add(new LoadCommits());
-        }
-        return new Next(Update.reloadDiff(next, cmds), cmds);
+        List<Cmd> cmds = headMoved ? List.of(new LoadCommits()) : List.empty();
+        return Update.reloadDiff(next, cmds);
     }
 
     private static Next branchesLoaded(Model model, List<Branch> branches) {
@@ -96,10 +78,10 @@ public final class LoadUpdate {
     }
 
     private static Optional<String> tip(List<Branch> branches, String name) {
-        return branches.stream()
-                .filter(b -> b.name().equals(name))
+        return branches
+                .find(b -> b.name().equals(name))
                 .map(Branch::tipOid)
-                .findFirst();
+                .toJavaOptional();
     }
 
     /**

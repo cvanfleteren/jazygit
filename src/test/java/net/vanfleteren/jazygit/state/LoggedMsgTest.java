@@ -1,9 +1,9 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.stage.StageMsg;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.Optional;
 
 import static net.vanfleteren.jazygit.state.TestModels.loaded;

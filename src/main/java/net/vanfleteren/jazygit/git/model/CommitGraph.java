@@ -1,10 +1,11 @@
 package net.vanfleteren.jazygit.git.model;
 
+import io.vavr.collection.List;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -33,16 +34,16 @@ public final class CommitGraph {
      */
     public static List<Commit> arrange(List<Commit> commits) {
         Map<Sha, Commit> bySha = index(commits);
-        List<Commit> arranged = new ArrayList<>(commits.size());
+        java.util.List<Commit> arranged = new ArrayList<>(commits.size());
         Set<Sha> placed = new HashSet<>();
         for (Commit commit : commits) {
             place(commit, commits, bySha, placed, arranged);
         }
-        return arranged;
+        return List.ofAll(arranged);
     }
 
     private static void place(Commit commit, List<Commit> commits, Map<Sha, Commit> bySha, Set<Sha> placed,
-                              List<Commit> arranged) {
+                              java.util.List<Commit> arranged) {
         if (!placed.add(commit.sha())) {
             return;
         }
@@ -82,11 +83,7 @@ public final class CommitGraph {
                 closes[last] = true;
             }
         }
-        List<Node> nodes = new ArrayList<>(arranged.size());
-        for (int i = 0; i < arranged.size(); i++) {
-            nodes.add(new Node(arranged.get(i), depth[i], closes[i]));
-        }
-        return nodes;
+        return List.range(0, arranged.size()).map(i -> new Node(arranged.get(i), depth[i], closes[i]));
     }
 
     private static Map<Sha, Commit> index(List<Commit> commits) {
@@ -100,20 +97,20 @@ public final class CommitGraph {
      * its first parent.
      */
     private static Set<Sha> broughtIn(Commit merge, Map<Sha, Commit> bySha) {
-        Set<Sha> main = reachable(merge.parents().subList(0, 1), bySha);
-        Set<Sha> brought = reachable(merge.parents().subList(1, merge.parents().size()), bySha);
+        Set<Sha> main = reachable(merge.parents().take(1), bySha);
+        Set<Sha> brought = reachable(merge.parents().drop(1), bySha);
         brought.removeAll(main);
         return brought;
     }
 
     private static Set<Sha> reachable(List<Sha> from, Map<Sha, Commit> bySha) {
         Set<Sha> seen = new HashSet<>();
-        ArrayDeque<Sha> todo = new ArrayDeque<>(from);
+        ArrayDeque<Sha> todo = new ArrayDeque<>(from.asJava());
         while (!todo.isEmpty()) {
             Sha sha = todo.pop();
             Commit commit = bySha.get(sha);
             if (commit != null && seen.add(sha)) {
-                todo.addAll(commit.parents());
+                todo.addAll(commit.parents().asJava());
             }
         }
         return seen;

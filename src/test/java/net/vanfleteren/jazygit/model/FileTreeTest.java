@@ -2,14 +2,13 @@ package net.vanfleteren.jazygit.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.git.model.FileTree;
 import net.vanfleteren.jazygit.git.model.FileTree.Dir;
 import net.vanfleteren.jazygit.git.model.FileTree.File;
+import net.vanfleteren.jazygit.git.model.FileTree;
 import org.junit.jupiter.api.Test;
-
-import java.util.List;
 
 class FileTreeTest {
 

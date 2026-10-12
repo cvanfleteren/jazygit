@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.feature.stash;
 
-import net.vanfleteren.jazygit.git.model.Sha;
-
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.stash.StashCmd.Stash;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -9,11 +8,10 @@ import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.LogEntry;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.Update;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.Optional;
 
 import static net.vanfleteren.jazygit.state.TestModels.*;
@@ -67,7 +65,7 @@ class StashUpdateTest {
     void aBlankNameIsReplacedByTheBranchAndTheHeadCommit() {
         Model open = Update.update(withChanges(), new StashMsg.Requested()).model();
         net.vanfleteren.jazygit.git.model.Commit head = ((net.vanfleteren.jazygit.state.Loadable.Loaded<
-                List<net.vanfleteren.jazygit.git.model.Commit>>) open.commits()).value().getFirst();
+                List<net.vanfleteren.jazygit.git.model.Commit>>) open.commits()).value().head();
         Model atHead = Update.update(open, new LoadMsg.StatusLoaded(new RepoStatus("main", head.sha().value(),
                 List.of(new FileEntry("a.txt", ChangeType.MODIFIED))))).model();
 

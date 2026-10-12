@@ -1,10 +1,9 @@
 package net.vanfleteren.jazygit.feature.stash;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
-
-import java.util.List;
 
 public sealed interface StashMsg extends Msg {
 
@@ -29,10 +28,6 @@ public sealed interface StashMsg extends Msg {
     }
 
     record Done(List<String> commands) implements StashMsg {
-
-        public Done {
-            commands = List.copyOf(commands);
-        }
     }
 
     record Failed(String message) implements StashMsg {
@@ -45,10 +40,6 @@ public sealed interface StashMsg extends Msg {
     }
 
     record Popped(List<String> commands) implements StashMsg {
-
-        public Popped {
-            commands = List.copyOf(commands);
-        }
     }
 
     record PopFailed(String message) implements StashMsg {
@@ -67,10 +58,6 @@ public sealed interface StashMsg extends Msg {
     }
 
     record Dropped(List<String> commands) implements StashMsg {
-
-        public Dropped {
-            commands = List.copyOf(commands);
-        }
     }
 
     record DropFailed(String message) implements StashMsg {

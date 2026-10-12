@@ -1,10 +1,8 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.git.model.Sha;
-
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.*;
-
-import java.util.List;
+import net.vanfleteren.jazygit.git.model.Sha;
 
 /**
  * Reading the repository. Every read reflects the current state of the repository; deciding when

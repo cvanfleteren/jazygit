@@ -1,12 +1,11 @@
 package net.vanfleteren.jazygit.keys;
 
 import dev.tamboui.tui.event.KeyEvent;
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.state.Msg;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -94,27 +93,25 @@ public final class Keymap {
     public static final class Builder {
 
         private final Map<String, Section> sections = new LinkedHashMap<>();
-        private final List<Global> globals = new ArrayList<>();
+        private List<Global> globals = List.empty();
 
         private Builder() {
         }
 
         @SafeVarargs
         public final <S> Builder add(Scope<S> scope, Binding<S>... bindings) {
-            sections.computeIfAbsent(scope.id(), id -> new Section(scope, new ArrayList<>()))
-                    .bindings().addAll(List.of(bindings));
+            sections.compute(scope.id(), (id, existing) -> new Section(scope,
+                    (existing == null ? List.<Binding<?>>empty() : existing.bindings()).appendAll(List.of(bindings))));
             return this;
         }
 
         public Builder global(Global global) {
-            globals.add(global);
+            globals = globals.append(global);
             return this;
         }
 
         public Keymap build() {
-            Map<String, Section> copy = new LinkedHashMap<>();
-            sections.forEach((id, section) -> copy.put(id, new Section(section.scope(), List.copyOf(section.bindings()))));
-            return new Keymap(Map.copyOf(copy), List.copyOf(globals));
+            return new Keymap(Map.copyOf(sections), globals);
         }
     }
 
@@ -142,10 +139,7 @@ public final class Keymap {
             return Optional.of(new HelpMsg.Requested(scope.id()));
         }
         return Optional.ofNullable(sections.get(scope.id()))
-                .stream()
-                .flatMap(section -> section.bindings().stream())
-                .filter(binding -> binding.key().equals(text))
-                .findFirst()
+                .flatMap(section -> section.bindings().find(binding -> binding.key().equals(text)).toJavaOptional())
                 .flatMap(binding -> {
                     @SuppressWarnings("unchecked")
                     Binding<S> typed = (Binding<S>) binding;

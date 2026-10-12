@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
-import net.vanfleteren.jazygit.git.model.Sha;
-
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -9,9 +8,9 @@ import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.Sha;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -41,7 +40,7 @@ public final class TestModels {
         Model model = Update.init("repo").model();
         model = Update.update(model, new LoadMsg.StatusLoaded(CLEAN)).model();
         model = Update.update(model, new LoadMsg.BranchesLoaded(BRANCHES)).model();
-        model = Update.update(model, new LoadMsg.StashesLoaded(java.util.List.of())).model();
+        model = Update.update(model, new LoadMsg.StashesLoaded(io.vavr.collection.List.of())).model();
         return Update.update(model, new LoadMsg.CommitsLoaded(COMMITS)).model();
     }
 
@@ -64,7 +63,7 @@ public final class TestModels {
     /**
      * The model after all of the provider's data, and the diff of {@code files}, has been loaded.
      */
-    public static Model withFilesSelected(GitInfoProvider provider, java.util.List<FileEntry> files) {
+    public static Model withFilesSelected(GitInfoProvider provider, io.vavr.collection.List<FileEntry> files) {
         Program program = Program.start(provider, Runnable::run, Runnable::run);
         program.dispatch(new SelectionMsg.FilesSelected(files));
         return program.model();

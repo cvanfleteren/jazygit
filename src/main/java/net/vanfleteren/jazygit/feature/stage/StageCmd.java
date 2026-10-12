@@ -1,10 +1,11 @@
 package net.vanfleteren.jazygit.feature.stage;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.GitCommandException;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Msg;
-import java.util.List;
+
 import java.util.Optional;
 
 /**
@@ -13,10 +14,6 @@ import java.util.Optional;
 public sealed interface StageCmd extends Cmd {
 
     record Stage(List<String> paths) implements StageCmd {
-
-        public Stage {
-            paths = List.copyOf(paths);
-        }
 
         @Override
         public Optional<String> logTitleKey() {
@@ -39,11 +36,6 @@ public sealed interface StageCmd extends Cmd {
      * {@code others} are reset to HEAD.
      */
     record Unstage(List<String> added, List<String> others) implements StageCmd {
-
-        public Unstage {
-            added = List.copyOf(added);
-            others = List.copyOf(others);
-        }
 
         @Override
         public Optional<String> logTitleKey() {

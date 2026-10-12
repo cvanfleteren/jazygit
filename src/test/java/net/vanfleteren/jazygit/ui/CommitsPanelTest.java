@@ -1,11 +1,11 @@
 package net.vanfleteren.jazygit.ui;
 
-import net.vanfleteren.jazygit.git.model.Sha;
-
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.tui.event.KeyCode;
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
@@ -13,7 +13,6 @@ import net.vanfleteren.jazygit.state.TestModels;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -23,7 +22,7 @@ class CommitsPanelTest {
 
     private static Commit commit(String sha, String... parents) {
         return new Commit(new Sha(sha + "0000"), "Ada", "ada@example.com", Instant.EPOCH, "msg " + sha, "",
-                java.util.Arrays.stream(parents).map(p -> new Sha(p + "0000")).toList());
+                List.of(parents).map(p -> new Sha(p + "0000")));
     }
 
     @Test
@@ -35,7 +34,7 @@ class CommitsPanelTest {
         List<LoadableList.Row> rows = CommitsPanel.rows(CommitGraph.layout(log));
 
         assertEquals(List.of("mmmmmmm Ad ◎─╮ msg mmmmmmm", "fffff02 Ad │ ○ msg fffff02", "fffff01 Ad │ ○ msg fffff01",
-                "bbbbbbb Ad ○─╯ msg bbbbbbb", "aaaaaaa Ad ○ msg aaaaaaa"), rows.stream().map(LoadableList.Row::text).toList());
+                "bbbbbbb Ad ○─╯ msg bbbbbbb", "aaaaaaa Ad ○ msg aaaaaaa"), rows.map(LoadableList.Row::text).toList());
     }
 
     @Test
@@ -51,7 +50,7 @@ class CommitsPanelTest {
 
     @Test
     void theListScrollsAlongWithTheSelection() throws Exception {
-        List<Commit> log = java.util.stream.IntStream.range(0, 80).mapToObj(i -> commit("s" + i)).toList();
+        List<Commit> log = List.range(0, 80).map(i -> commit("s" + i));
         Model model = TestModels.loaded(new SampleData()).withCommits(new Loadable.Loaded<>(log));
         CommitsPanel panel = new CommitsPanel();
 

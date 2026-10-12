@@ -1,26 +1,22 @@
 package net.vanfleteren.jazygit.feature.commit;
 
-import net.vanfleteren.jazygit.git.model.Sha;
-
-
-import net.vanfleteren.jazygit.ui.RenderedText;
-
-import net.vanfleteren.jazygit.state.LoadMsg;
-import static dev.tamboui.toolkit.Toolkit.*;
-
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
+import static dev.tamboui.toolkit.Toolkit.*;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -29,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 class SquashDialogTest {
 
-    private final List<Msg> dispatched = new ArrayList<>();
+    private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<SquashPopup> dialog = SquashDialog.create(dispatched::add);
     private final Model open = openModel();
 
@@ -47,7 +43,7 @@ class SquashDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new SquashMsg.Confirmed()), dispatched);
+        assertEquals(java.util.List.of(new SquashMsg.Confirmed()), dispatched);
     }
 
     @Test
@@ -57,7 +53,7 @@ class SquashDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new SquashMsg.Cancelled()), dispatched);
+        assertEquals(java.util.List.of(new SquashMsg.Cancelled()), dispatched);
     }
 
     @Test

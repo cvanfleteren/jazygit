@@ -1,16 +1,16 @@
 package net.vanfleteren.jazygit.feature.discard;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.discard.DiscardCmd.Discard;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Scope;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.Update;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.Optional;
 
 import static net.vanfleteren.jazygit.state.TestModels.loaded;

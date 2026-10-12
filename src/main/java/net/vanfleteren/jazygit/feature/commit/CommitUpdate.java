@@ -1,35 +1,24 @@
 package net.vanfleteren.jazygit.feature.commit;
 
-import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.feature.commit.CommitMsg.StagedForCommit;
-
-import net.vanfleteren.jazygit.feature.commit.CommitMsg.StageForCommitFailed;
-
-import net.vanfleteren.jazygit.feature.commit.CommitMsg.StageAllConfirmed;
-
-import net.vanfleteren.jazygit.feature.commit.CommitMsg.StageAllCancelled;
-
-import net.vanfleteren.jazygit.feature.commit.CommitMsg.Requested;
-
-import net.vanfleteren.jazygit.feature.commit.CommitMsg.Failed;
-
-import net.vanfleteren.jazygit.feature.commit.CommitMsg.Done;
-
-import net.vanfleteren.jazygit.feature.commit.CommitMsg.Confirmed;
-
-import net.vanfleteren.jazygit.feature.commit.CommitMsg.Cancelled;
-
-import net.vanfleteren.jazygit.feature.commit.CommitCmd.StageForCommit;
-
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.commit.CommitCmd.Commit;
-
+import net.vanfleteren.jazygit.feature.commit.CommitCmd.StageForCommit;
+import net.vanfleteren.jazygit.feature.commit.CommitMsg.Cancelled;
+import net.vanfleteren.jazygit.feature.commit.CommitMsg.Confirmed;
+import net.vanfleteren.jazygit.feature.commit.CommitMsg.Done;
+import net.vanfleteren.jazygit.feature.commit.CommitMsg.Failed;
+import net.vanfleteren.jazygit.feature.commit.CommitMsg.Requested;
+import net.vanfleteren.jazygit.feature.commit.CommitMsg.StageAllCancelled;
+import net.vanfleteren.jazygit.feature.commit.CommitMsg.StageAllConfirmed;
+import net.vanfleteren.jazygit.feature.commit.CommitMsg.StageForCommitFailed;
+import net.vanfleteren.jazygit.feature.commit.CommitMsg.StagedForCommit;
+import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
-import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.Update;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -62,7 +51,7 @@ public final class CommitUpdate {
      */
     private static Next requested(Model model) {
         List<FileEntry> files = Update.files(model);
-        if (files.stream().anyMatch(FileEntry::staged)) {
+        if (files.exists(FileEntry::staged)) {
             return Next.of(model.withError(Optional.empty()).openPopup(new CommitPopup()));
         }
         if (files.isEmpty()) {
@@ -72,7 +61,7 @@ public final class CommitUpdate {
     }
 
     private static Next stageAllConfirmed(Model model) {
-        List<String> paths = Update.files(model).stream().filter(FileEntry::unstaged).map(FileEntry::path).toList();
+        List<String> paths = Update.files(model).filter(FileEntry::unstaged).map(FileEntry::path).toList();
         return model.popup(StageAllPopup.class).isPresent()
                 ? Next.of(model.withoutPopup(StageAllPopup.class), new StageForCommit(paths))
                 : Next.of(model);

@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.Commit;
 
-import java.util.List;
 import java.util.Optional;
 
 /**

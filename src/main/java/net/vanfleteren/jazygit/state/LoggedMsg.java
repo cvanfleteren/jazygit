@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
-import java.util.List;
+import io.vavr.collection.List;
 
 /**
  * A message preceded by commands to log, used for commands that failed: the commands that were executed
@@ -11,10 +11,6 @@ import java.util.List;
  * @param msg      the message to apply once they are logged
  */
 public record LoggedMsg(String titleKey, List<String> commands, Msg msg) implements Msg {
-
-    public LoggedMsg {
-        commands = List.copyOf(commands);
-    }
 
     @Override
     public Update.Next apply(Model model) {

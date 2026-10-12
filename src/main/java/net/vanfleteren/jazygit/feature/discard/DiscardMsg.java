@@ -1,11 +1,10 @@
 package net.vanfleteren.jazygit.feature.discard;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
-
-import java.util.List;
 
 public sealed interface DiscardMsg extends Msg {
 
@@ -32,10 +31,6 @@ public sealed interface DiscardMsg extends Msg {
      * The user asked to discard the changes of the given files; what exactly is still to be chosen.
      */
     record Requested(List<FileEntry> files) implements DiscardMsg {
-
-        public Requested {
-            files = List.copyOf(files);
-        }
     }
 
     record Cancelled() implements DiscardMsg {

@@ -1,26 +1,23 @@
 package net.vanfleteren.jazygit.ui;
 
-import net.vanfleteren.jazygit.i18n.Messages;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
+import io.vavr.collection.List;
+import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
-import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
+import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.keys.Keymap;
+import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.CommitDetail;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.keys.Keymap;
-import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Msg;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * Left-side panel listing the commit log.
@@ -94,9 +91,8 @@ public class CommitsPanel {
     }
 
     static List<LoadableList.Row> rows(List<CommitGraph.Node> nodes) {
-        return IntStream.range(0, nodes.size())
-                .mapToObj(i -> row(nodes.get(i), i > 0 && nodes.get(i - 1).closesBranch()))
-                .toList();
+        return List.range(0, nodes.size())
+                .map(i -> row(nodes.get(i), i > 0 && nodes.get(i - 1).closesBranch()));
     }
 
     /**
@@ -117,14 +113,14 @@ public class CommitsPanel {
      * its first two letters as they are.
      */
     static String initials(String name) {
-        List<String> words = Arrays.stream(name.strip().split("\\s+")).filter(word -> !word.isEmpty()).toList();
+        List<String> words = List.of(name.strip().split("\\s+")).filter(word -> !word.isEmpty());
         if (words.size() < 2) {
             String word = name.strip();
             return word.substring(0, word.offsetByCodePoints(0, Math.min(2, word.codePointCount(0, word.length()))));
         }
-        return words.stream().limit(2)
+        return words.take(2)
                 .map(word -> word.substring(0, word.offsetByCodePoints(0, 1)).toUpperCase())
-                .collect(Collectors.joining());
+                .mkString();
     }
 
     private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {

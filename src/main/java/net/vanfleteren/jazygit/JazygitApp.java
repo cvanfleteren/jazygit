@@ -9,54 +9,54 @@ import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.TuiConfig;
 import dev.tamboui.tui.event.KeyEvent;
+import io.vavr.collection.List;
+import net.vanfleteren.jazygit.feature.branch.DeleteBranchDialog;
+import net.vanfleteren.jazygit.feature.branch.DeleteBranchPopup;
+import net.vanfleteren.jazygit.feature.branch.ForcePushDialog;
+import net.vanfleteren.jazygit.feature.branch.ForcePushPopup;
+import net.vanfleteren.jazygit.feature.branch.NewBranchDialog;
+import net.vanfleteren.jazygit.feature.branch.RebaseDialog;
+import net.vanfleteren.jazygit.feature.branch.RebasePopup;
+import net.vanfleteren.jazygit.feature.branch.StashCheckoutDialog;
+import net.vanfleteren.jazygit.feature.branch.StashCheckoutPopup;
+import net.vanfleteren.jazygit.feature.commit.AmendDialog;
+import net.vanfleteren.jazygit.feature.commit.AmendPopup;
+import net.vanfleteren.jazygit.feature.commit.CommitDialog;
+import net.vanfleteren.jazygit.feature.commit.SquashDialog;
+import net.vanfleteren.jazygit.feature.commit.SquashPopup;
+import net.vanfleteren.jazygit.feature.commit.StageAllPopup;
+import net.vanfleteren.jazygit.feature.discard.DiscardDialog;
+import net.vanfleteren.jazygit.feature.discard.DiscardPopup;
+import net.vanfleteren.jazygit.feature.help.HelpDialog;
+import net.vanfleteren.jazygit.feature.help.HelpPopup;
+import net.vanfleteren.jazygit.feature.stage.StageAllDialog;
+import net.vanfleteren.jazygit.feature.stash.StashDialog;
+import net.vanfleteren.jazygit.feature.stash.StashDropDialog;
+import net.vanfleteren.jazygit.feature.stash.StashDropPopup;
+import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
+import net.vanfleteren.jazygit.feature.theme.ThemePopup;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.JGitInfoProvider;
 import net.vanfleteren.jazygit.git.model.Stash;
+import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Program;
-import net.vanfleteren.jazygit.feature.branch.ForcePushPopup;
-import net.vanfleteren.jazygit.feature.branch.StashCheckoutPopup;
-import net.vanfleteren.jazygit.feature.commit.AmendDialog;
-import net.vanfleteren.jazygit.feature.commit.AmendPopup;
-import net.vanfleteren.jazygit.feature.commit.SquashDialog;
-import net.vanfleteren.jazygit.feature.commit.SquashPopup;
-import net.vanfleteren.jazygit.feature.commit.StageAllPopup;
-import net.vanfleteren.jazygit.feature.stash.StashDropPopup;
-import net.vanfleteren.jazygit.feature.branch.DeleteBranchPopup;
-import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
-import net.vanfleteren.jazygit.feature.theme.ThemePopup;
-import net.vanfleteren.jazygit.feature.branch.RebaseDialog;
-import net.vanfleteren.jazygit.feature.branch.RebasePopup;
-import net.vanfleteren.jazygit.feature.discard.DiscardPopup;
-import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
-import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
-import net.vanfleteren.jazygit.feature.help.HelpDialog;
-import net.vanfleteren.jazygit.feature.help.HelpPopup;
 import net.vanfleteren.jazygit.ui.BranchesPanel;
-import net.vanfleteren.jazygit.feature.commit.CommitDialog;
 import net.vanfleteren.jazygit.ui.CommandLogPanel;
 import net.vanfleteren.jazygit.ui.CommitsPanel;
-import net.vanfleteren.jazygit.feature.stage.StageAllDialog;
-import net.vanfleteren.jazygit.feature.branch.DeleteBranchDialog;
-import net.vanfleteren.jazygit.feature.discard.DiscardDialog;
 import net.vanfleteren.jazygit.ui.ContentPanel;
 import net.vanfleteren.jazygit.ui.FilesPanel;
-import net.vanfleteren.jazygit.feature.branch.ForcePushDialog;
-import net.vanfleteren.jazygit.feature.branch.StashCheckoutDialog;
-import net.vanfleteren.jazygit.feature.branch.NewBranchDialog;
-import net.vanfleteren.jazygit.feature.stash.StashDialog;
-import net.vanfleteren.jazygit.feature.stash.StashDropDialog;
 import net.vanfleteren.jazygit.ui.StashPanel;
 import net.vanfleteren.jazygit.ui.StatusPanel;
-import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.ui.Theme;
+import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
+import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -214,19 +214,17 @@ public class JazygitApp extends ToolkitApp {
                 new Popup(squashDialog.render(model), List.of(SquashDialog.ID), CommitsPanel.ID),
                 new Popup(rewordDialog.render(model), rewordDialog.ids(), CommitsPanel.ID),
                 new Popup(helpDialog.render(model), List.of(HelpDialog.ID), helpOrigin));
-        if (focusedId != null && popups.stream().noneMatch(p -> p.ids().contains(focusedId))) {
+        if (focusedId != null && popups.forAll(p -> !p.ids().contains(focusedId))) {
             lastFocus = focusedId;
         }
-        Optional<Popup> open = popups.stream().filter(p -> p.element().isPresent()).findFirst();
+        Optional<Popup> open = popups.find(p -> p.element().isPresent()).toJavaOptional();
         if (open.isPresent()) {
             if (focusedId == null || !open.get().ids().contains(focusedId)) {
-                runner().focusManager().setFocus(open.get().ids().getFirst());
+                runner().focusManager().setFocus(open.get().ids().head());
             }
         } else {
-            popups.stream()
-                    .filter(p -> focusedId != null && p.ids().contains(focusedId))
-                    .findFirst()
-                    .ifPresent(p -> runner().focusManager().setFocus(p.returnTo()));
+            popups.find(p -> focusedId != null && p.ids().contains(focusedId))
+                    .forEach(p -> runner().focusManager().setFocus(p.returnTo()));
         }
         Optional<Element> dialog = open.flatMap(Popup::element);
         return dialog.<Element>map(d -> stack(layout, d)).orElse(layout);

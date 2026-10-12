@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.discard;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.discard.DiscardCmd.Discard;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Chosen;
@@ -13,10 +14,9 @@ import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.Update;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 
@@ -59,9 +59,9 @@ public final class DiscardUpdate {
      */
     static DiscardPlan plan(List<FileEntry> files, Scope scope) {
         Predicate<FileEntry> affected = scope == Scope.ALL ? f -> true : FileEntry::unstaged;
-        List<FileEntry> picked = files.stream().filter(affected).toList();
+        List<FileEntry> picked = files.filter(affected).toList();
         List<String> untracked = paths(picked, f -> f.type() == ChangeType.UNTRACKED);
-        List<FileEntry> tracked = picked.stream().filter(f -> f.type() != ChangeType.UNTRACKED).toList();
+        List<FileEntry> tracked = picked.filter(f -> f.type() != ChangeType.UNTRACKED).toList();
         if (scope == Scope.UNSTAGED) {
             return new DiscardPlan(untracked, paths(tracked, f -> true), List.of(), List.of());
         }
@@ -71,6 +71,6 @@ public final class DiscardUpdate {
     }
 
     private static List<String> paths(List<FileEntry> files, Predicate<FileEntry> filter) {
-        return files.stream().filter(filter).map(FileEntry::path).toList();
+        return files.filter(filter).map(FileEntry::path).toList();
     }
 }

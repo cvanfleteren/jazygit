@@ -1,29 +1,27 @@
 package net.vanfleteren.jazygit.ui;
 
-import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
-import dev.tamboui.widgets.spinner.SpinnerStyle;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.widgets.spinner.SpinnerStyle;
+import io.vavr.collection.List;
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.keys.Keymap;
+import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.BranchLog;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.keys.Keymap;
-import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Msg;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 /**
  * Left-side panel listing the local branches, with the current branch marked. Space checks out
@@ -62,12 +60,10 @@ public class BranchesPanel {
     }
 
     private static LoadableList.Row row(Branch b, Duration since, Optional<String> spinner) {
-        return new LoadableList.Row(Stream.of(
-                        Stream.of(LoadableList.Seg.of("%4s ".formatted(age(since)) + (b.current() ? "* " : "  ") + b.name())),
-                        sync(b).stream(),
-                        spinner.stream().map(frame -> LoadableList.Seg.styled(" " + frame, Theme.Classes.SPINNER)))
-                .flatMap(Function.identity())
-                .toList());
+        return new LoadableList.Row(
+                List.of(LoadableList.Seg.of("%4s ".formatted(age(since)) + (b.current() ? "* " : "  ") + b.name()))
+                        .appendAll(sync(b))
+                        .appendAll(Option.ofOptional(spinner).map(frame -> LoadableList.Seg.styled(" " + frame, Theme.Classes.SPINNER))));
     }
 
     /**
@@ -75,13 +71,12 @@ public class BranchesPanel {
      * with a leading space; nothing for a branch that is in sync.
      */
     static List<LoadableList.Seg> sync(Branch branch) {
-        return Stream.of(
+        return List.of(
                         Optional.of(branch.ahead()).filter(n -> n > 0)
                                 .map(n -> LoadableList.Seg.styled(" ↑" + n, Theme.Classes.AHEAD)),
                         Optional.of(branch.behind()).filter(n -> n > 0)
                                 .map(n -> LoadableList.Seg.styled(" ↓" + n, Theme.Classes.BEHIND)))
-                .flatMap(Optional::stream)
-                .toList();
+                .flatMap(Option::ofOptional);
     }
 
     /**
@@ -94,14 +89,13 @@ public class BranchesPanel {
                 ? Optional.of(selected).filter(i -> i < previous.size()).map(i -> previous.get(i).name())
                 : current(next);
         return target
-                .map(name -> IntStream.range(0, next.size()).filter(i -> next.get(i).name().equals(name)).boxed()
-                        .findFirst()
-                        .orElse(selected))
+                .map(name -> next.indexWhere(b -> b.name().equals(name)))
+                .filter(i -> i >= 0)
                 .orElse(selected);
     }
 
     private static Optional<String> current(List<Branch> branches) {
-        return branches.stream().filter(Branch::current).map(Branch::name).findFirst();
+        return branches.find(Branch::current).map(Branch::name).toJavaOptional();
     }
 
     /**
@@ -116,10 +110,9 @@ public class BranchesPanel {
      */
     public BranchesPanel(Consumer<Msg> dispatch, Clock clock) {
         list = new LoadableList<>(Messages.get("panel.branches.title"), ID,
-                branches -> branches.stream()
+                branches -> branches
                         .map(b -> row(b, Duration.between(b.tipTime(), clock.instant()),
-                                pushing.contains(b.name()) ? Optional.of(spinnerFrame(clock.instant())) : Optional.empty()))
-                        .toList(),
+                                pushing.contains(b.name()) ? Optional.of(spinnerFrame(clock.instant())) : Optional.empty())),
                 BranchesPanel::reselect);
         // The highlight alone marks the selection; a symbol would indent the rows.
         list.highlightSymbol("");

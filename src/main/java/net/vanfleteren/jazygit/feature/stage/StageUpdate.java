@@ -1,23 +1,19 @@
 package net.vanfleteren.jazygit.feature.stage;
 
-import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.feature.stage.StageMsg.Requested;
-
-import net.vanfleteren.jazygit.feature.stage.StageMsg.Failed;
-
-import net.vanfleteren.jazygit.feature.stage.StageMsg.Done;
-
-import net.vanfleteren.jazygit.feature.stage.StageCmd.Unstage;
-
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.stage.StageCmd.Stage;
-
+import net.vanfleteren.jazygit.feature.stage.StageCmd.Unstage;
+import net.vanfleteren.jazygit.feature.stage.StageMsg.Done;
+import net.vanfleteren.jazygit.feature.stage.StageMsg.Failed;
+import net.vanfleteren.jazygit.feature.stage.StageMsg.Requested;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
-import java.util.List;
+import net.vanfleteren.jazygit.state.Update;
+
 import java.util.Optional;
 
 /**
@@ -43,19 +39,19 @@ public final class StageUpdate {
      * directory, git gets the directory itself where that has the same effect.
      */
     private static Next toggle(Model model, List<FileEntry> files, Optional<String> directory) {
-        List<String> unstaged = files.stream().filter(FileEntry::unstaged).map(FileEntry::path).toList();
+        List<String> unstaged = files.filter(FileEntry::unstaged).map(FileEntry::path).toList();
         if (!unstaged.isEmpty()) {
             // Adding a directory stages every change below it, which are exactly the changed files that
             // are not staged completely yet.
             return Next.of(model.withError(Optional.empty()),
                     new Stage(directory.map(d -> List.of(pathspec(d))).orElse(unstaged)));
         }
-        List<FileEntry> staged = files.stream().filter(FileEntry::staged).toList();
+        List<FileEntry> staged = files.filter(FileEntry::staged).toList();
         if (staged.isEmpty()) {
             return Next.of(model);
         }
-        List<String> added = staged.stream().filter(f -> f.type() == ChangeType.ADDED).map(FileEntry::path).toList();
-        List<String> others = staged.stream().filter(f -> f.type() != ChangeType.ADDED).map(FileEntry::path).toList();
+        List<String> added = staged.filter(f -> f.type() == ChangeType.ADDED).map(FileEntry::path).toList();
+        List<String> others = staged.filter(f -> f.type() != ChangeType.ADDED).map(FileEntry::path).toList();
         // Resetting a directory takes every staged change below it out of the index. That is only right
         // when none of them is a newly added file, which has to be removed from the index instead: doing
         // that for the directory would remove all its tracked files.

@@ -1,18 +1,17 @@
 package net.vanfleteren.jazygit.ui;
 
-import net.vanfleteren.jazygit.state.LoadMsg;
-import net.vanfleteren.jazygit.feature.branch.NewBranchMsg;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.tui.event.KeyCode;
+import io.vavr.collection.List;
+import net.vanfleteren.jazygit.feature.branch.NewBranchMsg;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.model.SampleData;
+import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import org.junit.jupiter.api.Test;
-
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -90,7 +89,7 @@ class BranchesPanelTest {
 
     @Test
     void nAsksForANewBranchStartingAtTheHighlightedBranch() throws Exception {
-        List<Msg> dispatched = new java.util.ArrayList<>();
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         BranchesPanel panel = new BranchesPanel(dispatched::add);
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
             testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
@@ -101,12 +100,12 @@ class BranchesPanelTest {
             testRunner.pilot().quit();
         }
 
-        assertEquals(List.of(new NewBranchMsg.Requested("feature")), dispatched);
+        assertEquals(java.util.List.of(new NewBranchMsg.Requested("feature")), dispatched);
     }
 
     @Test
     void shiftPPushesTheHighlightedBranch() throws Exception {
-        List<Msg> dispatched = new java.util.ArrayList<>();
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         BranchesPanel panel = new BranchesPanel(dispatched::add);
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
             testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
@@ -117,12 +116,12 @@ class BranchesPanelTest {
             testRunner.pilot().quit();
         }
 
-        assertEquals(List.of(new net.vanfleteren.jazygit.feature.branch.PushMsg.Requested("feature")), dispatched);
+        assertEquals(java.util.List.of(new net.vanfleteren.jazygit.feature.branch.PushMsg.Requested("feature")), dispatched);
     }
 
     @Test
     void questionMarkAsksForTheKeybindingsOfThePanel() throws Exception {
-        List<Msg> dispatched = new java.util.ArrayList<>();
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         BranchesPanel panel = new BranchesPanel(dispatched::add);
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
             testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
@@ -132,7 +131,7 @@ class BranchesPanelTest {
             testRunner.pilot().quit();
         }
 
-        assertEquals(List.of(new net.vanfleteren.jazygit.feature.help.HelpMsg.Requested(
+        assertEquals(java.util.List.of(new net.vanfleteren.jazygit.feature.help.HelpMsg.Requested(
                 net.vanfleteren.jazygit.keys.Scopes.BRANCHES.id())), dispatched);
     }
 

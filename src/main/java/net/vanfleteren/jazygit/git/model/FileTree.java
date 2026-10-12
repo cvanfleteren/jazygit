@@ -1,10 +1,6 @@
 package net.vanfleteren.jazygit.git.model;
 
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import io.vavr.collection.List;
 
 /**
  * Changed files arranged as a directory tree. A directory whose only child is another directory is
@@ -21,10 +17,6 @@ public sealed interface FileTree {
      * @param path the full repository-relative path of the directory
      */
     record Dir(String name, String path, List<FileTree> children) implements FileTree {
-
-        public Dir {
-            children = List.copyOf(children);
-        }
     }
 
     record File(String name, FileEntry entry) implements FileTree {
@@ -36,7 +28,7 @@ public sealed interface FileTree {
     default List<FileEntry> entries() {
         return switch (this) {
             case File file -> List.of(file.entry());
-            case Dir dir -> dir.children().stream().flatMap(child -> child.entries().stream()).toList();
+            case Dir dir -> dir.children().flatMap(FileTree::entries);
         };
     }
 
@@ -47,9 +39,8 @@ public sealed interface FileTree {
     default List<FileEntry> directEntries() {
         return switch (this) {
             case File file -> List.of(file.entry());
-            case Dir dir -> dir.children().stream()
-                    .flatMap(child -> child instanceof File file ? Stream.of(file.entry()) : Stream.empty())
-                    .toList();
+            case Dir dir -> dir.children()
+                    .flatMap(child -> child instanceof File file ? List.of(file.entry()) : List.<FileEntry>empty());
         };
     }
 
@@ -65,18 +56,17 @@ public sealed interface FileTree {
      * {@code files} are inside of.
      */
     private static List<FileTree> children(String prefix, List<FileEntry> files) {
-        Map<Boolean, List<FileEntry>> nested = files.stream()
-                .collect(Collectors.partitioningBy(f -> relative(prefix, f).contains("/")));
-        Stream<FileTree> dirs = nested.get(true).stream()
-                .collect(Collectors.groupingBy(f -> relative(prefix, f).split("/", 2)[0], TreeMap::new,
-                        Collectors.toList()))
-                .entrySet().stream()
-                .map(e -> merged(new Dir(e.getKey(), prefix + e.getKey(),
-                        children(prefix + e.getKey() + "/", e.getValue()))));
-        Stream<FileTree> leaves = nested.get(false).stream()
-                .map(f -> (FileTree) new File(relative(prefix, f), f))
+        var nested = files.partition(f -> relative(prefix, f).contains("/"));
+        List<FileTree> dirs = nested._1
+                .groupBy(f -> relative(prefix, f).split("/", 2)[0])
+                .toList()
+                .sortBy(entry -> entry._1)
+                .map(entry -> merged(new Dir(entry._1, prefix + entry._1,
+                        children(prefix + entry._1 + "/", entry._2))));
+        List<FileTree> leaves = nested._2
+                .<FileTree>map(f -> new File(relative(prefix, f), f))
                 .sorted((a, b) -> a.name().compareTo(b.name()));
-        return Stream.concat(dirs, leaves).toList();
+        return dirs.appendAll(leaves);
     }
 
     private static String relative(String prefix, FileEntry file) {
@@ -88,7 +78,7 @@ public sealed interface FileTree {
      * descendants, so one step is enough.
      */
     private static FileTree merged(Dir dir) {
-        if (dir.children().size() == 1 && dir.children().getFirst() instanceof Dir child) {
+        if (dir.children().size() == 1 && dir.children().head() instanceof Dir child) {
             return new Dir(dir.name() + "/" + child.name(), child.path(), child.children());
         }
         return dir;

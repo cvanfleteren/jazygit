@@ -1,25 +1,20 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Requested;
-
-import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Failed;
-
-import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Deleted;
-
-import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Chosen;
-
-import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Cancelled;
-
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.DeleteBranch;
-
-import net.vanfleteren.jazygit.state.CommandLog;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Cancelled;
+import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Chosen;
+import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Deleted;
+import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Failed;
+import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Requested;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
+import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
-import java.util.List;
+import net.vanfleteren.jazygit.state.Update;
+
 import java.util.Optional;
 
 /**
@@ -47,7 +42,7 @@ public final class DeleteBranchUpdate {
      */
     private static Next requested(Model model, String branch) {
         boolean deletable = model.branches() instanceof Loaded<List<Branch>>(List<Branch> branches)
-                && branches.stream().anyMatch(b -> b.name().equals(branch) && !b.current());
+                && branches.exists(b -> b.name().equals(branch) && !b.current());
         return deletable ? Next.of(model.openPopup(new DeleteBranchPopup(branch))) : Next.of(model);
     }
 
@@ -62,6 +57,6 @@ public final class DeleteBranchUpdate {
 
     private static boolean remoteDeletable(Model model, String branch) {
         return model.branches() instanceof Loaded<List<Branch>>(List<Branch> branches)
-                && branches.stream().anyMatch(b -> b.name().equals(branch) && b.remoteDeletable());
+                && branches.exists(b -> b.name().equals(branch) && b.remoteDeletable());
     }
 }

@@ -4,10 +4,10 @@ import dev.tamboui.css.Styleable;
 import dev.tamboui.css.engine.StyleEngine;
 import dev.tamboui.style.Style;
 import dev.tamboui.tui.event.KeyEvent;
+import io.vavr.collection.List;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 

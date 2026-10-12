@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
-import java.util.ArrayList;
-import java.util.List;
+import io.vavr.collection.List;
+
 import java.util.function.Supplier;
 
 /**
@@ -18,7 +18,7 @@ public class GitCommandException extends IllegalStateException {
 
     public GitCommandException(String message, List<String> commands, Throwable cause) {
         super(message, cause);
-        this.commands = List.copyOf(commands);
+        this.commands = commands;
     }
 
     /**
@@ -32,9 +32,7 @@ public class GitCommandException extends IllegalStateException {
      * This failure, as part of a sequence in which the {@code earlier} commands already succeeded.
      */
     public GitCommandException after(List<String> earlier) {
-        List<String> all = new ArrayList<>(earlier);
-        all.addAll(commands);
-        return new GitCommandException(getMessage(), all, getCause());
+        return new GitCommandException(getMessage(), earlier.appendAll(commands), getCause());
     }
 
     /**
@@ -43,10 +41,10 @@ public class GitCommandException extends IllegalStateException {
      */
     @SafeVarargs
     public static List<String> chain(Supplier<List<String>>... steps) {
-        List<String> executed = new ArrayList<>();
+        List<String> executed = List.empty();
         for (Supplier<List<String>> step : steps) {
             try {
-                executed.addAll(step.get());
+                executed = executed.appendAll(step.get());
             } catch (GitCommandException e) {
                 throw e.after(executed);
             }

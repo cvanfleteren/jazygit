@@ -1,12 +1,12 @@
 package net.vanfleteren.jazygit.feature.theme;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.Theme;
-import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
+import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 
-import java.util.List;
 import java.util.function.Consumer;
 
 /**

@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
@@ -10,8 +11,6 @@ import net.vanfleteren.jazygit.state.Loadable.Loading;
 import net.vanfleteren.jazygit.state.Msg.Tick;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
-
-import java.util.List;
 
 import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -84,9 +83,9 @@ class UpdateTest {
         Model model = loaded();
 
         assertSame(model.branches(),
-                Update.update(model, new LoadMsg.BranchesLoaded(List.copyOf(BRANCHES))).model().branches());
+                Update.update(model, new LoadMsg.BranchesLoaded(BRANCHES)).model().branches());
         assertSame(model.commits(),
-                Update.update(model, new LoadMsg.CommitsLoaded(List.copyOf(COMMITS))).model().commits());
+                Update.update(model, new LoadMsg.CommitsLoaded(COMMITS)).model().commits());
     }
 
     @Test

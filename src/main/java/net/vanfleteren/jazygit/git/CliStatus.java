@@ -1,17 +1,17 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.i18n.Messages;
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Conflict;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.i18n.Messages;
 import org.zeroturnaround.exec.InvalidExitValueException;
 import org.zeroturnaround.exec.ProcessExecutor;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
@@ -103,7 +103,7 @@ public final class CliStatus {
                 }
             }
         }
-        return new RepoStatus(head, oid, List.copyOf(byPath.values()));
+        return new RepoStatus(head, oid, List.ofAll(byPath.values()));
     }
 
     private static void put(Map<String, FileEntry> byPath, FileEntry entry) {

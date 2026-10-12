@@ -1,25 +1,20 @@
 package net.vanfleteren.jazygit.feature.commit;
 
-import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.feature.commit.RewordMsg.Requested;
-
-import net.vanfleteren.jazygit.feature.commit.RewordMsg.Failed;
-
-import net.vanfleteren.jazygit.feature.commit.RewordMsg.Done;
-
-import net.vanfleteren.jazygit.feature.commit.RewordMsg.Confirmed;
-
-import net.vanfleteren.jazygit.feature.commit.RewordMsg.Cancelled;
-
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.commit.CommitCmd.Reword;
-
+import net.vanfleteren.jazygit.feature.commit.RewordMsg.Cancelled;
+import net.vanfleteren.jazygit.feature.commit.RewordMsg.Confirmed;
+import net.vanfleteren.jazygit.feature.commit.RewordMsg.Done;
+import net.vanfleteren.jazygit.feature.commit.RewordMsg.Failed;
+import net.vanfleteren.jazygit.feature.commit.RewordMsg.Requested;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.CommandLog;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
+import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
-import java.util.List;
+import net.vanfleteren.jazygit.state.Update;
+
 import java.util.Optional;
 
 /**

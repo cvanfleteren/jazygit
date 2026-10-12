@@ -1,13 +1,11 @@
 package net.vanfleteren.jazygit.feature.selection;
 
-import net.vanfleteren.jazygit.git.model.Sha;
-
-import net.vanfleteren.jazygit.feature.selection.SelectionMsg.FilesSelected;
-
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg.BranchSelected;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg.CommitSelected;
-
+import net.vanfleteren.jazygit.feature.selection.SelectionMsg.FilesSelected;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.BranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
@@ -17,7 +15,6 @@ import net.vanfleteren.jazygit.state.FileDiff;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 
-import java.util.List;
 import java.util.Optional;
 
 /**

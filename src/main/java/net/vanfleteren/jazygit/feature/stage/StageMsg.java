@@ -1,11 +1,11 @@
 package net.vanfleteren.jazygit.feature.stage;
 
-import net.vanfleteren.jazygit.state.Update;
-import net.vanfleteren.jazygit.state.Model;
-
-import net.vanfleteren.jazygit.state.Msg;
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.FileEntry;
-import java.util.List;
+import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Update;
+
 import java.util.Optional;
 
 public sealed interface StageMsg extends Msg {
@@ -25,20 +25,12 @@ public sealed interface StageMsg extends Msg {
      */
     record Requested(List<FileEntry> files, Optional<String> directory) implements StageMsg {
 
-        public Requested {
-            files = List.copyOf(files);
-        }
-
         public Requested(List<FileEntry> files) {
             this(files, Optional.empty());
         }
     }
 
     record Done(Action action, List<String> commands) implements StageMsg {
-
-        public Done {
-            commands = List.copyOf(commands);
-        }
     }
 
     enum Action {

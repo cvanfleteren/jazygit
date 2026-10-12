@@ -1,12 +1,11 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Conflict;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import org.junit.jupiter.api.Test;
-
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -27,8 +26,8 @@ class CliStatusTest {
                 "u DD N... 100644 100644 100644 100644 aaaaaaa bbbbbbb ccccccc deleted.txt",
                 "");
 
-        List<Conflict> conflicts = CliStatus.parse(raw).files().stream()
-                .map(f -> f.conflict().orElseThrow()).toList();
+        List<Conflict> conflicts = CliStatus.parse(raw).files()
+                .map(f -> f.conflict().orElseThrow());
 
         assertEquals(List.of(
                 new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED),

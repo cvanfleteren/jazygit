@@ -1,8 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
-
-import java.util.List;
 
 /**
  * Operations on the index.
