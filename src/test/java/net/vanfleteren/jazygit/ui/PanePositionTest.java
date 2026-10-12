@@ -9,7 +9,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.LogError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.GitError.RepositoryUnreadable;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.ChangeType;
@@ -41,12 +40,12 @@ class PanePositionTest {
         }
 
         @Override
-        public Either<RepositoryUnreadable, List<Branch>> branches(List<Branch> known) {
+        public Either<ProcessError, List<Branch>> branches() {
             return Either.right(branchList);
         }
 
         @Override
-        public Either<RepositoryUnreadable, List<Commit>> commits() {
+        public Either<ProcessError, List<Commit>> commits() {
             return Either.right(commitList);
         }
 

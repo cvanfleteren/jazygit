@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
@@ -24,12 +23,7 @@ public final class Update {
     /**
      * Loads that a tick repeats. They are skipped while a previous one is still running.
      */
-    private static List<Cmd.Load> periodic(Model model) {
-        List<Branch> known = model.branches() instanceof Loaded<List<Branch>>(List<Branch> branches)
-                ? branches
-                : List.empty();
-        return List.of(new LoadStatus(), new LoadBranches(known), new Cmd.LoadStashes());
-    }
+    private static final List<Cmd.Load> PERIODIC = List.of(new LoadStatus(), new LoadBranches(), new Cmd.LoadStashes());
 
     private Update() {
     }
@@ -54,7 +48,7 @@ public final class Update {
     }
 
     public static Next refresh(Model model) {
-        List<Cmd.Load> loads = periodic(model).filter(cmd -> !model.refreshing().contains(cmd.key()));
+        List<Cmd.Load> loads = PERIODIC.filter(cmd -> !model.refreshing().contains(cmd));
         List<Cmd> cmds = List.<Cmd>empty()
                 .appendAll(loads)
                 .appendAll(model.commits() instanceof Failed ? List.of(new LoadCommits()) : List.empty())
@@ -66,7 +60,7 @@ public final class Update {
                         .filter(detail -> detail.changes() instanceof Failed)
                         .map(detail -> new LoadCommitDetail(detail.sha()))
                         .map(List::<Cmd>of).getOrElse(List.empty()));
-        return new Next(model.withRefreshing(model.refreshing().addAll(loads.map(Cmd.Load::key))), cmds);
+        return new Next(model.withRefreshing(model.refreshing().addAll(loads)), cmds);
     }
 
     /**
@@ -81,9 +75,9 @@ public final class Update {
         return model.fileDiff()
                 .filter(d -> status.files().containsAll(d.files()))
                 .map(d -> new LoadFileDiff(d.files()))
-                .filter(cmd -> !model.refreshing().contains(cmd.key()))
+                .filter(cmd -> !model.refreshing().contains(cmd))
                 .map(cmd -> new Next(
-                        model.withRefreshing(model.refreshing().add(cmd.key())),
+                        model.withRefreshing(model.refreshing().add(cmd)),
                         cmds.append(cmd)))
                 .getOrElse(() -> new Next(model, cmds));
     }

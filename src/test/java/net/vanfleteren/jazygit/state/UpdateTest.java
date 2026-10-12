@@ -35,15 +35,6 @@ class UpdateTest {
     }
 
     @Test
-    void aTickHandsTheLoadedBranchesToTheBranchLoad() {
-        Next next = Update.update(loaded(), new Tick());
-
-        assertEquals(List.of(BRANCHES), next.cmds()
-                .filter(LoadBranches.class::isInstance)
-                .map(cmd -> ((LoadBranches) cmd).known()));
-    }
-
-    @Test
     void firstStatusLoadsCommits() {
         Next next = Update.update(Update.init("repo").model(), new LoadMsg.StatusLoaded(CLEAN));
 
@@ -103,7 +94,7 @@ class UpdateTest {
     void failuresAreStoredAndRetriedOnTheNextTick() {
         Model model = Update.update(loaded(), new LoadMsg.Failed(new LoadCommits(), "boom")).model();
         assertEquals(new Failed<>("boom"), model.commits());
-        assertEquals(List.of(new LoadStatus(), new LoadBranches(BRANCHES), new net.vanfleteren.jazygit.state.Cmd.LoadStashes(), new LoadCommits()),
+        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadStashes(), new LoadCommits()),
                 Update.update(model, new Tick()).cmds());
 
         Model statusFailed = Update.update(Update.init("repo").model(), new LoadMsg.Failed(new LoadStatus(), "no git"))

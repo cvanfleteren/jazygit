@@ -20,7 +20,7 @@ graph TD
     Keys["keys<br/><i>Keymap: every shortcut, declared once</i>"]
     Feature["feature.*<br/><i>branch, commit, stage, stash, discard,<br/>selection, help, theme</i>"]
     State["state<br/><i>Model, Msg, Update, Cmd, Program</i>"]
-    Git["git<br/><i>GitInfoProvider, JGitInfoProvider, Cli*, GitProcess, GitError</i>"]
+    Git["git<br/><i>GitInfoProvider, CliGitInfoProvider, Cli*, GitProcess, GitError</i>"]
     GitModel["git.model<br/><i>Branch, Commit, RepoStatus, Sha, ...</i>"]
     I18n["i18n<br/><i>Messages</i>"]
 
@@ -47,7 +47,7 @@ graph TD
 | `keys` | `Keymap`: the keys of each panel (`Scope`) and the global keys. Panels react to keys from it, and the help popup lists them from it. |
 | `feature.*` | One package per feature. Each one holds the feature's messages, its update functions, its commands, and its popups, dialogs and keys. |
 | `state` | The Elm core: `Model`, `Msg`, `Update`, `Cmd`, `Program`, `Loadable`, the command log and `GitErrorText`. |
-| `git` | Everything that touches the repository: reads through JGit, writes through the `git` command line. All results are `Either` values. |
+| `git` | Everything that touches the repository, all through the `git` command line. All results are `Either` values. |
 | `git.model` | Immutable value types describing the repository. |
 | `i18n` | `Messages`: the user-facing texts, from `messages.properties`. |
 
@@ -76,7 +76,7 @@ flowchart LR
 
 Every 500 ms a `Msg.Tick` triggers `Update.refresh`, which re-reads the status, branches and stashes.
 That keeps the screen in sync with changes made outside the app. A periodic load is skipped while an
-equal one is still running: `Model.refreshing` holds the `Cmd.Load.key()` of each running load.
+equal one is still running: `Model.refreshing` holds the loads that are running.
 
 ## Core types
 
@@ -101,7 +101,6 @@ classDiagram
     }
     class Load {
         <<sealed interface>>
-        +key() Load
     }
     class Model {
         <<record>>
@@ -173,7 +172,7 @@ classDiagram
     class GitRead {
         <<interface>>
         status() Either of ProcessError or RepoStatus
-        branches(known) Either of RepositoryUnreadable or branches
+        branches() Either of ProcessError or branches
         log(branch) Either of LogError or commits
         diff(files) Either of DiffError or Diffs
         ...
@@ -198,7 +197,7 @@ classDiagram
     class GitStash {
         <<interface>>
     }
-    class JGitInfoProvider {
+    class CliGitInfoProvider {
         +open(Path) Either of OpenError or provider
     }
     GitInfoProvider --|> GitRead
@@ -206,22 +205,29 @@ classDiagram
     GitInfoProvider --|> GitCommits
     GitInfoProvider --|> GitIndex
     GitInfoProvider --|> GitStash
-    JGitInfoProvider ..|> GitInfoProvider
-    JGitInfoProvider ..> CliCheckout
-    JGitInfoProvider ..> CliRebase
-    JGitInfoProvider ..> CliIndex
-    JGitInfoProvider ..> CliStatus
+    CliGitInfoProvider ..|> GitInfoProvider
+    CliGitInfoProvider ..> CliBranches
+    CliGitInfoProvider ..> CliLog
+    CliGitInfoProvider ..> CliCheckout
+    CliGitInfoProvider ..> CliRebase
+    CliGitInfoProvider ..> CliIndex
+    CliGitInfoProvider ..> CliStatus
+    CliBranches ..> GitProcess
+    CliLog ..> GitProcess
     CliCheckout ..> GitProcess
     CliRebase ..> GitProcess
     CliIndex ..> GitProcess
     CliStatus ..> GitProcess
 ```
 
-- **Reads** of branches and commits go through **JGit**. The status, stashes and diffs come from the
-  `git` command line, through `CliStatus`, `CliStash`, `CliDiff` and `CliShow`.
-- **Writes** always go through the `git` command line (`CliCheckout`, `CliBranch`, `CliIndex`,
-  `CliRebase`, `CliStash`). That way the working tree, hooks, credentials and configuration are
-  handled exactly as git itself handles them.
+- **Everything goes through the `git` command line**, so the repository is read and changed exactly as
+  git itself does: its configuration, hooks, credentials and repository formats included.
+  - **Reads:** `CliStatus` (`git status --porcelain=v2`), `CliBranches` (one `git for-each-ref` for all
+    branches, with their upstream and ahead/behind counts), `CliLog` (`git rev-parse`, `git log -z`),
+    `CliStash`, `CliDiff` and `CliShow`. Each has a pure parser for git's output.
+  - **Writes:** `CliCheckout`, `CliBranch`, `CliIndex`, `CliRebase` and `CliStash`.
+  - **Opening:** `CliGitInfoProvider.open` asks `git rev-parse` whether the directory is in a repository,
+    whether that is bare, and where its working tree is.
 - **`GitProcess.run(workTree, GitCommand)`** is the only place that starts git:
   - A `GitCommand` is data: the arguments, the environment and a timeout.
   - Every command runs with `LC_ALL=C` (git's messages are matched in English) and
@@ -282,6 +288,7 @@ classDiagram
     ProcessError --|> RewordError
     ProcessError --|> DiscardError
     ProcessError --|> DiffError
+    ProcessError --|> LogError
     ProcessError --|> OpenError
 
     GitUnavailable --|> ProcessError
@@ -292,13 +299,10 @@ classDiagram
     StashNotRestored --|> StashCheckoutError
     TempFileFailed --|> RewordError
     TempFileFailed --|> DiffError
-    RepositoryUnreadable --|> RewordError
-    RepositoryUnreadable --|> LogError
     UnknownBranch --|> LogError
     RefusedPath --|> DiscardError
     DeleteFailed --|> DiscardError
     NotARepository --|> OpenError
-    OpenFailed --|> OpenError
     NoWorkTree --|> OpenError
 ```
 
@@ -326,7 +330,7 @@ sequenceDiagram
     participant App as JazygitApp.render
     participant Dialog as CommitDialog.reword
     participant IO as git-io thread
-    participant Provider as JGitInfoProvider
+    participant Provider as CliGitInfoProvider
     participant Git as git CLI
 
     User->>Panel: presses "r" on the third commit
@@ -344,7 +348,7 @@ sequenceDiagram
     Program->>IO: io.execute(perform(provider, cmd))
 
     IO->>Provider: reword(sha, message)
-    Provider->>Provider: head(): is sha HEAD?
+    Provider->>Git: git rev-parse --verify HEAD (is sha HEAD?)
     alt sha is HEAD
         Provider->>Git: git commit --amend --only -m ...
     else an older commit
@@ -388,9 +392,9 @@ sequenceDiagram
            .fold(this::failedWith, RewordMsg.Done::new);
    ```
 
-6. **The git work**, in `JGitInfoProvider.reword`.
-   - `head()` reads `HEAD` through JGit. If that fails, it's a `RepositoryUnreadable`, which is a
-     `RewordError`.
+6. **The git work**, in `CliGitInfoProvider.reword`.
+   - `CliLog.resolve(workTree, "HEAD")` runs `git rev-parse --verify --quiet HEAD^{commit}` to find out
+     whether the commit is `HEAD`. If that fails, it's a `ProcessError`, which is a `RewordError`.
    - **The commit is `HEAD`:** `CliIndex.reword` runs `git commit --allow-empty --amend --only -m … [-m …]`.
      Its `ProcessError` is widened to a `RewordError`.
    - **An older commit:** `CliRebase.reword` does the following.
@@ -410,7 +414,7 @@ sequenceDiagram
      in a `LoggedMsg("log.title.reword", failure.commands(), …)`. The commands that ran, including the
      abort, are logged. Then `RewordUpdate` stores `"Reword failed: …"` in `Model.error` and refreshes.
 
-8. **Refresh.** `Update.refresh` starts `LoadStatus`, `LoadBranches(known)` and `LoadStashes`.
+8. **Refresh.** `Update.refresh` starts `LoadStatus`, `LoadBranches` and `LoadStashes`.
    - When `StatusLoaded` arrives, `LoadUpdate.statusLoaded` sees that `HEAD` moved (the reworded
      commit and everything after it have new shas) and issues `LoadCommits`.
    - When `CommitsLoaded` arrives, the commits pane shows the new message.
@@ -436,7 +440,8 @@ flowchart TD
   assert on the next model and its commands. No git is involved.
 - **`ProgramTest`** runs the real loop with queue executors and a fake provider (`StubGitProvider`
   gives every method a default).
-- **The git layer** is tested against real temporary repositories: `JGitInfoProviderTest`,
-  `CliCheckoutTest`, `CliDiscardTest`, `CliDiffTest` and `GitProcessTest`. The parsers, such as
-  `CliStatus.parse`, are tested on fixed git output.
+- **The git layer** is tested against real temporary repositories: `CliGitInfoProviderTest`,
+  `CliCheckoutTest`, `CliDiscardTest`, `CliDiffTest` and `GitProcessTest`. The parsers
+  (`CliStatus.parse`, `CliBranches.parse`, `CliLog.parse`) are tested on fixed git output in
+  `CliStatusTest` and `CliParseTest`.
 - **UI tests** use TamboUI's `ToolkitTestRunner` and its pilot.

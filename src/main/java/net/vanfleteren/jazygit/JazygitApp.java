@@ -39,7 +39,7 @@ import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
 import net.vanfleteren.jazygit.feature.theme.ThemePopup;
 import net.vanfleteren.jazygit.git.GitError.OpenError;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
-import net.vanfleteren.jazygit.git.JGitInfoProvider;
+import net.vanfleteren.jazygit.git.CliGitInfoProvider;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.state.GitErrorText;
@@ -162,7 +162,7 @@ public class JazygitApp extends ToolkitApp {
         }
         io.shutdownNow();
         try {
-            // Let a running git call finish before main() closes the repository.
+            // Let a running git call finish before the process exits.
             io.awaitTermination(2, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -260,14 +260,12 @@ public class JazygitApp extends ToolkitApp {
      */
     public static void main(String[] args) throws Exception {
         Path start = (args.length > 0 ? Path.of(args[0]) : Path.of("")).toAbsolutePath();
-        Either<OpenError, JGitInfoProvider> opened = JGitInfoProvider.open(start);
+        Either<OpenError, CliGitInfoProvider> opened = CliGitInfoProvider.open(start);
         if (opened.isLeft()) {
             System.err.println(GitErrorText.of(opened.getLeft()));
             System.exit(1);
             return;
         }
-        try (JGitInfoProvider provider = opened.get()) {
-            new JazygitApp(provider).run();
-        }
+        new JazygitApp(opened.get()).run();
     }
 }

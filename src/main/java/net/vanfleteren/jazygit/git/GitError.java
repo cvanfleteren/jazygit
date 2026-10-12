@@ -56,7 +56,7 @@ public sealed interface GitError {
     /**
      * A failure that running any git command can have.
      */
-    sealed interface ProcessError extends CheckoutError, RewordError, DiscardError, DiffError, OpenError {
+    sealed interface ProcessError extends CheckoutError, RewordError, DiscardError, DiffError, LogError, OpenError {
     }
 
     /**
@@ -93,21 +93,11 @@ public sealed interface GitError {
     }
 
     /**
-     * The repository was found, but could not be opened.
-     */
-    record OpenFailed(Path gitDir, String reason) implements OpenError {
-    }
-
-    /**
      * The repository is bare: there are no files to show.
+     *
+     * @param directory the directory the repository was looked for from
      */
-    record NoWorkTree(Path gitDir) implements OpenError {
-    }
-
-    /**
-     * The repository could not be read through JGit.
-     */
-    record RepositoryUnreadable(String reason) implements LogError, RewordError {
+    record NoWorkTree(Path directory) implements OpenError {
     }
 
     /**

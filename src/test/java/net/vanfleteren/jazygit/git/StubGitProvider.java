@@ -10,7 +10,6 @@ import net.vanfleteren.jazygit.git.GitError.DiffError;
 import net.vanfleteren.jazygit.git.GitError.DiscardError;
 import net.vanfleteren.jazygit.git.GitError.LogError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.GitError.RepositoryUnreadable;
 import net.vanfleteren.jazygit.git.GitError.RewordError;
 import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -54,7 +53,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<RepositoryUnreadable, List<Branch>> branches(List<Branch> known) {
+    default Either<ProcessError, List<Branch>> branches() {
         return Either.right(List.empty());
     }
 
@@ -64,7 +63,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<RepositoryUnreadable, List<Commit>> commits() {
+    default Either<ProcessError, List<Commit>> commits() {
         return Either.right(List.empty());
     }
 

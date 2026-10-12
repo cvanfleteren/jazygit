@@ -22,8 +22,8 @@ import net.vanfleteren.jazygit.git.model.Stash;
  *                       highlighted
  * @param commitDetail   what the commit highlighted in the commits pane changed, once one is highlighted
  * @param fileDiff       the diff of the node highlighted in the files pane, once one is highlighted
- * @param refreshing     the {@link Cmd.Load#key() keys} of loads that have been started and not
- *                       finished yet, so a tick does not queue them again
+ * @param refreshing     periodic loads that have been started and not finished yet, so a tick does
+ *                       not queue them again
  * @param error          why the last operation failed, until the next one is started
  * @param pushing        the branches being pushed right now
  * @param commandLog     the mutating git commands that were executed, oldest first

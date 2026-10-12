@@ -7,7 +7,6 @@ import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.DiffError;
 import net.vanfleteren.jazygit.git.GitError.LogError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.GitError.RepositoryUnreadable;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
 
@@ -36,7 +35,7 @@ public final class SampleData implements StubGitProvider {
     }
 
     @Override
-    public Either<RepositoryUnreadable, List<Branch>> branches(List<Branch> known) {
+    public Either<ProcessError, List<Branch>> branches() {
         return Either.right(List.of(
                 new Branch("main", true, new Sha("a1b2c3d4e5f60718293a4b5c6d7e8f9012345678"), Instant.EPOCH, true, true),
                 new Branch("feature/initial-layout", false, new Sha("0a1b2c3d4e5f60718293a4b5c6d7e8f901234567"), Instant.EPOCH, true),
@@ -46,7 +45,7 @@ public final class SampleData implements StubGitProvider {
     }
 
     @Override
-    public Either<RepositoryUnreadable, List<Commit>> commits() {
+    public Either<ProcessError, List<Commit>> commits() {
         return Either.right(MAIN);
     }
 

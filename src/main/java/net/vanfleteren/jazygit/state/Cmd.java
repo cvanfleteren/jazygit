@@ -5,7 +5,6 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
-import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Sha;
 
@@ -56,14 +55,6 @@ public interface Cmd {
      */
     sealed interface Load extends Cmd {
 
-        /**
-         * What this load reads, so one that is still running is not started again: loads with the same
-         * key read the same thing. That is the load itself, unless it carries data that only helps reading.
-         */
-        default Load key() {
-            return this;
-        }
-
         @Override
         default Msg failed(String message) {
             return new LoadMsg.Failed(this, message);
@@ -78,27 +69,11 @@ public interface Cmd {
         }
     }
 
-    /**
-     * Reads the branches.
-     *
-     * @param known the branches as shown now, which spare the provider recounting how far unchanged
-     *              branches are from their upstream. They do not change what is loaded, so they are not
-     *              part of the {@link #key()}.
-     */
-    record LoadBranches(List<Branch> known) implements Load {
-
-        public LoadBranches() {
-            this(List.empty());
-        }
+    record LoadBranches() implements Load {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            return git.branches(known).fold(this::failedWith, LoadMsg.BranchesLoaded::new);
-        }
-
-        @Override
-        public Load key() {
-            return new LoadBranches();
+            return git.branches().fold(this::failedWith, LoadMsg.BranchesLoaded::new);
         }
     }
 

@@ -109,7 +109,7 @@ class BranchUpdateTest {
     void pushRequestOfADivergedBranchAsksForConfirmationInsteadOfPushing() {
         Model diverged = Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(
                 new Branch("main", true, new Sha("aaaa")),
-                new Branch("feature", false, new Sha("ffff"), Instant.EPOCH, true, false, Option.of(new Upstream("refs/remotes/origin/" + "feature", new Sha("ffff"), 1, 2)))))).model();
+                new Branch("feature", false, new Sha("ffff"), Instant.EPOCH, true, false, Option.of(new Upstream("origin/" + "feature", 1, 2)))))).model();
 
         Next asked = Update.update(diverged, new PushMsg.Requested("feature"));
 
@@ -143,7 +143,7 @@ class BranchUpdateTest {
 
         Next done = Update.update(withError(loaded(), "boom"), new PushMsg.Done("feature", List.of()));
         assertEquals(Option.none(), done.model().error());
-        assertEquals(true, done.cmds().contains(new LoadBranches(BRANCHES)));
+        assertEquals(true, done.cmds().contains(new LoadBranches()));
     }
 
     @Test
@@ -262,7 +262,7 @@ class BranchUpdateTest {
     void checkedOutReloadsStatusAndBranches() {
         Next next = Update.update(loaded(), new CheckoutMsg.Done("feature", List.of("git checkout feature")));
 
-        assertEquals(List.of(new LoadStatus(), new LoadBranches(BRANCHES), new net.vanfleteren.jazygit.state.Cmd.LoadStashes()), next.cmds());
+        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadStashes()), next.cmds());
         assertEquals(Option.none(), next.model().error());
     }
 

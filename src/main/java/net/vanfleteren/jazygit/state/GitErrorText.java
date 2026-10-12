@@ -20,9 +20,7 @@ public final class GitErrorText {
                     ? Messages.get("git.exitedWithCode", String.valueOf(exitCode))
                     : explanation;
             case GitError.NotARepository(var directory) -> Messages.get("git.notRepository", directory);
-            case GitError.OpenFailed(var gitDir, String reason) -> Messages.get("git.openFailed", gitDir, reason);
-            case GitError.NoWorkTree(var gitDir) -> Messages.get("git.noWorkTree", gitDir);
-            case GitError.RepositoryUnreadable(String reason) -> Messages.get("git.repositoryUnreadable", reason);
+            case GitError.NoWorkTree(var directory) -> Messages.get("git.noWorkTree", directory);
             case GitError.UnknownBranch(String branch) -> Messages.get("git.unknownBranch", branch);
             case GitError.LocalChanges(String explanation) -> explanation;
             case GitError.StashNotRestored(var cause) -> Messages.get("git.stashPopFailed", of(cause));

@@ -34,7 +34,7 @@ class ForcePushDialogTest {
 
     private static Model openModel() {
         Model diverged = Update.update(TestModels.loaded(), new LoadMsg.BranchesLoaded(List.of(
-                new Branch("main", true, new Sha("aaaa"), Instant.EPOCH, true, false, Option.of(new Upstream("refs/remotes/origin/" + "main", new Sha("aaaa"), 1, 2)))))).model();
+                new Branch("main", true, new Sha("aaaa"), Instant.EPOCH, true, false, Option.of(new Upstream("origin/" + "main", 1, 2)))))).model();
         return Update.update(diverged, new PushMsg.Requested("main")).model();
     }
 

@@ -3,8 +3,6 @@ package net.vanfleteren.jazygit.git;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.*;
-import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -24,15 +22,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * {@link JGitInfoProvider} against a real repository changed through the git CLI: every call
+ * {@link CliGitInfoProvider} against a real repository changed through the git CLI: every call
  * reflects the current state of the repository.
  */
-class JGitInfoProviderTest {
+class CliGitInfoProviderTest {
 
     @TempDir
     Path repo;
 
-    private JGitInfoProvider provider;
+    private CliGitInfoProvider provider;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -41,7 +39,7 @@ class JGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "hello\n");
         git("add", "README.md");
         git("commit", "-q", "-m", "Initial commit");
-        provider = JGitInfoProvider.open(repo).get();
+        provider = CliGitInfoProvider.open(repo).get();
     }
 
     @Test
@@ -50,18 +48,11 @@ class JGitInfoProviderTest {
         Path bare = elsewhere.resolve("bare.git");
         gitIn(elsewhere, "init", "-q", "--bare", bare.toString());
 
-        assertInstanceOf(GitError.NoWorkTree.class, JGitInfoProvider.open(bare).getLeft());
-        assumeTrue(new FileRepositoryBuilder().findGitDir(plain.toFile()).getGitDir() == null,
-                "the temporary directory is inside a repository");
-        assertEquals(new GitError.NotARepository(plain), JGitInfoProvider.open(plain).getLeft());
+        assertInstanceOf(GitError.NoWorkTree.class, CliGitInfoProvider.open(bare).getLeft());
+        assumeTrue(!gitSucceedsIn(plain, "rev-parse"), "the temporary directory is inside a repository");
+        assertEquals(new GitError.NotARepository(plain), CliGitInfoProvider.open(plain).getLeft());
     }
 
-    @AfterEach
-    void tearDown() {
-        if (provider != null) {
-            provider.close();
-        }
-    }
 
     @Test
     void statusFollowsTheWorkingTree() throws Exception {
@@ -92,17 +83,17 @@ class JGitInfoProviderTest {
     @Test
     void branchesFollowExternalChanges() throws Exception {
         Sha head = provider.status().get().headCommit().get();
-        assertEquals(List.of(new Branch("main", true, head)), withoutTimes(provider.branches(List.empty()).get()));
+        assertEquals(List.of(new Branch("main", true, head)), withoutTimes(provider.branches().get()));
 
         git("branch", "foo");
-        assertEquals(List.of(new Branch("main", true, head), new Branch("foo", false, head)), withoutTimes(provider.branches(List.empty()).get()));
+        assertEquals(List.of(new Branch("main", true, head), new Branch("foo", false, head)), withoutTimes(provider.branches().get()));
 
         git("checkout", "-q", "foo");
-        assertEquals(List.of(new Branch("foo", true, head), new Branch("main", false, head)), withoutTimes(provider.branches(List.empty()).get()));
+        assertEquals(List.of(new Branch("foo", true, head), new Branch("main", false, head)), withoutTimes(provider.branches().get()));
 
         git("commit", "-q", "--allow-empty", "-m", "Move foo");
         Sha moved = provider.status().get().headCommit().get();
-        assertEquals(List.of(new Branch("foo", true, moved), new Branch("main", false, head)), withoutTimes(provider.branches(List.empty()).get()));
+        assertEquals(List.of(new Branch("foo", true, moved), new Branch("main", false, head)), withoutTimes(provider.branches().get()));
     }
 
     @Test
@@ -116,11 +107,11 @@ class JGitInfoProviderTest {
         commitAt("newest", "2020-01-09T00:00:00Z");
 
         assertEquals(List.of("main", "newest", "middle", "old"),
-                provider.branches(List.empty()).get().map(Branch::name).toList());
+                provider.branches().get().map(Branch::name).toList());
 
         git("checkout", "-q", "old");
         assertEquals(List.of("old", "newest", "middle", "main"),
-                provider.branches(List.empty()).get().map(Branch::name).toList());
+                provider.branches().get().map(Branch::name).toList());
     }
 
     private void commitAt(String branch, String date) throws Exception {
@@ -483,7 +474,7 @@ class JGitInfoProviderTest {
 
     @Test
     void branchesCarryTheTimeOfTheirLastCommit() {
-        assertEquals(provider.commits().get().get(0).authorTime().getEpochSecond(), provider.branches(List.empty()).get().get(0).tipTime().getEpochSecond());
+        assertEquals(provider.commits().get().get(0).authorTime().getEpochSecond(), provider.branches().get().get(0).tipTime().getEpochSecond());
     }
 
     @Test
@@ -509,7 +500,7 @@ class JGitInfoProviderTest {
         git("remote", "add", "origin", bare.toString());
         git("push", "-q", "origin", "pushed");
 
-        assertEquals(List.of(true, false), provider.branches(List.empty()).get()
+        assertEquals(List.of(true, false), provider.branches().get()
                 .filter(b -> !b.name().equals("main"))
                 .sorted(java.util.Comparator.comparing(Branch::name).reversed())
                 .map(Branch::hasRemote));
@@ -537,23 +528,6 @@ class JGitInfoProviderTest {
     }
 
     @Test
-    void countsOfKnownBranchesAreReusedUntilATipMoves() throws Exception {
-        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
-        git("init", "-q", "--bare", "-b", "main", bare.toString());
-        git("remote", "add", "origin", bare.toString());
-        git("push", "-q", "-u", "origin", "main");
-        Branch main = provider.branches(List.empty()).get().head();
-        // Counts no revwalk would give: seeing them back shows they were reused.
-        Branch known = new Branch(main.name(), main.current(), main.tipOid(), main.tipTime(), main.hasRemote(),
-                main.isDefault(), main.upstream().map(u -> new Upstream(u.ref(), u.tip(), 7, 9)));
-
-        assertEquals(List.of(7, 9), provider.branches(List.of(known)).get().map(b -> List.of(b.ahead(), b.behind())).head());
-
-        git("commit", "-q", "--allow-empty", "-m", "local one");
-        assertEquals(List.of(1, 0), provider.branches(List.of(known)).get().map(b -> List.of(b.ahead(), b.behind())).head());
-    }
-
-    @Test
     void pushPublishesABranchWithoutUpstreamAndThenSendsNewCommits() throws Exception {
         java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
         git("init", "-q", "--bare", "-b", "main", bare.toString());
@@ -561,7 +535,7 @@ class JGitInfoProviderTest {
 
         provider.push("main", PushMode.FAST_FORWARD).get();
         assertEquals(List.of(0, 0), counts("main"));
-        assertTrue(provider.branches(List.empty()).get().filter(b -> b.name().equals("main")).forAll(Branch::hasRemote));
+        assertTrue(provider.branches().get().filter(b -> b.name().equals("main")).forAll(Branch::hasRemote));
 
         git("commit", "-q", "--allow-empty", "-m", "local");
         assertEquals(List.of(1, 0), counts("main"));
@@ -604,7 +578,7 @@ class JGitInfoProviderTest {
     }
 
     private List<Integer> counts(String branch) {
-        return provider.branches(List.empty()).get().filter(b -> b.name().equals(branch))
+        return provider.branches().get().filter(b -> b.name().equals(branch))
                 .map(b -> List.of(b.ahead(), b.behind())).head();
     }
 
@@ -619,7 +593,7 @@ class JGitInfoProviderTest {
     }
 
     private List<String> defaultBranches() {
-        return provider.branches(List.empty()).get().filter(Branch::isDefault).map(Branch::name).toList();
+        return provider.branches().get().filter(Branch::isDefault).map(Branch::name).toList();
     }
 
     @Test
@@ -628,7 +602,7 @@ class JGitInfoProviderTest {
 
         provider.deleteBranch("topic", DeleteScope.LOCAL).get();
 
-        assertEquals(List.of("main"), provider.branches(List.empty()).get().map(Branch::name).toList());
+        assertEquals(List.of("main"), provider.branches().get().map(Branch::name).toList());
     }
 
     @Test
@@ -701,10 +675,10 @@ class JGitInfoProviderTest {
         Path empty = repo.resolve("empty");
         Files.createDirectories(empty);
         gitIn(empty, "init", "-q", "-b", "main");
-        try (JGitInfoProvider emptyProvider = JGitInfoProvider.open(empty).get()) {
-            assertEquals(Option.none(), emptyProvider.status().get().headCommit());
-            assertEquals(List.of(), emptyProvider.commits().get());
-        }
+        CliGitInfoProvider emptyProvider = CliGitInfoProvider.open(empty).get();
+        assertEquals(Option.none(), emptyProvider.status().get().headCommit());
+        assertEquals(List.of(), emptyProvider.commits().get());
+        assertEquals(List.of(), emptyProvider.branches().get());
     }
 
     private void git(String... args) throws IOException, InterruptedException, TimeoutException {
@@ -724,6 +698,12 @@ class JGitInfoProviderTest {
                 .execute();
         assertEquals(0, result.getExitValue(),
                 () -> "git " + String.join(" ", args) + " failed: " + result.outputUTF8());
+    }
+
+    private static boolean gitSucceedsIn(Path dir, String... args) throws IOException, InterruptedException, TimeoutException {
+        java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of("git"));
+        command.addAll(java.util.List.of(args));
+        return new ProcessExecutor().command(command).directory(dir.toFile()).readOutput(true).execute().getExitValue() == 0;
     }
 
     private static boolean gitAvailable() {

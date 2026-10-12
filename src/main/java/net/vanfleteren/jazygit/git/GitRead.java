@@ -5,7 +5,6 @@ import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.DiffError;
 import net.vanfleteren.jazygit.git.GitError.LogError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.GitError.RepositoryUnreadable;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Diffs;
@@ -28,13 +27,9 @@ public interface GitRead {
     Either<ProcessError, RepoStatus> status();
 
     /**
-     * The local branches.
-     *
-     * @param known the branches as read before, if any; how far each is ahead of and behind its upstream
-     *              takes a walk through the history to count, which is skipped for branches whose tips
-     *              and upstream tips have not moved since
+     * The local branches: the checked out one first, then the most recently committed to.
      */
-    Either<RepositoryUnreadable, List<Branch>> branches(List<Branch> known);
+    Either<ProcessError, List<Branch>> branches();
 
     /**
      * The stashes, newest first.
@@ -44,7 +39,7 @@ public interface GitRead {
     /**
      * The log of HEAD, newest first.
      */
-    Either<RepositoryUnreadable, List<Commit>> commits();
+    Either<ProcessError, List<Commit>> commits();
 
     /**
      * The log of the local branch {@code branch}, newest first.

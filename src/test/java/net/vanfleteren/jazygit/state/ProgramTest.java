@@ -22,7 +22,6 @@ import net.vanfleteren.jazygit.git.GitError.DiffError;
 import net.vanfleteren.jazygit.git.GitError.DiscardError;
 import net.vanfleteren.jazygit.git.GitError.LogError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.GitError.RepositoryUnreadable;
 import net.vanfleteren.jazygit.git.GitError.RewordError;
 import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
 import net.vanfleteren.jazygit.git.GitFailure;
@@ -89,13 +88,13 @@ class ProgramTest {
         }
 
         @Override
-        public Either<RepositoryUnreadable, List<Branch>> branches(List<Branch> known) {
+        public Either<ProcessError, List<Branch>> branches() {
             return Either.right(List.of(new Branch("main", status.head().branchName().contains("main"), new Sha("main-tip")),
                     new Branch("other", status.head().branchName().contains("other"), new Sha("other-tip"), Instant.EPOCH, true)));
         }
 
         @Override
-        public Either<RepositoryUnreadable, List<Commit>> commits() {
+        public Either<ProcessError, List<Commit>> commits() {
             commitLoads++;
             return Either.right(List.of(commit(status.headCommit().get().value())));
         }
