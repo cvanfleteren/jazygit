@@ -104,7 +104,9 @@ public final class CommitDialog {
             shown = true;
             current.apply(model).forEach(commit -> {
                 summary.setText(commit.message());
+                summary.moveCursorToEnd();
                 description.setText(commit.body());
+                description.moveCursorToEnd();
             });
         }
         return Option.of(dialog(

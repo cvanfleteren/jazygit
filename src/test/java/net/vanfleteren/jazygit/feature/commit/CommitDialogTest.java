@@ -102,6 +102,23 @@ class CommitDialogTest {
         assertEquals(java.util.List.of(new RewordMsg.Confirmed(last.message(), last.body())), dispatched);
     }
 
+    @Test
+    void typingInTheRewordDialogAddsToTheEndOfTheCurrentSummary() throws Exception {
+        CommitDialog reword = CommitDialog.reword(dispatched::add);
+        Model rewording = Update.update(TestModels.loaded(new SampleData()), new RewordMsg.Requested(0)).model();
+        Commit last = rewording.popup(RewordPopup.class).get().commit();
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> reword.render(rewording).get())) {
+            runner.runner().focusManager().setFocus(CommitDialog.REWORD_ID);
+            RenderedText.ofLarge(runner, () -> reword.render(rewording).get());
+            runner.pilot().press('!');
+            runner.pilot().press(KeyCode.ENTER);
+            runner.pilot().pause();
+        }
+
+        assertEquals(java.util.List.of(new RewordMsg.Confirmed(last.message() + "!", last.body())), dispatched);
+    }
+
     private ToolkitTestRunner start() throws Exception {
         assertTrue(open.popup(CommitPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
