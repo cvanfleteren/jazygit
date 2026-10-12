@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.Checkout;
@@ -106,7 +107,7 @@ class BranchUpdateTest {
     void pushRequestOfADivergedBranchAsksForConfirmationInsteadOfPushing() {
         Model diverged = Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(
                 new Branch("main", true, new Sha("aaaa")),
-                new Branch("feature", false, new Sha("ffff"), Instant.EPOCH, true, false, 1, 2)))).model();
+                new Branch("feature", false, new Sha("ffff"), Instant.EPOCH, true, false, Option.of(new Upstream("refs/remotes/origin/" + "feature", new Sha("ffff"), 1, 2)))))).model();
 
         Next asked = Update.update(diverged, new PushMsg.Requested("feature"));
 

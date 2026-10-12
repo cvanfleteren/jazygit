@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
@@ -23,7 +24,12 @@ public final class Update {
     /**
      * Loads that a tick repeats. They are skipped while a previous one is still running.
      */
-    private static final List<Cmd.Load> PERIODIC = List.of(new LoadStatus(), new LoadBranches(), new Cmd.LoadStashes());
+    private static List<Cmd.Load> periodic(Model model) {
+        List<Branch> known = model.branches() instanceof Loaded<List<Branch>>(List<Branch> branches)
+                ? branches
+                : List.empty();
+        return List.of(new LoadStatus(), new LoadBranches(known), new Cmd.LoadStashes());
+    }
 
     private Update() {
     }
@@ -48,7 +54,7 @@ public final class Update {
     }
 
     public static Next refresh(Model model) {
-        List<Cmd.Load> loads = PERIODIC.filter(cmd -> !model.refreshing().contains(cmd));
+        List<Cmd.Load> loads = periodic(model).filter(cmd -> !model.refreshing().contains(cmd));
         List<Cmd> cmds = List.<Cmd>empty()
                 .appendAll(loads)
                 .appendAll(model.commits() instanceof Failed ? List.of(new LoadCommits()) : List.empty())

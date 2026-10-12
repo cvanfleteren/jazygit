@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Sha;
 
@@ -69,11 +70,32 @@ public interface Cmd {
         }
     }
 
-    record LoadBranches() implements Load {
+    /**
+     * Reads the branches.
+     *
+     * @param known the branches as shown now, which spare the provider recounting how far unchanged
+     *              branches are from their upstream. They are not part of what is loaded: every
+     *              {@code LoadBranches} equals every other, so a running one is not queued again.
+     */
+    record LoadBranches(List<Branch> known) implements Load {
+
+        public LoadBranches() {
+            this(List.empty());
+        }
 
         @Override
         public Msg run(GitInfoProvider git) {
-            return git.branches().fold(this::failedWith, LoadMsg.BranchesLoaded::new);
+            return git.branches(known).fold(this::failedWith, LoadMsg.BranchesLoaded::new);
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            return other instanceof LoadBranches;
+        }
+
+        @Override
+        public int hashCode() {
+            return LoadBranches.class.hashCode();
         }
     }
 

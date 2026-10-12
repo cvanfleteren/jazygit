@@ -41,7 +41,7 @@ class PanePositionTest {
         }
 
         @Override
-        public Either<RepositoryUnreadable, List<Branch>> branches() {
+        public Either<RepositoryUnreadable, List<Branch>> branches(List<Branch> known) {
             return Either.right(branchList);
         }
 

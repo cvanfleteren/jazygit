@@ -88,7 +88,7 @@ class ProgramTest {
         }
 
         @Override
-        public Either<RepositoryUnreadable, List<Branch>> branches() {
+        public Either<RepositoryUnreadable, List<Branch>> branches(List<Branch> known) {
             return Either.right(List.of(new Branch("main", status.head().branchName().contains("main"), new Sha("main-tip")),
                     new Branch("other", status.head().branchName().contains("other"), new Sha("other-tip"), Instant.EPOCH, true)));
         }

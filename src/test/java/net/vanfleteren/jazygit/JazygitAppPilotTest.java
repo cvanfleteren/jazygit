@@ -137,7 +137,7 @@ class JazygitAppPilotTest {
             pilot.pause();
             assertEquals(1, fixture.branches().selectedIndex());
 
-            int branchCount = fixture.data().branches().get().size();
+            int branchCount = fixture.data().branches(List.empty()).get().size();
             for (int i = 0; i < branchCount + 5; i++) {
                 pilot.press(KeyCode.DOWN);
             }

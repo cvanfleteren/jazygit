@@ -52,7 +52,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<RepositoryUnreadable, List<Branch>> branches() {
+    default Either<RepositoryUnreadable, List<Branch>> branches(List<Branch> known) {
         return Either.right(List.empty());
     }
 

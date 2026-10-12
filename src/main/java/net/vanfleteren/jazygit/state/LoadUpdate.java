@@ -111,7 +111,7 @@ public final class LoadUpdate {
     private static Model failed(Model model, Cmd.Load cmd, String message) {
         return switch (cmd) {
             case LoadStatus() -> model.withStatus(new Failed<>(message));
-            case LoadBranches() -> model.withBranches(new Failed<>(message));
+            case LoadBranches ignored -> model.withBranches(new Failed<>(message));
             case Cmd.LoadStashes() -> model.withStashes(new Failed<>(message));
             case LoadCommits() -> model.withCommits(new Failed<>(message));
             case LoadCommitDetail(Sha sha) ->

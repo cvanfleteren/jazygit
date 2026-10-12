@@ -1,10 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
 import io.vavr.CheckedFunction0;
-import io.vavr.Tuple;
-import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
-import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
@@ -38,7 +35,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Comparator;
-import java.util.function.Function;
 
 /**
  * {@link GitInfoProvider} backed by a real repository. The working tree status comes from the
@@ -54,16 +50,6 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     private final Repository repository;
     private final Git git;
     private final Path workTree;
-    // The ahead/behind counts per branch, so the revwalk only reruns when a tip moves. Replaced on
-    // every read, which drops deleted branches.
-    private volatile Map<String, Tracking> trackingCache = HashMap.empty();
-
-    /**
-     * The ahead/behind counts of a branch, valid for these tips of the branch and its upstream.
-     */
-    private record Tracking(String trackingRef, String localOid, String remoteOid, int ahead, int behind) {
-    }
-
     private JGitInfoProvider(Repository repository, Path workTree) {
         this.repository = repository;
         this.git = new Git(repository);
@@ -109,8 +95,18 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     }
 
     @Override
-    public Either<RepositoryUnreadable, List<Branch>> branches() {
-        return readBranches();
+    public Either<RepositoryUnreadable, List<Branch>> branches(List<Branch> known) {
+        return read(() -> {
+            List<Ref> refs = List.ofAll(git.branchList().call());
+            String fullBranch = repository.getFullBranch();
+            Option<String> defaultBranch = defaultBranch(refs.map(ref -> Repository.shortenRefName(ref.getName())));
+            try (RevWalk walk = new RevWalk(repository)) {
+                return Try.traverse(refs, ref -> Try.of(() -> branchOf(walk, ref, fullBranch, defaultBranch, known)))
+                        .get()
+                        .toList()
+                        .sorted(BRANCH_ORDER);
+            }
+        });
     }
 
     // The checked out branch first, then the most recently committed to.
@@ -118,40 +114,15 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
             .thenComparing(Comparator.comparing(Branch::tipTime).reversed())
             .thenComparing(Branch::name);
 
-    /**
-     * A branch as read, with the ahead/behind counts it was given, if it has an upstream.
-     */
-    private record BranchRead(Branch branch, Option<Tracking> tracking) {
-    }
-
-    private Either<RepositoryUnreadable, List<Branch>> readBranches() {
-        return read(() -> {
-            List<Ref> refs = List.ofAll(git.branchList().call());
-            String fullBranch = repository.getFullBranch();
-            Option<String> defaultBranch = defaultBranch(refs.map(ref -> Repository.shortenRefName(ref.getName())));
-            try (RevWalk walk = new RevWalk(repository)) {
-                return Try.traverse(refs, ref -> Try.of(() -> branchOf(walk, ref, fullBranch, defaultBranch)))
-                        .get()
-                        .toList();
-            }
-        }).map(read -> {
-            trackingCache = read.flatMap(b -> b.tracking().map(t -> Tuple.of(b.branch().name(), t)))
-                    .toMap(Function.identity());
-            return read.map(BranchRead::branch).sorted(BRANCH_ORDER);
-        });
-    }
-
-    private BranchRead branchOf(RevWalk walk, Ref ref, String fullBranch, Option<String> defaultBranch)
-            throws IOException {
+    private Branch branchOf(RevWalk walk, Ref ref, String fullBranch, Option<String> defaultBranch,
+                            List<Branch> known) throws IOException {
         String name = Repository.shortenRefName(ref.getName());
-        String tip = ref.getObjectId().name();
-        Option<Tracking> tracking = tracking(name, tip);
-        return new BranchRead(new Branch(name, ref.getName().equals(fullBranch), new Sha(tip),
+        Sha tip = new Sha(ref.getObjectId().name());
+        return new Branch(name, ref.getName().equals(fullBranch), tip,
                 Instant.ofEpochSecond(walk.parseCommit(ref.getObjectId()).getCommitTime()),
                 hasRemote(name),
                 defaultBranch.contains(name),
-                tracking.map(Tracking::ahead).getOrElse(0),
-                tracking.map(Tracking::behind).getOrElse(0)), tracking);
+                upstream(name, tip, known.find(branch -> branch.name().equals(name))));
     }
 
     @Override
@@ -241,25 +212,24 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     }
 
     /**
-     * How far {@code branch} is ahead of and behind its upstream, when it has one that exists. The
-     * counts of the previous read are reused while neither tip has moved.
+     * The upstream of {@code branch}, when it has one that exists. Counting how far apart they are
+     * takes a revwalk, so the counts of the {@code known} branch are reused while neither tip has moved.
      */
-    private Option<Tracking> tracking(String branch, String localOid) throws IOException {
+    private Option<Upstream> upstream(String branch, Sha tip, Option<Branch> known) throws IOException {
         String trackingRef = new BranchConfig(repository.getConfig(), branch).getRemoteTrackingBranch();
         Ref remote = trackingRef == null ? null : repository.exactRef(trackingRef);
         if (remote == null || remote.getObjectId() == null) {
             return Option.none();
         }
-        String remoteOid = remote.getObjectId().name();
-        Option<Tracking> cached = trackingCache.get(branch)
-                .filter(t -> t.trackingRef().equals(trackingRef) && t.localOid().equals(localOid)
-                        && t.remoteOid().equals(remoteOid));
-        if (cached.isDefined()) {
-            return cached;
-        }
-        return Option.of(BranchTrackingStatus.of(repository, branch))
-                .map(status -> new Tracking(trackingRef, localOid, remoteOid,
-                        status.getAheadCount(), status.getBehindCount()));
+        Sha remoteTip = new Sha(remote.getObjectId().name());
+        Option<Upstream> unchanged = known
+                .filter(previous -> previous.tipOid().equals(tip))
+                .flatMap(Branch::upstream)
+                .filter(previous -> previous.ref().equals(trackingRef) && previous.tip().equals(remoteTip));
+        return unchanged.isDefined()
+                ? unchanged
+                : Option.of(BranchTrackingStatus.of(repository, branch))
+                .map(status -> new Upstream(trackingRef, remoteTip, status.getAheadCount(), status.getBehindCount()));
     }
 
     /**

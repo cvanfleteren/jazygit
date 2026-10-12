@@ -35,6 +35,15 @@ class UpdateTest {
     }
 
     @Test
+    void aTickHandsTheLoadedBranchesToTheBranchLoad() {
+        Next next = Update.update(loaded(), new Tick());
+
+        assertEquals(List.of(BRANCHES), next.cmds()
+                .filter(LoadBranches.class::isInstance)
+                .map(cmd -> ((LoadBranches) cmd).known()));
+    }
+
+    @Test
     void firstStatusLoadsCommits() {
         Next next = Update.update(Update.init("repo").model(), new LoadMsg.StatusLoaded(CLEAN));
 

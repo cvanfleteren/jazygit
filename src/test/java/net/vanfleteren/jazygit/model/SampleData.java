@@ -36,7 +36,7 @@ public final class SampleData implements StubGitProvider {
     }
 
     @Override
-    public Either<RepositoryUnreadable, List<Branch>> branches() {
+    public Either<RepositoryUnreadable, List<Branch>> branches(List<Branch> known) {
         return Either.right(List.of(
                 new Branch("main", true, new Sha("a1b2c3d4e5f60718293a4b5c6d7e8f9012345678"), Instant.EPOCH, true, true),
                 new Branch("feature/initial-layout", false, new Sha("0a1b2c3d4e5f60718293a4b5c6d7e8f901234567"), Instant.EPOCH, true),

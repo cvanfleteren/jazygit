@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.git.model.Sha;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
@@ -45,14 +47,14 @@ class BranchesPanelTest {
     @Test
     void syncShowsAnAheadArrowForUnpushedAndABehindOneForIncomingCommits() {
         java.time.Instant t = java.time.Instant.EPOCH;
-        assertEquals(List.of(), BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, 0, 0)));
+        assertEquals(List.of(), BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, Option.of(new Upstream("refs/remotes/origin/" + "b", new Sha("1"), 0, 0)))));
         assertEquals(List.of(LoadableList.Seg.styled(" ↑2", Theme.Classes.AHEAD)),
-                BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, 2, 0)));
+                BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, Option.of(new Upstream("refs/remotes/origin/" + "b", new Sha("1"), 2, 0)))));
         assertEquals(List.of(LoadableList.Seg.styled(" ↓1", Theme.Classes.BEHIND)),
-                BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, 0, 1)));
+                BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, Option.of(new Upstream("refs/remotes/origin/" + "b", new Sha("1"), 0, 1)))));
         assertEquals(List.of(LoadableList.Seg.styled(" ↑2", Theme.Classes.AHEAD),
                         LoadableList.Seg.styled(" ↓1", Theme.Classes.BEHIND)),
-                BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, 2, 1)));
+                BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, Option.of(new Upstream("refs/remotes/origin/" + "b", new Sha("1"), 2, 1)))));
     }
 
     @Test

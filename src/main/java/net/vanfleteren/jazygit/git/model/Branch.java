@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.git.model;
 
+import io.vavr.control.Option;
+
 import java.time.Instant;
 
 /**
@@ -9,15 +11,28 @@ import java.time.Instant;
  * @param tipTime when that commit was made
  * @param hasRemote whether the branch also exists on its remote, according to the remote-tracking refs
  * @param isDefault whether this is the repository's main branch, i.e. the default branch of the remote
- * @param ahead     the commits not yet pushed to the upstream branch; 0 without an upstream
- * @param behind    the commits on the upstream branch not yet in this branch; 0 without an upstream
+ * @param upstream  the remote-tracking branch it follows, if that exists
  */
 public record Branch(String name, boolean current, Sha tipOid, Instant tipTime, boolean hasRemote,
-                     boolean isDefault, int ahead, int behind) {
+                     boolean isDefault, Option<Upstream> upstream) {
 
     public Branch(String name, boolean current, Sha tipOid, Instant tipTime, boolean hasRemote,
                   boolean isDefault) {
-        this(name, current, tipOid, tipTime, hasRemote, isDefault, 0, 0);
+        this(name, current, tipOid, tipTime, hasRemote, isDefault, Option.none());
+    }
+
+    /**
+     * The commits not yet pushed to the upstream branch; 0 without an upstream.
+     */
+    public int ahead() {
+        return upstream.map(Upstream::ahead).getOrElse(0);
+    }
+
+    /**
+     * The commits on the upstream branch not yet in this branch; 0 without an upstream.
+     */
+    public int behind() {
+        return upstream.map(Upstream::behind).getOrElse(0);
     }
 
     public Branch(String name, boolean current, Sha tipOid, Instant tipTime, boolean hasRemote) {

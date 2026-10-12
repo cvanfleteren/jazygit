@@ -27,7 +27,14 @@ public interface GitRead {
 
     Either<ProcessError, RepoStatus> status();
 
-    Either<RepositoryUnreadable, List<Branch>> branches();
+    /**
+     * The local branches.
+     *
+     * @param known the branches as read before, if any; how far each is ahead of and behind its upstream
+     *              takes a walk through the history to count, which is skipped for branches whose tips
+     *              and upstream tips have not moved since
+     */
+    Either<RepositoryUnreadable, List<Branch>> branches(List<Branch> known);
 
     /**
      * The stashes, newest first.
