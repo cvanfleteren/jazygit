@@ -113,11 +113,16 @@ public class CommitsPanel {
     }
 
     /**
-     * The first letters of the words of {@code name}, capitalized.
+     * The capitalized first letters of the first two words of {@code name}; a name of a single word gives
+     * its first two letters as they are.
      */
     static String initials(String name) {
-        return Arrays.stream(name.strip().split("\\s+"))
-                .filter(word -> !word.isEmpty())
+        List<String> words = Arrays.stream(name.strip().split("\\s+")).filter(word -> !word.isEmpty()).toList();
+        if (words.size() < 2) {
+            String word = name.strip();
+            return word.substring(0, word.offsetByCodePoints(0, Math.min(2, word.codePointCount(0, word.length()))));
+        }
+        return words.stream().limit(2)
                 .map(word -> word.substring(0, word.offsetByCodePoints(0, 1)).toUpperCase())
                 .collect(Collectors.joining());
     }

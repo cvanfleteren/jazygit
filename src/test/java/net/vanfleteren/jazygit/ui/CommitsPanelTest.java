@@ -32,15 +32,18 @@ class CommitsPanelTest {
 
         List<LoadableList.Row> rows = CommitsPanel.rows(CommitGraph.layout(log));
 
-        assertEquals(List.of("mmmmmmm A ◎─╮ msg mmmmmmm", "fffffff2 A │ ○ msg fffffff2", "fffffff1 A │ ○ msg fffffff1",
-                "bbbbbbb A ○─╯ msg bbbbbbb", "aaaaaaa A ○ msg aaaaaaa"), rows.stream().map(LoadableList.Row::text).toList());
+        assertEquals(List.of("mmmmmmm Ad ◎─╮ msg mmmmmmm", "fffffff2 Ad │ ○ msg fffffff2", "fffffff1 Ad │ ○ msg fffffff1",
+                "bbbbbbb Ad ○─╯ msg bbbbbbb", "aaaaaaa Ad ○ msg aaaaaaa"), rows.stream().map(LoadableList.Row::text).toList());
     }
 
     @Test
     void initialsAreTheCapitalizedFirstLettersOfTheName() {
         assertEquals("CV", CommitsPanel.initials("christophe vanfleteren"));
         assertEquals("AL", CommitsPanel.initials("  Ada   Lovelace "));
-        assertEquals("R", CommitsPanel.initials("renovate"));
+        assertEquals("re", CommitsPanel.initials("renovate"));
+        assertEquals("cl", CommitsPanel.initials("claude[bot]"));
+        assertEquals("JF", CommitsPanel.initials("John F Kennedy"));
+        assertEquals("x", CommitsPanel.initials("x"));
         assertEquals("", CommitsPanel.initials(""));
     }
 
