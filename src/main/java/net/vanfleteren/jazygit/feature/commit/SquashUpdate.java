@@ -1,15 +1,11 @@
 package net.vanfleteren.jazygit.feature.commit;
 
 import io.vavr.collection.List;
-import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.commit.CommitCmd.Squash;
 import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.Update;
 
 /**
  * Squashing a commit into the one below it.
@@ -24,13 +20,9 @@ public final class SquashUpdate {
             case SquashMsg.Requested(int index) -> requested(model, index);
             case SquashMsg.Cancelled() -> Next.of(model.withoutPopup(SquashPopup.class));
             case SquashMsg.Confirmed() -> model.popup(SquashPopup.class)
-                    .map(popup -> Next.of(model.withoutPopup(SquashPopup.class).withError(Option.none()),
+                    .map(popup -> Next.of(model.withoutPopup(SquashPopup.class).clearError(),
                             new Squash(popup.commit().sha())))
                     .getOrElse(() -> Next.of(model));
-            case SquashMsg.Done(List<String> commands) ->
-                    Update.refresh(CommandLog.append(model.withError(Option.none()), "log.title.squash", commands));
-            case SquashMsg.Failed(String message) ->
-                    Update.refresh(model.withError(Option.of(Messages.get("error.squash.failed", message))));
         };
     }
 
@@ -48,7 +40,7 @@ public final class SquashUpdate {
             return Next.of(model);
         }
         return commits.find(c -> c.sha().equals(commit.parents().head()))
-                .map(into -> Next.of(model.withError(Option.none()).openPopup(new SquashPopup(commit, into))))
+                .map(into -> Next.of(model.clearError().openPopup(new SquashPopup(commit, into))))
                 .getOrElse(() -> Next.of(model));
     }
 }

@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import io.vavr.collection.List;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -34,11 +33,5 @@ public sealed interface CheckoutMsg extends Msg {
      * The user cancelled the checkout that needed the changes stashed.
      */
     record StashCancelled() implements CheckoutMsg {
-    }
-
-    record Done(String branch, List<String> commands) implements CheckoutMsg {
-    }
-
-    record Failed(String branch, String message) implements CheckoutMsg {
     }
 }

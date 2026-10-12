@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import io.vavr.collection.List;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -25,11 +24,5 @@ public sealed interface RebaseMsg extends Msg {
      * The user chose a plain rebase.
      */
     record Chosen() implements RebaseMsg {
-    }
-
-    record Done(String onto, List<String> commands) implements RebaseMsg {
-    }
-
-    record Failed(String onto, String message) implements RebaseMsg {
     }
 }

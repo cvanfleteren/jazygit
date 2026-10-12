@@ -4,7 +4,7 @@ import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.GitError.CommandFailed;
 import net.vanfleteren.jazygit.git.GitError.LocalChanges;
 import net.vanfleteren.jazygit.git.GitError.StashNotRestored;
-import net.vanfleteren.jazygit.state.GitErrorText;
+import net.vanfleteren.jazygit.ui.ErrorText;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -108,7 +108,7 @@ class CliCheckoutTest {
         GitFailure<GitError.StashCheckoutError> failure = CliCheckout.checkoutWithStash(repo, "feature").getLeft();
 
         assertInstanceOf(StashNotRestored.class, failure.error());
-        assertTrue(GitErrorText.of(failure.error()).startsWith("Checked out, but your stashed changes"));
+        assertTrue(ErrorText.of(failure.error()).startsWith("Checked out, but your stashed changes"));
         assertEquals("feature", git("branch", "--show-current").strip());
         assertEquals(1, git("stash", "list").lines().count());
     }

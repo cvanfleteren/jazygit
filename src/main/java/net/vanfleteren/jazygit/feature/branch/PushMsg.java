@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import io.vavr.collection.List;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -34,11 +33,5 @@ public sealed interface PushMsg extends Msg {
      * The user confirmed overwriting the diverged remote branch.
      */
     record ForceConfirmed() implements PushMsg {
-    }
-
-    record Done(String branch, List<String> commands) implements PushMsg {
-    }
-
-    record Failed(String branch, String message) implements PushMsg {
     }
 }

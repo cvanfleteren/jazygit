@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
-import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
@@ -17,29 +16,27 @@ public interface Cmd {
 
     /**
      * Performs the IO and returns the {@link Msg} that reports its outcome. A {@link RuntimeException}
-     * thrown from here is a bug; {@link Program} still turns it into {@link #failed(String)}.
+     * thrown from here is a bug; {@link Program} still turns it into {@link #failed(Failure)}.
      */
     Msg run(GitInfoProvider git);
 
     /**
-     * The {@link Msg} that reports this command failing with {@code message}.
+     * The {@link Msg} that reports this command failing for {@code failure}.
      */
-    Msg failed(String message);
+    Msg failed(Failure failure);
 
     /**
-     * The {@link Msg} that reports this command failing with {@code error}.
+     * The {@link Msg} that reports this command failing with {@code error}, before any command ran.
      */
     default Msg failedWith(GitError error) {
-        return failed(GitErrorText.of(error));
+        return failed(new Failure.Git(error));
     }
 
     /**
-     * The {@link Msg} that reports this command failing with {@code failure}, after logging the commands
-     * that were run when this command has a log title.
+     * The {@link Msg} that reports this command failing with {@code failure}.
      */
     default Msg failedWith(GitFailure<?> failure) {
-        Msg failed = failedWith(failure.error());
-        return logTitleKey().<Msg>map(key -> new LoggedMsg(key, failure.commands(), failed)).getOrElse(failed);
+        return failed(Failure.of(failure));
     }
 
     /**
@@ -51,21 +48,13 @@ public interface Cmd {
     }
 
     /**
-     * The message key of the command log title for this command's git commands, if it runs any that
-     * change the repository.
-     */
-    default Option<String> logTitleKey() {
-        return Option.none();
-    }
-
-    /**
      * Reads part of the repository state into the {@link Model}.
      */
     sealed interface Load extends Cmd {
 
         @Override
-        default Msg failed(String message) {
-            return new LoadMsg.Failed(this, message);
+        default Msg failed(Failure failure) {
+            return new LoadMsg.Failed(this, failure);
         }
     }
 

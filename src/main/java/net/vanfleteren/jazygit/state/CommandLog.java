@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.i18n.Messages;
 
 /**
  * Appends executed commands to the command log of the model.
@@ -14,15 +13,14 @@ public final class CommandLog {
     }
 
     /**
-     * The model with an entry titled by the message {@code titleKey} added for {@code commands}; nothing
-     * is added when no command was executed.
+     * The model with an entry for {@code commands} of {@code operation} added; nothing is added when no
+     * command was executed.
      */
-    public static Model append(Model model, String titleKey, List<String> commands) {
-        if (commands.isEmpty()) {
-            return model;
-        }
-        return model.withCommandLog(model.commandLog()
-                .append(new LogEntry(Messages.get(titleKey), commands))
+    public static Model append(Model model, Operation operation, List<String> commands) {
+        return commands.isEmpty()
+                ? model
+                : model.withCommandLog(model.commandLog()
+                .append(new LogEntry(operation, commands))
                 .takeRight(MAX_ENTRIES));
     }
 }

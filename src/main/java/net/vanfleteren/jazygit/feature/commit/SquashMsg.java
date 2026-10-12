@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.commit;
 
-import io.vavr.collection.List;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -22,11 +21,5 @@ public sealed interface SquashMsg extends Msg {
     }
 
     record Confirmed() implements SquashMsg {
-    }
-
-    record Done(List<String> commands) implements SquashMsg {
-    }
-
-    record Failed(String message) implements SquashMsg {
     }
 }

@@ -4,6 +4,7 @@ import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.elements.TextElement;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import static dev.tamboui.toolkit.Toolkit.*;
@@ -23,7 +24,7 @@ public final class StatusPanel {
     public static Panel render(Model model) {
         String branch = switch (model.status()) {
             case Loadable.Loading<RepoStatus>() -> Placeholders.loading();
-            case Loadable.Failed<RepoStatus>(String message) -> Placeholders.error(message);
+            case Loadable.Failed<RepoStatus>(Failure failure) -> Placeholders.error(failure);
             case Loadable.Loaded<RepoStatus>(RepoStatus status) -> status.branchLabel();
         };
         TextElement repository = text(Messages.get("status.line", model.repositoryName(), branch));

@@ -1,22 +1,16 @@
 package net.vanfleteren.jazygit.feature.discard;
 
 import io.vavr.collection.List;
-import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.discard.DiscardCmd.Discard;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Chosen;
-import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Done;
-import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Failed;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Requested;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Scope;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.Update;
 
 import java.util.function.Predicate;
 
@@ -33,10 +27,6 @@ public final class DiscardUpdate {
             case Requested(List<FileEntry> files) -> requested(model, files);
             case Cancelled() -> Next.of(model.withoutPopup(DiscardPopup.class));
             case Chosen(Scope scope) -> chosen(model, scope);
-            case Done(List<String> commands) ->
-                    Update.refresh(CommandLog.append(model.withError(Option.none()), "log.title.discard", commands));
-            case Failed(String message) ->
-                    Update.refresh(model.withError(Option.of(Messages.get("error.discard.failed", message))));
         };
     }
 
@@ -48,7 +38,7 @@ public final class DiscardUpdate {
         return model.popup(DiscardPopup.class)
                 // Without unstaged changes there is nothing to discard of that kind.
                 .filter(popup -> scope == Scope.ALL || popup.hasUnstaged())
-                .map(popup -> Next.of(model.withoutPopup(DiscardPopup.class).withError(Option.none()),
+                .map(popup -> Next.of(model.withoutPopup(DiscardPopup.class).clearError(),
                         new Discard(plan(popup.files(), scope))))
                 .getOrElse(() -> Next.of(model));
     }

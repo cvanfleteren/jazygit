@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.discard;
 
+import static net.vanfleteren.jazygit.state.TestModels.errorText;
+import static net.vanfleteren.jazygit.state.TestModels.failed;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.discard.DiscardCmd.Discard;
@@ -96,8 +98,8 @@ class DiscardUpdateTest {
 
     @Test
     void aFailureIsStoredAsAnError() {
-        Next next = Update.update(loaded(), new DiscardMsg.Failed("boom"));
+        Next next = Update.update(loaded(), failed(new DiscardCmd.Discard(new DiscardPlan(List.of(), List.of(), List.of(), List.of())), "boom"));
 
-        assertEquals(Option.of("Discarding changes failed: boom"), next.model().error());
+        assertEquals(Option.of("Discarding changes failed: boom"), errorText(next.model()));
     }
 }

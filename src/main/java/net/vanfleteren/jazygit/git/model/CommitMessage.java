@@ -8,6 +8,17 @@ package net.vanfleteren.jazygit.git.model;
  */
 public record CommitMessage(String summary, String description) {
 
+    /**
+     * The message without the whitespace around its summary and description.
+     */
+    public CommitMessage stripped() {
+        return new CommitMessage(summary.strip(), description.strip());
+    }
+
+    public boolean hasSummary() {
+        return !summary.isBlank();
+    }
+
     public boolean hasDescription() {
         return !description.isBlank();
     }

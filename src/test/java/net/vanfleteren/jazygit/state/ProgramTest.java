@@ -45,6 +45,8 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Queue;
 
+import static net.vanfleteren.jazygit.state.TestModels.errorText;
+import static net.vanfleteren.jazygit.state.TestModels.refused;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -273,7 +275,7 @@ class ProgramTest {
         provider.statusError = "git status failed";
         settle();
 
-        assertEquals(new Failed<>("git status failed"), program.model().status());
+        assertEquals(new Failed<>(refused("git status failed")), program.model().status());
 
         provider.statusError = null;
         program.dispatch(new Msg.Tick());
@@ -318,7 +320,7 @@ class ProgramTest {
         program.dispatch(new NewBranchMsg.Confirmed("topic"));
         settle();
 
-        assertEquals(Option.of("Creating branch topic failed: fatal: exists"), program.model().error());
+        assertEquals(Option.of("Creating branch topic failed: fatal: exists"), errorText(program.model()));
     }
 
     @Test
@@ -360,7 +362,7 @@ class ProgramTest {
         assertEquals(java.util.List.of("stage[a.txt]"), provider.indexCalls);
         assertEquals(true, program.model().popup(CommitPopup.class).isDefined());
 
-        program.dispatch(new CommitMsg.Confirmed("summary", "more"));
+        program.dispatch(new CommitMsg.Confirmed(new CommitMessage("summary", "more")));
         settle();
 
         assertEquals(java.util.List.of("summary|more"), provider.commits);
@@ -387,7 +389,7 @@ class ProgramTest {
         settle();
 
         program.dispatch(new RewordMsg.Requested(0));
-        program.dispatch(new RewordMsg.Confirmed("new summary", "new body"));
+        program.dispatch(new RewordMsg.Confirmed(new CommitMessage("new summary", "new body")));
         settle();
 
         assertEquals(java.util.List.of("reword new summary|new body"), provider.commits);
@@ -402,10 +404,10 @@ class ProgramTest {
         settle();
 
         program.dispatch(new CommitMsg.Requested());
-        program.dispatch(new CommitMsg.Confirmed("summary", ""));
+        program.dispatch(new CommitMsg.Confirmed(new CommitMessage("summary", "")));
         settle();
 
-        assertEquals(Option.of("Commit failed: boom"), program.model().error());
+        assertEquals(Option.of("Commit failed: boom"), errorText(program.model()));
     }
 
     @Test
@@ -427,7 +429,7 @@ class ProgramTest {
         program.dispatch(new StageMsg.Requested(List.of(new FileEntry("a.txt", ChangeType.UNTRACKED))));
         settle();
 
-        assertEquals(Option.of("Staging failed: fatal: pathspec 'a.txt' did not match"), program.model().error());
+        assertEquals(Option.of("Staging failed: fatal: pathspec 'a.txt' did not match"), errorText(program.model()));
     }
 
     @Test
@@ -437,8 +439,7 @@ class ProgramTest {
         provider.checkoutError = "error: Your local changes would be overwritten";
         program.dispatch(new CheckoutMsg.Requested("other"));
         settle();
-        assertEquals(Option.of("Checkout of other failed: error: Your local changes would be overwritten"),
-                program.model().error());
+        assertEquals(Option.of("Checkout of other failed: error: Your local changes would be overwritten"), errorText(program.model()));
         assertEquals("main", ((Loaded<RepoStatus>) program.model().status()).value().head().branchName().get());
 
         provider.checkoutError = null;

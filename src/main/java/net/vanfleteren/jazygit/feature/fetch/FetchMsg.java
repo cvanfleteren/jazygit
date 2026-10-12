@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.fetch;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -24,12 +25,12 @@ public sealed interface FetchMsg extends Msg {
     record RemotesListed(List<String> remotes) implements FetchMsg {
     }
 
-    record ListingFailed(String message) implements FetchMsg {
+    record ListingFailed(Failure failure) implements FetchMsg {
     }
 
-    record Fetched(String remote, List<String> commands) implements FetchMsg {
+    record Fetched(String remote) implements FetchMsg {
     }
 
-    record FetchFailed(String remote, String message) implements FetchMsg {
+    record FetchFailed(String remote, Failure failure) implements FetchMsg {
     }
 }

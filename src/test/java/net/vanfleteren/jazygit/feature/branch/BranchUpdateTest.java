@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
+import net.vanfleteren.jazygit.state.Cmd.LoadStashes;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
@@ -34,7 +35,7 @@ class BranchUpdateTest {
 
     @Test
     void checkoutRequestOfAnotherBranchChecksItOut() {
-        Model failedBefore = Update.update(loaded(), new CheckoutMsg.Failed("feature", "boom")).model();
+        Model failedBefore = Update.update(loaded(), failed(new BranchCmd.Checkout("feature"), "boom")).model();
 
         Next next = Update.update(failedBefore, new CheckoutMsg.Requested("feature"));
 
@@ -104,7 +105,7 @@ class BranchUpdateTest {
 
     @Test
     void pushRequestOfABranchWithoutUpstreamAsksWhereToPushIt() {
-        Next asked = Update.update(withError(loaded(), "boom"), new PushMsg.Requested("feature"));
+        Next asked = Update.update(withCheckoutError(loaded(), "foo", "boom"), new PushMsg.Requested("feature"));
 
         assertEquals(List.of(), asked.cmds());
         assertEquals(Option.of(new SetUpstreamPopup("feature")), asked.model().popup());
@@ -141,7 +142,7 @@ class BranchUpdateTest {
 
     @Test
     void pushRequestOfAKnownBranchPushesIt() {
-        Model failedBefore = Update.update(tracking(), new PushMsg.Failed("feature", "boom")).model();
+        Model failedBefore = Update.update(tracking(), failed(new BranchCmd.Push("feature", PushMode.FAST_FORWARD), "boom")).model();
 
         Next next = Update.update(failedBefore, new PushMsg.Requested("feature"));
 
@@ -182,14 +183,14 @@ class BranchUpdateTest {
 
     @Test
     void failedPushIsStoredAndASuccessfulOneReloadsTheBranches() {
-        Model failed = Update.update(loaded(), new PushMsg.Failed("feature", "boom")).model();
-        assertEquals(Option.of("Pushing branch feature failed: boom"), failed.error());
+        Model failed = Update.update(loaded(), failed(new BranchCmd.Push("feature", PushMode.FAST_FORWARD), "boom")).model();
+        assertEquals(Option.of("Pushing branch feature failed: boom"), errorText(failed));
 
         Model pushing = Update.update(loaded(), new PushMsg.Requested("feature")).model();
-        assertEquals(io.vavr.collection.HashSet.empty(), Update.update(pushing, new PushMsg.Failed("feature", "boom")).model().busy());
-        assertEquals(io.vavr.collection.HashSet.empty(), Update.update(pushing, new PushMsg.Done("feature", List.of())).model().busy());
+        assertEquals(io.vavr.collection.HashSet.empty(), Update.update(pushing, failed(new BranchCmd.Push("feature", PushMode.FAST_FORWARD), "boom")).model().busy());
+        assertEquals(io.vavr.collection.HashSet.empty(), Update.update(pushing, succeeded(new BranchCmd.Push("feature", PushMode.FAST_FORWARD))).model().busy());
 
-        Next done = Update.update(withError(loaded(), "boom"), new PushMsg.Done("feature", List.of()));
+        Next done = Update.update(withCheckoutError(loaded(), "foo", "boom"), succeeded(new BranchCmd.Push("feature", PushMode.FAST_FORWARD)));
         assertEquals(Option.none(), done.model().error());
         assertEquals(true, done.cmds().contains(new LoadBranches()));
     }
@@ -237,9 +238,9 @@ class BranchUpdateTest {
 
     @Test
     void failedBranchCreationIsStored() {
-        Model model = Update.update(loaded(), new NewBranchMsg.Failed("topic", "boom")).model();
+        Model model = Update.update(loaded(), failed(new BranchCmd.CreateBranch("topic", "main"), "boom")).model();
 
-        assertEquals(Option.of("Creating branch topic failed: boom"), model.error());
+        assertEquals(Option.of("Creating branch topic failed: boom"), errorText(model));
     }
 
     @Test
@@ -300,9 +301,9 @@ class BranchUpdateTest {
         assertEquals(Option.none(), Update.update(deleting, new DeleteBranchMsg.Requested("feature")).model().popup());
 
         assertEquals(io.vavr.collection.HashSet.empty(),
-                Update.update(deleting, new DeleteBranchMsg.Deleted("feature", List.of())).model().busy());
+                Update.update(deleting, succeeded(new BranchCmd.DeleteBranch("feature", DeleteScope.LOCAL))).model().busy());
         assertEquals(io.vavr.collection.HashSet.empty(),
-                Update.update(deleting, new DeleteBranchMsg.Failed("feature", "boom")).model().busy());
+                Update.update(deleting, failed(new BranchCmd.DeleteBranch("feature", DeleteScope.LOCAL), "boom")).model().busy());
     }
 
     @Test
@@ -317,26 +318,25 @@ class BranchUpdateTest {
 
     @Test
     void failedDeletionIsStored() {
-        Model model = Update.update(loaded(), new DeleteBranchMsg.Failed("feature", "boom")).model();
+        Model model = Update.update(loaded(), failed(new BranchCmd.DeleteBranch("feature", DeleteScope.LOCAL), "boom")).model();
 
-        assertEquals(Option.of("Deleting branch feature failed: boom"), model.error());
+        assertEquals(Option.of("Deleting branch feature failed: boom"), errorText(model));
     }
 
     @Test
     void checkedOutReloadsStatusAndBranches() {
-        Next next = Update.update(loaded(), new CheckoutMsg.Done("feature", List.of("git checkout feature")));
+        Next next = Update.update(loaded(), succeeded(new BranchCmd.Checkout("feature"), "git checkout feature"));
 
         assertEquals(List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadStashes()), next.cmds());
         assertEquals(Option.none(), next.model().error());
     }
 
     @Test
-    void failedCheckoutIsStoredWithoutFurtherCommands() {
-        Next next = Update.update(loaded(), new CheckoutMsg.Failed("feature", "local changes would be overwritten"));
+    void failedCheckoutIsStoredAndTheRepositoryReadAgain() {
+        Next next = Update.update(loaded(), failed(new BranchCmd.Checkout("feature"), "local changes would be overwritten"));
 
-        assertEquals(Option.of("Checkout of feature failed: local changes would be overwritten"),
-                next.model().error());
-        assertEquals(List.of(), next.cmds());
+        assertEquals(Option.of("Checkout of feature failed: local changes would be overwritten"), errorText(next.model()));
+        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new LoadStashes()), next.cmds());
     }
 
     @Test
@@ -373,8 +373,8 @@ class BranchUpdateTest {
 
     @Test
     void aFailedRebaseShowsTheError() {
-        Next next = Update.update(loaded(), new RebaseMsg.Failed("feature", "conflict"));
+        Next next = Update.update(loaded(), failed(new BranchCmd.Rebase("feature"), "conflict"));
 
-        assertEquals(Option.of("Rebasing onto feature failed: conflict"), next.model().error());
+        assertEquals(Option.of("Rebasing onto feature failed: conflict"), errorText(next.model()));
     }
 }

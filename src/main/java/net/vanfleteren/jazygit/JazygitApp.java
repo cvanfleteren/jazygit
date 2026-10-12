@@ -46,7 +46,6 @@ import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.CliGitInfoProvider;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.keys.Keymap;
-import net.vanfleteren.jazygit.state.GitErrorText;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -56,6 +55,7 @@ import net.vanfleteren.jazygit.ui.CommandLogPanel;
 import net.vanfleteren.jazygit.ui.CommitsPanel;
 import net.vanfleteren.jazygit.ui.ContentPanel;
 import net.vanfleteren.jazygit.ui.FetchLine;
+import net.vanfleteren.jazygit.ui.ErrorText;
 import net.vanfleteren.jazygit.ui.FilesPanel;
 import net.vanfleteren.jazygit.ui.StashPanel;
 import net.vanfleteren.jazygit.ui.StatusPanel;
@@ -280,7 +280,7 @@ public class JazygitApp extends ToolkitApp {
         Path start = (args.length > 0 ? Path.of(args[0]) : Path.of("")).toAbsolutePath();
         Either<OpenError, CliGitInfoProvider> opened = CliGitInfoProvider.open(start);
         if (opened.isLeft()) {
-            System.err.println(GitErrorText.of(opened.getLeft()));
+            System.err.println(ErrorText.of(opened.getLeft()));
             System.exit(1);
             return;
         }

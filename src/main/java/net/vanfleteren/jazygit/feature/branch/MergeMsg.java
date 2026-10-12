@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -26,11 +25,5 @@ public sealed interface MergeMsg extends Msg {
      * The user chose how to merge.
      */
     record Chosen(MergeMode mode) implements MergeMsg {
-    }
-
-    record Done(String branch, List<String> commands) implements MergeMsg {
-    }
-
-    record Failed(String branch, String message) implements MergeMsg {
     }
 }

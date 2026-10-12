@@ -24,9 +24,9 @@ public final class FetchUpdate {
                     ? Next.of(model)
                     : Next.of(model.withFetching(Option.of(Fetching.LISTING)), new FetchCmd.ListRemotes());
             case FetchMsg.RemotesListed(List<String> remotes) -> next(model, remotes);
-            case FetchMsg.ListingFailed(String message) -> Next.of(model.withFetching(Option.none()));
-            case FetchMsg.Fetched(String remote, var commands) -> next(model, queued(model));
-            case FetchMsg.FetchFailed(String remote, String message) -> next(model, queued(model));
+            case FetchMsg.ListingFailed(var failure) -> Next.of(model.withFetching(Option.none()));
+            case FetchMsg.Fetched(String remote) -> next(model, queued(model));
+            case FetchMsg.FetchFailed(String remote, var failure) -> next(model, queued(model));
         };
     }
 

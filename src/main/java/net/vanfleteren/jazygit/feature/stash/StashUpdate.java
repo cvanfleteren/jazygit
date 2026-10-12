@@ -1,13 +1,12 @@
 package net.vanfleteren.jazygit.feature.stash;
 
 import io.vavr.collection.List;
-import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.stash.StashCmd.Stash;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.state.CommandLog;
+import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -26,26 +25,14 @@ public final class StashUpdate {
             case StashMsg.Requested() -> requested(model);
             case StashMsg.Cancelled() -> Next.of(model.withoutPopup(StashPopup.class));
             case StashMsg.Confirmed(String name) -> confirmed(model, name);
-            case StashMsg.Done(List<String> commands) ->
-                    Update.refresh(CommandLog.append(model.withError(Option.none()), "log.title.stash", commands));
-            case StashMsg.Failed(String message) ->
-                    Update.refresh(model.withError(Option.of(Messages.get("error.stash.failed", message))));
             case StashMsg.PopRequested(String ref) ->
-                    listed(model, ref) ? Next.of(model.withError(Option.none()), new StashCmd.Pop(ref)) : Next.of(model);
+                    listed(model, ref) ? Next.of(model.clearError(), new StashCmd.Pop(ref)) : Next.of(model);
             case StashMsg.DropRequested(String ref) ->
-                    listed(model, ref) ? Next.of(model.withError(Option.none()).openPopup(new StashDropPopup(ref))) : Next.of(model);
+                    listed(model, ref) ? Next.of(model.clearError().openPopup(new StashDropPopup(ref))) : Next.of(model);
             case StashMsg.DropCancelled() -> Next.of(model.withoutPopup(StashDropPopup.class));
             case StashMsg.DropConfirmed() -> model.popup(StashDropPopup.class)
                     .map(popup -> Next.of(model.withoutPopup(StashDropPopup.class), new StashCmd.Drop(popup.ref())))
                     .getOrElse(() -> Next.of(model));
-            case StashMsg.Dropped(List<String> commands) ->
-                    Update.refresh(CommandLog.append(model.withError(Option.none()), "log.title.stashDrop", commands));
-            case StashMsg.DropFailed(String message) ->
-                    Update.refresh(model.withError(Option.of(Messages.get("error.stashDrop.failed", message))));
-            case StashMsg.Popped(List<String> commands) ->
-                    Update.refresh(CommandLog.append(model.withError(Option.none()), "log.title.stashPop", commands));
-            case StashMsg.PopFailed(String message) ->
-                    Update.refresh(model.withError(Option.of(Messages.get("error.stashPop.failed", message))));
         };
     }
 
@@ -54,8 +41,8 @@ public final class StashUpdate {
      */
     private static Next requested(Model model) {
         return Update.files(model).isEmpty()
-                ? Next.of(model.withError(Option.of(Messages.get("error.stash.nothing"))))
-                : Next.of(model.withError(Option.none()).openPopup(new StashPopup()));
+                ? Next.of(model.fail(new AppError.NothingToStash()))
+                : Next.of(model.clearError().openPopup(new StashPopup()));
     }
 
     /**
@@ -69,7 +56,7 @@ public final class StashUpdate {
     private static Next confirmed(Model model, String name) {
         String trimmed = name.strip();
         return model.popup(StashPopup.class)
-                .map(popup -> Next.of(model.withoutPopup(StashPopup.class).withError(Option.none()),
+                .map(popup -> Next.of(model.withoutPopup(StashPopup.class).clearError(),
                         new Stash(trimmed.isEmpty() ? defaultName(model) : trimmed)))
                 .getOrElse(() -> Next.of(model));
     }

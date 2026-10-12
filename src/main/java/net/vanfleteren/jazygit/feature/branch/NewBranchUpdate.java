@@ -1,20 +1,14 @@
 package net.vanfleteren.jazygit.feature.branch;
 
 import io.vavr.collection.List;
-import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.CreateBranch;
 import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Confirmed;
-import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Created;
-import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Failed;
 import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Requested;
 import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.Update;
 
 /**
  * Creating a branch.
@@ -30,11 +24,6 @@ public final class NewBranchUpdate {
             case NewBranchMsg.RequestedAtCommit(int index) -> atCommit(model, index);
             case Cancelled() -> Next.of(model.withoutPopup(NewBranchPopup.class));
             case Confirmed(String name) -> confirmed(model, name);
-            // Like a checkout: status and branches show the new HEAD.
-            case Created(String name, List<String> commands) ->
-                    Update.refresh(CommandLog.append(model.withError(Option.none()), "log.title.newBranch", commands));
-            case Failed(String name, String message) ->
-                    Next.of(model.withError(Option.of(Messages.get("error.newBranch.failed", name, message))));
         };
     }
 
@@ -49,7 +38,7 @@ public final class NewBranchUpdate {
         // A blank name keeps the dialog open.
         return model.popup(NewBranchPopup.class).map(NewBranchPopup::base)
                 .filter(base -> !trimmed.isEmpty())
-                .map(base -> Next.of(model.withoutPopup(NewBranchPopup.class).withError(Option.none()),
+                .map(base -> Next.of(model.withoutPopup(NewBranchPopup.class).clearError(),
                         new CreateBranch(trimmed, base)))
                 .getOrElse(() -> Next.of(model));
     }

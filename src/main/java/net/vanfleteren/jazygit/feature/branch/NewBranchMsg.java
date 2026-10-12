@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import io.vavr.collection.List;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -31,11 +30,5 @@ public sealed interface NewBranchMsg extends Msg {
      * The user entered the name of the new branch.
      */
     record Confirmed(String name) implements NewBranchMsg {
-    }
-
-    record Created(String name, List<String> commands) implements NewBranchMsg {
-    }
-
-    record Failed(String name, String message) implements NewBranchMsg {
     }
 }

@@ -21,7 +21,7 @@ class MergeUpdateTest {
 
     @Test
     void aMergeRequestAsksHowToMerge() {
-        Next asked = Update.update(withError(loaded(), "boom"), new MergeMsg.Requested("feature"));
+        Next asked = Update.update(withCheckoutError(loaded(), "foo", "boom"), new MergeMsg.Requested("feature"));
 
         assertEquals(Option.of(new MergePopup("main", "feature")), asked.model().popup());
         assertEquals(Option.none(), asked.model().error());
@@ -51,11 +51,11 @@ class MergeUpdateTest {
 
     @Test
     void aMergeIsLoggedAndReloadsAndAFailedOneIsReported() {
-        Next done = Update.update(loaded(), new MergeMsg.Done("feature", List.of("git merge --ff --no-edit feature")));
+        Next done = Update.update(loaded(), succeeded(new BranchCmd.Merge("feature", MergeMode.FAST_FORWARD), "git merge --ff --no-edit feature"));
         assertEquals(List.of(new LoadStatus(), new LoadBranches(), new LoadStashes()), done.cmds());
         assertEquals(List.of("git merge --ff --no-edit feature"), done.model().commandLog().last().commands());
 
-        Next failed = Update.update(loaded(), new MergeMsg.Failed("feature", "CONFLICT (content)"));
-        assertEquals(Option.of("Merging feature failed: CONFLICT (content)"), failed.model().error());
+        Next failed = Update.update(loaded(), failed(new BranchCmd.Merge("feature", MergeMode.FAST_FORWARD), "CONFLICT (content)"));
+        assertEquals(Option.of("Merging feature failed: CONFLICT (content)"), errorText(failed.model()));
     }
 }

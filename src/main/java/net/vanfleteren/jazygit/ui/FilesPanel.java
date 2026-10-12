@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.FileDiff;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -137,8 +138,8 @@ public class FilesPanel {
 
         roots = switch (status) {
             case Loadable.Loading<RepoStatus>() -> List.of(TreeNode.<FileTree>of(Placeholders.loading()).leaf());
-            case Loadable.Failed<RepoStatus>(String message) ->
-                    List.of(TreeNode.<FileTree>of(Placeholders.error(message)).leaf());
+            case Loadable.Failed<RepoStatus>(Failure failure) ->
+                    List.of(TreeNode.<FileTree>of(Placeholders.error(failure)).leaf());
             case Loadable.Loaded<RepoStatus>(RepoStatus value) when value.files().isEmpty() -> List.of();
             case Loadable.Loaded<RepoStatus>(RepoStatus value) -> List.of(node(
                     new FileTree.Dir(ROOT_NAME, "", FileTree.of(value.files())), collapsed));

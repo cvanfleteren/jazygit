@@ -1,20 +1,15 @@
 package net.vanfleteren.jazygit.feature.commit;
 
 import io.vavr.collection.List;
-import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.commit.CommitCmd.Reword;
 import net.vanfleteren.jazygit.feature.commit.RewordMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.commit.RewordMsg.Confirmed;
-import net.vanfleteren.jazygit.feature.commit.RewordMsg.Done;
-import net.vanfleteren.jazygit.feature.commit.RewordMsg.Failed;
 import net.vanfleteren.jazygit.feature.commit.RewordMsg.Requested;
 import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.state.CommandLog;
+import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.Update;
 
 /**
  * Rewording a commit.
@@ -28,10 +23,7 @@ public final class RewordUpdate {
         return switch (msg) {
             case Requested(int index) -> requested(model, index);
             case Cancelled() -> Next.of(model.withoutPopup(RewordPopup.class));
-            case Confirmed(String summary, String description) -> confirmed(model, summary, description);
-            case Done(List<String> commands) ->
-                    Update.refresh(CommandLog.append(model.withError(Option.none()), "log.title.reword", commands));
-            case Failed(String message) -> Update.refresh(model.withError(Option.of(Messages.get("error.reword.failed", message))));
+            case Confirmed(CommitMessage message) -> confirmed(model, message.stripped());
         };
     }
 
@@ -40,16 +32,15 @@ public final class RewordUpdate {
      */
     private static Next requested(Model model, int index) {
         return model.commits() instanceof Loaded<List<Commit>>(var commits) && index >= 0 && index < commits.size()
-                ? Next.of(model.withError(Option.none()).openPopup(new RewordPopup(commits.get(index))))
+                ? Next.of(model.clearError().openPopup(new RewordPopup(commits.get(index))))
                 : Next.of(model);
     }
 
-    private static Next confirmed(Model model, String summary, String description) {
-        String trimmed = summary.strip();
+    private static Next confirmed(Model model, CommitMessage message) {
         // A blank summary keeps the dialog open.
-        return model.popup(RewordPopup.class).filter(popup -> !trimmed.isEmpty())
-                .map(popup -> Next.of(model.withoutPopup(RewordPopup.class).withError(Option.none()),
-                        new Reword(popup.commit().sha(), trimmed, description.strip())))
+        return model.popup(RewordPopup.class).filter(popup -> message.hasSummary())
+                .map(popup -> Next.of(model.withoutPopup(RewordPopup.class).clearError(),
+                        new Reword(popup.commit().sha(), message)))
                 .getOrElse(() -> Next.of(model));
     }
 }

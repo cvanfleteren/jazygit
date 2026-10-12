@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.stage;
 
+import net.vanfleteren.jazygit.state.Operation;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.stage.StageCmd.Stage;
@@ -81,24 +82,24 @@ class StageUpdateTest {
 
     @Test
     void doneLogsTheExecutedCommands() {
-        Next staged = Update.update(loaded(), new StageMsg.Done(StageMsg.Action.STAGE, List.of("git add -- a.txt")));
-        assertEquals(List.of(new LogEntry("Stage", List.of("git add -- a.txt"))), staged.model().commandLog());
+        Next staged = Update.update(loaded(), succeeded(new StageCmd.Stage(List.of()), "git add -- a.txt"));
+        assertEquals(List.of(new LogEntry(Operation.STAGE, List.of("git add -- a.txt"))), staged.model().commandLog());
 
         Next unstaged = Update.update(staged.model(),
-                new StageMsg.Done(StageMsg.Action.UNSTAGE, List.of("git reset --quiet HEAD -- a.txt")));
-        assertEquals(List.of("Stage", "Unstage"), unstaged.model().commandLog().map(LogEntry::title).toList());
+                succeeded(new StageCmd.Unstage(List.of(), List.of()), "git reset --quiet HEAD -- a.txt"));
+        assertEquals(List.of(Operation.STAGE, Operation.UNSTAGE), unstaged.model().commandLog().map(LogEntry::operation).toList());
 
-        assertEquals(List.of(), Update.update(loaded(), new StageMsg.Done(StageMsg.Action.STAGE, List.of()))
+        assertEquals(List.of(), Update.update(loaded(), succeeded(new StageCmd.Stage(List.of())))
                 .model().commandLog());
     }
 
     @Test
     void toggledReloadsAndFailureIsReported() {
         assertEquals(List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadStashes()),
-                Update.update(loaded(), new StageMsg.Done(StageMsg.Action.STAGE, List.of())).cmds());
+                Update.update(loaded(), succeeded(new StageCmd.Stage(List.of()))).cmds());
 
-        Next failed = Update.update(loaded(), new StageMsg.Failed("fatal: pathspec"));
-        assertEquals(Option.of("Staging failed: fatal: pathspec"), failed.model().error());
+        Next failed = Update.update(loaded(), failed(new StageCmd.Stage(List.of()), "fatal: pathspec"));
+        assertEquals(Option.of("Staging failed: fatal: pathspec"), errorText(failed.model()));
         assertEquals(List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadStashes()), failed.cmds());
     }
 }

@@ -7,13 +7,13 @@ import dev.tamboui.widgets.input.TextInputState;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.SubmittableTextArea;
 import static dev.tamboui.toolkit.Toolkit.*;
 
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -48,13 +48,13 @@ public final class CommitDialog {
     // The commit whose message the popup starts out with, while it is open.
     private final Function<Model, Option<Commit>> current;
     private final Predicate<Model> open;
-    private final BiFunction<String, String, Msg> confirmed;
+    private final Function<CommitMessage, Msg> confirmed;
     private final Supplier<Msg> cancelled;
     private final Consumer<Msg> dispatch;
     private boolean shown;
 
     private CommitDialog(String summaryId, String descriptionId, Predicate<Model> open,
-                         Function<Model, Option<Commit>> current, BiFunction<String, String, Msg> confirmed,
+                         Function<Model, Option<Commit>> current, Function<CommitMessage, Msg> confirmed,
                          Supplier<Msg> cancelled, Consumer<Msg> dispatch) {
         this.summaryId = summaryId;
         this.descriptionId = descriptionId;
@@ -133,7 +133,7 @@ public final class CommitDialog {
         if (!message.isBlank()) {
             clear();
         }
-        dispatch.accept(confirmed.apply(message, details));
+        dispatch.accept(confirmed.apply(new CommitMessage(message, details)));
     }
 
     private void cancel() {

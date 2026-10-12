@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.stash;
 
+import net.vanfleteren.jazygit.state.Operation;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
@@ -38,7 +39,7 @@ class StashUpdateTest {
         Model model = Update.update(loaded(), new StashMsg.Requested()).model();
 
         assertEquals(Option.none(), model.popup());
-        assertEquals(Option.of("No changes to stash"), model.error());
+        assertEquals(Option.of("No changes to stash"), errorText(model));
     }
 
     @Test
@@ -84,11 +85,11 @@ class StashUpdateTest {
 
     @Test
     void doneLogsTheCommandsAndFailureIsReported() {
-        Next done = Update.update(loaded(), new StashMsg.Done(List.of("git stash push --message x")));
-        assertEquals(List.of(new LogEntry("Stash", List.of("git stash push --message x"))), done.model().commandLog());
+        Next done = Update.update(loaded(), succeeded(new StashCmd.Stash("x"), "git stash push --message x"));
+        assertEquals(List.of(new LogEntry(Operation.STASH, List.of("git stash push --message x"))), done.model().commandLog());
 
-        Next failed = Update.update(loaded(), new StashMsg.Failed("boom"));
-        assertEquals(Option.of("Stash failed: boom"), failed.model().error());
+        Next failed = Update.update(loaded(), failed(new StashCmd.Stash("x"), "boom"));
+        assertEquals(Option.of("Stash failed: boom"), errorText(failed.model()));
     }
 
     @Test
@@ -132,21 +133,21 @@ class StashUpdateTest {
 
     @Test
     void droppedLogsTheCommandsAndFailureIsReported() {
-        Next dropped = Update.update(loaded(), new StashMsg.Dropped(List.of("git stash drop 'stash@{0}'")));
-        assertEquals(List.of(new LogEntry("Drop stash", List.of("git stash drop 'stash@{0}'"))),
+        Next dropped = Update.update(loaded(), succeeded(new StashCmd.Drop("stash@{0}"), "git stash drop 'stash@{0}'"));
+        assertEquals(List.of(new LogEntry(Operation.STASH_DROP, List.of("git stash drop 'stash@{0}'"))),
                 dropped.model().commandLog());
 
-        Next failed = Update.update(loaded(), new StashMsg.DropFailed("no such stash"));
-        assertEquals(Option.of("Dropping the stash failed: no such stash"), failed.model().error());
+        Next failed = Update.update(loaded(), failed(new StashCmd.Drop("stash@{0}"), "no such stash"));
+        assertEquals(Option.of("Dropping the stash failed: no such stash"), errorText(failed.model()));
     }
 
     @Test
     void poppedLogsTheCommandsAndFailureIsReported() {
-        Next popped = Update.update(loaded(), new StashMsg.Popped(List.of("git stash pop 'stash@{0}'")));
-        assertEquals(List.of(new LogEntry("Unstash", List.of("git stash pop 'stash@{0}'"))),
+        Next popped = Update.update(loaded(), succeeded(new StashCmd.Pop("stash@{0}"), "git stash pop 'stash@{0}'"));
+        assertEquals(List.of(new LogEntry(Operation.STASH_POP, List.of("git stash pop 'stash@{0}'"))),
                 popped.model().commandLog());
 
-        Next failed = Update.update(loaded(), new StashMsg.PopFailed("conflict"));
-        assertEquals(Option.of("Unstash failed: conflict"), failed.model().error());
+        Next failed = Update.update(loaded(), failed(new StashCmd.Pop("stash@{0}"), "conflict"));
+        assertEquals(Option.of("Unstash failed: conflict"), errorText(failed.model()));
     }
 }

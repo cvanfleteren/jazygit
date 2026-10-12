@@ -1,15 +1,37 @@
-package net.vanfleteren.jazygit.state;
+package net.vanfleteren.jazygit.ui;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.state.AppError;
+import net.vanfleteren.jazygit.state.Failure;
 
 /**
- * Describes a {@link GitError} to the user.
+ * Describes errors to the user. The only place that turns them into text.
  */
-public final class GitErrorText {
+public final class ErrorText {
 
-    private GitErrorText() {
+    private ErrorText() {
+    }
+
+    public static String of(AppError error) {
+        return switch (error) {
+            case AppError.OperationFailed(var operation, Option<String> subject, Failure failure) ->
+                    Messages.get(operation.errorKey(), subject.toList().<Object>map(s -> s).append(of(failure)).toJavaArray());
+            case AppError.NothingToCommit() -> Messages.get("error.commit.nothing");
+            case AppError.NothingToAmend() -> Messages.get("error.amend.nothing");
+            case AppError.NothingToStash() -> Messages.get("error.stash.nothing");
+            case AppError.InvalidUpstream(String text) -> Messages.get("error.upstream.invalid", text.strip());
+        };
+    }
+
+    public static String of(Failure failure) {
+        return switch (failure) {
+            case Failure.Git(GitError error, var commands, var cleanupFailed) -> cleanupFailed
+                    .map(cleanup -> Messages.get("error.cleanupFailed", of(error), of(cleanup)))
+                    .getOrElse(() -> of(error));
+            case Failure.Bug(Throwable cause) -> Messages.get("error.bug", reason(cause));
+        };
     }
 
     public static String of(GitError error) {

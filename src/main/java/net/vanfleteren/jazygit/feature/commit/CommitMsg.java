@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.commit;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -28,21 +29,13 @@ public sealed interface CommitMsg extends Msg {
     /**
      * Everything was staged for a commit.
      */
-    record StagedForCommit(List<String> commands) implements CommitMsg {
+    record StagedForCommit(CommitCmd.StageForCommit cmd, List<String> commands) implements CommitMsg {
     }
 
-    record StageForCommitFailed(String message) implements CommitMsg {
-    }
 
     record Cancelled() implements CommitMsg {
     }
 
-    record Confirmed(String summary, String description) implements CommitMsg {
-    }
-
-    record Done(List<String> commands) implements CommitMsg {
-    }
-
-    record Failed(String message) implements CommitMsg {
+    record Confirmed(CommitMessage message) implements CommitMsg {
     }
 }

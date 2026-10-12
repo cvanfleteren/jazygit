@@ -9,6 +9,7 @@ import dev.tamboui.toolkit.event.KeyEventHandler;
 import dev.tamboui.widgets.common.ScrollBarPolicy;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
 
@@ -118,7 +119,7 @@ final class LoadableList<T> {
     Panel render(Loadable<T> value, boolean focused) {
         List<Row> rows = switch (value) {
             case Loadable.Loading<T>() -> List.of(Row.of(Placeholders.loading()));
-            case Loadable.Failed<T>(String message) -> List.of(Row.of(Placeholders.error(message)));
+            case Loadable.Failed<T>(Failure failure) -> List.of(Row.of(Placeholders.error(failure)));
             case Loadable.Loaded<T>(T loaded) -> items.apply(loaded);
         };
         if (value != shown) {

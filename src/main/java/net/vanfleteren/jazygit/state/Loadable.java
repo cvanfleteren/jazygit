@@ -13,7 +13,7 @@ public sealed interface Loadable<T> {
     record Loaded<T>(T value) implements Loadable<T> {
     }
 
-    record Failed<T>(String message) implements Loadable<T> {
+    record Failed<T>(Failure failure) implements Loadable<T> {
     }
 
     static <T> Loadable<T> loading() {
@@ -24,7 +24,7 @@ public sealed interface Loadable<T> {
         return switch (this) {
             case Loading<T>() -> new Loading<>();
             case Loaded<T>(T value) -> new Loaded<>(f.apply(value));
-            case Failed<T>(String message) -> new Failed<>(message);
+            case Failed<T>(Failure failure) -> new Failed<>(failure);
         };
     }
 

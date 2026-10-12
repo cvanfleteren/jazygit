@@ -1,0 +1,89 @@
+package net.vanfleteren.jazygit.state;
+
+import io.vavr.collection.HashSet;
+import io.vavr.collection.List;
+import io.vavr.control.Either;
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.branch.BranchCmd;
+import net.vanfleteren.jazygit.git.GitError;
+import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.model.PushMode;
+import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
+import net.vanfleteren.jazygit.state.Cmd.LoadStashes;
+import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
+import net.vanfleteren.jazygit.state.Update.Next;
+import org.junit.jupiter.api.Test;
+
+import static net.vanfleteren.jazygit.state.TestModels.errorText;
+import static net.vanfleteren.jazygit.state.TestModels.failed;
+import static net.vanfleteren.jazygit.state.TestModels.loaded;
+import static net.vanfleteren.jazygit.state.TestModels.succeeded;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+
+class OperationUpdateTest {
+
+    private static final BranchCmd.Push PUSH = new BranchCmd.Push("feature", PushMode.FAST_FORWARD);
+
+    @Test
+    void aSuccessLogsItsCommandsReleasesItsBranchClearsTheErrorAndReadsTheRepositoryAgain() {
+        Model pushing = TestModels.withCheckoutError(loaded(), "foo", "boom").withBusyBranch("feature");
+
+        Next next = Update.update(pushing, succeeded(PUSH, "git push origin feature"));
+
+        assertEquals(List.of(new LogEntry(Operation.PUSH, List.of("git push origin feature"))), next.model().commandLog());
+        assertEquals(HashSet.empty(), next.model().busy());
+        assertEquals(Option.none(), next.model().error());
+        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new LoadStashes()), next.cmds());
+    }
+
+    @Test
+    void aFailureLogsTheCommandsThatRanAndShowsWhy() {
+        Failure failure = new Failure.Git(new GitError.CommandFailed("rejected", 1), List.of("git push origin feature"),
+                Option.none());
+
+        Next next = Update.update(loaded().withBusyBranch("feature"), new OperationMsg.Failed(PUSH, failure));
+
+        assertEquals(List.of(new LogEntry(Operation.PUSH, List.of("git push origin feature"))), next.model().commandLog());
+        assertEquals(HashSet.empty(), next.model().busy());
+        assertEquals(Option.of(new AppError.OperationFailed(Operation.PUSH, Option.of("feature"), failure)),
+                next.model().error());
+        assertEquals(Option.of("Pushing branch feature failed: rejected"), errorText(next.model()));
+    }
+
+    @Test
+    void aFailedCleanupIsShownNextToTheFailure() {
+        Failure failure = new Failure.Git(new GitError.CommandFailed("CONFLICT", 1), List.of(),
+                Option.of(new GitError.CommandFailed("fatal: no rebase in progress", 128)));
+
+        Next next = Update.update(loaded(), new OperationMsg.Failed(new BranchCmd.Rebase("main"), failure));
+
+        assertEquals(Option.of("Rebasing onto main failed: CONFLICT; cleaning up afterwards failed too: "
+                + "fatal: no rebase in progress"), errorText(next.model()));
+    }
+
+    @Test
+    void aCommandThatThrowsIsReportedAsABugOfThatCommand() {
+        GitInfoProvider throwing = new StubGitProvider() {
+            @Override
+            public Either<GitFailure<GitError.ProcessError>, List<String>> push(String branch, PushMode mode) {
+                throw new IllegalStateException("unexpected");
+            }
+        };
+
+        Msg msg = Program.perform(throwing, PUSH);
+
+        OperationMsg.Failed failed = assertInstanceOf(OperationMsg.Failed.class, msg);
+        assertInstanceOf(Failure.Bug.class, failed.failure());
+        assertEquals(Option.of("Pushing branch feature failed: Unexpected error: unexpected"),
+                errorText(Update.update(loaded(), failed).model()));
+    }
+
+    @Test
+    void anUnexpectedRefusalReportsWhatWasRefused() {
+        assertEquals(Option.of("Pushing branch feature failed: boom"),
+                errorText(Update.update(loaded(), failed(PUSH, "boom")).model()));
+    }
+}

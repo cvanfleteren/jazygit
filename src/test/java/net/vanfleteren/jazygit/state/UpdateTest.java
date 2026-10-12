@@ -92,14 +92,14 @@ class UpdateTest {
 
     @Test
     void failuresAreStoredAndRetriedOnTheNextTick() {
-        Model model = Update.update(loaded(), new LoadMsg.Failed(new LoadCommits(), "boom")).model();
-        assertEquals(new Failed<>("boom"), model.commits());
+        Model model = Update.update(loaded(), new LoadMsg.Failed(new LoadCommits(), refused("boom"))).model();
+        assertEquals(new Failed<>(refused("boom")), model.commits());
         assertEquals(List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadStashes(), new LoadCommits()),
                 Update.update(model, new Tick()).cmds());
 
-        Model statusFailed = Update.update(Update.init("repo").model(), new LoadMsg.Failed(new LoadStatus(), "no git"))
+        Model statusFailed = Update.update(Update.init("repo").model(), new LoadMsg.Failed(new LoadStatus(), refused("no git")))
                 .model();
-        assertEquals(new Failed<>("no git"), statusFailed.status());
+        assertEquals(new Failed<>(refused("no git")), statusFailed.status());
         assertEquals(List.of(new LoadStatus()), Update.update(statusFailed, new Tick()).cmds());
     }
 }

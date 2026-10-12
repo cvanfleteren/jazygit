@@ -1,57 +1,65 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import io.vavr.collection.List;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.GitError;
+import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Operation;
+import net.vanfleteren.jazygit.state.OperationCmd;
 
 /**
- * Commands that act on branches.
+ * Commands that act on branches. Each names the branch it acts on in its error message.
  */
-public sealed interface BranchCmd extends Cmd {
+public sealed interface BranchCmd extends OperationCmd {
 
     /**
-     * Creates the branch {@code name} at {@code base} and switches to it.
+     * The branch the command acts on.
      */
-    record CreateBranch(String name, String base) implements BranchCmd {
+    String branch();
+
+    @Override
+    default Option<String> subject() {
+        return Option.of(branch());
+    }
+
+    /**
+     * Creates the branch {@code branch} at {@code base} and switches to it.
+     */
+    record CreateBranch(String branch, String base) implements BranchCmd {
 
         @Override
-        public Option<String> logTitleKey() {
-            return Option.of("log.title.newBranch");
+        public Operation operation() {
+            return Operation.NEW_BRANCH;
         }
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.createBranch(name, base).fold(this::failedWith, executed -> new NewBranchMsg.Created(name, executed));
-        }
-
-        @Override
-        public Msg failed(String message) {
-            return new NewBranchMsg.Failed(name, message);
+        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+            return git.createBranch(branch, base);
         }
     }
 
     record DeleteBranch(String branch, DeleteScope scope) implements BranchCmd {
 
         @Override
-        public Option<String> logTitleKey() {
-            return Option.of("log.title.deleteBranch");
+        public Operation operation() {
+            return Operation.DELETE_BRANCH;
         }
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.deleteBranch(branch, scope)
-                    .fold(this::failedWith, executed -> new DeleteBranchMsg.Deleted(branch, executed));
+        public Option<String> busyBranch() {
+            return Option.of(branch);
         }
 
         @Override
-        public Msg failed(String message) {
-            return new DeleteBranchMsg.Failed(branch, message);
+        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+            return git.deleteBranch(branch, scope);
         }
     }
 
@@ -61,47 +69,46 @@ public sealed interface BranchCmd extends Cmd {
     record Merge(String branch, MergeMode mode) implements BranchCmd {
 
         @Override
-        public Option<String> logTitleKey() {
-            return Option.of("log.title.merge");
+        public Operation operation() {
+            return Operation.MERGE;
         }
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.merge(branch, mode).fold(this::failedWith, executed -> new MergeMsg.Done(branch, executed));
-        }
-
-        @Override
-        public Msg failed(String message) {
-            return new MergeMsg.Failed(branch, message);
+        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+            return git.merge(branch, mode);
         }
     }
 
     /**
-     * Rebases the checked out branch onto {@code onto}.
+     * Rebases the checked out branch onto {@code branch}.
      */
-    record Rebase(String onto) implements BranchCmd {
+    record Rebase(String branch) implements BranchCmd {
 
         @Override
-        public Option<String> logTitleKey() {
-            return Option.of("log.title.rebase");
+        public Operation operation() {
+            return Operation.REBASE;
         }
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.rebase(onto).fold(this::failedWith, executed -> new RebaseMsg.Done(onto, executed));
-        }
-
-        @Override
-        public Msg failed(String message) {
-            return new RebaseMsg.Failed(onto, message);
+        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+            return git.rebase(branch);
         }
     }
 
+    /**
+     * Checks out {@code branch}. When uncommitted changes are in the way, the user is offered to take them
+     * along instead of being told it failed.
+     */
     record Checkout(String branch) implements BranchCmd {
 
         @Override
-        public Option<String> logTitleKey() {
-            return Option.of("log.title.checkout");
+        public Operation operation() {
+            return Operation.CHECKOUT;
+        }
+
+        @Override
+        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+            return git.checkout(branch);
         }
 
         @Override
@@ -110,12 +117,7 @@ public sealed interface BranchCmd extends Cmd {
                     failure -> failure.error() instanceof GitError.LocalChanges
                             ? new CheckoutMsg.NeedsStash(branch)
                             : failedWith(failure),
-                    executed -> new CheckoutMsg.Done(branch, executed));
-        }
-
-        @Override
-        public Msg failed(String message) {
-            return new CheckoutMsg.Failed(branch, message);
+                    this::succeeded);
         }
     }
 
@@ -125,18 +127,13 @@ public sealed interface BranchCmd extends Cmd {
     record CheckoutWithStash(String branch) implements BranchCmd {
 
         @Override
-        public Option<String> logTitleKey() {
-            return Option.of("log.title.checkout");
+        public Operation operation() {
+            return Operation.CHECKOUT;
         }
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.checkoutWithStash(branch).fold(this::failedWith, executed -> new CheckoutMsg.Done(branch, executed));
-        }
-
-        @Override
-        public Msg failed(String message) {
-            return new CheckoutMsg.Failed(branch, message);
+        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+            return git.checkoutWithStash(branch);
         }
     }
 
@@ -146,37 +143,36 @@ public sealed interface BranchCmd extends Cmd {
     record PushSettingUpstream(String branch, RemoteBranch upstream) implements BranchCmd {
 
         @Override
-        public Option<String> logTitleKey() {
-            return Option.of("log.title.push");
+        public Operation operation() {
+            return Operation.PUSH;
         }
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.pushSettingUpstream(branch, upstream)
-                    .fold(this::failedWith, executed -> new PushMsg.Done(branch, executed));
+        public Option<String> busyBranch() {
+            return Option.of(branch);
         }
 
         @Override
-        public Msg failed(String message) {
-            return new PushMsg.Failed(branch, message);
+        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+            return git.pushSettingUpstream(branch, upstream);
         }
     }
 
     record Push(String branch, PushMode mode) implements BranchCmd {
 
         @Override
-        public Option<String> logTitleKey() {
-            return Option.of("log.title.push");
+        public Operation operation() {
+            return Operation.PUSH;
         }
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.push(branch, mode).fold(this::failedWith, executed -> new PushMsg.Done(branch, executed));
+        public Option<String> busyBranch() {
+            return Option.of(branch);
         }
 
         @Override
-        public Msg failed(String message) {
-            return new PushMsg.Failed(branch, message);
+        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+            return git.push(branch, mode);
         }
     }
 }

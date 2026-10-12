@@ -1,33 +1,28 @@
 package net.vanfleteren.jazygit.feature.stage;
 
 import io.vavr.collection.List;
-import io.vavr.control.Option;
+import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
-import net.vanfleteren.jazygit.state.Cmd;
-import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Operation;
+import net.vanfleteren.jazygit.state.OperationCmd;
 
 /**
  * Commands that change what is staged.
  */
-public sealed interface StageCmd extends Cmd {
+public sealed interface StageCmd extends OperationCmd {
 
     record Stage(List<String> paths) implements StageCmd {
 
         @Override
-        public Option<String> logTitleKey() {
-            return Option.of("log.title.stage");
+        public Operation operation() {
+            return Operation.STAGE;
         }
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.stage(paths).fold(this::failedWith, executed -> new StageMsg.Done(StageMsg.Action.STAGE, executed));
-        }
-
-        @Override
-        public Msg failed(String message) {
-            return new StageMsg.Failed(message);
+        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+            return git.stage(paths);
         }
     }
 
@@ -38,19 +33,13 @@ public sealed interface StageCmd extends Cmd {
     record Unstage(List<String> added, List<String> others) implements StageCmd {
 
         @Override
-        public Option<String> logTitleKey() {
-            return Option.of("log.title.unstage");
+        public Operation operation() {
+            return Operation.UNSTAGE;
         }
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return GitFailure.<ProcessError>sequence(() -> git.unstageNew(added), () -> git.unstage(others))
-                    .fold(this::failedWith, executed -> new StageMsg.Done(StageMsg.Action.UNSTAGE, executed));
-        }
-
-        @Override
-        public Msg failed(String message) {
-            return new StageMsg.Failed(message);
+        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+            return GitFailure.<ProcessError>sequence(() -> git.unstageNew(added), () -> git.unstage(others));
         }
     }
 }

@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit;
 
-import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -21,12 +21,6 @@ public sealed interface RewordMsg extends Msg {
     record Cancelled() implements RewordMsg {
     }
 
-    record Confirmed(String summary, String description) implements RewordMsg {
-    }
-
-    record Done(List<String> commands) implements RewordMsg {
-    }
-
-    record Failed(String message) implements RewordMsg {
+    record Confirmed(CommitMessage message) implements RewordMsg {
     }
 }

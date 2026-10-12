@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.fetch;
 
+import static net.vanfleteren.jazygit.state.TestModels.refused;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
@@ -36,11 +37,11 @@ class FetchUpdateTest {
         assertEquals(Option.of(new Fetching(Option.of("origin"), List.of("upstream"))), origin.model().fetching());
 
         // A remote that cannot be fetched from does not stop the others.
-        Next upstream = Update.update(origin.model(), new FetchMsg.FetchFailed("origin", "Could not resolve host"));
+        Next upstream = Update.update(origin.model(), new FetchMsg.FetchFailed("origin", refused("Could not resolve host")));
         assertEquals(List.of(new FetchCmd.Fetch("upstream")), upstream.cmds());
         assertEquals(Option.of(new Fetching(Option.of("upstream"), List.empty())), upstream.model().fetching());
 
-        Next done = Update.update(upstream.model(), new FetchMsg.Fetched("upstream", List.of("git fetch --quiet upstream")));
+        Next done = Update.update(upstream.model(), new FetchMsg.Fetched("upstream"));
         assertEquals(Option.none(), done.model().fetching());
         assertTrue(done.cmds().contains(new LoadBranches()));
         // Neither logged nor reported.
@@ -53,7 +54,7 @@ class FetchUpdateTest {
         Model listing = Update.update(loaded(), new FetchMsg.Tick()).model();
 
         assertEquals(Option.none(), Update.update(listing, new FetchMsg.RemotesListed(List.empty())).model().fetching());
-        Model failed = Update.update(listing, new FetchMsg.ListingFailed("boom")).model();
+        Model failed = Update.update(listing, new FetchMsg.ListingFailed(refused("boom"))).model();
         assertEquals(Option.none(), failed.fetching());
         assertEquals(Option.none(), failed.error());
         assertEquals(List.of(new FetchCmd.ListRemotes()), Update.update(failed, new FetchMsg.Tick()).cmds());

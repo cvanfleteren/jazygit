@@ -1,14 +1,16 @@
 package net.vanfleteren.jazygit.feature.stash;
 
-import io.vavr.control.Option;
+import io.vavr.collection.List;
+import io.vavr.control.Either;
+import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
-import net.vanfleteren.jazygit.state.Cmd;
-import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Operation;
+import net.vanfleteren.jazygit.state.OperationCmd;
 
 /**
- * Commands that create stashes.
+ * Commands that create, apply and delete stashes.
  */
-public sealed interface StashCmd extends Cmd {
+public sealed interface StashCmd extends OperationCmd {
 
     /**
      * Stashes the changes under {@code name}.
@@ -16,18 +18,13 @@ public sealed interface StashCmd extends Cmd {
     record Stash(String name) implements StashCmd {
 
         @Override
-        public Option<String> logTitleKey() {
-            return Option.of("log.title.stash");
+        public Operation operation() {
+            return Operation.STASH;
         }
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.stash(name).fold(this::failedWith, StashMsg.Done::new);
-        }
-
-        @Override
-        public Msg failed(String message) {
-            return new StashMsg.Failed(message);
+        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+            return git.stash(name);
         }
     }
 
@@ -37,18 +34,13 @@ public sealed interface StashCmd extends Cmd {
     record Drop(String ref) implements StashCmd {
 
         @Override
-        public Option<String> logTitleKey() {
-            return Option.of("log.title.stashDrop");
+        public Operation operation() {
+            return Operation.STASH_DROP;
         }
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.drop(ref).fold(this::failedWith, StashMsg.Dropped::new);
-        }
-
-        @Override
-        public Msg failed(String message) {
-            return new StashMsg.DropFailed(message);
+        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+            return git.drop(ref);
         }
     }
 
@@ -58,18 +50,13 @@ public sealed interface StashCmd extends Cmd {
     record Pop(String ref) implements StashCmd {
 
         @Override
-        public Option<String> logTitleKey() {
-            return Option.of("log.title.stashPop");
+        public Operation operation() {
+            return Operation.STASH_POP;
         }
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.pop(ref).fold(this::failedWith, StashMsg.Popped::new);
-        }
-
-        @Override
-        public Msg failed(String message) {
-            return new StashMsg.PopFailed(message);
+        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+            return git.pop(ref);
         }
     }
 }

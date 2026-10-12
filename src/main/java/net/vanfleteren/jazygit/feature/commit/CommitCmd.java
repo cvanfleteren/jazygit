@@ -1,19 +1,20 @@
 package net.vanfleteren.jazygit.feature.commit;
 
 import io.vavr.collection.List;
-import io.vavr.control.Option;
+import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Operation;
+import net.vanfleteren.jazygit.state.OperationCmd;
 
 /**
  * Commands that create or rewrite commits.
  */
-public sealed interface CommitCmd extends Cmd {
+public sealed interface CommitCmd extends OperationCmd {
 
     /**
      * Stages the paths so they can be committed; the commit dialog opens afterwards.
@@ -21,36 +22,31 @@ public sealed interface CommitCmd extends Cmd {
     record StageForCommit(List<String> paths) implements CommitCmd {
 
         @Override
-        public Option<String> logTitleKey() {
-            return Option.of("log.title.stage");
+        public Operation operation() {
+            return Operation.STAGE;
         }
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.stage(paths).fold(this::failedWith, CommitMsg.StagedForCommit::new);
+        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+            return git.stage(paths);
         }
 
         @Override
-        public Msg failed(String message) {
-            return new CommitMsg.StageForCommitFailed(message);
+        public Msg succeeded(List<String> commands) {
+            return new CommitMsg.StagedForCommit(this, commands);
         }
     }
 
-    record Commit(String summary, String description) implements CommitCmd {
+    record Commit(CommitMessage message) implements CommitCmd {
 
         @Override
-        public Option<String> logTitleKey() {
-            return Option.of("log.title.commit");
+        public Operation operation() {
+            return Operation.COMMIT;
         }
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.commit(new CommitMessage(summary, description)).fold(this::failedWith, CommitMsg.Done::new);
-        }
-
-        @Override
-        public Msg failed(String message) {
-            return new CommitMsg.Failed(message);
+        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+            return git.commit(message);
         }
     }
 
@@ -60,19 +56,13 @@ public sealed interface CommitCmd extends Cmd {
     record Amend(List<String> stage) implements CommitCmd {
 
         @Override
-        public Option<String> logTitleKey() {
-            return Option.of("log.title.amend");
+        public Operation operation() {
+            return Operation.AMEND;
         }
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return GitFailure.<ProcessError>sequence(() -> git.stage(stage), git::amendLastCommit)
-                    .fold(this::failedWith, AmendMsg.Done::new);
-        }
-
-        @Override
-        public Msg failed(String message) {
-            return new AmendMsg.Failed(message);
+        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+            return GitFailure.<ProcessError>sequence(() -> git.stage(stage), git::amendLastCommit);
         }
     }
 
@@ -82,39 +72,29 @@ public sealed interface CommitCmd extends Cmd {
     record Squash(Sha sha) implements CommitCmd {
 
         @Override
-        public Option<String> logTitleKey() {
-            return Option.of("log.title.squash");
+        public Operation operation() {
+            return Operation.SQUASH;
         }
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.squash(sha).fold(this::failedWith, SquashMsg.Done::new);
-        }
-
-        @Override
-        public Msg failed(String message) {
-            return new SquashMsg.Failed(message);
+        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+            return git.squash(sha);
         }
     }
 
     /**
-     * Replaces the message of the last commit.
+     * Replaces the message of a commit.
      */
-    record Reword(Sha sha, String summary, String description) implements CommitCmd {
+    record Reword(Sha sha, CommitMessage message) implements CommitCmd {
 
         @Override
-        public Option<String> logTitleKey() {
-            return Option.of("log.title.reword");
+        public Operation operation() {
+            return Operation.REWORD;
         }
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.reword(sha, new CommitMessage(summary, description)).fold(this::failedWith, RewordMsg.Done::new);
-        }
-
-        @Override
-        public Msg failed(String message) {
-            return new RewordMsg.Failed(message);
+        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+            return git.reword(sha, message);
         }
     }
 }

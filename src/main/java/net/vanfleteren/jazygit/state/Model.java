@@ -42,7 +42,7 @@ public record Model(String repositoryName,
                     Option<CommitDetail> commitDetail,
                     Option<FileDiff> fileDiff,
                     Set<Cmd.Load> refreshing,
-                    Option<String> error,
+                    Option<AppError> error,
                     Set<String> busy,
                     Option<Fetching> fetching,
                     List<LogEntry> commandLog,
@@ -64,6 +64,20 @@ public record Model(String repositoryName,
      */
     public <P extends Popup> Option<P> popup(Class<P> type) {
         return popup.filter(type::isInstance).map(type::cast);
+    }
+
+    /**
+     * This model without an error shown.
+     */
+    public Model clearError() {
+        return withError(Option.none());
+    }
+
+    /**
+     * This model showing {@code error}.
+     */
+    public Model fail(AppError error) {
+        return withError(Option.of(error));
     }
 
     /**

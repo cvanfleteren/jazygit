@@ -49,7 +49,7 @@ public final class LoadUpdate {
             // A diff that arrives after another node was highlighted is dropped.
             case FileDiffLoaded(List<FileEntry> files, Diffs diff) ->
                     Next.of(updateFileDiff(finished(model, new LoadFileDiff(files)), files, d -> d.reload(diff)));
-            case LoadMsg.Failed(Cmd.Load cmd, String message) -> Next.of(failed(finished(model, cmd), cmd, message));
+            case LoadMsg.Failed(Cmd.Load cmd, Failure failure) -> Next.of(failed(finished(model, cmd), cmd, failure));
         };
     }
 
@@ -108,18 +108,18 @@ public final class LoadUpdate {
         return model.withRefreshing(model.refreshing().remove(cmd));
     }
 
-    private static Model failed(Model model, Cmd.Load cmd, String message) {
+    private static Model failed(Model model, Cmd.Load cmd, Failure failure) {
         return switch (cmd) {
-            case LoadStatus() -> model.withStatus(new Failed<>(message));
-            case LoadBranches() -> model.withBranches(new Failed<>(message));
-            case Cmd.LoadStashes() -> model.withStashes(new Failed<>(message));
-            case LoadCommits() -> model.withCommits(new Failed<>(message));
+            case LoadStatus() -> model.withStatus(new Failed<>(failure));
+            case LoadBranches() -> model.withBranches(new Failed<>(failure));
+            case Cmd.LoadStashes() -> model.withStashes(new Failed<>(failure));
+            case LoadCommits() -> model.withCommits(new Failed<>(failure));
             case LoadCommitDetail(Sha sha) ->
-                    updateCommitDetail(model, sha, d -> new CommitDetail(sha, new Failed<>(message)));
+                    updateCommitDetail(model, sha, d -> new CommitDetail(sha, new Failed<>(failure)));
             case LoadFileDiff(List<FileEntry> files) ->
-                    updateFileDiff(model, files, d -> new FileDiff(files, new Failed<>(message)));
+                    updateFileDiff(model, files, d -> new FileDiff(files, new Failed<>(failure)));
             case LoadBranchLog(String branch) ->
-                    updateBranchLog(model, branch, log -> new BranchLog(branch, new Failed<>(message)));
+                    updateBranchLog(model, branch, log -> new BranchLog(branch, new Failed<>(failure)));
         };
     }
 }

@@ -40,6 +40,6 @@ public sealed interface LoadMsg extends Msg {
     record FileDiffLoaded(List<FileEntry> files, Diffs diff) implements LoadMsg {
     }
 
-    record Failed(Cmd.Load cmd, String message) implements LoadMsg {
+    record Failed(Cmd.Load cmd, Failure failure) implements LoadMsg {
     }
 }

@@ -38,10 +38,4 @@ public sealed interface DiscardMsg extends Msg {
 
     record Chosen(Scope scope) implements DiscardMsg {
     }
-
-    record Done(List<String> commands) implements DiscardMsg {
-    }
-
-    record Failed(String message) implements DiscardMsg {
-    }
 }

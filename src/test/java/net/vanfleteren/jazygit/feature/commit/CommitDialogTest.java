@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.commit;
 
 
+import net.vanfleteren.jazygit.git.model.CommitMessage;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
@@ -35,7 +36,7 @@ class CommitDialogTest {
         // The sample data has staged files, so the commit popup opens directly.
         Model loaded = TestModels.loaded(new SampleData());
         Model asked = Update.update(loaded, new CommitMsg.Requested()).model();
-        return asked.popup(CommitPopup.class).isDefined() ? asked : Update.update(asked, new CommitMsg.StagedForCommit(List.of())).model();
+        return asked.popup(CommitPopup.class).isDefined() ? asked : Update.update(asked, new CommitMsg.StagedForCommit(new CommitCmd.StageForCommit(List.of()), List.of())).model();
     }
 
     @Test
@@ -55,7 +56,7 @@ class CommitDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(java.util.List.of(new CommitMsg.Confirmed("fix it", "")), dispatched);
+        assertEquals(java.util.List.of(new CommitMsg.Confirmed(new CommitMessage("fix it", ""))), dispatched);
     }
 
     @Test
@@ -70,7 +71,7 @@ class CommitDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(java.util.List.of(new CommitMsg.Confirmed("fix it", "because\nreasons")), dispatched);
+        assertEquals(java.util.List.of(new CommitMsg.Confirmed(new CommitMessage("fix it", "because\nreasons"))), dispatched);
     }
 
     @Test
@@ -99,7 +100,7 @@ class CommitDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(java.util.List.of(new RewordMsg.Confirmed(last.message(), last.body())), dispatched);
+        assertEquals(java.util.List.of(new RewordMsg.Confirmed(new CommitMessage(last.message(), last.body()))), dispatched);
     }
 
     @Test
@@ -116,7 +117,7 @@ class CommitDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(java.util.List.of(new RewordMsg.Confirmed(last.message() + "!", last.body())), dispatched);
+        assertEquals(java.util.List.of(new RewordMsg.Confirmed(new CommitMessage(last.message() + "!", last.body()))), dispatched);
     }
 
     private ToolkitTestRunner start() throws Exception {

@@ -65,7 +65,7 @@ public final class Program {
             return cmd.run(provider);
         } catch (RuntimeException e) {
             // A bug rather than a git failure, which commands report as a Msg; still keep the app going.
-            return cmd.failed(e.getMessage() != null ? e.getMessage() : e.toString());
+            return cmd.failed(new Failure.Bug(e));
         }
     }
 }

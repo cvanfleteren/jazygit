@@ -12,7 +12,6 @@ import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 
-
 /**
  * The pure state transitions of the app: given a model and a message, the next model and the IO
  * to perform next. The transitions of each feature live in their own class, next to their

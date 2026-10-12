@@ -82,15 +82,15 @@ class SelectionUpdateTest {
         assertEquals(model.commitDetail(),
                 Update.update(model, new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), "changes")).model().commitDetail());
         assertEquals(model.commitDetail(),
-                Update.update(model, new LoadMsg.Failed(new LoadCommitDetail(new Sha("aaaa")), "boom")).model().commitDetail());
+                Update.update(model, new LoadMsg.Failed(new LoadCommitDetail(new Sha("aaaa")), refused("boom"))).model().commitDetail());
     }
 
     @Test
     void failedChangesAreShownAndRetriedOnTheNextTick() {
         Model model = Update.update(
                 Update.update(loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa"))).model(),
-                new LoadMsg.Failed(new LoadCommitDetail(new Sha("aaaa")), "boom")).model();
-        assertEquals(Option.of(new CommitDetail(new Sha("aaaa"), new Failed<>("boom"))), model.commitDetail());
+                new LoadMsg.Failed(new LoadCommitDetail(new Sha("aaaa")), refused("boom"))).model();
+        assertEquals(Option.of(new CommitDetail(new Sha("aaaa"), new Failed<>(refused("boom")))), model.commitDetail());
 
         assertTrue(Update.update(model, new Tick()).cmds().contains(new LoadCommitDetail(new Sha("aaaa"))));
     }
@@ -128,16 +128,16 @@ class SelectionUpdateTest {
 
         assertEquals(model.branchLog(), Update.update(model, new LoadMsg.BranchLogLoaded("feature", FEATURE_COMMITS))
                 .model().branchLog());
-        assertEquals(model.branchLog(), Update.update(model, new LoadMsg.Failed(new LoadBranchLog("feature"), "boom"))
+        assertEquals(model.branchLog(), Update.update(model, new LoadMsg.Failed(new LoadBranchLog("feature"), refused("boom")))
                 .model().branchLog());
     }
 
     @Test
     void failedLogIsRetriedOnTheNextTick() {
         Model model = Update.update(loaded(), new SelectionMsg.BranchSelected("feature")).model();
-        model = Update.update(model, new LoadMsg.Failed(new LoadBranchLog("feature"), "boom")).model();
+        model = Update.update(model, new LoadMsg.Failed(new LoadBranchLog("feature"), refused("boom"))).model();
 
-        assertEquals(Option.of(new BranchLog("feature", new Failed<>("boom"))), model.branchLog());
+        assertEquals(Option.of(new BranchLog("feature", new Failed<>(refused("boom")))), model.branchLog());
         assertEquals(List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadStashes(), new LoadBranchLog("feature")),
                 Update.update(model, new Tick()).cmds());
     }
@@ -208,7 +208,7 @@ class SelectionUpdateTest {
         Model model = Update.update(loaded(), new SelectionMsg.FilesSelected(DIRTY.files())).model();
         Cmd.LoadFileDiff cmd = new Cmd.LoadFileDiff(DIRTY.files());
 
-        assertEquals(Option.of(new FileDiff(DIRTY.files(), new Failed<>("boom"))),
-                Update.update(model, new LoadMsg.Failed(cmd, "boom")).model().fileDiff());
+        assertEquals(Option.of(new FileDiff(DIRTY.files(), new Failed<>(refused("boom")))),
+                Update.update(model, new LoadMsg.Failed(cmd, refused("boom"))).model().fileDiff());
     }
 }

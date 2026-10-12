@@ -1,16 +1,12 @@
 package net.vanfleteren.jazygit.feature.commit;
 
 import io.vavr.collection.List;
-import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.commit.AmendMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.commit.AmendMsg.Confirmed;
-import net.vanfleteren.jazygit.feature.commit.AmendMsg.Done;
-import net.vanfleteren.jazygit.feature.commit.AmendMsg.Failed;
 import net.vanfleteren.jazygit.feature.commit.AmendMsg.Requested;
 import net.vanfleteren.jazygit.feature.commit.CommitCmd.Amend;
 import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.state.CommandLog;
+import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.Update;
@@ -28,9 +24,6 @@ public final class AmendUpdate {
             case Requested() -> requested(model);
             case Cancelled() -> Next.of(model.withoutPopup(AmendPopup.class));
             case Confirmed() -> confirmed(model);
-            case Done(List<String> commands) ->
-                    Update.refresh(CommandLog.append(model.withError(Option.none()), "log.title.amend", commands));
-            case Failed(String message) -> Update.refresh(model.withError(Option.of(Messages.get("error.amend.failed", message))));
         };
     }
 
@@ -39,8 +32,8 @@ public final class AmendUpdate {
      */
     private static Next requested(Model model) {
         return Update.files(model).isEmpty()
-                ? Next.of(model.withError(Option.of(Messages.get("error.amend.nothing"))))
-                : Next.of(model.withError(Option.none()).openPopup(new AmendPopup()));
+                ? Next.of(model.fail(new AppError.NothingToAmend()))
+                : Next.of(model.clearError().openPopup(new AmendPopup()));
     }
 
     /**

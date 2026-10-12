@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
+import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.ChangeType;
@@ -11,6 +12,8 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
+
+import net.vanfleteren.jazygit.ui.ErrorText;
 
 import java.time.Instant;
 
@@ -77,14 +80,45 @@ public final class TestModels {
     }
 
     /**
-     * {@code model} after an operation failed with {@code error}.
+     * {@code model} with {@code entries} in its command log.
      */
     public static Model withLog(Model model, LogEntry... entries) {
         return model.withCommandLog(List.of(entries));
     }
 
-    public static Model withError(Model model, String error) {
-        return model.withError(Option.of(error));
+    /**
+     * {@code model} showing that checking out {@code branch} failed, git saying {@code explanation}.
+     */
+    public static Model withCheckoutError(Model model, String branch, String explanation) {
+        return model.fail(new AppError.OperationFailed(Operation.CHECKOUT, Option.of(branch), refused(explanation)));
+    }
+
+    /**
+     * Git refusing with {@code explanation}.
+     */
+    public static Failure refused(String explanation) {
+        return new Failure.Git(new GitError.CommandFailed(explanation, 1));
+    }
+
+    /**
+     * {@code cmd} having run {@code commands}.
+     */
+    public static OperationMsg succeeded(OperationCmd cmd, String... commands) {
+        return new OperationMsg.Succeeded(cmd, List.of(commands));
+    }
+
+    /**
+     * {@code cmd} having been refused by git, which said {@code explanation}.
+     */
+    public static OperationMsg failed(OperationCmd cmd, String explanation) {
+        return new OperationMsg.Failed(cmd, refused(explanation));
+    }
+
+    /**
+     * The error {@code model} shows, as the user sees it.
+     */
+    public static Option<String> errorText(Model model) {
+        return model.error().map(ErrorText::of);
     }
 
     /**

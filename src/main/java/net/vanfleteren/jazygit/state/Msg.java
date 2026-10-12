@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.state;
 
-
 /**
  * Everything that can happen to the {@link Model}, grouped by feature. A message knows how to
  * apply itself: each feature has its own sub-interface, which delegates to the transitions of that

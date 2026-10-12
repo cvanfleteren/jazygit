@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.commit;
 
-import io.vavr.collection.List;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -23,11 +22,5 @@ public sealed interface AmendMsg extends Msg {
     }
 
     record Confirmed() implements AmendMsg {
-    }
-
-    record Done(List<String> commands) implements AmendMsg {
-    }
-
-    record Failed(String message) implements AmendMsg {
     }
 }

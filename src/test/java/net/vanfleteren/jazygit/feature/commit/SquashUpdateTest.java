@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import static net.vanfleteren.jazygit.state.TestModels.errorText;
+import static net.vanfleteren.jazygit.state.TestModels.failed;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Commit;
@@ -85,8 +87,8 @@ class SquashUpdateTest {
 
     @Test
     void aFailureShowsTheError() {
-        Next next = Update.update(TestModels.loaded(), new SquashMsg.Failed("conflict"));
+        Next next = Update.update(TestModels.loaded(), failed(new CommitCmd.Squash(new Sha("aaaa")), "conflict"));
 
-        assertEquals(Option.of("Squash failed: conflict"), next.model().error());
+        assertEquals(Option.of("Squash failed: conflict"), errorText(next.model()));
     }
 }

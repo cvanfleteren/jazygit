@@ -32,7 +32,7 @@ class StatusPanelTest {
 
     @Test
     void doesNotShowTheLastOperationError() throws Exception {
-        Model model = TestModels.withError(TestModels.loaded(new SampleData()), "Checkout of foo failed: boom");
+        Model model = TestModels.withCheckoutError(TestModels.loaded(new SampleData()), "foo", "boom");
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> StatusPanel.render(model))) {
             String screen = RenderedText.of(testRunner, () -> StatusPanel.render(model));

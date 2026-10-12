@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.BranchLog;
 import net.vanfleteren.jazygit.state.CommitDetail;
 import net.vanfleteren.jazygit.state.FileDiff;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
@@ -173,8 +174,8 @@ public final class ContentPanel {
                 .map(d -> switch (d.diff()) {
                     case Loadable.Loaded<Diffs>(Diffs diffs) -> diffPanels(diffs);
                     case Loadable.Loading<Diffs>() -> panel(Messages.get("panel.diff.title"), text(Placeholders.loading()).addClass(Theme.Classes.DIM));
-                    case Loadable.Failed<Diffs>(String message) ->
-                            panel(Messages.get("panel.diff.title"), text(Placeholders.error(message)));
+                    case Loadable.Failed<Diffs>(Failure failure) ->
+                            panel(Messages.get("panel.diff.title"), text(Placeholders.error(failure)));
                 })
                 .getOrElse(() -> panel(Messages.get("panel.diff.title"), text(Placeholders.loading()).addClass(Theme.Classes.DIM)));
     }
@@ -303,8 +304,8 @@ public final class ContentPanel {
                                     .show(Messages.get("panel.commit.titleFor", commit.shortSha())))
                             .getOrElse(() -> panel(title, text(Placeholders.loading()).addClass(Theme.Classes.DIM)));
                     case Loadable.Loading<String>() -> panel(title, text(Placeholders.loading()).addClass(Theme.Classes.DIM));
-                    case Loadable.Failed<String>(String message) ->
-                            panel(title, text(Placeholders.error(message)));
+                    case Loadable.Failed<String>(Failure failure) ->
+                            panel(title, text(Placeholders.error(failure)));
                 })
                 .getOrElse(() -> model.commits() instanceof Loadable.Loaded<List<Commit>>(List<Commit> commits)
                         && commits.isEmpty()
@@ -353,7 +354,7 @@ public final class ContentPanel {
         return switch (loadable) {
             case Loadable.Loaded<T>(T value) -> view.apply(value);
             case Loadable.Loading<T>() -> panel(title, text(Placeholders.loading()).addClass(Theme.Classes.DIM));
-            case Loadable.Failed<T>(String message) -> panel(title, text(Placeholders.error(message)));
+            case Loadable.Failed<T>(Failure failure) -> panel(title, text(Placeholders.error(failure)));
         };
     }
 }

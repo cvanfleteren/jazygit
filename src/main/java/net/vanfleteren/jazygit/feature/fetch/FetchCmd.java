@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.fetch;
 
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.state.Cmd;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
 
 /**
@@ -25,8 +26,8 @@ public sealed interface FetchCmd extends Cmd {
         }
 
         @Override
-        public Msg failed(String message) {
-            return new FetchMsg.ListingFailed(message);
+        public Msg failed(Failure failure) {
+            return new FetchMsg.ListingFailed(failure);
         }
     }
 
@@ -37,12 +38,12 @@ public sealed interface FetchCmd extends Cmd {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            return git.fetch(remote).fold(this::failedWith, commands -> new FetchMsg.Fetched(remote, commands));
+            return git.fetch(remote).fold(this::failedWith, commands -> new FetchMsg.Fetched(remote));
         }
 
         @Override
-        public Msg failed(String message) {
-            return new FetchMsg.FetchFailed(remote, message);
+        public Msg failed(Failure failure) {
+            return new FetchMsg.FetchFailed(remote, failure);
         }
     }
 }

@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.stash;
 
-import io.vavr.collection.List;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -27,11 +26,7 @@ public sealed interface StashMsg extends Msg {
     record Confirmed(String name) implements StashMsg {
     }
 
-    record Done(List<String> commands) implements StashMsg {
-    }
 
-    record Failed(String message) implements StashMsg {
-    }
 
     /**
      * The user asked to unstash the stash {@code ref}.
@@ -39,11 +34,7 @@ public sealed interface StashMsg extends Msg {
     record PopRequested(String ref) implements StashMsg {
     }
 
-    record Popped(List<String> commands) implements StashMsg {
-    }
 
-    record PopFailed(String message) implements StashMsg {
-    }
 
     /**
      * The user asked to delete the stash {@code ref}; confirmation is still to be given.
@@ -55,11 +46,5 @@ public sealed interface StashMsg extends Msg {
     }
 
     record DropConfirmed() implements StashMsg {
-    }
-
-    record Dropped(List<String> commands) implements StashMsg {
-    }
-
-    record DropFailed(String message) implements StashMsg {
     }
 }

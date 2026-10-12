@@ -29,13 +29,4 @@ public sealed interface StageMsg extends Msg {
         }
     }
 
-    record Done(Action action, List<String> commands) implements StageMsg {
-    }
-
-    enum Action {
-        STAGE, UNSTAGE
-    }
-
-    record Failed(String message) implements StageMsg {
-    }
 }
