@@ -27,6 +27,7 @@ import net.vanfleteren.jazygit.git.model.Stash;
  * @param error          why the last operation failed, until the next one is started
  * @param busy           the branches a git operation runs on right now, a push or a delete: they show a
  *                       spinner, and take no other operation until it is done
+ * @param fetching       whether a background fetch from the remotes is running, so the next one waits
  * @param commandLog     the mutating git commands that were executed, oldest first
  * @param popup          the popup that is open, if any; only one can be
  * @param theme          the name of the theme the UI is drawn in
@@ -43,6 +44,7 @@ public record Model(String repositoryName,
                     Set<Cmd.Load> refreshing,
                     Option<String> error,
                     Set<String> busy,
+                    boolean fetching,
                     List<LogEntry> commandLog,
                     Option<Popup> popup,
                     String theme) {
@@ -53,7 +55,8 @@ public record Model(String repositoryName,
     public static Model initial(String repositoryName) {
         return new Model(repositoryName, Loadable.loading(), Loadable.loading(), Loadable.loading(),
                 Loadable.loading(), Option.none(),
-                Option.none(), Option.none(), HashSet.empty(), Option.none(), HashSet.empty(), List.empty(), Option.none(), DEFAULT_THEME);
+                Option.none(), Option.none(), HashSet.empty(), Option.none(), HashSet.empty(), false, List.empty(), Option.none(),
+                DEFAULT_THEME);
     }
 
     /**

@@ -153,6 +153,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<GitFailure<ProcessError>, List<String>> fetchAll() {
+        return CliRemote.fetchAll(workTree);
+    }
+
+    @Override
     public Either<GitFailure<ProcessError>, List<String>> rebase(String onto) {
         return CliRebase.onto(workTree, onto);
     }

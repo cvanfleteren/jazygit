@@ -110,6 +110,11 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
+    default Either<GitFailure<ProcessError>, List<String>> fetchAll() {
+        return ran();
+    }
+
+    @Override
     default Either<GitFailure<ProcessError>, List<String>> rebase(String onto) {
         return ran();
     }

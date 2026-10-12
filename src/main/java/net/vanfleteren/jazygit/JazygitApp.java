@@ -31,6 +31,7 @@ import net.vanfleteren.jazygit.feature.commit.SquashDialog;
 import net.vanfleteren.jazygit.feature.commit.SquashPopup;
 import net.vanfleteren.jazygit.feature.commit.StageAllPopup;
 import net.vanfleteren.jazygit.feature.discard.DiscardDialog;
+import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
 import net.vanfleteren.jazygit.feature.discard.DiscardPopup;
 import net.vanfleteren.jazygit.feature.help.HelpDialog;
 import net.vanfleteren.jazygit.feature.help.HelpPopup;
@@ -84,6 +85,7 @@ public class JazygitApp extends ToolkitApp {
     // A border around a single blank line.
     private static final int MIN_STASH_HEIGHT = 3;
     private static final Duration REFRESH_INTERVAL = Duration.ofMillis(500);
+    private static final Duration FETCH_INTERVAL = Duration.ofSeconds(5);
 
     private final GitInfoProvider provider;
     private final FilesPanel filesPanel = new FilesPanel(msg -> this.program.dispatch(msg),
@@ -114,6 +116,7 @@ public class JazygitApp extends ToolkitApp {
     // Where the focus was when no popup had it, which the theme popup, opened from anywhere, gives it back to.
     private String lastFocus = FilesPanel.ID;
     private ExecutorService io;
+    private ExecutorService fetch;
     private Program program;
 
     public JazygitApp(GitInfoProvider provider) {
@@ -149,9 +152,12 @@ public class JazygitApp extends ToolkitApp {
             return pane.isDefined();
         });
         io = Executors.newSingleThreadExecutor(Thread.ofPlatform().name("git-io").daemon().factory());
-        program = Program.start(provider, io, runner::runOnRenderThread);
+        fetch = Executors.newSingleThreadExecutor(Thread.ofPlatform().name("git-fetch").daemon().factory());
+        program = Program.start(provider, io, fetch, runner::runOnRenderThread);
         runner.scheduleRepeating(() -> runner.runOnRenderThread(() -> program.dispatch(new Msg.Tick())),
                 REFRESH_INTERVAL);
+        runner.scheduleRepeating(() -> runner.runOnRenderThread(() -> program.dispatch(new FetchMsg.Tick())),
+                FETCH_INTERVAL);
     }
 
 
@@ -166,8 +172,9 @@ public class JazygitApp extends ToolkitApp {
             return;
         }
         io.shutdownNow();
+        fetch.shutdownNow();
         try {
-            // Let a running git call finish before the process exits.
+            // Let a running git call finish before the process exits; a fetch is not waited for.
             io.awaitTermination(2, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

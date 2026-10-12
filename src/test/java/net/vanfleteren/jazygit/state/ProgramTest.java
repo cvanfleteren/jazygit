@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.feature.commit.AmendPopup;
 import net.vanfleteren.jazygit.feature.commit.CommitMsg;
 import net.vanfleteren.jazygit.feature.commit.CommitPopup;
 import net.vanfleteren.jazygit.feature.commit.RewordMsg;
+import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import net.vanfleteren.jazygit.feature.stage.StageMsg;
 import io.vavr.control.Either;
@@ -65,6 +66,7 @@ class ProgramTest {
         final java.util.List<String> pushed = new ArrayList<>();
         final java.util.List<String> indexCalls = new ArrayList<>();
         int commitLoads;
+        int fetches;
         final java.util.List<String> logLoads = new ArrayList<>();
 
         @Override
@@ -136,6 +138,12 @@ class ProgramTest {
         public Either<GitFailure<ProcessError>, List<String>> push(String branch, PushMode mode) {
             pushed.add(branch + (mode == PushMode.FORCE_WITH_LEASE ? " force" : ""));
             return StubGitProvider.ran("git push");
+        }
+
+        @Override
+        public Either<GitFailure<ProcessError>, List<String>> fetchAll() {
+            fetches++;
+            return StubGitProvider.ran("git fetch --all --quiet");
         }
 
         @Override
@@ -218,7 +226,8 @@ class ProgramTest {
     private final FakeProvider provider = new FakeProvider();
     private final Queue<Runnable> io = new ArrayDeque<>();
     private final Queue<Runnable> ui = new ArrayDeque<>();
-    private final Program program = Program.start(provider, io::add, ui::add);
+    private final Queue<Runnable> background = new ArrayDeque<>();
+    private final Program program = Program.start(provider, io::add, background::add, ui::add);
 
     @Test
     void initialLoadFillsTheModel() {
@@ -449,9 +458,27 @@ class ProgramTest {
     /**
      * Runs queued IO and UI work until both queues are empty.
      */
+    @Test
+    void aFetchRunsInTheBackgroundAndThenReloadsTheBranches() {
+        settle();
+
+        program.dispatch(new FetchMsg.Tick());
+        program.dispatch(new FetchMsg.Tick());
+
+        // Only one fetch, queued next to the other git commands instead of after them.
+        assertEquals(1, background.size());
+        assertEquals(true, io.isEmpty());
+        settle();
+        assertEquals(1, provider.fetches);
+        assertEquals(false, program.model().fetching());
+        // Not logged: it runs every few seconds.
+        assertEquals(List.of(), program.model().commandLog());
+    }
+
     private void settle() {
-        while (!io.isEmpty() || !ui.isEmpty()) {
+        while (!io.isEmpty() || !background.isEmpty() || !ui.isEmpty()) {
             drain(io);
+            drain(background);
             drain(ui);
         }
     }

@@ -43,6 +43,14 @@ public interface Cmd {
     }
 
     /**
+     * Whether this command runs in the background, next to the other commands instead of after them: it is
+     * slow, like talking to a remote, and the user is not waiting for it.
+     */
+    default boolean background() {
+        return false;
+    }
+
+    /**
      * The message key of the command log title for this command's git commands, if it runs any that
      * change the repository.
      */

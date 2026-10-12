@@ -57,6 +57,8 @@ graph TD
 
 - **ui**: the TamboUI render thread. It is the only thread that reads or replaces the model.
 - **io**: a single `git-io` thread, so git commands never run concurrently.
+- **background**: a `git-fetch` thread for commands that are slow and that nobody waits for
+  (`Cmd.background()`), so they don't hold up the others. Today that is only the fetch.
 
 ```mermaid
 flowchart LR
@@ -77,6 +79,11 @@ flowchart LR
 Every 500 ms a `Msg.Tick` triggers `Update.refresh`, which re-reads the status, branches and stashes.
 That keeps the screen in sync with changes made outside the app. A periodic load is skipped while an
 equal one is still running: `Model.refreshing` holds the loads that are running.
+
+Every 5 seconds a `FetchMsg.Tick` runs `git fetch --all` in the background, unless the previous fetch is
+still running (`Model.fetching`). Its result reloads the branches. Neither its commands nor its failures are
+shown, since it also runs while offline. `ssh` runs with `BatchMode=yes` during the fetch, so it can't prompt
+for a passphrase on the terminal.
 
 ## Core types
 

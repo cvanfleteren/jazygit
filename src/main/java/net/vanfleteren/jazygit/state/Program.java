@@ -17,23 +17,27 @@ public final class Program {
 
     private final GitInfoProvider provider;
     private final Executor io;
+    private final Executor background;
     private final Executor ui;
     private Model model;
 
-    private Program(GitInfoProvider provider, Executor io, Executor ui) {
+    private Program(GitInfoProvider provider, Executor io, Executor background, Executor ui) {
         this.provider = provider;
         this.io = io;
+        this.background = background;
         this.ui = ui;
     }
 
     /**
      * Creates the program and starts its initial loads.
      *
-     * @param io where git is called; a single thread keeps git commands from running concurrently
-     * @param ui the thread that owns the model, i.e. the render thread
+     * @param io         where git is called; a single thread keeps git commands from running concurrently
+     * @param background where {@link Cmd#background() background} commands run, so they do not hold up the
+     *                   others
+     * @param ui         the thread that owns the model, i.e. the render thread
      */
-    public static Program start(GitInfoProvider provider, Executor io, Executor ui) {
-        Program program = new Program(provider, io, ui);
+    public static Program start(GitInfoProvider provider, Executor io, Executor background, Executor ui) {
+        Program program = new Program(provider, io, background, ui);
         program.apply(Update.init(provider.repositoryName()));
         return program;
     }
@@ -49,7 +53,7 @@ public final class Program {
     private void apply(Next next) {
         model = next.model();
         for (Cmd cmd : next.cmds()) {
-            io.execute(() -> {
+            (cmd.background() ? background : io).execute(() -> {
                 Msg result = perform(provider, cmd);
                 ui.execute(() -> dispatch(result));
             });
