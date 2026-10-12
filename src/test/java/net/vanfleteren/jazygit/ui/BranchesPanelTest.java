@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import net.vanfleteren.jazygit.git.model.Sha;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.branch.NewBranchMsg;
@@ -20,16 +21,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 class BranchesPanelTest {
 
-    private static final Branch MAIN = new Branch("main", true, "1");
-    private static final Branch FEATURE = new Branch("feature", false, "2");
-    private static final Branch OLD = new Branch("old", false, "3");
+    private static final Branch MAIN = new Branch("main", true, new Sha("1"));
+    private static final Branch FEATURE = new Branch("feature", false, new Sha("2"));
+    private static final Branch OLD = new Branch("old", false, new Sha("3"));
 
     private final BranchesPanel panel = new BranchesPanel(msg -> { });
     private final Model before = with(TestModels.loaded(new SampleData()), List.of(MAIN, FEATURE, OLD));
 
     @Test
     void afterACheckoutTheNewCurrentBranchIsHighlighted() throws Exception {
-        Model after = with(before, List.of(new Branch("old", true, "3"), new Branch("main", false, "1"), FEATURE));
+        Model after = with(before, List.of(new Branch("old", true, new Sha("3")), new Branch("main", false, new Sha("1")), FEATURE));
 
         assertEquals("old", highlightedAfterMovingTo(2, after));
     }
@@ -44,14 +45,14 @@ class BranchesPanelTest {
     @Test
     void syncShowsAnAheadArrowForUnpushedAndABehindOneForIncomingCommits() {
         java.time.Instant t = java.time.Instant.EPOCH;
-        assertEquals(List.of(), BranchesPanel.sync(new Branch("b", false, "1", t, true, false, 0, 0)));
+        assertEquals(List.of(), BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, 0, 0)));
         assertEquals(List.of(LoadableList.Seg.styled(" ↑2", Theme.Classes.AHEAD)),
-                BranchesPanel.sync(new Branch("b", false, "1", t, true, false, 2, 0)));
+                BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, 2, 0)));
         assertEquals(List.of(LoadableList.Seg.styled(" ↓1", Theme.Classes.BEHIND)),
-                BranchesPanel.sync(new Branch("b", false, "1", t, true, false, 0, 1)));
+                BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, 0, 1)));
         assertEquals(List.of(LoadableList.Seg.styled(" ↑2", Theme.Classes.AHEAD),
                         LoadableList.Seg.styled(" ↓1", Theme.Classes.BEHIND)),
-                BranchesPanel.sync(new Branch("b", false, "1", t, true, false, 2, 1)));
+                BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, 2, 1)));
     }
 
     @Test

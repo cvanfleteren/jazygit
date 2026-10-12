@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.*;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.junit.jupiter.api.AfterEach;
@@ -75,22 +76,22 @@ class JGitInfoProviderTest {
 
     @Test
     void commitsAndStatusFollowNewCommits() throws Exception {
-        String headBefore = provider.status().get().headOid();
+        Sha headBefore = provider.status().get().headCommit().get();
         Files.writeString(repo.resolve("new.txt"), "new\n");
         git("add", "new.txt");
         git("commit", "-q", "-m", "Second commit");
 
         RepoStatus status = provider.status().get();
-        assertNotEquals(headBefore, status.headOid());
+        assertNotEquals(headBefore, status.headCommit().get());
         assertEquals(List.of(), status.files());
         List<Commit> commits = provider.commits().get();
         assertEquals("Second commit", commits.get(0).message());
-        assertTrue(status.headOid().startsWith(commits.get(0).shortSha()));
+        assertEquals(status.headCommit().get(), commits.get(0).sha());
     }
 
     @Test
     void branchesFollowExternalChanges() throws Exception {
-        String head = provider.status().get().headOid();
+        Sha head = provider.status().get().headCommit().get();
         assertEquals(List.of(new Branch("main", true, head)), withoutTimes(provider.branches().get()));
 
         git("branch", "foo");
@@ -100,7 +101,7 @@ class JGitInfoProviderTest {
         assertEquals(List.of(new Branch("foo", true, head), new Branch("main", false, head)), withoutTimes(provider.branches().get()));
 
         git("commit", "-q", "--allow-empty", "-m", "Move foo");
-        String moved = provider.status().get().headOid();
+        Sha moved = provider.status().get().headCommit().get();
         assertEquals(List.of(new Branch("foo", true, moved), new Branch("main", false, head)), withoutTimes(provider.branches().get()));
     }
 
@@ -684,7 +685,7 @@ class JGitInfoProviderTest {
         Files.createDirectories(empty);
         gitIn(empty, "init", "-q", "-b", "main");
         try (JGitInfoProvider emptyProvider = JGitInfoProvider.open(empty).get()) {
-            assertEquals(RepoStatus.INITIAL, emptyProvider.status().get().headOid());
+            assertEquals(Option.none(), emptyProvider.status().get().headCommit());
             assertEquals(List.of(), emptyProvider.commits().get());
         }
     }

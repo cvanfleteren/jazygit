@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
@@ -27,7 +29,7 @@ class FilesPanelTest {
 
         @Override
         public Either<ProcessError, RepoStatus> status() {
-            return Either.right(new RepoStatus("main", "aaaa", files));
+            return Either.right(new RepoStatus(Head.onBranch("main", new Sha("aaaa")), files));
         }
     }
 

@@ -12,15 +12,15 @@ import java.time.Instant;
  * @param ahead     the commits not yet pushed to the upstream branch; 0 without an upstream
  * @param behind    the commits on the upstream branch not yet in this branch; 0 without an upstream
  */
-public record Branch(String name, boolean current, String tipOid, Instant tipTime, boolean hasRemote,
+public record Branch(String name, boolean current, Sha tipOid, Instant tipTime, boolean hasRemote,
                      boolean isDefault, int ahead, int behind) {
 
-    public Branch(String name, boolean current, String tipOid, Instant tipTime, boolean hasRemote,
+    public Branch(String name, boolean current, Sha tipOid, Instant tipTime, boolean hasRemote,
                   boolean isDefault) {
         this(name, current, tipOid, tipTime, hasRemote, isDefault, 0, 0);
     }
 
-    public Branch(String name, boolean current, String tipOid, Instant tipTime, boolean hasRemote) {
+    public Branch(String name, boolean current, Sha tipOid, Instant tipTime, boolean hasRemote) {
         this(name, current, tipOid, tipTime, hasRemote, false);
     }
 
@@ -32,11 +32,11 @@ public record Branch(String name, boolean current, String tipOid, Instant tipTim
         return hasRemote && !isDefault;
     }
 
-    public Branch(String name, boolean current, String tipOid, Instant tipTime) {
+    public Branch(String name, boolean current, Sha tipOid, Instant tipTime) {
         this(name, current, tipOid, tipTime, false, false);
     }
 
-    public Branch(String name, boolean current, String tipOid) {
+    public Branch(String name, boolean current, Sha tipOid) {
         this(name, current, tipOid, Instant.EPOCH, false, false);
     }
 }

@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.model;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.DiffError;
@@ -24,7 +25,7 @@ public final class SampleData implements StubGitProvider {
 
     @Override
     public Either<ProcessError, RepoStatus> status() {
-        return Either.right(new RepoStatus("main", "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678", List.of(
+        return Either.right(new RepoStatus(Head.onBranch("main", new Sha("a1b2c3d4e5f60718293a4b5c6d7e8f9012345678")), List.of(
                 new FileEntry("src/main/java/net/vanfleteren/jazygit/JazygitApp.java", ChangeType.MODIFIED),
                 new FileEntry("src/main/java/net/vanfleteren/jazygit/ui/ContentPanel.java", ChangeType.ADDED),
                 new FileEntry("src/main/java/net/vanfleteren/jazygit/model/SampleData.java", ChangeType.ADDED),
@@ -37,10 +38,10 @@ public final class SampleData implements StubGitProvider {
     @Override
     public Either<RepositoryUnreadable, List<Branch>> branches() {
         return Either.right(List.of(
-                new Branch("main", true, "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678", Instant.EPOCH, true, true),
-                new Branch("feature/initial-layout", false, "0a1b2c3d4e5f60718293a4b5c6d7e8f901234567", Instant.EPOCH, true),
-                new Branch("feature/jgit-backend", false, "1a2b3c4d5e6f708192a3b4c5d6e7f80912345678"),
-                new Branch("bugfix/focus-cycling", false, "c3d4e5f60718293a4b5c6d7e8f9012345678a1b2")
+                new Branch("main", true, new Sha("a1b2c3d4e5f60718293a4b5c6d7e8f9012345678"), Instant.EPOCH, true, true),
+                new Branch("feature/initial-layout", false, new Sha("0a1b2c3d4e5f60718293a4b5c6d7e8f901234567"), Instant.EPOCH, true),
+                new Branch("feature/jgit-backend", false, new Sha("1a2b3c4d5e6f708192a3b4c5d6e7f80912345678")),
+                new Branch("bugfix/focus-cycling", false, new Sha("c3d4e5f60718293a4b5c6d7e8f9012345678a1b2"))
         ));
     }
 

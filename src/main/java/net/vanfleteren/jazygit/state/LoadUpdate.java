@@ -56,7 +56,7 @@ public final class LoadUpdate {
     private static Next statusLoaded(Model model, RepoStatus status) {
         Model next = finished(model, new LoadStatus()).withStatus(model.status().reload(status));
         boolean headMoved = !(model.status() instanceof Loaded<RepoStatus>(RepoStatus previous)
-                && previous.headOid().equals(status.headOid()));
+                && previous.headCommit().equals(status.headCommit()));
         // Commit loads are not deduplicated: one queued after HEAD moved must still run, even if
         // an earlier one is in progress.
         List<Cmd> cmds = headMoved ? List.of(new LoadCommits()) : List.empty();
@@ -76,7 +76,7 @@ public final class LoadUpdate {
                 .getOrElse(() -> Next.of(next));
     }
 
-    private static Option<String> tip(List<Branch> branches, String name) {
+    private static Option<Sha> tip(List<Branch> branches, String name) {
         return branches
                 .find(b -> b.name().equals(name))
                 .map(Branch::tipOid)

@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
@@ -53,7 +54,7 @@ class ProgramTest {
 
     private static final class FakeProvider implements StubGitProvider {
 
-        RepoStatus status = new RepoStatus("main", "aaaa", List.of());
+        RepoStatus status = new RepoStatus(Head.onBranch("main", new Sha("aaaa")), List.of());
         String statusError;
         String checkoutError;
         String indexError;
@@ -88,14 +89,14 @@ class ProgramTest {
 
         @Override
         public Either<RepositoryUnreadable, List<Branch>> branches() {
-            return Either.right(List.of(new Branch("main", status.head().equals("main"), "main-tip"),
-                    new Branch("other", status.head().equals("other"), "other-tip", Instant.EPOCH, true)));
+            return Either.right(List.of(new Branch("main", status.head().branchName().contains("main"), new Sha("main-tip")),
+                    new Branch("other", status.head().branchName().contains("other"), new Sha("other-tip"), Instant.EPOCH, true)));
         }
 
         @Override
         public Either<RepositoryUnreadable, List<Commit>> commits() {
             commitLoads++;
-            return Either.right(List.of(commit(status.headOid())));
+            return Either.right(List.of(commit(status.headCommit().get().value())));
         }
 
         @Override
@@ -127,7 +128,7 @@ class ProgramTest {
             if (checkoutError != null) {
                 return StubGitProvider.refused(command, checkoutError);
             }
-            status = new RepoStatus(branch, branch + "-head", List.of());
+            status = new RepoStatus(Head.onBranch(branch, new Sha(branch + "-head")), List.of());
             return StubGitProvider.ran(command);
         }
 
@@ -225,7 +226,7 @@ class ProgramTest {
 
         Model model = program.model();
         assertEquals(new Loaded<>(provider.status), model.status());
-        assertEquals(new Loaded<>(List.of(new Branch("main", true, "main-tip"), new Branch("other", false, "other-tip", Instant.EPOCH, true))), model.branches());
+        assertEquals(new Loaded<>(List.of(new Branch("main", true, new Sha("main-tip")), new Branch("other", false, new Sha("other-tip"), Instant.EPOCH, true))), model.branches());
         assertEquals(1, provider.commitLoads);
     }
 
@@ -233,7 +234,7 @@ class ProgramTest {
     void ticksPickUpWorkingTreeChangesWithoutReloadingCommits() {
         settle();
 
-        provider.status = new RepoStatus("main", "aaaa", List.of(new FileEntry("a.txt", ChangeType.UNTRACKED)));
+        provider.status = new RepoStatus(Head.onBranch("main", new Sha("aaaa")), List.of(new FileEntry("a.txt", ChangeType.UNTRACKED)));
         program.dispatch(new Msg.Tick());
         settle();
 
@@ -245,7 +246,7 @@ class ProgramTest {
     void ticksReloadCommitsWhenHeadMoves() {
         settle();
 
-        provider.status = new RepoStatus("main", "bbbb", List.of());
+        provider.status = new RepoStatus(Head.onBranch("main", new Sha("bbbb")), List.of());
         program.dispatch(new Msg.Tick());
         settle();
 
@@ -275,7 +276,7 @@ class ProgramTest {
 
         Model model = program.model();
         assertEquals(new Loaded<>(provider.status), model.status());
-        assertEquals(new Loaded<>(List.of(new Branch("main", false, "main-tip"), new Branch("other", true, "other-tip", Instant.EPOCH, true))), model.branches());
+        assertEquals(new Loaded<>(List.of(new Branch("main", false, new Sha("main-tip")), new Branch("other", true, new Sha("other-tip"), Instant.EPOCH, true))), model.branches());
         assertEquals("other-head", ((Loaded<List<Commit>>) model.commits()).value().get(0).sha().value());
         assertEquals(Option.none(), model.error());
     }
@@ -289,7 +290,7 @@ class ProgramTest {
         settle();
 
         Model model = program.model();
-        assertEquals("topic", ((Loaded<RepoStatus>) model.status()).value().head());
+        assertEquals("topic", ((Loaded<RepoStatus>) model.status()).value().head().branchName().get());
         assertEquals(Option.none(), model.popup());
         assertEquals(Option.none(), model.error());
     }
@@ -335,7 +336,7 @@ class ProgramTest {
 
     @Test
     void stagingAllAndCommitting() {
-        provider.status = new RepoStatus("main", "aaaa", List.of(new FileEntry("a.txt", ChangeType.UNTRACKED)));
+        provider.status = new RepoStatus(Head.onBranch("main", new Sha("aaaa")), List.of(new FileEntry("a.txt", ChangeType.UNTRACKED)));
         settle();
 
         program.dispatch(new CommitMsg.Requested());
@@ -355,7 +356,7 @@ class ProgramTest {
 
     @Test
     void amendingStagesAllFilesWhenNoneIsStaged() {
-        provider.status = new RepoStatus("main", "aaaa", List.of(new FileEntry("a.txt", ChangeType.MODIFIED)));
+        provider.status = new RepoStatus(Head.onBranch("main", new Sha("aaaa")), List.of(new FileEntry("a.txt", ChangeType.MODIFIED)));
         settle();
 
         program.dispatch(new AmendMsg.Requested());
@@ -382,7 +383,7 @@ class ProgramTest {
 
     @Test
     void failedCommitIsReported() {
-        provider.status = new RepoStatus("main", "aaaa", List.of(new FileEntry("a.txt", ChangeType.ADDED)));
+        provider.status = new RepoStatus(Head.onBranch("main", new Sha("aaaa")), List.of(new FileEntry("a.txt", ChangeType.ADDED)));
         provider.commitFailure = "boom";
         settle();
 
@@ -424,13 +425,13 @@ class ProgramTest {
         settle();
         assertEquals(Option.of("Checkout of other failed: error: Your local changes would be overwritten"),
                 program.model().error());
-        assertEquals("main", ((Loaded<RepoStatus>) program.model().status()).value().head());
+        assertEquals("main", ((Loaded<RepoStatus>) program.model().status()).value().head().branchName().get());
 
         provider.checkoutError = null;
         program.dispatch(new CheckoutMsg.Requested("other"));
         settle();
         assertEquals(Option.none(), program.model().error());
-        assertEquals("other", ((Loaded<RepoStatus>) program.model().status()).value().head());
+        assertEquals("other", ((Loaded<RepoStatus>) program.model().status()).value().head().branchName().get());
     }
 
     @Test

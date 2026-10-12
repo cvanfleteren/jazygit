@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.feature.stage;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
@@ -34,7 +36,7 @@ class StageAllDialogTest {
 
     private static Model openModel() {
         Model unstaged = Update.update(TestModels.loaded(new SampleData()), new LoadMsg.StatusLoaded(
-                new RepoStatus("main", "aaaa", List.of(new FileEntry("a.txt", ChangeType.MODIFIED))))).model();
+                new RepoStatus(Head.onBranch("main", new Sha("aaaa")), List.of(new FileEntry("a.txt", ChangeType.MODIFIED))))).model();
         return Update.update(unstaged, new CommitMsg.Requested()).model();
     }
 

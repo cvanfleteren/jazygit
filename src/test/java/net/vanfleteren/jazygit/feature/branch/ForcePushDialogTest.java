@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.branch;
 
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import net.vanfleteren.jazygit.git.model.Sha;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
@@ -31,7 +32,7 @@ class ForcePushDialogTest {
 
     private static Model openModel() {
         Model diverged = Update.update(TestModels.loaded(), new LoadMsg.BranchesLoaded(List.of(
-                new Branch("main", true, "aaaa", Instant.EPOCH, true, false, 1, 2)))).model();
+                new Branch("main", true, new Sha("aaaa"), Instant.EPOCH, true, false, 1, 2)))).model();
         return Update.update(diverged, new PushMsg.Requested("main")).model();
     }
 

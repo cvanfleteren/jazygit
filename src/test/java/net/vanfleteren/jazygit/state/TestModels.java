@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
@@ -19,12 +20,11 @@ import java.time.Instant;
  */
 public final class TestModels {
 
-    public static final RepoStatus CLEAN = new RepoStatus("main", "aaaa", List.of());
-    public static final RepoStatus DIRTY = new RepoStatus("main", "aaaa",
-            List.of(new FileEntry("a.txt", ChangeType.UNTRACKED)));
-    public static final RepoStatus MOVED = new RepoStatus("main", "bbbb", List.of());
-    public static final List<Branch> BRANCHES = List.of(new Branch("main", true, "aaaa"),
-            new Branch("feature", false, "ffff"));
+    public static final RepoStatus CLEAN = new RepoStatus(Head.onBranch("main", new Sha("aaaa")), List.of());
+    public static final RepoStatus DIRTY = new RepoStatus(Head.onBranch("main", new Sha("aaaa")), List.of(new FileEntry("a.txt", ChangeType.UNTRACKED)));
+    public static final RepoStatus MOVED = new RepoStatus(Head.onBranch("main", new Sha("bbbb")), List.of());
+    public static final List<Branch> BRANCHES = List.of(new Branch("main", true, new Sha("aaaa")),
+            new Branch("feature", false, new Sha("ffff")));
     public static final List<Commit> COMMITS = List.of(
             new Commit(new Sha("aaaa"), "Ada", "ada@example.com", Instant.EPOCH, "First", ""));
     public static final List<Commit> FEATURE_COMMITS = List.of(

@@ -1,6 +1,9 @@
 package net.vanfleteren.jazygit.git;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Conflict;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -41,16 +44,16 @@ class CliStatusTest {
     void parsesBranchHeaders() {
         RepoStatus status = CliStatus.parse(
                 "# branch.oid 0123abcd\0# branch.head main\0# branch.upstream origin/main\0");
-        assertEquals("0123abcd", status.headOid());
-        assertEquals("main", status.head());
+        assertEquals(Head.onBranch("main", new Sha("0123abcd")), status.head());
         assertEquals(List.of(), status.files());
     }
 
     @Test
     void parsesInitialAndDetachedHeads() {
-        RepoStatus status = CliStatus.parse("# branch.oid (initial)\0# branch.head (detached)\0");
-        assertEquals("(initial)", status.headOid());
-        assertEquals("(detached)", status.head());
+        assertEquals(new Head.OnBranch("main", Option.none()),
+                CliStatus.parse("# branch.oid (initial)\0# branch.head main\0").head());
+        assertEquals(new Head.Detached(new Sha("0123abcd")),
+                CliStatus.parse("# branch.oid 0123abcd\0# branch.head (detached)\0").head());
     }
 
     @Test
@@ -91,8 +94,8 @@ class CliStatusTest {
 
     @Test
     void branchLabelDescribesDetachedHead() {
-        assertEquals("main", new RepoStatus("main", "0123456789", List.of()).branchLabel());
+        assertEquals("main", new RepoStatus(Head.onBranch("main", new Sha("0123456789")), List.of()).branchLabel());
         assertEquals("HEAD detached at 0123456",
-                new RepoStatus(RepoStatus.DETACHED, "0123456789", List.of()).branchLabel());
+                new RepoStatus(new Head.Detached(new Sha("0123456789")), List.of()).branchLabel());
     }
 }

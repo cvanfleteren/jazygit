@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.feature.stash;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.stash.StashCmd.Stash;
 import net.vanfleteren.jazygit.git.model.ChangeType;
@@ -20,10 +22,9 @@ class StashUpdateTest {
 
     private static Model withChanges() {
         Model model = loaded();
-        String oid = ((RepoStatus) ((net.vanfleteren.jazygit.state.Loadable.Loaded<RepoStatus>) model.status()).value())
-                .headOid();
+        Head head = ((net.vanfleteren.jazygit.state.Loadable.Loaded<RepoStatus>) model.status()).value().head();
         return Update.update(model, new LoadMsg.StatusLoaded(
-                new RepoStatus("main", oid, List.of(new FileEntry("a.txt", ChangeType.MODIFIED))))).model();
+                new RepoStatus(head, List.of(new FileEntry("a.txt", ChangeType.MODIFIED))))).model();
     }
 
     @Test
@@ -65,8 +66,7 @@ class StashUpdateTest {
         Model open = Update.update(withChanges(), new StashMsg.Requested()).model();
         net.vanfleteren.jazygit.git.model.Commit head = ((net.vanfleteren.jazygit.state.Loadable.Loaded<
                 List<net.vanfleteren.jazygit.git.model.Commit>>) open.commits()).value().head();
-        Model atHead = Update.update(open, new LoadMsg.StatusLoaded(new RepoStatus("main", head.sha().value(),
-                List.of(new FileEntry("a.txt", ChangeType.MODIFIED))))).model();
+        Model atHead = Update.update(open, new LoadMsg.StatusLoaded(new RepoStatus(Head.onBranch("main", new Sha(head.sha().value())), List.of(new FileEntry("a.txt", ChangeType.MODIFIED))))).model();
 
         Next next = Update.update(atHead, new StashMsg.Confirmed(" "));
 
@@ -77,7 +77,7 @@ class StashUpdateTest {
     @Test
     void theGeneratedNameLeavesOutTheCommitInARepositoryWithoutCommits() {
         Model model = Update.update(loaded(), new LoadMsg.StatusLoaded(
-                new RepoStatus("main", RepoStatus.INITIAL, List.of(new FileEntry("a.txt", ChangeType.UNTRACKED))))).model();
+                new RepoStatus(new Head.OnBranch("main", Option.none()), List.of(new FileEntry("a.txt", ChangeType.UNTRACKED))))).model();
 
         assertEquals("WIP on main", StashUpdate.defaultName(model));
     }

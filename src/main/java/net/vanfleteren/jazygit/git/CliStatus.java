@@ -10,6 +10,8 @@ import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Conflict;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
+import net.vanfleteren.jazygit.git.model.Sha;
 
 import java.nio.file.Path;
 import java.time.Duration;
@@ -43,7 +45,18 @@ public final class CliStatus {
      */
     static RepoStatus parse(String raw) {
         Parsed parsed = List.of(raw.split("\0")).foldLeft(Parsed.NOTHING, CliStatus::next);
-        return new RepoStatus(parsed.head(), parsed.oid(), parsed.byPath().values().toList());
+        return new RepoStatus(head(parsed.head(), parsed.oid()), parsed.byPath().values().toList());
+    }
+
+    /**
+     * HEAD as described by the {@code branch.head} and {@code branch.oid} headers, which say
+     * {@code (detached)} and {@code (initial)} for a detached HEAD and a repository without commits.
+     */
+    private static Head head(String branch, String oid) {
+        Option<Sha> commit = Option.of(oid).filter(o -> !o.isEmpty() && !o.equals("(initial)")).map(Sha::new);
+        return branch.equals("(detached)") && commit.isDefined()
+                ? new Head.Detached(commit.get())
+                : new Head.OnBranch(branch, commit);
     }
 
     /**

@@ -146,7 +146,7 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
         String name = Repository.shortenRefName(ref.getName());
         String tip = ref.getObjectId().name();
         Option<Tracking> tracking = tracking(name, tip);
-        return new BranchRead(new Branch(name, ref.getName().equals(fullBranch), tip,
+        return new BranchRead(new Branch(name, ref.getName().equals(fullBranch), new Sha(tip),
                 Instant.ofEpochSecond(walk.parseCommit(ref.getObjectId()).getCommitTime()),
                 hasRemote(name),
                 defaultBranch.contains(name),

@@ -1,27 +1,71 @@
 package net.vanfleteren.jazygit.git.model;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.i18n.Messages;
 
 /**
  * The state of the working tree and HEAD, as reported by {@code git status}.
  *
- * @param head    the checked-out branch name, or {@value #DETACHED}
- * @param headOid the commit HEAD points to, or {@value #INITIAL} in a repository without commits
- * @param files   the changed and untracked files, sorted by path
+ * @param files the changed and untracked files, sorted by path
  */
-public record RepoStatus(String head, String headOid, List<FileEntry> files) {
+public record RepoStatus(Head head, List<FileEntry> files) {
 
-    public static final String DETACHED = "(detached)";
-    public static final String INITIAL = "(initial)";
+    /**
+     * What HEAD points to.
+     */
+    public sealed interface Head {
+
+        /**
+         * A checked out branch.
+         *
+         * @param tip the commit it points to; none in a repository without commits
+         */
+        record OnBranch(String branch, Option<Sha> tip) implements Head {
+        }
+
+        /**
+         * A commit checked out without a branch.
+         */
+        record Detached(Sha at) implements Head {
+        }
+
+        static Head onBranch(String branch, Sha tip) {
+            return new OnBranch(branch, Option.of(tip));
+        }
+
+        /**
+         * The commit HEAD points to; none in a repository without commits.
+         */
+        default Option<Sha> commit() {
+            return switch (this) {
+                case OnBranch(String branch, Option<Sha> tip) -> tip;
+                case Detached(Sha at) -> Option.of(at);
+            };
+        }
+
+        /**
+         * The checked out branch; none for a detached HEAD.
+         */
+        default Option<String> branchName() {
+            return this instanceof OnBranch(String branch, Option<Sha> tip) ? Option.of(branch) : Option.none();
+        }
+    }
+
+    /**
+     * The commit HEAD points to; none in a repository without commits.
+     */
+    public Option<Sha> headCommit() {
+        return head.commit();
+    }
 
     /**
      * The checked-out branch, or a description of the detached HEAD.
      */
     public String branchLabel() {
-        if (!DETACHED.equals(head)) {
-            return head;
-        }
-        return Messages.get("status.headDetached", headOid.substring(0, Math.min(7, headOid.length())));
+        return switch (head) {
+            case Head.OnBranch(String branch, Option<Sha> tip) -> branch;
+            case Head.Detached(Sha at) -> Messages.get("status.headDetached", at.shortSha());
+        };
     }
 }

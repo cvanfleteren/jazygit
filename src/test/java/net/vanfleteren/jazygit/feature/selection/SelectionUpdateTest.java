@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.selection;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.ChangeType;
@@ -148,9 +149,9 @@ class SelectionUpdateTest {
 
         assertEquals(List.of(), Update.update(model, new LoadMsg.BranchesLoaded(BRANCHES)).cmds());
         assertEquals(List.of(), Update.update(model, new LoadMsg.BranchesLoaded(
-                List.of(new Branch("main", true, "moved"), new Branch("feature", false, "ffff")))).cmds());
+                List.of(new Branch("main", true, new Sha("moved")), new Branch("feature", false, new Sha("ffff"))))).cmds());
         assertEquals(List.of(new LoadBranchLog("feature")), Update.update(model, new LoadMsg.BranchesLoaded(
-                List.of(new Branch("main", true, "aaaa"), new Branch("feature", false, "moved")))).cmds());
+                List.of(new Branch("main", true, new Sha("aaaa")), new Branch("feature", false, new Sha("moved"))))).cmds());
     }
 
     @Test
@@ -197,7 +198,7 @@ class SelectionUpdateTest {
         List<FileEntry> restaged = DIRTY.files()
                 .map(f -> new FileEntry(f.path(), f.type(), !f.staged(), !f.unstaged()));
 
-        Next statusLoaded = Update.update(model, new LoadMsg.StatusLoaded(new RepoStatus("main", "aaaa", restaged)));
+        Next statusLoaded = Update.update(model, new LoadMsg.StatusLoaded(new RepoStatus(Head.onBranch("main", new Sha("aaaa")), restaged)));
 
         assertEquals(false, statusLoaded.cmds().contains(new Cmd.LoadFileDiff(DIRTY.files())));
     }

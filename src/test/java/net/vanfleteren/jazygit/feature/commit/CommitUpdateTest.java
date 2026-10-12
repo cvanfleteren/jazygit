@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.commit;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Commit;
@@ -24,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class CommitUpdateTest {
 
     private Model withFiles(FileEntry... files) {
-        return loaded().withStatus(new Loaded<>(new RepoStatus("main", "aaaa", List.of(files))));
+        return loaded().withStatus(new Loaded<>(new RepoStatus(Head.onBranch("main", new Sha("aaaa")), List.of(files))));
     }
 
     private Model withCommits(Commit... commits) {

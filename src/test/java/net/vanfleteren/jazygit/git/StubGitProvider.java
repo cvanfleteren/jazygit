@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.CheckoutError;
 import net.vanfleteren.jazygit.git.GitError.DiffError;
@@ -47,7 +48,7 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<ProcessError, RepoStatus> status() {
-        return Either.right(new RepoStatus("main", "aaaa", List.empty()));
+        return Either.right(new RepoStatus(Head.onBranch("main", new Sha("aaaa")), List.empty()));
     }
 
     @Override

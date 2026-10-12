@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import net.vanfleteren.jazygit.git.model.Sha;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
@@ -70,8 +71,8 @@ class DeleteBranchDialogTest {
     @Test
     void remoteOptionsAreNotActionableForTheDefaultBranch() throws Exception {
         Model model = Update.update(TestModels.loaded(new SampleData()), new LoadMsg.BranchesLoaded(List.of(
-                new Branch("x", true, "1"),
-                new Branch("trunk", false, "2", java.time.Instant.EPOCH, true, true)))).model();
+                new Branch("x", true, new Sha("1")),
+                new Branch("trunk", false, new Sha("2"), java.time.Instant.EPOCH, true, true)))).model();
         Model open = Update.update(model, new DeleteBranchMsg.Requested("trunk")).model();
 
         assertEquals(List.of(), pressing(open, r -> {

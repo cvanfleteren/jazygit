@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.Checkout;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.CheckoutWithStash;
@@ -47,8 +48,7 @@ class BranchUpdateTest {
 
     @Test
     void checkoutRequestWithChangedFilesStillTriesTheCheckoutFirst() {
-        Model dirty = Update.update(loaded(), new LoadMsg.StatusLoaded(new RepoStatus("main", "aaaa",
-                List.of(new FileEntry("a.txt", ChangeType.MODIFIED))))).model();
+        Model dirty = Update.update(loaded(), new LoadMsg.StatusLoaded(new RepoStatus(Head.onBranch("main", new Sha("aaaa")), List.of(new FileEntry("a.txt", ChangeType.MODIFIED))))).model();
 
         assertEquals(List.of(new Checkout("feature")),
                 Update.update(dirty, new CheckoutMsg.Requested("feature")).cmds());
@@ -105,8 +105,8 @@ class BranchUpdateTest {
     @Test
     void pushRequestOfADivergedBranchAsksForConfirmationInsteadOfPushing() {
         Model diverged = Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(
-                new Branch("main", true, "aaaa"),
-                new Branch("feature", false, "ffff", Instant.EPOCH, true, false, 1, 2)))).model();
+                new Branch("main", true, new Sha("aaaa")),
+                new Branch("feature", false, new Sha("ffff"), Instant.EPOCH, true, false, 1, 2)))).model();
 
         Next asked = Update.update(diverged, new PushMsg.Requested("feature"));
 
@@ -216,8 +216,8 @@ class BranchUpdateTest {
 
     @Test
     void remoteScopesAreRefusedForTheDefaultBranch() {
-        Model model = Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(new Branch("main", true, "aaaa"),
-                new Branch("trunk", false, "tttt", java.time.Instant.EPOCH, true, true)))).model();
+        Model model = Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(new Branch("main", true, new Sha("aaaa")),
+                new Branch("trunk", false, new Sha("tttt"), java.time.Instant.EPOCH, true, true)))).model();
         Model open = Update.update(model, new DeleteBranchMsg.Requested("trunk")).model();
 
         assertEquals(List.of(), Update.update(open, new DeleteBranchMsg.Chosen(BranchCmd.DeleteBranch.DeleteScope.REMOTE)).cmds());
@@ -229,7 +229,7 @@ class BranchUpdateTest {
     @Test
     void choosingAScopeDeletesTheBranchAndClosesThePopup() {
         Model withRemote = Update.update(loaded(), new LoadMsg.BranchesLoaded(
-                List.of(new Branch("main", true, "aaaa"), new Branch("feature", false, "ffff", java.time.Instant.EPOCH, true)))).model();
+                List.of(new Branch("main", true, new Sha("aaaa")), new Branch("feature", false, new Sha("ffff"), java.time.Instant.EPOCH, true)))).model();
         Model open = Update.update(withRemote, new DeleteBranchMsg.Requested("feature")).model();
 
         Next next = Update.update(open, new DeleteBranchMsg.Chosen(BranchCmd.DeleteBranch.DeleteScope.REMOTE));
@@ -275,7 +275,7 @@ class BranchUpdateTest {
     @Test
     void rebaseRequestOfAnotherBranchOpensTheChoiceForTheCheckedOutOne() {
         Model model = Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(
-                new Branch("main", true, "1"), new Branch("feature", false, "2")))).model();
+                new Branch("main", true, new Sha("1")), new Branch("feature", false, new Sha("2"))))).model();
 
         Next next = Update.update(model, new RebaseMsg.Requested("feature"));
 
@@ -286,7 +286,7 @@ class BranchUpdateTest {
     @Test
     void theCheckedOutBranchAndUnknownBranchesCannotBeRebasedOnto() {
         Model model = Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(
-                new Branch("main", true, "1"), new Branch("feature", false, "2")))).model();
+                new Branch("main", true, new Sha("1")), new Branch("feature", false, new Sha("2"))))).model();
 
         assertEquals(Option.none(), Update.update(model, new RebaseMsg.Requested("main")).model().popup(RebasePopup.class));
         assertEquals(Option.none(), Update.update(model, new RebaseMsg.Requested("nope")).model().popup(RebasePopup.class));
@@ -295,7 +295,7 @@ class BranchUpdateTest {
     @Test
     void choosingARebaseClosesThePopupAndRebases() {
         Model open = Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(
-                new Branch("main", true, "1"), new Branch("feature", false, "2")))).model();
+                new Branch("main", true, new Sha("1")), new Branch("feature", false, new Sha("2"))))).model();
         open = Update.update(open, new RebaseMsg.Requested("feature")).model();
 
         Next next = Update.update(open, new RebaseMsg.Chosen());

@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.stash.StashCmd.Stash;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
@@ -80,11 +81,9 @@ public final class StashUpdate {
         if (!(model.status() instanceof Loaded<RepoStatus>(RepoStatus status))) {
             return Messages.get("stash.defaultName", "").strip();
         }
-        String sha = status.headOid().equals(RepoStatus.INITIAL)
-                ? ""
-                : status.headOid().substring(0, Math.min(7, status.headOid().length()));
+        String sha = status.headCommit().map(Sha::shortSha).getOrElse("");
         String message = model.commits() instanceof Loaded<List<Commit>>(List<Commit> commits)
-                ? commits.find(c -> c.sha().value().equals(status.headOid())).map(Commit::message).getOrElse("")
+                ? commits.find(c -> status.headCommit().contains(c.sha())).map(Commit::message).getOrElse("")
                 : "";
         return List.of(Messages.get("stash.defaultName", status.branchLabel()), sha, message)
                 .filter(part -> !part.isEmpty())

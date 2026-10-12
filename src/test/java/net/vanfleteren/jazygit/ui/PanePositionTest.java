@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.pilot.Pilot;
@@ -36,7 +37,7 @@ class PanePositionTest {
 
         @Override
         public Either<ProcessError, RepoStatus> status() {
-            return Either.right(new RepoStatus("main", "aaaa", files));
+            return Either.right(new RepoStatus(Head.onBranch("main", new Sha("aaaa")), files));
         }
 
         @Override
@@ -58,7 +59,7 @@ class PanePositionTest {
     private static final Model MODEL = TestModels.loaded(new FixedProvider(
             List.of(new FileEntry("net/vanfleteren/A.java", ChangeType.MODIFIED),
                     new FileEntry("net/vanfleteren/B.java", ChangeType.UNTRACKED)),
-            List.of(new Branch("main", true, "aaaa"), new Branch("feature", false, "bbbb")),
+            List.of(new Branch("main", true, new Sha("aaaa")), new Branch("feature", false, new Sha("bbbb"))),
             List.of(new Commit(new Sha("aaaa"), "me", "me@example.com", Instant.EPOCH, "first", ""),
                     new Commit(new Sha("bbbb"), "me", "me@example.com", Instant.EPOCH, "second", ""),
                     new Commit(new Sha("cccc"), "me", "me@example.com", Instant.EPOCH, "third", ""))));
