@@ -47,7 +47,7 @@ public final class NewBranchUpdate {
 
     private static Next atCommit(Model model, int index) {
         return model.commits() instanceof Loadable.Loaded<List<Commit>>(var commits) && index >= 0 && index < commits.size()
-                ? Next.of(model.openPopup(new NewBranchPopup(commits.get(index).sha(), commits.get(index).shortSha())))
+                ? Next.of(model.openPopup(new NewBranchPopup(commits.get(index).sha().value(), commits.get(index).shortSha())))
                 : Next.of(model);
     }
 

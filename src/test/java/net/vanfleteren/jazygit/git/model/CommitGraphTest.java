@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.git.model;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -10,11 +12,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class CommitGraphTest {
 
     private static Commit commit(String sha, String... parents) {
-        return new Commit(sha, sha, "Ada", "ada@example.com", Instant.EPOCH, sha, "", List.of(parents));
+        return new Commit(new Sha(sha), "Ada", "ada@example.com", Instant.EPOCH, sha, "", java.util.Arrays.stream(parents).map(Sha::new).toList());
     }
 
     private static List<String> shas(List<Commit> commits) {
-        return commits.stream().map(Commit::sha).toList();
+        return commits.stream().map(c -> c.sha().value()).toList();
     }
 
     @Test

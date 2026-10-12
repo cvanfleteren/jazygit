@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 import net.vanfleteren.jazygit.git.model.*;
 
 import java.util.List;
@@ -44,7 +46,7 @@ public interface GitRead {
      *
      * @throws IllegalStateException if git fails, with git's explanation as message
      */
-    String commitChanges(String sha);
+    String commitChanges(Sha sha);
 
     /**
      * The staged and the unstaged diff of {@code files}.

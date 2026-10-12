@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,10 +27,10 @@ public final class CliRebase {
      * @return the command lines that were run
      * @throws GitCommandException if git refuses, with git's explanation as message
      */
-    public static List<String> reword(Path workTree, String sha, String summary, String description) {
+    public static List<String> reword(Path workTree, Sha sha, String summary, String description) {
         Path message = writeMessage(summary, description);
         try {
-            String abbreviated = sha.substring(0, Math.min(7, sha.length()));
+            String abbreviated = sha.shortSha();
             // The todo list names the commit by an abbreviation of at least 7 characters. A merge in it
             // is "merge -C <commit>", which has to become "-c" for git to ask for a message.
             String sequenceEditor = "sed -i -e 's/^pick " + abbreviated + "/reword " + abbreviated + "/'"
@@ -36,7 +38,7 @@ public final class CliRebase {
             Map<String, String> environment = Map.of(
                     "GIT_SEQUENCE_EDITOR", sequenceEditor,
                     "GIT_EDITOR", "cp '" + message + "'");
-            String base = hasParent(workTree, sha) ? sha + "^" : "--root";
+            String base = hasParent(workTree, sha.value()) ? sha + "^" : "--root";
             List<String> executed = new ArrayList<>();
             try {
                 executed.add(CliCheckout.exec(workTree, environment, "git", "rebase", "--interactive",
@@ -93,13 +95,13 @@ public final class CliRebase {
      * {@code --root} when the parent has no parent. Uncommitted changes are stashed and brought back. When the
      * rebase fails, it is aborted again, so the repository is left as it was.
      *
-     * @param sha the full object id of a commit that has exactly one parent
+     * @param sha the object id of a commit that has exactly one parent
      * @return the command lines that were run
      * @throws GitCommandException if git refuses, with git's explanation as message
      */
-    public static List<String> squash(Path workTree, String sha) {
+    public static List<String> squash(Path workTree, Sha sha) {
         String parent = CliCheckout.run(workTree, "git", "rev-parse", sha + "^").strip();
-        String abbreviated = sha.substring(0, Math.min(7, sha.length()));
+        String abbreviated = sha.shortSha();
         Map<String, String> environment = Map.of(
                 "GIT_SEQUENCE_EDITOR", "sed -i -e 's/^pick " + abbreviated + "/squash " + abbreviated + "/'",
                 "GIT_EDITOR", "true");

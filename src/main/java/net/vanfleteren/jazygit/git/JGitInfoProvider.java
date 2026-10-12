@@ -186,9 +186,9 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
 
     private static Commit toCommit(RevCommit c) {
         PersonIdent author = c.getAuthorIdent();
-        return new Commit(c.name(), c.abbreviate(7).name(), author.getName(), author.getEmailAddress(),
+        return new Commit(new Sha(c.name()), author.getName(), author.getEmailAddress(),
                 author.getWhenAsInstant(), c.getShortMessage(), extendedMessage(c.getFullMessage()),
-                Arrays.stream(c.getParents()).map(RevCommit::name).toList());
+                Arrays.stream(c.getParents()).map(parent -> new Sha(parent.name())).toList());
     }
 
     /**
@@ -318,14 +318,14 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     }
 
     @Override
-    public List<String> reword(String sha, String summary, String description) {
-        return sha.equals(headOid())
+    public List<String> reword(Sha sha, String summary, String description) {
+        return sha.value().equals(headOid())
                 ? CliIndex.reword(workTree, summary, description)
                 : CliRebase.reword(workTree, sha, summary, description);
     }
 
     @Override
-    public List<String> squash(String sha) {
+    public List<String> squash(Sha sha) {
         return CliRebase.squash(workTree, sha);
     }
 
@@ -339,7 +339,7 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     }
 
     @Override
-    public String commitChanges(String sha) {
+    public String commitChanges(Sha sha) {
         return CliShow.changes(workTree, sha);
     }
 

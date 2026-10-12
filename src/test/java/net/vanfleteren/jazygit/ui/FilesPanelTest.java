@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -114,12 +116,12 @@ class FilesPanelTest {
         }
 
         @Override
-        public List<String> squash(String sha) {
+        public List<String> squash(Sha sha) {
             return List.of();
         }
 
         @Override
-        public List<String> reword(String sha, String summary, String description) {
+        public List<String> reword(Sha sha, String summary, String description) {
             throw new UnsupportedOperationException();
         }
 
@@ -144,7 +146,7 @@ class FilesPanelTest {
         }
 
         @Override
-        public String commitChanges(String sha) {
+        public String commitChanges(Sha sha) {
             throw new UnsupportedOperationException();
         }
 

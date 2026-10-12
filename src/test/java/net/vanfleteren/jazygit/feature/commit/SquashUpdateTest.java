@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import net.vanfleteren.jazygit.git.model.Commit;
@@ -25,7 +27,7 @@ class SquashUpdateTest {
     private static final Commit MERGE = commit("c4", List.of("c3", "x"));
 
     private static Commit commit(String sha, List<String> parents) {
-        return new Commit(sha, sha, "Ada", "ada@example.com", Instant.EPOCH, "Commit " + sha, "", parents);
+        return new Commit(new Sha(sha), "Ada", "ada@example.com", Instant.EPOCH, "Commit " + sha, "", parents.stream().map(Sha::new).toList());
     }
 
     private static Model withCommits(Commit... commits) {
@@ -69,7 +71,7 @@ class SquashUpdateTest {
 
         Next next = Update.update(open, new SquashMsg.Confirmed());
 
-        assertEquals(List.of(new CommitCmd.Squash("c3")), next.cmds());
+        assertEquals(List.of(new CommitCmd.Squash(new Sha("c3"))), next.cmds());
         assertEquals(Optional.empty(), next.model().popup(SquashPopup.class));
     }
 

@@ -32,23 +32,23 @@ public final class CommitGraph {
      * list are considered.
      */
     public static List<Commit> arrange(List<Commit> commits) {
-        Map<String, Commit> bySha = index(commits);
+        Map<Sha, Commit> bySha = index(commits);
         List<Commit> arranged = new ArrayList<>(commits.size());
-        Set<String> placed = new HashSet<>();
+        Set<Sha> placed = new HashSet<>();
         for (Commit commit : commits) {
             place(commit, commits, bySha, placed, arranged);
         }
         return arranged;
     }
 
-    private static void place(Commit commit, List<Commit> commits, Map<String, Commit> bySha, Set<String> placed,
+    private static void place(Commit commit, List<Commit> commits, Map<Sha, Commit> bySha, Set<Sha> placed,
                               List<Commit> arranged) {
         if (!placed.add(commit.sha())) {
             return;
         }
         arranged.add(commit);
         if (commit.isMerge()) {
-            Set<String> brought = broughtIn(commit, bySha);
+            Set<Sha> brought = broughtIn(commit, bySha);
             for (Commit candidate : commits) {
                 if (brought.contains(candidate.sha())) {
                     place(candidate, commits, bySha, placed, arranged);
@@ -61,10 +61,10 @@ public final class CommitGraph {
      * The nodes for commits in the order of {@link #arrange}.
      */
     public static List<Node> layout(List<Commit> arranged) {
-        Map<String, Commit> bySha = index(arranged);
+        Map<Sha, Commit> bySha = index(arranged);
         int[] depth = new int[arranged.size()];
         boolean[] closes = new boolean[arranged.size()];
-        Map<String, Integer> position = new HashMap<>();
+        Map<Sha, Integer> position = new HashMap<>();
         for (int i = 0; i < arranged.size(); i++) {
             position.put(arranged.get(i).sha(), i);
         }
@@ -73,7 +73,7 @@ public final class CommitGraph {
                 continue;
             }
             int last = -1;
-            for (String sha : broughtIn(merge, bySha)) {
+            for (Sha sha : broughtIn(merge, bySha)) {
                 int at = position.get(sha);
                 depth[at]++;
                 last = Math.max(last, at);
@@ -89,8 +89,8 @@ public final class CommitGraph {
         return nodes;
     }
 
-    private static Map<String, Commit> index(List<Commit> commits) {
-        Map<String, Commit> bySha = new HashMap<>();
+    private static Map<Sha, Commit> index(List<Commit> commits) {
+        Map<Sha, Commit> bySha = new HashMap<>();
         commits.forEach(c -> bySha.put(c.sha(), c));
         return bySha;
     }
@@ -99,18 +99,18 @@ public final class CommitGraph {
      * The shas of the commits in the list reachable from the other parents of {@code merge}, but not from
      * its first parent.
      */
-    private static Set<String> broughtIn(Commit merge, Map<String, Commit> bySha) {
-        Set<String> main = reachable(merge.parents().subList(0, 1), bySha);
-        Set<String> brought = reachable(merge.parents().subList(1, merge.parents().size()), bySha);
+    private static Set<Sha> broughtIn(Commit merge, Map<Sha, Commit> bySha) {
+        Set<Sha> main = reachable(merge.parents().subList(0, 1), bySha);
+        Set<Sha> brought = reachable(merge.parents().subList(1, merge.parents().size()), bySha);
         brought.removeAll(main);
         return brought;
     }
 
-    private static Set<String> reachable(List<String> from, Map<String, Commit> bySha) {
-        Set<String> seen = new HashSet<>();
-        ArrayDeque<String> todo = new ArrayDeque<>(from);
+    private static Set<Sha> reachable(List<Sha> from, Map<Sha, Commit> bySha) {
+        Set<Sha> seen = new HashSet<>();
+        ArrayDeque<Sha> todo = new ArrayDeque<>(from);
         while (!todo.isEmpty()) {
-            String sha = todo.pop();
+            Sha sha = todo.pop();
             Commit commit = bySha.get(sha);
             if (commit != null && seen.add(sha)) {
                 todo.addAll(commit.parents());

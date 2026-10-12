@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 
 import net.vanfleteren.jazygit.ui.RenderedText;
 
@@ -32,8 +34,8 @@ class SquashDialogTest {
     private final Model open = openModel();
 
     private static Model openModel() {
-        Commit below = new Commit("c1", "c1", "Ada", "ada@example.com", Instant.EPOCH, "Below", "");
-        Commit selected = new Commit("c2", "c2", "Ada", "ada@example.com", Instant.EPOCH, "Selected", "", List.of("c1"));
+        Commit below = new Commit(new Sha("c1"), "Ada", "ada@example.com", Instant.EPOCH, "Below", "");
+        Commit selected = new Commit(new Sha("c2"), "Ada", "ada@example.com", Instant.EPOCH, "Selected", "", List.of(new Sha("c1")));
         Model model = Update.update(TestModels.loaded(), new LoadMsg.CommitsLoaded(List.of(selected, below))).model();
         return Update.update(model, new SquashMsg.Requested(0)).model();
     }

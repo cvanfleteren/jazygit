@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
@@ -107,12 +109,12 @@ class PanePositionTest {
         }
 
         @Override
-        public List<String> squash(String sha) {
+        public List<String> squash(Sha sha) {
             return List.of();
         }
 
         @Override
-        public List<String> reword(String sha, String summary, String description) {
+        public List<String> reword(Sha sha, String summary, String description) {
             throw new UnsupportedOperationException();
         }
 
@@ -137,7 +139,7 @@ class PanePositionTest {
         }
 
         @Override
-        public String commitChanges(String sha) {
+        public String commitChanges(Sha sha) {
             throw new UnsupportedOperationException();
         }
 
@@ -151,9 +153,9 @@ class PanePositionTest {
             List.of(new FileEntry("net/vanfleteren/A.java", ChangeType.MODIFIED),
                     new FileEntry("net/vanfleteren/B.java", ChangeType.UNTRACKED)),
             List.of(new Branch("main", true, "aaaa"), new Branch("feature", false, "bbbb")),
-            List.of(new Commit("aaaa", "aaaa", "me", "me@example.com", Instant.EPOCH, "first", ""),
-                    new Commit("bbbb", "bbbb", "me", "me@example.com", Instant.EPOCH, "second", ""),
-                    new Commit("cccc", "cccc", "me", "me@example.com", Instant.EPOCH, "third", ""))));
+            List.of(new Commit(new Sha("aaaa"), "me", "me@example.com", Instant.EPOCH, "first", ""),
+                    new Commit(new Sha("bbbb"), "me", "me@example.com", Instant.EPOCH, "second", ""),
+                    new Commit(new Sha("cccc"), "me", "me@example.com", Instant.EPOCH, "third", ""))));
 
     @Test
     void branchesShowSelectedPositionAndFollowSelection() throws Exception {

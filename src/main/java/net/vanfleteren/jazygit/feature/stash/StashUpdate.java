@@ -87,7 +87,7 @@ public final class StashUpdate {
                 ? ""
                 : status.headOid().substring(0, Math.min(7, status.headOid().length()));
         String message = model.commits() instanceof Loaded<List<Commit>>(List<Commit> commits)
-                ? commits.stream().filter(c -> c.sha().equals(status.headOid())).map(Commit::message).findFirst().orElse("")
+                ? commits.stream().filter(c -> c.sha().value().equals(status.headOid())).map(Commit::message).findFirst().orElse("")
                 : "";
         return Stream.of(Messages.get("stash.defaultName", status.branchLabel()), sha, message)
                 .filter(part -> !part.isEmpty())

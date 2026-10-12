@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.stash;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 import net.vanfleteren.jazygit.feature.stash.StashCmd.Stash;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -66,12 +68,12 @@ class StashUpdateTest {
         Model open = Update.update(withChanges(), new StashMsg.Requested()).model();
         net.vanfleteren.jazygit.git.model.Commit head = ((net.vanfleteren.jazygit.state.Loadable.Loaded<
                 List<net.vanfleteren.jazygit.git.model.Commit>>) open.commits()).value().getFirst();
-        Model atHead = Update.update(open, new LoadMsg.StatusLoaded(new RepoStatus("main", head.sha(),
+        Model atHead = Update.update(open, new LoadMsg.StatusLoaded(new RepoStatus("main", head.sha().value(),
                 List.of(new FileEntry("a.txt", ChangeType.MODIFIED))))).model();
 
         Next next = Update.update(atHead, new StashMsg.Confirmed(" "));
 
-        assertEquals(List.of(new Stash("WIP on main " + head.sha().substring(0, Math.min(7, head.sha().length())) + " " + head.message())),
+        assertEquals(List.of(new Stash("WIP on main " + head.sha().shortSha() + " " + head.message())),
                 next.cmds());
     }
 

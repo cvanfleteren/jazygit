@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 import net.vanfleteren.jazygit.state.Update.Next;
 
 import net.vanfleteren.jazygit.state.LoadMsg.StatusLoaded;
@@ -58,7 +60,7 @@ public final class LoadUpdate {
             case BranchLogLoaded(String branch, var commits) ->
                     Next.of(updateBranchLog(model, branch, log -> log.reload(commits)));
             // Changes that arrive after another commit was highlighted are dropped.
-            case CommitDetailLoaded(String sha, String changes) ->
+            case CommitDetailLoaded(Sha sha, String changes) ->
                     Next.of(updateCommitDetail(finished(model, new LoadCommitDetail(sha)), sha, d -> d.reload(changes)));
             // A diff that arrives after another node was highlighted is dropped.
             case FileDiffLoaded(List<FileEntry> files, Diffs diff) ->
@@ -110,7 +112,7 @@ public final class LoadUpdate {
     /**
      * Applies {@code f} to the commit detail if it is the detail of {@code sha}.
      */
-    private static Model updateCommitDetail(Model model, String sha, UnaryOperator<CommitDetail> f) {
+    private static Model updateCommitDetail(Model model, Sha sha, UnaryOperator<CommitDetail> f) {
         return model.withCommitDetail(model.commitDetail().map(d -> d.sha().equals(sha) ? f.apply(d) : d));
     }
 
@@ -133,7 +135,7 @@ public final class LoadUpdate {
             case LoadBranches() -> model.withBranches(new Failed<>(message));
             case Cmd.LoadStashes() -> model.withStashes(new Failed<>(message));
             case LoadCommits() -> model.withCommits(new Failed<>(message));
-            case LoadCommitDetail(String sha) ->
+            case LoadCommitDetail(Sha sha) ->
                     updateCommitDetail(model, sha, d -> new CommitDetail(sha, new Failed<>(message)));
             case LoadFileDiff(List<FileEntry> files) ->
                     updateFileDiff(model, files, d -> new FileDiff(files, new Failed<>(message)));

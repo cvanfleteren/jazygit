@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 import java.util.List;
 
 /**
@@ -32,7 +34,7 @@ public interface GitCommits {
      * @param description the extended message; may be blank
      * @throws IllegalStateException if git fails, with git's explanation as message
      */
-    List<String> reword(String sha, String summary, String description);
+    List<String> reword(Sha sha, String summary, String description);
 
     /**
      * Squashes the commit {@code sha} into its parent, keeping both messages. This rebases the commits after
@@ -41,5 +43,5 @@ public interface GitCommits {
      * @param sha the full object id of a commit that has exactly one parent
      * @throws IllegalStateException if git fails, with git's explanation as message
      */
-    List<String> squash(String sha);
+    List<String> squash(Sha sha);
 }

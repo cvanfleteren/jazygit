@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Commit;
@@ -32,7 +34,7 @@ class CommitUpdateTest {
     }
 
     private static Commit commit(String message, String body) {
-        return new Commit("abc1234", "abc1234", "me", "me@example.com", Instant.EPOCH, message, body);
+        return new Commit(new Sha("abc1234"), "me", "me@example.com", Instant.EPOCH, message, body);
     }
 
     @Test
@@ -64,7 +66,7 @@ class CommitUpdateTest {
 
         Next next = Update.update(open, new RewordMsg.Confirmed(" better ", "\nwhy\n"));
 
-        assertEquals(List.of(new CommitCmd.Reword("abc1234", "better", "why")), next.cmds());
+        assertEquals(List.of(new CommitCmd.Reword(new Sha("abc1234"), "better", "why")), next.cmds());
         assertEquals(Optional.empty(), next.model().popup());
     }
 

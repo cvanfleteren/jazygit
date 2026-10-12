@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 
@@ -83,7 +85,7 @@ public interface Cmd {
         }
     }
 
-    record LoadCommitDetail(String sha) implements Load {
+    record LoadCommitDetail(Sha sha) implements Load {
 
         @Override
         public Msg run(GitInfoProvider git) {

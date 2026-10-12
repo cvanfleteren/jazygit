@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 import net.vanfleteren.jazygit.feature.commit.CommitPopup;
 import net.vanfleteren.jazygit.feature.commit.AmendPopup;
 
@@ -117,7 +119,7 @@ class ProgramTest {
         }
 
         private static Commit commit(String sha) {
-            return new Commit(sha, sha, "Ada", "ada@example.com", Instant.EPOCH, "msg", "");
+            return new Commit(new Sha(sha), "Ada", "ada@example.com", Instant.EPOCH, "msg", "");
         }
 
         @Override
@@ -177,12 +179,12 @@ class ProgramTest {
         }
 
         @Override
-        public List<String> squash(String sha) {
+        public List<String> squash(Sha sha) {
             return List.of("git squash");
         }
 
         @Override
-        public List<String> reword(String sha, String summary, String description) {
+        public List<String> reword(Sha sha, String summary, String description) {
             commits.add("reword " + summary + "|" + description);
             return List.of("git reword");
         }
@@ -215,7 +217,7 @@ class ProgramTest {
         }
 
         @Override
-        public String commitChanges(String sha) {
+        public String commitChanges(Sha sha) {
             return "changes of " + sha;
         }
 
@@ -294,7 +296,7 @@ class ProgramTest {
         Model model = program.model();
         assertEquals(new Loaded<>(provider.status), model.status());
         assertEquals(new Loaded<>(List.of(new Branch("main", false, "main-tip"), new Branch("other", true, "other-tip", Instant.EPOCH, true))), model.branches());
-        assertEquals("other-head", ((Loaded<List<Commit>>) model.commits()).value().get(0).shortSha());
+        assertEquals("other-head", ((Loaded<List<Commit>>) model.commits()).value().get(0).sha().value());
         assertEquals(Optional.empty(), model.error());
     }
 

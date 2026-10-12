@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.tui.event.KeyCode;
 import net.vanfleteren.jazygit.git.model.Commit;
@@ -20,19 +22,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CommitsPanelTest {
 
     private static Commit commit(String sha, String... parents) {
-        return new Commit(sha + "0000", sha, "Ada", "ada@example.com", Instant.EPOCH, "msg " + sha, "",
-                java.util.Arrays.stream(parents).map(p -> p + "0000").toList());
+        return new Commit(new Sha(sha + "0000"), "Ada", "ada@example.com", Instant.EPOCH, "msg " + sha, "",
+                java.util.Arrays.stream(parents).map(p -> new Sha(p + "0000")).toList());
     }
 
     @Test
     void mergesAreFollowedByTheirBranchWithRails() {
-        List<Commit> log = CommitGraph.arrange(List.of(commit("mmmmmmm", "bbbbbbb", "fffffff2"),
-                commit("fffffff2", "fffffff1"), commit("bbbbbbb", "aaaaaaa"), commit("fffffff1", "aaaaaaa"),
+        List<Commit> log = CommitGraph.arrange(List.of(commit("mmmmmmm", "bbbbbbb", "fffff02"),
+                commit("fffff02", "fffff01"), commit("bbbbbbb", "aaaaaaa"), commit("fffff01", "aaaaaaa"),
                 commit("aaaaaaa")));
 
         List<LoadableList.Row> rows = CommitsPanel.rows(CommitGraph.layout(log));
 
-        assertEquals(List.of("mmmmmmm Ad ◎─╮ msg mmmmmmm", "fffffff2 Ad │ ○ msg fffffff2", "fffffff1 Ad │ ○ msg fffffff1",
+        assertEquals(List.of("mmmmmmm Ad ◎─╮ msg mmmmmmm", "fffff02 Ad │ ○ msg fffff02", "fffff01 Ad │ ○ msg fffff01",
                 "bbbbbbb Ad ○─╯ msg bbbbbbb", "aaaaaaa Ad ○ msg aaaaaaa"), rows.stream().map(LoadableList.Row::text).toList());
     }
 

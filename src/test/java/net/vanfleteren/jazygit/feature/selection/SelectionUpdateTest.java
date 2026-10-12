@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.selection;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Diffs;
@@ -50,12 +52,12 @@ class SelectionUpdateTest {
 
     @Test
     void selectingACommitLoadsItsChangesOnce() {
-        Next next = Update.update(loaded(), new SelectionMsg.CommitSelected("aaaa"));
+        Next next = Update.update(loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa")));
 
-        assertEquals(Optional.of(new CommitDetail("aaaa", new Loading<>())), next.model().commitDetail());
-        assertEquals(List.of(new LoadCommitDetail("aaaa")), next.cmds());
+        assertEquals(Optional.of(new CommitDetail(new Sha("aaaa"), new Loading<>())), next.model().commitDetail());
+        assertEquals(List.of(new LoadCommitDetail(new Sha("aaaa"))), next.cmds());
 
-        Next again = Update.update(next.model(), new SelectionMsg.CommitSelected("aaaa"));
+        Next again = Update.update(next.model(), new SelectionMsg.CommitSelected(new Sha("aaaa")));
         assertSame(next.model(), again.model());
         assertEquals(List.of(), again.cmds());
     }
@@ -63,35 +65,35 @@ class SelectionUpdateTest {
     @Test
     void loadedChangesAreShownKeepingThePreviousOnesWhileTheNextCommitLoads() {
         Model first = Update.update(
-                Update.update(loaded(), new SelectionMsg.CommitSelected("aaaa")).model(),
-                new LoadMsg.CommitDetailLoaded("aaaa", "changes")).model();
-        CommitDetail firstDetail = new CommitDetail("aaaa", new Loaded<>("changes"));
+                Update.update(loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa"))).model(),
+                new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), "changes")).model();
+        CommitDetail firstDetail = new CommitDetail(new Sha("aaaa"), new Loaded<>("changes"));
         assertEquals(Optional.of(firstDetail), first.commitDetail());
 
-        Model second = Update.update(first, new SelectionMsg.CommitSelected("ffff")).model();
-        assertEquals(Optional.of(new CommitDetail("ffff", new Loading<>(), Optional.of(firstDetail))),
+        Model second = Update.update(first, new SelectionMsg.CommitSelected(new Sha("ffff"))).model();
+        assertEquals(Optional.of(new CommitDetail(new Sha("ffff"), new Loading<>(), Optional.of(firstDetail))),
                 second.commitDetail());
     }
 
     @Test
     void changesOfACommitThatIsNoLongerSelectedAreDropped() {
-        Model model = Update.update(loaded(), new SelectionMsg.CommitSelected("aaaa")).model();
-        model = Update.update(model, new SelectionMsg.CommitSelected("ffff")).model();
+        Model model = Update.update(loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa"))).model();
+        model = Update.update(model, new SelectionMsg.CommitSelected(new Sha("ffff"))).model();
 
         assertEquals(model.commitDetail(),
-                Update.update(model, new LoadMsg.CommitDetailLoaded("aaaa", "changes")).model().commitDetail());
+                Update.update(model, new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), "changes")).model().commitDetail());
         assertEquals(model.commitDetail(),
-                Update.update(model, new LoadMsg.Failed(new LoadCommitDetail("aaaa"), "boom")).model().commitDetail());
+                Update.update(model, new LoadMsg.Failed(new LoadCommitDetail(new Sha("aaaa")), "boom")).model().commitDetail());
     }
 
     @Test
     void failedChangesAreShownAndRetriedOnTheNextTick() {
         Model model = Update.update(
-                Update.update(loaded(), new SelectionMsg.CommitSelected("aaaa")).model(),
-                new LoadMsg.Failed(new LoadCommitDetail("aaaa"), "boom")).model();
-        assertEquals(Optional.of(new CommitDetail("aaaa", new Failed<>("boom"))), model.commitDetail());
+                Update.update(loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa"))).model(),
+                new LoadMsg.Failed(new LoadCommitDetail(new Sha("aaaa")), "boom")).model();
+        assertEquals(Optional.of(new CommitDetail(new Sha("aaaa"), new Failed<>("boom"))), model.commitDetail());
 
-        assertTrue(Update.update(model, new Tick()).cmds().contains(new LoadCommitDetail("aaaa")));
+        assertTrue(Update.update(model, new Tick()).cmds().contains(new LoadCommitDetail(new Sha("aaaa"))));
     }
 
     @Test

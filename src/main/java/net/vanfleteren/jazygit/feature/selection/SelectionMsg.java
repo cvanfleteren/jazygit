@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.selection;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Model;
 
@@ -26,7 +28,7 @@ public sealed interface SelectionMsg extends Msg {
     /**
      * The user highlighted a commit in the commits pane.
      */
-    record CommitSelected(String sha) implements SelectionMsg {
+    record CommitSelected(Sha sha) implements SelectionMsg {
     }
 
     /**

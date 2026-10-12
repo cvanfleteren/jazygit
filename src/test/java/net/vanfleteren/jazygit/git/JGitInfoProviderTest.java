@@ -379,7 +379,7 @@ class JGitInfoProviderTest {
     @Test
     void aFailingRebaseIsAbortedAndReported() throws Exception {
         GitCommandException e = assertThrows(GitCommandException.class,
-                () -> provider.reword("0123456789012345678901234567890123456789", "x", ""));
+                () -> provider.reword(new Sha("0123456789012345678901234567890123456789"), "x", ""));
 
         assertTrue(e.commands().getFirst().startsWith("git rev-list"), e.commands().toString());
         assertEquals("Initial commit", provider.commits().getFirst().message());

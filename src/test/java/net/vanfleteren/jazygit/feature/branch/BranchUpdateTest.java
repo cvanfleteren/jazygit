@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.Checkout;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.CheckoutWithStash;
@@ -156,7 +158,7 @@ class BranchUpdateTest {
 
     @Test
     void newBranchRequestedAtACommitOpensTheDialogWithItsSha() {
-        net.vanfleteren.jazygit.git.model.Commit commit = new net.vanfleteren.jazygit.git.model.Commit("abc1234567", "abc1234", "Ada",
+        net.vanfleteren.jazygit.git.model.Commit commit = new net.vanfleteren.jazygit.git.model.Commit(new Sha("abc1234567"), "Ada",
                 "a@e.com", java.time.Instant.EPOCH, "msg", "");
         Model model = Update.update(loaded(), new net.vanfleteren.jazygit.state.LoadMsg.CommitsLoaded(List.of(commit))).model();
 

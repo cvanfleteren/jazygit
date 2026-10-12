@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 import dev.tamboui.text.Span;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.StyledElement;
@@ -112,8 +114,8 @@ class ContentPanelTest {
     @Test
     void theCommitAreaCanBeFocusedOnceItShowsTheHighlightedCommitAndReturnsToTheCommitsPane() {
         Model selected = Update.update(
-                Update.update(TestModels.loaded(), new SelectionMsg.CommitSelected("aaaa")).model(),
-                new LoadMsg.CommitDetailLoaded("aaaa", "changes")).model();
+                Update.update(TestModels.loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa"))).model(),
+                new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), "changes")).model();
 
         // Rendering gives the area its content; the commits pane has the focus while doing so.
         ContentPanel.render(selected, CommitsPanel.ID, 0);
@@ -132,7 +134,7 @@ class ContentPanelTest {
 
     @Test
     void commitTextShowsTheHeaderTheMessageADividerAndTheChanges() {
-        Commit commit = new Commit("a1b2c3d4e5f6", "a1b2c3d", "Ada Lovelace", "ada@example.com",
+        Commit commit = new Commit(new Sha("a1b2c3d4e5f6"), "Ada Lovelace", "ada@example.com",
                 Instant.parse("2026-10-09T12:30:00Z"), "Subject", "More\ntext");
 
         List<String> lines = ContentPanel.commitText(commit, " a.txt | 1 +\n 1 file changed\n\n+added\n").lines().stream()
@@ -148,7 +150,7 @@ class ContentPanelTest {
 
     @Test
     void commitTextHasNoBlankLineWithoutAnExtendedMessage() {
-        Commit commit = new Commit("a1b2c3d4e5f6", "a1b2c3d", "Ada", "ada@example.com", Instant.EPOCH, "Subject", "");
+        Commit commit = new Commit(new Sha("a1b2c3d4e5f6"), "Ada", "ada@example.com", Instant.EPOCH, "Subject", "");
 
         List<String> lines = ContentPanel.commitText(commit, "x").lines().stream()
                 .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
@@ -165,7 +167,7 @@ class ContentPanelTest {
 
     @Test
     void logLinesShowTheExtendedMessageFollowedByABlankLine() {
-        Commit commit = new Commit("a1b2c3d", "a1b2c3d", "Ada Lovelace", "ada@example.com",
+        Commit commit = new Commit(new Sha("a1b2c3d"), "Ada Lovelace", "ada@example.com",
                 Instant.parse("2026-10-09T12:30:05Z"), "Add layout", "First detail\nSecond detail");
 
         assertEquals(List.of(
@@ -194,7 +196,7 @@ class ContentPanelTest {
     }
 
     private static Commit plain(String sha, String... parents) {
-        return new Commit(sha, sha, "Ada", "a@e.com", Instant.EPOCH, sha, "", List.of(parents));
+        return new Commit(new Sha(sha), "Ada", "a@e.com", Instant.EPOCH, sha, "", java.util.Arrays.stream(parents).map(Sha::new).toList());
     }
 
     private static Commit merge(String sha, String... parents) {
@@ -204,8 +206,8 @@ class ContentPanelTest {
     @Test
     void logLinesWithoutExtendedMessageEndAfterTheSubject() {
         List<Commit> commits = List.of(
-                new Commit("a1b2c3d", "a1b2c3d", "Ada", "ada@example.com", Instant.parse("2026-10-09T12:30:00Z"), "Second", ""),
-                new Commit("b2c3d4e", "b2c3d4e", "Ada", "ada@example.com", Instant.parse("2026-10-08T12:30:00Z"), "First", ""));
+                new Commit(new Sha("a1b2c3d"), "Ada", "ada@example.com", Instant.parse("2026-10-09T12:30:00Z"), "Second", ""),
+                new Commit(new Sha("b2c3d4e"), "Ada", "ada@example.com", Instant.parse("2026-10-08T12:30:00Z"), "First", ""));
 
         assertEquals(List.of(
                 "* commit a1b2c3d", "| Ada <ada@example.com>", "| 2026-10-09 12:30:00", "| ", "|     Second", "| ",

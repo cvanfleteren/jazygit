@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.selection;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg.FilesSelected;
 
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg.BranchSelected;
@@ -29,7 +31,7 @@ public final class SelectionUpdate {
     public static Next update(Model model, SelectionMsg msg) {
         return switch (msg) {
             case BranchSelected(String branch) -> branchSelected(model, branch);
-            case CommitSelected(String sha) -> commitSelected(model, sha);
+            case CommitSelected(Sha sha) -> commitSelected(model, sha);
             case FilesSelected(List<FileEntry> files) -> filesSelected(model, files);
         };
     }
@@ -42,7 +44,7 @@ public final class SelectionUpdate {
                 new LoadBranchLog(branch));
     }
 
-    private static Next commitSelected(Model model, String sha) {
+    private static Next commitSelected(Model model, Sha sha) {
         if (model.commitDetail().map(CommitDetail::sha).filter(sha::equals).isPresent()) {
             return Next.of(model);
         }

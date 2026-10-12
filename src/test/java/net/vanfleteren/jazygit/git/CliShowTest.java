@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.zeroturnaround.exec.ProcessExecutor;
@@ -32,7 +34,7 @@ class CliShowTest {
         git("add", "-A");
         git("commit", "-qm", "second", "-m", "body");
 
-        List<String> lines = CliShow.changes(repo, git("rev-parse", "HEAD").strip()).lines().toList();
+        List<String> lines = CliShow.changes(repo, new Sha(git("rev-parse", "HEAD").strip())).lines().toList();
 
         assertEquals(List.of(
                 " a.txt | 1 +",

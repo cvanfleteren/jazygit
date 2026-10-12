@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 import net.vanfleteren.jazygit.git.GitCommandException;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.state.Cmd;
@@ -83,7 +85,7 @@ public sealed interface CommitCmd extends Cmd {
     /**
      * Squashes a commit into its parent.
      */
-    record Squash(String sha) implements CommitCmd {
+    record Squash(Sha sha) implements CommitCmd {
 
         @Override
         public Optional<String> logTitleKey() {
@@ -104,7 +106,7 @@ public sealed interface CommitCmd extends Cmd {
     /**
      * Replaces the message of the last commit.
      */
-    record Reword(String sha, String summary, String description) implements CommitCmd {
+    record Reword(Sha sha, String summary, String description) implements CommitCmd {
 
         @Override
         public Optional<String> logTitleKey() {

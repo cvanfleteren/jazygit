@@ -101,7 +101,7 @@ public final class SampleData implements GitInfoProvider {
      */
     private static Commit commit(String sha, String author, String time, String message, String body) {
         int lt = author.indexOf(" <");
-        return new Commit(sha, sha, author.substring(0, lt), author.substring(lt + 2, author.length() - 1),
+        return new Commit(new Sha(sha), author.substring(0, lt), author.substring(lt + 2, author.length() - 1),
                 Instant.parse(time), message, body);
     }
 
@@ -169,17 +169,17 @@ public final class SampleData implements GitInfoProvider {
     }
 
     @Override
-    public List<String> squash(String sha) {
+    public List<String> squash(Sha sha) {
         return List.of("git squash");
     }
 
     @Override
-    public List<String> reword(String sha, String summary, String description) {
+    public List<String> reword(Sha sha, String summary, String description) {
         return List.of("git reword");
     }
 
     @Override
-    public String commitChanges(String sha) {
+    public String commitChanges(Sha sha) {
         return "1 file changed, 1 insertion(+)\n\ndiff --git a/" + sha + " b/" + sha + "\n";
     }
 

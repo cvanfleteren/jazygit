@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 import java.nio.file.Path;
 import java.util.List;
 
@@ -15,9 +17,9 @@ final class CliShow {
      * The changed files with their change counts, a summary line, a blank line and the diff, in one
      * git call however many files the commit touches. Long output is cut off.
      */
-    static String changes(Path workTree, String sha) {
+    static String changes(Path workTree, Sha sha) {
         return CliDiff.truncated(CliDiff.run(workTree,
                 List.of("show", "--format=", "--stat=1000", "--patch", "--no-color", "--no-ext-diff"),
-                List.of(sha)));
+                List.of(sha.value())));
     }
 }

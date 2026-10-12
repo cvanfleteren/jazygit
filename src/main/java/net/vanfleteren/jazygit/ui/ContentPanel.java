@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.BranchLog;
 import net.vanfleteren.jazygit.state.CommitDetail;
 import net.vanfleteren.jazygit.state.FileDiff;
@@ -278,7 +279,7 @@ public final class ContentPanel {
                         List<String> rows = new java.util.ArrayList<>();
                         rows.add(rails + "*   " + lines.getFirst());
                         rows.add(rails + "|\\  " + Messages.get("content.merge", c.parents().stream()
-                                .map(sha -> sha.substring(0, Math.min(7, sha.length()))).collect(Collectors.joining(" "))));
+                                .map(Sha::shortSha).collect(Collectors.joining(" "))));
                         lines.stream().skip(1).forEach(line -> rows.add(rails + "| | " + line));
                         return rows.stream();
                     }
@@ -320,7 +321,7 @@ public final class ContentPanel {
                         : panel(title, text(Placeholders.loading()).addClass(Theme.Classes.DIM)));
     }
 
-    private static Optional<Commit> commit(Model model, String sha) {
+    private static Optional<Commit> commit(Model model, Sha sha) {
         return model.commits() instanceof Loadable.Loaded<List<Commit>>(List<Commit> commits)
                 ? commits.stream().filter(c -> c.sha().equals(sha)).findFirst()
                 : Optional.empty();
@@ -339,7 +340,7 @@ public final class ContentPanel {
      */
     static Text commitText(Commit commit, String changes) {
         Stream<Line> header = Stream.of(
-                Line.from(Span.styled(Messages.get("content.commitSha", commit.sha()), Theme.spanStyle(Theme.Classes.SHA))),
+                Line.from(Span.styled(Messages.get("content.commitSha", commit.sha().value()), Theme.spanStyle(Theme.Classes.SHA))),
                 Line.from(Span.raw(Messages.get("content.commitAuthor", commit.authorName(), commit.authorEmail()))),
                 Line.from(Span.raw(Messages.get("content.commitDate", commitDate().format(
                         commit.authorTime().atZone(ZoneId.systemDefault()))))),

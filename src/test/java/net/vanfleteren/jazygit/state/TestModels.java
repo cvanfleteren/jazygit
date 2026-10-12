@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -25,9 +27,9 @@ public final class TestModels {
     public static final List<Branch> BRANCHES = List.of(new Branch("main", true, "aaaa"),
             new Branch("feature", false, "ffff"));
     public static final List<Commit> COMMITS = List.of(
-            new Commit("aaaa", "aaaa", "Ada", "ada@example.com", Instant.EPOCH, "First", ""));
+            new Commit(new Sha("aaaa"), "Ada", "ada@example.com", Instant.EPOCH, "First", ""));
     public static final List<Commit> FEATURE_COMMITS = List.of(
-            new Commit("ffff", "ffff", "Ada", "ada@example.com", Instant.EPOCH, "Feature", ""));
+            new Commit(new Sha("ffff"), "Ada", "ada@example.com", Instant.EPOCH, "Feature", ""));
 
     private TestModels() {
     }

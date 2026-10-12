@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
+import net.vanfleteren.jazygit.git.model.Sha;
+
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Diffs;
@@ -34,7 +36,7 @@ public sealed interface LoadMsg extends Msg {
     record BranchLogLoaded(String branch, List<Commit> commits) implements LoadMsg {
     }
 
-    record CommitDetailLoaded(String sha, String changes) implements LoadMsg {
+    record CommitDetailLoaded(Sha sha, String changes) implements LoadMsg {
     }
 
     record FileDiffLoaded(List<FileEntry> files, Diffs diff) implements LoadMsg {
