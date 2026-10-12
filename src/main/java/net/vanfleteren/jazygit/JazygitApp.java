@@ -17,6 +17,8 @@ import net.vanfleteren.jazygit.feature.branch.DeleteBranchPopup;
 import net.vanfleteren.jazygit.feature.branch.ForcePushDialog;
 import net.vanfleteren.jazygit.feature.branch.ForcePushPopup;
 import net.vanfleteren.jazygit.feature.branch.NewBranchDialog;
+import net.vanfleteren.jazygit.feature.branch.MergeDialog;
+import net.vanfleteren.jazygit.feature.branch.MergePopup;
 import net.vanfleteren.jazygit.feature.branch.RebaseDialog;
 import net.vanfleteren.jazygit.feature.branch.RebasePopup;
 import net.vanfleteren.jazygit.feature.branch.SetUpstreamDialog;
@@ -91,6 +93,7 @@ public class JazygitApp extends ToolkitApp {
     private final ChoiceDialog<DiscardPopup> discardDialog = DiscardDialog.create(msg -> this.program.dispatch(msg));
     private final ChoiceDialog<ThemePopup> themeDialog = ThemeDialog.create(msg -> this.program.dispatch(msg));
     private final ChoiceDialog<RebasePopup> rebaseDialog = RebaseDialog.create(msg -> this.program.dispatch(msg));
+    private final ChoiceDialog<MergePopup> mergeDialog = MergeDialog.create(msg -> this.program.dispatch(msg));
     private final ChoiceDialog<DeleteBranchPopup> deleteBranchDialog = DeleteBranchDialog.create(msg -> this.program.dispatch(msg));
     private final ConfirmDialog<ForcePushPopup> forcePushDialog = ForcePushDialog.create(msg -> this.program.dispatch(msg));
     private final SetUpstreamDialog setUpstreamDialog = new SetUpstreamDialog(msg -> this.program.dispatch(msg));
@@ -208,6 +211,7 @@ public class JazygitApp extends ToolkitApp {
                 new Popup(discardDialog.render(model), List.of(DiscardDialog.ID), FilesPanel.ID),
                 new Popup(themeDialog.render(model), List.of(ThemeDialog.ID), lastFocus),
                 new Popup(rebaseDialog.render(model), List.of(RebaseDialog.ID), BranchesPanel.ID),
+                new Popup(mergeDialog.render(model), List.of(MergeDialog.ID), BranchesPanel.ID),
                 new Popup(deleteBranchDialog.render(model), List.of(DeleteBranchDialog.ID), BranchesPanel.ID),
                 new Popup(forcePushDialog.render(model), List.of(ForcePushDialog.ID), BranchesPanel.ID),
                 new Popup(setUpstreamDialog.render(model), List.of(SetUpstreamDialog.ID), BranchesPanel.ID),

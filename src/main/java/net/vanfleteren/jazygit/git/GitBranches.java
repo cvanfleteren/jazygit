@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.git.GitError.CheckoutError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
+import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 
@@ -39,6 +40,12 @@ public interface GitBranches {
      * first, so a failure leaves the local branch in place.
      */
     Either<GitFailure<ProcessError>, List<String>> deleteBranch(String name, DeleteScope scope);
+
+    /**
+     * Merges {@code branch} into the checked out branch, as {@code mode} says. A merge that stops on conflicts
+     * is undone again, so the repository is left as it was.
+     */
+    Either<GitFailure<ProcessError>, List<String>> merge(String branch, MergeMode mode);
 
     /**
      * Rebases the checked out branch onto {@code onto}, bringing uncommitted changes along. When the rebase

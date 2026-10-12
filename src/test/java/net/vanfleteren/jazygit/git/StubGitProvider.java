@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
@@ -100,6 +101,11 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<GitFailure<ProcessError>, List<String>> deleteBranch(String name, DeleteScope scope) {
+        return ran();
+    }
+
+    @Override
+    default Either<GitFailure<ProcessError>, List<String>> merge(String branch, MergeMode mode) {
         return ran();
     }
 

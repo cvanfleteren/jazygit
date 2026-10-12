@@ -17,6 +17,7 @@ public final class BranchKeys {
                 Binding.<String>onSelected(" ", "help.branches.checkout", CheckoutMsg.Requested::new),
                 Binding.<String>onSelected("P", "help.branches.push", PushMsg.Requested::new),
                 Binding.<String>onSelected("n", "help.branches.new", NewBranchMsg.Requested::new),
+                Binding.<String>onSelected("m", "help.branches.merge", MergeMsg.Requested::new),
                 Binding.<String>onSelected("r", "help.branches.rebase", RebaseMsg.Requested::new),
                 Binding.<String>onSelected("d", "help.branches.delete", DeleteBranchMsg.Requested::new));
     }

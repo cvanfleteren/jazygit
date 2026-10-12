@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
@@ -144,6 +145,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     @Override
     public Either<GitFailure<ProcessError>, List<String>> pushSettingUpstream(String branch, RemoteBranch upstream) {
         return CliBranch.pushSettingUpstream(workTree, branch, upstream);
+    }
+
+    @Override
+    public Either<GitFailure<ProcessError>, List<String>> merge(String branch, MergeMode mode) {
+        return CliMerge.merge(workTree, branch, mode);
     }
 
     @Override

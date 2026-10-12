@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.branch;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
+import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.GitError;
@@ -51,6 +52,27 @@ public sealed interface BranchCmd extends Cmd {
         @Override
         public Msg failed(String message) {
             return new DeleteBranchMsg.Failed(branch, message);
+        }
+    }
+
+    /**
+     * Merges {@code branch} into the checked out branch.
+     */
+    record Merge(String branch, MergeMode mode) implements BranchCmd {
+
+        @Override
+        public Option<String> logTitleKey() {
+            return Option.of("log.title.merge");
+        }
+
+        @Override
+        public Msg run(GitInfoProvider git) {
+            return git.merge(branch, mode).fold(this::failedWith, executed -> new MergeMsg.Done(branch, executed));
+        }
+
+        @Override
+        public Msg failed(String message) {
+            return new MergeMsg.Failed(branch, message);
         }
     }
 
