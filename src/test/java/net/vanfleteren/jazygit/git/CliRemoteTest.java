@@ -35,10 +35,22 @@ class CliRemoteTest {
         git(clone, "push", "-q", "origin", "main");
         git(clone, "push", "-q", other.toString(), "main");
 
-        assertEquals(List.of("git fetch --all --quiet"), CliRemote.fetchAll(repo).get());
+        git(repo, "remote", "add", "skipped", dir.resolve("nowhere.git").toString());
+        git(repo, "config", "remote.skipped.skipFetchAll", "true");
+
+        List<String> remotes = CliRemote.remotes(repo).get();
+        assertEquals(List.of("origin", "other"), remotes);
+        assertEquals(List.of("git fetch --quiet origin"), CliRemote.fetch(repo, "origin").get());
+        assertEquals(List.of("git fetch --quiet other"), CliRemote.fetch(repo, "other").get());
 
         assertTrue(git(repo, "branch", "-r").contains("origin/main"));
         assertTrue(git(repo, "branch", "-r").contains("other/main"));
+    }
+
+    @Test
+    void remotesWithSkipFetchAllAreLeftOut() {
+        assertEquals(List.of("Mirror", "old"),
+                CliRemote.skipped("remote.Mirror.skipfetchall true\nremote.origin.skipfetchall false\nremote.old.skipfetchall true\n"));
     }
 
     @Test

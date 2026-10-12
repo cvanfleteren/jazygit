@@ -18,9 +18,18 @@ public sealed interface FetchMsg extends Msg {
     record Tick() implements FetchMsg {
     }
 
-    record Done(List<String> commands) implements FetchMsg {
+    /**
+     * The remotes to fetch from, in order.
+     */
+    record RemotesListed(List<String> remotes) implements FetchMsg {
     }
 
-    record Failed(String message) implements FetchMsg {
+    record ListingFailed(String message) implements FetchMsg {
+    }
+
+    record Fetched(String remote, List<String> commands) implements FetchMsg {
+    }
+
+    record FetchFailed(String remote, String message) implements FetchMsg {
     }
 }

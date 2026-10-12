@@ -141,9 +141,14 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<ProcessError>, List<String>> fetchAll() {
+        public Either<ProcessError, List<String>> remotes() {
+            return Either.right(List.of("origin", "upstream"));
+        }
+
+        @Override
+        public Either<GitFailure<ProcessError>, List<String>> fetch(String remote) {
             fetches++;
-            return StubGitProvider.ran("git fetch --all --quiet");
+            return StubGitProvider.ran("git fetch --quiet " + remote);
         }
 
         @Override
@@ -469,8 +474,8 @@ class ProgramTest {
         assertEquals(1, background.size());
         assertEquals(true, io.isEmpty());
         settle();
-        assertEquals(1, provider.fetches);
-        assertEquals(false, program.model().fetching());
+        assertEquals(2, provider.fetches);
+        assertEquals(Option.none(), program.model().fetching());
         // Not logged: it runs every few seconds.
         assertEquals(List.of(), program.model().commandLog());
     }

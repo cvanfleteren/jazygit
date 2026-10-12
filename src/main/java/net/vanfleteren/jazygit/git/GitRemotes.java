@@ -10,7 +10,12 @@ import net.vanfleteren.jazygit.git.GitError.ProcessError;
 public interface GitRemotes {
 
     /**
-     * Fetches from all remotes. It never asks for credentials or passphrases: what would need them fails.
+     * The remotes that fetching all fetches from: all of them but those with {@code skipFetchAll} set.
      */
-    Either<GitFailure<ProcessError>, List<String>> fetchAll();
+    Either<ProcessError, List<String>> remotes();
+
+    /**
+     * Fetches from {@code remote}. It never asks for credentials or passphrases: what would need them fails.
+     */
+    Either<GitFailure<ProcessError>, List<String>> fetch(String remote);
 }

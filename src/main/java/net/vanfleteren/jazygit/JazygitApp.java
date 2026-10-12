@@ -55,6 +55,7 @@ import net.vanfleteren.jazygit.ui.BranchesPanel;
 import net.vanfleteren.jazygit.ui.CommandLogPanel;
 import net.vanfleteren.jazygit.ui.CommitsPanel;
 import net.vanfleteren.jazygit.ui.ContentPanel;
+import net.vanfleteren.jazygit.ui.FetchLine;
 import net.vanfleteren.jazygit.ui.FilesPanel;
 import net.vanfleteren.jazygit.ui.StashPanel;
 import net.vanfleteren.jazygit.ui.StatusPanel;
@@ -85,7 +86,7 @@ public class JazygitApp extends ToolkitApp {
     // A border around a single blank line.
     private static final int MIN_STASH_HEIGHT = 3;
     private static final Duration REFRESH_INTERVAL = Duration.ofMillis(500);
-    private static final Duration FETCH_INTERVAL = Duration.ofSeconds(5);
+    private static final Duration FETCH_INTERVAL = Duration.ofMinutes(1);
 
     private final GitInfoProvider provider;
     private final FilesPanel filesPanel = new FilesPanel(msg -> this.program.dispatch(msg),
@@ -194,7 +195,7 @@ public class JazygitApp extends ToolkitApp {
         filesPanel.selectionChange(model).forEach(program::dispatch);
         Panel stash = stashPanel.render(model, focusedId);
         Option<Integer> stashHeight = stashHeight(model);
-        Element layout = row(
+        var panes = row(
                 column(
                         StatusPanel.render(model),
                         filesPanel.render(model, focusedId).percent(FILES_PERCENT),
@@ -211,6 +212,8 @@ public class JazygitApp extends ToolkitApp {
                                 .fill(),
                         CommandLogPanel.render(model).length(COMMAND_LOG_HEIGHT))
                         .fill());
+        // The fetch line keeps its row under the panes, also when nothing is fetched, so they do not move.
+        Element layout = column(panes.fill(), FetchLine.render(model).length(FetchLine.HEIGHT));
         // The open popup takes the focus, and gives it back to the pane it was opened from.
         model.popup(HelpPopup.class).map(HelpPopup::scopeId).forEach(scopeId -> helpOrigin = scopeId);
         List<Popup> popups = List.of(
@@ -257,7 +260,8 @@ public class JazygitApp extends ToolkitApp {
                 ? Math.max(1, stashes.size())
                 : 1;
         try {
-            int height = runner().tuiRunner().backend().size().height();
+            // The left column is the screen without the fetch line.
+            int height = runner().tuiRunner().backend().size().height() - FetchLine.HEIGHT;
             int share = height - StatusPanel.HEIGHT
                     - height * (FILES_PERCENT + BRANCHES_PERCENT + COMMITS_PERCENT) / 100;
             return Option.of(Math.max(MIN_STASH_HEIGHT, Math.min(rows + 2, share)));

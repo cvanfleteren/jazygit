@@ -80,10 +80,13 @@ Every 500 ms a `Msg.Tick` triggers `Update.refresh`, which re-reads the status, 
 That keeps the screen in sync with changes made outside the app. A periodic load is skipped while an
 equal one is still running: `Model.refreshing` holds the loads that are running.
 
-Every 5 seconds a `FetchMsg.Tick` runs `git fetch --all` in the background, unless the previous fetch is
-still running (`Model.fetching`). Its result reloads the branches. Neither its commands nor its failures are
-shown, since it also runs while offline. `ssh` runs with `BatchMode=yes` during the fetch, so it can't prompt
-for a passphrase on the terminal.
+Every minute a `FetchMsg.Tick` fetches from the remotes in the background, unless the previous fetch is
+still running. `FetchUpdate` lists the remotes (those `git fetch --all` would fetch) and fetches them one after
+the other with `git fetch <remote>`. `Model.fetching` holds the remote being fetched from, which the line at
+the bottom of the screen shows, and the remotes still queued. When the queue is empty, the branches reload.
+Neither the commands nor the failures are shown, since fetching also runs while offline, and a failing remote
+doesn't stop the others. `ssh` runs with `BatchMode=yes` during the fetch, so it can't prompt for a passphrase
+on the terminal.
 
 ## Core types
 

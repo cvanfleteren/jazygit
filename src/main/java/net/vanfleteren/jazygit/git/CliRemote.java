@@ -26,12 +26,45 @@ public final class CliRemote {
     }
 
     /**
-     * Runs {@code git fetch --all}. Whether deleted remote branches are pruned is left to git's own
+     * The remotes {@code git fetch --all} would fetch: all of them but those with {@code skipFetchAll} set.
+     */
+    public static Either<ProcessError, List<String>> remotes(Path workTree) {
+        return GitProcess.run(workTree, git("remote"))
+                .map(output -> List.ofAll(output.stdout().lines()).map(String::strip).filter(name -> !name.isEmpty()))
+                .flatMap(remotes -> skippedByFetchAll(workTree).map(skipped -> remotes.removeAll(skipped)))
+                .mapLeft(GitFailure::error);
+    }
+
+    /**
+     * The remotes with {@code remote.<name>.skipFetchAll} set to true.
+     */
+    private static Either<GitFailure<ProcessError>, List<String>> skippedByFetchAll(Path workTree) {
+        // git config --get-regexp exits with 1, saying nothing, when no key matches.
+        return GitProcess.run(workTree, git("config", "--bool", "--get-regexp", "^remote\\..*\\.skipfetchall$"))
+                .fold(failure -> failure.error() instanceof CommandFailed(String explanation, int exitCode)
+                                && exitCode == 1 && explanation.isEmpty()
+                                ? Either.right(List.empty())
+                                : Either.left(failure),
+                        output -> Either.right(skipped(output.stdout())));
+    }
+
+    /**
+     * Parses {@code remote.<name>.skipfetchall <true|false>} lines into the names set to true.
+     */
+    static List<String> skipped(String raw) {
+        return List.ofAll(raw.lines())
+                .map(line -> line.split(" ", 2))
+                .filter(fields -> fields.length == 2 && fields[1].strip().equals("true"))
+                .map(fields -> fields[0].substring("remote.".length(), fields[0].length() - ".skipfetchall".length()));
+    }
+
+    /**
+     * Runs {@code git fetch <remote>}. Whether deleted remote branches are pruned is left to git's own
      * {@code fetch.prune} configuration. Git's own prompts are already off; ssh would still ask for a
      * passphrase or about an unknown host on the terminal, so it runs in batch mode.
      */
-    public static Either<GitFailure<ProcessError>, List<String>> fetchAll(Path workTree) {
-        return configuredSsh(workTree).flatMap(ssh -> GitProcess.run(workTree, git("fetch", "--all", "--quiet")
+    public static Either<GitFailure<ProcessError>, List<String>> fetch(Path workTree, String remote) {
+        return configuredSsh(workTree).flatMap(ssh -> GitProcess.run(workTree, git("fetch", "--quiet", remote)
                         .withEnvironment(HashMap.of("GIT_SSH_COMMAND", batchMode(ssh)))
                         .withTimeout(FETCH_TIMEOUT))
                 .map(Output::log));
