@@ -14,7 +14,9 @@ import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Cancelled;
 
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.CreateBranch;
 
+import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.state.CommandLog;
+import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -32,6 +34,7 @@ public final class NewBranchUpdate {
     public static Next update(Model model, NewBranchMsg msg) {
         return switch (msg) {
             case Requested(String base) -> Next.of(model.openPopup(new NewBranchPopup(base)));
+            case NewBranchMsg.RequestedAtCommit(int index) -> atCommit(model, index);
             case Cancelled() -> Next.of(model.withoutPopup(NewBranchPopup.class));
             case Confirmed(String name) -> confirmed(model, name);
             // Like a checkout: status and branches show the new HEAD.
@@ -40,6 +43,12 @@ public final class NewBranchUpdate {
             case Failed(String name, String message) ->
                     Next.of(model.withError(Optional.of(Messages.get("error.newBranch.failed", name, message))));
         };
+    }
+
+    private static Next atCommit(Model model, int index) {
+        return model.commits() instanceof Loadable.Loaded<List<Commit>>(var commits) && index >= 0 && index < commits.size()
+                ? Next.of(model.openPopup(new NewBranchPopup(commits.get(index).sha(), commits.get(index).shortSha())))
+                : Next.of(model);
     }
 
     private static Next confirmed(Model model, String name) {

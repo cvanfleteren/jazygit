@@ -199,7 +199,7 @@ public class JazygitApp extends ToolkitApp {
         // The open popup takes the focus, and gives it back to the pane it was opened from.
         model.popup(HelpPopup.class).map(HelpPopup::scopeId).ifPresent(scopeId -> helpOrigin = scopeId);
         List<Popup> popups = List.of(
-                new Popup(newBranchDialog.render(model), List.of(NewBranchDialog.ID), BranchesPanel.ID),
+                new Popup(newBranchDialog.render(model), List.of(NewBranchDialog.ID), lastFocus),
                 new Popup(discardDialog.render(model), List.of(DiscardDialog.ID), FilesPanel.ID),
                 new Popup(themeDialog.render(model), List.of(ThemeDialog.ID), lastFocus),
                 new Popup(rebaseDialog.render(model), List.of(RebaseDialog.ID), BranchesPanel.ID),

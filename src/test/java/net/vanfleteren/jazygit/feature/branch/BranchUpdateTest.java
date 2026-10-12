@@ -155,6 +155,17 @@ class BranchUpdateTest {
     }
 
     @Test
+    void newBranchRequestedAtACommitOpensTheDialogWithItsSha() {
+        net.vanfleteren.jazygit.git.model.Commit commit = new net.vanfleteren.jazygit.git.model.Commit("abc1234567", "abc1234", "Ada",
+                "a@e.com", java.time.Instant.EPOCH, "msg", "");
+        Model model = Update.update(loaded(), new net.vanfleteren.jazygit.state.LoadMsg.CommitsLoaded(List.of(commit))).model();
+
+        assertEquals(Optional.of(new NewBranchPopup("abc1234567", "abc1234")),
+                Update.update(model, new NewBranchMsg.RequestedAtCommit(0)).model().popup());
+        assertEquals(Optional.empty(), Update.update(model, new NewBranchMsg.RequestedAtCommit(5)).model().popup());
+    }
+
+    @Test
     void confirmedNewBranchIsCreatedAtTheBase() {
         Model open = Update.update(loaded(), new NewBranchMsg.Requested("feature")).model();
 

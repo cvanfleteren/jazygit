@@ -19,6 +19,12 @@ public sealed interface NewBranchMsg extends Msg {
     record Requested(String base) implements NewBranchMsg {
     }
 
+    /**
+     * The user asked for a new branch starting at the commit at {@code index} in the commit log.
+     */
+    record RequestedAtCommit(int index) implements NewBranchMsg {
+    }
+
     record Cancelled() implements NewBranchMsg {
     }
 
