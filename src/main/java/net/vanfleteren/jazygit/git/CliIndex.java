@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.git;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import io.vavr.control.Try;
 import net.vanfleteren.jazygit.git.GitError.DeleteFailed;
 import net.vanfleteren.jazygit.git.GitError.DiscardError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
@@ -9,12 +10,10 @@ import net.vanfleteren.jazygit.git.GitError.RefusedPath;
 import net.vanfleteren.jazygit.git.GitProcess.Output;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.Comparator;
-import java.util.stream.Stream;
 
 import static net.vanfleteren.jazygit.git.GitCommand.git;
 
@@ -93,18 +92,14 @@ public final class CliIndex {
     }
 
     private static Either<DiscardError, Path> deleteTree(Path target, String path) {
-        try (Stream<Path> tree = Files.walk(target)) {
-            // Children before their directory.
-            for (Path p : tree.sorted(Comparator.reverseOrder()).toList()) {
-                Files.deleteIfExists(p);
-            }
-            return Either.right(target);
-        } catch (NoSuchFileException e) {
-            // Already gone.
-            return Either.right(target);
-        } catch (IOException e) {
-            return Either.left(new DeleteFailed(path, String.valueOf(e.getMessage())));
-        }
+        return Try.withResources(() -> Files.walk(target))
+                // Children before their directory.
+                .of(tree -> tree.sorted(Comparator.reverseOrder()).toList())
+                .flatMap(files -> Try.traverse(files, file -> Try.of(() -> Files.deleteIfExists(file))))
+                .map(deleted -> target)
+                .recover(NoSuchFileException.class, target) // already gone
+                .toEither()
+                .mapLeft(e -> new DeleteFailed(path, String.valueOf(e.getMessage())));
     }
 
     /**

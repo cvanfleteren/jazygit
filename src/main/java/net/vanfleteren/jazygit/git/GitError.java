@@ -42,6 +42,12 @@ public sealed interface GitError {
     }
 
     /**
+     * The failures of reading the log of a branch.
+     */
+    sealed interface LogError extends GitError {
+    }
+
+    /**
      * A failure that running any git command can have.
      */
     sealed interface ProcessError extends CheckoutError, RewordError, DiscardError, DiffError {
@@ -72,6 +78,18 @@ public sealed interface GitError {
      *                    printed nothing
      */
     record CommandFailed(String explanation, int exitCode) implements ProcessError {
+    }
+
+    /**
+     * The repository could not be read through JGit.
+     */
+    record RepositoryUnreadable(String reason) implements LogError, RewordError {
+    }
+
+    /**
+     * There is no local branch by that name.
+     */
+    record UnknownBranch(String branch) implements LogError {
     }
 
     /**

@@ -1,15 +1,21 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.CheckedFunction0;
+import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import io.vavr.control.Try;
 import net.vanfleteren.jazygit.git.GitError.DiscardError;
+import net.vanfleteren.jazygit.git.GitError.LogError;
+import net.vanfleteren.jazygit.git.GitError.RepositoryUnreadable;
+import net.vanfleteren.jazygit.git.GitError.RewordError;
+import net.vanfleteren.jazygit.git.GitError.UnknownBranch;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
 import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.BranchConfig;
 import org.eclipse.jgit.lib.BranchTrackingStatus;
 import org.eclipse.jgit.lib.Constants;
@@ -26,6 +32,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Comparator;
+import java.util.function.Function;
 
 /**
  * {@link GitInfoProvider} backed by a real repository. The working tree status comes from the
@@ -36,6 +43,7 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
 
     private static final int MAX_COMMITS = 300;
     private static final String DEFAULT_REMOTE = "origin";
+    private static final String ORIGIN = "refs/remotes/origin/";
 
     private final Repository repository;
     private final Git git;
@@ -92,37 +100,48 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
 
     @Override
     public List<Branch> branches() {
-        try {
+        return readOrThrow(readBranches());
+    }
+
+    // The checked out branch first, then the most recently committed to.
+    private static final Comparator<Branch> BRANCH_ORDER = Comparator.comparing(Branch::current).reversed()
+            .thenComparing(Comparator.comparing(Branch::tipTime).reversed())
+            .thenComparing(Branch::name);
+
+    /**
+     * A branch as read, with the ahead/behind counts it was given, if it has an upstream.
+     */
+    private record BranchRead(Branch branch, Option<Tracking> tracking) {
+    }
+
+    private Either<RepositoryUnreadable, List<Branch>> readBranches() {
+        return read(() -> {
+            List<Ref> refs = List.ofAll(git.branchList().call());
             String fullBranch = repository.getFullBranch();
-            Map<String, Integer> modified = commitTimes();
-            Option<String> defaultBranch = defaultBranch();
-            List<Branch> branches = List.empty();
-            Map<String, Tracking> tracking = HashMap.empty();
-            for (Ref ref : git.branchList().call()) {
-                String name = Repository.shortenRefName(ref.getName());
-                Option<Tracking> counts = tracking(name, ref.getObjectId().name());
-                if (counts.isDefined()) {
-                    tracking = tracking.put(name, counts.get());
-                }
-                branches = branches.append(new Branch(name,
-                        ref.getName().equals(fullBranch), ref.getObjectId().name(),
-                        Instant.ofEpochSecond(modified.apply(ref.getObjectId().name())),
-                        hasRemote(name),
-                        defaultBranch.equals(Option.of(name)),
-                        counts.map(Tracking::ahead).getOrElse(0),
-                        counts.map(Tracking::behind).getOrElse(0)));
+            Option<String> defaultBranch = defaultBranch(refs.map(ref -> Repository.shortenRefName(ref.getName())));
+            try (RevWalk walk = new RevWalk(repository)) {
+                return Try.traverse(refs, ref -> Try.of(() -> branchOf(walk, ref, fullBranch, defaultBranch)))
+                        .get()
+                        .toList();
             }
-            trackingCache = tracking;
-            // The checked out branch first, then the most recently committed to.
-            return branches
-                    .sorted(Comparator.comparing(Branch::current).reversed()
-                            .thenComparing(Comparator.comparingInt((Branch b) -> modified.apply(b.tipOid())).reversed())
-                            .thenComparing(Branch::name));
-        } catch (IOException e) {
-            throw new UncheckedIOException(Messages.get("git.readBranchesFailed"), e);
-        } catch (GitAPIException e) {
-            throw new IllegalStateException(Messages.get("git.readBranchesFailed"), e);
-        }
+        }).map(read -> {
+            trackingCache = read.flatMap(b -> b.tracking().map(t -> Tuple.of(b.branch().name(), t)))
+                    .toMap(Function.identity());
+            return read.map(BranchRead::branch).sorted(BRANCH_ORDER);
+        });
+    }
+
+    private BranchRead branchOf(RevWalk walk, Ref ref, String fullBranch, Option<String> defaultBranch)
+            throws IOException {
+        String name = Repository.shortenRefName(ref.getName());
+        String tip = ref.getObjectId().name();
+        Option<Tracking> tracking = tracking(name, tip);
+        return new BranchRead(new Branch(name, ref.getName().equals(fullBranch), tip,
+                Instant.ofEpochSecond(walk.parseCommit(ref.getObjectId()).getCommitTime()),
+                hasRemote(name),
+                defaultBranch.contains(name),
+                tracking.map(Tracking::ahead).getOrElse(0),
+                tracking.map(Tracking::behind).getOrElse(0)), tracking);
     }
 
     @Override
@@ -147,34 +166,34 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
 
     @Override
     public List<Commit> commits() {
-        try {
-            ObjectId head = repository.resolve(Constants.HEAD);
-            return head == null ? List.of() : CommitGraph.arrange(log(head));
-        } catch (IOException e) {
-            throw new UncheckedIOException(Messages.get("git.readLogFailed"), e);
-        }
+        return readOrThrow(head().flatMap(head -> head.fold(() -> Either.right(List.empty()), this::log)));
     }
 
     @Override
     public List<Commit> log(String branch) {
-        try {
-            ObjectId tip = repository.resolve(Constants.R_HEADS + branch);
-            if (tip == null) {
-                throw new IllegalStateException(Messages.get("git.unknownBranch", branch));
-            }
-            return CommitGraph.arrange(log(tip));
-        } catch (IOException e) {
-            throw new UncheckedIOException(Messages.get("git.readBranchLogFailed", branch), e);
-        }
+        return readOrThrow(readLog(branch));
     }
 
-    private List<Commit> log(ObjectId start) throws IOException {
-        try {
-            return List.ofAll(git.log().add(start).setMaxCount(MAX_COMMITS).call())
-                    .map(JGitInfoProvider::toCommit);
-        } catch (GitAPIException e) {
-            throw new IllegalStateException(Messages.get("git.readLogFailed"), e);
-        }
+    private Either<LogError, List<Commit>> readLog(String branch) {
+        return Either.<LogError, Option<ObjectId>>narrow(read(() -> Option.of(repository.resolve(Constants.R_HEADS + branch))))
+                .flatMap(tip -> tip.<LogError>toEither(() -> new UnknownBranch(branch)))
+                .flatMap(tip -> Either.narrow(log(tip)));
+    }
+
+    private Either<RepositoryUnreadable, List<Commit>> log(ObjectId start) {
+        return read(() -> CommitGraph.arrange(List.ofAll(git.log().add(start).setMaxCount(MAX_COMMITS).call())
+                .map(JGitInfoProvider::toCommit)));
+    }
+
+    private Either<RepositoryUnreadable, Option<ObjectId>> head() {
+        return read(() -> Option.of(repository.resolve(Constants.HEAD)));
+    }
+
+    /**
+     * Runs a read through JGit.
+     */
+    private static <T> Either<RepositoryUnreadable, T> read(CheckedFunction0<T> read) {
+        return Try.of(read).toEither().mapLeft(e -> new RepositoryUnreadable(String.valueOf(e.getMessage())));
     }
 
     private static Commit toCommit(RevCommit c) {
@@ -203,36 +222,16 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     }
 
     /**
-     * The commit time of the tip of every local branch, by object id.
-     */
-    private Map<String, Integer> commitTimes() throws IOException, GitAPIException {
-        Map<String, Integer> modified = HashMap.empty();
-        try (RevWalk walk = new RevWalk(repository)) {
-            for (Ref ref : git.branchList().call()) {
-                modified = modified.put(ref.getObjectId().name(), walk.parseCommit(ref.getObjectId()).getCommitTime());
-            }
-        }
-        return modified;
-    }
-
-    /**
      * The main branch: the one {@code origin/HEAD} points to, as set by a clone. Without it, the
-     * first of {@code main} and {@code master} that exists.
+     * first of {@code main} and {@code master} that is among {@code branches}.
      */
-    private Option<String> defaultBranch() throws IOException {
-        String prefix = "refs/remotes/origin/";
-        Ref head = repository.exactRef(prefix + "HEAD");
-        if (head != null && head.isSymbolic() && head.getTarget().getName().startsWith(prefix)) {
-            return Option.of(head.getTarget().getName().substring(prefix.length()));
-        }
-        return List.of("main", "master")
-                .find(name -> {
-                    try {
-                        return repository.exactRef("refs/heads/" + name) != null;
-                    } catch (IOException e) {
-                        throw new UncheckedIOException(e);
-                    }
-                });
+    private Option<String> defaultBranch(List<String> branches) throws IOException {
+        return Option.of(repository.exactRef(ORIGIN + "HEAD"))
+                .filter(Ref::isSymbolic)
+                .map(head -> head.getTarget().getName())
+                .filter(target -> target.startsWith(ORIGIN))
+                .map(target -> target.substring(ORIGIN.length()))
+                .orElse(() -> List.of("main", "master").find(branches::contains));
     }
 
     /**
@@ -323,21 +322,14 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
         return orThrow(CliIndex.amend(workTree));
     }
 
-    private String headOid() {
-        try {
-            ObjectId head = repository.resolve(Constants.HEAD);
-            return head == null ? "" : head.name();
-        } catch (IOException e) {
-            throw new UncheckedIOException(Messages.get("git.readLogFailed"), e);
-        }
-    }
-
     @Override
     public List<String> reword(Sha sha, String summary, String description) {
         CommitMessage message = new CommitMessage(summary, description);
-        return sha.value().equals(headOid())
-                ? orThrow(CliIndex.reword(workTree, message))
-                : orThrow(CliRebase.reword(workTree, sha, message));
+        return orThrow(head()
+                .mapLeft(error -> new GitFailure<RewordError>(error, List.empty()))
+                .flatMap(head -> head.exists(id -> id.name().equals(sha.value()))
+                        ? GitFailure.widen(CliIndex.reword(workTree, message))
+                        : CliRebase.reword(workTree, sha, message)));
     }
 
     @Override

@@ -1,8 +1,10 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.TreeMap;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Conflict;
@@ -20,6 +22,8 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
 public final class CliStatus {
 
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
+    private static final String HEAD = "# branch.head ";
+    private static final String OID = "# branch.oid ";
 
     private CliStatus() {
     }
@@ -38,72 +42,77 @@ public final class CliStatus {
      * Parses the output of {@code git status --porcelain=v2 --branch -z}.
      */
     static RepoStatus parse(String raw) {
-        String head = "";
-        String oid = "";
-        Map<String, FileEntry> byPath = TreeMap.empty();
-        String[] fields = raw.split("\0");
-        for (int i = 0; i < fields.length; i++) {
-            String field = fields[i];
-            if (field.isEmpty()) {
-                continue;
-            }
-            switch (field.charAt(0)) {
-                case '#' -> {
-                    if (field.startsWith("# branch.head ")) {
-                        head = field.substring("# branch.head ".length());
-                    } else if (field.startsWith("# branch.oid ")) {
-                        oid = field.substring("# branch.oid ".length());
-                    }
-                }
-                case '?' -> byPath = put(byPath, new FileEntry(field.substring(2), ChangeType.UNTRACKED, false, true));
-                // 1 XY sub mH mI mW hH hI path
-                case '1' -> {
-                    String xy = field.substring(2, 4);
-                    byPath = put(byPath, new FileEntry(pathAfter(field, 8), ordinaryChange(xy),
-                            xy.charAt(0) != '.', xy.charAt(1) != '.'));
-                }
-                // 2 XY sub mH mI mW hH hI Xscore path, followed by the original path as its own field
-                case '2' -> {
-                    String xy = field.substring(2, 4);
-                    boolean staged = xy.charAt(0) != '.';
-                    boolean unstaged = xy.charAt(1) != '.';
-                    byPath = put(byPath, new FileEntry(pathAfter(field, 9), ChangeType.ADDED, staged, unstaged));
-                    if (i + 1 < fields.length) {
-                        byPath = put(byPath, new FileEntry(fields[++i], ChangeType.DELETED, staged, unstaged));
-                    }
-                }
-                // u XY sub m1 m2 m3 mW h1 h2 h3 path
-                case 'u' -> byPath = put(byPath, FileEntry.conflicted(pathAfter(field, 10), Conflict.of(field.substring(2, 4))));
-                default -> {
-                    // Ignored entries ('!') and anything unknown are not shown.
-                }
-            }
-        }
-        return new RepoStatus(head, oid, byPath.values().toList());
-    }
-
-    private static Map<String, FileEntry> put(Map<String, FileEntry> byPath, FileEntry entry) {
-        return byPath.put(entry.path(), entry);
-    }
-
-    private static ChangeType ordinaryChange(String xy) {
-        if (xy.indexOf('D') >= 0) {
-            return ChangeType.DELETED;
-        }
-        if (xy.charAt(0) == 'A') {
-            return ChangeType.ADDED;
-        }
-        return ChangeType.MODIFIED;
+        Parsed parsed = List.of(raw.split("\0")).foldLeft(Parsed.NOTHING, CliStatus::next);
+        return new RepoStatus(parsed.head(), parsed.oid(), parsed.byPath().values().toList());
     }
 
     /**
-     * Returns everything after the first {@code spaces} space-separated fields; paths may contain spaces.
+     * What was parsed so far.
+     *
+     * @param origin for the rename just parsed, the staged and unstaged flags of its original path,
+     *               which is the next field
      */
-    private static String pathAfter(String field, int spaces) {
-        int index = 0;
-        for (int n = 0; n < spaces; n++) {
-            index = field.indexOf(' ', index) + 1;
+    private record Parsed(String head, String oid, Map<String, FileEntry> byPath, Option<FileEntry> origin) {
+
+        static final Parsed NOTHING = new Parsed("", "", TreeMap.empty(), Option.none());
+
+        Parsed with(FileEntry entry) {
+            return new Parsed(head, oid, byPath.put(entry.path(), entry), Option.none());
         }
-        return field.substring(index);
+
+        Parsed expectingOrigin(FileEntry flags) {
+            return new Parsed(head, oid, byPath, Option.of(flags));
+        }
+    }
+
+    private static Parsed next(Parsed parsed, String field) {
+        return parsed.origin()
+                .map(flags -> parsed.with(new FileEntry(field, ChangeType.DELETED, flags.staged(), flags.unstaged())))
+                .getOrElse(() -> field.isEmpty() ? parsed : entry(parsed, field));
+    }
+
+    private static Parsed entry(Parsed parsed, String field) {
+        return switch (field.charAt(0)) {
+            case '#' -> header(parsed, field);
+            case '?' -> parsed.with(new FileEntry(field.substring(2), ChangeType.UNTRACKED, false, true));
+            // 1 XY sub mH mI mW hH hI path
+            case '1' -> parsed.with(changed(pathAfter(field, 8), ordinaryChange(xy(field)), xy(field)));
+            // 2 XY sub mH mI mW hH hI Xscore path, followed by the original path as its own field
+            case '2' -> {
+                FileEntry renamed = changed(pathAfter(field, 9), ChangeType.ADDED, xy(field));
+                yield parsed.with(renamed).expectingOrigin(renamed);
+            }
+            // u XY sub m1 m2 m3 mW h1 h2 h3 path
+            case 'u' -> parsed.with(FileEntry.conflicted(pathAfter(field, 10), Conflict.of(xy(field))));
+            // Ignored entries ('!') and anything unknown are not shown.
+            default -> parsed;
+        };
+    }
+
+    private static Parsed header(Parsed parsed, String field) {
+        return field.startsWith(HEAD) ? new Parsed(field.substring(HEAD.length()), parsed.oid(), parsed.byPath(), parsed.origin())
+                : field.startsWith(OID) ? new Parsed(parsed.head(), field.substring(OID.length()), parsed.byPath(), parsed.origin())
+                : parsed;
+    }
+
+    private static String xy(String field) {
+        return field.substring(2, 4);
+    }
+
+    private static FileEntry changed(String path, ChangeType type, String xy) {
+        return new FileEntry(path, type, xy.charAt(0) != '.', xy.charAt(1) != '.');
+    }
+
+    private static ChangeType ordinaryChange(String xy) {
+        return xy.indexOf('D') >= 0 ? ChangeType.DELETED
+                : xy.charAt(0) == 'A' ? ChangeType.ADDED
+                : ChangeType.MODIFIED;
+    }
+
+    /**
+     * Everything after the first {@code fields} space-separated fields; paths may contain spaces.
+     */
+    private static String pathAfter(String field, int fields) {
+        return field.split(" ", fields + 1)[fields];
     }
 }

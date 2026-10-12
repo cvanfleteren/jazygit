@@ -18,6 +18,8 @@ public final class GitErrorText {
             case GitError.CommandFailed(String explanation, int exitCode) -> explanation.isEmpty()
                     ? Messages.get("git.exitedWithCode", String.valueOf(exitCode))
                     : explanation;
+            case GitError.RepositoryUnreadable(String reason) -> Messages.get("git.repositoryUnreadable", reason);
+            case GitError.UnknownBranch(String branch) -> Messages.get("git.unknownBranch", branch);
             case GitError.LocalChanges(String explanation) -> explanation;
             case GitError.StashNotRestored(var cause) -> Messages.get("git.stashPopFailed", of(cause));
             case GitError.TempFileFailed(String reason) -> Messages.get("git.tempFileFailed", reason);

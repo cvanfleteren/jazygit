@@ -1,10 +1,10 @@
 package net.vanfleteren.jazygit.git.model;
 
 import io.vavr.collection.HashSet;
+import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
-import io.vavr.control.Option;
 
 /**
  * Lays out a commit log with its merges: the commits a merge brought in follow it, so they can be shown
@@ -88,17 +88,23 @@ public final class CommitGraph {
     }
 
     private static Set<Sha> reachable(List<Sha> from, Map<Sha, Commit> bySha) {
-        Set<Sha> seen = HashSet.empty();
-        List<Sha> todo = from;
-        while (!todo.isEmpty()) {
+        return Iterator.iterate(new Walk(from, HashSet.empty()), walk -> walk.step(bySha))
+                .find(walk -> walk.todo().isEmpty())
+                .get()
+                .seen();
+    }
+
+    /**
+     * A depth-first walk through the parents: the shas still to visit, and those visited.
+     */
+    private record Walk(List<Sha> todo, Set<Sha> seen) {
+
+        Walk step(Map<Sha, Commit> bySha) {
             Sha sha = todo.head();
-            todo = todo.tail();
-            Option<Commit> commit = bySha.get(sha);
-            if (commit.isDefined() && !seen.contains(sha)) {
-                seen = seen.add(sha);
-                todo = todo.prependAll(commit.get().parents());
-            }
+            return bySha.get(sha)
+                    .filter(commit -> !seen.contains(sha))
+                    .map(commit -> new Walk(todo.tail().prependAll(commit.parents()), seen.add(sha)))
+                    .getOrElse(() -> new Walk(todo.tail(), seen));
         }
-        return seen;
     }
 }
