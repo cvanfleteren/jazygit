@@ -12,9 +12,6 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.Update;
 
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 /**
  * Stashing the changes, and unstashing them again.
  */
@@ -89,8 +86,8 @@ public final class StashUpdate {
         String message = model.commits() instanceof Loaded<List<Commit>>(List<Commit> commits)
                 ? commits.find(c -> c.sha().value().equals(status.headOid())).map(Commit::message).getOrElse("")
                 : "";
-        return Stream.of(Messages.get("stash.defaultName", status.branchLabel()), sha, message)
+        return List.of(Messages.get("stash.defaultName", status.branchLabel()), sha, message)
                 .filter(part -> !part.isEmpty())
-                .collect(Collectors.joining(" "));
+                .mkString(" ");
     }
 }
