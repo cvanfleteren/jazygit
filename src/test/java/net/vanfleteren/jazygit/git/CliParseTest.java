@@ -26,10 +26,11 @@ class CliParseTest {
 
     @Test
     void branchesKnowTheirUpstreamRemoteAndWhetherTheyAreTheDefault() {
-        String raw = ref("refs/heads/feature", B, "200", " ", "origin/feature", "[ahead 1, behind 2]", "origin", "")
-                + ref("refs/heads/gone", B, "100", " ", "origin/gone", "[gone]", "origin", "")
-                + ref("refs/heads/trunk", A, "300", "*", "origin/trunk", "", "origin", "")
-                + ref("refs/remotes/origin/HEAD", A, "300", " ", "", "", "", "refs/remotes/origin/trunk")
+        String raw = ref("refs/heads/feature", B, "200", " ", "origin/feature", "[ahead 1, behind 2]", "",
+                "refs/remotes/origin/feature")
+                + ref("refs/heads/gone", B, "100", " ", "origin/gone", "[gone]", "", "refs/remotes/origin/gone")
+                + ref("refs/heads/trunk", A, "300", "*", "origin/trunk", "", "", "refs/remotes/origin/trunk")
+                + ref("refs/remotes/origin/HEAD", A, "300", " ", "", "", "refs/remotes/origin/trunk", "")
                 + ref("refs/remotes/origin/feature", B, "200", " ", "", "", "", "")
                 + ref("refs/remotes/origin/trunk", A, "300", " ", "", "", "", "");
 
@@ -40,6 +41,14 @@ class CliParseTest {
                                 Option.of(new Upstream("origin/feature", 1, 2))),
                         new Branch("gone", false, new Sha(B), Instant.ofEpochSecond(100), false, false, Option.none())),
                 CliBranches.parse(raw));
+    }
+
+    @Test
+    void aBranchIsOnItsRemoteWhenItsUpstreamIsEvenUnderAnotherName() {
+        String raw = ref("refs/heads/local", A, "1", "*", "origin/elsewhere", "", "", "refs/remotes/origin/elsewhere")
+                + ref("refs/remotes/origin/elsewhere", A, "1", " ", "", "", "", "");
+
+        assertEquals(List.of(true), CliBranches.parse(raw).map(Branch::hasRemote));
     }
 
     @Test

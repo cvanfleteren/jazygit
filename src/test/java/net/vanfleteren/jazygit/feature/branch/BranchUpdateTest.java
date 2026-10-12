@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.Upstream;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.Checkout;
@@ -91,9 +92,56 @@ class BranchUpdateTest {
         assertEquals(List.of(), Update.update(Update.init("repo").model(), new CheckoutMsg.Requested("feature")).cmds());
     }
 
+    /**
+     * The loaded model, with feature tracking origin/feature.
+     */
+    private static Model tracking() {
+        return Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(
+                new Branch("main", true, new Sha("aaaa")),
+                new Branch("feature", false, new Sha("ffff"), Instant.EPOCH, true, false,
+                        Option.of(new Upstream("origin/feature", 0, 0)))))).model();
+    }
+
+    @Test
+    void pushRequestOfABranchWithoutUpstreamAsksWhereToPushIt() {
+        Next asked = Update.update(withError(loaded(), "boom"), new PushMsg.Requested("feature"));
+
+        assertEquals(List.of(), asked.cmds());
+        assertEquals(Option.of(new SetUpstreamPopup("feature")), asked.model().popup());
+        assertEquals(Option.none(), asked.model().error());
+        assertEquals(io.vavr.collection.HashSet.empty(), asked.model().pushing());
+
+        Next confirmed = Update.update(asked.model(), new PushMsg.UpstreamConfirmed("  upstream   shared/feature "));
+        assertEquals(List.of(new BranchCmd.PushSettingUpstream("feature", new RemoteBranch("upstream", "shared/feature"))),
+                confirmed.cmds());
+        assertEquals(Option.none(), confirmed.model().popup());
+        assertEquals(io.vavr.collection.HashSet.of("feature"), confirmed.model().pushing());
+
+        Next cancelled = Update.update(asked.model(), new PushMsg.UpstreamCancelled());
+        assertEquals(List.of(), cancelled.cmds());
+        assertEquals(Option.none(), cancelled.model().popup());
+    }
+
+    @Test
+    void anUpstreamThatIsNotARemoteAndABranchKeepsTheDialogOpen() {
+        Model asked = Update.update(loaded(), new PushMsg.Requested("feature")).model();
+
+        for (String text : List.of("", "origin", "origin feature extra")) {
+            Next next = Update.update(asked, new PushMsg.UpstreamConfirmed(text));
+            assertEquals(List.of(), next.cmds());
+            assertEquals(Option.of(new SetUpstreamPopup("feature")), next.model().popup());
+            assertEquals(true, next.model().error().isDefined());
+        }
+    }
+
+    @Test
+    void confirmingAnUpstreamWithoutTheDialogDoesNothing() {
+        assertEquals(List.of(), Update.update(loaded(), new PushMsg.UpstreamConfirmed("origin feature")).cmds());
+    }
+
     @Test
     void pushRequestOfAKnownBranchPushesIt() {
-        Model failedBefore = Update.update(loaded(), new PushMsg.Failed("feature", "boom")).model();
+        Model failedBefore = Update.update(tracking(), new PushMsg.Failed("feature", "boom")).model();
 
         Next next = Update.update(failedBefore, new PushMsg.Requested("feature"));
 

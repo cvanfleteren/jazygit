@@ -28,7 +28,7 @@ public final class CliBranches {
     private static final String REMOTES = "refs/remotes/";
     private static final String ORIGIN = REMOTES + DEFAULT_REMOTE + "/";
     private static final String FORMAT = List.of("%(refname)", "%(objectname)", "%(committerdate:unix)", "%(HEAD)",
-            "%(upstream:short)", "%(upstream:track)", "%(upstream:remotename)", "%(symref)").mkString("%1f");
+            "%(upstream:short)", "%(upstream:track)", "%(symref)", "%(upstream)").mkString("%1f");
     private static final Pattern AHEAD = Pattern.compile("ahead (\\d+)");
     private static final Pattern BEHIND = Pattern.compile("behind (\\d+)");
     // The checked out branch first, then the most recently committed to.
@@ -54,11 +54,12 @@ public final class CliBranches {
      * @param upstream   the short name of the upstream, e.g. {@code origin/main}; empty without one
      * @param track      how far the branch is from its upstream, e.g. {@code [ahead 1, behind 2]}; empty when
      *                   they are equal, {@code [gone]} when the upstream does not exist
-     * @param remoteName the remote of the upstream; empty without one
      * @param symref     what a symbolic ref points to, e.g. {@code refs/remotes/origin/main}
+     * @param upstreamRef the remote-tracking ref of the upstream, e.g. {@code refs/remotes/origin/main}; empty
+     *                    without one
      */
     private record Ref(String name, Sha tip, Instant time, boolean head, String upstream, String track,
-                       String remoteName, String symref) {
+                       String symref, String upstreamRef) {
 
         static Ref parse(String line) {
             String[] f = line.split(SEPARATOR, -1);
@@ -71,10 +72,11 @@ public final class CliBranches {
         }
 
         /**
-         * The remote the branch is pushed to: the one of its upstream, or {@code origin}.
+         * The remote-tracking ref of the branch it is pushed to: its upstream, or the one of the same name
+         * on {@code origin}.
          */
-        String remote() {
-            return remoteName.isEmpty() ? DEFAULT_REMOTE : remoteName;
+        String pushedTo() {
+            return upstreamRef.isEmpty() ? REMOTES + DEFAULT_REMOTE + "/" + shortName() : upstreamRef;
         }
     }
 
@@ -85,7 +87,7 @@ public final class CliBranches {
         Option<String> defaultBranch = defaultBranch(refs, local.map(Ref::shortName));
         return local
                 .map(ref -> new Branch(ref.shortName(), ref.head(), ref.tip(), ref.time(),
-                        remote.contains(REMOTES + ref.remote() + "/" + ref.shortName()),
+                        remote.contains(ref.pushedTo()),
                         defaultBranch.contains(ref.shortName()),
                         upstream(ref)))
                 .sorted(ORDER);

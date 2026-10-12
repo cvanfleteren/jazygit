@@ -21,6 +21,15 @@ public sealed interface PushMsg extends Msg {
     record ForceCancelled() implements PushMsg {
     }
 
+    record UpstreamCancelled() implements PushMsg {
+    }
+
+    /**
+     * The user entered the upstream of a branch without one, as {@code <remote> <branch>}.
+     */
+    record UpstreamConfirmed(String upstream) implements PushMsg {
+    }
+
     /**
      * The user confirmed overwriting the diverged remote branch.
      */

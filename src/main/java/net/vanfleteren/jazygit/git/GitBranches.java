@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.PushMode;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 
 /**
  * Operations on branches. Each returns the command lines it ran, or why it failed together with the
@@ -46,8 +47,14 @@ public interface GitBranches {
     Either<GitFailure<ProcessError>, List<String>> rebase(String onto);
 
     /**
-     * Pushes the local branch {@code branch} to its remote, setting that as the upstream when the
-     * branch has none yet.
+     * Pushes the local branch {@code branch} to its upstream. A branch without one is pushed to the
+     * branch of the same name on {@code origin}, which becomes its upstream.
      */
     Either<GitFailure<ProcessError>, List<String>> push(String branch, PushMode mode);
+
+    /**
+     * Pushes the local branch {@code branch} to {@code upstream}, which becomes its upstream once the push
+     * succeeded.
+     */
+    Either<GitFailure<ProcessError>, List<String>> pushSettingUpstream(String branch, RemoteBranch upstream);
 }

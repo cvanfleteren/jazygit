@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.feature.branch.ForcePushPopup;
 import net.vanfleteren.jazygit.feature.branch.NewBranchDialog;
 import net.vanfleteren.jazygit.feature.branch.RebaseDialog;
 import net.vanfleteren.jazygit.feature.branch.RebasePopup;
+import net.vanfleteren.jazygit.feature.branch.SetUpstreamDialog;
 import net.vanfleteren.jazygit.feature.branch.StashCheckoutDialog;
 import net.vanfleteren.jazygit.feature.branch.StashCheckoutPopup;
 import net.vanfleteren.jazygit.feature.commit.AmendDialog;
@@ -92,6 +93,7 @@ public class JazygitApp extends ToolkitApp {
     private final ChoiceDialog<RebasePopup> rebaseDialog = RebaseDialog.create(msg -> this.program.dispatch(msg));
     private final ChoiceDialog<DeleteBranchPopup> deleteBranchDialog = DeleteBranchDialog.create(msg -> this.program.dispatch(msg));
     private final ConfirmDialog<ForcePushPopup> forcePushDialog = ForcePushDialog.create(msg -> this.program.dispatch(msg));
+    private final SetUpstreamDialog setUpstreamDialog = new SetUpstreamDialog(msg -> this.program.dispatch(msg));
     private final ConfirmDialog<StashCheckoutPopup> stashCheckoutDialog = StashCheckoutDialog.create(msg -> this.program.dispatch(msg));
     private final ConfirmDialog<AmendPopup> amendDialog = AmendDialog.create(msg -> this.program.dispatch(msg));
     private final ConfirmDialog<SquashPopup> squashDialog = SquashDialog.create(msg -> this.program.dispatch(msg));
@@ -208,6 +210,7 @@ public class JazygitApp extends ToolkitApp {
                 new Popup(rebaseDialog.render(model), List.of(RebaseDialog.ID), BranchesPanel.ID),
                 new Popup(deleteBranchDialog.render(model), List.of(DeleteBranchDialog.ID), BranchesPanel.ID),
                 new Popup(forcePushDialog.render(model), List.of(ForcePushDialog.ID), BranchesPanel.ID),
+                new Popup(setUpstreamDialog.render(model), List.of(SetUpstreamDialog.ID), BranchesPanel.ID),
                 new Popup(stashCheckoutDialog.render(model), List.of(StashCheckoutDialog.ID), BranchesPanel.ID),
                 new Popup(amendDialog.render(model), List.of(AmendDialog.ID), FilesPanel.ID),
                 new Popup(stashDropDialog.render(model), List.of(StashDropDialog.ID), StashPanel.ID),

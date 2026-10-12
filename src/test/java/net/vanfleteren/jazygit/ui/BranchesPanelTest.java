@@ -67,7 +67,7 @@ class BranchesPanelTest {
 
     @Test
     void aBranchBeingPushedShowsTheSpinnerNextToItsName() throws Exception {
-        Model pushing = Update.update(before, new net.vanfleteren.jazygit.feature.branch.PushMsg.Requested("feature")).model();
+        Model pushing = before.withPushing(io.vavr.collection.HashSet.of("feature"));
         String frame = BranchesPanel.spinnerFrame(java.time.Instant.EPOCH);
         BranchesPanel panel = new BranchesPanel(msg -> { }, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(pushing, BranchesPanel.ID))) {

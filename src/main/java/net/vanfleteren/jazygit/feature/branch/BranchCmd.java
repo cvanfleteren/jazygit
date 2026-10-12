@@ -4,6 +4,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.PushMode;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Msg;
@@ -114,6 +115,28 @@ public sealed interface BranchCmd extends Cmd {
         @Override
         public Msg failed(String message) {
             return new CheckoutMsg.Failed(branch, message);
+        }
+    }
+
+    /**
+     * Pushes {@code branch} to {@code upstream}, which it then tracks.
+     */
+    record PushSettingUpstream(String branch, RemoteBranch upstream) implements BranchCmd {
+
+        @Override
+        public Option<String> logTitleKey() {
+            return Option.of("log.title.push");
+        }
+
+        @Override
+        public Msg run(GitInfoProvider git) {
+            return git.pushSettingUpstream(branch, upstream)
+                    .fold(this::failedWith, executed -> new PushMsg.Done(branch, executed));
+        }
+
+        @Override
+        public Msg failed(String message) {
+            return new PushMsg.Failed(branch, message);
         }
     }
 

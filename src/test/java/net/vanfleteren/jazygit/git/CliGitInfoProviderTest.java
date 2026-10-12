@@ -544,6 +544,35 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void anUpstreamUnderAnotherNameIsWherePushingAndDeletingGo() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "mirror", bare.toString());
+
+        assertEquals(List.of("git push --set-upstream mirror main:refs/heads/shared"),
+                provider.pushSettingUpstream("main", new RemoteBranch("mirror", "shared")).get());
+        Branch main = provider.branches().get().head();
+        assertEquals(Option.of(new Upstream("mirror/shared", 0, 0)), main.upstream());
+        assertTrue(main.hasRemote());
+
+        git("commit", "-q", "--allow-empty", "-m", "local");
+        assertEquals(List.of("git push mirror main:refs/heads/shared"), provider.push("main", PushMode.FAST_FORWARD).get());
+        assertEquals(List.of(0, 0), counts("main"));
+
+        assertEquals(List.of("git push mirror --delete shared"), provider.deleteBranch("main", DeleteScope.REMOTE).get());
+        assertTrue(gitSucceedsIn(repo, "fetch", "-q", "--prune", "mirror"));
+        assertEquals(Option.none(), provider.branches().get().head().upstream());
+    }
+
+    @Test
+    void aFailedPushSetsNoUpstream() throws Exception {
+        assertTrue(provider.pushSettingUpstream("main", new RemoteBranch("nowhere", "main")).isLeft());
+
+        assertEquals(Option.none(), provider.branches().get().head().upstream());
+        assertTrue(!gitSucceedsIn(repo, "config", "--get", "branch.main.merge"));
+    }
+
+    @Test
     void aDivergedBranchOnlyPushesWithForceWithLease() throws Exception {
         java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
         git("init", "-q", "--bare", "-b", "main", bare.toString());
