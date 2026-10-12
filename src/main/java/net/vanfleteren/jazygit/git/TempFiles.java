@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.git;
 
 import io.vavr.CheckedConsumer;
 import io.vavr.control.Either;
+import io.vavr.control.Try;
 import net.vanfleteren.jazygit.git.GitError.TempFileFailed;
 
 import java.io.IOException;
@@ -23,18 +24,17 @@ final class TempFiles {
      */
     static <T> Either<TempFileFailed, T> using(String prefix, CheckedConsumer<Path> prepare,
                                                Function<Path, T> action) {
-        Path file;
-        try {
-            file = Files.createTempFile(prefix, null);
-            prepare.accept(file);
-        } catch (Throwable e) {
-            return Either.left(new TempFileFailed(String.valueOf(e.getMessage())));
-        }
-        try {
-            return Either.right(action.apply(file));
-        } finally {
-            delete(file);
-        }
+        return Try.of(() -> Files.createTempFile(prefix, null))
+                .flatMap(file -> Try.run(() -> prepare.accept(file)).map(prepared -> file).onFailure(e -> delete(file)))
+                .toEither()
+                .<TempFileFailed>mapLeft(e -> new TempFileFailed(String.valueOf(e.getMessage())))
+                .map(file -> {
+                    try {
+                        return action.apply(file);
+                    } finally {
+                        delete(file);
+                    }
+                });
     }
 
     private static void delete(Path file) {
