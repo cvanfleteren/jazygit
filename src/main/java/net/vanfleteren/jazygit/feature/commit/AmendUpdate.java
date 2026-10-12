@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import io.vavr.control.Option;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.commit.AmendMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.commit.AmendMsg.Confirmed;
@@ -43,9 +44,7 @@ public final class AmendUpdate {
         List<FileEntry> files = Update.files(model);
         List<String> stage = files.exists(FileEntry::staged)
                 ? List.of()
-                : files.filter(FileEntry::unstaged).map(FileEntry::path).toList();
-        return model.popup(AmendPopup.class).isDefined()
-                ? Next.of(model.withoutPopup(AmendPopup.class), new Amend(stage))
-                : Next.of(model);
+                : FileEntry.paths(files, FileEntry::unstaged);
+        return Update.confirm(model, AmendPopup.class, popup -> Option.of(new Amend(stage)));
     }
 }

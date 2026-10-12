@@ -20,7 +20,6 @@ import net.vanfleteren.jazygit.state.LoadMsg.CommitsLoaded;
 import net.vanfleteren.jazygit.state.LoadMsg.FileDiffLoaded;
 import net.vanfleteren.jazygit.state.LoadMsg.StatusLoaded;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
-import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 import java.util.function.UnaryOperator;
@@ -55,8 +54,7 @@ public final class LoadUpdate {
 
     private static Next statusLoaded(Model model, RepoStatus status) {
         Model next = finished(model, new LoadStatus()).withStatus(model.status().reload(status));
-        boolean headMoved = !(model.status() instanceof Loaded<RepoStatus>(RepoStatus previous)
-                && previous.headCommit().equals(status.headCommit()));
+        boolean headMoved = !model.status().toOption().exists(previous -> previous.headCommit().equals(status.headCommit()));
         // Commit loads are not deduplicated: one queued after HEAD moved must still run, even if
         // an earlier one is in progress.
         List<Cmd> cmds = headMoved ? List.of(new LoadCommits()) : List.empty();
@@ -65,9 +63,7 @@ public final class LoadUpdate {
 
     private static Next branchesLoaded(Model model, List<Branch> branches) {
         Model next = finished(model, new LoadBranches()).withBranches(model.branches().reload(branches));
-        List<Branch> previous = model.branches() instanceof Loaded<List<Branch>>(List<Branch> value)
-                ? value
-                : List.of();
+        List<Branch> previous = model.branches().getOrElse(List.empty());
         // The highlighted branch moved (a commit, reset, fetch...): its log is outdated.
         return model.branchLog()
                 .map(BranchLog::branch)

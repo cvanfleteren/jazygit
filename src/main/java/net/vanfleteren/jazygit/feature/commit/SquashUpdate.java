@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import net.vanfleteren.jazygit.state.Update;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Sha;
 import io.vavr.collection.List;
@@ -20,10 +21,8 @@ public final class SquashUpdate {
         return switch (msg) {
             case SquashMsg.Requested(int index) -> requested(model, index);
             case SquashMsg.Cancelled() -> Next.of(model.withoutPopup(SquashPopup.class));
-            case SquashMsg.Confirmed() -> model.popup(SquashPopup.class)
-                    .map(popup -> Next.of(model.withoutPopup(SquashPopup.class).clearError(),
-                            new Squash(popup.commit().sha())))
-                    .getOrElse(() -> Next.of(model));
+            case SquashMsg.Confirmed() ->
+                    Update.confirm(model, SquashPopup.class, popup -> Option.of(new Squash(popup.commit().sha())));
         };
     }
 

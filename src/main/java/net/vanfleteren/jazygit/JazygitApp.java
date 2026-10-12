@@ -46,9 +46,7 @@ import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
 import net.vanfleteren.jazygit.feature.theme.ThemePopup;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.CliGitInfoProvider;
-import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.keys.Keymap;
-import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Program;
@@ -254,9 +252,7 @@ public class JazygitApp extends ToolkitApp {
      * Empty when the terminal size is not known.
      */
     private Option<Integer> stashHeight(Model model) {
-        int rows = model.stashes() instanceof Loadable.Loaded<List<Stash>>(List<Stash> stashes)
-                ? Math.max(1, stashes.size())
-                : 1;
+        int rows = Math.max(1, model.stashes().getOrElse(List.empty()).size());
         // The left column is the screen without the fetch line.
         return Try.of(() -> runner().tuiRunner().backend().size().height() - FetchLine.HEIGHT)
                 .toOption()

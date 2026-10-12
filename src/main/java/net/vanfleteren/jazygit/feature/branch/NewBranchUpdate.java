@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import net.vanfleteren.jazygit.state.Update;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.CreateBranch;
 import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.branch.NewBranchMsg.Confirmed;
@@ -33,10 +35,8 @@ public final class NewBranchUpdate {
     private static Next confirmed(Model model, String name) {
         String trimmed = name.strip();
         // A blank name keeps the dialog open.
-        return model.popup(NewBranchPopup.class).map(NewBranchPopup::base)
-                .filter(base -> !trimmed.isEmpty())
-                .map(base -> Next.of(model.withoutPopup(NewBranchPopup.class).clearError(),
-                        new CreateBranch(trimmed, base)))
-                .getOrElse(() -> Next.of(model));
+        return Update.confirm(model, NewBranchPopup.class, popup -> Option.of(trimmed)
+                .filter(branch -> !branch.isEmpty())
+                .map(branch -> new CreateBranch(branch, popup.base())));
     }
 }

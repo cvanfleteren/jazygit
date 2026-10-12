@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import net.vanfleteren.jazygit.state.Update;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.Checkout;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.CheckoutWithStash;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.NeedsStash;
@@ -22,10 +24,8 @@ public final class CheckoutUpdate {
             case Requested(String branch) -> requested(model, branch);
             case NeedsStash(String branch) -> Next.of(model.openPopup(new StashCheckoutPopup(branch)));
             case StashCancelled() -> Next.of(model.withoutPopup(StashCheckoutPopup.class));
-            case StashConfirmed() -> model.popup(StashCheckoutPopup.class).map(StashCheckoutPopup::branch)
-                    .map(branch -> Next.of(model.withoutPopup(StashCheckoutPopup.class).clearError(),
-                            new CheckoutWithStash(branch)))
-                    .getOrElse(() -> Next.of(model));
+            case StashConfirmed() -> Update.confirm(model, StashCheckoutPopup.class,
+                    popup -> Option.of(new CheckoutWithStash(popup.branch())));
         };
     }
 

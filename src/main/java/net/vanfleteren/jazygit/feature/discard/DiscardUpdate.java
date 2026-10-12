@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.discard;
 
+import net.vanfleteren.jazygit.state.Update;
+import io.vavr.control.Option;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.discard.DiscardCmd.Discard;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Cancelled;
@@ -35,12 +37,10 @@ public final class DiscardUpdate {
     }
 
     private static Next chosen(Model model, Scope scope) {
-        return model.popup(DiscardPopup.class)
-                // Without unstaged changes there is nothing to discard of that kind.
-                .filter(popup -> scope == Scope.ALL || popup.hasUnstaged())
-                .map(popup -> Next.of(model.withoutPopup(DiscardPopup.class).clearError(),
-                        new Discard(plan(popup.files(), scope))))
-                .getOrElse(() -> Next.of(model));
+        // Without unstaged changes there is nothing to discard of that kind.
+        return Update.confirm(model, DiscardPopup.class, popup -> Option.of(popup)
+                .filter(open -> scope == Scope.ALL || open.hasUnstaged())
+                .map(open -> new Discard(plan(open.files(), scope))));
     }
 
     /**
@@ -49,18 +49,13 @@ public final class DiscardUpdate {
      */
     static DiscardPlan plan(List<FileEntry> files, Scope scope) {
         Predicate<FileEntry> affected = scope == Scope.ALL ? f -> true : FileEntry::unstaged;
-        List<FileEntry> picked = files.filter(affected).toList();
-        List<String> untracked = paths(picked, f -> f.type() == ChangeType.UNTRACKED);
-        List<FileEntry> tracked = picked.filter(f -> f.type() != ChangeType.UNTRACKED).toList();
-        if (scope == Scope.UNSTAGED) {
-            return new DiscardPlan(untracked, paths(tracked, f -> true), List.of(), List.of());
-        }
-        return new DiscardPlan(untracked, List.of(),
-                paths(tracked, f -> f.type() != ChangeType.ADDED || !f.staged()),
-                paths(tracked, f -> f.type() == ChangeType.ADDED && f.staged()));
-    }
-
-    private static List<String> paths(List<FileEntry> files, Predicate<FileEntry> filter) {
-        return files.filter(filter).map(FileEntry::path).toList();
+        List<FileEntry> picked = files.filter(affected);
+        List<String> untracked = FileEntry.paths(picked, f -> f.type() == ChangeType.UNTRACKED);
+        List<FileEntry> tracked = picked.filter(f -> f.type() != ChangeType.UNTRACKED);
+        return scope == Scope.UNSTAGED
+                ? new DiscardPlan(untracked, FileEntry.paths(tracked, f -> true), List.empty(), List.empty())
+                : new DiscardPlan(untracked, List.empty(),
+                FileEntry.paths(tracked, f -> f.type() != ChangeType.ADDED || !f.staged()),
+                FileEntry.paths(tracked, f -> f.type() == ChangeType.ADDED && f.staged()));
     }
 }

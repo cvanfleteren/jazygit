@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import net.vanfleteren.jazygit.state.Update;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.commit.CommitCmd.Reword;
 import net.vanfleteren.jazygit.feature.commit.RewordMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.commit.RewordMsg.Confirmed;
@@ -35,9 +37,7 @@ public final class RewordUpdate {
 
     private static Next confirmed(Model model, CommitMessage message) {
         // A blank summary keeps the dialog open.
-        return model.popup(RewordPopup.class).filter(popup -> message.hasSummary())
-                .map(popup -> Next.of(model.withoutPopup(RewordPopup.class).clearError(),
-                        new Reword(popup.commit().sha(), message)))
-                .getOrElse(() -> Next.of(model));
+        return Update.confirm(model, RewordPopup.class,
+                popup -> Option.when(message.hasSummary(), () -> new Reword(popup.commit().sha(), message)));
     }
 }

@@ -1,6 +1,9 @@
 package net.vanfleteren.jazygit.git.model;
 
+import io.vavr.collection.List;
 import io.vavr.control.Option;
+
+import java.util.function.Predicate;
 
 /**
  * A single file entry as it would appear in {@code git status}.
@@ -20,6 +23,13 @@ public record FileEntry(String path, ChangeType type, boolean staged, boolean un
      */
     public static FileEntry conflicted(String path, Conflict conflict) {
         return new FileEntry(path, ChangeType.CONFLICTED, false, true, Option.of(conflict));
+    }
+
+    /**
+     * The paths of the {@code files} that {@code which} picks.
+     */
+    public static List<String> paths(List<FileEntry> files, Predicate<? super FileEntry> which) {
+        return files.filter(which).map(FileEntry::path);
     }
 
     /**

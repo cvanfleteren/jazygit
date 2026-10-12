@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.function.Predicate;
 
 import static net.vanfleteren.jazygit.git.GitCommand.git;
 
@@ -36,17 +35,14 @@ public final class CliDiff {
      * against the index). Untracked files are shown as entirely added. Long diffs are cut off.
      */
     public static Either<DiffError, Diffs> diff(Path workTree, List<FileEntry> files) {
-        List<String> staged = paths(files, f -> f.staged() && f.type() != ChangeType.UNTRACKED);
-        List<String> unstaged = paths(files, f -> f.unstaged() && f.type() != ChangeType.UNTRACKED);
-        List<String> untracked = paths(files, f -> f.type() == ChangeType.UNTRACKED);
+        List<String> staged = FileEntry.paths(files, f -> f.staged() && f.type() != ChangeType.UNTRACKED);
+        List<String> unstaged = FileEntry.paths(files, f -> f.unstaged() && f.type() != ChangeType.UNTRACKED);
+        List<String> untracked = FileEntry.paths(files, f -> f.type() == ChangeType.UNTRACKED);
         return Either.<DiffError, String>narrow(tracked(workTree, STAGED, staged, HashMap.empty()))
                 .flatMap(stagedDiff -> unstagedAndUntracked(workTree, unstaged, untracked)
                         .map(unstagedDiff -> new Diffs(truncated(stagedDiff), truncated(unstagedDiff))));
     }
 
-    private static List<String> paths(List<FileEntry> files, Predicate<FileEntry> filter) {
-        return files.filter(filter).map(FileEntry::path);
-    }
 
     /**
      * Untracked files are marked intent-to-add in a temporary copy of the index, so one {@code git diff}

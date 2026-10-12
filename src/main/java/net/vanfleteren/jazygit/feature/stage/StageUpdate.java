@@ -29,19 +29,19 @@ public final class StageUpdate {
      * directory, git gets the directory itself where that has the same effect.
      */
     private static Next toggle(Model model, List<FileEntry> files, Option<String> directory) {
-        List<String> unstaged = files.filter(FileEntry::unstaged).map(FileEntry::path).toList();
+        List<String> unstaged = FileEntry.paths(files, FileEntry::unstaged);
         if (!unstaged.isEmpty()) {
             // Adding a directory stages every change below it, which are exactly the changed files that
             // are not staged completely yet.
             return Next.of(model.clearError(),
                     new Stage(directory.map(d -> List.of(pathspec(d))).getOrElse(unstaged)));
         }
-        List<FileEntry> staged = files.filter(FileEntry::staged).toList();
+        List<FileEntry> staged = files.filter(FileEntry::staged);
         if (staged.isEmpty()) {
             return Next.of(model);
         }
-        List<String> added = staged.filter(f -> f.type() == ChangeType.ADDED).map(FileEntry::path).toList();
-        List<String> others = staged.filter(f -> f.type() != ChangeType.ADDED).map(FileEntry::path).toList();
+        List<String> added = FileEntry.paths(staged, f -> f.type() == ChangeType.ADDED);
+        List<String> others = FileEntry.paths(staged, f -> f.type() != ChangeType.ADDED);
         // Resetting a directory takes every staged change below it out of the index. That is only right
         // when none of them is a newly added file, which has to be removed from the index instead: doing
         // that for the directory would remove all its tracked files.

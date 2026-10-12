@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import io.vavr.control.Option;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.commit.CommitCmd.Commit;
 import net.vanfleteren.jazygit.feature.commit.CommitCmd.StageForCommit;
@@ -52,16 +53,12 @@ public final class CommitUpdate {
     }
 
     private static Next stageAllConfirmed(Model model) {
-        List<String> paths = Update.files(model).filter(FileEntry::unstaged).map(FileEntry::path).toList();
-        return model.popup(StageAllPopup.class).isDefined()
-                ? Next.of(model.withoutPopup(StageAllPopup.class), new StageForCommit(paths))
-                : Next.of(model);
+        List<String> paths = FileEntry.paths(Update.files(model), FileEntry::unstaged);
+        return Update.confirm(model, StageAllPopup.class, popup -> Option.of(new StageForCommit(paths)));
     }
 
     private static Next confirmed(Model model, CommitMessage message) {
         // A blank summary keeps the dialog open.
-        return model.popup(CommitPopup.class).isDefined() && message.hasSummary()
-                ? Next.of(model.withoutPopup(CommitPopup.class).clearError(), new Commit(message))
-                : Next.of(model);
+        return Update.confirm(model, CommitPopup.class, popup -> Option.when(message.hasSummary(), () -> new Commit(message)));
     }
 }
