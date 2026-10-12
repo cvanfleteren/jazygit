@@ -8,7 +8,6 @@ import org.zeroturnaround.exec.ProcessExecutor;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -33,7 +32,7 @@ class CliShowTest {
         git("add", "-A");
         git("commit", "-qm", "second", "-m", "body");
 
-        List<String> lines = CliShow.changes(repo, new Sha(git("rev-parse", "HEAD").strip())).lines().collect(List.collector());
+        List<String> lines = CliShow.changes(repo, new Sha(git("rev-parse", "HEAD").strip())).get().lines().collect(List.collector());
 
         assertEquals(List.of(
                 " a.txt | 1 +",

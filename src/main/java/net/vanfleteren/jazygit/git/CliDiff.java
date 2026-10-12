@@ -3,12 +3,14 @@ package net.vanfleteren.jazygit.git;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
+import io.vavr.control.Either;
+import net.vanfleteren.jazygit.git.GitError.DiffError;
+import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.i18n.Messages;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -22,6 +24,8 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
 public final class CliDiff {
 
     static final int MAX_LINES = 5000;
+    private static final List<String> STAGED = List.of("diff", "--cached", "--no-color", "--no-ext-diff", "--");
+    private static final List<String> UNSTAGED = List.of("diff", "--no-color", "--no-ext-diff", "--");
 
     private CliDiff() {
     }
@@ -30,14 +34,13 @@ public final class CliDiff {
      * The staged changes of the files (index against HEAD), and their unstaged changes (working tree
      * against the index). Untracked files are shown as entirely added. Long diffs are cut off.
      */
-    public static Diffs diff(Path workTree, List<FileEntry> files) {
+    public static Either<DiffError, Diffs> diff(Path workTree, List<FileEntry> files) {
         List<String> staged = paths(files, f -> f.staged() && f.type() != ChangeType.UNTRACKED);
         List<String> unstaged = paths(files, f -> f.unstaged() && f.type() != ChangeType.UNTRACKED);
         List<String> untracked = paths(files, f -> f.type() == ChangeType.UNTRACKED);
-        return new Diffs(
-                truncated(tracked(workTree, List.of("diff", "--cached", "--no-color", "--no-ext-diff", "--"),
-                        staged, HashMap.empty())),
-                truncated(unstagedAndUntracked(workTree, unstaged, untracked)));
+        return Either.<DiffError, String>narrow(tracked(workTree, STAGED, staged, HashMap.empty()))
+                .flatMap(stagedDiff -> unstagedAndUntracked(workTree, unstaged, untracked)
+                        .map(unstagedDiff -> new Diffs(truncated(stagedDiff), truncated(unstagedDiff))));
     }
 
     private static List<String> paths(List<FileEntry> files, Predicate<FileEntry> filter) {
@@ -48,37 +51,33 @@ public final class CliDiff {
      * Untracked files are marked intent-to-add in a temporary copy of the index, so one {@code git diff}
      * shows them as entirely added next to the unstaged changes. The real index is left untouched.
      */
-    private static String unstagedAndUntracked(Path workTree, List<String> unstaged, List<String> untracked) {
-        List<String> diff = List.of("diff", "--no-color", "--no-ext-diff", "--");
+    private static Either<DiffError, String> unstagedAndUntracked(Path workTree, List<String> unstaged,
+                                                                  List<String> untracked) {
         if (untracked.isEmpty()) {
-            return tracked(workTree, diff, unstaged, HashMap.empty());
+            return Either.narrow(tracked(workTree, UNSTAGED, unstaged, HashMap.empty()));
         }
-        Path tempIndex = null;
-        try {
-            Path index = workTree.resolve(run(workTree, List.of("rev-parse", "--git-path", "index"), List.of()).strip());
-            tempIndex = Files.createTempFile("jazygit-index", null);
-            if (Files.exists(index)) {
-                Files.copy(index, tempIndex, StandardCopyOption.REPLACE_EXISTING);
-            }
-            Map<String, String> env = HashMap.of("GIT_INDEX_FILE", tempIndex.toString());
-            run(workTree, List.of("add", "--intent-to-add", "--"), untracked, env);
-            return tracked(workTree, diff, unstaged.appendAll(untracked), env);
-        } catch (IOException e) {
-            throw new IllegalStateException(Messages.get("git.notInstalled"), e);
-        } finally {
-            if (tempIndex != null) {
-                try {
-                    Files.deleteIfExists(tempIndex);
-                } catch (IOException ignored) {
-                    // a leftover temp file is harmless
-                }
-            }
-        }
+        return Either.<DiffError, String>narrow(run(workTree, List.of("rev-parse", "--git-path", "index"), HashMap.empty()))
+                .map(index -> workTree.resolve(index.strip()))
+                .flatMap(index -> TempFiles.using("jazygit-index",
+                                copy -> {
+                                    if (Files.exists(index)) {
+                                        Files.copy(index, copy, StandardCopyOption.REPLACE_EXISTING);
+                                    }
+                                },
+                                copy -> withUntracked(workTree, unstaged, untracked,
+                                        HashMap.of("GIT_INDEX_FILE", copy.toString())))
+                        .fold(Either::left, Either::narrow));
     }
 
-    private static String tracked(Path workTree, List<String> subcommand, List<String> paths,
-                                  Map<String, String> env) {
-        return paths.isEmpty() ? "" : run(workTree, subcommand, paths, env);
+    private static Either<ProcessError, String> withUntracked(Path workTree, List<String> unstaged,
+                                                              List<String> untracked, Map<String, String> env) {
+        return run(workTree, List.of("add", "--intent-to-add", "--").appendAll(untracked), env)
+                .flatMap(added -> tracked(workTree, UNSTAGED, unstaged.appendAll(untracked), env));
+    }
+
+    private static Either<ProcessError, String> tracked(Path workTree, List<String> subcommand, List<String> paths,
+                                                        Map<String, String> env) {
+        return paths.isEmpty() ? Either.right("") : run(workTree, subcommand.appendAll(paths), env);
     }
 
     static String truncated(String diff) {
@@ -89,12 +88,9 @@ public final class CliDiff {
                 .mkString("", "\n", "\n");
     }
 
-    static String run(Path workTree, List<String> subcommand, List<String> paths) {
-        return run(workTree, subcommand, paths, HashMap.empty());
-    }
-
-    static String run(Path workTree, List<String> subcommand, List<String> paths,
-                      Map<String, String> env) {
-        return GitProcess.runOrThrow(workTree, git(subcommand.appendAll(paths)).withEnvironment(env)).stdout();
+    static Either<ProcessError, String> run(Path workTree, List<String> args, Map<String, String> env) {
+        return GitProcess.run(workTree, git(args).withEnvironment(env))
+                .map(GitProcess.Output::stdout)
+                .mapLeft(GitFailure::error);
     }
 }

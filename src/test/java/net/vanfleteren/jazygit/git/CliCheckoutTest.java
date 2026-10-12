@@ -1,6 +1,9 @@
 package net.vanfleteren.jazygit.git;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.GitError.CommandFailed;
+import net.vanfleteren.jazygit.git.GitError.LocalChanges;
+import net.vanfleteren.jazygit.git.GitError.StashNotRestored;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -8,10 +11,10 @@ import org.zeroturnaround.exec.ProcessExecutor;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CliCheckoutTest {
 
@@ -37,30 +40,29 @@ class CliCheckoutTest {
         git("checkout", "-q", "main");
         Files.writeString(repo.resolve("a.txt"), "main change\n");
 
-        assertThrows(LocalChangesException.class, () -> CliCheckout.checkout(repo, "feature"));
+        assertInstanceOf(LocalChanges.class, CliCheckout.checkout(repo, "feature").getLeft().error());
     }
 
     @Test
     void checkoutCarriesNonConflictingChangesAcrossWithoutAStash() throws Exception {
         Files.writeString(repo.resolve("a.txt"), "changed\n");
 
-        CliCheckout.checkout(repo, "feature");
+        assertTrue(CliCheckout.checkout(repo, "feature").isRight());
 
         assertEquals("changed\n", Files.readString(repo.resolve("a.txt")));
     }
 
     @Test
     void otherCheckoutFailuresAreNotLocalChanges() {
-        IllegalStateException e = assertThrows(IllegalStateException.class,
-                () -> CliCheckout.checkout(repo, "no-such-branch"));
-        assertEquals(false, e instanceof LocalChangesException);
+        assertInstanceOf(CommandFailed.class, CliCheckout.checkout(repo, "no-such-branch").getLeft().error());
     }
 
     @Test
     void checkoutWithStashBringsTheChangesAcrossAndLeavesNoStash() throws Exception {
         Files.writeString(repo.resolve("a.txt"), "changed\n");
 
-        CliCheckout.checkoutWithStash(repo, "feature");
+        assertEquals(List.of("git stash push --quiet", "git checkout --quiet feature --", "git stash pop --quiet"),
+                CliCheckout.checkoutWithStash(repo, "feature").get());
 
         assertEquals("feature", git("branch", "--show-current").strip());
         assertEquals("changed\n", Files.readString(repo.resolve("a.txt")));
@@ -72,7 +74,7 @@ class CliCheckoutTest {
         Files.writeString(repo.resolve("a.txt"), "old\n");
         git("stash", "push", "-q");
 
-        CliCheckout.checkoutWithStash(repo, "feature");
+        assertTrue(CliCheckout.checkoutWithStash(repo, "feature").isRight());
 
         assertEquals("feature", git("branch", "--show-current").strip());
         assertEquals("one\n", Files.readString(repo.resolve("a.txt")));
@@ -83,7 +85,11 @@ class CliCheckoutTest {
     void failedCheckoutPutsTheChangesBack() throws Exception {
         Files.writeString(repo.resolve("a.txt"), "changed\n");
 
-        assertThrows(IllegalStateException.class, () -> CliCheckout.checkoutWithStash(repo, "no-such-branch"));
+        GitFailure<GitError.StashCheckoutError> failure = CliCheckout.checkoutWithStash(repo, "no-such-branch").getLeft();
+
+        assertInstanceOf(CommandFailed.class, failure.error());
+        assertEquals(List.of("git stash push --quiet", "git checkout --quiet no-such-branch --", "git stash pop --quiet"),
+                failure.commands());
 
         assertEquals("main", git("branch", "--show-current").strip());
         assertEquals("changed\n", Files.readString(repo.resolve("a.txt")));
@@ -98,10 +104,10 @@ class CliCheckoutTest {
         git("checkout", "-q", "main");
         Files.writeString(repo.resolve("a.txt"), "main change\n");
 
-        IllegalStateException e = assertThrows(IllegalStateException.class,
-                () -> CliCheckout.checkoutWithStash(repo, "feature"));
+        GitFailure<GitError.StashCheckoutError> failure = CliCheckout.checkoutWithStash(repo, "feature").getLeft();
 
-        assertEquals(true, e.getMessage().startsWith("Checked out, but your stashed changes"), e.getMessage());
+        assertInstanceOf(StashNotRestored.class, failure.error());
+        assertTrue(GitErrorText.of(failure.error()).startsWith("Checked out, but your stashed changes"));
         assertEquals("feature", git("branch", "--show-current").strip());
         assertEquals(1, git("stash", "list").lines().count());
     }

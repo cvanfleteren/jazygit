@@ -36,7 +36,7 @@ class CliDiffTest {
         Diffs diffs = CliDiff.diff(repo, List.of(
                 new FileEntry("a.txt", ChangeType.MODIFIED),
                 new FileEntry("new1.txt", ChangeType.UNTRACKED),
-                new FileEntry("new2.txt", ChangeType.UNTRACKED)));
+                new FileEntry("new2.txt", ChangeType.UNTRACKED))).get();
 
         assertEquals("", diffs.staged());
         assertTrue(diffs.unstaged().contains("+two"));

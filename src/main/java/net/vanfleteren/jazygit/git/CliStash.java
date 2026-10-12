@@ -1,6 +1,9 @@
 package net.vanfleteren.jazygit.git;
 
 import io.vavr.collection.List;
+import io.vavr.control.Either;
+import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.GitProcess.Output;
 import net.vanfleteren.jazygit.git.model.Stash;
 
 import java.nio.file.Path;
@@ -22,13 +25,11 @@ public final class CliStash {
 
     /**
      * Runs {@code git stash list}, newest stash first.
-     *
-     * @throws IllegalStateException if git fails; the message then is git's own explanation
      */
-    public static List<Stash> list(Path workTree) {
-        String output = GitProcess.runOrThrow(workTree, git("--no-optional-locks", "stash", "list",
-                "--format=%gd" + SEPARATOR + "%gs")).stdout();
-        return List.ofAll(output.lines()).filter(line -> !line.isBlank()).map(CliStash::parse);
+    public static Either<ProcessError, List<Stash>> list(Path workTree) {
+        return GitProcess.run(workTree, git("--no-optional-locks", "stash", "list", "--format=%gd" + SEPARATOR + "%gs"))
+                .map(output -> List.ofAll(output.stdout().lines()).filter(line -> !line.isBlank()).map(CliStash::parse))
+                .mapLeft(GitFailure::error);
     }
 
     static Stash parse(String line) {
@@ -37,34 +38,26 @@ public final class CliStash {
     }
 
     /**
-     * Runs {@code git stash pop <ref>}.
-     *
-     * @return the command lines that were run
-     * @throws GitCommandException if git refuses, e.g. because local changes would be overwritten, or the
-     *                             stash conflicts and is kept; the message then is git's own explanation
+     * Runs {@code git stash pop <ref>}. Git refuses e.g. when local changes would be overwritten, or
+     * when the stash conflicts, which keeps it.
      */
-    public static List<String> pop(Path workTree, String ref) {
-        return GitProcess.runOrThrow(workTree, git("stash", "pop", ref)).log();
+    public static Either<GitFailure<ProcessError>, List<String>> pop(Path workTree, String ref) {
+        return GitProcess.run(workTree, git("stash", "pop", ref)).map(Output::log);
     }
 
     /**
      * Runs {@code git stash drop <ref>}.
-     *
-     * @return the command lines that were run
-     * @throws GitCommandException if git refuses; the message then is git's own explanation
      */
-    public static List<String> drop(Path workTree, String ref) {
-        return GitProcess.runOrThrow(workTree, git("stash", "drop", ref)).log();
+    public static Either<GitFailure<ProcessError>, List<String>> drop(Path workTree, String ref) {
+        return GitProcess.run(workTree, git("stash", "drop", ref)).map(Output::log);
     }
 
     /**
      * Runs {@code git stash push --include-untracked --message <message>}: stashes the changes, staged and
      * unstaged, and the untracked files.
-     *
-     * @return the command lines that were run
-     * @throws IllegalStateException if git refuses; the message then is git's own explanation
      */
-    public static List<String> push(Path workTree, String message) {
-        return GitProcess.runOrThrow(workTree, git("stash", "push", "--include-untracked", "--message", message)).log();
+    public static Either<GitFailure<ProcessError>, List<String>> push(Path workTree, String message) {
+        return GitProcess.run(workTree, git("stash", "push", "--include-untracked", "--message", message))
+                .map(Output::log);
     }
 }

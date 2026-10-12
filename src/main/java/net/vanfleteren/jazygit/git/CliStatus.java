@@ -2,6 +2,8 @@ package net.vanfleteren.jazygit.git;
 
 import io.vavr.collection.Map;
 import io.vavr.collection.TreeMap;
+import io.vavr.control.Either;
+import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Conflict;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -24,12 +26,12 @@ public final class CliStatus {
 
     /**
      * Runs {@code git status} in {@code workTree} and parses its output.
-     *
-     * @throws IllegalStateException if git cannot be run or reports an error
      */
-    public static RepoStatus read(Path workTree) {
-        return parse(GitProcess.runOrThrow(workTree, git("--no-optional-locks", "status",
-                "--porcelain=v2", "--branch", "-z", "--untracked-files=all").withTimeout(TIMEOUT)).stdout());
+    public static Either<ProcessError, RepoStatus> read(Path workTree) {
+        return GitProcess.run(workTree, git("--no-optional-locks", "status",
+                        "--porcelain=v2", "--branch", "-z", "--untracked-files=all").withTimeout(TIMEOUT))
+                .map(output -> parse(output.stdout()))
+                .mapLeft(GitFailure::error);
     }
 
     /**

@@ -9,11 +9,10 @@ import org.zeroturnaround.exec.ProcessExecutor;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -76,7 +75,7 @@ class CliDiscardTest {
         write("dir/y.txt", "y\n");
         write("z.txt", "z\n");
 
-        CliIndex.deleteUntracked(repo, List.of("dir", "z.txt"));
+        assertEquals(List.of("rm -r -- dir", "rm -r -- z.txt"), CliIndex.deleteUntracked(repo, List.of("dir", "z.txt")).get());
 
         assertFalse(Files.exists(repo.resolve("dir")));
         assertFalse(Files.exists(repo.resolve("z.txt")));
@@ -87,9 +86,11 @@ class CliDiscardTest {
     void pathsOutsideTheWorkingTreeAreRefused() throws Exception {
         Path outside = Files.createTempFile("outside", ".txt");
         try {
-            assertThrows(IllegalStateException.class, () -> CliIndex.deleteUntracked(repo, List.of("../" + outside.getFileName())));
-            assertThrows(IllegalStateException.class, () -> CliIndex.deleteUntracked(repo, List.of(".")));
-            assertThrows(IllegalStateException.class, () -> CliIndex.deleteUntracked(repo, List.of(".git")));
+            assertInstanceOf(GitError.RefusedPath.class,
+                    CliIndex.deleteUntracked(repo, List.of("../" + outside.getFileName())).getLeft().error());
+            assertInstanceOf(GitError.RefusedPath.class, CliIndex.deleteUntracked(repo, List.of(".")).getLeft().error());
+            assertInstanceOf(GitError.RefusedPath.class, CliIndex.deleteUntracked(repo, List.of(".git")).getLeft().error());
+            assertTrue(Files.exists(outside));
             assertTrue(Files.exists(repo.resolve(".git")));
         } finally {
             Files.deleteIfExists(outside);

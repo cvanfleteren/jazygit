@@ -47,10 +47,11 @@ final class GitProcess {
     }
 
     /**
-     * Bridges to callers that still expect an exception.
+     * Runs {@code command} for its effect only, as a clean-up whose own failure changes nothing, and
+     * returns the command log either way.
      */
-    static Output runOrThrow(Path workTree, GitCommand command) {
-        return run(workTree, command).getOrElseThrow(GitFailure::toException);
+    static List<String> attempt(Path workTree, GitCommand command) {
+        return run(workTree, command).fold(GitFailure::commands, Output::log);
     }
 
     private static Either<ProcessError, Output> execute(Path workTree, GitCommand command) {

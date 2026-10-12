@@ -3,7 +3,9 @@ package net.vanfleteren.jazygit.git;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.GitError.DiscardError;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
 import org.eclipse.jgit.api.Git;
@@ -33,6 +35,7 @@ import java.util.Comparator;
 public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
 
     private static final int MAX_COMMITS = 300;
+    private static final String DEFAULT_REMOTE = "origin";
 
     private final Repository repository;
     private final Git git;
@@ -70,7 +73,7 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
         try {
             this.workTree = repository.getWorkTree().toPath();
             // Fail at startup rather than on first use when git is not available.
-            CliStatus.read(workTree);
+            readOrThrow(CliStatus.read(workTree));
         } catch (RuntimeException e) {
             close();
             throw e;
@@ -84,7 +87,7 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
 
     @Override
     public RepoStatus status() {
-        return CliStatus.read(workTree);
+        return readOrThrow(CliStatus.read(workTree));
     }
 
     @Override
@@ -124,22 +127,22 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
 
     @Override
     public List<Stash> stashes() {
-        return CliStash.list(workTree);
+        return readOrThrow(CliStash.list(workTree));
     }
 
     @Override
     public List<String> drop(String ref) {
-        return CliStash.drop(workTree, ref);
+        return orThrow(CliStash.drop(workTree, ref));
     }
 
     @Override
     public List<String> pop(String ref) {
-        return CliStash.pop(workTree, ref);
+        return orThrow(CliStash.pop(workTree, ref));
     }
 
     @Override
     public List<String> stash(String message) {
-        return CliStash.push(workTree, message);
+        return orThrow(CliStash.push(workTree, message));
     }
 
     @Override
@@ -191,12 +194,12 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
 
     @Override
     public List<String> checkout(String branch) {
-        return CliCheckout.checkout(workTree, branch);
+        return orThrow(CliCheckout.checkout(workTree, branch));
     }
 
     @Override
     public List<String> checkoutWithStash(String branch) {
-        return CliCheckout.checkoutWithStash(workTree, branch);
+        return orThrow(CliCheckout.checkoutWithStash(workTree, branch));
     }
 
     /**
@@ -256,58 +259,68 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
 
     /**
      * Whether the remote-tracking ref of {@code branch} exists. The remote is the one
-     * {@link CliBranch#deleteRemote} pushes to: the configured one, or {@code origin}.
+     * {@link #remoteOf}.
      */
     private boolean hasRemote(String branch) throws IOException {
-        String remote = repository.getConfig().getString("branch", branch, "remote");
-        return repository.exactRef("refs/remotes/" + (remote == null ? "origin" : remote) + "/" + branch) != null;
+        return repository.exactRef("refs/remotes/" + remoteOf(branch) + "/" + branch) != null;
+    }
+
+    /**
+     * The remote {@code branch} tracks, or {@code origin}.
+     */
+    private String remoteOf(String branch) {
+        return Option.of(repository.getConfig().getString("branch", branch, "remote")).getOrElse(DEFAULT_REMOTE);
+    }
+
+    private boolean hasUpstream(String branch) {
+        return repository.getConfig().getString("branch", branch, "merge") != null;
     }
 
     @Override
     public List<String> createBranch(String name, String startPoint) {
-        return CliCheckout.createBranch(workTree, name, startPoint);
+        return orThrow(CliCheckout.createBranch(workTree, name, startPoint));
     }
 
     @Override
     public List<String> push(String branch, boolean forceWithLease) {
-        return CliBranch.push(workTree, branch, forceWithLease);
+        return orThrow(CliBranch.push(workTree, remoteOf(branch), branch, hasUpstream(branch), forceWithLease));
     }
 
     @Override
     public List<String> rebase(String onto) {
-        return CliRebase.onto(workTree, onto);
+        return orThrow(CliRebase.onto(workTree, onto));
     }
 
     @Override
     public List<String> deleteBranch(String name, boolean local, boolean remote) {
-        return GitCommandException.chain(
-                () -> remote ? CliBranch.deleteRemote(workTree, name) : List.of(),
-                () -> local ? CliBranch.deleteLocal(workTree, name) : List.of());
+        return orThrow(GitFailure.sequence(
+                () -> remote ? CliBranch.deleteRemote(workTree, remoteOf(name), name) : Either.right(List.empty()),
+                () -> local ? CliBranch.deleteLocal(workTree, name) : Either.right(List.empty())));
     }
 
     @Override
     public List<String> stage(List<String> paths) {
-        return CliIndex.add(workTree, paths);
+        return orThrow(CliIndex.add(workTree, paths));
     }
 
     @Override
     public List<String> unstageNew(List<String> paths) {
-        return CliIndex.removeCached(workTree, paths);
+        return orThrow(CliIndex.removeCached(workTree, paths));
     }
 
     @Override
     public List<String> unstage(List<String> paths) {
-        return CliIndex.reset(workTree, paths);
+        return orThrow(CliIndex.reset(workTree, paths));
     }
 
     @Override
     public List<String> commit(String summary, String description) {
-        return CliIndex.commit(workTree, summary, description);
+        return orThrow(CliIndex.commit(workTree, new CommitMessage(summary, description)));
     }
 
     @Override
     public List<String> amendLastCommit() {
-        return CliIndex.amend(workTree);
+        return orThrow(CliIndex.amend(workTree));
     }
 
     private String headOid() {
@@ -321,33 +334,45 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
 
     @Override
     public List<String> reword(Sha sha, String summary, String description) {
+        CommitMessage message = new CommitMessage(summary, description);
         return sha.value().equals(headOid())
-                ? CliIndex.reword(workTree, summary, description)
-                : CliRebase.reword(workTree, sha, summary, description);
+                ? orThrow(CliIndex.reword(workTree, message))
+                : orThrow(CliRebase.reword(workTree, sha, message));
     }
 
     @Override
     public List<String> squash(Sha sha) {
-        return CliRebase.squash(workTree, sha);
+        return orThrow(CliRebase.squash(workTree, sha));
     }
 
     @Override
     public List<String> discard(DiscardPlan plan) {
-        return GitCommandException.chain(
-                () -> CliIndex.removeAdded(workTree, plan.added()),
-                () -> CliIndex.checkoutFromHead(workTree, plan.fromHead()),
-                () -> CliIndex.checkoutFromIndex(workTree, plan.fromIndex()),
-                () -> CliIndex.deleteUntracked(workTree, plan.untracked()));
+        return orThrow(GitFailure.<DiscardError>sequence(
+                () -> GitFailure.widen(CliIndex.removeAdded(workTree, plan.added())),
+                () -> GitFailure.widen(CliIndex.checkoutFromHead(workTree, plan.fromHead())),
+                () -> GitFailure.widen(CliIndex.checkoutFromIndex(workTree, plan.fromIndex())),
+                () -> CliIndex.deleteUntracked(workTree, plan.untracked())));
     }
 
     @Override
     public String commitChanges(Sha sha) {
-        return CliShow.changes(workTree, sha);
+        return readOrThrow(CliShow.changes(workTree, sha));
     }
 
     @Override
     public Diffs diff(List<FileEntry> files) {
-        return CliDiff.diff(workTree, files);
+        return readOrThrow(CliDiff.diff(workTree, files));
+    }
+
+    /**
+     * Bridges to callers that still expect an exception.
+     */
+    private static List<String> orThrow(Either<? extends GitFailure<?>, List<String>> outcome) {
+        return outcome.getOrElseThrow(GitFailure::toException);
+    }
+
+    private static <T> T readOrThrow(Either<? extends GitError, T> outcome) {
+        return outcome.getOrElseThrow(error -> new IllegalStateException(GitErrorText.of(error)));
     }
 
     @Override
