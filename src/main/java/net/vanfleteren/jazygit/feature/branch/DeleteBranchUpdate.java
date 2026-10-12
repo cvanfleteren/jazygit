@@ -30,19 +30,20 @@ public final class DeleteBranchUpdate {
             case Requested(String branch) -> requested(model, branch);
             case Cancelled() -> Next.of(model.withoutPopup(DeleteBranchPopup.class));
             case Chosen(DeleteScope scope) -> chosen(model, scope);
-            case Deleted(String branch, List<String> commands) ->
-                    Update.refresh(CommandLog.append(model.withError(Option.none()), "log.title.deleteBranch", commands));
-            case Failed(String branch, String message) ->
-                    Update.refresh(model.withError(Option.of(Messages.get("error.deleteBranch.failed", branch, message))));
+            case Deleted(String branch, List<String> commands) -> Update.refresh(CommandLog.append(
+                    model.withoutBusyBranch(branch).withError(Option.none()), "log.title.deleteBranch", commands));
+            case Failed(String branch, String message) -> Update.refresh(model.withoutBusyBranch(branch)
+                    .withError(Option.of(Messages.get("error.deleteBranch.failed", branch, message))));
         };
     }
 
     /**
-     * Only a known branch that is not checked out can be deleted.
+     * Only a known branch that is not checked out can be deleted, and not while it is being pushed or deleted.
      */
     private static Next requested(Model model, String branch) {
         boolean deletable = model.branches() instanceof Loaded<List<Branch>>(List<Branch> branches)
-                && branches.exists(b -> b.name().equals(branch) && !b.current());
+                && branches.exists(b -> b.name().equals(branch) && !b.current())
+                && !model.busy().contains(branch);
         return deletable ? Next.of(model.openPopup(new DeleteBranchPopup(branch))) : Next.of(model);
     }
 
@@ -50,7 +51,8 @@ public final class DeleteBranchUpdate {
         return model.popup(DeleteBranchPopup.class).map(DeleteBranchPopup::branch)
                 // Deleting on the remote is not possible for a local-only branch, nor for the default one.
                 .filter(branch -> scope == DeleteScope.LOCAL || remoteDeletable(model, branch))
-                .map(branch -> Next.of(model.withoutPopup(DeleteBranchPopup.class).withError(Option.none()),
+                .map(branch -> Next.of(model.withoutPopup(DeleteBranchPopup.class).withBusyBranch(branch)
+                                .withError(Option.none()),
                         new DeleteBranch(branch, scope)))
                 .getOrElse(() -> Next.of(model));
     }

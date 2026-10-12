@@ -38,8 +38,8 @@ public class BranchesPanel {
     // The list's key handler also sees keys typed in other panes, so it must know whether it has focus.
     private boolean focused;
     private final Keymap keymap = Keymap.standard();
-    // The branches being pushed; the rows are built from it on every render.
-    private Set<String> pushing = HashSet.empty();
+    // The branches an operation runs on, shown with a spinner; the rows are built from it on every render.
+    private Set<String> busy = HashSet.empty();
 
     /**
      * The time since the last commit as a number and one unit: s, m, h or d.
@@ -112,7 +112,7 @@ public class BranchesPanel {
         list = new LoadableList<>(Messages.get("panel.branches.title"), ID,
                 branches -> branches
                         .map(b -> row(b, Duration.between(b.tipTime(), clock.instant()),
-                                pushing.contains(b.name()) ? Option.of(spinnerFrame(clock.instant())) : Option.none())),
+                                busy.contains(b.name()) ? Option.of(spinnerFrame(clock.instant())) : Option.none())),
                 BranchesPanel::reselect);
         // The highlight alone marks the selection; a symbol would indent the rows.
         list.highlightSymbol("");
@@ -125,7 +125,7 @@ public class BranchesPanel {
      */
     public Panel render(Model model, String focusedId) {
         focused = ID.equals(focusedId);
-        pushing = model.pushing();
+        busy = model.busy();
         return list.render(model.branches(), focused);
     }
 

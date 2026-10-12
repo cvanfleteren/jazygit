@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
 import io.vavr.collection.List;
-import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.Push;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.PushSettingUpstream;
@@ -35,10 +34,10 @@ public final class PushUpdate {
             // The branches then show the new ahead/behind counts.
             case PushMsg.Done(String branch, List<String> commands) ->
                     Update.refresh(CommandLog.append(
-                            model.withPushing(without(model, branch)).withError(Option.none()),
+                            model.withoutBusyBranch(branch).withError(Option.none()),
                             "log.title.push", commands));
             case PushMsg.Failed(String branch, String message) ->
-                    Update.refresh(model.withPushing(without(model, branch))
+                    Update.refresh(model.withoutBusyBranch(branch)
                             .withError(Option.of(Messages.get("error.push.failed", branch, message))));
         };
     }
@@ -46,8 +45,8 @@ public final class PushUpdate {
     private static Next requested(Model model, String branch) {
         boolean known = model.branches() instanceof Loaded<List<Branch>>(List<Branch> branches)
                 && branches.exists(b -> b.name().equals(branch));
-        // A branch that is being pushed is not pushed again.
-        if (!known || model.pushing().contains(branch)) {
+        // A branch that is being pushed or deleted is not pushed meanwhile.
+        if (!known || model.busy().contains(branch)) {
             return Next.of(model);
         }
         // A branch without an upstream is pushed where the user says. Pushing a diverged branch needs a
@@ -75,7 +74,7 @@ public final class PushUpdate {
         return model.popup(SetUpstreamPopup.class).map(SetUpstreamPopup::branch)
                 .map(branch -> RemoteBranch.parse(text)
                         .map(upstream -> Next.of(model.withoutPopup(SetUpstreamPopup.class)
-                                        .withPushing(with(model, branch))
+                                        .withBusyBranch(branch)
                                         .withError(Option.none()),
                                 new PushSettingUpstream(branch, upstream)))
                         .getOrElse(() -> Next.of(model.withError(Option.of(Messages.get("error.upstream.invalid", text.strip()))))))
@@ -88,15 +87,8 @@ public final class PushUpdate {
     }
 
     private static Next push(Model model, String branch, PushMode mode) {
-        return Next.of(model.withPushing(with(model, branch)).withError(Option.none()),
+        return Next.of(model.withBusyBranch(branch).withError(Option.none()),
                 new Push(branch, mode));
     }
 
-    private static Set<String> with(Model model, String branch) {
-        return model.pushing().add(branch);
-    }
-
-    private static Set<String> without(Model model, String branch) {
-        return model.pushing().remove(branch);
-    }
 }

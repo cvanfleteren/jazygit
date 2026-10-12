@@ -25,7 +25,8 @@ import net.vanfleteren.jazygit.git.model.Stash;
  * @param refreshing     periodic loads that have been started and not finished yet, so a tick does
  *                       not queue them again
  * @param error          why the last operation failed, until the next one is started
- * @param pushing        the branches being pushed right now
+ * @param busy           the branches a git operation runs on right now, a push or a delete: they show a
+ *                       spinner, and take no other operation until it is done
  * @param commandLog     the mutating git commands that were executed, oldest first
  * @param popup          the popup that is open, if any; only one can be
  * @param theme          the name of the theme the UI is drawn in
@@ -41,7 +42,7 @@ public record Model(String repositoryName,
                     Option<FileDiff> fileDiff,
                     Set<Cmd.Load> refreshing,
                     Option<String> error,
-                    Set<String> pushing,
+                    Set<String> busy,
                     List<LogEntry> commandLog,
                     Option<Popup> popup,
                     String theme) {
@@ -60,6 +61,20 @@ public record Model(String repositoryName,
      */
     public <P extends Popup> Option<P> popup(Class<P> type) {
         return popup.filter(type::isInstance).map(type::cast);
+    }
+
+    /**
+     * This model with an operation running on {@code branch}.
+     */
+    public Model withBusyBranch(String branch) {
+        return withBusy(busy.add(branch));
+    }
+
+    /**
+     * This model with the operation on {@code branch} done.
+     */
+    public Model withoutBusyBranch(String branch) {
+        return withBusy(busy.remove(branch));
     }
 
     /**
