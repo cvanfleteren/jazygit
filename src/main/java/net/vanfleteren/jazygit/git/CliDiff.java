@@ -7,23 +7,20 @@ import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.i18n.Messages;
-import org.zeroturnaround.exec.ProcessExecutor;
-import org.zeroturnaround.exec.ProcessResult;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
+
+import static net.vanfleteren.jazygit.git.GitCommand.git;
 
 /**
  * Reads the diff of changed files through the git command line tool.
  */
 public final class CliDiff {
 
-    private static final long TIMEOUT_SECONDS = 30;
     static final int MAX_LINES = 5000;
 
     private CliDiff() {
@@ -92,38 +89,12 @@ public final class CliDiff {
                 .mkString("", "\n", "\n");
     }
 
-    /**
-     * Exit code 1 is fine: {@code --no-index} uses it to say the files differ.
-     */
     static String run(Path workTree, List<String> subcommand, List<String> paths) {
         return run(workTree, subcommand, paths, HashMap.empty());
     }
 
     static String run(Path workTree, List<String> subcommand, List<String> paths,
                       Map<String, String> env) {
-        List<String> command = List.of("git").appendAll(subcommand).appendAll(paths);
-        try {
-            ProcessResult result = new ProcessExecutor()
-                    .command(command)
-                    .directory(workTree.toFile())
-                    .environment(env.toJavaMap())
-                    .readOutput(true)
-                    .redirectErrorStream(true)
-                    .exitValueAny()
-                    .timeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                    .execute();
-            if (result.getExitValue() > 1) {
-                throw new IllegalStateException(
-                        CliCheckout.explanation(result.outputUTF8(), result.getExitValue()));
-            }
-            return result.outputUTF8();
-        } catch (IOException e) {
-            throw new IllegalStateException(Messages.get("git.notInstalled"), e);
-        } catch (TimeoutException e) {
-            throw new IllegalStateException(Messages.get("git.timedOut", "diff", workTree), e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException(Messages.get("git.interrupted", "diff"), e);
-        }
+        return GitProcess.runOrThrow(workTree, git(subcommand.appendAll(paths)).withEnvironment(env)).stdout();
     }
 }

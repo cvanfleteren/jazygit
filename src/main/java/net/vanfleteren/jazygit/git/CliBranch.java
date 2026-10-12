@@ -4,6 +4,8 @@ import io.vavr.collection.List;
 
 import java.nio.file.Path;
 
+import static net.vanfleteren.jazygit.git.GitCommand.git;
+
 /**
  * Deletes branches through the {@code git} command line tool, so the remote is reached with the
  * user's own configuration and credentials.
@@ -21,7 +23,7 @@ public final class CliBranch {
      * @throws IllegalStateException if git refuses; the message then is git's own explanation
      */
     public static List<String> deleteLocal(Path workTree, String name) {
-        return one(workTree, "git", "branch", "--delete", "--force", name);
+        return GitProcess.runOrThrow(workTree, git("branch", "--delete", "--force", name)).log();
     }
 
     /**
@@ -31,7 +33,7 @@ public final class CliBranch {
      * @throws IllegalStateException if git refuses; the message then is git's own explanation
      */
     public static List<String> deleteRemote(Path workTree, String name) {
-        return one(workTree, "git", "push", remoteOf(workTree, name), "--delete", name);
+        return GitProcess.runOrThrow(workTree, git("push", remoteOf(workTree, name), "--delete", name)).log();
     }
 
     /**
@@ -46,20 +48,16 @@ public final class CliBranch {
     public static List<String> push(Path workTree, String name, boolean forceWithLease) {
         String remote = remoteOf(workTree, name);
         if (hasUpstream(workTree, name)) {
-            return one(workTree, forceWithLease
-                    ? new String[]{"git", "push", "--force-with-lease", remote, name}
-                    : new String[]{"git", "push", remote, name});
+            return GitProcess.runOrThrow(workTree, forceWithLease
+                    ? git("push", "--force-with-lease", remote, name)
+                    : git("push", remote, name)).log();
         }
-        return one(workTree, "git", "push", "--set-upstream", remote, name);
-    }
-
-    private static List<String> one(Path workTree, String... command) {
-        return List.of(CliCheckout.exec(workTree, command).command());
+        return GitProcess.runOrThrow(workTree, git("push", "--set-upstream", remote, name)).log();
     }
 
     private static boolean hasUpstream(Path workTree, String name) {
         try {
-            return !CliCheckout.run(workTree, "git", "config", "--get", "branch." + name + ".merge").isEmpty();
+            return !GitProcess.runOrThrow(workTree, git("config", "--get", "branch." + name + ".merge")).stdout().isBlank();
         } catch (IllegalStateException e) {
             // Not configured: git config exits with 1.
             return false;
@@ -68,7 +66,7 @@ public final class CliBranch {
 
     private static String remoteOf(Path workTree, String name) {
         try {
-            String remote = CliCheckout.run(workTree, "git", "config", "--get", "branch." + name + ".remote");
+            String remote = GitProcess.runOrThrow(workTree, git("config", "--get", "branch." + name + ".remote")).stdout().strip();
             return remote.isEmpty() ? DEFAULT_REMOTE : remote;
         } catch (IllegalStateException e) {
             // Not configured: git config exits with 1.

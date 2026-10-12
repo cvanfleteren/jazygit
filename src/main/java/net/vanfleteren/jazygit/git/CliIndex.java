@@ -2,24 +2,20 @@ package net.vanfleteren.jazygit.git;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.i18n.Messages;
-import org.zeroturnaround.exec.ProcessExecutor;
-import org.zeroturnaround.exec.ProcessResult;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.Comparator;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
+
+import static net.vanfleteren.jazygit.git.GitCommand.git;
 
 /**
  * Changes the index (staging area) through the git command line tool.
  */
 public final class CliIndex {
-
-    private static final long TIMEOUT_SECONDS = 30;
 
     private CliIndex() {
     }
@@ -98,18 +94,18 @@ public final class CliIndex {
      * {@code git commit -m <summary> [-m <description>]}: commits the index.
      */
     public static List<String> commit(Path workTree, String summary, String description) {
-        List<String> command = List.of("git", "commit", "--quiet", "-m", summary);
+        List<String> command = List.of("commit", "--quiet", "-m", summary);
         if (!description.isBlank()) {
             command = command.appendAll(List.of("-m", description));
         }
-        return execute(workTree, command, "commit");
+        return execute(workTree, command);
     }
 
     /**
      * {@code git commit --amend --no-edit}: amends the last commit with the index.
      */
     public static List<String> amend(Path workTree) {
-        return execute(workTree, List.of("git", "commit", "--quiet", "--amend", "--no-edit"), "commit");
+        return execute(workTree, List.of("commit", "--quiet", "--amend", "--no-edit"));
     }
 
     /**
@@ -118,44 +114,21 @@ public final class CliIndex {
      */
     public static List<String> reword(Path workTree, String summary, String description) {
         List<String> command =
-                List.of("git", "commit", "--quiet", "--allow-empty", "--amend", "--only", "-m", summary);
+                List.of("commit", "--quiet", "--allow-empty", "--amend", "--only", "-m", summary);
         if (!description.isBlank()) {
             command = command.appendAll(List.of("-m", description));
         }
-        return execute(workTree, command, "commit");
+        return execute(workTree, command);
     }
 
     private static List<String> run(Path workTree, List<String> subcommand, List<String> paths) {
         if (paths.isEmpty()) {
             return List.of();
         }
-        List<String> command = List.of("git").appendAll(subcommand).append("--").appendAll(paths);
-        return execute(workTree, command, subcommand.head());
+        return execute(workTree, subcommand.append("--").appendAll(paths));
     }
 
-    private static List<String> execute(Path workTree, List<String> command, String name) {
-        List<String> line = List.of(CommandLine.format(command));
-        try {
-            ProcessResult result = new ProcessExecutor()
-                    .command(command)
-                    .directory(workTree.toFile())
-                    .readOutput(true)
-                    .redirectErrorStream(true)
-                    .exitValueAny()
-                    .timeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                    .execute();
-            if (result.getExitValue() != 0) {
-                throw new GitCommandException(
-                        CliCheckout.explanation(result.outputUTF8(), result.getExitValue()), line);
-            }
-            return line;
-        } catch (IOException e) {
-            throw new GitCommandException(Messages.get("git.notInstalled"), line, e);
-        } catch (TimeoutException e) {
-            throw new GitCommandException(Messages.get("git.timedOut", name, workTree), line, e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new GitCommandException(Messages.get("git.interrupted", name), line, e);
-        }
+    private static List<String> execute(Path workTree, List<String> args) {
+        return GitProcess.runOrThrow(workTree, git(args)).log();
     }
 }

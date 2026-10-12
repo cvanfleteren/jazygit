@@ -6,22 +6,18 @@ import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Conflict;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
-import net.vanfleteren.jazygit.i18n.Messages;
-import org.zeroturnaround.exec.InvalidExitValueException;
-import org.zeroturnaround.exec.ProcessExecutor;
 
-import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.file.Path;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.time.Duration;
+
+import static net.vanfleteren.jazygit.git.GitCommand.git;
 
 /**
  * Reads the working tree status through the {@code git status} command line tool.
  */
 public final class CliStatus {
 
-    private static final long TIMEOUT_SECONDS = 10;
+    private static final Duration TIMEOUT = Duration.ofSeconds(10);
 
     private CliStatus() {
     }
@@ -32,29 +28,8 @@ public final class CliStatus {
      * @throws IllegalStateException if git cannot be run or reports an error
      */
     public static RepoStatus read(Path workTree) {
-        try {
-            String output = new ProcessExecutor()
-                    .command("git", "--no-optional-locks", "status",
-                            "--porcelain=v2", "--branch", "-z", "--untracked-files=all")
-                    .directory(workTree.toFile())
-                    .readOutput(true)
-                    // readOutput would otherwise capture stderr too, mixing git warnings into the status.
-                    .redirectError(OutputStream.nullOutputStream())
-                    .exitValueNormal()
-                    .timeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                    .execute()
-                    .outputUTF8();
-            return parse(output);
-        } catch (IOException e) {
-            throw new IllegalStateException(Messages.get("git.notInstalled"), e);
-        } catch (InvalidExitValueException e) {
-            throw new IllegalStateException(Messages.get("git.failed", "status", workTree, String.valueOf(e.getExitValue())), e);
-        } catch (TimeoutException e) {
-            throw new IllegalStateException(Messages.get("git.timedOut", "status", workTree), e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException(Messages.get("git.interrupted", "status"), e);
-        }
+        return parse(GitProcess.runOrThrow(workTree, git("--no-optional-locks", "status",
+                "--porcelain=v2", "--branch", "-z", "--untracked-files=all").withTimeout(TIMEOUT)).stdout());
     }
 
     /**

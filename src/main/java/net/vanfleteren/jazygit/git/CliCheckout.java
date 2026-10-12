@@ -1,16 +1,11 @@
 package net.vanfleteren.jazygit.git;
 
-import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
-import io.vavr.collection.Map;
 import net.vanfleteren.jazygit.i18n.Messages;
-import org.zeroturnaround.exec.ProcessExecutor;
-import org.zeroturnaround.exec.ProcessResult;
 
-import java.io.IOException;
 import java.nio.file.Path;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+
+import static net.vanfleteren.jazygit.git.GitCommand.git;
 
 /**
  * Checks out branches through the {@code git checkout} command line tool, so the working tree is
@@ -19,7 +14,6 @@ import java.util.concurrent.TimeoutException;
  */
 public final class CliCheckout {
 
-    private static final long TIMEOUT_SECONDS = 30;
     // What git says when stashing the changes would let the checkout go through. It is matched in
     // English, so git is run with the C locale.
     private static final String LOCAL_CHANGES =
@@ -37,7 +31,8 @@ public final class CliCheckout {
      */
     public static List<String> checkout(Path workTree, String branch) {
         try {
-            return List.of(exec(workTree, "git", "checkout", "--quiet", branch, "--").command());
+            // A trailing "--" keeps git from treating branch names as paths.
+            return GitProcess.runOrThrow(workTree, git("checkout", "--quiet", branch, "--")).log();
         } catch (GitCommandException e) {
             if (e.getMessage().contains(LOCAL_CHANGES)) {
                 throw new LocalChangesException(e.getMessage(), e.commands());
@@ -58,15 +53,15 @@ public final class CliCheckout {
         // Git succeeds without stashing when there is nothing to stash; then there is nothing to pop
         // either, and popping would apply an older, unrelated stash.
         long before = stashCount(workTree);
-        List<String> executed = List.of(exec(workTree, "git", "stash", "push", "--quiet").command());
+        List<String> executed = GitProcess.runOrThrow(workTree, git("stash", "push", "--quiet")).log();
         boolean stashed = stashCount(workTree) > before;
         try {
             executed = executed.appendAll(checkout(workTree, branch));
         } catch (GitCommandException e) {
-            List<String> all = concat(executed, e.commands());
+            List<String> all = executed.appendAll(e.commands());
             if (stashed) {
                 try {
-                    all = all.append(exec(workTree, "git", "stash", "pop", "--quiet").command());
+                    all = all.appendAll(GitProcess.runOrThrow(workTree, git("stash", "pop", "--quiet")).log());
                 } catch (GitCommandException popFailure) {
                     all = all.appendAll(popFailure.commands());
                 }
@@ -75,21 +70,17 @@ public final class CliCheckout {
         }
         if (stashed) {
             try {
-                executed = executed.append(exec(workTree, "git", "stash", "pop", "--quiet").command());
+                executed = executed.appendAll(GitProcess.runOrThrow(workTree, git("stash", "pop", "--quiet")).log());
             } catch (GitCommandException e) {
                 throw new GitCommandException(Messages.get("git.stashPopFailed", e.getMessage()),
-                        concat(executed, e.commands()), e);
+                        executed.appendAll(e.commands()), e);
             }
         }
         return executed;
     }
 
-    private static List<String> concat(List<String> first, List<String> second) {
-        return first.appendAll(second);
-    }
-
     private static long stashCount(Path workTree) {
-        return run(workTree, "git", "stash", "list").lines().count();
+        return GitProcess.runOrThrow(workTree, git("stash", "list")).stdout().lines().count();
     }
 
     /**
@@ -100,59 +91,6 @@ public final class CliCheckout {
      *                               explanation
      */
     public static List<String> createBranch(Path workTree, String name, String startPoint) {
-        return List.of(exec(workTree, "git", "checkout", "--quiet", "-b", name, startPoint, "--").command());
-    }
-
-    /**
-     * The output of a finished command, and the command line it was run as.
-     */
-    record Result(String output, String command) {
-    }
-
-    static String run(Path workTree, String... command) {
-        return exec(workTree, command).output();
-    }
-
-    static Result exec(Path workTree, String... command) {
-        return exec(workTree, HashMap.empty(), command);
-    }
-
-    static Result exec(Path workTree, Map<String, String> environment, String... command) {
-        List<String> line = List.of(CommandLine.format(List.of(command)));
-        try {
-            ProcessResult result = new ProcessExecutor()
-                    // A trailing "--" keeps git from treating branch names as paths.
-                    .command(command)
-                    .directory(workTree.toFile())
-                    // Fail instead of waiting for credentials that cannot be typed.
-                    .environment("GIT_TERMINAL_PROMPT", "0")
-                    .environment("LC_ALL", "C")
-                    .environment(environment.toJavaMap())
-                    .readOutput(true)
-                    .redirectErrorStream(true)
-                    .exitValueAny()
-                    .timeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                    .execute();
-            if (result.getExitValue() != 0) {
-                throw new GitCommandException(explanation(result.outputUTF8(), result.getExitValue()), line);
-            }
-            return new Result(result.outputUTF8().strip(), CommandLine.format(List.of(command)));
-        } catch (IOException e) {
-            throw new GitCommandException(Messages.get("git.notInstalled"), line, e);
-        } catch (TimeoutException e) {
-            throw new GitCommandException(Messages.get("git.timedOut", "checkout", workTree), line, e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new GitCommandException(Messages.get("git.interrupted", "checkout"), line, e);
-        }
-    }
-
-    /**
-     * The first line git printed, which states why it failed, e.g. {@code error: Your local
-     * changes to the following files would be overwritten by checkout:}.
-     */
-    static String explanation(String output, int exitValue) {
-        List<String> lines = output.lines().map(String::strip).filter(line -> !line.isEmpty()).collect(List.collector());
-        return lines.isEmpty() ? Messages.get("git.exitedWithCode", String.valueOf(exitValue)) : lines.head();
+        return GitProcess.runOrThrow(workTree, git("checkout", "--quiet", "-b", name, startPoint, "--")).log();
     }
 }

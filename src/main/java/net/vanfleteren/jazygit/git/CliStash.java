@@ -6,6 +6,8 @@ import net.vanfleteren.jazygit.git.model.Stash;
 import java.nio.file.Path;
 import java.util.regex.Pattern;
 
+import static net.vanfleteren.jazygit.git.GitCommand.git;
+
 /**
  * Lists and creates stashes through the {@code git stash} command line tool.
  */
@@ -24,8 +26,8 @@ public final class CliStash {
      * @throws IllegalStateException if git fails; the message then is git's own explanation
      */
     public static List<Stash> list(Path workTree) {
-        String output = CliCheckout.run(workTree, "git", "--no-optional-locks", "stash", "list",
-                "--format=%gd" + SEPARATOR + "%gs");
+        String output = GitProcess.runOrThrow(workTree, git("--no-optional-locks", "stash", "list",
+                "--format=%gd" + SEPARATOR + "%gs")).stdout();
         return List.ofAll(output.lines()).filter(line -> !line.isBlank()).map(CliStash::parse);
     }
 
@@ -42,7 +44,7 @@ public final class CliStash {
      *                             stash conflicts and is kept; the message then is git's own explanation
      */
     public static List<String> pop(Path workTree, String ref) {
-        return List.of(CliCheckout.exec(workTree, "git", "stash", "pop", ref).command());
+        return GitProcess.runOrThrow(workTree, git("stash", "pop", ref)).log();
     }
 
     /**
@@ -52,7 +54,7 @@ public final class CliStash {
      * @throws GitCommandException if git refuses; the message then is git's own explanation
      */
     public static List<String> drop(Path workTree, String ref) {
-        return List.of(CliCheckout.exec(workTree, "git", "stash", "drop", ref).command());
+        return GitProcess.runOrThrow(workTree, git("stash", "drop", ref)).log();
     }
 
     /**
@@ -63,7 +65,6 @@ public final class CliStash {
      * @throws IllegalStateException if git refuses; the message then is git's own explanation
      */
     public static List<String> push(Path workTree, String message) {
-        return List.of(CliCheckout.exec(workTree, "git", "stash", "push", "--include-untracked", "--message",
-                message).command());
+        return GitProcess.runOrThrow(workTree, git("stash", "push", "--include-untracked", "--message", message)).log();
     }
 }

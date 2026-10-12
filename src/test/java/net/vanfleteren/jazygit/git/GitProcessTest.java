@@ -1,0 +1,53 @@
+package net.vanfleteren.jazygit.git;
+
+import io.vavr.collection.HashMap;
+import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.GitError.CommandFailed;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.nio.file.Path;
+
+import static net.vanfleteren.jazygit.git.GitCommand.git;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class GitProcessTest {
+
+    @TempDir
+    Path dir;
+
+    @Test
+    void aSuccessfulCommandReturnsItsOutputAndLine() {
+        GitProcess.Output output = GitProcess.run(dir, git("init", "-q", "-b", "main")).get();
+
+        assertEquals("git init -q -b main", output.line());
+        assertEquals(List.of("git init -q -b main"), output.log());
+    }
+
+    @Test
+    void aRefusedCommandFailsWithGitsExplanationAndItsLine() {
+        GitFailure<GitError.ProcessError> failure = GitProcess.run(dir, git("rev-parse", "HEAD")).getLeft();
+
+        CommandFailed failed = (CommandFailed) failure.error();
+        assertTrue(failed.explanation().startsWith("fatal: not a git repository"), failed.explanation());
+        assertEquals(128, failed.exitCode());
+        assertEquals(List.of("git rev-parse HEAD"), failure.commands());
+    }
+
+    @Test
+    void theExplanationPrefersTheErrorOutput() {
+        assertEquals("error: boom", GitProcess.explanation("\n error: boom\nmore", "On branch main"));
+        assertEquals("On branch main", GitProcess.explanation("", "\nOn branch main\n"));
+        assertEquals("", GitProcess.explanation("", ""));
+    }
+
+    @Test
+    void theOperationIsTheSubcommandAndGivenVariablesOverrideTheDefaults() {
+        GitCommand command = git("--no-optional-locks", "status").withEnvironment(HashMap.of("LC_ALL", "nl_BE"));
+
+        assertEquals("status", command.operation());
+        assertEquals("nl_BE", command.environment().get("LC_ALL").get());
+        assertEquals("0", command.environment().get("GIT_TERMINAL_PROMPT").get());
+    }
+}

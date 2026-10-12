@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import static net.vanfleteren.jazygit.git.GitCommand.git;
+
 /**
  * Rewrites history through {@code git rebase}, driven without an interactive editor.
  */
@@ -40,12 +42,12 @@ public final class CliRebase {
                     "GIT_EDITOR", "cp '" + message + "'");
             String base = hasParent(workTree, sha.value()) ? sha + "^" : "--root";
             try {
-                return List.of(CliCheckout.exec(workTree, environment, "git", "rebase", "--interactive",
-                        "--autostash", "--keep-empty", "--rebase-merges", base).command());
+                return GitProcess.runOrThrow(workTree, git("rebase", "--interactive",
+                        "--autostash", "--keep-empty", "--rebase-merges", base).withEnvironment(environment)).log();
             } catch (GitCommandException e) {
                 List<String> executed = e.commands();
                 try {
-                    executed = executed.append(CliCheckout.exec(workTree, "git", "rebase", "--abort").command());
+                    executed = executed.appendAll(GitProcess.runOrThrow(workTree, git("rebase", "--abort")).log());
                 } catch (GitCommandException abortFailure) {
                     executed = executed.appendAll(abortFailure.commands());
                 }
@@ -71,12 +73,12 @@ public final class CliRebase {
      */
     public static List<String> onto(Path workTree, String onto) {
         try {
-            return List.of(CliCheckout.exec(workTree, "git", "rebase", "--autostash", "--keep-empty",
-                    "--rebase-merges", "--no-autosquash", onto).command());
+            return GitProcess.runOrThrow(workTree, git("rebase", "--autostash", "--keep-empty",
+                    "--rebase-merges", "--no-autosquash", onto)).log();
         } catch (GitCommandException e) {
             List<String> executed = e.commands();
             try {
-                executed = executed.append(CliCheckout.exec(workTree, "git", "rebase", "--abort").command());
+                executed = executed.appendAll(GitProcess.runOrThrow(workTree, git("rebase", "--abort")).log());
             } catch (GitCommandException abortFailure) {
                 executed = executed.appendAll(abortFailure.commands());
             }
@@ -96,19 +98,19 @@ public final class CliRebase {
      * @throws GitCommandException if git refuses, with git's explanation as message
      */
     public static List<String> squash(Path workTree, Sha sha) {
-        String parent = CliCheckout.run(workTree, "git", "rev-parse", sha + "^").strip();
+        String parent = GitProcess.runOrThrow(workTree, git("rev-parse", sha + "^")).stdout().strip();
         String abbreviated = sha.shortSha();
         Map<String, String> environment = HashMap.of(
                 "GIT_SEQUENCE_EDITOR", "sed -i -e 's/^pick " + abbreviated + "/squash " + abbreviated + "/'",
                 "GIT_EDITOR", "true");
         String base = hasParent(workTree, parent) ? parent + "^" : "--root";
         try {
-            return List.of(CliCheckout.exec(workTree, environment, "git", "rebase", "--interactive",
-                    "--autostash", "--keep-empty", "--rebase-merges", "--no-autosquash", base).command());
+            return GitProcess.runOrThrow(workTree, git("rebase", "--interactive",
+                    "--autostash", "--keep-empty", "--rebase-merges", "--no-autosquash", base).withEnvironment(environment)).log();
         } catch (GitCommandException e) {
             List<String> executed = e.commands();
             try {
-                executed = executed.append(CliCheckout.exec(workTree, "git", "rebase", "--abort").command());
+                executed = executed.appendAll(GitProcess.runOrThrow(workTree, git("rebase", "--abort")).log());
             } catch (GitCommandException abortFailure) {
                 executed = executed.appendAll(abortFailure.commands());
             }
@@ -118,7 +120,7 @@ public final class CliRebase {
 
     private static boolean hasParent(Path workTree, String sha) {
         // "<sha> <parents...>": only the sha when it is a root commit.
-        return CliCheckout.run(workTree, "git", "rev-list", "--parents", "-n", "1", sha).strip().contains(" ");
+        return GitProcess.runOrThrow(workTree, git("rev-list", "--parents", "-n", "1", sha)).stdout().strip().contains(" ");
     }
 
     private static Path writeMessage(String summary, String description) {
