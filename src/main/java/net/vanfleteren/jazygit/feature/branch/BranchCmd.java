@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.feature.branch;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
-import net.vanfleteren.jazygit.git.LocalChangesException;
+import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Msg;
 
@@ -23,7 +23,7 @@ public sealed interface BranchCmd extends Cmd {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            return new NewBranchMsg.Created(name, git.createBranch(name, base));
+            return git.createBranch(name, base).fold(this::failedWith, executed -> new NewBranchMsg.Created(name, executed));
         }
 
         @Override
@@ -47,8 +47,8 @@ public sealed interface BranchCmd extends Cmd {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            return new DeleteBranchMsg.Deleted(branch,
-                    git.deleteBranch(branch, scope != DeleteScope.REMOTE, scope != DeleteScope.LOCAL));
+            return git.deleteBranch(branch, scope != DeleteScope.REMOTE, scope != DeleteScope.LOCAL)
+                    .fold(this::failedWith, executed -> new DeleteBranchMsg.Deleted(branch, executed));
         }
 
         @Override
@@ -69,7 +69,7 @@ public sealed interface BranchCmd extends Cmd {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            return new RebaseMsg.Done(onto, git.rebase(onto));
+            return git.rebase(onto).fold(this::failedWith, executed -> new RebaseMsg.Done(onto, executed));
         }
 
         @Override
@@ -87,11 +87,11 @@ public sealed interface BranchCmd extends Cmd {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            try {
-                return new CheckoutMsg.Done(branch, git.checkout(branch));
-            } catch (LocalChangesException e) {
-                return new CheckoutMsg.NeedsStash(branch);
-            }
+            return git.checkout(branch).fold(
+                    failure -> failure.error() instanceof GitError.LocalChanges
+                            ? new CheckoutMsg.NeedsStash(branch)
+                            : failedWith(failure),
+                    executed -> new CheckoutMsg.Done(branch, executed));
         }
 
         @Override
@@ -112,7 +112,7 @@ public sealed interface BranchCmd extends Cmd {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            return new CheckoutMsg.Done(branch, git.checkoutWithStash(branch));
+            return git.checkoutWithStash(branch).fold(this::failedWith, executed -> new CheckoutMsg.Done(branch, executed));
         }
 
         @Override
@@ -130,7 +130,7 @@ public sealed interface BranchCmd extends Cmd {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            return new PushMsg.Done(branch, git.push(branch, forceWithLease));
+            return git.push(branch, forceWithLease).fold(this::failedWith, executed -> new PushMsg.Done(branch, executed));
         }
 
         @Override

@@ -22,7 +22,7 @@ public sealed interface StashCmd extends Cmd {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            return new StashMsg.Done(git.stash(name));
+            return git.stash(name).fold(this::failedWith, StashMsg.Done::new);
         }
 
         @Override
@@ -43,7 +43,7 @@ public sealed interface StashCmd extends Cmd {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            return new StashMsg.Dropped(git.drop(ref));
+            return git.drop(ref).fold(this::failedWith, StashMsg.Dropped::new);
         }
 
         @Override
@@ -64,7 +64,7 @@ public sealed interface StashCmd extends Cmd {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            return new StashMsg.Popped(git.pop(ref));
+            return git.pop(ref).fold(this::failedWith, StashMsg.Popped::new);
         }
 
         @Override

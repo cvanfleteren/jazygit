@@ -2,7 +2,8 @@ package net.vanfleteren.jazygit.feature.stage;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.GitCommandException;
+import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Msg;
@@ -21,7 +22,7 @@ public sealed interface StageCmd extends Cmd {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            return new StageMsg.Done(StageMsg.Action.STAGE, git.stage(paths));
+            return git.stage(paths).fold(this::failedWith, executed -> new StageMsg.Done(StageMsg.Action.STAGE, executed));
         }
 
         @Override
@@ -43,8 +44,8 @@ public sealed interface StageCmd extends Cmd {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            return new StageMsg.Done(StageMsg.Action.UNSTAGE,
-                    GitCommandException.chain(() -> git.unstageNew(added), () -> git.unstage(others)));
+            return GitFailure.<ProcessError>sequence(() -> git.unstageNew(added), () -> git.unstage(others))
+                    .fold(this::failedWith, executed -> new StageMsg.Done(StageMsg.Action.UNSTAGE, executed));
         }
 
         @Override

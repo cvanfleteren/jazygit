@@ -1,5 +1,6 @@
-package net.vanfleteren.jazygit.git;
+package net.vanfleteren.jazygit.state;
 
+import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.i18n.Messages;
 
 /**

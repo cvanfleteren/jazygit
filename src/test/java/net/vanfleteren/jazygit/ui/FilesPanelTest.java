@@ -2,17 +2,14 @@ package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
-import net.vanfleteren.jazygit.git.model.Branch;
+import io.vavr.control.Either;
+import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.ChangeType;
-import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Conflict;
-import net.vanfleteren.jazygit.git.model.Diffs;
-import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.FileTree;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
-import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import org.junit.jupiter.api.Test;
@@ -26,131 +23,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class FilesPanelTest {
 
-    private record FixedProvider(List<FileEntry> files) implements GitInfoProvider {
+    private record FixedProvider(List<FileEntry> files) implements StubGitProvider {
 
         @Override
-        public String repositoryName() {
-            return "repo";
-        }
-
-        @Override
-        public RepoStatus status() {
-            return new RepoStatus("main", "aaaa", files);
-        }
-
-        @Override
-        public List<net.vanfleteren.jazygit.git.model.Stash> stashes() {
-            return List.of();
-        }
-
-        @Override
-        public List<String> drop(String ref) {
-            return List.of("git stash drop " + ref);
-        }
-
-        @Override
-        public List<String> pop(String ref) {
-            return List.of("git stash pop " + ref);
-        }
-
-        @Override
-        public List<String> stash(String message) {
-            return List.of("git stash");
-        }
-
-        @Override
-        public List<Branch> branches() {
-            return List.of();
-        }
-
-        @Override
-        public List<Commit> commits() {
-            return List.of();
-        }
-
-        @Override
-        public List<Commit> log(String branch) {
-            return List.of();
-        }
-
-        @Override
-        public List<String> checkout(String branch) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public List<String> checkoutWithStash(String branch) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public List<String> push(String branch, boolean forceWithLease) {
-            return List.of();
-        }
-
-        @Override
-        public List<String> rebase(String onto) {
-            return List.of();
-        }
-
-        @Override
-        public List<String> deleteBranch(String name, boolean local, boolean remote) {
-            return List.of();
-        }
-
-        @Override
-        public List<String> createBranch(String name, String startPoint) {
-            return List.of();
-        }
-
-        @Override
-        public List<String> stage(List<String> paths) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public List<String> unstageNew(List<String> paths) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public List<String> squash(Sha sha) {
-            return List.of();
-        }
-
-        @Override
-        public List<String> reword(Sha sha, String summary, String description) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public List<String> amendLastCommit() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public List<String> commit(String summary, String description) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public List<String> discard(DiscardPlan plan) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public List<String> unstage(List<String> paths) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public String commitChanges(Sha sha) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Diffs diff(List<FileEntry> files) {
-            throw new UnsupportedOperationException();
+        public Either<ProcessError, RepoStatus> status() {
+            return Either.right(new RepoStatus("main", "aaaa", files));
         }
     }
 

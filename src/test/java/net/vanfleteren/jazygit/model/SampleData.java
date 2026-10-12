@@ -1,7 +1,13 @@
 package net.vanfleteren.jazygit.model;
 
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
+import io.vavr.control.Either;
+import net.vanfleteren.jazygit.git.GitError;
+import net.vanfleteren.jazygit.git.GitError.DiffError;
+import net.vanfleteren.jazygit.git.GitError.LogError;
+import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.GitError.RepositoryUnreadable;
+import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
 
 import java.time.Instant;
@@ -9,7 +15,7 @@ import java.time.Instant;
 /**
  * Fixed sample data used by tests, so they don't depend on the state of a real repository.
  */
-public final class SampleData implements GitInfoProvider {
+public final class SampleData implements StubGitProvider {
 
     @Override
     public String repositoryName() {
@@ -17,65 +23,45 @@ public final class SampleData implements GitInfoProvider {
     }
 
     @Override
-    public RepoStatus status() {
-        return new RepoStatus("main", "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678", List.of(
+    public Either<ProcessError, RepoStatus> status() {
+        return Either.right(new RepoStatus("main", "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678", List.of(
                 new FileEntry("src/main/java/net/vanfleteren/jazygit/JazygitApp.java", ChangeType.MODIFIED),
                 new FileEntry("src/main/java/net/vanfleteren/jazygit/ui/ContentPanel.java", ChangeType.ADDED),
                 new FileEntry("src/main/java/net/vanfleteren/jazygit/model/SampleData.java", ChangeType.ADDED),
                 new FileEntry("pom.xml", ChangeType.MODIFIED),
                 new FileEntry("README.md", ChangeType.DELETED),
                 new FileEntry("notes.txt", ChangeType.UNTRACKED)
-        ));
+        )));
     }
 
     @Override
-    public List<net.vanfleteren.jazygit.git.model.Stash> stashes() {
-        return List.of();
-    }
-
-    @Override
-    public List<String> drop(String ref) {
-            return List.of("git stash drop " + ref);
-        }
-
-        @Override
-        public List<String> pop(String ref) {
-            return List.of("git stash pop " + ref);
-        }
-
-        @Override
-        public List<String> stash(String message) {
-        return List.of("git stash");
-    }
-
-    @Override
-    public List<Branch> branches() {
-        return List.of(
+    public Either<RepositoryUnreadable, List<Branch>> branches() {
+        return Either.right(List.of(
                 new Branch("main", true, "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678", Instant.EPOCH, true, true),
                 new Branch("feature/initial-layout", false, "0a1b2c3d4e5f60718293a4b5c6d7e8f901234567", Instant.EPOCH, true),
                 new Branch("feature/jgit-backend", false, "1a2b3c4d5e6f708192a3b4c5d6e7f80912345678"),
                 new Branch("bugfix/focus-cycling", false, "c3d4e5f60718293a4b5c6d7e8f9012345678a1b2")
-        );
+        ));
     }
 
     @Override
-    public List<Commit> commits() {
-        return log("main");
+    public Either<RepositoryUnreadable, List<Commit>> commits() {
+        return Either.right(MAIN);
     }
 
     @Override
-    public List<Commit> log(String branch) {
+    public Either<LogError, List<Commit>> log(String branch) {
         return switch (branch) {
-            case "main" -> MAIN;
-            case "feature/initial-layout" -> List.of(
+            case "main" -> Either.right(MAIN);
+            case "feature/initial-layout" -> Either.right(List.of(
                     commit("0a1b2c3", ADA, "2026-10-09T16:05:00Z", "Split the screen into panes", ""),
                     commit("9f8e7d6", ADA, "2026-10-09T15:40:00Z", "Add a placeholder status bar",
-                            "Shows the repository name until the real status is loaded."));
-            case "feature/jgit-backend" -> List.of(
+                            "Shows the repository name until the real status is loaded.")));
+            case "feature/jgit-backend" -> Either.right(List.of(
                     commit("1a2b3c4", LINUS, "2026-10-08T21:15:00Z", "Read branches through JGit",
-                            "Replaces the hard-coded branch list.\nThe current branch is marked."));
-            case "bugfix/focus-cycling" -> MAIN.drop(2);
-            default -> throw new IllegalStateException("Unknown branch: " + branch);
+                            "Replaces the hard-coded branch list.\nThe current branch is marked.")));
+            case "bugfix/focus-cycling" -> Either.right(MAIN.drop(2));
+            default -> Either.left(new GitError.UnknownBranch(branch));
         };
     }
 
@@ -105,87 +91,14 @@ public final class SampleData implements GitInfoProvider {
                 Instant.parse(time), message, body);
     }
 
-    /**
-     * Does nothing: the sample data never changes.
-     */
     @Override
-    public List<String> checkout(String branch) {
-        return List.of("git checkout");
+    public Either<ProcessError, String> commitChanges(Sha sha) {
+        return Either.right("1 file changed, 1 insertion(+)\n\ndiff --git a/" + sha + " b/" + sha + "\n");
     }
 
     @Override
-    public List<String> checkoutWithStash(String branch) {
-        return List.of("git checkoutWithStash");
-    }
-
-    @Override
-    public List<String> createBranch(String name, String startPoint) {
-        return List.of("git createBranch");
-    }
-
-    @Override
-    public List<String> push(String branch, boolean forceWithLease) {
-        return List.of("git push");
-    }
-
-    @Override
-    public List<String> rebase(String onto) {
-        return List.of("git rebase");
-    }
-
-    @Override
-    public List<String> deleteBranch(String name, boolean local, boolean remote) {
-        return List.of("git deleteBranch");
-    }
-
-    @Override
-    public List<String> stage(List<String> paths) {
-        return List.of("git stage");
-    }
-
-    @Override
-    public List<String> unstageNew(List<String> paths) {
-        return List.of("git unstageNew");
-    }
-
-    @Override
-    public List<String> discard(DiscardPlan plan) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public List<String> unstage(List<String> paths) {
-        return List.of("git unstage");
-    }
-
-    @Override
-    public List<String> commit(String summary, String description) {
-        return List.of("git commit");
-    }
-
-    @Override
-    public List<String> amendLastCommit() {
-        return List.of("git amendLastCommit");
-    }
-
-    @Override
-    public List<String> squash(Sha sha) {
-        return List.of("git squash");
-    }
-
-    @Override
-    public List<String> reword(Sha sha, String summary, String description) {
-        return List.of("git reword");
-    }
-
-    @Override
-    public String commitChanges(Sha sha) {
-        return "1 file changed, 1 insertion(+)\n\ndiff --git a/" + sha + " b/" + sha + "\n";
-    }
-
-    @Override
-    public Diffs diff(List<FileEntry> files) {
-        return new Diffs(sample(files, FileEntry::staged), sample(files, FileEntry::unstaged));
+    public Either<DiffError, Diffs> diff(List<FileEntry> files) {
+        return Either.right(new Diffs(sample(files, FileEntry::staged), sample(files, FileEntry::unstaged)));
     }
 
     private static String sample(List<FileEntry> files, java.util.function.Predicate<FileEntry> filter) {

@@ -67,13 +67,4 @@ public record GitFailure<E extends GitError>(E error, List<String> commands) {
         return steps.foldLeft(Either.right(List.empty()), (done, step) -> done.flatMap(earlier ->
                 step.get().map(earlier::appendAll).mapLeft(failure -> failure.after(earlier))));
     }
-
-    /**
-     * Bridges to callers that still expect an exception.
-     */
-    GitCommandException toException() {
-        return error instanceof GitError.LocalChanges(String explanation)
-                ? new LocalChangesException(explanation, commands)
-                : new GitCommandException(GitErrorText.of(error), commands);
-    }
 }

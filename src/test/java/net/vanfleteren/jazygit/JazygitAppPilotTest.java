@@ -137,7 +137,7 @@ class JazygitAppPilotTest {
             pilot.pause();
             assertEquals(1, fixture.branches().selectedIndex());
 
-            int branchCount = fixture.data().branches().size();
+            int branchCount = fixture.data().branches().get().size();
             for (int i = 0; i < branchCount + 5; i++) {
                 pilot.press(KeyCode.DOWN);
             }
@@ -266,7 +266,7 @@ class JazygitAppPilotTest {
             assertEquals(1, fixture.dispatched().size());
             StageMsg.Requested all = (StageMsg.Requested) fixture.dispatched().get(0);
             // The virtual root is selected first, so every changed file is requested.
-            assertEquals(fixture.data().status().files().toSet(), all.files().toSet());
+            assertEquals(fixture.data().status().get().files().toSet(), all.files().toSet());
 
             pilot.press(KeyCode.DOWN);
             pilot.press(KeyCode.DOWN);

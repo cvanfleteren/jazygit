@@ -20,7 +20,7 @@ public sealed interface DiscardCmd extends Cmd {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            return new DiscardMsg.Done(git.discard(plan));
+            return git.discard(plan).fold(this::failedWith, DiscardMsg.Done::new);
         }
 
         @Override

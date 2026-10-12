@@ -1,8 +1,18 @@
 package net.vanfleteren.jazygit.git;
 
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.git.model.*;
+import io.vavr.control.Either;
+import net.vanfleteren.jazygit.git.GitError.DiffError;
+import net.vanfleteren.jazygit.git.GitError.LogError;
+import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.GitError.RepositoryUnreadable;
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.Diffs;
+import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.Stash;
 
 /**
  * Reading the repository. Every read reflects the current state of the repository; deciding when
@@ -15,41 +25,33 @@ public interface GitRead {
      */
     String repositoryName();
 
-    RepoStatus status();
+    Either<ProcessError, RepoStatus> status();
 
-    List<Branch> branches();
+    Either<RepositoryUnreadable, List<Branch>> branches();
 
     /**
      * The stashes, newest first.
-     *
-     * @throws IllegalStateException if git fails, with git's explanation as message
      */
-    List<Stash> stashes();
+    Either<ProcessError, List<Stash>> stashes();
 
     /**
      * The log of HEAD, newest first.
      */
-    List<Commit> commits();
+    Either<RepositoryUnreadable, List<Commit>> commits();
 
     /**
      * The log of the local branch {@code branch}, newest first.
-     *
-     * @throws IllegalStateException if there is no such branch
      */
-    List<Commit> log(String branch);
+    Either<LogError, List<Commit>> log(String branch);
 
     /**
      * What the commit {@code sha} changed, like {@code git show}: the changed files, a summary of the
      * changes, a blank line and the diff. Long output is cut off.
-     *
-     * @throws IllegalStateException if git fails, with git's explanation as message
      */
-    String commitChanges(Sha sha);
+    Either<ProcessError, String> commitChanges(Sha sha);
 
     /**
      * The staged and the unstaged diff of {@code files}.
-     *
-     * @throws IllegalStateException if git fails, with git's explanation as message
      */
-    Diffs diff(List<FileEntry> files);
+    Either<DiffError, Diffs> diff(List<FileEntry> files);
 }

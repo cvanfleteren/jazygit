@@ -8,13 +8,18 @@ import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
+import net.vanfleteren.jazygit.git.GitError.CheckoutError;
+import net.vanfleteren.jazygit.git.GitError.DiffError;
 import net.vanfleteren.jazygit.git.GitError.DiscardError;
+import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
 import net.vanfleteren.jazygit.git.GitError.LogError;
 import net.vanfleteren.jazygit.git.GitError.RepositoryUnreadable;
 import net.vanfleteren.jazygit.git.GitError.RewordError;
 import net.vanfleteren.jazygit.git.GitError.UnknownBranch;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.state.GitErrorText;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.lib.BranchConfig;
 import org.eclipse.jgit.lib.BranchTrackingStatus;
@@ -81,7 +86,7 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
         try {
             this.workTree = repository.getWorkTree().toPath();
             // Fail at startup rather than on first use when git is not available.
-            readOrThrow(CliStatus.read(workTree));
+            CliStatus.read(workTree).getOrElseThrow(error -> new IllegalStateException(GitErrorText.of(error)));
         } catch (RuntimeException e) {
             close();
             throw e;
@@ -94,13 +99,13 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     }
 
     @Override
-    public RepoStatus status() {
-        return readOrThrow(CliStatus.read(workTree));
+    public Either<ProcessError, RepoStatus> status() {
+        return CliStatus.read(workTree);
     }
 
     @Override
-    public List<Branch> branches() {
-        return readOrThrow(readBranches());
+    public Either<RepositoryUnreadable, List<Branch>> branches() {
+        return readBranches();
     }
 
     // The checked out branch first, then the most recently committed to.
@@ -145,36 +150,32 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     }
 
     @Override
-    public List<Stash> stashes() {
-        return readOrThrow(CliStash.list(workTree));
+    public Either<ProcessError, List<Stash>> stashes() {
+        return CliStash.list(workTree);
     }
 
     @Override
-    public List<String> drop(String ref) {
-        return orThrow(CliStash.drop(workTree, ref));
+    public Either<GitFailure<ProcessError>, List<String>> drop(String ref) {
+        return CliStash.drop(workTree, ref);
     }
 
     @Override
-    public List<String> pop(String ref) {
-        return orThrow(CliStash.pop(workTree, ref));
+    public Either<GitFailure<ProcessError>, List<String>> pop(String ref) {
+        return CliStash.pop(workTree, ref);
     }
 
     @Override
-    public List<String> stash(String message) {
-        return orThrow(CliStash.push(workTree, message));
+    public Either<GitFailure<ProcessError>, List<String>> stash(String message) {
+        return CliStash.push(workTree, message);
     }
 
     @Override
-    public List<Commit> commits() {
-        return readOrThrow(head().flatMap(head -> head.fold(() -> Either.right(List.empty()), this::log)));
+    public Either<RepositoryUnreadable, List<Commit>> commits() {
+        return head().flatMap(head -> head.fold(() -> Either.right(List.empty()), this::log));
     }
 
     @Override
-    public List<Commit> log(String branch) {
-        return readOrThrow(readLog(branch));
-    }
-
-    private Either<LogError, List<Commit>> readLog(String branch) {
+    public Either<LogError, List<Commit>> log(String branch) {
         return Either.<LogError, Option<ObjectId>>narrow(read(() -> Option.of(repository.resolve(Constants.R_HEADS + branch))))
                 .flatMap(tip -> tip.<LogError>toEither(() -> new UnknownBranch(branch)))
                 .flatMap(tip -> Either.narrow(log(tip)));
@@ -212,13 +213,13 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     }
 
     @Override
-    public List<String> checkout(String branch) {
-        return orThrow(CliCheckout.checkout(workTree, branch));
+    public Either<GitFailure<CheckoutError>, List<String>> checkout(String branch) {
+        return CliCheckout.checkout(workTree, branch);
     }
 
     @Override
-    public List<String> checkoutWithStash(String branch) {
-        return orThrow(CliCheckout.checkoutWithStash(workTree, branch));
+    public Either<GitFailure<StashCheckoutError>, List<String>> checkoutWithStash(String branch) {
+        return CliCheckout.checkoutWithStash(workTree, branch);
     }
 
     /**
@@ -276,95 +277,83 @@ public final class JGitInfoProvider implements GitInfoProvider, AutoCloseable {
     }
 
     @Override
-    public List<String> createBranch(String name, String startPoint) {
-        return orThrow(CliCheckout.createBranch(workTree, name, startPoint));
+    public Either<GitFailure<ProcessError>, List<String>> createBranch(String name, String startPoint) {
+        return CliCheckout.createBranch(workTree, name, startPoint);
     }
 
     @Override
-    public List<String> push(String branch, boolean forceWithLease) {
-        return orThrow(CliBranch.push(workTree, remoteOf(branch), branch, hasUpstream(branch), forceWithLease));
+    public Either<GitFailure<ProcessError>, List<String>> push(String branch, boolean forceWithLease) {
+        return CliBranch.push(workTree, remoteOf(branch), branch, hasUpstream(branch), forceWithLease);
     }
 
     @Override
-    public List<String> rebase(String onto) {
-        return orThrow(CliRebase.onto(workTree, onto));
+    public Either<GitFailure<ProcessError>, List<String>> rebase(String onto) {
+        return CliRebase.onto(workTree, onto);
     }
 
     @Override
-    public List<String> deleteBranch(String name, boolean local, boolean remote) {
-        return orThrow(GitFailure.sequence(
+    public Either<GitFailure<ProcessError>, List<String>> deleteBranch(String name, boolean local, boolean remote) {
+        return GitFailure.sequence(
                 () -> remote ? CliBranch.deleteRemote(workTree, remoteOf(name), name) : Either.right(List.empty()),
-                () -> local ? CliBranch.deleteLocal(workTree, name) : Either.right(List.empty())));
+                () -> local ? CliBranch.deleteLocal(workTree, name) : Either.right(List.empty()));
     }
 
     @Override
-    public List<String> stage(List<String> paths) {
-        return orThrow(CliIndex.add(workTree, paths));
+    public Either<GitFailure<ProcessError>, List<String>> stage(List<String> paths) {
+        return CliIndex.add(workTree, paths);
     }
 
     @Override
-    public List<String> unstageNew(List<String> paths) {
-        return orThrow(CliIndex.removeCached(workTree, paths));
+    public Either<GitFailure<ProcessError>, List<String>> unstageNew(List<String> paths) {
+        return CliIndex.removeCached(workTree, paths);
     }
 
     @Override
-    public List<String> unstage(List<String> paths) {
-        return orThrow(CliIndex.reset(workTree, paths));
+    public Either<GitFailure<ProcessError>, List<String>> unstage(List<String> paths) {
+        return CliIndex.reset(workTree, paths);
     }
 
     @Override
-    public List<String> commit(String summary, String description) {
-        return orThrow(CliIndex.commit(workTree, new CommitMessage(summary, description)));
+    public Either<GitFailure<ProcessError>, List<String>> commit(CommitMessage message) {
+        return CliIndex.commit(workTree, message);
     }
 
     @Override
-    public List<String> amendLastCommit() {
-        return orThrow(CliIndex.amend(workTree));
+    public Either<GitFailure<ProcessError>, List<String>> amendLastCommit() {
+        return CliIndex.amend(workTree);
     }
 
     @Override
-    public List<String> reword(Sha sha, String summary, String description) {
-        CommitMessage message = new CommitMessage(summary, description);
-        return orThrow(head()
+    public Either<GitFailure<RewordError>, List<String>> reword(Sha sha, CommitMessage message) {
+        return head()
                 .mapLeft(error -> new GitFailure<RewordError>(error, List.empty()))
                 .flatMap(head -> head.exists(id -> id.name().equals(sha.value()))
                         ? GitFailure.widen(CliIndex.reword(workTree, message))
-                        : CliRebase.reword(workTree, sha, message)));
+                        : CliRebase.reword(workTree, sha, message));
     }
 
     @Override
-    public List<String> squash(Sha sha) {
-        return orThrow(CliRebase.squash(workTree, sha));
+    public Either<GitFailure<ProcessError>, List<String>> squash(Sha sha) {
+        return CliRebase.squash(workTree, sha);
     }
 
     @Override
-    public List<String> discard(DiscardPlan plan) {
-        return orThrow(GitFailure.<DiscardError>sequence(
+    public Either<GitFailure<DiscardError>, List<String>> discard(DiscardPlan plan) {
+        return GitFailure.<DiscardError>sequence(
                 () -> GitFailure.widen(CliIndex.removeAdded(workTree, plan.added())),
                 () -> GitFailure.widen(CliIndex.checkoutFromHead(workTree, plan.fromHead())),
                 () -> GitFailure.widen(CliIndex.checkoutFromIndex(workTree, plan.fromIndex())),
-                () -> CliIndex.deleteUntracked(workTree, plan.untracked())));
+                () -> CliIndex.deleteUntracked(workTree, plan.untracked()));
     }
 
     @Override
-    public String commitChanges(Sha sha) {
-        return readOrThrow(CliShow.changes(workTree, sha));
+    public Either<ProcessError, String> commitChanges(Sha sha) {
+        return CliShow.changes(workTree, sha);
     }
 
     @Override
-    public Diffs diff(List<FileEntry> files) {
-        return readOrThrow(CliDiff.diff(workTree, files));
-    }
-
-    /**
-     * Bridges to callers that still expect an exception.
-     */
-    private static List<String> orThrow(Either<? extends GitFailure<?>, List<String>> outcome) {
-        return outcome.getOrElseThrow(GitFailure::toException);
-    }
-
-    private static <T> T readOrThrow(Either<? extends GitError, T> outcome) {
-        return outcome.getOrElseThrow(error -> new IllegalStateException(GitErrorText.of(error)));
+    public Either<DiffError, Diffs> diff(List<FileEntry> files) {
+        return CliDiff.diff(workTree, files);
     }
 
     @Override

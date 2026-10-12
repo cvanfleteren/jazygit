@@ -19,7 +19,7 @@ class SampleDataTest {
 
     @Test
     void filesAreNotEmpty() {
-        List<FileEntry> files = data.status().files();
+        List<FileEntry> files = data.status().get().files();
         assertFalse(files.isEmpty());
         for (FileEntry file : files) {
             assertFalse(file.path().isBlank());
@@ -28,14 +28,14 @@ class SampleDataTest {
 
     @Test
     void exactlyOneBranchIsCurrent() {
-        List<Branch> branches = data.branches();
+        List<Branch> branches = data.branches().get();
         long currentCount = branches.count(Branch::current);
         assertEquals(1, currentCount);
     }
 
     @Test
     void commitsHaveShortShaAndMessage() {
-        List<Commit> commits = data.commits();
+        List<Commit> commits = data.commits().get();
         assertFalse(commits.isEmpty());
         for (Commit commit : commits) {
             assertFalse(commit.shortSha().isBlank());
@@ -45,8 +45,8 @@ class SampleDataTest {
 
     @Test
     void sampleCollectionsAreConsistentAcrossCalls() {
-        assertTrue(data.status().files().size() > 0);
-        assertEquals(data.branches().size(), data.branches().size());
-        assertEquals(data.commits().size(), data.commits().size());
+        assertTrue(data.status().get().files().size() > 0);
+        assertEquals(data.branches().get().size(), data.branches().get().size());
+        assertEquals(data.commits().get().size(), data.commits().get().size());
     }
 }

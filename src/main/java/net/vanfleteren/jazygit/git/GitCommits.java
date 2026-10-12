@@ -1,27 +1,27 @@
 package net.vanfleteren.jazygit.git;
 
 import io.vavr.collection.List;
+import io.vavr.control.Either;
+import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.GitError.RewordError;
+import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.Sha;
 
 /**
- * Operations that create or rewrite commits.
+ * Operations that create or rewrite commits. Each returns the command lines it ran, or why it failed
+ * together with the command lines run up to then.
  */
 public interface GitCommits {
 
     /**
      * Commits what is staged.
-     *
-     * @param description the extended message; may be blank
-     * @throws IllegalStateException if git fails, with git's explanation as message
      */
-    List<String> commit(String summary, String description);
+    Either<GitFailure<ProcessError>, List<String>> commit(CommitMessage message);
 
     /**
      * Amends the last commit with what is staged, keeping its message.
-     *
-     * @throws IllegalStateException if git fails, with git's explanation as message
      */
-    List<String> amendLastCommit();
+    Either<GitFailure<ProcessError>, List<String>> amendLastCommit();
 
     /**
      * Replaces the message of the commit {@code sha}, leaving its content alone. Other than for the last commit,
@@ -29,18 +29,14 @@ public interface GitCommits {
      * when it fails.
      *
      * @param sha the full object id of the commit
-     *
-     * @param description the extended message; may be blank
-     * @throws IllegalStateException if git fails, with git's explanation as message
      */
-    List<String> reword(Sha sha, String summary, String description);
+    Either<GitFailure<RewordError>, List<String>> reword(Sha sha, CommitMessage message);
 
     /**
      * Squashes the commit {@code sha} into its parent, keeping both messages. This rebases the commits after
      * it, uncommitted changes being stashed meanwhile; the rebase is aborted when it fails.
      *
      * @param sha the full object id of a commit that has exactly one parent
-     * @throws IllegalStateException if git fails, with git's explanation as message
      */
-    List<String> squash(Sha sha);
+    Either<GitFailure<ProcessError>, List<String>> squash(Sha sha);
 }

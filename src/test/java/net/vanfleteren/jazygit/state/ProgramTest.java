@@ -13,7 +13,19 @@ import net.vanfleteren.jazygit.feature.commit.CommitPopup;
 import net.vanfleteren.jazygit.feature.commit.RewordMsg;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import net.vanfleteren.jazygit.feature.stage.StageMsg;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
+import io.vavr.control.Either;
+import net.vanfleteren.jazygit.git.GitError;
+import net.vanfleteren.jazygit.git.GitError.CheckoutError;
+import net.vanfleteren.jazygit.git.GitError.DiffError;
+import net.vanfleteren.jazygit.git.GitError.DiscardError;
+import net.vanfleteren.jazygit.git.GitError.LogError;
+import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.GitError.RepositoryUnreadable;
+import net.vanfleteren.jazygit.git.GitError.RewordError;
+import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
+import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Commit;
@@ -39,12 +51,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 class ProgramTest {
 
-    private static final class FakeProvider implements GitInfoProvider {
+    private static final class FakeProvider implements StubGitProvider {
 
         RepoStatus status = new RepoStatus("main", "aaaa", List.of());
-        RuntimeException statusError;
-        RuntimeException checkoutError;
-        RuntimeException indexError;
+        String statusError;
+        String checkoutError;
+        String indexError;
         String commitFailure;
         final java.util.List<DiscardPlan> discarded = new ArrayList<>();
         final java.util.List<String> commits = new ArrayList<>();
@@ -55,54 +67,41 @@ class ProgramTest {
         final java.util.List<String> logLoads = new ArrayList<>();
 
         @Override
-        public String repositoryName() {
-            return "repo";
+        public Either<ProcessError, RepoStatus> status() {
+            return statusError != null ? Either.left(new GitError.CommandFailed(statusError, 1)) : Either.right(status);
         }
 
         @Override
-        public RepoStatus status() {
-            if (statusError != null) {
-                throw statusError;
-            }
-            return status;
+        public Either<GitFailure<ProcessError>, List<String>> drop(String ref) {
+            return StubGitProvider.ran("git stash drop " + ref);
         }
 
         @Override
-        public List<net.vanfleteren.jazygit.git.model.Stash> stashes() {
-            return List.of();
+        public Either<GitFailure<ProcessError>, List<String>> pop(String ref) {
+            return StubGitProvider.ran("git stash pop " + ref);
         }
 
         @Override
-        public List<String> drop(String ref) {
-            return List.of("git stash drop " + ref);
+        public Either<GitFailure<ProcessError>, List<String>> stash(String message) {
+            return StubGitProvider.ran("git stash");
         }
 
         @Override
-        public List<String> pop(String ref) {
-            return List.of("git stash pop " + ref);
+        public Either<RepositoryUnreadable, List<Branch>> branches() {
+            return Either.right(List.of(new Branch("main", status.head().equals("main"), "main-tip"),
+                    new Branch("other", status.head().equals("other"), "other-tip", Instant.EPOCH, true)));
         }
 
         @Override
-        public List<String> stash(String message) {
-            return List.of("git stash");
-        }
-
-        @Override
-        public List<Branch> branches() {
-            return List.of(new Branch("main", status.head().equals("main"), "main-tip"),
-                    new Branch("other", status.head().equals("other"), "other-tip", Instant.EPOCH, true));
-        }
-
-        @Override
-        public List<Commit> commits() {
+        public Either<RepositoryUnreadable, List<Commit>> commits() {
             commitLoads++;
-            return List.of(commit(status.headOid()));
+            return Either.right(List.of(commit(status.headOid())));
         }
 
         @Override
-        public List<Commit> log(String branch) {
+        public Either<LogError, List<Commit>> log(String branch) {
             logLoads.add(branch);
-            return List.of(commit(branch + "-tip"));
+            return Either.right(List.of(commit(branch + "-tip")));
         }
 
         private static Commit commit(String sha) {
@@ -110,114 +109,108 @@ class ProgramTest {
         }
 
         @Override
-        public List<String> checkout(String branch) {
-            if (checkoutError != null) {
-                throw checkoutError;
-            }
-            status = new RepoStatus(branch, branch + "-head", List.of());
-            return List.of("git checkout");
+        public Either<GitFailure<CheckoutError>, List<String>> checkout(String branch) {
+            return GitFailure.widen(switchTo(branch, "git checkout"));
         }
 
         @Override
-        public List<String> checkoutWithStash(String branch) {
-            if (checkoutError != null) {
-                throw checkoutError;
-            }
-            status = new RepoStatus(branch, branch + "-head", List.of());
-            return List.of("git checkoutWithStash");
+        public Either<GitFailure<StashCheckoutError>, List<String>> checkoutWithStash(String branch) {
+            return GitFailure.widen(switchTo(branch, "git checkoutWithStash"));
         }
 
         @Override
-        public List<String> push(String branch, boolean forceWithLease) {
+        public Either<GitFailure<ProcessError>, List<String>> createBranch(String name, String startPoint) {
+            return switchTo(name, "git createBranch");
+        }
+
+        private Either<GitFailure<ProcessError>, List<String>> switchTo(String branch, String command) {
+            if (checkoutError != null) {
+                return StubGitProvider.refused(command, checkoutError);
+            }
+            status = new RepoStatus(branch, branch + "-head", List.of());
+            return StubGitProvider.ran(command);
+        }
+
+        @Override
+        public Either<GitFailure<ProcessError>, List<String>> push(String branch, boolean forceWithLease) {
             pushed.add(branch + (forceWithLease ? " force" : ""));
-            return List.of("git push");
+            return StubGitProvider.ran("git push");
         }
 
         @Override
-        public List<String> rebase(String onto) {
-            return List.of("git rebase");
+        public Either<GitFailure<ProcessError>, List<String>> rebase(String onto) {
+            return StubGitProvider.ran("git rebase");
         }
 
         @Override
-        public List<String> deleteBranch(String name, boolean local, boolean remote) {
+        public Either<GitFailure<ProcessError>, List<String>> deleteBranch(String name, boolean local, boolean remote) {
             deleted.add(name + (local ? " local" : "") + (remote ? " remote" : ""));
-            return List.of("git deleteBranch");
+            return StubGitProvider.ran("git deleteBranch");
         }
 
         @Override
-        public List<String> createBranch(String name, String startPoint) {
-            if (checkoutError != null) {
-                throw checkoutError;
-            }
-            status = new RepoStatus(name, name + "-head", List.of());
-            return List.of("git createBranch");
+        public Either<GitFailure<ProcessError>, List<String>> stage(List<String> paths) {
+            return index("stage", paths, "git stage");
         }
 
         @Override
-        public List<String> stage(List<String> paths) {
-            index("stage", paths);
-            return List.of("git stage");
+        public Either<GitFailure<ProcessError>, List<String>> unstageNew(List<String> paths) {
+            return index("unstageNew", paths, "git unstageNew");
         }
 
         @Override
-        public List<String> unstageNew(List<String> paths) {
-            index("unstageNew", paths);
-            return List.of("git unstageNew");
+        public Either<GitFailure<ProcessError>, List<String>> squash(Sha sha) {
+            return StubGitProvider.ran("git squash");
         }
 
         @Override
-        public List<String> squash(Sha sha) {
-            return List.of("git squash");
+        public Either<GitFailure<RewordError>, List<String>> reword(Sha sha, CommitMessage message) {
+            commits.add("reword " + message.summary() + "|" + message.description());
+            return StubGitProvider.ran("git reword");
         }
 
         @Override
-        public List<String> reword(Sha sha, String summary, String description) {
-            commits.add("reword " + summary + "|" + description);
-            return List.of("git reword");
+        public Either<GitFailure<ProcessError>, List<String>> amendLastCommit() {
+            return index("amend", List.of(), "git amendLastCommit");
         }
 
         @Override
-        public List<String> amendLastCommit() {
-            index("amend", List.of());
-            return List.of("git amendLastCommit");
-        }
-
-        @Override
-        public List<String> commit(String summary, String description) {
+        public Either<GitFailure<ProcessError>, List<String>> commit(CommitMessage message) {
             if (commitFailure != null) {
-                throw new IllegalStateException(commitFailure);
+                return StubGitProvider.refused("git commit", commitFailure);
             }
-            commits.add(summary + "|" + description);
-            return List.of("git commit");
+            commits.add(message.summary() + "|" + message.description());
+            return StubGitProvider.ran("git commit");
         }
 
         @Override
-        public List<String> discard(DiscardPlan plan) {
+        public Either<GitFailure<DiscardError>, List<String>> discard(DiscardPlan plan) {
             discarded.add(plan);
-            return List.of("git discard");
+            return StubGitProvider.ran("git discard");
         }
 
         @Override
-        public List<String> unstage(List<String> paths) {
-            index("unstage", paths);
-            return List.of("git unstage");
+        public Either<GitFailure<ProcessError>, List<String>> unstage(List<String> paths) {
+            return index("unstage", paths, "git unstage");
         }
 
         @Override
-        public String commitChanges(Sha sha) {
-            return "changes of " + sha;
+        public Either<ProcessError, String> commitChanges(Sha sha) {
+            return Either.right("changes of " + sha);
         }
 
         @Override
-        public Diffs diff(List<FileEntry> files) {
-            return new Diffs("", "diff of " + files.size());
+        public Either<DiffError, Diffs> diff(List<FileEntry> files) {
+            return Either.right(new Diffs("", "diff of " + files.size()));
         }
 
-        private void index(String operation, List<String> paths) {
+        private Either<GitFailure<ProcessError>, List<String>> index(String operation, List<String> paths,
+                                                                   String command) {
             if (indexError != null) {
-                throw indexError;
+                return StubGitProvider.refused(command, indexError);
             }
             indexCalls.add(operation + paths.asJava());
+            return StubGitProvider.ran(command);
         }
     }
 
@@ -262,7 +255,7 @@ class ProgramTest {
 
     @Test
     void providerErrorsBecomeFailedState() {
-        provider.statusError = new IllegalStateException("git status failed");
+        provider.statusError = "git status failed";
         settle();
 
         assertEquals(new Failed<>("git status failed"), program.model().status());
@@ -304,7 +297,7 @@ class ProgramTest {
     @Test
     void failedNewBranchIsReported() {
         settle();
-        provider.checkoutError = new IllegalStateException("fatal: exists");
+        provider.checkoutError = "fatal: exists";
 
         program.dispatch(new NewBranchMsg.Requested("other"));
         program.dispatch(new NewBranchMsg.Confirmed("topic"));
@@ -415,7 +408,7 @@ class ProgramTest {
     void failedToggleStageIsReported() {
         settle();
 
-        provider.indexError = new IllegalStateException("fatal: pathspec 'a.txt' did not match");
+        provider.indexError = "fatal: pathspec 'a.txt' did not match";
         program.dispatch(new StageMsg.Requested(List.of(new FileEntry("a.txt", ChangeType.UNTRACKED))));
         settle();
 
@@ -426,7 +419,7 @@ class ProgramTest {
     void failedCheckoutIsReportedUntilTheNextOne() {
         settle();
 
-        provider.checkoutError = new IllegalStateException("error: Your local changes would be overwritten");
+        provider.checkoutError = "error: Your local changes would be overwritten";
         program.dispatch(new CheckoutMsg.Requested("other"));
         settle();
         assertEquals(Option.of("Checkout of other failed: error: Your local changes would be overwritten"),

@@ -17,7 +17,7 @@ import java.util.concurrent.TimeoutException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -51,44 +51,44 @@ class JGitInfoProviderTest {
 
     @Test
     void statusFollowsTheWorkingTree() throws Exception {
-        assertEquals(List.of(), provider.status().files());
+        assertEquals(List.of(), provider.status().get().files());
 
         Files.writeString(repo.resolve("new.txt"), "new\n");
-        assertEquals(List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)), provider.status().files());
+        assertEquals(List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)), provider.status().get().files());
 
         git("add", "new.txt");
-        assertEquals(List.of(new FileEntry("new.txt", ChangeType.ADDED)), provider.status().files());
+        assertEquals(List.of(new FileEntry("new.txt", ChangeType.ADDED)), provider.status().get().files());
     }
 
     @Test
     void commitsAndStatusFollowNewCommits() throws Exception {
-        String headBefore = provider.status().headOid();
+        String headBefore = provider.status().get().headOid();
         Files.writeString(repo.resolve("new.txt"), "new\n");
         git("add", "new.txt");
         git("commit", "-q", "-m", "Second commit");
 
-        RepoStatus status = provider.status();
+        RepoStatus status = provider.status().get();
         assertNotEquals(headBefore, status.headOid());
         assertEquals(List.of(), status.files());
-        List<Commit> commits = provider.commits();
+        List<Commit> commits = provider.commits().get();
         assertEquals("Second commit", commits.get(0).message());
         assertTrue(status.headOid().startsWith(commits.get(0).shortSha()));
     }
 
     @Test
     void branchesFollowExternalChanges() throws Exception {
-        String head = provider.status().headOid();
-        assertEquals(List.of(new Branch("main", true, head)), withoutTimes(provider.branches()));
+        String head = provider.status().get().headOid();
+        assertEquals(List.of(new Branch("main", true, head)), withoutTimes(provider.branches().get()));
 
         git("branch", "foo");
-        assertEquals(List.of(new Branch("main", true, head), new Branch("foo", false, head)), withoutTimes(provider.branches()));
+        assertEquals(List.of(new Branch("main", true, head), new Branch("foo", false, head)), withoutTimes(provider.branches().get()));
 
         git("checkout", "-q", "foo");
-        assertEquals(List.of(new Branch("foo", true, head), new Branch("main", false, head)), withoutTimes(provider.branches()));
+        assertEquals(List.of(new Branch("foo", true, head), new Branch("main", false, head)), withoutTimes(provider.branches().get()));
 
         git("commit", "-q", "--allow-empty", "-m", "Move foo");
-        String moved = provider.status().headOid();
-        assertEquals(List.of(new Branch("foo", true, moved), new Branch("main", false, head)), withoutTimes(provider.branches()));
+        String moved = provider.status().get().headOid();
+        assertEquals(List.of(new Branch("foo", true, moved), new Branch("main", false, head)), withoutTimes(provider.branches().get()));
     }
 
     @Test
@@ -102,11 +102,11 @@ class JGitInfoProviderTest {
         commitAt("newest", "2020-01-09T00:00:00Z");
 
         assertEquals(List.of("main", "newest", "middle", "old"),
-                provider.branches().map(Branch::name).toList());
+                provider.branches().get().map(Branch::name).toList());
 
         git("checkout", "-q", "old");
         assertEquals(List.of("old", "newest", "middle", "main"),
-                provider.branches().map(Branch::name).toList());
+                provider.branches().get().map(Branch::name).toList());
     }
 
     private void commitAt(String branch, String date) throws Exception {
@@ -130,27 +130,27 @@ class JGitInfoProviderTest {
         git("commit", "-q", "--allow-empty", "-m", "Side subject", "-m", "Side detail\nsecond line");
         git("checkout", "-q", "main");
 
-        List<Commit> side = provider.log("side");
+        List<Commit> side = provider.log("side").get();
         assertEquals(List.of("Side subject", "Initial commit"), side.map(Commit::message).toList());
         assertEquals("Side detail\nsecond line", side.get(0).body());
         assertEquals("", side.get(1).body());
         assertEquals("Test", side.get(0).authorName());
         assertEquals("test@example.com", side.get(0).authorEmail());
 
-        assertEquals(List.of("Initial commit"), provider.log("main").map(Commit::message).toList());
-        assertThrows(IllegalStateException.class, () -> provider.log("gone"));
+        assertEquals(List.of("Initial commit"), provider.log("main").get().map(Commit::message).toList());
+        assertEquals(new GitError.UnknownBranch("gone"), provider.log("gone").getLeft());
     }
 
     @Test
     void reportsRepositoryNameAndCurrentBranch() throws Exception {
         assertEquals(repo.getFileName().toString(), provider.repositoryName());
-        assertEquals("main", provider.status().branchLabel());
+        assertEquals("main", provider.status().get().branchLabel());
 
         git("checkout", "-q", "-b", "feature");
-        assertEquals("feature", provider.status().branchLabel());
+        assertEquals("feature", provider.status().get().branchLabel());
 
         git("checkout", "-q", "--detach");
-        assertEquals("HEAD detached at " + provider.commits().get(0).shortSha(), provider.status().branchLabel());
+        assertEquals("HEAD detached at " + provider.commits().get().get(0).shortSha(), provider.status().get().branchLabel());
     }
 
     @Test
@@ -158,10 +158,10 @@ class JGitInfoProviderTest {
         git("branch", "feature");
         Files.writeString(repo.resolve("new.txt"), "new\n");
 
-        provider.checkout("feature");
+        provider.checkout("feature").get();
 
-        assertEquals("feature", provider.status().branchLabel());
-        assertEquals(List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)), provider.status().files());
+        assertEquals("feature", provider.status().get().branchLabel());
+        assertEquals(List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)), provider.status().get().files());
     }
 
     @Test
@@ -170,17 +170,17 @@ class JGitInfoProviderTest {
         Files.writeString(repo.resolve("new file.txt"), "new\n");
 
         assertEquals(List.of("git add -- README.md 'new file.txt'"),
-                provider.stage(List.of("README.md", "new file.txt")));
+                provider.stage(List.of("README.md", "new file.txt")).get());
         assertEquals(List.of("git rm --cached --force --quiet -- 'new file.txt'"),
-                provider.unstageNew(List.of("new file.txt")));
-        assertEquals(List.of(), provider.unstage(List.of()));
+                provider.unstageNew(List.of("new file.txt")).get());
+        assertEquals(List.of(), provider.unstage(List.of()).get());
         assertEquals(List.of("git commit --quiet -m 'a summary' -m details"),
-                provider.commit("a summary", "details"));
+                provider.commit(new CommitMessage("a summary", "details")).get());
 
         git("branch", "feature");
         Files.writeString(repo.resolve("README.md"), "dirty\n");
         assertEquals(List.of("git stash push --quiet", "git checkout --quiet feature --",
-                "git stash pop --quiet"), provider.checkoutWithStash("feature"));
+                "git stash pop --quiet"), provider.checkoutWithStash("feature").get());
     }
 
     @Test
@@ -195,7 +195,7 @@ class JGitInfoProviderTest {
         git("commit", "-q", "-m", "Main work");
         git("merge", "-q", "--no-ff", "-m", "Merge feature", "feature");
 
-        List<Commit> commits = provider.commits();
+        List<Commit> commits = provider.commits().get();
 
         assertEquals(List.of("Merge feature", "Feature work", "Main work"),
                 commits.map(Commit::message).take(3));
@@ -212,13 +212,13 @@ class JGitInfoProviderTest {
         git("add", "b.txt");
         git("commit", "-q", "-m", "Third");
         Files.writeString(repo.resolve("README.md"), "dirty\n");
-        List<Commit> before = provider.commits();
+        List<Commit> before = provider.commits().get();
 
-        List<String> executed = provider.reword(before.get(1).sha(), "Second, better", "because");
+        List<String> executed = provider.reword(before.get(1).sha(), new CommitMessage("Second, better", "because")).get();
 
         assertEquals(List.of("git rebase --interactive --autostash --keep-empty --rebase-merges " + before.get(1).sha() + "^"),
                 executed);
-        List<Commit> after = provider.commits();
+        List<Commit> after = provider.commits().get();
         assertEquals(List.of("Third", "Second, better", "Initial commit"),
                 after.map(Commit::message).toList());
         assertEquals("because", after.get(1).body());
@@ -238,11 +238,11 @@ class JGitInfoProviderTest {
         git("commit", "-q", "-m", "Main work");
         git("checkout", "-q", "feature");
 
-        List<String> executed = provider.rebase("main");
+        List<String> executed = provider.rebase("main").get();
 
         assertEquals(List.of("git rebase --autostash --keep-empty --rebase-merges --no-autosquash main"), executed);
         assertEquals(List.of("Feature work", "Main work", "Initial commit"),
-                provider.commits().map(Commit::message).toList());
+                provider.commits().get().map(Commit::message).toList());
     }
 
     @Test
@@ -270,9 +270,9 @@ class JGitInfoProviderTest {
         git("commit", "-q", "-m", "Main work");
         git("checkout", "-q", "feature");
 
-        provider.rebase("main");
+        provider.rebase("main").get();
 
-        List<Commit> after = provider.commits();
+        List<Commit> after = provider.commits().get();
         assertEquals(List.of("fixup! Feature work", "Merge side"),
                 after.take(2).map(Commit::message));
         assertTrue(after.get(1).isMerge());
@@ -289,10 +289,10 @@ class JGitInfoProviderTest {
         git("commit", "-q", "-am", "Main edit");
         git("checkout", "-q", "feature");
 
-        assertThrows(IllegalStateException.class, () -> provider.rebase("main"));
+        assertInstanceOf(GitError.CommandFailed.class, provider.rebase("main").getLeft().error());
 
         assertEquals(List.of("Feature edit", "Initial commit"),
-                provider.commits().map(Commit::message).toList());
+                provider.commits().get().map(Commit::message).toList());
         assertEquals("feature\n", Files.readString(repo.resolve("README.md")));
     }
 
@@ -308,13 +308,13 @@ class JGitInfoProviderTest {
         git("add", "c.txt");
         git("commit", "-q", "-m", "Fourth");
         Files.writeString(repo.resolve("README.md"), "dirty\n");
-        List<Commit> before = provider.commits();
+        List<Commit> before = provider.commits().get();
 
-        List<String> executed = provider.squash(before.get(1).sha());
+        List<String> executed = provider.squash(before.get(1).sha()).get();
 
         assertTrue(executed.head().startsWith("git rebase --interactive --autostash --keep-empty --rebase-merges"),
                 executed.toString());
-        List<Commit> after = provider.commits();
+        List<Commit> after = provider.commits().get();
         assertEquals(List.of("Fourth", "Second", "Initial commit"), after.map(Commit::message).toList());
         assertTrue(after.get(1).body().contains("Third"), after.get(1).body());
         assertTrue(Files.exists(repo.resolve("b.txt")));
@@ -327,9 +327,9 @@ class JGitInfoProviderTest {
         git("add", "a.txt");
         git("commit", "-q", "-m", "Second");
 
-        provider.squash(provider.commits().head().sha());
+        provider.squash(provider.commits().get().head().sha()).get();
 
-        assertEquals(List.of("Initial commit"), provider.commits().map(Commit::message).toList());
+        assertEquals(List.of("Initial commit"), provider.commits().get().map(Commit::message).toList());
     }
 
     @Test
@@ -338,18 +338,18 @@ class JGitInfoProviderTest {
         git("add", "a.txt");
         git("commit", "-q", "-m", "Second");
 
-        provider.reword(provider.commits().get(1).sha(), "Start", "");
+        provider.reword(provider.commits().get().get(1).sha(), new CommitMessage("Start", "")).get();
 
-        assertEquals(List.of("Second", "Start"), provider.commits().map(Commit::message).toList());
+        assertEquals(List.of("Second", "Start"), provider.commits().get().map(Commit::message).toList());
     }
 
     @Test
     void rewordOfALastCommitAmendsIt() throws Exception {
-        List<String> executed = provider.reword(provider.commits().head().sha(), "Renamed", "");
+        List<String> executed = provider.reword(provider.commits().get().head().sha(), new CommitMessage("Renamed", "")).get();
 
         assertEquals(1, executed.size());
         assertTrue(executed.head().startsWith("git commit"), executed.toString());
-        assertEquals("Renamed", provider.commits().head().message());
+        assertEquals("Renamed", provider.commits().get().head().message());
     }
 
     @Test
@@ -366,11 +366,11 @@ class JGitInfoProviderTest {
         Files.writeString(repo.resolve("after.txt"), "x\n");
         git("add", "after.txt");
         git("commit", "-q", "-m", "After merge");
-        Commit merge = provider.commits().get(1);
+        Commit merge = provider.commits().get().get(1);
 
-        provider.reword(merge.sha(), "Merged the feature", "");
+        provider.reword(merge.sha(), new CommitMessage("Merged the feature", "")).get();
 
-        List<Commit> after = provider.commits();
+        List<Commit> after = provider.commits().get();
         assertEquals("After merge", after.head().message());
         assertEquals("Merged the feature", after.get(1).message());
         assertTrue(after.get(1).isMerge());
@@ -378,11 +378,11 @@ class JGitInfoProviderTest {
 
     @Test
     void aFailingRebaseIsAbortedAndReported() throws Exception {
-        GitCommandException e = assertThrows(GitCommandException.class,
-                () -> provider.reword(new Sha("0123456789012345678901234567890123456789"), "x", ""));
+        GitFailure<GitError.RewordError> failure =
+                provider.reword(new Sha("0123456789012345678901234567890123456789"), new CommitMessage("x", "")).getLeft();
 
-        assertTrue(e.commands().head().startsWith("git rev-list"), e.commands().toString());
-        assertEquals("Initial commit", provider.commits().head().message());
+        assertTrue(failure.commands().head().startsWith("git rev-list"), failure.commands().toString());
+        assertEquals("Initial commit", provider.commits().get().head().message());
         assertTrue(Files.notExists(repo.resolve(".git/rebase-merge")));
     }
 
@@ -391,66 +391,61 @@ class JGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "changed\n");
         Files.writeString(repo.resolve("new.txt"), "new\n");
 
-        List<String> executed = provider.stash("my work");
+        List<String> executed = provider.stash("my work").get();
 
         assertEquals(List.of("git stash push --include-untracked --message 'my work'"), executed);
-        assertEquals(List.of(), provider.status().files());
-        assertEquals(List.of(new Stash("stash@{0}", "my work")), provider.stashes());
+        assertEquals(List.of(), provider.status().get().files());
+        assertEquals(List.of(new Stash("stash@{0}", "my work")), provider.stashes().get());
     }
 
     @Test
     void popRestoresTheChangesAndDropsTheStash() throws Exception {
         Files.writeString(repo.resolve("README.md"), "changed\n");
-        provider.stash("work");
+        provider.stash("work").get();
 
-        List<String> executed = provider.pop("stash@{0}");
+        List<String> executed = provider.pop("stash@{0}").get();
 
         assertEquals(1, executed.size());
         assertTrue(executed.head().startsWith("git stash pop"), executed.toString());
         assertEquals("changed\n", Files.readString(repo.resolve("README.md")));
-        assertEquals(List.of(), provider.stashes());
+        assertEquals(List.of(), provider.stashes().get());
     }
 
     @Test
     void dropDeletesTheStashWithoutApplyingIt() throws Exception {
         Files.writeString(repo.resolve("README.md"), "changed\n");
-        provider.stash("work");
+        provider.stash("work").get();
 
-        List<String> executed = provider.drop("stash@{0}");
+        List<String> executed = provider.drop("stash@{0}").get();
 
         assertEquals(1, executed.size());
         assertTrue(executed.head().startsWith("git stash drop"), executed.toString());
-        assertEquals(List.of(), provider.stashes());
+        assertEquals(List.of(), provider.stashes().get());
         assertEquals("hello\n", Files.readString(repo.resolve("README.md")));
     }
 
     @Test
     void popOfAnUnknownStashFailsWithTheCommand() {
-        GitCommandException e = assertThrows(GitCommandException.class, () -> provider.pop("stash@{3}"));
-
-        assertEquals(1, e.commands().size());
+        assertEquals(1, provider.pop("stash@{3}").getLeft().commands().size());
     }
 
     @Test
     void stashesListTheNewestFirstAndThereAreNoneInACleanRepository() throws Exception {
-        assertEquals(List.of(), provider.stashes());
+        assertEquals(List.of(), provider.stashes().get());
         Files.writeString(repo.resolve("README.md"), "one\n");
-        provider.stash("first");
+        provider.stash("first").get();
         Files.writeString(repo.resolve("README.md"), "two\n");
-        provider.stash("second");
+        provider.stash("second").get();
 
         assertEquals(List.of(new Stash("stash@{0}", "second"), new Stash("stash@{1}", "first")),
-                provider.stashes());
+                provider.stashes().get());
     }
 
     @Test
     void aFailingCommandReportsTheCommandsRunUpToAndIncludingIt() {
-        GitCommandException e = assertThrows(GitCommandException.class,
-                () -> provider.deleteBranch("missing", true, false));
-        assertEquals(List.of("git branch --delete --force missing"), e.commands());
-
-        e = assertThrows(GitCommandException.class, () -> provider.stage(List.of("missing.txt")));
-        assertEquals(List.of("git add -- missing.txt"), e.commands());
+        assertEquals(List.of("git branch --delete --force missing"),
+                provider.deleteBranch("missing", true, false).getLeft().commands());
+        assertEquals(List.of("git add -- missing.txt"), provider.stage(List.of("missing.txt")).getLeft().commands());
     }
 
     @Test
@@ -461,10 +456,11 @@ class JGitInfoProviderTest {
         git("checkout", "-q", "main");
         Files.writeString(repo.resolve("README.md"), "local change\n");
 
-        IllegalStateException e = assertThrows(IllegalStateException.class, () -> provider.checkout("feature"));
+        GitError.CheckoutError error = provider.checkout("feature").getLeft().error();
 
-        assertTrue(e.getMessage().contains("would be overwritten"), e.getMessage());
-        assertEquals("main", provider.status().branchLabel());
+        assertTrue(error instanceof GitError.LocalChanges(String explanation)
+                && explanation.contains("would be overwritten"), error.toString());
+        assertEquals("main", provider.status().get().branchLabel());
     }
 
     private static List<Branch> withoutTimes(List<Branch> branches) {
@@ -473,7 +469,7 @@ class JGitInfoProviderTest {
 
     @Test
     void branchesCarryTheTimeOfTheirLastCommit() {
-        assertEquals(provider.commits().get(0).authorTime().getEpochSecond(), provider.branches().get(0).tipTime().getEpochSecond());
+        assertEquals(provider.commits().get().get(0).authorTime().getEpochSecond(), provider.branches().get().get(0).tipTime().getEpochSecond());
     }
 
     @Test
@@ -484,9 +480,9 @@ class JGitInfoProviderTest {
         git("commit", "-q", "-m", "On other");
         git("checkout", "-q", "main");
 
-        provider.createBranch("topic", "other");
+        provider.createBranch("topic", "other").get();
 
-        assertEquals("topic", provider.status().branchLabel());
+        assertEquals("topic", provider.status().get().branchLabel());
         assertTrue(Files.exists(repo.resolve("other.txt")));
     }
 
@@ -499,7 +495,7 @@ class JGitInfoProviderTest {
         git("remote", "add", "origin", bare.toString());
         git("push", "-q", "origin", "pushed");
 
-        assertEquals(List.of(true, false), provider.branches()
+        assertEquals(List.of(true, false), provider.branches().get()
                 .filter(b -> !b.name().equals("main"))
                 .sorted(java.util.Comparator.comparing(Branch::name).reversed())
                 .map(Branch::hasRemote));
@@ -532,13 +528,13 @@ class JGitInfoProviderTest {
         git("init", "-q", "--bare", "-b", "main", bare.toString());
         git("remote", "add", "origin", bare.toString());
 
-        provider.push("main", false);
+        provider.push("main", false).get();
         assertEquals(List.of(0, 0), counts("main"));
-        assertTrue(provider.branches().filter(b -> b.name().equals("main")).forAll(Branch::hasRemote));
+        assertTrue(provider.branches().get().filter(b -> b.name().equals("main")).forAll(Branch::hasRemote));
 
         git("commit", "-q", "--allow-empty", "-m", "local");
         assertEquals(List.of(1, 0), counts("main"));
-        provider.push("main", false);
+        provider.push("main", false).get();
         assertEquals(List.of(0, 0), counts("main"));
     }
 
@@ -558,16 +554,16 @@ class JGitInfoProviderTest {
         git("commit", "-q", "--allow-empty", "-m", "ours");
         assertEquals(List.of(1, 1), counts("main"));
 
-        assertThrows(IllegalStateException.class, () -> provider.push("main", false));
+        assertTrue(provider.push("main", false).isLeft());
 
-        provider.push("main", true);
+        provider.push("main", true).get();
         git("fetch", "-q", "origin");
         assertEquals(List.of(0, 0), counts("main"));
     }
 
     @Test
     void pushFailsWithGitsExplanationWithoutARemote() {
-        assertThrows(IllegalStateException.class, () -> provider.push("main", false));
+        assertTrue(provider.push("main", false).isLeft());
     }
 
     @Test
@@ -577,7 +573,7 @@ class JGitInfoProviderTest {
     }
 
     private List<Integer> counts(String branch) {
-        return provider.branches().filter(b -> b.name().equals(branch))
+        return provider.branches().get().filter(b -> b.name().equals(branch))
                 .map(b -> List.of(b.ahead(), b.behind())).head();
     }
 
@@ -592,28 +588,28 @@ class JGitInfoProviderTest {
     }
 
     private List<String> defaultBranches() {
-        return provider.branches().filter(Branch::isDefault).map(Branch::name).toList();
+        return provider.branches().get().filter(Branch::isDefault).map(Branch::name).toList();
     }
 
     @Test
     void deleteBranchRemovesTheLocalBranch() throws Exception {
         git("branch", "topic");
 
-        provider.deleteBranch("topic", true, false);
+        provider.deleteBranch("topic", true, false).get();
 
-        assertEquals(List.of("main"), provider.branches().map(Branch::name).toList());
+        assertEquals(List.of("main"), provider.branches().get().map(Branch::name).toList());
     }
 
     @Test
     void deleteBranchFailsForTheCheckedOutBranch() {
-        assertThrows(IllegalStateException.class, () -> provider.deleteBranch("main", true, false));
+        assertTrue(provider.deleteBranch("main", true, false).isLeft());
     }
 
     @Test
     void createBranchFailsWhenTheNameIsTaken() throws Exception {
         git("branch", "topic");
 
-        assertThrows(IllegalStateException.class, () -> provider.createBranch("topic", "main"));
+        assertTrue(provider.createBranch("topic", "main").isLeft());
     }
 
     @Test
@@ -621,14 +617,14 @@ class JGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "changed\n");
         Files.writeString(repo.resolve("new.txt"), "new\n");
 
-        provider.stage(List.of("README.md", "new.txt"));
+        provider.stage(List.of("README.md", "new.txt")).get();
         assertEquals(List.of(new FileEntry("README.md", ChangeType.MODIFIED, true, false),
-                new FileEntry("new.txt", ChangeType.ADDED, true, false)), provider.status().files());
+                new FileEntry("new.txt", ChangeType.ADDED, true, false)), provider.status().get().files());
 
-        provider.unstageNew(List.of("new.txt"));
-        provider.unstage(List.of("README.md"));
+        provider.unstageNew(List.of("new.txt")).get();
+        provider.unstage(List.of("README.md")).get();
         assertEquals(List.of(new FileEntry("README.md", ChangeType.MODIFIED, false, true),
-                new FileEntry("new.txt", ChangeType.UNTRACKED, false, true)), provider.status().files());
+                new FileEntry("new.txt", ChangeType.UNTRACKED, false, true)), provider.status().get().files());
     }
 
     @Test
@@ -638,7 +634,7 @@ class JGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "unstaged\n");
         Files.writeString(repo.resolve("new.txt"), "brand new\n");
 
-        Diffs diffs = provider.diff(provider.status().files());
+        Diffs diffs = provider.diff(provider.status().get().files()).get();
 
         assertTrue(diffs.staged().contains("-hello"), diffs.toString());
         assertTrue(diffs.staged().contains("+staged"), diffs.toString());
@@ -646,7 +642,7 @@ class JGitInfoProviderTest {
         assertTrue(diffs.unstaged().contains("-staged"), diffs.toString());
         assertTrue(diffs.unstaged().contains("+unstaged"), diffs.toString());
         assertTrue(diffs.unstaged().contains("+brand new"), diffs.toString());
-        assertEquals(new Diffs("", ""), provider.diff(List.of()));
+        assertEquals(new Diffs("", ""), provider.diff(List.of()).get());
     }
 
     @Test
@@ -654,7 +650,7 @@ class JGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "changed\n");
         Files.writeString(repo.resolve("new.txt"), "new\n");
 
-        Diffs diffs = provider.diff(List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)));
+        Diffs diffs = provider.diff(List.of(new FileEntry("new.txt", ChangeType.UNTRACKED))).get();
 
         assertEquals("", diffs.staged());
         assertTrue(diffs.unstaged().contains("+new"), diffs.unstaged());
@@ -663,10 +659,10 @@ class JGitInfoProviderTest {
 
     @Test
     void stageFailsWithGitsExplanationForAnUnknownPath() {
-        IllegalStateException e = assertThrows(IllegalStateException.class,
-                () -> provider.stage(List.of("missing.txt")));
+        GitError.ProcessError error = provider.stage(List.of("missing.txt")).getLeft().error();
 
-        assertTrue(e.getMessage().contains("missing.txt"), e.getMessage());
+        assertTrue(error instanceof GitError.CommandFailed(String explanation, int ignored)
+                && explanation.contains("missing.txt"), error.toString());
     }
 
     @Test
@@ -675,8 +671,8 @@ class JGitInfoProviderTest {
         Files.createDirectories(empty);
         gitIn(empty, "init", "-q", "-b", "main");
         try (JGitInfoProvider emptyProvider = new JGitInfoProvider(empty)) {
-            assertEquals(RepoStatus.INITIAL, emptyProvider.status().headOid());
-            assertEquals(List.of(), emptyProvider.commits());
+            assertEquals(RepoStatus.INITIAL, emptyProvider.status().get().headOid());
+            assertEquals(List.of(), emptyProvider.commits().get());
         }
     }
 

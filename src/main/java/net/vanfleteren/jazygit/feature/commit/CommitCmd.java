@@ -2,8 +2,10 @@ package net.vanfleteren.jazygit.feature.commit;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.GitCommandException;
+import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Msg;
@@ -25,7 +27,7 @@ public sealed interface CommitCmd extends Cmd {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            return new CommitMsg.StagedForCommit(git.stage(paths));
+            return git.stage(paths).fold(this::failedWith, CommitMsg.StagedForCommit::new);
         }
 
         @Override
@@ -43,7 +45,7 @@ public sealed interface CommitCmd extends Cmd {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            return new CommitMsg.Done(git.commit(summary, description));
+            return git.commit(new CommitMessage(summary, description)).fold(this::failedWith, CommitMsg.Done::new);
         }
 
         @Override
@@ -64,7 +66,8 @@ public sealed interface CommitCmd extends Cmd {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            return new AmendMsg.Done(GitCommandException.chain(() -> git.stage(stage), git::amendLastCommit));
+            return GitFailure.<ProcessError>sequence(() -> git.stage(stage), git::amendLastCommit)
+                    .fold(this::failedWith, AmendMsg.Done::new);
         }
 
         @Override
@@ -85,7 +88,7 @@ public sealed interface CommitCmd extends Cmd {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            return new SquashMsg.Done(git.squash(sha));
+            return git.squash(sha).fold(this::failedWith, SquashMsg.Done::new);
         }
 
         @Override
@@ -106,7 +109,7 @@ public sealed interface CommitCmd extends Cmd {
 
         @Override
         public Msg run(GitInfoProvider git) {
-            return new RewordMsg.Done(git.reword(sha, summary, description));
+            return git.reword(sha, new CommitMessage(summary, description)).fold(this::failedWith, RewordMsg.Done::new);
         }
 
         @Override
