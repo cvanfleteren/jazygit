@@ -57,4 +57,11 @@ public sealed interface AppError {
      */
     record NotPushed(String branch) implements AppError {
     }
+
+    /**
+     * A pull request was asked for, but the pull requests could not be read, so it is unknown whether the branch
+     * has one.
+     */
+    record PullRequestsUnavailable(Failure failure) implements AppError {
+    }
 }

@@ -36,9 +36,10 @@ public final class PullRequestUpdate {
             }
             case PullRequestMsg.Refresh() -> Next.of(model, new LoadPullRequests());
             case PullRequestMsg.Loaded(List<PullRequest> pullRequests) ->
-                    Next.of(model.withPullRequests(byHeadBranch(pullRequests)));
+                    Next.of(model.withPullRequests(byHeadBranch(pullRequests)).withPullRequestsFailure(Option.none()));
             // gh can be missing, logged out or offline, or the remote not on GitHub: then no pull requests show.
-            case PullRequestMsg.LoadFailed(var failure) -> Next.of(model);
+            // That is no reason to bother the user until they ask for a pull request, see requested().
+            case PullRequestMsg.LoadFailed(var failure) -> Next.of(model.withPullRequestsFailure(Option.of(failure)));
         };
     }
 
@@ -61,7 +62,10 @@ public final class PullRequestUpdate {
                 .filter(known -> !model.busy().containsKey(branch))
                 .map(known -> model.pullRequest(known)
                         .map(pr -> Update.start(model.clearError(), new OpenPullRequest(branch, pr.number())))
-                        .getOrElse(() -> known.upstream().isEmpty() || known.ahead() > 0
+                        .getOrElse(() -> model.pullRequestsFailure().isDefined()
+                                // Without the pull requests it is unknown whether there is one to open.
+                                ? Next.of(model.fail(new AppError.PullRequestsUnavailable(model.pullRequestsFailure().get())))
+                                : known.upstream().isEmpty() || known.ahead() > 0
                                 ? Next.of(model.fail(new AppError.NotPushed(branch)))
                                 : Next.of(model.openPopup(new BasePopup(branch, bases(model, branch))).clearError())))
                 .getOrElse(() -> Next.of(model));

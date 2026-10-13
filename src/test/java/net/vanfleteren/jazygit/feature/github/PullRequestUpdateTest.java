@@ -125,6 +125,26 @@ class PullRequestUpdateTest {
     }
 
     @Test
+    void askingForAPullRequestAfterFailingToReadThemTellsWhy() {
+        var failure = refused("gh: not logged in");
+        Model failed = Update.update(model(), new PullRequestMsg.LoadFailed(failure)).model();
+
+        Next asked = Update.update(failed, new PullRequestMsg.Requested("feature"));
+
+        assertEquals(Option.of(new AppError.PullRequestsUnavailable(failure)), asked.model().error());
+        assertEquals(List.empty(), asked.cmds());
+    }
+
+    @Test
+    void readingThePullRequestsAgainForgetsTheFailure() {
+        Model failed = Update.update(model(), new PullRequestMsg.LoadFailed(refused("offline"))).model();
+
+        Model loaded = Update.update(failed, new PullRequestMsg.Loaded(List.empty())).model();
+
+        assertEquals(Option.none(), loaded.pullRequestsFailure());
+    }
+
+    @Test
     void aCreatedPullRequestIsLoggedAndThePullRequestsAreReadAgain() {
         Model asked = Update.update(model(), new PullRequestMsg.Requested("feature")).model();
         Model creating = Update.update(asked, new PullRequestMsg.BaseChosen("main")).model();

@@ -40,6 +40,7 @@ import net.vanfleteren.jazygit.git.model.Upstream;
  * @param fetching       the background fetch from the remotes that is running, if any; the next one waits
  * @param pullRequests   the open pull requests on GitHub, by the remote branch they merge from; empty when
  *                       they could not be read
+ * @param pullRequestsFailure why the pull requests could not be read the last time, if they could not
  * @param commandLog     the mutating git commands that were executed, oldest first
  * @param popup          the popup that is open, if any; only one can be
  * @param theme          the name of the theme the UI is drawn in
@@ -58,6 +59,7 @@ public record Model(String repositoryName,
                     Map<String, Operation> busy,
                     Option<Fetching> fetching,
                     Map<String, PullRequest> pullRequests,
+                    Option<Failure> pullRequestsFailure,
                     List<LogEntry> commandLog,
                     Option<Popup> popup,
                     String theme) {
@@ -68,8 +70,8 @@ public record Model(String repositoryName,
     public static Model initial(String repositoryName) {
         return new Model(repositoryName, Loadable.loading(), Loadable.loading(), Loadable.loading(),
                 Loadable.loading(), Option.none(),
-                Option.none(), Option.none(), HashSet.empty(), Option.none(), HashMap.empty(), Option.none(), HashMap.empty(), List.empty(), Option.none(),
-                DEFAULT_THEME);
+                Option.none(), Option.none(), HashSet.empty(), Option.none(), HashMap.empty(), Option.none(), HashMap.empty(), Option.none(), List.empty(),
+                Option.none(), DEFAULT_THEME);
     }
 
     /**
