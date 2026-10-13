@@ -217,11 +217,10 @@ public class JazygitApp extends ToolkitApp {
         model.popup(HelpPopup.class).map(HelpPopup::scopeId).forEach(scopeId -> helpOrigin = scopeId);
         List<Shown> shown = popups.map(slot -> new Shown(slot.view().render(model), slot.view().ids(),
                 slot.returnTo().get()));
-        if (focusedId != null && shown.forAll(p -> !p.ids().contains(focusedId))) {
-            lastFocus = focusedId;
-        }
-        Option<Shown> open = shown.find(p -> p.element().isDefined());
+        // The framework knows no focus before the first render.
         Option<String> focus = Option.of(focusedId);
+        focus.filter(id -> shown.forAll(p -> !p.ids().contains(id))).forEach(id -> lastFocus = id);
+        Option<Shown> open = shown.find(p -> p.element().isDefined());
         open.fold(
                         // A popup that just closed gives the focus back.
                         () -> shown.find(p -> focus.exists(p.ids()::contains)).map(Shown::returnTo),

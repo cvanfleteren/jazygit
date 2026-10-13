@@ -45,17 +45,20 @@ public final class CommitGraph {
     }
 
     private static Placed place(Commit commit, List<Commit> commits, Map<Sha, Commit> bySha, Placed state) {
-        if (state.shas().contains(commit.sha())) {
-            return state;
-        }
         Placed placed = new Placed(state.shas().add(commit.sha()), state.latestFirst().prepend(commit));
-        if (!commit.isMerge()) {
-            return placed;
-        }
-        Set<Sha> brought = broughtIn(commit, bySha);
+        return state.shas().contains(commit.sha()) ? state
+                : !commit.isMerge() ? placed
+                : placeBroughtIn(commit, commits, bySha, placed);
+    }
+
+    /**
+     * Places the commits the merge {@code merge} brought in.
+     */
+    private static Placed placeBroughtIn(Commit merge, List<Commit> commits, Map<Sha, Commit> bySha, Placed state) {
+        Set<Sha> brought = broughtIn(merge, bySha);
         return commits
                 .filter(candidate -> brought.contains(candidate.sha()))
-                .foldLeft(placed, (next, candidate) -> place(candidate, commits, bySha, next));
+                .foldLeft(state, (next, candidate) -> place(candidate, commits, bySha, next));
     }
 
     /**
@@ -67,8 +70,7 @@ public final class CommitGraph {
         List<Set<Sha>> brought = arranged.filter(Commit::isMerge).map(merge -> broughtIn(merge, bySha));
         // The last commit of each merged branch closes it.
         Set<Integer> closing = brought
-                .filter(shas -> !shas.isEmpty())
-                .map(shas -> shas.map(position::apply).max().get())
+                .flatMap(shas -> shas.flatMap(position::get).max())
                 .toSet();
         return arranged.zipWithIndex().map(entry -> new Node(entry._1,
                 brought.count(shas -> shas.contains(entry._1.sha())),
@@ -90,8 +92,8 @@ public final class CommitGraph {
     private static Set<Sha> reachable(List<Sha> from, Map<Sha, Commit> bySha) {
         return Iterator.iterate(new Walk(from, HashSet.empty()), walk -> walk.step(bySha))
                 .find(walk -> walk.todo().isEmpty())
-                .get()
-                .seen();
+                .map(Walk::seen)
+                .getOrElse(HashSet.empty());
     }
 
     /**
@@ -100,11 +102,11 @@ public final class CommitGraph {
     private record Walk(List<Sha> todo, Set<Sha> seen) {
 
         Walk step(Map<Sha, Commit> bySha) {
-            Sha sha = todo.head();
-            return bySha.get(sha)
-                    .filter(commit -> !seen.contains(sha))
-                    .map(commit -> new Walk(todo.tail().prependAll(commit.parents()), seen.add(sha)))
-                    .getOrElse(() -> new Walk(todo.tail(), seen));
+            return todo.pop2Option().map(next -> bySha.get(next._1)
+                            .filter(commit -> !seen.contains(next._1))
+                            .map(commit -> new Walk(next._2.prependAll(commit.parents()), seen.add(next._1)))
+                            .getOrElse(() -> new Walk(next._2, seen)))
+                    .getOrElse(this);
         }
     }
 }

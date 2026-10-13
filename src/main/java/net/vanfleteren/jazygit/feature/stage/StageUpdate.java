@@ -30,25 +30,24 @@ public final class StageUpdate {
      */
     private static Next toggle(Model model, List<FileEntry> files, Option<String> directory) {
         List<String> unstaged = FileEntry.paths(files, FileEntry::unstaged);
-        if (!unstaged.isEmpty()) {
-            // Adding a directory stages every change below it, which are exactly the changed files that
-            // are not staged completely yet.
-            return Next.of(model.clearError(),
-                    new Stage(directory.map(d -> List.of(pathspec(d))).getOrElse(unstaged)));
-        }
         List<FileEntry> staged = files.filter(FileEntry::staged);
-        if (staged.isEmpty()) {
-            return Next.of(model);
-        }
+        // Adding a directory stages every change below it, which are exactly the changed files that are not
+        // staged completely yet.
+        return !unstaged.isEmpty()
+                ? Next.of(model.clearError(), new Stage(directory.map(d -> List.of(pathspec(d))).getOrElse(unstaged)))
+                : staged.isEmpty() ? Next.of(model)
+                : Next.of(model.clearError(), unstage(staged, directory));
+    }
+
+    private static Unstage unstage(List<FileEntry> staged, Option<String> directory) {
         List<String> added = FileEntry.paths(staged, f -> f.type() == ChangeType.ADDED);
         List<String> others = FileEntry.paths(staged, f -> f.type() != ChangeType.ADDED);
         // Resetting a directory takes every staged change below it out of the index. That is only right
         // when none of them is a newly added file, which has to be removed from the index instead: doing
         // that for the directory would remove all its tracked files.
-        Unstage unstage = directory.filter(d -> added.isEmpty())
+        return directory.filter(d -> added.isEmpty())
                 .map(d -> new Unstage(List.of(), List.of(pathspec(d))))
                 .getOrElse(() -> new Unstage(added, others));
-        return Next.of(model.clearError(), unstage);
     }
 
     /**

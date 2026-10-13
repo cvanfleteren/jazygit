@@ -43,10 +43,10 @@ graph TD
 | Package | Responsibility |
 |---|---|
 | `JazygitApp` | Opens the repository, starts the `Program`, lays out the panes, shows the open popup and moves the focus. |
-| `ui` | Panels (`FilesPanel`, `BranchesPanel`, `CommitsPanel`, `ContentPanel`, `CommandLogPanel`, ...) that render a `Model` and turn key events into `Msg`s. |
+| `ui` | Panels (`FilesPanel`, `BranchesPanel`, `CommitsPanel`, `ContentPanel`, `CommandLogPanel`, ...) that render a `Model` and turn key events into `Msg`s; the dialog widgets (`ConfirmDialog`, `ChoiceDialog`, `TextInputDialog`); `ErrorText`, the only place that turns errors into text. |
 | `keys` | `Keymap`: the keys of each panel (`Scope`) and the global keys. Panels react to keys from it, and the help popup lists them from it. |
 | `feature.*` | One package per feature. Each one holds the feature's messages, its update functions, its commands, and its popups, dialogs and keys. |
-| `state` | The Elm core: `Model`, `Msg`, `Update`, `Cmd`, `Program`, `Loadable`, the command log and `GitErrorText`. |
+| `state` | The Elm core: `Model`, `Msg`, `Update`, `Cmd`, `Program`, `Loadable`, `Preview`, the operations (`OperationCmd`, `OperationMsg`, `OperationUpdate`), the command log and the errors as data (`AppError`, `Failure`). |
 | `git` | Everything that touches the repository, all through the `git` command line. All results are `Either` values. |
 | `git.model` | Immutable value types describing the repository. |
 | `i18n` | `Messages`: the user-facing texts, from `messages.properties`. |
@@ -70,7 +70,7 @@ flowchart LR
         Store --> Render["JazygitApp.render()<br/>draws the Model"]
     end
     subgraph io["git-io thread"]
-        Perform["Program.perform(provider, cmd)<br/>cmd.run(git)"] --> Result["Msg<br/><i>Done / Failed / Loaded</i>"]
+        Perform["Program.perform(provider, cmd)<br/>cmd.run(git)"] --> Result["Msg<br/><i>OperationMsg / LoadMsg / ...</i>"]
     end
     Next -- "each Cmd" --> Perform
     Result -- "ui.execute" --> Dispatch
@@ -104,13 +104,19 @@ classDiagram
     class Cmd {
         <<interface>>
         +run(GitInfoProvider) Msg
-        +failed(String) Msg
+        +failed(Failure) Msg
         +failedWith(GitError) Msg
         +failedWith(GitFailure) Msg
-        +logTitleKey() Option
     }
     class Load {
         <<sealed interface>>
+    }
+    class OperationCmd {
+        <<interface>>
+        +operation() Operation
+        +subject() Option
+        +busyBranch() Option
+        +perform(GitInfoProvider) Either
     }
     class Model {
         <<record>>
@@ -137,6 +143,7 @@ classDiagram
     Next o-- Model
     Next o-- Cmd
     Load --|> Cmd
+    OperationCmd --|> Cmd
     Model o-- Loadable
     Model o-- Popup
     Cmd ..> Msg : run returns
@@ -148,16 +155,24 @@ classDiagram
 - **`Cmd` is immutable data** that knows how to run itself against a `GitInfoProvider` and how to
   report failure:
   - `run` folds the provider's `Either` into a `Msg`.
-  - `failedWith(GitFailure)` turns a failure into the failure `Msg`. When the command has a
-    `logTitleKey`, it first wraps that `Msg` in a `LoggedMsg`, so the commands that ran still appear
-    in the command log.
-- **`Cmd.Load`** reads part of the repository into the model, as a `Loadable`.
+  - `failed(Failure)` turns a failure into the failure `Msg`. A `Failure` is data: `Failure.Git` (the
+    `GitError`, the commands that ran, and why the cleanup failed if it did) or `Failure.Bug` (the command
+    threw, which `Program.perform` catches).
+- **`Cmd.Load`** reads part of the repository into the model, as a `Loadable`. Every `LoadMsg` names its
+  load, so `LoadUpdate` marks it as no longer running in one place.
+- **`OperationCmd`** changes the repository. It names its `Operation` (which holds the command log title
+  and the error message), the branch it is done to, and the branch it keeps busy. Its outcome is an
+  `OperationMsg.Succeeded` or `OperationMsg.Failed`, which `OperationUpdate` handles the same way for every
+  operation: it logs the commands, releases the busy branch, stores an `AppError.OperationFailed` or clears
+  the error, and reads the repository again. A feature only adds its own messages for outcomes that really
+  are special, like `CheckoutMsg.NeedsStash`.
+- **Errors are data until the view.** `Model.error` is an `Option<AppError>` and `Loadable.Failed` holds a
+  `Failure`; `ErrorText` in `ui` turns them into text.
 - **Popups are part of the model.** `model.popup()` says which dialog is open. `JazygitApp` renders the
   dialog that matches it and moves the focus into it, then back to the pane it came from once
   the popup closes.
-- **The command log** (`Model.commandLog`) lists every git command that changed the repository.
-  `CommandLog.append` adds them when an operation reports `Done`, or when a `LoggedMsg` arrives for
-  one that failed.
+- **The command log** (`Model.commandLog`) lists every git command that changed the repository, under the
+  `Operation` that ran them, whether it succeeded or failed.
 
 ### The anatomy of a feature
 
@@ -165,12 +180,12 @@ Each feature package follows the same shape:
 
 | Type | Example (reword) | Role |
 |---|---|---|
-| `XxxMsg` | `RewordMsg` | Sealed set of messages: `Requested`, `Confirmed`, `Cancelled`, `Done`, `Failed`. |
-| `XxxUpdate` | `RewordUpdate` | Pure transitions for those messages. |
-| `XxxCmd` | `CommitCmd.Reword` | The IO the feature asks for. |
+| `XxxMsg` | `RewordMsg` | Sealed set of messages: `Requested`, `Confirmed`, `Cancelled`. |
+| `XxxUpdate` | `RewordUpdate` | Pure transitions for those messages; `Update.confirm` closes a popup and starts the operation made of it. |
+| `XxxCmd` | `CommitCmd.Reword` | The operation the feature asks for, an `OperationCmd`. |
 | `XxxPopup` | `RewordPopup` | What the open dialog is about; it lives in the model. |
-| `XxxDialog` | `CommitDialog.reword` | Renders the popup and dispatches `Confirmed` or `Cancelled`. |
-| `XxxKeys` | `CommitKeys` | Registers the feature's keys in the `Keymap`. |
+| `XxxDialogs` | `CommitDialogs.SQUASH`, `CommitDialog.reword` | The popups, mostly as data (`ConfirmDialog.Spec`, `ChoiceDialog.Spec`, `TextInputDialog.Spec`) that `JazygitApp` turns into widgets. |
+| `XxxKeys` | `CommitKeys` | Adds the feature's keys to the immutable `Keymap`. |
 
 ## The git layer
 
@@ -305,13 +320,15 @@ classDiagram
     TimedOut --|> ProcessError
     Interrupted --|> ProcessError
     CommandFailed --|> ProcessError
+    UnexpectedOutput --|> ProcessError
     LocalChanges --|> CheckoutError
     StashNotRestored --|> StashCheckoutError
     TempFileFailed --|> RewordError
     TempFileFailed --|> DiffError
     UnknownBranch --|> LogError
-    RefusedPath --|> DiscardError
-    DeleteFailed --|> DiscardError
+    DeleteUntrackedError --|> DiscardError
+    RefusedPath --|> DeleteUntrackedError
+    DeleteFailed --|> DeleteUntrackedError
     NotARepository --|> OpenError
     NoWorkTree --|> OpenError
 ```
@@ -322,9 +339,14 @@ Some helpers combine these results:
   carries the commands of the steps before it.
 - `GitFailure.widen(...)` views a failure as a wider error type, for example a `ProcessError` as a
   `RewordError`.
+- `GitFailure.followedBy(cleanup)` adds the commands of a cleanup, like `git rebase --abort`, and records in
+  `cleanupFailed` why it failed, if it did.
+- `GitProcess.log`, `read`, `ask` and `runOrUndo` run a command for its effect, to read something, to ask a
+  question git answers "no" to by exiting with 1 silently, or with an undo when it fails.
 
-`GitErrorText` in `state` turns an error into the text the user sees. The git package returns data,
-not messages.
+Parsing never throws: the parsers in `GitOutput` and the `Cli*` classes return
+`Either<UnexpectedOutput, T>`, so output git was not expected to print is a `ProcessError` like any other.
+The git package returns data, not messages; `ErrorText` in `ui` turns errors into text.
 
 ## Example: rewording a commit
 
@@ -352,9 +374,9 @@ sequenceDiagram
     Dialog-->>User: dialog prefilled with the commit's message
 
     User->>Dialog: edits the summary and submits
-    Dialog->>Program: dispatch(RewordMsg.Confirmed(summary, description))
-    Program->>Update: confirmed(model, ...)
-    Update-->>Program: Next(model - popup, [CommitCmd.Reword(sha, summary, description)])
+    Dialog->>Program: dispatch(RewordMsg.Confirmed(message))
+    Program->>Update: confirmed(model, message)
+    Update-->>Program: Next(model - popup, [CommitCmd.Reword(sha, message)])
     Program->>IO: io.execute(perform(provider, cmd))
 
     IO->>Provider: reword(sha, message)
@@ -367,9 +389,9 @@ sequenceDiagram
     end
     Git-->>Provider: exit code
     Provider-->>IO: Either of GitFailure or commands
-    IO->>Program: ui.execute(dispatch(RewordMsg.Done(commands)))
+    IO->>Program: ui.execute(dispatch(OperationMsg.Succeeded(reword, commands)))
 
-    Program->>Update: Done(commands)
+    Program->>Update: OperationUpdate: Succeeded(reword, commands)
     Update-->>Program: Next(model + command log entry, [LoadStatus, LoadBranches, LoadStashes])
     Note over Program,Provider: the loads run on git-io. StatusLoaded sees HEAD moved,<br/>so LoadCommits re-reads the log with the new message
 ```
@@ -392,17 +414,18 @@ sequenceDiagram
 
 4. **Confirm**, a pure step in `RewordUpdate.confirmed`.
    - A blank summary keeps the dialog open.
-   - Otherwise the popup closes and the update returns one command:
-     `CommitCmd.Reword(sha, summary, description)`.
+   - Otherwise `Update.confirm` closes the popup and returns one command: `CommitCmd.Reword(sha, message)`.
 
-5. **Perform**, on the `git-io` thread. `Program.perform` calls `Reword.run(git)`:
+5. **Perform**, on the `git-io` thread. `Program.perform` calls `Reword.run(git)`, which `OperationCmd`
+   implements for every operation:
 
    ```java
-   return git.reword(sha, new CommitMessage(summary, description))
-           .fold(this::failedWith, RewordMsg.Done::new);
+   return perform(git).fold(this::failedWith, this::succeeded);
    ```
 
-6. **The git work**, in `CliGitInfoProvider.reword`.
+   where `Reword.perform` is `git.reword(sha, message)`.
+
+6. **The git work**, in `CliRebase.rewordAny`.
    - `CliLog.resolve(workTree, "HEAD")` runs `git rev-parse --verify --quiet HEAD^{commit}` to find out
      whether the commit is `HEAD`. If that fails, it's a `ProcessError`, which is a `RewordError`.
    - **The commit is `HEAD`:** `CliIndex.reword` runs `git commit --allow-empty --amend --only -m … [-m …]`.
@@ -414,15 +437,17 @@ sequenceDiagram
      3. It runs `git rebase --interactive --autostash --keep-empty --rebase-merges <base>` with
         `GIT_SEQUENCE_EDITOR` set to a `sed` script that turns `pick <sha>` into `reword <sha>` (and
         `merge -C` into `merge -c`). `GIT_EDITOR` is set to `cp <message file>`.
-     4. If the rebase fails, `rebase()` runs `git rebase --abort` through `GitProcess.attempt`, and
-        that line joins the failure's command log. The repository is left as it was.
+     4. If the rebase fails, `GitProcess.runOrUndo` runs `git rebase --abort`, and that line joins the
+        failure's command log. If the abort fails too, the failure records why. The repository is left as
+        it was.
 
-7. **Report.** The `Either` becomes one of two messages:
-   - **Success:** `RewordMsg.Done(commands)`. `RewordUpdate` appends the commands to the command log
-     under the title "Reword" and calls `Update.refresh`.
-   - **Failure:** `failedWith(failure)` builds `RewordMsg.Failed(GitErrorText.of(error))` and wraps it
-     in a `LoggedMsg("log.title.reword", failure.commands(), …)`. The commands that ran, including the
-     abort, are logged. Then `RewordUpdate` stores `"Reword failed: …"` in `Model.error` and refreshes.
+7. **Report.** The `Either` becomes one of two messages, which `OperationUpdate` handles:
+   - **Success:** `OperationMsg.Succeeded(reword, commands)`. The commands are logged under
+     `Operation.REWORD`, the error is cleared and `Update.refresh` reads the repository again.
+   - **Failure:** `OperationMsg.Failed(reword, Failure.Git(error, commands, cleanupFailed))`. The commands
+     that ran, including the abort, are logged; `Model.error` becomes
+     `AppError.OperationFailed(REWORD, none, failure)`, which `ErrorText` shows as `"Reword failed: …"`;
+     and the repository is read again.
 
 8. **Refresh.** `Update.refresh` starts `LoadStatus`, `LoadBranches` and `LoadStashes`.
    - When `StatusLoaded` arrives, `LoadUpdate.statusLoaded` sees that `HEAD` moved (the reworded
@@ -434,14 +459,13 @@ sequenceDiagram
 ```mermaid
 flowchart TD
     Run["Reword.run(git)"] --> Either{"git.reword(...)"}
-    Either -- "Right(commands)" --> Done["RewordMsg.Done(commands)"]
-    Either -- "Left(GitFailure(error, commands))" --> FailedWith["Cmd.failedWith(failure)"]
-    FailedWith --> Text["GitErrorText.of(error)<br/>e.g. CommandFailed → git's first line"]
-    Text --> Failed["RewordMsg.Failed(text)"]
-    Failed --> Logged["LoggedMsg(&quot;log.title.reword&quot;, commands, Failed)"]
-    Logged --> Log["CommandLog.append: shows rev-list, rebase, rebase --abort"]
-    Log --> Update["RewordUpdate: error = 'Reword failed: …'<br/>Update.refresh(model)"]
-    Done --> UpdateOk["RewordUpdate: command log += commands<br/>Update.refresh(model)"]
+    Either -- "Right(commands)" --> Done["OperationMsg.Succeeded(reword, commands)"]
+    Either -- "Left(GitFailure(error, commands, cleanupFailed))" --> FailedWith["Cmd.failedWith(failure)"]
+    FailedWith --> Failed["OperationMsg.Failed(reword, Failure.Git(...))"]
+    Failed --> Log["OperationUpdate: CommandLog.append shows rev-list, rebase, rebase --abort"]
+    Log --> Update["error = AppError.OperationFailed(REWORD, ...)<br/>Update.refresh(model)"]
+    Update --> Text["ErrorText.of(error) when rendered<br/>e.g. 'Reword failed: ' + git's first line"]
+    Done --> UpdateOk["OperationUpdate: command log += commands<br/>Update.refresh(model)"]
 ```
 
 ## Testing

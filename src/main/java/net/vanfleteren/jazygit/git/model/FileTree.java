@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.git.model;
 
+import io.vavr.control.Option;
 import io.vavr.collection.List;
 
 /**
@@ -78,9 +79,10 @@ public sealed interface FileTree {
      * descendants, so one step is enough.
      */
     private static FileTree merged(Dir dir) {
-        if (dir.children().size() == 1 && dir.children().head() instanceof Dir child) {
-            return new Dir(dir.name() + "/" + child.name(), child.path(), child.children());
-        }
-        return dir;
+        return dir.children().headOption()
+                .filter(only -> dir.children().size() == 1)
+                .flatMap(only -> only instanceof Dir child ? Option.of(child) : Option.none())
+                .<FileTree>map(child -> new Dir(dir.name() + "/" + child.name(), child.path(), child.children()))
+                .getOrElse(dir);
     }
 }

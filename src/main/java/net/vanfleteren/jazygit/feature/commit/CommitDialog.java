@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Popup;
 import net.vanfleteren.jazygit.ui.SubmittableTextArea;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 import static dev.tamboui.toolkit.Toolkit.*;
@@ -52,7 +53,7 @@ public final class CommitDialog implements PopupView {
     private final Function<CommitMessage, Msg> confirmed;
     private final Supplier<Msg> cancelled;
     private final Consumer<Msg> dispatch;
-    private boolean shown;
+    private Option<Popup> shownFor = Option.none();
 
     private CommitDialog(String summaryId, String descriptionId, Predicate<Model> open,
                          Function<Model, Option<Commit>> current, Function<CommitMessage, Msg> confirmed,
@@ -99,12 +100,13 @@ public final class CommitDialog implements PopupView {
      */
     @Override
     public Option<Element> render(Model model) {
-        if (!open.test(model)) {
-            shown = false;
+        Option<Popup> popup = model.popup().filter(p -> open.test(model));
+        boolean opened = popup.isDefined() && !shownFor.equals(popup);
+        shownFor = popup;
+        if (popup.isEmpty()) {
             return Option.none();
         }
-        if (!shown) {
-            shown = true;
+        if (opened) {
             current.apply(model).forEach(commit -> {
                 summary.setText(commit.message());
                 summary.moveCursorToEnd();

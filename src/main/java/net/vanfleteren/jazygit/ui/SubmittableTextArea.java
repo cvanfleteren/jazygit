@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
+import io.vavr.control.Option;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.terminal.Frame;
 import dev.tamboui.toolkit.element.DefaultRenderContext;
@@ -21,7 +22,8 @@ public final class SubmittableTextArea extends StyledElement<SubmittableTextArea
 
     private final TextAreaElement area;
     private final Runnable onSubmit;
-    private Integer height;
+    // The rows the text area takes, borders included, if it is told.
+    private Option<Integer> height = Option.none();
 
     /**
      * @param area     the text area; it gets the id
@@ -37,7 +39,7 @@ public final class SubmittableTextArea extends StyledElement<SubmittableTextArea
      * Makes the text area this many rows high, borders included.
      */
     public SubmittableTextArea rows(int rows) {
-        this.height = rows;
+        this.height = Option.of(rows);
         return length(rows);
     }
 
@@ -54,7 +56,7 @@ public final class SubmittableTextArea extends StyledElement<SubmittableTextArea
     @Override
     public Size preferredSize(int availableWidth, int availableHeight, RenderContext context) {
         Size size = area.preferredSize(availableWidth, availableHeight, context);
-        return height == null ? size : Size.of(size.widthOr(availableWidth), height);
+        return height.map(rows -> Size.of(size.widthOr(availableWidth), rows)).getOrElse(size);
     }
 
     @Override

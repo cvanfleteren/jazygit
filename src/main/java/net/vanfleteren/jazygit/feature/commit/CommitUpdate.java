@@ -43,13 +43,9 @@ public final class CommitUpdate {
      */
     private static Next requested(Model model) {
         List<FileEntry> files = Update.files(model);
-        if (files.exists(FileEntry::staged)) {
-            return Next.of(model.clearError().openPopup(new CommitPopup()));
-        }
-        if (files.isEmpty()) {
-            return Next.of(model.fail(new AppError.NothingToCommit()));
-        }
-        return Next.of(model.clearError().openPopup(new StageAllPopup()));
+        return files.exists(FileEntry::staged) ? Next.of(model.clearError().openPopup(new CommitPopup()))
+                : files.isEmpty() ? Next.of(model.fail(new AppError.NothingToCommit()))
+                : Next.of(model.clearError().openPopup(new StageAllPopup()));
     }
 
     private static Next stageAllConfirmed(Model model) {
