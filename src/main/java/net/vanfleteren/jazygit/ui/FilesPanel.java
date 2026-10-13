@@ -132,7 +132,7 @@ public class FilesPanel {
                 yield parent;
             }
             case FileTree.File file ->
-                    TreeNode.of(file.entry().type().marker() + " " + file.name(), node).leaf();
+                    TreeNode.of(file.entry().type().marker() + " " + name(file), node).leaf();
         };
     }
 
@@ -152,9 +152,26 @@ public class FilesPanel {
         String staged = entry.conflict().map(conflict -> marker(conflict.ours()))
                 .getOrElse(() -> entry.staged() ? entry.type().marker() : " ");
         String unstaged = entry.conflict().map(conflict -> marker(conflict.theirs()))
-                .getOrElse(() -> !entry.unstaged() ? " " : entry.type() == ChangeType.DELETED ? "D" : "M");
+                .getOrElse(() -> !entry.unstaged() ? " "
+                        : entry.type() == ChangeType.DELETED ? "D"
+                        // A rename only in the working tree, after intent-to-add of the new path.
+                        : entry.type() == ChangeType.RENAMED && !entry.staged() ? "R"
+                        : "M");
         return Toolkit.row(Toolkit.text(staged).addClass(Theme.Classes.STAGED),
-                Toolkit.text(unstaged).addClass(Theme.Classes.UNSTAGED), Toolkit.text(" " + file.name()));
+                Toolkit.text(unstaged).addClass(Theme.Classes.UNSTAGED), Toolkit.text(" " + name(file)));
+    }
+
+    /**
+     * The file name, preceded by where a renamed file came from: just the name when it stayed in the same
+     * directory, the full path otherwise.
+     */
+    private static String name(FileTree.File file) {
+        String path = file.entry().path();
+        String directory = path.substring(0, path.length() - file.name().length());
+        return file.entry().origin()
+                .map(origin -> origin.startsWith(directory) ? origin.substring(directory.length()) : origin)
+                .map(origin -> origin + " -> " + file.name())
+                .getOrElse(file.name());
     }
 
     /**

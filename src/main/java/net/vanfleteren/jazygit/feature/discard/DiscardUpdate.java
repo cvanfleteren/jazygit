@@ -45,17 +45,19 @@ public final class DiscardUpdate {
 
     /**
      * How each file has to be treated to discard it: untracked ones are deleted, tracked ones are checked
-     * out again, and files that were only just added are removed altogether.
+     * out again, and files that were only just added are removed altogether. A renamed file is removed, and
+     * its origin checked out again.
      */
     static DiscardPlan plan(List<FileEntry> files, Scope scope) {
         Predicate<FileEntry> affected = scope == Scope.ALL ? f -> true : FileEntry::unstaged;
         List<FileEntry> picked = files.filter(affected);
         List<String> untracked = FileEntry.paths(picked, f -> f.type() == ChangeType.UNTRACKED);
         List<FileEntry> tracked = picked.filter(f -> f.type() != ChangeType.UNTRACKED);
+        Predicate<FileEntry> removed = f -> f.type() == ChangeType.RENAMED || f.type() == ChangeType.ADDED && f.staged();
         return scope == Scope.UNSTAGED
                 ? new DiscardPlan(untracked, FileEntry.paths(tracked, f -> true), List.empty(), List.empty())
                 : new DiscardPlan(untracked, List.empty(),
-                FileEntry.paths(tracked, f -> f.type() != ChangeType.ADDED || !f.staged()),
-                FileEntry.paths(tracked, f -> f.type() == ChangeType.ADDED && f.staged()));
+                FileEntry.paths(tracked, removed.negate()).appendAll(tracked.flatMap(FileEntry::origin)),
+                FileEntry.paths(tracked, removed));
     }
 }

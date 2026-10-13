@@ -752,6 +752,29 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void aStagedRenameIsOneEntryThatUnstagesAndDiscardsAsAWhole() throws Exception {
+        Files.move(repo.resolve("README.md"), repo.resolve("READ.md"));
+        assertEquals(List.of(new FileEntry("READ.md", ChangeType.UNTRACKED),
+                new FileEntry("README.md", ChangeType.DELETED)), provider.status().get().files());
+
+        provider.stage(List.of("READ.md", "README.md")).get();
+        List<FileEntry> files = provider.status().get().files();
+        assertEquals(List.of(FileEntry.renamed("READ.md", "README.md", true, false)), files);
+
+        Diffs diffs = provider.diff(files).get();
+        assertTrue(diffs.staged().contains("rename from README.md"), diffs.toString());
+
+        provider.unstageNew(List.of("READ.md")).get();
+        provider.unstage(List.of("README.md")).get();
+        assertEquals(List.of(new FileEntry("READ.md", ChangeType.UNTRACKED),
+                new FileEntry("README.md", ChangeType.DELETED)), provider.status().get().files());
+
+        provider.stage(List.of("READ.md", "README.md")).get();
+        provider.discard(new DiscardPlan(List.of(), List.of(), List.of("README.md"), List.of("READ.md"))).get();
+        assertEquals(List.of(), provider.status().get().files());
+    }
+
+    @Test
     void diffCombinesStagedUnstagedAndUntrackedChanges() throws Exception {
         Files.writeString(repo.resolve("README.md"), "staged\n");
         git("add", "README.md");
