@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.git.model.Tracking;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.git.model.Sha;
 import dev.tamboui.tui.event.KeyCode;
@@ -66,6 +67,15 @@ class BranchesPanelTest {
         // A draft without checks or reviews shows only its number, dimmed.
         assertEquals(List.of(LoadableList.Seg.styled(" #37", Theme.Classes.DIM)),
                 BranchesPanel.pullRequest(Option.of(new PullRequest(37, "b", true, Checks.NONE, Review.NONE))));
+    }
+
+    @Test
+    void aBranchWhoseUpstreamIsGoneSaysSo() {
+        assertEquals(List.of(LoadableList.Seg.styled(" gone", Theme.Classes.GONE)),
+                BranchesPanel.sync(new Branch("b", false, new Sha("1"), java.time.Instant.EPOCH, false, false,
+                        new Tracking.Gone("origin/b"))));
+        // A branch that was never pushed shows nothing.
+        assertEquals(List.of(), BranchesPanel.sync(new Branch("b", false, new Sha("1"))));
     }
 
     @Test

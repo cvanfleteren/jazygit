@@ -46,6 +46,14 @@ public sealed interface AppError {
     }
 
     /**
+     * A pull was asked for, but the upstream of the branch was deleted on the remote.
+     *
+     * @param upstream the short name the upstream had, e.g. {@code origin/feature}
+     */
+    record UpstreamGone(String branch, String upstream) implements AppError {
+    }
+
+    /**
      * A pull of a branch that is not checked out was asked for, but its commits not yet pushed keep it from
      * being fast-forwarded.
      */

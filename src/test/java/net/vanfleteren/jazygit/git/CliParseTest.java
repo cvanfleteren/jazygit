@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Tag;
+import net.vanfleteren.jazygit.git.model.Tracking;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import org.junit.jupiter.api.Test;
 
@@ -40,7 +41,8 @@ class CliParseTest {
                                 Option.of(new Upstream("origin/trunk", 0, 0))),
                         new Branch("feature", false, new Sha(B), Instant.ofEpochSecond(200), true, false,
                                 Option.of(new Upstream("origin/feature", 1, 2))),
-                        new Branch("gone", false, new Sha(B), Instant.ofEpochSecond(100), false, false, Option.none())),
+                        new Branch("gone", false, new Sha(B), Instant.ofEpochSecond(100), false, false,
+                                new Tracking.Gone("origin/gone"))),
                 CliBranches.parse(raw).get());
     }
 

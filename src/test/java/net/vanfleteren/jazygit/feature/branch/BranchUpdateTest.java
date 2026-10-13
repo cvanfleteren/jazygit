@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.branch;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
+import net.vanfleteren.jazygit.git.model.Tracking;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
@@ -244,6 +245,22 @@ class BranchUpdateTest {
 
         assertEquals(List.of(), Update.update(loaded(), new PullMsg.Requested("feature")).cmds());
         assertEquals(List.of(), Update.update(loaded(), new PullMsg.Requested("gone")).cmds());
+    }
+
+    @Test
+    void aBranchWhoseUpstreamIsGoneIsNotPulledAndTheErrorSaysWhy() {
+        Branch gone = new Branch("old", false, new Sha("9"), Instant.EPOCH, false, false,
+                new Tracking.Gone("origin/old"));
+        Model model = Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(gone))).model();
+
+        Next pulled = Update.update(model, new PullMsg.Requested("old"));
+
+        assertEquals(List.of(), pulled.cmds());
+        assertEquals(Option.of("Cannot pull branch old: its upstream origin/old was deleted on the remote"),
+                errorText(pulled.model()));
+        // Like a branch without an upstream, it asks where to push.
+        assertEquals(Option.of(new SetUpstreamPopup("old")),
+                Update.update(model, new PushMsg.Requested("old")).model().popup());
     }
 
     @Test

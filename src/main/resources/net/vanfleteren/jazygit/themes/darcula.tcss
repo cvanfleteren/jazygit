@@ -38,6 +38,7 @@ ListElement-item:selected, TreeElement-node:selected {
 .spinner { color: $warn; }
 .ahead { color: $added; }
 .behind { color: $removed; }
+.gone { color: $removed; }
 .pull-request { color: $hunk; }
 .checks-passed { color: $added; }
 .checks-failed { color: $removed; }
