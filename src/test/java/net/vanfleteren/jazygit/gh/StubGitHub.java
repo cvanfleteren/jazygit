@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.gh;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -47,5 +48,16 @@ public interface StubGitHub extends GitHub {
     @Override
     default Either<GhFailure, List<ExecutedCommand>> openPullRequest(int number) {
         return Either.right(List.of(ExecutedCommand.of("gh", "pr", "view", String.valueOf(number), "--web")));
+    }
+
+    @Override
+    default Either<GhFailure, List<ExecutedCommand>> mergePullRequest(int number, MergeMethod method) {
+        return Either.right(List.of(ExecutedCommand.of("gh", "pr", "merge", String.valueOf(number),
+                CliGitHub.mergeFlag(method))));
+    }
+
+    @Override
+    default Either<GhFailure, List<ExecutedCommand>> closePullRequest(int number) {
+        return Either.right(List.of(ExecutedCommand.of("gh", "pr", "close", String.valueOf(number))));
     }
 }

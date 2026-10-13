@@ -5,6 +5,7 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -45,6 +46,10 @@ class PullRequestDialogTest {
             List.of(new Check("lint", Checks.PASSING), new Check("integration", Checks.PENDING),
                     new Check("build", Checks.FAILING)));
 
+    private static final PullRequestDetails READY = new PullRequestDetails(42, "Ready", "cvf", State.OPEN, false,
+            "support_rename", "main", NOW, 1, 1, 1, Mergeable.MERGEABLE, Review.APPROVED, 0, List.empty(),
+            List.empty(), List.empty());
+
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final PullRequestDialog dialog = new PullRequestDialog(dispatched::add, Clock.fixed(NOW, ZoneOffset.UTC));
 
@@ -61,7 +66,7 @@ class PullRequestDialogTest {
         assertTrue(screen.contains("Branch  support_rename"), screen);
         assertTrue(screen.contains("Reading the pull request from GitHub… "
                 + BranchesPanel.spinnerFrame(NOW)), screen);
-        assertTrue(screen.contains("(enter) open in browser   (esc) close"), screen);
+        assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
     }
 
     @Test
@@ -83,7 +88,7 @@ class PullRequestDialogTest {
         // The failed check first, then the running one; the passed one is only counted.
         assertTrue(screen.indexOf("✗ build") < screen.indexOf("● integration"), screen);
         assertFalse(screen.contains("✓ lint"), screen);
-        assertTrue(screen.contains("(enter) open in browser   (esc) close"), screen);
+        assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
     }
 
     @Test
@@ -107,7 +112,7 @@ class PullRequestDialogTest {
         String screen = screen(PullRequestPopup.loading("support_rename", PR).with(Either.left(refused("not logged in"))));
 
         assertTrue(screen.contains("Could not read the pull request: not logged in"), screen);
-        assertTrue(screen.contains("(enter) open in browser   (esc) close"), screen);
+        assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
     }
 
     @Test
@@ -127,7 +132,50 @@ class PullRequestDialogTest {
     }
 
     private static int hintLine(String screen) {
-        return List.of(screen.split("\n")).indexWhere(line -> line.contains("(enter) open in browser"));
+        return List.of(screen.split("\n")).indexWhere(line -> line.contains("(enter) select"));
+    }
+
+    @Test
+    void listsWhatCanBeDoneWithThePullRequest() throws Exception {
+        String screen = screen(PullRequestPopup.loading("support_rename", PR).with(Either.right(READY)));
+
+        assertTrue(screen.contains("(o) Open in browser"), screen);
+        assertTrue(screen.contains("(m) Merge"), screen);
+        assertTrue(screen.contains("(s) Squash and merge"), screen);
+        assertTrue(screen.contains("(r) Rebase and merge"), screen);
+        assertTrue(screen.contains("(x) Close pull request"), screen);
+        assertTrue(screen.contains("(c) Cancel"), screen);
+    }
+
+    @Test
+    void lettersMergeOrCloseAPullRequestThatIsReady() throws Exception {
+        Model model = TestModels.loaded().openPopup(PullRequestPopup.loading("support_rename", PR).with(Either.right(READY)));
+        try (ToolkitTestRunner runner = start(model)) {
+            for (char key : new char[]{'m', 's', 'r', 'x', 'o'}) {
+                runner.pilot().press(key);
+                runner.pilot().pause();
+            }
+        }
+
+        assertEquals(java.util.List.of(new PullRequestMsg.MergeChosen(MergeMethod.MERGE),
+                new PullRequestMsg.MergeChosen(MergeMethod.SQUASH), new PullRequestMsg.MergeChosen(MergeMethod.REBASE),
+                new PullRequestMsg.CloseChosen(), new PullRequestMsg.OpenConfirmed()), dispatched);
+    }
+
+    @Test
+    void aDraftCanBeClosedButNotMergedAndNothingIsDoneBeforeTheDetailsAreRead() throws Exception {
+        PullRequestPopup loading = PullRequestPopup.loading("support_rename", PR);
+        for (PullRequestPopup popup : List.of(loading, loading.with(Either.right(DETAILS)))) {
+            try (ToolkitTestRunner runner = start(TestModels.loaded().openPopup(popup))) {
+                runner.pilot().press('m');
+                runner.pilot().pause();
+                runner.pilot().press('x');
+                runner.pilot().pause();
+            }
+        }
+
+        // DETAILS is a draft.
+        assertEquals(java.util.List.of(new PullRequestMsg.CloseChosen()), dispatched);
     }
 
     @Test
@@ -146,7 +194,7 @@ class PullRequestDialogTest {
     private String screen(PullRequestPopup popup) throws Exception {
         Model model = TestModels.loaded().openPopup(popup);
         try (ToolkitTestRunner runner = start(model)) {
-            return RenderedText.ofLarge(runner, () -> view(model));
+            return RenderedText.ofTall(runner, () -> view(model));
         }
     }
 

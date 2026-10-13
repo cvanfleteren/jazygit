@@ -4,10 +4,14 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.github.PullRequestCmd.ChangingCmd;
+import net.vanfleteren.jazygit.feature.github.PullRequestCmd.ClosePullRequest;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.CreatePullRequest;
+import net.vanfleteren.jazygit.feature.github.PullRequestCmd.MergePullRequest;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.LoadPullRequestDetails;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.LoadPullRequests;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.OpenPullRequest;
+import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -49,6 +53,19 @@ public final class PullRequestUpdate {
             case PullRequestMsg.DetailsFailed(int number, var failure) -> Next.of(shown(model, number, Either.left(failure)));
             case PullRequestMsg.OpenConfirmed() -> Update.confirm(model, PullRequestPopup.class,
                     popup -> Option.of(new OpenPullRequest(popup.branch(), popup.pullRequest().number())));
+            case PullRequestMsg.MergeChosen(MergeMethod method) -> Update.confirm(model, PullRequestPopup.class,
+                    popup -> Option.when(popup.mergeable(),
+                            () -> new MergePullRequest(popup.branch(), popup.pullRequest().number(), method)));
+            case PullRequestMsg.CloseChosen() -> Update.confirm(model, PullRequestPopup.class,
+                    popup -> Option.when(popup.open(),
+                            () -> new ClosePullRequest(popup.branch(), popup.pullRequest().number())));
+            case PullRequestMsg.Ended(ChangingCmd cmd, var commands) -> {
+                // Done like any operation. The pull request is no longer open, which reading them again confirms.
+                Next done = OperationUpdate.update(model, new OperationMsg.Succeeded(cmd, commands));
+                Model ended = done.model().withPullRequests(
+                        done.model().pullRequests().filterValues(pr -> pr.number() != cmd.number()));
+                yield load(new Next(ended, done.cmds()));
+            }
             case PullRequestMsg.InfoClosed() -> Next.of(model.withoutPopup(PullRequestPopup.class));
             case PullRequestMsg.Refresh() -> load(Next.of(model));
             case PullRequestMsg.Loaded(List<PullRequest> pullRequests) -> Next.of(read(model)

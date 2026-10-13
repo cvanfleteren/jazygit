@@ -7,6 +7,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
 import net.vanfleteren.jazygit.gh.GhError.UnexpectedOutput;
+import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -109,6 +110,27 @@ public final class CliGitHub implements GitHub {
     @Override
     public Either<GhFailure, List<ExecutedCommand>> openPullRequest(int number) {
         return GhProcess.log(workTree, gh("pr", "view", String.valueOf(number), "--web"));
+    }
+
+    @Override
+    public Either<GhFailure, List<ExecutedCommand>> mergePullRequest(int number, MergeMethod method) {
+        return GhProcess.log(workTree, gh("pr", "merge", String.valueOf(number), mergeFlag(method)));
+    }
+
+    /**
+     * The flag that tells {@code gh pr merge} how to merge, so it does not ask.
+     */
+    static String mergeFlag(MergeMethod method) {
+        return switch (method) {
+            case MERGE -> "--merge";
+            case SQUASH -> "--squash";
+            case REBASE -> "--rebase";
+        };
+    }
+
+    @Override
+    public Either<GhFailure, List<ExecutedCommand>> closePullRequest(int number) {
+        return GhProcess.log(workTree, gh("pr", "close", String.valueOf(number)));
     }
 
     /**

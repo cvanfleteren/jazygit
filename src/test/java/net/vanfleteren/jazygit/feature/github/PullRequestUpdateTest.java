@@ -3,11 +3,14 @@ package net.vanfleteren.jazygit.feature.github;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.github.PullRequestCmd.ClosePullRequest;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.CreatePullRequest;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.LoadPullRequestDetails;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.LoadPullRequests;
+import net.vanfleteren.jazygit.feature.github.PullRequestCmd.MergePullRequest;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.OpenPullRequest;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -136,6 +139,39 @@ class PullRequestUpdateTest {
         Model closed = Update.update(shown, new PullRequestMsg.InfoClosed()).model();
         assertEquals(Option.none(), closed.popup());
         assertEquals(closed, Update.update(closed, new PullRequestMsg.DetailsLoaded(42, details)).model());
+    }
+
+    @Test
+    void choosingToMergeOrCloseStartsItOnceTheDetailsShowItCan() {
+        Model shown = Update.update(withPr(), new PullRequestMsg.Requested("feature")).model();
+        // Nothing is known about the pull request yet.
+        assertEquals(List.empty(), Update.update(shown, new PullRequestMsg.MergeChosen(MergeMethod.SQUASH)).cmds());
+        assertEquals(List.empty(), Update.update(shown, new PullRequestMsg.CloseChosen()).cmds());
+
+        Model read = Update.update(shown, new PullRequestMsg.DetailsLoaded(42,
+                StubGitHub.empty().pullRequestDetails(42).get())).model();
+        Next merging = Update.update(read, new PullRequestMsg.MergeChosen(MergeMethod.SQUASH));
+        Next closing = Update.update(read, new PullRequestMsg.CloseChosen());
+
+        assertEquals(List.of(new MergePullRequest("feature", 42, MergeMethod.SQUASH)), merging.cmds());
+        assertEquals(Option.none(), merging.model().popup());
+        assertEquals(Option.of(Operation.MERGE_PR), merging.model().busy().get("feature"));
+        assertEquals(List.of(new ClosePullRequest("feature", 42)), closing.cmds());
+        assertEquals(Option.of(Operation.CLOSE_PR), closing.model().busy().get("feature"));
+    }
+
+    @Test
+    void aMergedPullRequestIsNoLongerListedAndThePullRequestsAreReadAgain() {
+        MergePullRequest cmd = new MergePullRequest("feature", 42, MergeMethod.MERGE);
+        Model merging = withPr().withBusyBranch("feature", Operation.MERGE_PR);
+
+        Next done = Update.update(merging, cmd.run(new Env(new StubGitProvider() {
+        }, StubGitHub.empty())));
+
+        assertEquals(Option.none(), done.model().pullRequests().get("feature"));
+        assertEquals(Option.none(), done.model().busy().get("feature"));
+        assertTrue(done.cmds().contains(new LoadPullRequests()), done.cmds().toString());
+        assertEquals("gh pr merge 42 --merge", done.model().commandLog().last().commands().last().line());
     }
 
     @Test

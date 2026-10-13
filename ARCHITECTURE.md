@@ -287,8 +287,11 @@ the GitHub repository from the git remotes itself. It mirrors the git layer with
   tab-separated line per pull request (fork pull requests left out), which `CliGitHub.parse` reads; there is
   no JSON library. The CI checks are folded into one state: failing, else pending, else passing.
 - **Creating and opening:** `gh pr create --head <branch on the remote> --base <base> --fill` and
-  `gh pr view <n> --web`. The name of the branch on its remote comes from git
-  (`GitBranches.remoteBranch`): `PullRequestCmd.CreatePullRequest` asks git, then gh.
+  `gh pr view <n> --web`. The name of the branch on its remote is the branch's push target, as the branches
+  were read (`Branch.pushTarget`), which `PullRequestUpdate` puts in `PullRequestCmd.CreatePullRequest`.
+- **Merging and closing:** `gh pr merge <n> --merge|--squash|--rebase` and `gh pr close <n>`, chosen in the
+  pull request dialog. The branch is kept. Once done, the pull request is dropped from the open ones and they
+  are read again.
 
 ### Errors as values
 

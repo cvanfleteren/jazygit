@@ -26,4 +26,23 @@ public record PullRequestPopup(String branch, PullRequest pullRequest,
     PullRequestPopup with(Either<Failure, PullRequestDetails> read) {
         return new PullRequestPopup(branch, pullRequest, Option.of(read));
     }
+
+    /**
+     * Whether it is known to be open, so it can be closed: once its details are read.
+     */
+    public boolean open() {
+        return readDetails().exists(details -> details.state() == PullRequestDetails.State.OPEN);
+    }
+
+    /**
+     * Whether it can be merged as far as is known: it is open, not a draft, and does not conflict.
+     */
+    public boolean mergeable() {
+        return open() && readDetails().exists(details -> !details.draft()
+                && details.mergeable() != PullRequestDetails.Mergeable.CONFLICTING);
+    }
+
+    private Option<PullRequestDetails> readDetails() {
+        return details.flatMap(Either::toOption);
+    }
 }

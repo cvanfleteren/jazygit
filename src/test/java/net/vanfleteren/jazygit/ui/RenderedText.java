@@ -18,6 +18,7 @@ public final class RenderedText {
 
     private static final Rect AREA = new Rect(0, 0, 40, 5);
     private static final Rect LARGE = new Rect(0, 0, 100, 30);
+    private static final Rect TALL = new Rect(0, 0, 100, 40);
 
     private RenderedText() {
     }
@@ -34,6 +35,13 @@ public final class RenderedText {
      */
     public static String ofLarge(ToolkitTestRunner testRunner, Supplier<? extends Element> element) throws Exception {
         return of(testRunner, element, LARGE);
+    }
+
+    /**
+     * Like {@link #of(ToolkitTestRunner, Supplier)}, on a 100x40 screen, for the tallest popups.
+     */
+    public static String ofTall(ToolkitTestRunner testRunner, Supplier<? extends Element> element) throws Exception {
+        return of(testRunner, element, TALL);
     }
 
     private static String of(ToolkitTestRunner testRunner, Supplier<? extends Element> element, Rect area)
