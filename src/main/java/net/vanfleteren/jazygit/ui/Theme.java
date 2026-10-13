@@ -43,6 +43,7 @@ public final class Theme {
         public static final String DIFF_HUNK = "diff-hunk";
         public static final String CURRENT_BRANCH = "current-branch";
         public static final String SHA = "sha";
+        public static final String TAG = "tag";
 
         private Classes() {
         }

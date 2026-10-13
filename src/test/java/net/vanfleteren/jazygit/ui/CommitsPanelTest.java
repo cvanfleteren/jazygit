@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.ui;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -35,6 +36,18 @@ class CommitsPanelTest {
 
         assertEquals(List.of("mmmmmmm Ad ◎─╮ msg mmmmmmm", "fffff02 Ad │ ○ msg fffff02", "fffff01 Ad │ ○ msg fffff01",
                 "bbbbbbb Ad ○─╯ msg bbbbbbb", "aaaaaaa Ad ○ msg aaaaaaa"), rows.map(LoadableList.Row::text).toList());
+    }
+
+    @Test
+    void tagsComeBeforeTheMessageInTheirOwnColour() {
+        Commit tagged = new Commit(new Sha("abcdef0"), "Ada", "ada@example.com", Instant.EPOCH, "Release", "",
+                List.empty(), List.of("v1", "v1.1"));
+
+        LoadableList.Row row = CommitsPanel.row(new CommitGraph.Node(tagged, 0, false), false);
+
+        assertEquals("abcdef0 Ad ○ [v1] [v1.1] Release", row.text());
+        assertEquals(List.of(Option.none(), Option.of(Theme.Classes.TAG), Option.of(Theme.Classes.TAG), Option.none()),
+                row.segs().map(LoadableList.Seg::cssClass));
     }
 
     @Test
