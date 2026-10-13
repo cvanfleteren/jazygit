@@ -13,7 +13,8 @@ public final class ThemeDialog {
 
     public static final ChoiceDialog.Spec<ThemePopup> SPEC = new ChoiceDialog.Spec<>("theme", ThemePopup.class,
             popup -> Messages.get("dialog.theme.title"),
-            List.of(choice('d', Theme.DARK), choice('l', Theme.LIGHT), choice('a', Theme.DARCULA)),
+            List.of(choice('d', Theme.DARK), choice('l', Theme.LIGHT), choice('a', Theme.DARCULA),
+                    choice('b', Theme.DARK_COLORBLIND)),
             ThemeMsg.Cancelled::new);
 
     private ThemeDialog() {

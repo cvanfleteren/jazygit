@@ -1,0 +1,46 @@
+/*
+ * The dark theme, readable with red/green colour blindness: good is blue and bad is vermillion instead of
+ * green and red, from the Okabe-Ito palette. Yellow, for what is still running, is much lighter than
+ * vermillion, so the two stay apart.
+ */
+$border: white;
+$accent: cyan;
+$good: #56b4e9;
+$bad: #d55e00;
+$running: #f0e442;
+$hunk: #cc79a7;
+
+Panel, TextInputElement, TextAreaElement, RichTextAreaElement {
+    border-type: rounded;
+    border-color: $border;
+}
+
+Panel.focused {
+    border-color: $accent;
+}
+
+.bold { text-style: bold; }
+.dim { text-style: dim; }
+.error { color: $bad; }
+.disabled { text-style: crossed-out dim; }
+.staged { color: $good; }
+.unstaged { color: $bad; }
+.spinner { color: $running; }
+.ahead { color: $good; }
+.behind { color: $bad; }
+.gone { color: $bad; text-style: dim; }
+.pull-request { color: cyan; }
+.checks-passed { color: $good; }
+.checks-failed { color: $bad; }
+.checks-running { color: $running; }
+.review-approved { color: $good; }
+.review-changes { color: $bad; }
+
+Span.diff-header { text-style: bold; }
+Span.diff-added { color: $good; }
+Span.diff-removed { color: $bad; }
+Span.diff-hunk { color: $hunk; }
+Span.current-branch { color: yellow; }
+Span.sha { color: yellow; }
+Span.tag { color: $good; }
+Span.bold { text-style: bold; }
