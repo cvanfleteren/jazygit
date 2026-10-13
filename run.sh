@@ -13,12 +13,14 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-JAR="target/jazygit-fat.jar"
+JAR_GLOB="target/jazygit-*-fat.jar"
 DEBUG_PORT=5005
 
-if [[ ! -f "$JAR" ]]; then
+if ! compgen -G "$JAR_GLOB" > /dev/null; then
     mvn -q -DskipTests package
 fi
+
+JAR="$(ls $JAR_GLOB | head -n 1)"
 
 if [[ "${1:-}" == "--debug" ]]; then
     echo "Waiting for debugger to attach on port ${DEBUG_PORT}..."
