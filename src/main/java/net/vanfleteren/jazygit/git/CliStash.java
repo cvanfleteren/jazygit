@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import io.vavr.collection.List;
 import io.vavr.collection.Seq;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.model.Stash;
@@ -60,10 +61,12 @@ public final class CliStash {
 
     /**
      * Runs {@code git stash push --include-untracked --message <message>}: stashes the changes, staged and
-     * unstaged, and the untracked files.
+     * unstaged, and the untracked files. Without a message, git names the stash after the branch and its
+     * commit, e.g. {@code WIP on main: abc1234 Add widget}.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Path workTree, String message) {
-        return GitProcess.log(workTree, git("stash", "push", "--include-untracked", "--message", message));
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Path workTree, Option<String> message) {
+        return GitProcess.log(workTree, git(List.of("stash", "push", "--include-untracked")
+                .appendAll(message.toList().flatMap(text -> List.of("--message", text)))));
     }
 
     /**

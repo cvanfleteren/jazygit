@@ -38,6 +38,7 @@ import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
@@ -90,7 +91,7 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> stash(String message) {
+        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> stash(Option<String> message) {
             return StubGitProvider.ran("git stash");
         }
 
@@ -214,8 +215,8 @@ class ProgramTest {
         }
 
         @Override
-        public Either<ProcessError, String> commitChanges(Sha sha) {
-            return Either.right("changes of " + sha);
+        public Either<ProcessError, DiffText> commitChanges(Sha sha) {
+            return Either.right(DiffText.of("changes of " + sha));
         }
 
         @Override

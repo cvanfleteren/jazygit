@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
@@ -38,7 +39,7 @@ public final class LoadUpdate {
             // What arrives after another item was highlighted is dropped.
             case BranchLogLoaded(String branch, var commits) ->
                     Next.of(done.withBranchLog(Preview.updated(done.branchLog(), branch, log -> log.reload(commits))));
-            case CommitDetailLoaded(Sha sha, String changes) ->
+            case CommitDetailLoaded(Sha sha, DiffText changes) ->
                     Next.of(done.withCommitDetail(Preview.updated(done.commitDetail(), sha, d -> d.reload(changes))));
             case FileDiffLoaded(var files, var diff) ->
                     Next.of(done.withFileDiff(Preview.updated(done.fileDiff(), files, d -> d.reload(diff))));

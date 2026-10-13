@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.stash;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.state.Operation;
@@ -16,7 +17,7 @@ public sealed interface StashCmd extends GitOperationCmd {
     /**
      * Stashes the changes under {@code name}.
      */
-    record Stash(String name) implements StashCmd {
+    record Stash(Option<String> name) implements StashCmd {
 
         @Override
         public Operation operation() {

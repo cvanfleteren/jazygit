@@ -2,7 +2,10 @@ package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.elements.TextElement;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
@@ -25,10 +28,20 @@ public final class StatusPanel {
         String branch = switch (model.status()) {
             case Loadable.Loading<RepoStatus>() -> Placeholders.loading();
             case Loadable.Failed<RepoStatus>(Failure failure) -> Placeholders.error(failure);
-            case Loadable.Loaded<RepoStatus>(RepoStatus status) -> status.branchLabel();
+            case Loadable.Loaded<RepoStatus>(RepoStatus status) -> branchLabel(status.head());
         };
         TextElement repository = text(Messages.get("status.line", model.repositoryName(), branch));
         return panel(Messages.get("panel.status.title"), repository)
                 .length(HEIGHT);
+    }
+
+    /**
+     * The checked-out branch, or a description of the detached HEAD.
+     */
+    static String branchLabel(Head head) {
+        return switch (head) {
+            case Head.OnBranch(String branch, Option<Sha> tip) -> branch;
+            case Head.Detached(Sha at) -> Messages.get("status.headDetached", at.shortSha());
+        };
     }
 }

@@ -6,7 +6,14 @@ package net.vanfleteren.jazygit.git.model;
  * @param staged   the changes in the index, against HEAD
  * @param unstaged the changes in the working tree, against the index; untracked files count as entirely added
  */
-public record Diffs(String staged, String unstaged) {
+public record Diffs(DiffText staged, DiffText unstaged) {
+
+    /**
+     * Diffs that are shown whole.
+     */
+    public Diffs(String staged, String unstaged) {
+        this(DiffText.of(staged), DiffText.of(unstaged));
+    }
 
     public boolean isEmpty() {
         return staged.isBlank() && unstaged.isBlank();

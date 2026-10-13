@@ -13,25 +13,8 @@ Refactorings that were left out of the functional/immutable cleanup, and why.
   `render` updates, so that a closing popup can give the focus back. The model could hold the focus origin
   instead, for example the pane in `HelpPopup` and `ThemePopup`.
 
-## Translated text outside the views
-
-- [ ] **`StashUpdate.defaultName`** builds the default stash name with `Messages` ("WIP on …"). That text is
-  passed to git as the stash message, which is why it was left. Options:
-  - don't pass `--message` when the name is blank, and let git generate the name. The listed name then
-    becomes git's own format, `WIP on main: abc1234 msg`;
-  - build the name without `Messages`.
-- [ ] **`RepoStatus.branchLabel`** in `git.model` uses `Messages` for "HEAD detached at …". Move the text
-  into the view, and keep only the data in the model.
-- [ ] **`CliDiff.truncated`** adds a translated "… truncated" line in the git layer. `Diffs` could carry
-  whether the diff was cut off, and the view could add the line.
-
 ## Git layer
 
-- [ ] **`CliBranch.tracking`** runs its own `git for-each-ref` per branch to find where the branch is
-  pushed. `CliBranches.list` already reads all branches in one call, but `Upstream` only keeps the short
-  name, for example `origin/main`. That name is ambiguous when a remote name contains `/`. To reuse the bulk
-  read, keep the remote name and the remote ref in `Branch`/`Upstream`, then derive the push target from
-  them.
 - [ ] **Reshape the capability interfaces** so that each one maps onto one `Cli*` class (optional):
   - `GitRead.branches()` belongs with `GitBranches`;
   - `GitRead.stashes()` belongs with `GitStash`;

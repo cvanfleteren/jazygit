@@ -92,8 +92,8 @@ public final class SampleData implements StubGitProvider {
     }
 
     @Override
-    public Either<ProcessError, String> commitChanges(Sha sha) {
-        return Either.right("1 file changed, 1 insertion(+)\n\ndiff --git a/" + sha + " b/" + sha + "\n");
+    public Either<ProcessError, DiffText> commitChanges(Sha sha) {
+        return Either.right(DiffText.of("1 file changed, 1 insertion(+)\n\ndiff --git a/" + sha + " b/" + sha + "\n"));
     }
 
     @Override

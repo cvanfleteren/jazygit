@@ -59,37 +59,25 @@ class StashUpdateTest {
 
         Next next = Update.update(open, new StashMsg.Confirmed("  my work "));
 
-        assertEquals(List.of(new Stash("my work")), next.cmds());
+        assertEquals(List.of(new Stash(Option.of("my work"))), next.cmds());
         assertEquals(Option.none(), next.model().popup());
     }
 
     @Test
-    void aBlankNameIsReplacedByTheBranchAndTheHeadCommit() {
+    void aBlankNameLeavesNamingTheStashToGit() {
         Model open = Update.update(withChanges(), new StashMsg.Requested()).model();
-        net.vanfleteren.jazygit.git.model.Commit head = ((net.vanfleteren.jazygit.state.Loadable.Loaded<
-                List<net.vanfleteren.jazygit.git.model.Commit>>) open.commits()).value().head();
-        Model atHead = Update.update(open, new LoadMsg.StatusLoaded(new RepoStatus(Head.onBranch("main", new Sha(head.sha().value())), List.of(new FileEntry("a.txt", ChangeType.MODIFIED))))).model();
 
-        Next next = Update.update(atHead, new StashMsg.Confirmed(" "));
+        Next next = Update.update(open, new StashMsg.Confirmed(" "));
 
-        assertEquals(List.of(new Stash("WIP on main " + head.sha().shortSha() + " " + head.message())),
-                next.cmds());
-    }
-
-    @Test
-    void theGeneratedNameLeavesOutTheCommitInARepositoryWithoutCommits() {
-        Model model = Update.update(loaded(), new LoadMsg.StatusLoaded(
-                new RepoStatus(new Head.OnBranch("main", Option.none()), List.of(new FileEntry("a.txt", ChangeType.UNTRACKED))))).model();
-
-        assertEquals("WIP on main", StashUpdate.defaultName(model));
+        assertEquals(List.of(new Stash(Option.none())), next.cmds());
     }
 
     @Test
     void doneLogsTheCommandsAndFailureIsReported() {
-        Next done = Update.update(loaded(), succeeded(new StashCmd.Stash("x"), "git stash push --message x"));
+        Next done = Update.update(loaded(), succeeded(new StashCmd.Stash(Option.of("x")), "git stash push --message x"));
         assertEquals(List.of(new LogEntry(Operation.STASH, executed("git stash push --message x"))), done.model().commandLog());
 
-        Next failed = Update.update(loaded(), failed(new StashCmd.Stash("x"), "boom"));
+        Next failed = Update.update(loaded(), failed(new StashCmd.Stash(Option.of("x")), "boom"));
         assertEquals(Option.of("Stash failed: boom"), errorText(failed.model()));
     }
 

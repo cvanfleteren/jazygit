@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
+import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -116,7 +117,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> stash(String message) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> stash(Option<String> message) {
         return CliStash.push(workTree, message);
     }
 
@@ -231,7 +232,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<ProcessError, String> commitChanges(Sha sha) {
+    public Either<ProcessError, DiffText> commitChanges(Sha sha) {
         return CliShow.changes(workTree, sha);
     }
 

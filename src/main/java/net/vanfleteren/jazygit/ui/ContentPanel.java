@@ -14,6 +14,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.git.model.Diffs;
+import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Failure;
@@ -173,11 +174,18 @@ public final class ContentPanel {
             return dimPanel(title, Messages.get("content.noChanges"));
         }
         List<Element> panels = List.of(
-                        Tuple.of(Messages.get("content.staged"), stagedArea.with(diffs.staged())),
-                        Tuple.of(Messages.get("content.unstaged"), unstagedArea.with(diffs.unstaged())))
+                        Tuple.of(Messages.get("content.staged"), stagedArea.with(shown(diffs.staged()))),
+                        Tuple.of(Messages.get("content.unstaged"), unstagedArea.with(shown(diffs.unstaged()))))
                 .filter(e -> e._2.hasContent())
                 .map(e -> e._2.show(e._1));
         return column(panels.toJavaArray(Element[]::new));
+    }
+
+    /**
+     * The text of {@code diff}, with a line saying it is truncated when it was cut off.
+     */
+    static String shown(DiffText diff) {
+        return diff.truncated() ? diff.text() + Messages.get("git.diff.truncated") + "\n" : diff.text();
     }
 
     /**
@@ -269,7 +277,7 @@ public final class ContentPanel {
     /**
      * What the commit area shows: the commit, and what it changed.
      */
-    private record CommitContent(Commit commit, String changes) {
+    private record CommitContent(Commit commit, DiffText changes) {
     }
 
     private StyledElement<?> commitDiffView(Model model) {
@@ -278,7 +286,7 @@ public final class ContentPanel {
                 .map(Preview::shown)
                 .<StyledElement<?>>map(detail -> whenLoaded(title, detail.value(), changes -> commit(model, detail.key())
                         .<StyledElement<?>>map(commit -> commitArea
-                                .with(new CommitContent(commit, changes), () -> commitText(commit, changes, styles))
+                                .with(new CommitContent(commit, changes), () -> commitText(commit, shown(changes), styles))
                                 .show(Messages.get("panel.commit.titleFor", commit.shortSha())))
                         .getOrElse(() -> loadingPanel(title))))
                 .getOrElse(() -> model.commits().toOption().exists(List::isEmpty)

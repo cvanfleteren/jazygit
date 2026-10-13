@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 
@@ -52,7 +53,7 @@ public record Model(String repositoryName,
                     Loadable<List<Commit>> commits,
                     Loadable<List<Stash>> stashes,
                     Option<Preview<String, List<Commit>>> branchLog,
-                    Option<Preview<Sha, String>> commitDetail,
+                    Option<Preview<Sha, DiffText>> commitDetail,
                     Option<Preview<List<FileEntry>, Diffs>> fileDiff,
                     Set<Cmd.Load> refreshing,
                     Option<AppError> error,

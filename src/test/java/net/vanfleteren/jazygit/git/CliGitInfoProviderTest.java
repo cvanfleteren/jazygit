@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -154,13 +155,13 @@ class CliGitInfoProviderTest {
     @Test
     void reportsRepositoryNameAndCurrentBranch() throws Exception {
         assertEquals(repo.getFileName().toString(), provider.repositoryName());
-        assertEquals("main", provider.status().get().branchLabel());
+        assertEquals(Option.of("main"), provider.status().get().head().branchName());
 
         git("checkout", "-q", "-b", "feature");
-        assertEquals("feature", provider.status().get().branchLabel());
+        assertEquals(Option.of("feature"), provider.status().get().head().branchName());
 
         git("checkout", "-q", "--detach");
-        assertEquals("HEAD detached at " + provider.commits().get().get(0).shortSha(), provider.status().get().branchLabel());
+        assertEquals(new Head.Detached(provider.commits().get().get(0).sha()), provider.status().get().head());
     }
 
     @Test
@@ -170,7 +171,7 @@ class CliGitInfoProviderTest {
 
         provider.checkout("feature").get();
 
-        assertEquals("feature", provider.status().get().branchLabel());
+        assertEquals(Option.of("feature"), provider.status().get().head().branchName());
         assertEquals(List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)), provider.status().get().files());
     }
 
@@ -401,7 +402,7 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "changed\n");
         Files.writeString(repo.resolve("new.txt"), "new\n");
 
-        List<String> executed = provider.stash("my work").get().map(ExecutedCommand::line);
+        List<String> executed = provider.stash(Option.of("my work")).get().map(ExecutedCommand::line);
 
         assertEquals(List.of("git stash push --include-untracked --message 'my work'"), executed);
         assertEquals(List.of(), provider.status().get().files());
@@ -409,9 +410,21 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void stashWithoutANameIsNamedByGit() throws Exception {
+        Files.writeString(repo.resolve("README.md"), "changed\n");
+        Commit head = provider.commits().get().head();
+
+        List<String> executed = provider.stash(Option.none()).get().map(ExecutedCommand::line);
+
+        assertEquals(List.of("git stash push --include-untracked"), executed);
+        assertEquals(List.of("WIP on main: " + head.shortSha() + " " + head.message()),
+                provider.stashes().get().map(Stash::message));
+    }
+
+    @Test
     void popRestoresTheChangesAndDropsTheStash() throws Exception {
         Files.writeString(repo.resolve("README.md"), "changed\n");
-        provider.stash("work").get();
+        provider.stash(Option.of("work")).get();
 
         List<String> executed = provider.pop("stash@{0}").get().map(ExecutedCommand::line);
 
@@ -424,7 +437,7 @@ class CliGitInfoProviderTest {
     @Test
     void dropDeletesTheStashWithoutApplyingIt() throws Exception {
         Files.writeString(repo.resolve("README.md"), "changed\n");
-        provider.stash("work").get();
+        provider.stash(Option.of("work")).get();
 
         List<String> executed = provider.drop("stash@{0}").get().map(ExecutedCommand::line);
 
@@ -443,9 +456,9 @@ class CliGitInfoProviderTest {
     void stashesListTheNewestFirstAndThereAreNoneInACleanRepository() throws Exception {
         assertEquals(List.of(), provider.stashes().get());
         Files.writeString(repo.resolve("README.md"), "one\n");
-        provider.stash("first").get();
+        provider.stash(Option.of("first")).get();
         Files.writeString(repo.resolve("README.md"), "two\n");
-        provider.stash("second").get();
+        provider.stash(Option.of("second")).get();
 
         assertEquals(List.of(new Stash("stash@{0}", "second"), new Stash("stash@{1}", "first")),
                 provider.stashes().get());
@@ -470,7 +483,7 @@ class CliGitInfoProviderTest {
 
         assertTrue(error instanceof GitError.LocalChanges(String explanation)
                 && explanation.contains("would be overwritten"), error.toString());
-        assertEquals("main", provider.status().get().branchLabel());
+        assertEquals(Option.of("main"), provider.status().get().head().branchName());
     }
 
     private static List<Branch> withoutTimes(List<Branch> branches) {
@@ -492,7 +505,7 @@ class CliGitInfoProviderTest {
 
         provider.createBranch("topic", "other").get();
 
-        assertEquals("topic", provider.status().get().branchLabel());
+        assertEquals(Option.of("topic"), provider.status().get().head().branchName());
         assertTrue(Files.exists(repo.resolve("other.txt")));
     }
 
@@ -762,7 +775,7 @@ class CliGitInfoProviderTest {
         assertEquals(List.of(FileEntry.renamed("READ.md", "README.md", true, false)), files);
 
         Diffs diffs = provider.diff(files).get();
-        assertTrue(diffs.staged().contains("rename from README.md"), diffs.toString());
+        assertTrue(diffs.staged().text().contains("rename from README.md"), diffs.toString());
 
         provider.unstageNew(List.of("READ.md")).get();
         provider.unstage(List.of("README.md")).get();
@@ -783,12 +796,12 @@ class CliGitInfoProviderTest {
 
         Diffs diffs = provider.diff(provider.status().get().files()).get();
 
-        assertTrue(diffs.staged().contains("-hello"), diffs.toString());
-        assertTrue(diffs.staged().contains("+staged"), diffs.toString());
-        assertTrue(!diffs.staged().contains("unstaged"), diffs.toString());
-        assertTrue(diffs.unstaged().contains("-staged"), diffs.toString());
-        assertTrue(diffs.unstaged().contains("+unstaged"), diffs.toString());
-        assertTrue(diffs.unstaged().contains("+brand new"), diffs.toString());
+        assertTrue(diffs.staged().text().contains("-hello"), diffs.toString());
+        assertTrue(diffs.staged().text().contains("+staged"), diffs.toString());
+        assertTrue(!diffs.staged().text().contains("unstaged"), diffs.toString());
+        assertTrue(diffs.unstaged().text().contains("-staged"), diffs.toString());
+        assertTrue(diffs.unstaged().text().contains("+unstaged"), diffs.toString());
+        assertTrue(diffs.unstaged().text().contains("+brand new"), diffs.toString());
         assertEquals(new Diffs("", ""), provider.diff(List.of()).get());
     }
 
@@ -799,9 +812,9 @@ class CliGitInfoProviderTest {
 
         Diffs diffs = provider.diff(List.of(new FileEntry("new.txt", ChangeType.UNTRACKED))).get();
 
-        assertEquals("", diffs.staged());
-        assertTrue(diffs.unstaged().contains("+new"), diffs.unstaged());
-        assertTrue(!diffs.unstaged().contains("README.md"), diffs.unstaged());
+        assertEquals("", diffs.staged().text());
+        assertTrue(diffs.unstaged().text().contains("+new"), diffs.unstaged().text());
+        assertTrue(!diffs.unstaged().text().contains("README.md"), diffs.unstaged().text());
     }
 
     @Test

@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 
@@ -50,7 +51,7 @@ public interface GitRead {
      * What the commit {@code sha} changed, like {@code git show}: the changed files, a summary of the
      * changes, a blank line and the diff. Long output is cut off.
      */
-    Either<ProcessError, String> commitChanges(Sha sha);
+    Either<ProcessError, DiffText> commitChanges(Sha sha);
 
     /**
      * The staged and the unstaged diff of {@code files}.

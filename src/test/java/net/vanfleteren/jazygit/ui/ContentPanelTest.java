@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.LoadMsg;
@@ -116,7 +117,7 @@ class ContentPanelTest {
     void theCommitAreaCanBeFocusedOnceItShowsTheHighlightedCommitAndReturnsToTheCommitsPane() {
         Model selected = Update.update(
                 Update.update(TestModels.loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa"))).model(),
-                new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), "changes")).model();
+                new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffText.of("changes"))).model();
 
         // Rendering gives the area its content; the commits pane has the focus while doing so.
         content.render(selected, CommitsPanel.ID);
@@ -158,6 +159,12 @@ class ContentPanelTest {
                 .collect(List.collector());
 
         assertEquals(List.of("", "    Subject", "---", "x"), lines.drop(3));
+    }
+
+    @Test
+    void aTruncatedDiffEndsWithALineSayingSo() {
+        assertEquals("+a\n", ContentPanel.shown(DiffText.of("+a\n")));
+        assertEquals("+a\n… truncated\n", ContentPanel.shown(new DiffText("+a\n", true)));
     }
 
     @Test

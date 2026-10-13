@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.git.model;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.i18n.Messages;
 
 /**
  * The state of the working tree and HEAD, as reported by {@code git status}.
@@ -57,15 +56,5 @@ public record RepoStatus(Head head, List<FileEntry> files) {
      */
     public Option<Sha> headCommit() {
         return head.commit();
-    }
-
-    /**
-     * The checked-out branch, or a description of the detached HEAD.
-     */
-    public String branchLabel() {
-        return switch (head) {
-            case Head.OnBranch(String branch, Option<Sha> tip) -> branch;
-            case Head.Detached(Sha at) -> Messages.get("status.headDetached", at.shortSha());
-        };
     }
 }

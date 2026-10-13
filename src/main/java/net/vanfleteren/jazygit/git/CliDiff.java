@@ -7,9 +7,9 @@ import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.DiffError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.i18n.Messages;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -83,8 +83,14 @@ public final class CliDiff {
         return paths.isEmpty() ? Either.right("") : run(workTree, subcommand.appendAll(paths), env);
     }
 
-    static String truncated(String diff) {
-        return GitOutput.truncated(diff, MAX_LINES, Messages.get("git.diff.truncated"));
+    /**
+     * {@code diff} cut off after {@link #MAX_LINES} lines.
+     */
+    static DiffText truncated(String diff) {
+        List<String> lines = GitOutput.lines(diff);
+        return lines.size() <= MAX_LINES
+                ? DiffText.of(diff)
+                : new DiffText(lines.take(MAX_LINES).mkString("", "\n", "\n"), true);
     }
 
     private static Either<ProcessError, String> run(Path workTree, List<String> args, Map<String, String> env) {

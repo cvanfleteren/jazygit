@@ -3,9 +3,6 @@ package net.vanfleteren.jazygit.feature.stash;
 import io.vavr.control.Option;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.stash.StashCmd.Stash;
-import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -53,22 +50,6 @@ public final class StashUpdate {
     private static Next confirmed(Model model, String name) {
         String trimmed = name.strip();
         return Update.confirm(model, StashPopup.class,
-                popup -> Option.of(new Stash(trimmed.isEmpty() ? defaultName(model) : trimmed)));
-    }
-
-    /**
-     * {@code WIP on <branch> <short sha> <message of HEAD>}, leaving out what is not known.
-     */
-    static String defaultName(Model model) {
-        return model.status().toOption()
-                .map(status -> List.of(Messages.get("stash.defaultName", status.branchLabel()),
-                        status.headCommit().map(Sha::shortSha).getOrElse(""),
-                        model.commits().getOrElse(List.empty())
-                                .find(commit -> status.headCommit().contains(commit.sha()))
-                                .map(Commit::message)
-                                .getOrElse("")))
-                .getOrElse(() -> List.of(Messages.get("stash.defaultName", "").strip()))
-                .filter(part -> !part.isEmpty())
-                .mkString(" ");
+                popup -> Option.of(new Stash(Option.of(trimmed).filter(text -> !text.isEmpty()))));
     }
 }

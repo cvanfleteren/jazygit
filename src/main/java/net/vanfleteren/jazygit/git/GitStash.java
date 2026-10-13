@@ -4,6 +4,7 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 
 /**
@@ -15,7 +16,7 @@ public interface GitStash {
     /**
      * Stashes the changes, staged and unstaged, and the untracked files, under the name {@code message}.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> stash(String message);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> stash(Option<String> message);
 
     /**
      * Applies the stash {@code ref} (e.g. {@code stash@{1}}) to the working tree and drops it. When that

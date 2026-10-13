@@ -20,6 +20,7 @@
         <lombok.version>1.18.46</lombok.version>
         <slf4j.version>2.0.17</slf4j.version>
         <zt-exec.version>1.13.0</zt-exec.version>
+        <archunit.version>1.4.1</archunit.version>
         <main.class>net.vanfleteren.jazygit.JazygitApp</main.class>
     </properties>
 
@@ -89,6 +90,12 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+            <version>${archunit.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>

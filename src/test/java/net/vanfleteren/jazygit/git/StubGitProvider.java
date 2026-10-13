@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 
@@ -85,8 +86,8 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<ProcessError, String> commitChanges(Sha sha) {
-        return Either.right("");
+    default Either<ProcessError, DiffText> commitChanges(Sha sha) {
+        return Either.right(DiffText.of(""));
     }
 
     @Override
@@ -195,7 +196,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> stash(String message) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> stash(Option<String> message) {
         return ran();
     }
 

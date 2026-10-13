@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 
@@ -64,7 +65,7 @@ public sealed interface LoadMsg extends Msg {
         }
     }
 
-    record CommitDetailLoaded(Sha sha, String changes) implements LoadMsg {
+    record CommitDetailLoaded(Sha sha, DiffText changes) implements LoadMsg {
 
         @Override
         public Cmd.Load cmd() {

@@ -98,11 +98,4 @@ class CliStatusTest {
         assertEquals(List.of(new FileEntry("both.txt", ChangeType.MODIFIED, true, true)),
                 CliStatus.parse(raw).get().files());
     }
-
-    @Test
-    void branchLabelDescribesDetachedHead() {
-        assertEquals("main", new RepoStatus(Head.onBranch("main", new Sha("0123456789")), List.of()).branchLabel());
-        assertEquals("HEAD detached at 0123456",
-                new RepoStatus(new Head.Detached(new Sha("0123456789")), List.of()).branchLabel());
-    }
 }

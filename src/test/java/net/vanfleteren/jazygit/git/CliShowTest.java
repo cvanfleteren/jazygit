@@ -32,7 +32,7 @@ class CliShowTest {
         git("add", "-A");
         git("commit", "-qm", "second", "-m", "body");
 
-        List<String> lines = CliShow.changes(repo, new Sha(git("rev-parse", "HEAD").strip())).get().lines().collect(List.collector());
+        List<String> lines = CliShow.changes(repo, new Sha(git("rev-parse", "HEAD").strip())).get().text().lines().collect(List.collector());
 
         assertEquals(List.of(
                 " a.txt | 1 +",

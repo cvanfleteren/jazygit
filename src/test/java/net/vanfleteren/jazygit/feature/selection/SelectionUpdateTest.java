@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
@@ -64,8 +65,8 @@ class SelectionUpdateTest {
     void loadedChangesAreShownKeepingThePreviousOnesWhileTheNextCommitLoads() {
         Model first = Update.update(
                 Update.update(loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa"))).model(),
-                new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), "changes")).model();
-        Preview<Sha, String> firstDetail = new Preview<>(new Sha("aaaa"), new Loaded<>("changes"));
+                new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffText.of("changes"))).model();
+        Preview<Sha, DiffText> firstDetail = new Preview<>(new Sha("aaaa"), new Loaded<>(DiffText.of("changes")));
         assertEquals(Option.of(firstDetail), first.commitDetail());
 
         Model second = Update.update(first, new SelectionMsg.CommitSelected(new Sha("ffff"))).model();
@@ -79,7 +80,7 @@ class SelectionUpdateTest {
         model = Update.update(model, new SelectionMsg.CommitSelected(new Sha("ffff"))).model();
 
         assertEquals(model.commitDetail(),
-                Update.update(model, new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), "changes")).model().commitDetail());
+                Update.update(model, new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffText.of("changes"))).model().commitDetail());
         assertEquals(model.commitDetail(),
                 Update.update(model, new LoadMsg.Failed(new LoadCommitDetail(new Sha("aaaa")), refused("boom"))).model().commitDetail());
     }
