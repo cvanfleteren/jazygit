@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.gh;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
@@ -25,8 +26,9 @@ public interface StubGitHub extends GitHub {
     }
 
     @Override
-    default Either<GhFailure, List<ExecutedCommand>> createPullRequest(String head, String base) {
-        return Either.right(List.of(ExecutedCommand.of("gh", "pr", "create", "--head", head, "--base", base, "--fill")));
+    default Either<GhFailure, Created> createPullRequest(String head, String base) {
+        return Either.right(new Created(Option.none(),
+                List.of(ExecutedCommand.of("gh", "pr", "create", "--head", head, "--base", base, "--fill"))));
     }
 
     @Override

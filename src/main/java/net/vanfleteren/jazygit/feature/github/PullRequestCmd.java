@@ -1,6 +1,9 @@
 package net.vanfleteren.jazygit.feature.github;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.PullRequest;
+import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
+import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
@@ -36,10 +39,14 @@ public sealed interface PullRequestCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             // The branch can have another name on its remote; gh needs that one.
-            return env.git().remoteBranch(branch).fold(this::failedWith,
-                    remote -> env.gitHub().createPullRequest(remote.getOrElse(branch), base).fold(
-                            failure -> failed(Failure.of(failure)),
-                            commands -> new PullRequestMsg.Created(this, commands)));
+            return env.git().remoteBranch(branch).fold(this::failedWith, remote -> {
+                String head = remote.getOrElse(branch);
+                return env.gitHub().createPullRequest(head, base).fold(
+                        failure -> failed(Failure.of(failure)),
+                        created -> new PullRequestMsg.Created(this,
+                                created.number().map(number -> new PullRequest(number, head, false, Checks.NONE, Review.NONE)),
+                                created.commands()));
+            });
         }
     }
 

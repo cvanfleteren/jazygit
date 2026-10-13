@@ -13,6 +13,8 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import java.nio.file.Path;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static net.vanfleteren.jazygit.gh.GhCommand.gh;
 
@@ -40,6 +42,8 @@ public final class CliGitHub implements GitHub {
             "FAILURE", "ERROR", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED", "STARTUP_FAILURE");
     private static final Set<String> RUNNING = HashSet.of("PENDING", "EXPECTED", "QUEUED", "IN_PROGRESS", "WAITING");
 
+    private static final Pattern CREATED_URL = Pattern.compile("/pull/(\\d{1,9})$");
+
     private final Path workTree;
 
     public CliGitHub(Path workTree) {
@@ -54,8 +58,17 @@ public final class CliGitHub implements GitHub {
     }
 
     @Override
-    public Either<GhFailure, List<ExecutedCommand>> createPullRequest(String head, String base) {
-        return GhProcess.log(workTree, gh("pr", "create", "--head", head, "--base", base, "--fill"));
+    public Either<GhFailure, Created> createPullRequest(String head, String base) {
+        return GhProcess.logWithOutput(workTree, gh("pr", "create", "--head", head, "--base", base, "--fill"))
+                .map(out -> new Created(createdNumber(out._1), out._2));
+    }
+
+    /**
+     * The number in the URL of the new pull request, which is the last thing {@code gh pr create} prints.
+     */
+    static Option<Integer> createdNumber(String stdout) {
+        Matcher url = CREATED_URL.matcher(stdout.strip());
+        return Option.when(url.find(), () -> Integer.parseInt(url.group(1)));
     }
 
     @Override

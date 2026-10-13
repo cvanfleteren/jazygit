@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.gh;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -43,6 +44,12 @@ class CliGitHubTest {
         assertEquals(Checks.PENDING, CliGitHub.checks(List.of("SUCCESS", "PENDING")));
         assertEquals(Checks.FAILING, CliGitHub.checks(List.of("PENDING", "FAILURE")));
         assertEquals(Checks.FAILING, CliGitHub.checks(List.of("SUCCESS", "ERROR")));
+    }
+
+    @Test
+    void theNumberOfACreatedPullRequestIsInTheUrlGhPrints() {
+        assertEquals(Option.of(12), CliGitHub.createdNumber("\nCreating pull request...\nhttps://github.com/o/r/pull/12\n"));
+        assertEquals(Option.none(), CliGitHub.createdNumber("nothing useful"));
     }
 
     @Test

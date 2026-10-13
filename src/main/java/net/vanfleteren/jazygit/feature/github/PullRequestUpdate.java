@@ -29,10 +29,14 @@ public final class PullRequestUpdate {
             case PullRequestMsg.BaseChosen(String base) -> Update.confirm(model, BasePopup.class,
                     popup -> Option.of(new CreatePullRequest(popup.branch(), base)));
             case PullRequestMsg.BaseCancelled() -> Next.of(model.withoutPopup(BasePopup.class));
-            case PullRequestMsg.Created(CreatePullRequest cmd, var commands) -> {
-                // Done like any operation; then the new pull request is read, to show it.
+            case PullRequestMsg.Created(CreatePullRequest cmd, var pullRequest, var commands) -> {
+                // Done like any operation. The new pull request shows at once, as GitHub may not list it yet;
+                // reading the pull requests then gives its checks and review.
                 Next done = OperationUpdate.update(model, new OperationMsg.Succeeded(cmd, commands));
-                yield new Next(done.model(), done.cmds().append(new LoadPullRequests()));
+                Model shown = pullRequest
+                        .map(pr -> done.model().withPullRequests(done.model().pullRequests().put(pr.headBranch(), pr)))
+                        .getOrElse(done.model());
+                yield new Next(shown, done.cmds().append(new LoadPullRequests()));
             }
             case PullRequestMsg.Refresh() -> Next.of(model, new LoadPullRequests());
             case PullRequestMsg.Loaded(List<PullRequest> pullRequests) ->

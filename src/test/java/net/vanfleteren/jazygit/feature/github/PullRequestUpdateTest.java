@@ -160,6 +160,19 @@ class PullRequestUpdateTest {
     }
 
     @Test
+    void aCreatedPullRequestShowsAtOnceEvenIfGitHubDoesNotListItYet() {
+        CreatePullRequest cmd = new CreatePullRequest("feature", "main");
+        PullRequest created = new PullRequest(43, "feature", false, Checks.NONE, Review.NONE);
+        Model creating = Update.update(Update.update(model(), new PullRequestMsg.Requested("feature")).model(),
+                new PullRequestMsg.BaseChosen("main")).model();
+
+        Next done = Update.update(creating, new PullRequestMsg.Created(cmd, Option.of(created), List.empty()));
+
+        assertEquals(Option.of(created), done.model().pullRequests().get("feature"));
+        assertTrue(done.cmds().contains(new LoadPullRequests()));
+    }
+
+    @Test
     void refreshingReadsThePullRequests() {
         assertEquals(List.of(new LoadPullRequests()), Update.update(model(), new PullRequestMsg.Refresh()).cmds());
         assertInstanceOf(PullRequestMsg.Loaded.class,

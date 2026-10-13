@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.gh;
 
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.process.Exec;
@@ -23,6 +25,15 @@ final class GhProcess {
     static Either<GhFailure, List<ExecutedCommand>> log(Path workTree, GhCommand command) {
         return execute(workTree, command)
                 .bimap(error -> new GhFailure(error, List.of(command.executed())), stdout -> List.of(command.executed()));
+    }
+
+    /**
+     * Runs {@code command} for its effect, and returns what it printed with the command log.
+     */
+    static Either<GhFailure, Tuple2<String, List<ExecutedCommand>>> logWithOutput(Path workTree, GhCommand command) {
+        return execute(workTree, command)
+                .bimap(error -> new GhFailure(error, List.of(command.executed())),
+                        stdout -> Tuple.of(stdout, List.of(command.executed())));
     }
 
     /**

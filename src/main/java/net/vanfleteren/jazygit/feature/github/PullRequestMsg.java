@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.github;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Failure;
@@ -32,8 +33,11 @@ public sealed interface PullRequestMsg extends Msg {
 
     /**
      * The pull request was created by running {@code commands}.
+     *
+     * @param pullRequest the new pull request, as far as it is known before it is read from GitHub
      */
-    record Created(PullRequestCmd.CreatePullRequest cmd, List<ExecutedCommand> commands) implements PullRequestMsg {
+    record Created(PullRequestCmd.CreatePullRequest cmd, Option<PullRequest> pullRequest, List<ExecutedCommand> commands)
+            implements PullRequestMsg {
     }
 
     /**
