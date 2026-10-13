@@ -173,6 +173,20 @@ class PullRequestUpdateTest {
     }
 
     @Test
+    void aReadOfThePullRequestsIsCountedWhileItRunsAndNotStartedTwice() {
+        Next reading = Update.update(model(), new PullRequestMsg.Refresh());
+        assertEquals(1, reading.model().readingPullRequests());
+
+        Next again = Update.update(reading.model(), new PullRequestMsg.Refresh());
+        assertEquals(List.empty(), again.cmds());
+        assertEquals(1, again.model().readingPullRequests());
+
+        assertEquals(0, Update.update(reading.model(), new PullRequestMsg.Loaded(List.empty())).model().readingPullRequests());
+        assertEquals(0, Update.update(reading.model(), new PullRequestMsg.LoadFailed(refused("offline"))).model()
+                .readingPullRequests());
+    }
+
+    @Test
     void refreshingReadsThePullRequests() {
         assertEquals(List.of(new LoadPullRequests()), Update.update(model(), new PullRequestMsg.Refresh()).cmds());
         assertInstanceOf(PullRequestMsg.Loaded.class,

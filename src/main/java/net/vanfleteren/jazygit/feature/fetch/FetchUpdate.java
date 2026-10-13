@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.feature.fetch;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.github.PullRequestCmd;
+import net.vanfleteren.jazygit.feature.github.PullRequestUpdate;
 import net.vanfleteren.jazygit.state.Fetching;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
@@ -47,7 +47,6 @@ public final class FetchUpdate {
     }
 
     private static Next done(Model model) {
-        Next refreshed = Update.refresh(model.withFetching(Option.none()));
-        return new Next(refreshed.model(), refreshed.cmds().append(new PullRequestCmd.LoadPullRequests()));
+        return PullRequestUpdate.load(Update.refresh(model.withFetching(Option.none())));
     }
 }

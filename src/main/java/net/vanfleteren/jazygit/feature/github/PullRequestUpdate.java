@@ -36,15 +36,34 @@ public final class PullRequestUpdate {
                 Model shown = pullRequest
                         .map(pr -> done.model().withPullRequests(done.model().pullRequests().put(pr.headBranch(), pr)))
                         .getOrElse(done.model());
-                yield new Next(shown, done.cmds().append(new LoadPullRequests()));
+                // A read that is still running may have missed it, so this one is started anyway.
+                yield new Next(reading(shown), done.cmds().append(new LoadPullRequests()));
             }
-            case PullRequestMsg.Refresh() -> Next.of(model, new LoadPullRequests());
-            case PullRequestMsg.Loaded(List<PullRequest> pullRequests) ->
-                    Next.of(model.withPullRequests(byHeadBranch(pullRequests)).withPullRequestsFailure(Option.none()));
+            case PullRequestMsg.Refresh() -> load(Next.of(model));
+            case PullRequestMsg.Loaded(List<PullRequest> pullRequests) -> Next.of(read(model)
+                    .withPullRequests(byHeadBranch(pullRequests)).withPullRequestsFailure(Option.none()));
             // gh can be missing, logged out or offline, or the remote not on GitHub: then no pull requests show.
             // That is no reason to bother the user until they ask for a pull request, see requested().
-            case PullRequestMsg.LoadFailed(var failure) -> Next.of(model.withPullRequestsFailure(Option.of(failure)));
+            case PullRequestMsg.LoadFailed(var failure) -> Next.of(read(model).withPullRequestsFailure(Option.of(failure)));
         };
+    }
+
+    /**
+     * {@code next}, also reading the pull requests again; unless a read is still running, which gets the
+     * latest state already.
+     */
+    public static Next load(Next next) {
+        return next.model().readingPullRequests() > 0
+                ? next
+                : new Next(reading(next.model()), next.cmds().append(new LoadPullRequests()));
+    }
+
+    private static Model reading(Model model) {
+        return model.withReadingPullRequests(model.readingPullRequests() + 1);
+    }
+
+    private static Model read(Model model) {
+        return model.withReadingPullRequests(Math.max(0, model.readingPullRequests() - 1));
     }
 
     /**

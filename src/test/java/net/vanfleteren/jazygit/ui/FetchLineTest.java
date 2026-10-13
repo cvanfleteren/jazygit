@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * The line saying which remote is being fetched from.
+ * The line saying which remote is being fetched from, or that the pull requests are being read.
  */
 class FetchLineTest {
 
@@ -19,6 +19,15 @@ class FetchLineTest {
     void showsTheRemoteBeingFetchedFrom() throws Exception {
         assertEquals("Fetching origin",
                 rendered(TestModels.loaded().withFetching(Option.of(new Fetching(Option.of("origin"), List.empty())))));
+    }
+
+    @Test
+    void showsThePullRequestsBeingReadWhenNoRemoteIsBeingFetchedFrom() throws Exception {
+        Model reading = TestModels.loaded().withReadingPullRequests(1);
+
+        assertEquals("Reading pull requests from GitHub", rendered(reading));
+        assertEquals("Fetching origin",
+                rendered(reading.withFetching(Option.of(new Fetching(Option.of("origin"), List.empty())))));
     }
 
     @Test
