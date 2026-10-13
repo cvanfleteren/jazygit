@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
-import net.vanfleteren.jazygit.git.ExecutedCommand;
+import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
@@ -235,7 +236,7 @@ class ProgramTest {
     private final Queue<Runnable> io = new ArrayDeque<>();
     private final Queue<Runnable> ui = new ArrayDeque<>();
     private final Queue<Runnable> background = new ArrayDeque<>();
-    private final Program program = Program.start(provider, io::add, background::add, ui::add);
+    private final Program program = Program.start(new Env(provider, StubGitHub.empty()), io::add, background::add, ui::add);
 
     @Test
     void initialLoadFillsTheModel() {

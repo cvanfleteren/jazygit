@@ -1,14 +1,16 @@
 package net.vanfleteren.jazygit.state;
 
-import net.vanfleteren.jazygit.git.ExecutedCommand;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.GhError;
+import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 
 /**
- * Why a {@link Cmd} failed, as data: git refused, or there is a bug.
+ * Why a {@link Cmd} failed, as data: git or gh refused, or there is a bug.
  */
 public sealed interface Failure {
 
@@ -31,6 +33,16 @@ public sealed interface Failure {
     }
 
     /**
+     * gh failed.
+     */
+    record GitHub(GhError error, List<ExecutedCommand> commands) implements Failure {
+
+        public GitHub(GhError error) {
+            this(error, List.empty());
+        }
+    }
+
+    /**
      * The command threw: a bug, which is reported rather than taking the app down.
      */
     record Bug(Throwable cause) implements Failure {
@@ -43,5 +55,9 @@ public sealed interface Failure {
 
     static Failure of(GitFailure<?> failure) {
         return new Git(failure.error(), failure.commands(), failure.cleanupFailed());
+    }
+
+    static Failure of(GhFailure failure) {
+        return new GitHub(failure.error(), failure.commands());
     }
 }

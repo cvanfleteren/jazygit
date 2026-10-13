@@ -37,6 +37,12 @@ public final class Theme {
         public static final String SPINNER = "spinner";
         public static final String AHEAD = "ahead";
         public static final String BEHIND = "behind";
+        public static final String PULL_REQUEST = "pull-request";
+        public static final String CHECKS_PASSED = "checks-passed";
+        public static final String CHECKS_FAILED = "checks-failed";
+        public static final String CHECKS_RUNNING = "checks-running";
+        public static final String REVIEW_APPROVED = "review-approved";
+        public static final String REVIEW_CHANGES = "review-changes";
         public static final String DIFF_HEADER = "diff-header";
         public static final String DIFF_ADDED = "diff-added";
         public static final String DIFF_REMOVED = "diff-removed";

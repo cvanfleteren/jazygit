@@ -20,12 +20,15 @@ import net.vanfleteren.jazygit.feature.commit.CommitDialog;
 import net.vanfleteren.jazygit.feature.commit.CommitDialogs;
 import net.vanfleteren.jazygit.feature.discard.DiscardDialog;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
+import net.vanfleteren.jazygit.feature.github.PullRequestDialogs;
+import net.vanfleteren.jazygit.feature.github.PullRequestMsg;
 import net.vanfleteren.jazygit.feature.help.HelpDialog;
 import net.vanfleteren.jazygit.feature.error.ErrorDialog;
 import net.vanfleteren.jazygit.feature.help.HelpPopup;
 import net.vanfleteren.jazygit.feature.stash.StashDialogs;
 import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.state.Env;
+import net.vanfleteren.jazygit.gh.CliGitHub;
 import net.vanfleteren.jazygit.git.CliGitInfoProvider;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.state.Model;
@@ -43,6 +46,7 @@ import net.vanfleteren.jazygit.ui.StatusPanel;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
+import net.vanfleteren.jazygit.ui.widgets.PickDialog;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 import net.vanfleteren.jazygit.ui.widgets.TextInputDialog;
 
@@ -72,7 +76,7 @@ public class JazygitApp extends ToolkitApp {
     private static final Duration REFRESH_INTERVAL = Duration.ofMillis(500);
     private static final Duration FETCH_INTERVAL = Duration.ofMinutes(1);
 
-    private final GitInfoProvider provider;
+    private final Env env;
     private final StyleEngine styleEngine;
     private final Consumer<Msg> dispatch = msg -> this.runtime.forEach(running -> running.program().dispatch(msg));
     private final ContentPanel contentPanel;
@@ -91,6 +95,7 @@ public class JazygitApp extends ToolkitApp {
             new PopupSlot(new ConfirmDialog<>(BranchDialogs.FORCE_PUSH, dispatch), () -> BranchesPanel.ID),
             new PopupSlot(new TextInputDialog<>(BranchDialogs.SET_UPSTREAM, dispatch), () -> BranchesPanel.ID),
             new PopupSlot(new ConfirmDialog<>(BranchDialogs.STASH_CHECKOUT, dispatch), () -> BranchesPanel.ID),
+            new PopupSlot(new PickDialog<>(PullRequestDialogs.BASE, dispatch), () -> BranchesPanel.ID),
             new PopupSlot(new ConfirmDialog<>(CommitDialogs.AMEND, dispatch), () -> FilesPanel.ID),
             new PopupSlot(new ConfirmDialog<>(StashDialogs.DROP, dispatch), () -> StashPanel.ID),
             new PopupSlot(new TextInputDialog<>(StashDialogs.STASH, dispatch), () -> FilesPanel.ID),
@@ -117,8 +122,8 @@ public class JazygitApp extends ToolkitApp {
     private record Runtime(ExecutorService io, ExecutorService fetch, Program program) {
     }
 
-    public JazygitApp(GitInfoProvider provider, StyleEngine styleEngine) {
-        this.provider = provider;
+    public JazygitApp(Env env, StyleEngine styleEngine) {
+        this.env = env;
         this.styleEngine = styleEngine;
         this.contentPanel = new ContentPanel(Theme.spanStyles(styleEngine), this::leaveScrollArea);
     }
@@ -154,11 +159,13 @@ public class JazygitApp extends ToolkitApp {
         runner.focusManager().setFocus(FilesPanel.ID);
         ExecutorService io = singleThread("git-io");
         ExecutorService fetch = singleThread("git-fetch");
-        runtime = Option.of(new Runtime(io, fetch, Program.start(provider, io, fetch, runner::runOnRenderThread)));
+        runtime = Option.of(new Runtime(io, fetch, Program.start(env, io, fetch, runner::runOnRenderThread)));
         runner.scheduleRepeating(() -> runner.runOnRenderThread(() -> dispatch.accept(new Msg.Tick())),
                 REFRESH_INTERVAL);
         runner.scheduleRepeating(() -> runner.runOnRenderThread(() -> dispatch.accept(new FetchMsg.Tick())),
                 FETCH_INTERVAL);
+        // The first fetch is a while off; the pull requests show from the start.
+        dispatch.accept(new PullRequestMsg.Refresh());
     }
 
     private static ExecutorService singleThread(String name) {
@@ -186,7 +193,7 @@ public class JazygitApp extends ToolkitApp {
     @Override
     protected Element render() {
         Model model = runtime.map(running -> running.program().model())
-                .getOrElse(() -> Model.initial(provider.repositoryName()));
+                .getOrElse(() -> Model.initial(env.git().repositoryName()));
         Theme.activate(styleEngine, model.theme());
         String focusedId = runner().focusManager().focusedId();
         Panel branches = branchesPanel.render(model, focusedId);
@@ -269,7 +276,7 @@ public class JazygitApp extends ToolkitApp {
                 .mapLeft(ErrorText::of)
                 .flatMap(provider -> Theme.createEngine()
                         .mapLeft(failed -> Messages.get("theme.loadFailed", failed.theme(), failed.cause()))
-                        .map(engine -> new JazygitApp(provider, engine)));
+                        .map(engine -> new JazygitApp(new Env(provider, new CliGitHub(provider.workTree())), engine)));
         app.flatMap(jazygit -> Try.run(jazygit::run).toEither().mapLeft(Throwable::toString))
                 .orElseRun(problem -> {
                     System.err.println(problem);

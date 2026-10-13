@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.process.ExecutedCommand;
+
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.MergeMode;
 import org.junit.jupiter.api.BeforeEach;

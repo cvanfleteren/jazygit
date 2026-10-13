@@ -51,4 +51,17 @@ public sealed interface AppError {
      */
     record UnpushedCommits(String branch) implements AppError {
     }
+
+    /**
+     * A pull request was asked for, but the branch is not on its remote yet, or not with all its commits.
+     */
+    record NotPushed(String branch) implements AppError {
+    }
+
+    /**
+     * A pull request was asked for, but the pull requests could not be read, so it is unknown whether the branch
+     * has one.
+     */
+    record PullRequestsUnavailable(Failure failure) implements AppError {
+    }
 }

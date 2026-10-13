@@ -47,6 +47,23 @@ public final class CliBranches {
     }
 
     /**
+     * The name of the branch {@code branch} follows on its remote, read from git's configuration.
+     */
+    public static Either<ProcessError, Option<String>> remoteBranch(Path workTree, String branch) {
+        return GitProcess.read(workTree,
+                GitCommand.reading("for-each-ref", "--format=%(upstream:remoteref)", Refs.head(branch)),
+                raw -> Either.right(remoteBranch(raw)));
+    }
+
+    /**
+     * Parses {@code %(upstream:remoteref)}, e.g. {@code refs/heads/main}; it is empty without an upstream.
+     */
+    static Option<String> remoteBranch(String raw) {
+        String ref = raw.strip();
+        return GitOutput.after(ref, HEADS).orElse(Option.of(ref)).filter(name -> !name.isEmpty());
+    }
+
+    /**
      * One line of {@code for-each-ref} output.
      *
      * @param upstream    the short name of the upstream, e.g. {@code origin/main}

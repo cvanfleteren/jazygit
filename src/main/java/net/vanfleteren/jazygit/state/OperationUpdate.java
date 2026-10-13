@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
-import net.vanfleteren.jazygit.git.ExecutedCommand;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.state.Update.Next;
 

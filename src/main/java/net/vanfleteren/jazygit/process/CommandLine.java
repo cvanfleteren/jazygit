@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.git;
+package net.vanfleteren.jazygit.process;
 
 import io.vavr.collection.List;
 

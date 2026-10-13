@@ -1,7 +1,10 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.process.ExecutedCommand;
+
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.CheckoutError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
@@ -77,4 +80,10 @@ public interface GitBranches {
      * is not a fast-forward.
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(String branch);
+
+    /**
+     * The name of the branch {@code branch} follows on its remote, e.g. {@code main} for an upstream
+     * {@code origin/main}; none without an upstream.
+     */
+    Either<ProcessError, Option<String>> remoteBranch(String branch);
 }

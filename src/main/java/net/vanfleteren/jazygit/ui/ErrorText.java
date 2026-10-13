@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.AppError;
@@ -24,6 +25,9 @@ public final class ErrorText {
             case AppError.InvalidUpstream(String text) -> Messages.get("error.upstream.invalid", text.strip());
             case AppError.NoUpstream(String branch) -> Messages.get("error.pull.noUpstream", branch);
             case AppError.UnpushedCommits(String branch) -> Messages.get("error.fastForward.unpushed", branch);
+            case AppError.NotPushed(String branch) -> Messages.get("error.pullRequest.notPushed", branch);
+            case AppError.PullRequestsUnavailable(Failure failure) ->
+                    Messages.get("error.pullRequest.unavailable", of(failure));
         };
     }
 
@@ -32,7 +36,19 @@ public final class ErrorText {
             case Failure.Git(GitError error, var commands, var cleanupFailed) -> cleanupFailed
                     .map(cleanup -> Messages.get("error.cleanupFailed", of(error), of(cleanup)))
                     .getOrElse(() -> of(error));
+            case Failure.GitHub(GhError error, var commands) -> of(error);
             case Failure.Bug(Throwable cause) -> Messages.get("error.bug", reason(cause));
+        };
+    }
+
+    public static String of(GhError error) {
+        return switch (error) {
+            case GhError.GhUnavailable(var cause) -> Messages.get("gh.notInstalled");
+            case GhError.TimedOut(String operation) -> Messages.get("gh.timedOut", operation);
+            case GhError.Interrupted(String operation) -> Messages.get("gh.interrupted", operation);
+            case GhError.CommandFailed(var explanation, int exitCode) ->
+                    explanation.getOrElse(() -> Messages.get("gh.exitedWithCode", String.valueOf(exitCode)));
+            case GhError.UnexpectedOutput(String output) -> Messages.get("gh.unexpectedOutput", output);
         };
     }
 

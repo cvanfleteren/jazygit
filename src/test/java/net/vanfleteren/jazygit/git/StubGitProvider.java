@@ -1,11 +1,14 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.process.ExecutedCommand;
+
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.CheckoutError;
 import net.vanfleteren.jazygit.git.GitError.DiffError;
 import net.vanfleteren.jazygit.git.GitError.DiscardError;
@@ -149,6 +152,11 @@ public interface StubGitProvider extends GitInfoProvider {
     @Override
     default Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(String branch) {
         return ran();
+    }
+
+    @Override
+    default Either<ProcessError, Option<String>> remoteBranch(String branch) {
+        return Either.right(Option.of(branch));
     }
 
     @Override

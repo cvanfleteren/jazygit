@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.fetch;
 
-import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
@@ -21,8 +21,8 @@ public sealed interface FetchCmd extends Cmd {
     record ListRemotes() implements FetchCmd {
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.remotes().fold(this::failedWith, FetchMsg.RemotesListed::new);
+        public Msg run(Env env) {
+            return env.git().remotes().fold(this::failedWith, FetchMsg.RemotesListed::new);
         }
 
         @Override
@@ -37,8 +37,8 @@ public sealed interface FetchCmd extends Cmd {
     record Fetch(String remote) implements FetchCmd {
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.fetch(remote).fold(this::failedWith, commands -> new FetchMsg.Fetched(remote));
+        public Msg run(Env env) {
+            return env.git().fetch(remote).fold(this::failedWith, commands -> new FetchMsg.Fetched(remote));
         }
 
         @Override

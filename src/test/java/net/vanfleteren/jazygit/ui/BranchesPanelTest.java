@@ -2,6 +2,9 @@ package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.PullRequest;
+import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
+import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.git.model.Sha;
 import dev.tamboui.tui.event.KeyCode;
@@ -43,6 +46,26 @@ class BranchesPanelTest {
         Model after = with(before, List.of(MAIN, OLD, FEATURE));
 
         assertEquals("feature", highlightedAfterMovingTo(1, after));
+    }
+
+    @Test
+    void aPullRequestShowsItsNumberItsChecksAndItsReview() {
+        assertEquals(List.of(), BranchesPanel.pullRequest(Option.none()));
+        assertEquals(List.of(LoadableList.Seg.styled(" #42", Theme.Classes.PULL_REQUEST),
+                        LoadableList.Seg.styled(" ✓", Theme.Classes.CHECKS_PASSED),
+                        LoadableList.Seg.styled(" ✔", Theme.Classes.REVIEW_APPROVED)),
+                BranchesPanel.pullRequest(Option.of(new PullRequest(42, "b", false, Checks.PASSING, Review.APPROVED))));
+        assertEquals(List.of(LoadableList.Seg.styled(" #40", Theme.Classes.PULL_REQUEST),
+                        LoadableList.Seg.styled(" ✗", Theme.Classes.CHECKS_FAILED),
+                        LoadableList.Seg.styled(" ?", Theme.Classes.DIM)),
+                BranchesPanel.pullRequest(Option.of(new PullRequest(40, "b", false, Checks.FAILING, Review.REQUIRED))));
+        assertEquals(List.of(LoadableList.Seg.styled(" #38", Theme.Classes.PULL_REQUEST),
+                        LoadableList.Seg.styled(" ●", Theme.Classes.CHECKS_RUNNING),
+                        LoadableList.Seg.styled(" ✎", Theme.Classes.REVIEW_CHANGES)),
+                BranchesPanel.pullRequest(Option.of(new PullRequest(38, "b", false, Checks.PENDING, Review.CHANGES_REQUESTED))));
+        // A draft without checks or reviews shows only its number, dimmed.
+        assertEquals(List.of(LoadableList.Seg.styled(" #37", Theme.Classes.DIM)),
+                BranchesPanel.pullRequest(Option.of(new PullRequest(37, "b", true, Checks.NONE, Review.NONE))));
     }
 
     @Test

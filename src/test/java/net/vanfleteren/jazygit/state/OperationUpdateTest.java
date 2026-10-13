@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
-import net.vanfleteren.jazygit.git.ExecutedCommand;
+import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import static net.vanfleteren.jazygit.git.StubGitProvider.executed;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
@@ -75,7 +76,7 @@ class OperationUpdateTest {
             }
         };
 
-        Msg msg = Program.perform(throwing, PUSH);
+        Msg msg = Program.perform(new Env(throwing, StubGitHub.empty()), PUSH);
 
         OperationMsg.Failed failed = assertInstanceOf(OperationMsg.Failed.class, msg);
         assertInstanceOf(Failure.Bug.class, failed.failure());

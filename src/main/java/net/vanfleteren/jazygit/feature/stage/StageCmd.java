@@ -1,18 +1,18 @@
 package net.vanfleteren.jazygit.feature.stage;
 
-import net.vanfleteren.jazygit.git.ExecutedCommand;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.state.Operation;
-import net.vanfleteren.jazygit.state.OperationCmd;
+import net.vanfleteren.jazygit.state.GitOperationCmd;
 
 /**
  * Commands that change what is staged.
  */
-public sealed interface StageCmd extends OperationCmd {
+public sealed interface StageCmd extends GitOperationCmd {
 
     record Stage(List<String> paths) implements StageCmd {
 
