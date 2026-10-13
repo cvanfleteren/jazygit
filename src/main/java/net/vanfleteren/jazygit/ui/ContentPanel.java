@@ -14,16 +14,12 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.git.model.Diffs;
-import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.state.BranchLog;
-import net.vanfleteren.jazygit.state.CommitDetail;
-import net.vanfleteren.jazygit.state.FileDiff;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.Preview;
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import java.time.ZoneId;
@@ -31,7 +27,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
 
 /**
  * The right-hand content panel: it always mirrors whichever left pane currently has focus,
@@ -52,6 +47,7 @@ public final class ContentPanel {
     // Not focusable: clicking the log must not take the focus from the branches pane it mirrors.
     private static final ScrollArea LOG_AREA =
             new ScrollArea("branch-log", Option.none(), ContentPanel::logText);
+    private static final List<ScrollArea> FOCUSABLE_AREAS = List.of(STAGED_AREA, UNSTAGED_AREA, COMMIT_AREA);
     // Called when Escape is pressed; gives the focus back to the file tree if a focusable area had it, and
     // says whether it did.
     private static Supplier<Boolean> leaveScrollArea = () -> false;
@@ -65,7 +61,7 @@ public final class ContentPanel {
      * is a focusable area.
      */
     public static Option<String> paneOfArea(String areaId) {
-        return List.of(STAGED_AREA, UNSTAGED_AREA, COMMIT_AREA)
+        return FOCUSABLE_AREAS
                 .filter(area -> area.id().equals(areaId))
                 .flatMap(area -> area.pane)
                 .headOption();
@@ -76,8 +72,8 @@ public final class ContentPanel {
      * the staged diff if it shows anything, else the unstaged one, or the commit.
      */
     public static Option<String> areaOfPane(String paneId) {
-        return List.of(STAGED_AREA, UNSTAGED_AREA, COMMIT_AREA)
-                .filter(area -> area.pane.filter(paneId::equals).isDefined() && area.hasContent())
+        return FOCUSABLE_AREAS
+                .filter(area -> area.pane.contains(paneId) && area.hasContent())
                 .map(ScrollArea::id)
                 .headOption();
     }
@@ -147,11 +143,7 @@ public final class ContentPanel {
         }
     }
 
-    private static DateTimeFormatter dateTime() {
-        return DateTimeFormatter.ofPattern(Messages.get("content.dateTimePattern"));
-    }
-
-    public static StyledElement<?> render(Model model, String focusedId, int commitsSelection) {
+    public static StyledElement<?> render(Model model, String focusedId) {
         if (BranchesPanel.ID.equals(focusedId)) {
             return branchLogView(model);
         }
@@ -165,93 +157,73 @@ public final class ContentPanel {
      * One panel for the staged changes and one for the unstaged changes, one above the other when both exist.
      */
     private static StyledElement<?> fileDiffView(Model model) {
+        String title = Messages.get("panel.diff.title");
         // With no files there is nothing to highlight, so no diff is ever requested.
-        if (Update.files(model).isEmpty() && model.status() instanceof Loadable.Loaded<RepoStatus>) {
-            return panel(Messages.get("panel.diff.title"), text(Messages.get("content.noChangedFiles")).addClass(Theme.Classes.DIM));
-        }
-        return model.fileDiff()
-                .map(ContentPanel::shown)
-                .map(d -> switch (d.diff()) {
-                    case Loadable.Loaded<Diffs>(Diffs diffs) -> diffPanels(diffs);
-                    case Loadable.Loading<Diffs>() -> panel(Messages.get("panel.diff.title"), text(Placeholders.loading()).addClass(Theme.Classes.DIM));
-                    case Loadable.Failed<Diffs>(Failure failure) ->
-                            panel(Messages.get("panel.diff.title"), text(Placeholders.error(failure)));
-                })
-                .getOrElse(() -> panel(Messages.get("panel.diff.title"), text(Placeholders.loading()).addClass(Theme.Classes.DIM)));
+        return model.status().toOption().exists(status -> status.files().isEmpty())
+                ? dimPanel(title, Messages.get("content.noChangedFiles"))
+                : model.fileDiff()
+                .map(Preview::shown)
+                .<StyledElement<?>>map(diff -> whenLoaded(title, diff.value(), diffs -> diffPanels(title, diffs)))
+                .getOrElse(() -> loadingPanel(title));
     }
 
-    private static StyledElement<?> diffPanels(Diffs diffs) {
+    private static StyledElement<?> diffPanels(String title, Diffs diffs) {
         if (diffs.isEmpty()) {
-            return panel(Messages.get("panel.diff.title"), text(Messages.get("content.noChanges")).addClass(Theme.Classes.DIM));
+            return dimPanel(title, Messages.get("content.noChanges"));
         }
         List<Element> panels = List.of(
                         Tuple.of(Messages.get("content.staged"), STAGED_AREA.with(diffs.staged())),
                         Tuple.of(Messages.get("content.unstaged"), UNSTAGED_AREA.with(diffs.unstaged())))
                 .filter(e -> e._2.hasContent())
-                .map(e -> (Element) e._2.show(e._1));
+                .map(e -> e._2.show(e._1));
         return column(panels.toJavaArray(Element[]::new));
-    }
-
-    /**
-     * While a diff is loading, keep showing the previously loaded one rather than flashing a placeholder.
-     */
-    private static FileDiff shown(FileDiff diff) {
-        return diff.diff() instanceof Loadable.Loading<Diffs> ? diff.previous().getOrElse(diff) : diff;
     }
 
     /**
      * The unified diff as one styled text, so it is a single element to lay out however long the diff is.
      */
     static Text diffText(String diff) {
-        return Text.from(diff.lines().map(ContentPanel::diffLine).toList());
+        return styledText(lines(diff).map(ContentPanel::diffLine));
     }
 
     /**
      * The branch log: the {@code commit <sha>} part of each commit's first line is yellow.
      */
     static Text logText(String content) {
-        return Text.from(content.lines().map(line -> line.startsWith("* ")
-                        ? Line.from(Span.raw("* "), Span.styled(line.substring(2), Theme.spanStyle(Theme.Classes.CURRENT_BRANCH)))
-                        : Line.from(Span.raw(line)))
-                .toList());
+        return styledText(lines(content).map(line -> line.startsWith("* ")
+                ? Line.from(Span.raw("* "), styled(line.substring(2), Theme.Classes.CURRENT_BRANCH))
+                : Line.from(Span.raw(line))));
     }
 
     static Text plainText(String content) {
-        return Text.from(content.lines().map(line -> Line.from(Span.raw(line))).toList());
+        return styledText(lines(content).map(line -> Line.from(Span.raw(line))));
     }
 
     /**
      * A line of a unified diff, colored by what it is: added, removed, a hunk header or a file header.
      */
     static Line diffLine(String line) {
-        if (line.startsWith("+++") || line.startsWith("---") || line.startsWith("diff ") || line.startsWith("index ")) {
-            return Line.from(Span.styled(line, Theme.spanStyle(Theme.Classes.DIFF_HEADER)));
-        }
-        if (line.startsWith("+")) {
-            return Line.from(Span.styled(line, Theme.spanStyle(Theme.Classes.DIFF_ADDED)));
-        }
-        if (line.startsWith("-")) {
-            return Line.from(Span.styled(line, Theme.spanStyle(Theme.Classes.DIFF_REMOVED)));
-        }
-        if (line.startsWith("@@")) {
-            return Line.from(Span.styled(line, Theme.spanStyle(Theme.Classes.DIFF_HUNK)));
-        }
-        return Line.from(Span.raw(line));
+        return diffClass(line).map(cssClass -> Line.from(styled(line, cssClass))).getOrElse(() -> Line.from(Span.raw(line)));
+    }
+
+    private static Option<String> diffClass(String line) {
+        return line.startsWith("+++") || line.startsWith("---") || line.startsWith("diff ") || line.startsWith("index ")
+                ? Option.of(Theme.Classes.DIFF_HEADER)
+                : line.startsWith("+") ? Option.of(Theme.Classes.DIFF_ADDED)
+                : line.startsWith("-") ? Option.of(Theme.Classes.DIFF_REMOVED)
+                : line.startsWith("@@") ? Option.of(Theme.Classes.DIFF_HUNK)
+                : Option.none();
     }
 
     private static StyledElement<?> branchLogView(Model model) {
         return model.branchLog()
-                .map(ContentPanel::shown)
-                .<StyledElement<?>>map(log -> whenLoaded(Messages.get("panel.log.titleFor", log.branch()), log.commits(), commits ->
-                        LOG_AREA.with(String.join("\n", logLines(commits, ZoneId.systemDefault()))).show(Messages.get("panel.log.titleFor", log.branch()))))
-                .getOrElse(() -> panel(Messages.get("panel.log.title"), text(Placeholders.loading()).addClass(Theme.Classes.DIM)));
-    }
-
-    /**
-     * While a log is loading, keep showing the previously loaded one rather than flashing a placeholder.
-     */
-    private static BranchLog shown(BranchLog log) {
-        return log.commits() instanceof Loadable.Loading<List<Commit>> ? log.previous().getOrElse(log) : log;
+                .map(Preview::shown)
+                .<StyledElement<?>>map(log -> {
+                    String title = Messages.get("panel.log.titleFor", log.key());
+                    return whenLoaded(title, log.value(), commits ->
+                            LOG_AREA.with(logLines(commits, ZoneId.systemDefault()).mkString("\n")).show(title));
+                })
+                .getOrElse(() -> loadingPanel(Messages.get("panel.log.title")));
     }
 
     /**
@@ -260,31 +232,36 @@ public final class ContentPanel {
      * indented.
      */
     static List<String> logLines(List<Commit> commits, ZoneId zone) {
-        return CommitGraph.layout(commits)
-                .flatMap(node -> {
-                    Commit c = node.commit();
-                    String rails = "| ".repeat(node.depth());
-                    List<String> lines = List.of(Messages.get("content.commitSha", c.shortSha()), author(c), dateTime().format(c.authorTime().atZone(zone)),
-                                    "", MESSAGE_INDENT + c.message(), "")
-                            .appendAll(c.body().isBlank() ? List.<String>empty()
-                                    : List.ofAll(c.body().lines()).map(line -> line.isBlank() ? line : MESSAGE_INDENT + line).append(""));
-                    // Like git's graph: a merge opens a rail with a "\\" line, the last commit of a merged
-                    // branch closes it with a "/" in place of its second line.
-                    if (c.isMerge()) {
-                        return List.of(rails + "*   " + lines.head(),
-                                        rails + "|\\  " + Messages.get("content.merge", c.parents()
-                                                .map(Sha::shortSha).mkString(" ")))
-                                .appendAll(lines.tail().map(line -> rails + "| | " + line));
-                    }
-                    String closing = "| ".repeat(Math.max(0, node.depth() - 1));
-                    return List.range(0, lines.size()).map(i -> i == 0 ? rails + "* " + lines.get(i)
-                            : node.closesBranch() ? closing + (i == 1 ? "|/  " : "|   ") + lines.get(i)
-                            : rails + "| " + lines.get(i));
-                });
+        DateTimeFormatter dateTime = DateTimeFormatter.ofPattern(Messages.get("content.dateTimePattern"));
+        return CommitGraph.layout(commits).flatMap(node -> {
+            Commit c = node.commit();
+            String rails = "| ".repeat(node.depth());
+            List<String> lines = List.of(Messages.get("content.commitSha", c.shortSha()),
+                            Messages.get("content.author", c.authorName(), c.authorEmail()),
+                            dateTime.format(c.authorTime().atZone(zone)), "")
+                    .appendAll(messageLines(c))
+                    .append("");
+            // Like git's graph: a merge opens a rail with a "\\" line, the last commit of a merged
+            // branch closes it with a "/" in place of its second line.
+            String closing = "| ".repeat(Math.max(0, node.depth() - 1));
+            return c.isMerge()
+                    ? List.of(rails + "*   " + lines.head(),
+                            rails + "|\\  " + Messages.get("content.merge", c.parents().map(Sha::shortSha).mkString(" ")))
+                    .appendAll(lines.tail().map(line -> rails + "| | " + line))
+                    : lines.zipWithIndex((line, i) -> i == 0 ? rails + "* " + line
+                    : node.closesBranch() ? closing + (i == 1 ? "|/  " : "|   ") + line
+                    : rails + "| " + line);
+        });
     }
 
-    private static String author(Commit commit) {
-        return Messages.get("content.author", commit.authorName(), commit.authorEmail());
+    /**
+     * The indented message of {@code commit}: its subject, and its body after a blank line if it has one.
+     */
+    private static List<String> messageLines(Commit commit) {
+        return List.of(MESSAGE_INDENT + commit.message())
+                .appendAll(commit.body().isBlank() ? List.empty() : lines(commit.body())
+                        .map(line -> line.isBlank() ? line : MESSAGE_INDENT + line)
+                        .prepend(""));
     }
 
     /**
@@ -296,65 +273,66 @@ public final class ContentPanel {
     private static StyledElement<?> commitDiffView(Model model) {
         String title = Messages.get("panel.commit.title");
         return model.commitDetail()
-                .map(ContentPanel::shown)
-                .<StyledElement<?>>map(detail -> switch (detail.changes()) {
-                    case Loadable.Loaded<String>(String changes) -> commit(model, detail.sha())
-                            .<StyledElement<?>>map(commit -> COMMIT_AREA
-                                    .with(new CommitContent(commit, changes), () -> commitText(commit, changes))
-                                    .show(Messages.get("panel.commit.titleFor", commit.shortSha())))
-                            .getOrElse(() -> panel(title, text(Placeholders.loading()).addClass(Theme.Classes.DIM)));
-                    case Loadable.Loading<String>() -> panel(title, text(Placeholders.loading()).addClass(Theme.Classes.DIM));
-                    case Loadable.Failed<String>(Failure failure) ->
-                            panel(title, text(Placeholders.error(failure)));
-                })
-                .getOrElse(() -> model.commits() instanceof Loadable.Loaded<List<Commit>>(List<Commit> commits)
-                        && commits.isEmpty()
+                .map(Preview::shown)
+                .<StyledElement<?>>map(detail -> whenLoaded(title, detail.value(), changes -> commit(model, detail.key())
+                        .<StyledElement<?>>map(commit -> COMMIT_AREA
+                                .with(new CommitContent(commit, changes), () -> commitText(commit, changes))
+                                .show(Messages.get("panel.commit.titleFor", commit.shortSha())))
+                        .getOrElse(() -> loadingPanel(title))))
+                .getOrElse(() -> model.commits().toOption().exists(List::isEmpty)
                         ? panel(title, text(Messages.get("content.noCommits")))
-                        : panel(title, text(Placeholders.loading()).addClass(Theme.Classes.DIM)));
+                        : loadingPanel(title));
     }
 
     private static Option<Commit> commit(Model model, Sha sha) {
-        return model.commits() instanceof Loadable.Loaded<List<Commit>>(List<Commit> commits)
-                ? commits.find(c -> c.sha().equals(sha))
-                : Option.none();
-    }
-
-    /**
-     * While the changes of a commit are loading, keep showing the previously loaded ones rather than
-     * flashing a placeholder.
-     */
-    private static CommitDetail shown(CommitDetail detail) {
-        return detail.changes() instanceof Loadable.Loading<String> ? detail.previous().getOrElse(detail) : detail;
+        return model.commits().getOrElse(List.empty()).find(c -> c.sha().equals(sha));
     }
 
     /**
      * Like {@code git show}: the commit's header, its indented message, a {@code ---} line and then the changes.
      */
     static Text commitText(Commit commit, String changes) {
-        Stream<Line> header = Stream.of(
-                Line.from(Span.styled(Messages.get("content.commitSha", commit.sha().value()), Theme.spanStyle(Theme.Classes.SHA))),
-                Line.from(Span.raw(Messages.get("content.commitAuthor", commit.authorName(), commit.authorEmail()))),
-                Line.from(Span.raw(Messages.get("content.commitDate", commitDate().format(
-                        commit.authorTime().atZone(ZoneId.systemDefault()))))),
-                Line.from(Span.raw("")),
-                Line.from(Span.styled(MESSAGE_INDENT + commit.message(), Theme.spanStyle(Theme.Classes.BOLD))));
-        Stream<Line> body = commit.body().isBlank()
-                ? Stream.empty()
-                : Stream.concat(Stream.of(Line.from(Span.raw(""))), commit.body().lines().map(l -> Line.from(Span.raw(l.isBlank() ? l : MESSAGE_INDENT + l))));
-        return Text.from(Stream.of(header, body, Stream.of(Line.from(Span.raw("---"))), changes.lines().map(ContentPanel::diffLine))
-                .flatMap(lines -> lines)
-                .toList());
+        DateTimeFormatter commitDate = DateTimeFormatter.ofPattern(Messages.get("content.commitDatePattern"), Locale.ENGLISH);
+        List<String> message = messageLines(commit);
+        return styledText(List.of(
+                        styled(Messages.get("content.commitSha", commit.sha().value()), Theme.Classes.SHA),
+                        Span.raw(Messages.get("content.commitAuthor", commit.authorName(), commit.authorEmail())),
+                        Span.raw(Messages.get("content.commitDate", commitDate.format(
+                                commit.authorTime().atZone(ZoneId.systemDefault())))),
+                        Span.raw(""),
+                        styled(message.head(), Theme.Classes.BOLD))
+                .map(Line::from)
+                .appendAll(message.tail().map(line -> Line.from(Span.raw(line))))
+                .append(Line.from(Span.raw("---")))
+                .appendAll(lines(changes).map(ContentPanel::diffLine)));
     }
 
-    private static DateTimeFormatter commitDate() {
-        return DateTimeFormatter.ofPattern(Messages.get("content.commitDatePattern"), Locale.ENGLISH);
+    private static List<String> lines(String text) {
+        return List.ofAll(text.lines()::iterator);
+    }
+
+    private static Text styledText(List<Line> lines) {
+        return Text.from(lines.toJavaList());
+    }
+
+    private static Span styled(String text, String cssClass) {
+        return Span.styled(text, Theme.spanStyle(cssClass));
+    }
+
+    private static StyledElement<?> loadingPanel(String title) {
+        return dimPanel(title, Placeholders.loading());
+    }
+
+    private static StyledElement<?> dimPanel(String title, String content) {
+        return panel(title, text(content).addClass(Theme.Classes.DIM));
     }
 
     private static <T> StyledElement<?> whenLoaded(String title, Loadable<T> loadable, Function<T, StyledElement<?>> view) {
         return switch (loadable) {
             case Loadable.Loaded<T>(T value) -> view.apply(value);
-            case Loadable.Loading<T>() -> panel(title, text(Placeholders.loading()).addClass(Theme.Classes.DIM));
-            case Loadable.Failed<T>(Failure failure) -> panel(title, text(Placeholders.error(failure)));
+            case Loadable.Loading<T>() -> loadingPanel(title);
+            case Loadable.Failed<T>(Failure failure) ->
+                    panel(title, text(Placeholders.error(failure)).addClass(Theme.Classes.ERROR));
         };
     }
 }

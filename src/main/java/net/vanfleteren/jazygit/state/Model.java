@@ -7,7 +7,10 @@ import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.Diffs;
+import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 
 /**
@@ -20,8 +23,10 @@ import net.vanfleteren.jazygit.git.model.Stash;
  * @param stashes        the stashes, newest first
  * @param branchLog      the log of the branch highlighted in the branches pane, once one is
  *                       highlighted
- * @param commitDetail   what the commit highlighted in the commits pane changed, once one is highlighted
- * @param fileDiff       the diff of the node highlighted in the files pane, once one is highlighted
+ * @param commitDetail   what the commit highlighted in the commits pane changed (its files, a summary and its
+ *                       diff), once one is highlighted
+ * @param fileDiff       the diff of the node highlighted in the files pane, keyed by the changed files under
+ *                       it, once one is highlighted
  * @param refreshing     periodic loads that have been started and not finished yet, so a tick does
  *                       not queue them again
  * @param error          why the last operation failed, until the next one is started
@@ -38,9 +43,9 @@ public record Model(String repositoryName,
                     Loadable<List<Branch>> branches,
                     Loadable<List<Commit>> commits,
                     Loadable<List<Stash>> stashes,
-                    Option<BranchLog> branchLog,
-                    Option<CommitDetail> commitDetail,
-                    Option<FileDiff> fileDiff,
+                    Option<Preview<String, List<Commit>>> branchLog,
+                    Option<Preview<Sha, String>> commitDetail,
+                    Option<Preview<List<FileEntry>, Diffs>> fileDiff,
                     Set<Cmd.Load> refreshing,
                     Option<AppError> error,
                     Set<String> busy,

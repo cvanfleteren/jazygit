@@ -418,7 +418,7 @@ class ProgramTest {
         program.dispatch(new SelectionMsg.FilesSelected(files));
         settle();
 
-        assertEquals(new Loaded<>(new Diffs("", "diff of 1")), program.model().fileDiff().get().diff());
+        assertEquals(new Loaded<>(new Diffs("", "diff of 1")), program.model().fileDiff().get().value());
     }
 
     @Test
@@ -456,7 +456,7 @@ class ProgramTest {
         program.dispatch(new SelectionMsg.BranchSelected("other"));
         settle();
 
-        assertEquals(Option.of(new BranchLog("other", new Loaded<>(List.of(FakeProvider.commit("other-tip"))))),
+        assertEquals(Option.of(new Preview<>("other", new Loaded<>(List.of(FakeProvider.commit("other-tip"))))),
                 program.model().branchLog());
         assertEquals(java.util.List.of("other"), provider.logLoads);
     }

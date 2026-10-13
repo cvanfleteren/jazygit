@@ -191,7 +191,7 @@ public class JazygitApp extends ToolkitApp {
                         stashHeight.map(stash::length).getOrElse(stash::fill))
                         .percent(30),
                 column(
-                        ContentPanel.render(program.model(), focusedId, commitsPanel.selectedIndex())
+                        ContentPanel.render(model, focusedId)
                                 .fill(),
                         CommandLogPanel.render(model).length(COMMAND_LOG_HEIGHT))
                         .fill());

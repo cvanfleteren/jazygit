@@ -102,4 +102,14 @@ class UpdateTest {
         assertEquals(new Failed<>(refused("no git")), statusFailed.status());
         assertEquals(List.of(new LoadStatus()), Update.update(statusFailed, new Tick()).cmds());
     }
+
+    @Test
+    void aRetryThatIsStillRunningIsNotStartedAgain() {
+        Model failed = Update.update(loaded(), new LoadMsg.Failed(new LoadCommits(), refused("boom"))).model();
+        Model retrying = Update.update(failed, new Tick()).model();
+
+        assertEquals(false, Update.update(retrying, new Tick()).cmds().contains(new LoadCommits()));
+        Model retried = Update.update(retrying, new LoadMsg.CommitsLoaded(COMMITS)).model();
+        assertEquals(false, retried.refreshing().contains(new LoadCommits()));
+    }
 }

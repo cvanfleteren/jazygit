@@ -52,7 +52,7 @@ class CommitsPanelTest {
     void theListScrollsAlongWithTheSelection() throws Exception {
         List<Commit> log = List.range(0, 80).map(i -> commit("s" + i));
         Model model = TestModels.loaded(new SampleData()).withCommits(new Loadable.Loaded<>(log));
-        CommitsPanel panel = new CommitsPanel();
+        CommitsPanel panel = new CommitsPanel(msg -> { }, () -> { });
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.ID))) {
             testRunner.runner().focusManager().setFocus(CommitsPanel.ID);

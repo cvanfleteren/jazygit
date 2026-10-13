@@ -67,20 +67,21 @@ public final class Update {
                 .getOrElse(() -> Next.of(model));
     }
 
+    /**
+     * Reads the repository again: the periodic loads, and whatever failed to load before. A load that is still
+     * running is not started again.
+     */
     public static Next refresh(Model model) {
-        List<Cmd.Load> loads = PERIODIC.filter(cmd -> !model.refreshing().contains(cmd));
-        List<Cmd> cmds = List.<Cmd>empty()
-                .appendAll(loads)
-                .appendAll(model.commits() instanceof Failed ? List.of(new LoadCommits()) : List.empty())
+        List<Cmd.Load> retries = List.<Cmd.Load>empty()
+                .appendAll(Option.when(model.commits() instanceof Failed, LoadCommits::new))
                 .appendAll(model.branchLog()
-                        .filter(log -> log.commits() instanceof Failed)
-                        .map(log -> new LoadBranchLog(log.branch()))
-                        .map(List::<Cmd>of).getOrElse(List.empty()))
+                        .filter(log -> log.value() instanceof Failed)
+                        .map(log -> new LoadBranchLog(log.key())))
                 .appendAll(model.commitDetail()
-                        .filter(detail -> detail.changes() instanceof Failed)
-                        .map(detail -> new LoadCommitDetail(detail.sha()))
-                        .map(List::<Cmd>of).getOrElse(List.empty()));
-        return new Next(model.withRefreshing(model.refreshing().addAll(loads)), cmds);
+                        .filter(detail -> detail.value() instanceof Failed)
+                        .map(detail -> new LoadCommitDetail(detail.key())));
+        List<Cmd.Load> loads = PERIODIC.appendAll(retries).filter(cmd -> !model.refreshing().contains(cmd));
+        return new Next(model.withRefreshing(model.refreshing().addAll(loads)), List.narrow(loads));
     }
 
     /**
@@ -90,8 +91,8 @@ public final class Update {
      */
     static Next reloadDiff(Model model, List<Cmd> cmds) {
         return model.fileDiff()
-                .filter(d -> model.status().toOption().exists(status -> status.files().containsAll(d.files())))
-                .map(d -> new LoadFileDiff(d.files()))
+                .filter(d -> model.status().toOption().exists(status -> status.files().containsAll(d.key())))
+                .map(d -> new LoadFileDiff(d.key()))
                 .filter(cmd -> !model.refreshing().contains(cmd))
                 .map(cmd -> new Next(
                         model.withRefreshing(model.refreshing().add(cmd)),

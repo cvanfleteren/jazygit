@@ -1,9 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.elements.Panel;
-import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
-import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
@@ -12,8 +10,6 @@ import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
-import net.vanfleteren.jazygit.state.CommitDetail;
-import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 
@@ -28,31 +24,16 @@ public class CommitsPanel {
 
     private final LoadableList<List<Commit>> list = new LoadableList<>(Messages.get("panel.commits.title"), ID,
             commits -> rows(CommitGraph.layout(commits)));
-    // The list's key handler also sees keys typed in other panes, so it must know whether it has focus.
-    private boolean focused;
     private final Keymap keymap = Keymap.standard();
-    private final Runnable openCommit;
-
-    public CommitsPanel() {
-        this(msg -> {
-        });
-    }
-
-    /**
-     * @param dispatch receives the messages for the user's actions, on the render thread
-     */
-    public CommitsPanel(Consumer<Msg> dispatch) {
-        this(dispatch, () -> {
-        });
-    }
 
     /**
      * @param dispatch   receives the messages for the user's actions, on the render thread
      * @param openCommit called when Enter is pressed on a commit, to move focus to its content
      */
     public CommitsPanel(Consumer<Msg> dispatch, Runnable openCommit) {
-        this.openCommit = openCommit;
-        list.onKeyEvent(event -> handleKey(event, dispatch));
+        list.onKey(event -> event.code() == KeyCode.ENTER && selectedCommit().isDefined()
+                ? Option.of(openCommit)
+                : PaneKeys.sending(keymap.handle(Scopes.COMMITS, event, Option.of(selectedIndex())), dispatch));
     }
 
     /**
@@ -60,8 +41,7 @@ public class CommitsPanel {
      *                  {@code runner().focusManager().focusedId()}
      */
     public Panel render(Model model, String focusedId) {
-        focused = ID.equals(focusedId);
-        return list.render(model.commits(), focused);
+        return list.render(model.commits(), ID.equals(focusedId));
     }
 
     /**
@@ -75,24 +55,20 @@ public class CommitsPanel {
      * The highlighted commit, once the commits are shown.
      */
     public Option<Commit> selectedCommit() {
-        return list.shown() instanceof Loadable.Loaded<List<Commit>>(List<Commit> commits) && !commits.isEmpty()
-                ? Option.of(commits.get(Math.min(selectedIndex(), commits.size() - 1)))
-                : Option.none();
+        return list.selected(commits -> commits);
     }
 
     /**
      * The message to send when the highlighted commit is not the one whose changes {@code model} holds.
      */
     public Option<Msg> selectionChange(Model model) {
-        return selectedCommit()
-                .map(Commit::sha)
-                .filter(sha -> !model.commitDetail().map(CommitDetail::sha).equals(Option.of(sha)))
-                .map(SelectionMsg.CommitSelected::new);
+        return PaneKeys.selectionChange(selectedCommit().map(Commit::sha), model.commitDetail(),
+                SelectionMsg.CommitSelected::new);
     }
 
     static List<LoadableList.Row> rows(List<CommitGraph.Node> nodes) {
-        return List.range(0, nodes.size())
-                .map(i -> row(nodes.get(i), i > 0 && nodes.get(i - 1).closesBranch()));
+        // Each commit joins the branch that the commit before it closes.
+        return nodes.zipWith(nodes.map(CommitGraph.Node::closesBranch).prepend(false), CommitsPanel::row);
     }
 
     /**
@@ -123,22 +99,4 @@ public class CommitsPanel {
                 .mkString();
     }
 
-    private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {
-        if (focused && event.code() == KeyCode.ENTER && selectedCommit().isDefined()) {
-            openCommit.run();
-            return EventResult.HANDLED;
-        }
-        return Option.of(event)
-                .filter(e -> focused)
-                .flatMap(this::request)
-                .map(msg -> {
-                    dispatch.accept(msg);
-                    return EventResult.HANDLED;
-                })
-                .getOrElse(EventResult.UNHANDLED);
-    }
-
-    private Option<Msg> request(KeyEvent event) {
-        return keymap.handle(Scopes.COMMITS, event, Option.of(selectedIndex()));
-    }
 }

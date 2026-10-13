@@ -71,13 +71,13 @@ class PanePositionTest {
 
     @Test
     void commitsShowSelectedPositionAndFollowSelection() throws Exception {
-        CommitsPanel panel = new CommitsPanel();
+        CommitsPanel panel = new CommitsPanel(msg -> { }, () -> { });
         assertPositions(() -> panel.render(MODEL, CommitsPanel.ID), CommitsPanel.ID, KeyCode.DOWN, "1/3", "2/3");
     }
 
     @Test
     void filesCountOnlyVisibleRows() throws Exception {
-        FilesPanel panel = new FilesPanel(msg -> { });
+        FilesPanel panel = new FilesPanel(msg -> { }, () -> { });
         // The root, the merged directory and its two files; collapsing the directory hides the files.
         assertPositions(() -> panel.render(MODEL, FilesPanel.ID), FilesPanel.ID, KeyCode.LEFT, "1/4", "1/1");
     }

@@ -54,8 +54,8 @@ class JazygitAppPilotTest {
         }
 
         private Fixture(SampleData data, java.util.List<Msg> dispatched) {
-            this(data, TestModels.loaded(data), dispatched, new ArrayList<>(), new FilesPanel(dispatched::add), new BranchesPanel(dispatched::add),
-                    new CommitsPanel(dispatched::add), new StashPanel(dispatched::add), new AtomicReference<>());
+            this(data, TestModels.loaded(data), dispatched, new ArrayList<>(), new FilesPanel(dispatched::add, () -> { }), new BranchesPanel(dispatched::add),
+                    new CommitsPanel(dispatched::add, () -> { }), new StashPanel(dispatched::add), new AtomicReference<>());
         }
 
         Supplier<Element> renderer() {
@@ -69,7 +69,7 @@ class JazygitAppPilotTest {
                                 branchesPane.percent(20), commits.render(model, focusedId).percent(30),
                                 stash.render(model, focusedId).fill())
                                 .percent(30),
-                        ContentPanel.render(model, focusedId, commits.selectedIndex())
+                        ContentPanel.render(model, focusedId)
                                 .fill());
             };
         }

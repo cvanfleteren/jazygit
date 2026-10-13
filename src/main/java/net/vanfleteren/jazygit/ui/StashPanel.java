@@ -1,15 +1,12 @@
 package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.elements.Panel;
-import dev.tamboui.toolkit.event.EventResult;
-import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
-import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 
@@ -23,17 +20,14 @@ public final class StashPanel {
     public static final String ID = Scopes.STASH.id();
 
     private final LoadableList<List<Stash>> list = new LoadableList<>(Messages.get("panel.stash.title"), ID,
-            stashes -> List.range(0, stashes.size())
-                    .map(i -> LoadableList.Row.of(row(i, stashes.get(i)))));
-    // The list's key handler also sees keys typed in other panes, so it must know whether it has focus.
-    private boolean focused;
+            stashes -> stashes.zipWithIndex((stash, index) -> LoadableList.Row.of(row(index, stash))));
     private final Keymap keymap = Keymap.standard();
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public StashPanel(Consumer<Msg> dispatch) {
-        list.onKeyEvent(event -> handleKey(event, dispatch));
+        list.onKey(event -> PaneKeys.sending(keymap.handle(Scopes.STASH, event, selectedStash()), dispatch));
     }
 
     /**
@@ -41,17 +35,14 @@ public final class StashPanel {
      *                  {@code runner().focusManager().focusedId()}
      */
     public Panel render(Model model, String focusedId) {
-        focused = ID.equals(focusedId);
-        return list.render(model.stashes(), focused);
+        return list.render(model.stashes(), ID.equals(focusedId));
     }
 
     /**
      * The highlighted stash, once the stashes are shown.
      */
     public Option<Stash> selectedStash() {
-        return list.shown() instanceof Loadable.Loaded<List<Stash>>(List<Stash> stashes) && !stashes.isEmpty()
-                ? Option.of(stashes.get(Math.min(list.selectedIndex(), stashes.size() - 1)))
-                : Option.none();
+        return list.selected(stashes -> stashes);
     }
 
     /**
@@ -61,18 +52,4 @@ public final class StashPanel {
         return index + " " + stash.message();
     }
 
-    private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {
-        return Option.of(event)
-                .filter(e -> focused)
-                .flatMap(this::request)
-                .map(msg -> {
-                    dispatch.accept(msg);
-                    return EventResult.HANDLED;
-                })
-                .getOrElse(EventResult.UNHANDLED);
-    }
-
-    private Option<Msg> request(KeyEvent event) {
-        return keymap.handle(Scopes.STASH, event, selectedStash());
-    }
 }

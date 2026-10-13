@@ -4,9 +4,7 @@ import dev.tamboui.toolkit.Toolkit;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.elements.TreeElement;
-import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
-import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.widgets.common.ScrollBarPolicy;
 import dev.tamboui.widgets.tree.TreeNode;
 import io.vavr.collection.List;
@@ -21,7 +19,6 @@ import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
-import net.vanfleteren.jazygit.state.FileDiff;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
@@ -49,56 +46,35 @@ public class FilesPanel {
             .scrollbar(ScrollBarPolicy.AS_NEEDED)
             .nodeRenderer(FilesPanel::renderNode);
     private List<TreeNode<FileTree>> roots = List.of();
-    private Loadable<RepoStatus> shown;
+    // The status the tree was built for.
+    private Option<Loadable<RepoStatus>> shown = Option.none();
     // The tree's key handler also sees keys typed in other panes, so it must know whether it has focus.
     private boolean focused;
     private final Keymap keymap = Keymap.standard();
-    private final Runnable openDiff;
-
-    /**
-     * @param dispatch receives the messages for the user's actions, on the render thread
-     */
-    public FilesPanel(Consumer<Msg> dispatch) {
-        this(dispatch, () -> { });
-    }
 
     /**
      * @param dispatch  receives the messages for the user's actions, on the render thread
      * @param openDiff  called when Enter is pressed on a file or directory, to move focus to its diff
      */
     public FilesPanel(Consumer<Msg> dispatch, Runnable openDiff) {
-        this.openDiff = openDiff;
-        tree.onKeyEvent(event -> handleKey(event, dispatch));
+        tree.onKeyEvent(PaneKeys.whileFocused(() -> focused, event -> event.code() == KeyCode.ENTER && selected().isDefined()
+                ? Option.of(openDiff)
+                : PaneKeys.sending(keymap.handle(Scopes.FILES, event, selected()), dispatch)));
+    }
+
+    /**
+     * The highlighted node, unless it is a placeholder.
+     */
+    private Option<FileTree> selected() {
+        return Option.of(tree.selectedNode()).flatMap(node -> Option.of(node.data()));
     }
 
     /**
      * The message to send when the highlighted node is not the one whose diff {@code model} holds.
      */
     public Option<Msg> selectionChange(Model model) {
-        return Option.of(tree.selectedNode())
-                .flatMap(node -> Option.of(node.data()))
-                .map(FileTree::directEntries)
-                .filter(files -> !model.fileDiff().map(FileDiff::files).equals(Option.of(files)))
-                .map(SelectionMsg.FilesSelected::new);
-    }
-
-    private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {
-        if (focused && event.code() == KeyCode.ENTER && tree.selectedNode() != null) {
-            openDiff.run();
-            return EventResult.HANDLED;
-        }
-        return Option.of(event)
-                .filter(e -> focused)
-                .flatMap(this::request)
-                .map(msg -> {
-                    dispatch.accept(msg);
-                    return EventResult.HANDLED;
-                })
-                .getOrElse(EventResult.UNHANDLED);
-    }
-
-    private Option<Msg> request(KeyEvent event) {
-        return keymap.handle(Scopes.FILES, event, Option.of(tree.selectedNode()).flatMap(node -> Option.of(node.data())));
+        return PaneKeys.selectionChange(selected().map(FileTree::directEntries), model.fileDiff(),
+                SelectionMsg.FilesSelected::new);
     }
 
     /**
@@ -107,16 +83,14 @@ public class FilesPanel {
      */
     public Panel render(Model model, String focusedId) {
         focused = ID.equals(focusedId);
-        if (model.status() != shown) {
-            shown = model.status();
-            rebuild(shown);
+        if (!shown.contains(model.status())) {
+            shown = Option.of(model.status());
+            rebuild(model.status());
         }
         // Counted on every render: expanding or collapsing a directory changes the visible rows
         // without a rebuild.
-        Option<Integer> count = shown instanceof Loadable.Loaded<RepoStatus>
-                ? Option.some(visible(roots).size())
-                : Option.none();
-        return Pane.bordered(Messages.get("panel.files.title"), tree, ID.equals(focusedId), Math.max(0, tree.selected()), count);
+        Option<Integer> count = model.status().toOption().map(status -> visible(roots).size());
+        return Pane.bordered(Messages.get("panel.files.title"), tree, focused, Math.max(0, tree.selected()), count);
     }
 
     /**
@@ -129,12 +103,10 @@ public class FilesPanel {
     @SuppressWarnings("unchecked")
     private void rebuild(Loadable<RepoStatus> status) {
         Set<String> collapsed = nodes(roots)
-                .filter(n -> n.data() instanceof FileTree.Dir && !n.isExpanded())
-                .map(n -> path(n.data()))
+                .filter(n -> !n.isExpanded())
+                .flatMap(n -> n.data() instanceof FileTree.Dir dir ? Option.of(dir.path()) : Option.none())
                 .toSet();
-        Option<String> selected = Option.of(tree.selectedNode())
-                .flatMap(node -> Option.of(node.data()))
-                .map(FilesPanel::path);
+        Option<String> selected = selected().map(FilesPanel::path);
 
         roots = switch (status) {
             case Loadable.Loading<RepoStatus>() -> List.of(TreeNode.<FileTree>of(Placeholders.loading()).leaf());
@@ -146,9 +118,10 @@ public class FilesPanel {
         };
         tree.roots(roots.toJavaArray(TreeNode[]::new));
 
-        List<String> visible = visible(roots).map(n -> path(n.data()));
+        // Placeholders have no path.
+        List<Option<String>> visible = visible(roots).map(n -> Option.of(n.data()).map(FilesPanel::path));
         int fallback = Math.min(Math.max(0, tree.selected()), Math.max(0, visible.size() - 1));
-        tree.selected(selected.map(visible::indexOf).filter(i -> i >= 0).getOrElse(fallback));
+        tree.selected(selected.map(path -> visible.indexOf(Option.of(path))).filter(i -> i >= 0).getOrElse(fallback));
     }
 
     private static TreeNode<FileTree> node(FileTree node, Set<String> collapsed) {
@@ -192,11 +165,10 @@ public class FilesPanel {
     }
 
     /**
-     * The path a node stands for, or {@code null} for a placeholder.
+     * The path a node stands for.
      */
     private static String path(FileTree node) {
         return switch (node) {
-            case null -> null;
             case FileTree.Dir dir -> dir.path();
             case FileTree.File file -> file.entry().path();
         };

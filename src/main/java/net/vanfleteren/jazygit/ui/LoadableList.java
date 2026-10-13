@@ -5,7 +5,8 @@ import static dev.tamboui.toolkit.Toolkit.*;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.elements.Panel;
-import dev.tamboui.toolkit.event.KeyEventHandler;
+import dev.tamboui.toolkit.Toolkit;
+import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.widgets.common.ScrollBarPolicy;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -25,9 +26,11 @@ final class LoadableList<T> {
     private final ListElement<?> list;
     private final Function<T, List<Row>> items;
     private final Reselect<T> reselect;
-    private Loadable<T> shown;
+    // The value the last render showed, and its rows.
+    private Option<Loadable<T>> shown = Option.none();
     private List<Row> shownRows = List.of();
     private Option<Integer> count = Option.none();
+    private boolean focused;
 
     /**
      * A piece of a row, in a colour of its own when it has one.
@@ -73,17 +76,15 @@ final class LoadableList<T> {
 
         StyledElement<?> element() {
             StyledElement<?> first = firstLine();
-            return detail.<StyledElement<?>>map(line -> column(first, dev.tamboui.toolkit.Toolkit.text(line).addClass(Theme.Classes.DIM)))
+            return detail.<StyledElement<?>>map(line -> column(first, Toolkit.text(line).addClass(Theme.Classes.DIM)))
                     .getOrElse(first);
         }
 
         private StyledElement<?> firstLine() {
-            return segs.size() == 1 && segs.head().cssClass().isEmpty()
-                    ? dev.tamboui.toolkit.Toolkit.text(segs.head().text())
-                    : row(segs
-                            .<StyledElement<?>>map(seg -> seg.cssClass().<StyledElement<?>>map(c -> dev.tamboui.toolkit.Toolkit.text(seg.text()).addClass(c))
-                                    .getOrElse(() -> dev.tamboui.toolkit.Toolkit.text(seg.text())))
-                            .toJavaArray(StyledElement[]::new));
+            List<StyledElement<?>> pieces = segs.map(seg -> seg.cssClass()
+                    .<StyledElement<?>>map(cssClass -> Toolkit.text(seg.text()).addClass(cssClass))
+                    .getOrElse(() -> Toolkit.text(seg.text())));
+            return pieces.size() == 1 ? pieces.head() : row(pieces.toJavaArray(StyledElement[]::new));
         }
     }
 
@@ -117,22 +118,22 @@ final class LoadableList<T> {
     }
 
     Panel render(Loadable<T> value, boolean focused) {
+        this.focused = focused;
         List<Row> rows = switch (value) {
             case Loadable.Loading<T>() -> List.of(Row.of(Placeholders.loading()));
             case Loadable.Failed<T>(Failure failure) -> List.of(Row.of(Placeholders.error(failure)));
             case Loadable.Loaded<T>(T loaded) -> items.apply(loaded);
         };
-        if (value != shown) {
-            Loadable<T> previous = shown;
-            shown = value;
+        if (!shown.exists(previous -> previous == value)) {
+            Option<T> before = shown.flatMap(Loadable::toOption);
+            shown = Option.of(value);
             show(rows);
-            if (previous instanceof Loadable.Loaded<T>(T before) && value instanceof Loadable.Loaded<T>(T after)) {
-                list.selected(reselect.apply(before, after, selectedIndex()));
-            }
+            before.forEach(previous -> value.toOption()
+                    .forEach(after -> list.selected(reselect.apply(previous, after, selectedIndex()))));
             if (list.selected() >= rows.size()) {
                 list.selected(Math.max(0, rows.size() - 1));
             }
-            count = value instanceof Loadable.Loaded<T> ? Option.some(rows.size()) : Option.none();
+            count = value.toOption().map(loaded -> rows.size());
         } else if (!rows.equals(shownRows)) {
             // The rows can depend on more than the value, e.g. on the time.
             show(rows);
@@ -153,10 +154,20 @@ final class LoadableList<T> {
     }
 
     /**
-     * The value shown by the last render, or {@code null} before the first one.
+     * The item of the highlighted row, once the value is shown; {@code items} are the items of the value, one
+     * per row.
      */
-    Loadable<T> shown() {
-        return shown;
+    <E> Option<E> selected(Function<T, List<E>> items) {
+        return shown.flatMap(Loadable::toOption)
+                .map(items)
+                .flatMap(all -> all.lift().apply(Math.min(selectedIndex(), all.size() - 1)));
+    }
+
+    /**
+     * Whether the list had the focus at the last render.
+     */
+    boolean focused() {
+        return focused;
     }
 
     /**
@@ -167,10 +178,10 @@ final class LoadableList<T> {
     }
 
     /**
-     * Handles the keys the list itself does not use while it has focus; it only uses the
-     * navigation keys.
+     * Does what {@code action} makes of the keys the list itself does not use, while it has the focus; it
+     * only uses the navigation keys.
      */
-    void onKeyEvent(KeyEventHandler handler) {
-        list.onKeyEvent(handler);
+    void onKey(Function<KeyEvent, Option<Runnable>> action) {
+        list.onKeyEvent(PaneKeys.whileFocused(this::focused, action));
     }
 }

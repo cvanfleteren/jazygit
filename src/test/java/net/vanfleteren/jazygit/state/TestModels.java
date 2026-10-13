@@ -125,6 +125,6 @@ public final class TestModels {
      * {@code model} with the log of {@code branch} still loading, while the log it replaced stays visible.
      */
     public static Model switchingBranch(Model model, String branch) {
-        return model.withBranchLog(Option.of(BranchLog.loading(branch, model.branchLog())));
+        return model.withBranchLog(Option.of(Preview.loading(branch, model.branchLog())));
     }
 }

@@ -33,7 +33,7 @@ class FilesPanelTest {
         }
     }
 
-    private final FilesPanel panel = new FilesPanel(msg -> { });
+    private final FilesPanel panel = new FilesPanel(msg -> { }, () -> { });
 
     @Test
     void conflictedFilesShowAMarkerForEachBranchThatChangedThem() throws Exception {

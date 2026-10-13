@@ -9,19 +9,18 @@ import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.state.BranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.Cmd;
-import net.vanfleteren.jazygit.state.CommitDetail;
-import net.vanfleteren.jazygit.state.FileDiff;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Loadable.Loading;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Preview;
+import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.state.Msg.Tick;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.Update;
@@ -41,7 +40,7 @@ class SelectionUpdateTest {
     void selectingABranchLoadsItsLogOnce() {
         Next next = Update.update(loaded(), new SelectionMsg.BranchSelected("feature"));
 
-        assertEquals(Option.of(new BranchLog("feature", new Loading<>())), next.model().branchLog());
+        assertEquals(Option.of(new Preview<>("feature", new Loading<>())), next.model().branchLog());
         assertEquals(List.of(new LoadBranchLog("feature")), next.cmds());
 
         Next again = Update.update(next.model(), new SelectionMsg.BranchSelected("feature"));
@@ -53,7 +52,7 @@ class SelectionUpdateTest {
     void selectingACommitLoadsItsChangesOnce() {
         Next next = Update.update(loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa")));
 
-        assertEquals(Option.of(new CommitDetail(new Sha("aaaa"), new Loading<>())), next.model().commitDetail());
+        assertEquals(Option.of(new Preview<>(new Sha("aaaa"), new Loading<>())), next.model().commitDetail());
         assertEquals(List.of(new LoadCommitDetail(new Sha("aaaa"))), next.cmds());
 
         Next again = Update.update(next.model(), new SelectionMsg.CommitSelected(new Sha("aaaa")));
@@ -66,11 +65,11 @@ class SelectionUpdateTest {
         Model first = Update.update(
                 Update.update(loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa"))).model(),
                 new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), "changes")).model();
-        CommitDetail firstDetail = new CommitDetail(new Sha("aaaa"), new Loaded<>("changes"));
+        Preview<Sha, String> firstDetail = new Preview<>(new Sha("aaaa"), new Loaded<>("changes"));
         assertEquals(Option.of(firstDetail), first.commitDetail());
 
         Model second = Update.update(first, new SelectionMsg.CommitSelected(new Sha("ffff"))).model();
-        assertEquals(Option.of(new CommitDetail(new Sha("ffff"), new Loading<>(), Option.of(firstDetail))),
+        assertEquals(Option.of(new Preview<>(new Sha("ffff"), new Loading<>(), Option.of(firstDetail))),
                 second.commitDetail());
     }
 
@@ -90,7 +89,7 @@ class SelectionUpdateTest {
         Model model = Update.update(
                 Update.update(loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa"))).model(),
                 new LoadMsg.Failed(new LoadCommitDetail(new Sha("aaaa")), refused("boom"))).model();
-        assertEquals(Option.of(new CommitDetail(new Sha("aaaa"), new Failed<>(refused("boom")))), model.commitDetail());
+        assertEquals(Option.of(new Preview<>(new Sha("aaaa"), new Failed<>(refused("boom")))), model.commitDetail());
 
         assertTrue(Update.update(model, new Tick()).cmds().contains(new LoadCommitDetail(new Sha("aaaa"))));
     }
@@ -100,10 +99,10 @@ class SelectionUpdateTest {
         Model feature = Update.update(
                 Update.update(loaded(), new SelectionMsg.BranchSelected("feature")).model(),
                 new LoadMsg.BranchLogLoaded("feature", FEATURE_COMMITS)).model();
-        BranchLog featureLog = feature.branchLog().get();
+        Preview<String, List<Commit>> featureLog = feature.branchLog().get();
 
         Model main = Update.update(feature, new SelectionMsg.BranchSelected("main")).model();
-        assertEquals(Option.of(new BranchLog("main", new Loading<>(), Option.of(featureLog))), main.branchLog());
+        assertEquals(Option.of(new Preview<String, List<Commit>>("main", new Loading<>(), Option.of(featureLog))), main.branchLog());
 
         Model other = Update.update(main, new SelectionMsg.BranchSelected("other")).model();
         assertEquals(Option.of(featureLog), other.branchLog().get().previous());
@@ -118,7 +117,7 @@ class SelectionUpdateTest {
 
         Model next = Update.update(model, new LoadMsg.BranchLogLoaded("feature", FEATURE_COMMITS)).model();
 
-        assertEquals(Option.of(new BranchLog("feature", new Loaded<>(FEATURE_COMMITS))), next.branchLog());
+        assertEquals(Option.of(new Preview<>("feature", new Loaded<>(FEATURE_COMMITS))), next.branchLog());
     }
 
     @Test
@@ -137,7 +136,7 @@ class SelectionUpdateTest {
         Model model = Update.update(loaded(), new SelectionMsg.BranchSelected("feature")).model();
         model = Update.update(model, new LoadMsg.Failed(new LoadBranchLog("feature"), refused("boom"))).model();
 
-        assertEquals(Option.of(new BranchLog("feature", new Failed<>(refused("boom")))), model.branchLog());
+        assertEquals(Option.of(new Preview<>("feature", new Failed<>(refused("boom")))), model.branchLog());
         assertEquals(List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadStashes(), new LoadBranchLog("feature")),
                 Update.update(model, new Tick()).cmds());
     }
@@ -161,7 +160,7 @@ class SelectionUpdateTest {
 
         Next next = Update.update(model, new SelectionMsg.FilesSelected(files));
         assertEquals(List.of(new Cmd.LoadFileDiff(files)), next.cmds());
-        assertEquals(Option.of(new FileDiff(files, new Loading<>())), next.model().fileDiff());
+        assertEquals(Option.of(new Preview<>(files, new Loading<>())), next.model().fileDiff());
 
         assertEquals(List.of(), Update.update(next.model(), new SelectionMsg.FilesSelected(files)).cmds());
     }
@@ -172,7 +171,7 @@ class SelectionUpdateTest {
         List<FileEntry> other = List.of(new FileEntry("b.txt", ChangeType.UNTRACKED));
 
         assertEquals(model.fileDiff(), Update.update(model, new LoadMsg.FileDiffLoaded(other, new Diffs("", "x"))).model().fileDiff());
-        assertEquals(Option.of(new FileDiff(DIRTY.files(), new Loaded<>(new Diffs("", "+a")))),
+        assertEquals(Option.of(new Preview<>(DIRTY.files(), new Loaded<>(new Diffs("", "+a")))),
                 Update.update(model, new LoadMsg.FileDiffLoaded(DIRTY.files(), new Diffs("", "+a"))).model().fileDiff());
     }
 
@@ -187,8 +186,8 @@ class SelectionUpdateTest {
         assertEquals(true, statusLoaded.cmds().contains(new Cmd.LoadFileDiff(DIRTY.files())));
 
         List<FileEntry> next = List.of(new FileEntry("b.txt", ChangeType.UNTRACKED));
-        FileDiff loading = Update.update(model, new SelectionMsg.FilesSelected(next)).model().fileDiff().get();
-        assertEquals(Option.of(new FileDiff(DIRTY.files(), new Loaded<>(new Diffs("", "+a")))), loading.previous());
+        Preview<List<FileEntry>, Diffs> loading = Update.update(model, new SelectionMsg.FilesSelected(next)).model().fileDiff().get();
+        assertEquals(Option.of(new Preview<>(DIRTY.files(), new Loaded<>(new Diffs("", "+a")))), loading.previous());
     }
 
     @Test
@@ -208,7 +207,7 @@ class SelectionUpdateTest {
         Model model = Update.update(loaded(), new SelectionMsg.FilesSelected(DIRTY.files())).model();
         Cmd.LoadFileDiff cmd = new Cmd.LoadFileDiff(DIRTY.files());
 
-        assertEquals(Option.of(new FileDiff(DIRTY.files(), new Failed<>(refused("boom")))),
+        assertEquals(Option.of(new Preview<>(DIRTY.files(), new Failed<>(refused("boom")))),
                 Update.update(model, new LoadMsg.Failed(cmd, refused("boom"))).model().fileDiff());
     }
 }

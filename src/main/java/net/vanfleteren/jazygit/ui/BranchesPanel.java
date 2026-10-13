@@ -1,8 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.elements.Panel;
-import dev.tamboui.toolkit.event.EventResult;
-import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.widgets.spinner.SpinnerStyle;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
@@ -13,8 +11,6 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
-import net.vanfleteren.jazygit.state.BranchLog;
-import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 
@@ -35,8 +31,6 @@ public class BranchesPanel {
     private static final long SPINNER_FRAME_MILLIS = 120;
 
     private final LoadableList<List<Branch>> list;
-    // The list's key handler also sees keys typed in other panes, so it must know whether it has focus.
-    private boolean focused;
     private final Keymap keymap = Keymap.standard();
     // The branches an operation runs on, shown with a spinner; the rows are built from it on every render.
     private Set<String> busy = HashSet.empty();
@@ -116,7 +110,7 @@ public class BranchesPanel {
                 BranchesPanel::reselect);
         // The highlight alone marks the selection; a symbol would indent the rows.
         list.highlightSymbol("");
-        list.onKeyEvent(event -> handleKey(event, dispatch));
+        list.onKey(event -> PaneKeys.sending(keymap.handle(Scopes.BRANCHES, event, selectedBranch()), dispatch));
     }
 
     /**
@@ -124,9 +118,8 @@ public class BranchesPanel {
      *                  {@code runner().focusManager().focusedId()}
      */
     public Panel render(Model model, String focusedId) {
-        focused = ID.equals(focusedId);
         busy = model.busy();
-        return list.render(model.branches(), focused);
+        return list.render(model.branches(), ID.equals(focusedId));
     }
 
     /**
@@ -140,28 +133,13 @@ public class BranchesPanel {
      * The name of the highlighted branch, once the branches are shown.
      */
     public Option<String> selectedBranch() {
-        return list.shown() instanceof Loadable.Loaded<List<Branch>>(List<Branch> branches) && !branches.isEmpty()
-                ? Option.of(branches.get(Math.min(selectedIndex(), branches.size() - 1)).name())
-                : Option.none();
+        return list.selected(branches -> branches).map(Branch::name);
     }
 
     /**
      * The message to send when the highlighted branch is not the one whose log {@code model} holds.
      */
     public Option<Msg> selectionChange(Model model) {
-        return selectedBranch()
-                .filter(branch -> !model.branchLog().map(BranchLog::branch).equals(Option.of(branch)))
-                .map(SelectionMsg.BranchSelected::new);
-    }
-
-    private EventResult handleKey(KeyEvent event, Consumer<Msg> dispatch) {
-        return Option.of(event)
-                .filter(e -> focused)
-                .flatMap(e -> keymap.handle(Scopes.BRANCHES, e, selectedBranch()))
-                .map(msg -> {
-                    dispatch.accept(msg);
-                    return EventResult.HANDLED;
-                })
-                .getOrElse(EventResult.UNHANDLED);
+        return PaneKeys.selectionChange(selectedBranch(), model.branchLog(), SelectionMsg.BranchSelected::new);
     }
 }
