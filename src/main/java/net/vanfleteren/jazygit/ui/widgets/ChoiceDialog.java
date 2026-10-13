@@ -1,20 +1,13 @@
 package net.vanfleteren.jazygit.ui.widgets;
 
-import static dev.tamboui.toolkit.Toolkit.*;
-
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
-import dev.tamboui.toolkit.elements.ListElement;
-import dev.tamboui.toolkit.event.EventResult;
-import dev.tamboui.tui.event.KeyCode;
-import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
-import net.vanfleteren.jazygit.ui.Theme;
 
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
@@ -22,19 +15,16 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
- * The standard popup offering a choice between several options, as a selectable list that always ends in
- * a cancel option. An option is chosen with its letter, or with the arrow keys and Enter; Escape cancels.
- * An option that does not apply is struck through and dimmed, and cannot be chosen. Whether the popup is open
- * lives in the {@link Model}, as a popup of type {@code P}.
+ * The standard popup offering a choice between several options, as a {@link ChoiceList}. Whether the popup is
+ * open lives in the {@link Model}, as a popup of type {@code P}.
  *
  * @param <P> the popup that makes this dialog show
  */
 public final class ChoiceDialog<P extends Popup> implements PopupView {
 
     private static final int WIDTH = 40;
-    private static final char CANCEL_KEY = 'c';
-    // The "(k) " before a label, the padding and the border.
-    private static final int ROW_OVERHEAD = 4 + 2 + 2;
+    // The padding and the border.
+    private static final int ROW_OVERHEAD = 2 + 2;
 
     /**
      * An option of the dialog.
@@ -81,31 +71,15 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
                           Supplier<Msg> onCancel) {
     }
 
-    /**
-     * An option as it is shown: its text, and whether it applies.
-     */
-    private record Row(String label, boolean enabled) {
-    }
-
     private final Spec<P> spec;
-    private final List<Choice<P>> choices;
-    private final Consumer<Msg> dispatch;
-    private final ListElement<?> list;
-    // What the rows show, as of the last render.
-    private List<Row> shown = List.empty();
+    private final ChoiceList<P> list;
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public ChoiceDialog(Spec<P> spec, Consumer<Msg> dispatch) {
         this.spec = spec;
-        this.choices = spec.choices().append(new Choice<P>(CANCEL_KEY, "dialog.choice.cancel", spec.onCancel()));
-        this.dispatch = dispatch;
-        this.list = list()
-                .id(spec.id())
-                .focusable()
-                .highlightSymbol("")
-                .onKeyEvent(this::handleKey);
+        this.list = new ChoiceList<>(spec.id(), spec.choices(), spec.onCancel(), dispatch);
     }
 
     public String id() {
@@ -123,42 +97,9 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
     @Override
     public Option<Element> render(Model model) {
         return model.popup(spec.popupType()).map(popup -> {
-            show(choices.map(choice -> new Row(choice.label().apply(popup), choice.enabled().test(model, popup))));
-            return DialogFrame.withHint(spec.title().apply(popup), Math.max(WIDTH, widest() + ROW_OVERHEAD),
-                    "dialog.hint.selectCancel", List.of(list.length(choices.size())));
+            StyledElement<?> rows = list.render(model, popup);
+            return DialogFrame.withHint(spec.title().apply(popup), Math.max(WIDTH, list.width() + ROW_OVERHEAD),
+                    "dialog.hint.selectCancel", List.of(rows));
         });
-    }
-
-    private int widest() {
-        return shown.map(row -> row.label().length()).max().getOrElse(0);
-    }
-
-    private void show(List<Row> rows) {
-        if (!rows.equals(shown)) {
-            shown = rows;
-            list.elements(choices.zipWith(rows, ChoiceDialog::row).toJavaArray(StyledElement[]::new));
-        }
-    }
-
-    private static StyledElement<?> row(Choice<?> choice, Row row) {
-        String text = Messages.get("dialog.choice.row", String.valueOf(choice.key()), row.label());
-        return row.enabled() ? text(text) : text(text).addClass(Theme.Classes.DISABLED);
-    }
-
-    private EventResult handleKey(KeyEvent event) {
-        Option<Choice<P>> chosen = event.code() == KeyCode.ESCAPE ? Option.of(choices.last())
-                : event.isConfirm() ? choices.lift().apply(Math.clamp(list.selected(), 0, choices.size() - 1))
-                : choices.find(choice -> event.isChar(choice.key()));
-        chosen.forEach(this::choose);
-        return chosen.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
-    }
-
-    private void choose(Choice<P> choice) {
-        // A disabled option is not actionable.
-        boolean disabled = shown.lift().apply(choices.indexOf(choice)).exists(row -> !row.enabled());
-        if (!disabled) {
-            list.selected(0);
-            dispatch.accept(choice.msg().get());
-        }
     }
 }

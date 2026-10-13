@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.github;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -36,6 +37,24 @@ public sealed interface PullRequestMsg extends Msg {
      * The user asked to open the pull request that is shown in the browser.
      */
     record OpenConfirmed() implements PullRequestMsg {
+    }
+
+    /**
+     * The user asked to merge the pull request that is shown, as {@code method} says.
+     */
+    record MergeChosen(MergeMethod method) implements PullRequestMsg {
+    }
+
+    /**
+     * The user asked to close the pull request that is shown.
+     */
+    record CloseChosen() implements PullRequestMsg {
+    }
+
+    /**
+     * The pull request was merged or closed by running {@code commands}.
+     */
+    record Ended(PullRequestCmd.ChangingCmd cmd, List<ExecutedCommand> commands) implements PullRequestMsg {
     }
 
     record InfoClosed() implements PullRequestMsg {

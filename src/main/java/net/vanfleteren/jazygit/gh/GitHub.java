@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.gh;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -41,4 +42,14 @@ public interface GitHub {
      * Opens pull request {@code number} in the browser.
      */
     Either<GhFailure, List<ExecutedCommand>> openPullRequest(int number);
+
+    /**
+     * Merges pull request {@code number} as {@code method} says, keeping its branch.
+     */
+    Either<GhFailure, List<ExecutedCommand>> mergePullRequest(int number, MergeMethod method);
+
+    /**
+     * Closes pull request {@code number} without merging it.
+     */
+    Either<GhFailure, List<ExecutedCommand>> closePullRequest(int number);
 }

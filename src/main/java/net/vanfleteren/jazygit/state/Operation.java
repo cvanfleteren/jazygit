@@ -26,6 +26,8 @@ public enum Operation {
     MERGE("log.title.merge", "error.merge.failed"),
     CREATE_PR("log.title.createPr", "error.createPr.failed"),
     OPEN_PR("log.title.openPr", "error.openPr.failed"),
+    MERGE_PR("log.title.mergePr", "error.mergePr.failed"),
+    CLOSE_PR("log.title.closePr", "error.closePr.failed"),
     STASH("log.title.stash", "error.stash.failed"),
     STASH_POP("log.title.stashPop", "error.stashPop.failed"),
     STASH_DROP("log.title.stashDrop", "error.stashDrop.failed");

@@ -8,6 +8,7 @@ import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.widgets.paragraph.Paragraph;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
@@ -21,6 +22,8 @@ import net.vanfleteren.jazygit.ui.ErrorText;
 import net.vanfleteren.jazygit.ui.PullRequestSymbols;
 import net.vanfleteren.jazygit.ui.PullRequestSymbols.Symbol;
 import net.vanfleteren.jazygit.ui.Theme;
+import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
+import net.vanfleteren.jazygit.ui.widgets.ChoiceList;
 import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
@@ -32,7 +35,8 @@ import java.util.function.Consumer;
 
 /**
  * Popup showing the pull request of a branch: its title, state, branches, review and checks, as labelled
- * rows. Enter opens it in the browser, Escape closes it. Whether it is open lives in the {@link Model}.
+ * rows, and under them what can be done with it: open it in the browser, merge it or close it. Whether it is
+ * open lives in the {@link Model}.
  */
 public final class PullRequestDialog implements PopupView {
 
@@ -57,8 +61,8 @@ public final class PullRequestDialog implements PopupView {
      */
     private static final int CONTENT_HEIGHT = TITLE_LINES + 1 + 6 + 1 + 4 + 1 + 1 + LISTED_CHECKS + 1;
 
-    private final Consumer<Msg> dispatch;
     private final Clock clock;
+    private final ChoiceList<PullRequestPopup> actions;
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
@@ -71,8 +75,15 @@ public final class PullRequestDialog implements PopupView {
      * @param clock tells how long ago the pull request was opened, and on which day, and animates the spinner
      */
     PullRequestDialog(Consumer<Msg> dispatch, Clock clock) {
-        this.dispatch = dispatch;
         this.clock = clock;
+        this.actions = new ChoiceList<>(ID, List.of(
+                new Choice<>('o', "dialog.pullRequest.open", PullRequestMsg.OpenConfirmed::new),
+                merge('m', "dialog.pullRequest.merge", MergeMethod.MERGE),
+                merge('s', "dialog.pullRequest.squash", MergeMethod.SQUASH),
+                merge('r', "dialog.pullRequest.rebase", MergeMethod.REBASE),
+                new Choice<>('x', "dialog.pullRequest.close", PullRequestMsg.CloseChosen::new,
+                        (model, popup) -> popup.open())),
+                PullRequestMsg.InfoClosed::new, dispatch);
     }
 
     @Override
@@ -88,15 +99,20 @@ public final class PullRequestDialog implements PopupView {
                     .getOrElse(() -> loading(popup));
             int blanks = CONTENT_HEIGHT - lines.map(Line::height).sum().intValue();
             return DialogFrame.withHint(Messages.get("dialog.pullRequest.title", String.valueOf(popup.pullRequest().number())),
-                            WIDTH, "dialog.pullRequest.hint",
-                            lines.appendAll(List.fill(Math.max(0, blanks), Line::blank)).map(Line::element))
-                    .id(ID)
-                    .focusable()
-                    // The lines, the blank line and the hint, plus the border.
-                    .length(CONTENT_HEIGHT + 2 + 2)
-                    .onConfirm(() -> dispatch.accept(new PullRequestMsg.OpenConfirmed()))
-                    .onCancel(() -> dispatch.accept(new PullRequestMsg.InfoClosed()));
+                            WIDTH, "dialog.hint.selectCancel",
+                            lines.appendAll(List.fill(Math.max(0, blanks), Line::blank)).append(Line.blank())
+                                    .map(Line::element).append(actions.render(model, popup)))
+                    // The lines, a blank line, the actions, the blank line and the hint, plus the border.
+                    .length(CONTENT_HEIGHT + 1 + actions.height() + 2 + 2);
         });
+    }
+
+    /**
+     * Merging as {@code method} says; only for a pull request that can be merged, as far as is known.
+     */
+    private static Choice<PullRequestPopup> merge(char key, String labelKey, MergeMethod method) {
+        return new Choice<>(key, labelKey, () -> new PullRequestMsg.MergeChosen(method),
+                (model, popup) -> popup.mergeable());
     }
 
     /**
