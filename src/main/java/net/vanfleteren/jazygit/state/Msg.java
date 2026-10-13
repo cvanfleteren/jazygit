@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.control.Option;
+
 /**
  * Everything that can happen to the {@link Model}, grouped by feature. A message knows how to
  * apply itself: each feature has its own sub-interface, which delegates to the transitions of that
@@ -20,6 +22,17 @@ public interface Msg {
         @Override
         public Update.Next apply(Model model) {
             return Update.refresh(model);
+        }
+    }
+
+    /**
+     * The element with the id {@code id}, outside the popups, got the focus.
+     */
+    record Focused(String id) implements Msg {
+
+        @Override
+        public Update.Next apply(Model model) {
+            return Update.Next.of(model.withFocusedPane(Option.of(id)));
         }
     }
 }

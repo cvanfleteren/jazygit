@@ -9,9 +9,8 @@ Refactorings that were left out of the functional/immutable cleanup, and why.
   because the TamboUI list and tree widgets only know their selection after they have been rendered.
   Fixing it means reacting to selection changes in the widgets' key and mouse handlers, or changing how
   the panels work with TamboUI.
-- [ ] **Move the focus bookkeeping out of `render`.** `helpOrigin` and `lastFocus` are mutable fields that
-  `render` updates, so that a closing popup can give the focus back. The model could hold the focus origin
-  instead, for example the pane in `HelpPopup` and `ThemePopup`.
+  The same goes for `Msg.Focused`, which `render` dispatches when the focus has moved to another element
+  outside the popups, as the focus lives in TamboUI's focus manager rather than in the model.
 
 ## Git layer
 

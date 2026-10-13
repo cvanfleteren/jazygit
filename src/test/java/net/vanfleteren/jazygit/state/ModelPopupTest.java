@@ -29,4 +29,14 @@ class ModelPopupTest {
         assertEquals(model, model.withoutPopup(AmendPopup.class));
         assertEquals(Option.none(), model.withoutPopup(DeleteBranchPopup.class).popup());
     }
+
+    @Test
+    void theFocusOutsideThePopupsIsKeptThroughAPopup() {
+        assertEquals(Option.none(), closed.focusedPane());
+
+        Model focused = Update.update(closed, new Msg.Focused("branches")).model();
+
+        assertEquals(Option.of("branches"), focused.focusedPane());
+        assertEquals(Option.of("branches"), focused.openPopup(new AmendPopup()).withoutPopup(AmendPopup.class).focusedPane());
+    }
 }
