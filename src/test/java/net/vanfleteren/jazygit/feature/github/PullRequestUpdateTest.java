@@ -104,6 +104,16 @@ class PullRequestUpdateTest {
     }
 
     @Test
+    void ofSeveralPullRequestsFromTheSameBranchTheNewestIsKeptWhateverTheOrder() {
+        PullRequest older = new PullRequest(7, "feature", false, Checks.NONE, Review.NONE);
+
+        assertEquals(Option.of(FEATURE_PR),
+                Update.update(model(), new PullRequestMsg.Loaded(List.of(older, FEATURE_PR))).model().pullRequests().get("feature"));
+        assertEquals(Option.of(FEATURE_PR),
+                Update.update(model(), new PullRequestMsg.Loaded(List.of(FEATURE_PR, older))).model().pullRequests().get("feature"));
+    }
+
+    @Test
     void failingToReadThePullRequestsKeepsTheOnesShownWithoutAnError() {
         Model withPr = Update.update(model(), new PullRequestMsg.Loaded(List.of(FEATURE_PR))).model();
 

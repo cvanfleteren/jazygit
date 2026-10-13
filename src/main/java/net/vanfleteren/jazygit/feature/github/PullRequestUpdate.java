@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.github;
 
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.CreatePullRequest;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.LoadPullRequests;
@@ -35,10 +36,20 @@ public final class PullRequestUpdate {
             }
             case PullRequestMsg.Refresh() -> Next.of(model, new LoadPullRequests());
             case PullRequestMsg.Loaded(List<PullRequest> pullRequests) ->
-                    Next.of(model.withPullRequests(pullRequests.toMap(PullRequest::headBranch, pr -> pr)));
+                    Next.of(model.withPullRequests(byHeadBranch(pullRequests)));
             // gh can be missing, logged out or offline, or the remote not on GitHub: then no pull requests show.
             case PullRequestMsg.LoadFailed(var failure) -> Next.of(model);
         };
+    }
+
+    /**
+     * The pull requests by the branch they merge from. Several can merge from the same branch, into different
+     * bases: the newest, the one with the highest number, is kept, so the choice does not depend on the order
+     * gh lists them in.
+     */
+    static Map<String, PullRequest> byHeadBranch(List<PullRequest> pullRequests) {
+        return pullRequests.toMap(PullRequest::headBranch, pr -> pr,
+                (a, b) -> a.number() >= b.number() ? a : b);
     }
 
     /**
