@@ -1,0 +1,67 @@
+name: Publish fat-jar
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+
+concurrency:
+  group: publish-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Build fat-jar
+        run: mvn --batch-mode --no-transfer-progress verify
+
+      - name: Replace the rolling snapshot release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete snapshot --cleanup-tag --yes || true
+          gh release create snapshot target/jazygit-*-fat.jar \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "Latest snapshot" \
+            --notes "Automated build of main at $GITHUB_SHA"
+
+  release:
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Set version from the release tag
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          mvn --batch-mode --no-transfer-progress versions:set -DnewVersion="$version" -DgenerateBackupPoms=false
+
+      - name: Build fat-jar
+        run: mvn --batch-mode --no-transfer-progress verify
+
+      - name: Attach fat-jar to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" target/jazygit-*-fat.jar --clobber
