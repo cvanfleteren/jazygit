@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
 
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.function.Function;
 
 import static net.vanfleteren.jazygit.git.GitCommand.git;
 
@@ -65,11 +66,11 @@ public final class CliStatus {
     /**
      * What was parsed so far.
      *
-     * @param origin for the rename just parsed, the staged and unstaged flags of its original path,
-     *               which is the next field
+     * @param origin for the rename or copy just parsed, its entry given its original path, which is the
+     *               next field
      */
     private record Parsed(Option<String> head, Option<String> oid, Map<String, FileEntry> byPath,
-                          Option<FileEntry> origin) {
+                          Option<Function<String, FileEntry>> origin) {
 
         static final Parsed NOTHING = new Parsed(Option.none(), Option.none(), TreeMap.empty(), Option.none());
 
@@ -77,8 +78,8 @@ public final class CliStatus {
             return new Parsed(head, oid, byPath.put(entry.path(), entry), Option.none());
         }
 
-        Parsed expectingOrigin(FileEntry flags) {
-            return new Parsed(head, oid, byPath, Option.of(flags));
+        Parsed expectingOrigin(Function<String, FileEntry> entry) {
+            return new Parsed(head, oid, byPath, Option.of(entry));
         }
 
         Parsed withHead(String branch) {
@@ -92,8 +93,7 @@ public final class CliStatus {
 
     private static Either<UnexpectedOutput, Parsed> next(Parsed parsed, String field) {
         return parsed.origin()
-                .map(flags -> Either.<UnexpectedOutput, Parsed>right(
-                        parsed.with(new FileEntry(field, ChangeType.DELETED, flags.staged(), flags.unstaged()))))
+                .map(entry -> Either.<UnexpectedOutput, Parsed>right(parsed.with(entry.apply(field))))
                 .getOrElse(() -> field.isEmpty() ? Either.right(parsed) : entry(parsed, field));
     }
 
@@ -106,10 +106,12 @@ public final class CliStatus {
             // 1 XY sub mH mI mW hH hI path
             case '1' -> xy(field).flatMap(xy -> pathAfter(field, 8)
                     .map(path -> parsed.with(changed(path, ordinaryChange(xy), xy))));
-            // 2 XY sub mH mI mW hH hI Xscore path, followed by the original path as its own field
+            // 2 XY sub mH mI mW hH hI Xscore path, followed by the original path as its own field. A copy
+            // leaves its original path as it was, so it shows as added.
             case '2' -> xy(field).flatMap(xy -> pathAfter(field, 9)
-                    .map(path -> changed(path, ChangeType.ADDED, xy))
-                    .map(renamed -> parsed.with(renamed).expectingOrigin(renamed)));
+                    .map(path -> parsed.expectingOrigin(xy.staged() == 'R' || xy.unstaged() == 'R'
+                            ? origin -> FileEntry.renamed(path, origin, xy.staged() != '.', xy.unstaged() != '.')
+                            : origin -> changed(path, ChangeType.ADDED, xy))));
             // u XY sub m1 m2 m3 mW h1 h2 h3 path
             case 'u' -> xy(field).flatMap(xy -> pathAfter(field, 10)
                     .map(path -> parsed.with(FileEntry.conflicted(path, Conflict.of(xy.staged(), xy.unstaged())))));

@@ -54,6 +54,25 @@ class StageUpdateTest {
     }
 
     @Test
+    void toggleUnstagesBothSidesOfARename() {
+        FileEntry renamed = FileEntry.renamed("src/b.txt", "a.txt", true, false);
+
+        assertEquals(List.of(new Unstage(List.of("src/b.txt"), List.of("a.txt"))),
+                Update.update(loaded(), new StageMsg.Requested(List.of(renamed))).cmds());
+        assertEquals(List.of(new Unstage(List.of("src/b.txt"), List.of("a.txt"))),
+                Update.update(loaded(), new StageMsg.Requested(List.of(renamed), Option.of("src"))).cmds());
+    }
+
+    @Test
+    void toggleStagesTheChangesOfARename() {
+        FileEntry edited = FileEntry.renamed("b.txt", "a.txt", true, true);
+        FileEntry intentToAdd = FileEntry.renamed("d.txt", "c.txt", false, true);
+
+        assertEquals(List.of(new Stage(List.of("b.txt", "c.txt", "d.txt"))),
+                Update.update(loaded(), new StageMsg.Requested(List.of(edited, intentToAdd))).cmds());
+    }
+
+    @Test
     void toggleOfADirectoryStagesTheDirectory() {
         FileEntry unstaged = new FileEntry("src/a.txt", ChangeType.MODIFIED);
         FileEntry staged = new FileEntry("src/c.txt", ChangeType.MODIFIED, true, false);

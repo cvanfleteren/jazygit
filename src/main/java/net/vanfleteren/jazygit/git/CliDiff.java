@@ -35,8 +35,11 @@ public final class CliDiff {
      * against the index). Untracked files are shown as entirely added. Long diffs are cut off.
      */
     public static Either<DiffError, Diffs> diff(Path workTree, List<FileEntry> files) {
-        List<String> staged = FileEntry.paths(files, f -> f.staged() && f.type() != ChangeType.UNTRACKED);
-        List<String> unstaged = FileEntry.paths(files, f -> f.unstaged() && f.type() != ChangeType.UNTRACKED);
+        // A rename only shows as one when both of its paths are diffed.
+        List<String> staged = files.filter(f -> f.staged() && f.type() != ChangeType.UNTRACKED)
+                .flatMap(f -> f.paths(true));
+        List<String> unstaged = files.filter(f -> f.unstaged() && f.type() != ChangeType.UNTRACKED)
+                .flatMap(f -> f.paths(false));
         List<String> untracked = FileEntry.paths(files, f -> f.type() == ChangeType.UNTRACKED);
         return Either.<DiffError, String>narrow(tracked(workTree, STAGED, staged, HashMap.empty()))
                 .flatMap(stagedDiff -> unstagedAndUntracked(workTree, unstaged, untracked)

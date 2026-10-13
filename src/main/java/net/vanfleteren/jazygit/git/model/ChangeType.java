@@ -7,6 +7,10 @@ public enum ChangeType {
     MODIFIED("M"),
     ADDED("A"),
     DELETED("D"),
+    /**
+     * Moved from {@link FileEntry#origin()}, possibly with changes.
+     */
+    RENAMED("R"),
     UNTRACKED("??"),
     /**
      * Both sides of a merge changed the file; see {@link FileEntry#conflict()}.

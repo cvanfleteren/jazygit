@@ -58,6 +58,26 @@ class FilesPanelTest {
     }
 
     @Test
+    void renamedFilesShowWhereTheyCameFrom() throws Exception {
+        Model sameDirectory = TestModels.loaded(new FixedProvider(List.of(
+                FileEntry.renamed("b.txt", "a.txt", true, false),
+                FileEntry.renamed("c.txt", "old.txt", true, true))));
+        Model otherDirectory = TestModels.loaded(new FixedProvider(List.of(
+                FileEntry.renamed("lib/m.txt", "src/m.txt", true, false))));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(sameDirectory, FilesPanel.ID))) {
+            String screen = RenderedText.of(testRunner, () -> panel.render(sameDirectory, FilesPanel.ID));
+            assertTrue(screen.contains("R  a.txt -> b.txt"), screen);
+            assertTrue(screen.contains("RM old.txt -> c.txt"), screen);
+
+            String other = RenderedText.of(testRunner, () -> panel.render(otherDirectory, FilesPanel.ID));
+            assertTrue(other.contains("R  src/m.txt -> m.txt"), other);
+
+            testRunner.pilot().quit();
+        }
+    }
+
+    @Test
     void aPlaceholderRowIsNotASelection() throws Exception {
         Model loading = TestModels.loading("repo");
 

@@ -72,6 +72,16 @@ class DiscardUpdateTest {
     }
 
     @Test
+    void discardingARenameRemovesItAndRestoresItsOrigin() {
+        List<FileEntry> renamed = List.of(FileEntry.renamed("b.txt", "a.txt", true, true));
+
+        assertEquals(new DiscardPlan(List.of(), List.of(), List.of("a.txt"), List.of("b.txt")),
+                DiscardUpdate.plan(renamed, Scope.ALL));
+        assertEquals(new DiscardPlan(List.of(), List.of("b.txt"), List.of(), List.of()),
+                DiscardUpdate.plan(renamed, Scope.UNSTAGED));
+    }
+
+    @Test
     void choosingStartsTheDiscardAndClosesThePopup() {
         Model open = Update.update(loaded(), new DiscardMsg.Requested(List.of(UNSTAGED_MOD))).model();
 

@@ -60,7 +60,7 @@
             <configuration>
               <shadedArtifactAttached>true</shadedArtifactAttached>
               <shadedClassifierName>fat</shadedClassifierName>
-              <outputFile>${project.build.directory}/${project.build.finalName}-fat.jar</outputFile>
+              <outputFile>${project.build.directory}/${project.build.finalName}-${project.version}-fat.jar</outputFile>
               <transformers>
                 <transformer>
                   <mainClass>${main.class}</mainClass>
