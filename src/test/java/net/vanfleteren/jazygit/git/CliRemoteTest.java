@@ -42,11 +42,29 @@ class CliRemoteTest {
 
         List<String> remotes = CliRemote.remotes(repo).get();
         assertEquals(List.of("origin", "other"), remotes);
-        assertEquals(List.of("git fetch --quiet origin"), CliRemote.fetch(repo, "origin", Option.none()).get().map(ExecutedCommand::line));
-        assertEquals(List.of("git fetch --quiet other"), CliRemote.fetch(repo, "other", Option.none()).get().map(ExecutedCommand::line));
+        assertEquals(List.of("git fetch --quiet --prune origin"), CliRemote.fetch(repo, "origin", Option.none()).get().map(ExecutedCommand::line));
+        assertEquals(List.of("git fetch --quiet --prune other"), CliRemote.fetch(repo, "other", Option.none()).get().map(ExecutedCommand::line));
 
         assertTrue(git(repo, "branch", "-r").contains("origin/main"));
         assertTrue(git(repo, "branch", "-r").contains("other/main"));
+    }
+
+    @Test
+    void aBranchDeletedOnTheRemoteIsPrunedEvenWhenGitIsToldNotTo() throws Exception {
+        Path origin = dir.resolve("origin.git");
+        Path repo = dir.resolve("repo");
+        git(dir, "init", "-q", "--bare", "-b", "main", origin.toString());
+        git(dir, "clone", "-q", origin.toString(), repo.toString());
+        git(repo, "config", "fetch.prune", "false");
+        git(repo, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "first");
+        git(repo, "push", "-q", "-u", "origin", "main", "HEAD:refs/heads/feature");
+        git(repo, "branch", "-q", "--track", "feature", "origin/feature");
+        git(origin, "branch", "-q", "-D", "feature");
+
+        CliRemote.fetch(repo, "origin", Option.none()).get();
+
+        assertTrue(!git(repo, "branch", "-r").contains("origin/feature"));
+        assertTrue(git(repo, "branch", "-vv").contains("[origin/feature: gone]"));
     }
 
     @Test

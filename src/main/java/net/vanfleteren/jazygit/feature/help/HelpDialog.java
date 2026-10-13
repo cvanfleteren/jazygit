@@ -42,6 +42,7 @@ public final class HelpDialog implements PopupView {
      */
     private static final Map<String, List<Tuple2<String, String>>> LEGENDS = HashMap.of(
             Scopes.BRANCHES.id(), List.of(
+                    Tuple.of("gone", "help.branches.legend.gone"),
                     Tuple.of("#42", "help.branches.legend.pullRequest"),
                     Tuple.of("✓ ✗ ●", "help.branches.legend.checks"),
                     Tuple.of("✔ ✎ ?", "help.branches.legend.review")));

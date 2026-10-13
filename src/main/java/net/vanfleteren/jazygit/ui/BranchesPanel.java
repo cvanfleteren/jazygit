@@ -93,14 +93,18 @@ public class BranchesPanel {
 
     /**
      * The commits not yet pushed in green and not yet pulled in red, as an arrow and a count each,
-     * with a leading space; nothing for a branch that is in sync.
+     * with a leading space; "gone" when its upstream was deleted on the remote; nothing for a branch that is
+     * in sync, or that has no upstream.
      */
     static List<LoadableList.Seg> sync(Branch branch) {
         return List.of(
                         Option.of(branch.ahead()).filter(n -> n > 0)
                                 .map(n -> LoadableList.Seg.styled(" ↑" + n, Theme.Classes.AHEAD)),
                         Option.of(branch.behind()).filter(n -> n > 0)
-                                .map(n -> LoadableList.Seg.styled(" ↓" + n, Theme.Classes.BEHIND)))
+                                .map(n -> LoadableList.Seg.styled(" ↓" + n, Theme.Classes.BEHIND)),
+                        branch.goneUpstream()
+                                .map(upstream -> LoadableList.Seg.styled(" " + Messages.get("branches.gone"),
+                                        Theme.Classes.GONE)))
                 .flatMap(o -> o);
     }
 

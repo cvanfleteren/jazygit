@@ -11,28 +11,51 @@ import java.time.Instant;
  * @param tipTime when that commit was made
  * @param hasRemote whether the branch also exists on its remote, according to the remote-tracking refs
  * @param isDefault whether this is the repository's main branch, i.e. the default branch of the remote
- * @param upstream  the remote-tracking branch it follows, if that exists
+ * @param tracking  what it follows on its remote: nothing, a remote-tracking branch, or one that is gone
  */
 public record Branch(String name, boolean current, Sha tipOid, Instant tipTime, boolean hasRemote,
-                     boolean isDefault, Option<Upstream> upstream) {
+                     boolean isDefault, Tracking tracking) {
+
+    /**
+     * A branch following {@code upstream}, or nothing.
+     */
+    public Branch(String name, boolean current, Sha tipOid, Instant tipTime, boolean hasRemote,
+                  boolean isDefault, Option<Upstream> upstream) {
+        this(name, current, tipOid, tipTime, hasRemote, isDefault,
+                upstream.<Tracking>map(Tracking.Tracks::new).getOrElse(new Tracking.None()));
+    }
 
     public Branch(String name, boolean current, Sha tipOid, Instant tipTime, boolean hasRemote,
                   boolean isDefault) {
-        this(name, current, tipOid, tipTime, hasRemote, isDefault, Option.none());
+        this(name, current, tipOid, tipTime, hasRemote, isDefault, new Tracking.None());
+    }
+
+    /**
+     * The remote-tracking branch it follows, if that exists; none when its upstream is gone.
+     */
+    public Option<Upstream> upstream() {
+        return tracking instanceof Tracking.Tracks(Upstream upstream) ? Option.of(upstream) : Option.none();
+    }
+
+    /**
+     * The name its upstream had, when that was deleted on the remote.
+     */
+    public Option<String> goneUpstream() {
+        return tracking instanceof Tracking.Gone(String upstream) ? Option.of(upstream) : Option.none();
     }
 
     /**
      * The commits not yet pushed to the upstream branch; 0 without an upstream.
      */
     public int ahead() {
-        return upstream.map(Upstream::ahead).getOrElse(0);
+        return upstream().map(Upstream::ahead).getOrElse(0);
     }
 
     /**
      * The commits on the upstream branch not yet in this branch; 0 without an upstream.
      */
     public int behind() {
-        return upstream.map(Upstream::behind).getOrElse(0);
+        return upstream().map(Upstream::behind).getOrElse(0);
     }
 
     public Branch(String name, boolean current, Sha tipOid, Instant tipTime, boolean hasRemote) {

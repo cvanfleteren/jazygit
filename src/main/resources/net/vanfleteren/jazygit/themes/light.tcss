@@ -31,6 +31,7 @@ Panel.focused {
 .spinner { color: $warn; }
 .ahead { color: $added; }
 .behind { color: $removed; }
+.gone { color: $removed; }
 .pull-request { color: $accent; }
 .checks-passed { color: $added; }
 .checks-failed { color: $removed; }

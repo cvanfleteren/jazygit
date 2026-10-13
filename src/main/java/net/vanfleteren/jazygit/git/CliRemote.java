@@ -62,8 +62,9 @@ public final class CliRemote {
     }
 
     /**
-     * Runs {@code git fetch <remote>}. Whether deleted remote branches are pruned is left to git's own
-     * {@code fetch.prune} configuration. Git's own prompts are already off; ssh would still ask for a
+     * Runs {@code git fetch --prune <remote>}. It always prunes, whatever {@code fetch.prune} says: the
+     * remote-tracking branches of branches deleted on the remote go, so git marks the local branches that
+     * followed them as gone. Git's own prompts are already off; ssh would still ask for a
      * passphrase or about an unknown host on the terminal, so it runs in batch mode.
      *
      * @param environment the value of the environment variable {@code GIT_SSH_COMMAND}, if it is set
@@ -71,7 +72,7 @@ public final class CliRemote {
     public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(Path workTree, String remote,
                                                                      Option<String> environment) {
         return configuredSsh(workTree, environment).flatMap(ssh -> GitProcess.log(workTree,
-                git("fetch", "--quiet", remote)
+                git("fetch", "--quiet", "--prune", remote)
                         .withEnvironment(HashMap.of("GIT_SSH_COMMAND", batchMode(ssh)))
                         .withTimeout(FETCH_TIMEOUT)));
     }

@@ -23,12 +23,15 @@ public final class PullUpdate {
     }
 
     private static Next requested(Model model, String branch) {
-        // A branch that is busy is not pulled meanwhile. A branch without an upstream has nothing to pull from.
+        // A branch that is busy is not pulled meanwhile. A branch without an upstream, or whose upstream was
+        // deleted, has nothing to pull from.
         // A branch that is not checked out can only be fast-forwarded, which its own commits would prevent.
         return model.branch(branch)
                 .filter(known -> !model.busy().containsKey(branch))
                 .map(known -> known.upstream().isEmpty()
-                        ? Next.of(model.fail(new AppError.NoUpstream(branch)))
+                        ? Next.of(model.fail(known.goneUpstream()
+                        .<AppError>map(upstream -> new AppError.UpstreamGone(branch, upstream))
+                        .getOrElse(() -> new AppError.NoUpstream(branch))))
                         : known.current()
                         ? Update.start(model.clearError(), new Pull(branch))
                         : known.ahead() > 0

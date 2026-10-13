@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.Tracking;
 import net.vanfleteren.jazygit.git.model.Upstream;
 
 import java.nio.file.Path;
@@ -113,7 +114,7 @@ public final class CliBranches {
                 .flatMap(ref -> ref.localName().map(name -> new Branch(name, ref.head(), ref.tip(), ref.time(),
                         remote.contains(ref.pushedTo(name)),
                         defaultBranch.contains(name),
-                        upstream(ref))))
+                        tracking(ref))))
                 .sorted(ORDER);
     }
 
@@ -128,11 +129,13 @@ public final class CliBranches {
                 .orElse(() -> List.of("main", "master").find(branches::contains));
     }
 
-    private static Option<Upstream> upstream(Ref ref) {
+    private static Tracking tracking(Ref ref) {
         String track = ref.track().getOrElse("");
         return ref.upstream()
-                .filter(name -> !track.equals("[gone]"))
-                .map(name -> new Upstream(name, count(AHEAD, track), count(BEHIND, track)));
+                .<Tracking>map(name -> track.equals("[gone]")
+                        ? new Tracking.Gone(name)
+                        : new Tracking.Tracks(new Upstream(name, count(AHEAD, track), count(BEHIND, track))))
+                .getOrElse(new Tracking.None());
     }
 
     private static int count(Pattern pattern, String track) {

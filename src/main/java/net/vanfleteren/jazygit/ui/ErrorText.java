@@ -24,6 +24,8 @@ public final class ErrorText {
             case AppError.NothingToStash() -> Messages.get("error.stash.nothing");
             case AppError.InvalidUpstream(String text) -> Messages.get("error.upstream.invalid", text.strip());
             case AppError.NoUpstream(String branch) -> Messages.get("error.pull.noUpstream", branch);
+            case AppError.UpstreamGone(String branch, String upstream) ->
+                    Messages.get("error.pull.upstreamGone", branch, upstream);
             case AppError.UnpushedCommits(String branch) -> Messages.get("error.fastForward.unpushed", branch);
             case AppError.NotPushed(String branch) -> Messages.get("error.pullRequest.notPushed", branch);
             case AppError.PullRequestsUnavailable(Failure failure) ->
