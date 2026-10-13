@@ -7,6 +7,7 @@ import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import io.vavr.control.Try;
 
 import java.util.Set;
@@ -47,9 +48,6 @@ public final class Theme {
         }
     }
 
-    // Spans are not elements, so their styles are resolved by hand; null until the app starts.
-    private static volatile StyleEngine active;
-
     private Theme() {
     }
 
@@ -69,10 +67,7 @@ public final class Theme {
                                 .toEither()
                                 .<LoadFailed>mapLeft(cause -> new LoadFailed(name, cause))
                                 .map(done -> e)))
-                .peek(e -> {
-                    e.setActiveStylesheet(DARK);
-                    active = e;
-                });
+                .peek(e -> e.setActiveStylesheet(DARK));
     }
 
     /** Whether {@code event} is the shortcut that asks which theme to use. */
@@ -84,23 +79,32 @@ public final class Theme {
      * Makes {@code name} the active theme, if it is not yet; the next render picks it up. An unknown name
      * leaves the theme as it is.
      */
-    public static void activate(String name) {
-        StyleEngine engine = active;
-        if (engine == null || !NAMES.contains(name) || engine.getActiveStylesheet().filter(name::equals).isPresent()) {
-            return;
+    public static void activate(StyleEngine engine, String name) {
+        if (NAMES.contains(name) && !Option.ofOptional(engine.getActiveStylesheet()).contains(name)) {
+            engine.setActiveStylesheet(name);
         }
-        engine.setActiveStylesheet(name);
     }
 
     /**
-     * The style of a span with the given CSS class, for text that is not an element of its own.
-     * Empty when no theme is active.
+     * The styles of spans by their CSS class, as {@code engine} resolves them, for text that is not an
+     * element of its own.
      */
-    public static Style spanStyle(String cssClass) {
-        StyleEngine engine = active;
-        return engine == null
-                ? Style.EMPTY
-                : engine.resolve(new SpanNode(Set.of(cssClass))).toStyle();
+    public static SpanStyles spanStyles(StyleEngine engine) {
+        return cssClass -> engine.resolve(new SpanNode(Set.of(cssClass))).toStyle();
+    }
+
+    /**
+     * How text is styled that is not an element of its own: the style of a span with a CSS class.
+     */
+    @FunctionalInterface
+    public interface SpanStyles {
+
+        /**
+         * No styling, e.g. before a theme is known.
+         */
+        SpanStyles NONE = cssClass -> Style.EMPTY;
+
+        Style of(String cssClass);
     }
 
     private record SpanNode(Set<String> cssClasses) implements Styleable {

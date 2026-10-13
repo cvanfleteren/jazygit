@@ -40,11 +40,11 @@ class ThemeTest {
         var engine = Theme.createEngine().get();
         assertEquals(java.util.Optional.of(Theme.DARK), engine.getActiveStylesheet());
 
-        Theme.activate(Theme.LIGHT);
+        Theme.activate(engine, Theme.LIGHT);
         assertEquals(java.util.Optional.of(Theme.LIGHT), engine.getActiveStylesheet());
-        Theme.activate(Theme.DARCULA);
+        Theme.activate(engine, Theme.DARCULA);
         assertEquals(java.util.Optional.of(Theme.DARCULA), engine.getActiveStylesheet());
-        Theme.activate("nonsense");
+        Theme.activate(engine, "nonsense");
         assertEquals(java.util.Optional.of(Theme.DARCULA), engine.getActiveStylesheet());
     }
 
@@ -52,7 +52,7 @@ class ThemeTest {
     void everyThemeStylesThePanelBorders() {
         for (String name : Theme.NAMES) {
             var engine = Theme.createEngine().get();
-            Theme.activate(name);
+            Theme.activate(engine, name);
 
             assertTrue(engine.resolve(new Node("Panel", Set.of())).borderColor().isPresent(), name);
         }

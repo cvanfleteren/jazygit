@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.ui.ContentPanel;
 import net.vanfleteren.jazygit.ui.FilesPanel;
 import net.vanfleteren.jazygit.ui.StashPanel;
 import net.vanfleteren.jazygit.ui.StatusPanel;
+import net.vanfleteren.jazygit.ui.Theme;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -44,6 +45,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * always opens a real terminal; {@link ToolkitTestRunner} is the headless entry point instead.
  */
 class JazygitAppPilotTest {
+
+    private static final ContentPanel CONTENT = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
 
     private record Fixture(SampleData data, Model model, java.util.List<Msg> dispatched, java.util.List<Msg> selections, FilesPanel files,
                             BranchesPanel branches, CommitsPanel commits, StashPanel stash,
@@ -69,7 +72,7 @@ class JazygitAppPilotTest {
                                 branchesPane.percent(20), commits.render(model, focusedId).percent(30),
                                 stash.render(model, focusedId).fill())
                                 .percent(30),
-                        ContentPanel.render(model, focusedId)
+                        CONTENT.render(model, focusedId)
                                 .fill());
             };
         }

@@ -34,21 +34,17 @@ public final class Messages {
         return new Messages(locale);
     }
 
-    private static volatile Messages current;
+    // The locale of the user does not change while the app runs.
+    private static final Messages DEFAULT = forDefaultLocale();
 
     /**
-     * Looks up {@code key} in the messages for the default locale.
+     * Looks up {@code key} in the messages for the locale of the user.
      *
      * @param args the values for the {@code {0}}, {@code {1}}... placeholders; numbers should be
      *             passed as strings to avoid locale-specific grouping
      */
     public static String get(String key, Object... args) {
-        Messages messages = current;
-        if (messages == null || !messages.locale.equals(Locale.getDefault())) {
-            messages = forDefaultLocale();
-            current = messages;
-        }
-        return messages.format(key, args);
+        return DEFAULT.format(key, args);
     }
 
     /**

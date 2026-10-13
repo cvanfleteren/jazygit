@@ -33,19 +33,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class ContentPanelTest {
 
+    private final ContentPanel content = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
+
     private final Model model = TestModels.loaded(new SampleData(), "feature/initial-layout");
 
     @Test
     void filesFocusedRendersFileStatusView() {
-        StyledElement<?> panel = ContentPanel.render(model, FilesPanel.ID);
+        StyledElement<?> panel = content.render(model, FilesPanel.ID);
         assertNotNull(panel);
     }
 
     @Test
     void filesFocusedWithoutChangedFilesSaysSoInsteadOfLoading() throws Exception {
         Model clean = TestModels.loaded();
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> ContentPanel.render(clean, FilesPanel.ID))) {
-            String screen = RenderedText.of(testRunner, () -> ContentPanel.render(clean, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(clean, FilesPanel.ID))) {
+            String screen = RenderedText.of(testRunner, () -> content.render(clean, FilesPanel.ID));
             assertTrue(screen.contains("No changed files"), screen);
             assertFalse(screen.contains(Placeholders.loading()), screen);
         }
@@ -54,16 +56,16 @@ class ContentPanelTest {
     @Test
     void filesFocusedStillLoadsWhileTheStatusIsLoading() throws Exception {
         Model loading = TestModels.loading("repo");
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> ContentPanel.render(loading, FilesPanel.ID))) {
-            String screen = RenderedText.of(testRunner, () -> ContentPanel.render(loading, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(loading, FilesPanel.ID))) {
+            String screen = RenderedText.of(testRunner, () -> content.render(loading, FilesPanel.ID));
             assertTrue(screen.contains(Placeholders.loading()), screen);
         }
     }
 
     @Test
     void branchesFocusedRendersTheLogOfTheSelectedBranch() throws Exception {
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> ContentPanel.render(model, BranchesPanel.ID))) {
-            String screen = RenderedText.ofLarge(testRunner, () -> ContentPanel.render(model, BranchesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(model, BranchesPanel.ID))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> content.render(model, BranchesPanel.ID));
             assertTrue(screen.contains("Log: feature/initial-layout"), screen);
             assertTrue(screen.contains("commit 0a1b2c3"), screen);
             assertFalse(screen.contains("a1b2c3d"), screen);
@@ -73,8 +75,8 @@ class ContentPanelTest {
     @Test
     void branchesFocusedShowsLoadingBeforeABranchIsSelected() throws Exception {
         Model unselected = TestModels.loaded(new SampleData());
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> ContentPanel.render(unselected, BranchesPanel.ID))) {
-            String screen = RenderedText.of(testRunner, () -> ContentPanel.render(unselected, BranchesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(unselected, BranchesPanel.ID))) {
+            String screen = RenderedText.of(testRunner, () -> content.render(unselected, BranchesPanel.ID));
             assertTrue(screen.contains(Placeholders.loading()), screen);
         }
     }
@@ -82,8 +84,8 @@ class ContentPanelTest {
     @Test
     void branchesFocusedKeepsShowingThePreviousLogWhileTheNewOneLoads() throws Exception {
         Model switching = TestModels.switchingBranch(model, "other");
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> ContentPanel.render(switching, BranchesPanel.ID))) {
-            String screen = RenderedText.of(testRunner, () -> ContentPanel.render(switching, BranchesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(switching, BranchesPanel.ID))) {
+            String screen = RenderedText.of(testRunner, () -> content.render(switching, BranchesPanel.ID));
             assertTrue(screen.contains("Log: feature/initial-layout"), screen);
             assertTrue(screen.contains("commit 0a1b2c3"), screen);
             assertFalse(screen.contains(Placeholders.loading()), screen);
@@ -92,22 +94,22 @@ class ContentPanelTest {
 
     @Test
     void commitsFocusedRendersCommitDiffView() {
-        StyledElement<?> panel = ContentPanel.render(model, CommitsPanel.ID);
+        StyledElement<?> panel = content.render(model, CommitsPanel.ID);
         assertNotNull(panel);
     }
 
     @Test
     void unknownFocusFallsBackToFileStatusView() {
-        StyledElement<?> panel = ContentPanel.render(model, "unknown");
+        StyledElement<?> panel = content.render(model, "unknown");
         assertNotNull(panel);
     }
 
     @Test
     void rendersPlaceholdersWhileLoading() {
         Model loading = TestModels.loading("repo");
-        assertNotNull(ContentPanel.render(loading, FilesPanel.ID));
-        assertNotNull(ContentPanel.render(loading, BranchesPanel.ID));
-        assertNotNull(ContentPanel.render(loading, CommitsPanel.ID));
+        assertNotNull(content.render(loading, FilesPanel.ID));
+        assertNotNull(content.render(loading, BranchesPanel.ID));
+        assertNotNull(content.render(loading, CommitsPanel.ID));
     }
 
     @Test
@@ -117,18 +119,18 @@ class ContentPanelTest {
                 new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), "changes")).model();
 
         // Rendering gives the area its content; the commits pane has the focus while doing so.
-        ContentPanel.render(selected, CommitsPanel.ID);
+        content.render(selected, CommitsPanel.ID);
 
-        String area = ContentPanel.areaOfPane(CommitsPanel.ID).get();
-        assertEquals(io.vavr.control.Option.of(CommitsPanel.ID), ContentPanel.paneOfArea(area));
-        assertNotNull(ContentPanel.render(selected, area));
+        String area = content.areaOfPane(CommitsPanel.ID).get();
+        assertEquals(io.vavr.control.Option.of(CommitsPanel.ID), content.paneOfArea(area));
+        assertNotNull(content.render(selected, area));
     }
 
     @Test
     void theDiffAreasReturnToTheFilesPane() {
-        assertEquals(io.vavr.control.Option.none(), ContentPanel.paneOfArea("unknown"));
-        assertEquals(io.vavr.control.Option.of(FilesPanel.ID), ContentPanel.paneOfArea("diff-staged"));
-        assertEquals(io.vavr.control.Option.of(FilesPanel.ID), ContentPanel.paneOfArea("diff-unstaged"));
+        assertEquals(io.vavr.control.Option.none(), content.paneOfArea("unknown"));
+        assertEquals(io.vavr.control.Option.of(FilesPanel.ID), content.paneOfArea("diff-staged"));
+        assertEquals(io.vavr.control.Option.of(FilesPanel.ID), content.paneOfArea("diff-unstaged"));
     }
 
     @Test
@@ -136,7 +138,7 @@ class ContentPanelTest {
         Commit commit = new Commit(new Sha("a1b2c3d4e5f6"), "Ada Lovelace", "ada@example.com",
                 Instant.parse("2026-10-09T12:30:00Z"), "Subject", "More\ntext");
 
-        List<String> lines = ContentPanel.commitText(commit, " a.txt | 1 +\n 1 file changed\n\n+added\n").lines().stream()
+        List<String> lines = ContentPanel.commitText(commit, " a.txt | 1 +\n 1 file changed\n\n+added\n", Theme.SpanStyles.NONE).lines().stream()
                 .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
                 .collect(List.collector());
 
@@ -151,7 +153,7 @@ class ContentPanelTest {
     void commitTextHasNoBlankLineWithoutAnExtendedMessage() {
         Commit commit = new Commit(new Sha("a1b2c3d4e5f6"), "Ada", "ada@example.com", Instant.EPOCH, "Subject", "");
 
-        List<String> lines = ContentPanel.commitText(commit, "x").lines().stream()
+        List<String> lines = ContentPanel.commitText(commit, "x", Theme.SpanStyles.NONE).lines().stream()
                 .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
                 .collect(List.collector());
 
@@ -160,8 +162,8 @@ class ContentPanelTest {
 
     @Test
     void outOfRangeSelectionIsClampedRatherThanThrowing() {
-        assertDoesNotThrow(() -> ContentPanel.render(model, CommitsPanel.ID));
-        assertDoesNotThrow(() -> ContentPanel.render(model, CommitsPanel.ID));
+        assertDoesNotThrow(() -> content.render(model, CommitsPanel.ID));
+        assertDoesNotThrow(() -> content.render(model, CommitsPanel.ID));
     }
 
     @Test
@@ -221,8 +223,8 @@ class ContentPanelTest {
                 new FileEntry("a.txt", ChangeType.MODIFIED, true, false),
                 new FileEntry("b.txt", ChangeType.MODIFIED, false, true)));
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> ContentPanel.render(selected, FilesPanel.ID))) {
-            String screen = RenderedText.of(testRunner, () -> ContentPanel.render(selected, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(selected, FilesPanel.ID))) {
+            String screen = RenderedText.of(testRunner, () -> content.render(selected, FilesPanel.ID));
             assertTrue(screen.contains("Staged changes"), screen);
             assertTrue(screen.contains("Unstaged changes"), screen);
             assertTrue(screen.indexOf("Staged changes") < screen.indexOf("Unstaged changes"), screen);

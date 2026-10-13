@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.control.Try;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -52,12 +53,11 @@ public final class Program {
 
     private void apply(Next next) {
         model = next.model();
-        for (Cmd cmd : next.cmds()) {
-            (cmd.background() ? background : io).execute(() -> {
-                Msg result = perform(provider, cmd);
-                ui.execute(() -> dispatch(result));
-            });
-        }
+        // Once the app stops, the executors take nothing anymore, and what is left is dropped.
+        next.cmds().forEach(cmd -> Try.run(() -> (cmd.background() ? background : io).execute(() -> {
+            Msg result = perform(provider, cmd);
+            Try.run(() -> ui.execute(() -> dispatch(result)));
+        })));
     }
 
     static Msg perform(GitInfoProvider provider, Cmd cmd) {

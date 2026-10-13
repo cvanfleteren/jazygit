@@ -73,7 +73,8 @@ public class JazygitApp extends ToolkitApp {
 
     private final GitInfoProvider provider;
     private final StyleEngine styleEngine;
-    private final Consumer<Msg> dispatch = msg -> this.program.dispatch(msg);
+    private final Consumer<Msg> dispatch = msg -> this.runtime.forEach(running -> running.program().dispatch(msg));
+    private final ContentPanel contentPanel;
     private final FilesPanel filesPanel = new FilesPanel(dispatch, () -> openContent(FilesPanel.ID));
     private final BranchesPanel branchesPanel = new BranchesPanel(dispatch);
     private final CommitsPanel commitsPanel = new CommitsPanel(dispatch, () -> openContent(CommitsPanel.ID));
@@ -101,20 +102,38 @@ public class JazygitApp extends ToolkitApp {
     private String helpOrigin = FilesPanel.ID;
     // Where the focus was when no popup had it, which the theme popup, opened from anywhere, gives it back to.
     private String lastFocus = FilesPanel.ID;
-    private ExecutorService io;
-    private ExecutorService fetch;
-    private Program program;
+    // What runs while the app is started.
+    private Option<Runtime> runtime = Option.none();
+
+    /**
+     * The program and the threads it runs git on, which exist from the start of the app to its stop.
+     *
+     * @param io    where git is called
+     * @param fetch where git talks to the remotes
+     */
+    private record Runtime(ExecutorService io, ExecutorService fetch, Program program) {
+    }
 
     public JazygitApp(GitInfoProvider provider, StyleEngine styleEngine) {
         this.provider = provider;
         this.styleEngine = styleEngine;
+        this.contentPanel = new ContentPanel(Theme.spanStyles(styleEngine), this::leaveScrollArea);
     }
 
     /**
      * Moves the focus to the content shown for the pane {@code paneId}, so it can be scrolled by key.
      */
     private void openContent(String paneId) {
-        ContentPanel.areaOfPane(paneId).forEach(id -> runner().focusManager().setFocus(id));
+        contentPanel.areaOfPane(paneId).forEach(id -> runner().focusManager().setFocus(id));
+    }
+
+    /**
+     * Gives the focus back to the pane whose content has it, and says whether there was one.
+     */
+    private boolean leaveScrollArea() {
+        Option<String> pane = contentPanel.paneOfArea(runner().focusManager().focusedId());
+        pane.forEach(runner().focusManager()::setFocus);
+        return pane.isDefined();
     }
 
     @Override
@@ -125,23 +144,22 @@ public class JazygitApp extends ToolkitApp {
                 .filter(KeyEvent.class::isInstance)
                 .flatMap(key -> Keymap.standard().handleGlobal((KeyEvent) key))
                 .map(msg -> {
-                    program.dispatch(msg);
+                    dispatch.accept(msg);
                     return EventResult.HANDLED;
                 })
                 .getOrElse(EventResult.UNHANDLED));
         runner.focusManager().setFocus(FilesPanel.ID);
-        ContentPanel.onLeaveScrollArea(() -> {
-            Option<String> pane = ContentPanel.paneOfArea(runner.focusManager().focusedId());
-            pane.forEach(runner.focusManager()::setFocus);
-            return pane.isDefined();
-        });
-        io = Executors.newSingleThreadExecutor(Thread.ofPlatform().name("git-io").daemon().factory());
-        fetch = Executors.newSingleThreadExecutor(Thread.ofPlatform().name("git-fetch").daemon().factory());
-        program = Program.start(provider, io, fetch, runner::runOnRenderThread);
-        runner.scheduleRepeating(() -> runner.runOnRenderThread(() -> program.dispatch(new Msg.Tick())),
+        ExecutorService io = singleThread("git-io");
+        ExecutorService fetch = singleThread("git-fetch");
+        runtime = Option.of(new Runtime(io, fetch, Program.start(provider, io, fetch, runner::runOnRenderThread)));
+        runner.scheduleRepeating(() -> runner.runOnRenderThread(() -> dispatch.accept(new Msg.Tick())),
                 REFRESH_INTERVAL);
-        runner.scheduleRepeating(() -> runner.runOnRenderThread(() -> program.dispatch(new FetchMsg.Tick())),
+        runner.scheduleRepeating(() -> runner.runOnRenderThread(() -> dispatch.accept(new FetchMsg.Tick())),
                 FETCH_INTERVAL);
+    }
+
+    private static ExecutorService singleThread(String name) {
+        return Executors.newSingleThreadExecutor(Thread.ofPlatform().name(name).daemon().factory());
     }
 
 
@@ -152,30 +170,28 @@ public class JazygitApp extends ToolkitApp {
 
     @Override
     protected void onStop() {
-        if (io == null) {
-            return;
-        }
-        io.shutdownNow();
-        fetch.shutdownNow();
-        try {
+        runtime.forEach(running -> {
+            running.io().shutdownNow();
+            running.fetch().shutdownNow();
             // Let a running git call finish before the process exits; a fetch is not waited for.
-            io.awaitTermination(2, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+            Try.of(() -> running.io().awaitTermination(2, TimeUnit.SECONDS))
+                    .onFailure(InterruptedException.class, e -> Thread.currentThread().interrupt());
+        });
+        runtime = Option.none();
     }
 
     @Override
     protected Element render() {
-        Model model = program.model();
-        Theme.activate(model.theme());
+        Model model = runtime.map(running -> running.program().model())
+                .getOrElse(() -> Model.initial(provider.repositoryName()));
+        Theme.activate(styleEngine, model.theme());
         String focusedId = runner().focusManager().focusedId();
         Panel branches = branchesPanel.render(model, focusedId);
         // The highlighted branch lives in the list widget, which knows it once rendered; the
         // content panel then shows the log of that branch.
-        branchesPanel.selectionChange(model).forEach(program::dispatch);
-        commitsPanel.selectionChange(model).forEach(program::dispatch);
-        filesPanel.selectionChange(model).forEach(program::dispatch);
+        branchesPanel.selectionChange(model).forEach(dispatch);
+        commitsPanel.selectionChange(model).forEach(dispatch);
+        filesPanel.selectionChange(model).forEach(dispatch);
         Panel stash = stashPanel.render(model, focusedId);
         Option<Integer> stashHeight = stashHeight(model);
         var panes = row(
@@ -191,7 +207,7 @@ public class JazygitApp extends ToolkitApp {
                         stashHeight.map(stash::length).getOrElse(stash::fill))
                         .percent(30),
                 column(
-                        ContentPanel.render(model, focusedId)
+                        contentPanel.render(model, focusedId)
                                 .fill(),
                         CommandLogPanel.render(model).length(COMMAND_LOG_HEIGHT))
                         .fill());
