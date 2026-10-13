@@ -36,6 +36,8 @@ class ThemeDialogTest {
         assertEquals(List.of(new ThemeMsg.Chosen("light")), pressing(r -> r.pilot().press('l')));
         dispatched.clear();
         assertEquals(List.of(new ThemeMsg.Chosen("darcula")), pressing(r -> r.pilot().press('a')));
+        dispatched.clear();
+        assertEquals(List.of(new ThemeMsg.Chosen("dark-colorblind")), pressing(r -> r.pilot().press('b')));
     }
 
     @Test
@@ -60,6 +62,7 @@ class ThemeDialogTest {
             assertTrue(screen.contains("(d) dark (current)"), screen);
             assertTrue(screen.contains("(l) light"), screen);
             assertTrue(screen.contains("(a) darcula"), screen);
+            assertTrue(screen.contains("(b) dark, colour-blind friendly"), screen);
             assertTrue(screen.contains("(c) Cancel"), screen);
         }
     }

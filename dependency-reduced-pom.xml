@@ -114,6 +114,22 @@
       </exclusions>
     </dependency>
     <dependency>
+      <groupId>com.tngtech.archunit</groupId>
+      <artifactId>archunit-junit5</artifactId>
+      <version>1.4.1</version>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <artifactId>archunit-junit5-api</artifactId>
+          <groupId>com.tngtech.archunit</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>archunit-junit5-engine</artifactId>
+          <groupId>com.tngtech.archunit</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
       <groupId>dev.tamboui</groupId>
       <artifactId>tamboui-toolkit</artifactId>
       <version>0.6.0-SNAPSHOT</version>
@@ -166,6 +182,7 @@
     <main.class>net.vanfleteren.jazygit.JazygitApp</main.class>
     <slf4j.version>2.0.17</slf4j.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <archunit.version>1.4.1</archunit.version>
     <junit.version>5.14.4</junit.version>
     <tamboui.version>0.6.0-SNAPSHOT</tamboui.version>
   </properties>

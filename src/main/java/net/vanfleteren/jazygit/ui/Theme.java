@@ -22,8 +22,10 @@ public final class Theme {
     public static final String DARK = "dark";
     public static final String LIGHT = "light";
     public static final String DARCULA = "darcula";
+    /** The dark theme with blue and vermillion for red and green, for red/green colour blindness. */
+    public static final String DARK_COLORBLIND = "dark-colorblind";
     /** The themes, in the order they are offered. */
-    public static final List<String> NAMES = List.of(DARK, LIGHT, DARCULA);
+    public static final List<String> NAMES = List.of(DARK, LIGHT, DARCULA, DARK_COLORBLIND);
 
     /** CSS class names referenced from the stylesheets. */
     public static final class Classes {

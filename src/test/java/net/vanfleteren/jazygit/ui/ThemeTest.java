@@ -49,6 +49,16 @@ class ThemeTest {
     }
 
     @Test
+    void theColourBlindThemeShowsGoodAndBadInBlueAndVermillion() {
+        var engine = Theme.createEngine().get();
+        Theme.activate(engine, Theme.DARK_COLORBLIND);
+        Theme.SpanStyles styles = Theme.spanStyles(engine);
+
+        assertEquals(java.util.Optional.of(Color.hex("#56b4e9")), styles.of(Theme.Classes.DIFF_ADDED).fg());
+        assertEquals(java.util.Optional.of(Color.hex("#d55e00")), styles.of(Theme.Classes.DIFF_REMOVED).fg());
+    }
+
+    @Test
     void everyThemeStylesThePanelBorders() {
         for (String name : Theme.NAMES) {
             var engine = Theme.createEngine().get();
