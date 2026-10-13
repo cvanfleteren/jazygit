@@ -51,8 +51,11 @@ public final class PullRequestUpdate {
             }
             case PullRequestMsg.DetailsLoaded(int number, var details) -> Next.of(shown(model, number, Either.right(details)));
             case PullRequestMsg.DetailsFailed(int number, var failure) -> Next.of(shown(model, number, Either.left(failure)));
-            case PullRequestMsg.OpenConfirmed() -> Update.confirm(model, PullRequestPopup.class,
-                    popup -> Option.of(new OpenPullRequest(popup.branch(), popup.pullRequest().number())));
+            // The dialog stays open, so the pull request can still be merged or closed from it.
+            case PullRequestMsg.OpenConfirmed() -> model.popup(PullRequestPopup.class)
+                    .map(popup -> Update.start(model.clearError(),
+                            new OpenPullRequest(popup.branch(), popup.pullRequest().number())))
+                    .getOrElse(() -> Next.of(model));
             case PullRequestMsg.MergeChosen(MergeMethod method) -> Update.confirm(model, PullRequestPopup.class,
                     popup -> Option.when(popup.mergeable(),
                             () -> new MergePullRequest(popup.branch(), popup.pullRequest().number(), method)));

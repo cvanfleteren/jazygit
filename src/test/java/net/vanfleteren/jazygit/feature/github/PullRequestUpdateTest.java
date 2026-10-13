@@ -209,13 +209,16 @@ class PullRequestUpdateTest {
     }
 
     @Test
-    void confirmingThePopupOpensThePullRequestInTheBrowser() {
+    void openingThePullRequestInTheBrowserKeepsTheDialogOpen() {
         Model shown = Update.update(withPr(), new PullRequestMsg.Requested("feature")).model();
 
         Next opened = Update.update(shown, new PullRequestMsg.OpenConfirmed());
 
         assertEquals(List.of(new OpenPullRequest("feature", 42)), opened.cmds());
-        assertEquals(Option.none(), opened.model().popup());
+        assertEquals(shown.popup(), opened.model().popup());
+
+        Next done = Update.update(opened.model(), new OpenPullRequest("feature", 42).succeeded(List.empty()));
+        assertEquals(shown.popup(), done.model().popup());
     }
 
     @Test
