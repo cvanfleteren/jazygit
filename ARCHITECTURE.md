@@ -167,7 +167,8 @@ classDiagram
   the error, and reads the repository again. A feature only adds its own messages for outcomes that really
   are special, like `CheckoutMsg.NeedsStash`.
 - **Errors are data until the view.** `Model.error` is an `Option<AppError>` and `Loadable.Failed` holds a
-  `Failure`; `ErrorText` in `ui` turns them into text.
+  `Failure`; `ErrorText` in `ui` turns them into text. `Model.fail` shows the error in the command log and
+  opens an `ErrorPopup`, unless another popup is open, which then keeps what the user entered.
 - **Popups are part of the model.** `model.popup()` says which dialog is open. `JazygitApp` renders the
   dialog that matches it and moves the focus into it, then back to the pane it came from once
   the popup closes.

@@ -16,7 +16,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
- * The standard popup asking to confirm an action: a title, a message, and always the same hint that Enter
+ * The standard popup asking to confirm an action: a title, a message, and a hint, by default that Enter
  * confirms and Escape cancels. Whether it is open lives in the {@link Model}, as a popup of type {@code P}.
  *
  * @param <P> the popup that makes this dialog show
@@ -38,9 +38,18 @@ public final class ConfirmDialog<P extends Popup> implements PopupView {
      * @param message   the question, from the popup; it is wrapped at the dialog's width
      * @param onConfirm the message for Enter
      * @param onCancel  the message for Escape
+     * @param hintKey   the message key of the hint about the keys
      */
     public record Spec<P>(String id, Class<P> popupType, Function<P, String> title, Function<P, String> message,
-                          Supplier<Msg> onConfirm, Supplier<Msg> onCancel) {
+                          Supplier<Msg> onConfirm, Supplier<Msg> onCancel, String hintKey) {
+
+        /**
+         * A dialog with the hint that Enter confirms and Escape cancels.
+         */
+        public Spec(String id, Class<P> popupType, Function<P, String> title, Function<P, String> message,
+                    Supplier<Msg> onConfirm, Supplier<Msg> onCancel) {
+            this(id, popupType, title, message, onConfirm, onCancel, "dialog.hint.confirmCancel");
+        }
     }
 
     private final Spec<P> spec;
@@ -71,7 +80,7 @@ public final class ConfirmDialog<P extends Popup> implements PopupView {
         return model.popup(spec.popupType()).map(popup -> {
             String text = spec.message().apply(popup);
             int messageHeight = lines(text, INNER_WIDTH);
-            return DialogFrame.withHint(spec.title().apply(popup), WIDTH, "dialog.hint.confirmCancel", List.of(
+            return DialogFrame.withHint(spec.title().apply(popup), WIDTH, spec.hintKey(), List.of(
                             widget(Paragraph.builder().text(text).overflow(Overflow.WRAP_WORD).build()).length(messageHeight)))
                     .id(spec.id())
                     .focusable()

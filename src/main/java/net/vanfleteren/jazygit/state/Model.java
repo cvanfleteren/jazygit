@@ -103,10 +103,12 @@ public record Model(String repositoryName,
     }
 
     /**
-     * This model showing {@code error}.
+     * This model showing {@code error}, in the command log and in an error popup. A popup that is open stays
+     * open instead, so what the user entered in it is not lost; the command log still shows the error.
      */
     public Model fail(AppError error) {
-        return withError(Option.of(error));
+        Model failed = withError(Option.of(error));
+        return popup.isDefined() ? failed : failed.openPopup(new ErrorPopup(error));
     }
 
     /**

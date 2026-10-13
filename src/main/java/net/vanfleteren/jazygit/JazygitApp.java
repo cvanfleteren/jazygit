@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.feature.commit.CommitDialogs;
 import net.vanfleteren.jazygit.feature.discard.DiscardDialog;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
 import net.vanfleteren.jazygit.feature.help.HelpDialog;
+import net.vanfleteren.jazygit.feature.error.ErrorDialog;
 import net.vanfleteren.jazygit.feature.help.HelpPopup;
 import net.vanfleteren.jazygit.feature.stash.StashDialogs;
 import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
@@ -97,7 +98,9 @@ public class JazygitApp extends ToolkitApp {
             new PopupSlot(new CommitDialog(dispatch), () -> FilesPanel.ID),
             new PopupSlot(new ConfirmDialog<>(CommitDialogs.SQUASH, dispatch), () -> CommitsPanel.ID),
             new PopupSlot(CommitDialog.reword(dispatch), () -> CommitsPanel.ID),
-            new PopupSlot(new HelpDialog(dispatch), () -> this.helpOrigin));
+            new PopupSlot(new HelpDialog(dispatch), () -> this.helpOrigin),
+            // Errors come up wherever the user is.
+            new PopupSlot(new ConfirmDialog<>(ErrorDialog.SPEC, dispatch), () -> this.lastFocus));
     // The panel the help popup was opened from, which gets the focus back.
     private String helpOrigin = FilesPanel.ID;
     // Where the focus was when no popup had it, which the theme popup, opened from anywhere, gives it back to.

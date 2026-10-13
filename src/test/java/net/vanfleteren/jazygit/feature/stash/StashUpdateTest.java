@@ -38,7 +38,7 @@ class StashUpdateTest {
     void requestingWithoutChangesReportsThat() {
         Model model = Update.update(loaded(), new StashMsg.Requested()).model();
 
-        assertEquals(Option.none(), model.popup());
+        assertEquals(Option.none(), model.popup(StashPopup.class));
         assertEquals(Option.of("No changes to stash"), errorText(model));
     }
 
