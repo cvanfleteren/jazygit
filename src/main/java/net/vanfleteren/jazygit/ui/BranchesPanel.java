@@ -2,9 +2,9 @@ package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.widgets.spinner.SpinnerStyle;
-import io.vavr.collection.HashSet;
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
-import io.vavr.collection.Set;
+import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Operation;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -33,7 +34,7 @@ public class BranchesPanel {
     private final LoadableList<List<Branch>> list;
     private final Keymap keymap = Keymap.standard();
     // The branches an operation runs on, shown with a spinner; the rows are built from it on every render.
-    private Set<String> busy = HashSet.empty();
+    private Map<String, Operation> busy = HashMap.empty();
 
     /**
      * The time since the last commit as a number and one unit: s, m, h or d.
@@ -47,17 +48,39 @@ public class BranchesPanel {
     }
 
     /**
-     * The frame of the push spinner to show at {@code now}.
+     * The frame of the spinner of a busy branch to show at {@code now}.
      */
     static String spinnerFrame(Instant now) {
         return SPINNER.frame((int) (now.toEpochMilli() / SPINNER_FRAME_MILLIS % SPINNER.frameCount()));
     }
 
+    /**
+     * What a busy branch shows on the left of its spinner: what is being done to it, for the operations that
+     * talk to its remote.
+     */
+    static Option<String> busyLabel(Operation operation) {
+        return switch (operation) {
+            case PUSH -> Option.of(Messages.get("branches.busy.push"));
+            case PULL, FAST_FORWARD -> Option.of(Messages.get("branches.busy.pull"));
+            default -> Option.none();
+        };
+    }
+
+    /**
+     * @param spinner the label and the spinner frame of a busy branch, as one text
+     */
     private static LoadableList.Row row(Branch b, Duration since, Option<String> spinner) {
         return new LoadableList.Row(
                 List.of(LoadableList.Seg.of("%4s ".formatted(age(since)) + (b.current() ? "* " : "  ") + b.name()))
                         .appendAll(sync(b))
-                        .appendAll(spinner.map(frame -> LoadableList.Seg.styled(" " + frame, Theme.Classes.SPINNER))));
+                        .appendAll(spinner.map(text -> LoadableList.Seg.styled(" " + text, Theme.Classes.SPINNER))));
+    }
+
+    /**
+     * The spinner of a branch that {@code operation} runs on, preceded by its label if it has one.
+     */
+    static String spinner(Operation operation, Instant now) {
+        return busyLabel(operation).map(label -> label + " ").getOrElse("") + spinnerFrame(now);
     }
 
     /**
@@ -106,7 +129,7 @@ public class BranchesPanel {
         list = new LoadableList<>(Messages.get("panel.branches.title"), ID,
                 branches -> branches
                         .map(b -> row(b, Duration.between(b.tipTime(), clock.instant()),
-                                busy.contains(b.name()) ? Option.of(spinnerFrame(clock.instant())) : Option.none())),
+                                busy.get(b.name()).map(operation -> spinner(operation, clock.instant())))),
                 BranchesPanel::reselect);
         // The highlight alone marks the selection; a symbol would indent the rows.
         list.highlightSymbol("");

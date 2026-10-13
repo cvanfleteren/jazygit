@@ -1,7 +1,9 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import lombok.With;
@@ -30,7 +32,8 @@ import net.vanfleteren.jazygit.git.model.Stash;
  * @param refreshing     periodic loads that have been started and not finished yet, so a tick does
  *                       not queue them again
  * @param error          why the last operation failed, until the next one is started
- * @param busy           the branches a git operation runs on right now, a push or a delete: they show a
+ * @param busy           the branches a git operation runs on right now, like a push or a delete, and that
+ *                       operation: they show a
  *                       spinner, and take no other operation until it is done
  * @param fetching       the background fetch from the remotes that is running, if any; the next one waits
  * @param commandLog     the mutating git commands that were executed, oldest first
@@ -48,7 +51,7 @@ public record Model(String repositoryName,
                     Option<Preview<List<FileEntry>, Diffs>> fileDiff,
                     Set<Cmd.Load> refreshing,
                     Option<AppError> error,
-                    Set<String> busy,
+                    Map<String, Operation> busy,
                     Option<Fetching> fetching,
                     List<LogEntry> commandLog,
                     Option<Popup> popup,
@@ -60,7 +63,7 @@ public record Model(String repositoryName,
     public static Model initial(String repositoryName) {
         return new Model(repositoryName, Loadable.loading(), Loadable.loading(), Loadable.loading(),
                 Loadable.loading(), Option.none(),
-                Option.none(), Option.none(), HashSet.empty(), Option.none(), HashSet.empty(), Option.none(), List.empty(), Option.none(),
+                Option.none(), Option.none(), HashSet.empty(), Option.none(), HashMap.empty(), Option.none(), List.empty(), Option.none(),
                 DEFAULT_THEME);
     }
 
@@ -107,10 +110,10 @@ public record Model(String repositoryName,
     }
 
     /**
-     * This model with an operation running on {@code branch}.
+     * This model with {@code operation} running on {@code branch}.
      */
-    public Model withBusyBranch(String branch) {
-        return withBusy(busy.add(branch));
+    public Model withBusyBranch(String branch, Operation operation) {
+        return withBusy(busy.put(branch, operation));
     }
 
     /**

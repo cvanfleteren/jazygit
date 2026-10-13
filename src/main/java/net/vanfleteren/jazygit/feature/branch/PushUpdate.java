@@ -34,7 +34,7 @@ public final class PushUpdate {
         // whose upstream is gone) is pushed where the user says. Pushing a diverged branch needs a force push,
         // which the user must confirm.
         return model.branch(branch)
-                .filter(known -> !model.busy().contains(branch))
+                .filter(known -> !model.busy().containsKey(branch))
                 .map(known -> known.upstream().isEmpty()
                         ? Next.of(model.openPopup(new SetUpstreamPopup(branch)).clearError())
                         : known.behind() > 0

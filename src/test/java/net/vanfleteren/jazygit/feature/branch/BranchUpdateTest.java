@@ -110,13 +110,13 @@ class BranchUpdateTest {
         assertEquals(List.of(), asked.cmds());
         assertEquals(Option.of(new SetUpstreamPopup("feature")), asked.model().popup());
         assertEquals(Option.none(), asked.model().error());
-        assertEquals(io.vavr.collection.HashSet.empty(), asked.model().busy());
+        assertEquals(io.vavr.collection.HashSet.empty(), asked.model().busy().keySet());
 
         Next confirmed = Update.update(asked.model(), new PushMsg.UpstreamConfirmed("  upstream   shared/feature "));
         assertEquals(List.of(new BranchCmd.PushSettingUpstream("feature", new RemoteBranch("upstream", "shared/feature"))),
                 confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());
-        assertEquals(io.vavr.collection.HashSet.of("feature"), confirmed.model().busy());
+        assertEquals(io.vavr.collection.HashSet.of("feature"), confirmed.model().busy().keySet());
 
         Next cancelled = Update.update(asked.model(), new PushMsg.UpstreamCancelled());
         assertEquals(List.of(), cancelled.cmds());
@@ -148,7 +148,7 @@ class BranchUpdateTest {
 
         assertEquals(List.of(new BranchCmd.Push("feature", PushMode.FAST_FORWARD)), next.cmds());
         assertEquals(Option.none(), next.model().error());
-        assertEquals(io.vavr.collection.HashSet.of("feature"), next.model().busy());
+        assertEquals(io.vavr.collection.HashSet.of("feature"), next.model().busy().keySet());
         // Not pushed again while it is being pushed.
         assertEquals(List.of(), Update.update(next.model(), new PushMsg.Requested("feature")).cmds());
         assertEquals(List.of(), Update.update(loaded(), new PushMsg.Requested("gone")).cmds());
@@ -164,12 +164,12 @@ class BranchUpdateTest {
 
         assertEquals(List.of(), asked.cmds());
         assertEquals(Option.of(new ForcePushPopup("feature")), asked.model().popup());
-        assertEquals(io.vavr.collection.HashSet.empty(), asked.model().busy());
+        assertEquals(io.vavr.collection.HashSet.empty(), asked.model().busy().keySet());
 
         Next confirmed = Update.update(asked.model(), new PushMsg.ForceConfirmed());
         assertEquals(List.of(new BranchCmd.Push("feature", PushMode.FORCE_WITH_LEASE)), confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());
-        assertEquals(io.vavr.collection.HashSet.of("feature"), confirmed.model().busy());
+        assertEquals(io.vavr.collection.HashSet.of("feature"), confirmed.model().busy().keySet());
 
         Next cancelled = Update.update(asked.model(), new PushMsg.ForceCancelled());
         assertEquals(List.of(), cancelled.cmds());
@@ -187,8 +187,8 @@ class BranchUpdateTest {
         assertEquals(Option.of("Pushing branch feature failed: boom"), errorText(failed));
 
         Model pushing = Update.update(loaded(), new PushMsg.Requested("feature")).model();
-        assertEquals(io.vavr.collection.HashSet.empty(), Update.update(pushing, failed(new BranchCmd.Push("feature", PushMode.FAST_FORWARD), "boom")).model().busy());
-        assertEquals(io.vavr.collection.HashSet.empty(), Update.update(pushing, succeeded(new BranchCmd.Push("feature", PushMode.FAST_FORWARD))).model().busy());
+        assertEquals(io.vavr.collection.HashSet.empty(), Update.update(pushing, failed(new BranchCmd.Push("feature", PushMode.FAST_FORWARD), "boom")).model().busy().keySet());
+        assertEquals(io.vavr.collection.HashSet.empty(), Update.update(pushing, succeeded(new BranchCmd.Push("feature", PushMode.FAST_FORWARD))).model().busy().keySet());
 
         Next done = Update.update(withCheckoutError(loaded(), "foo", "boom"), succeeded(new BranchCmd.Push("feature", PushMode.FAST_FORWARD)));
         assertEquals(Option.none(), done.model().error());
@@ -214,7 +214,7 @@ class BranchUpdateTest {
 
         assertEquals(List.of(new BranchCmd.Pull("main")), next.cmds());
         assertEquals(Option.none(), next.model().error());
-        assertEquals(io.vavr.collection.HashSet.of("main"), next.model().busy());
+        assertEquals(io.vavr.collection.HashMap.of("main", net.vanfleteren.jazygit.state.Operation.PULL), next.model().busy());
         // Not pulled again while it is being pulled.
         assertEquals(List.of(), Update.update(next.model(), new PullMsg.Requested("main")).cmds());
     }
@@ -224,7 +224,7 @@ class BranchUpdateTest {
         Next next = Update.update(pullable(0, 0), new PullMsg.Requested("feature"));
 
         assertEquals(List.of(new BranchCmd.FastForward("feature")), next.cmds());
-        assertEquals(io.vavr.collection.HashSet.of("feature"), next.model().busy());
+        assertEquals(io.vavr.collection.HashSet.of("feature"), next.model().busy().keySet());
     }
 
     @Test
@@ -347,7 +347,7 @@ class BranchUpdateTest {
 
         assertEquals(List.of(new BranchCmd.DeleteBranch("feature", DeleteScope.REMOTE)), next.cmds());
         assertEquals(Option.none(), next.model().popup());
-        assertEquals(io.vavr.collection.HashSet.of("feature"), next.model().busy());
+        assertEquals(io.vavr.collection.HashSet.of("feature"), next.model().busy().keySet());
     }
 
     @Test
@@ -360,9 +360,9 @@ class BranchUpdateTest {
         assertEquals(Option.none(), Update.update(deleting, new DeleteBranchMsg.Requested("feature")).model().popup());
 
         assertEquals(io.vavr.collection.HashSet.empty(),
-                Update.update(deleting, succeeded(new BranchCmd.DeleteBranch("feature", DeleteScope.LOCAL))).model().busy());
+                Update.update(deleting, succeeded(new BranchCmd.DeleteBranch("feature", DeleteScope.LOCAL))).model().busy().keySet());
         assertEquals(io.vavr.collection.HashSet.empty(),
-                Update.update(deleting, failed(new BranchCmd.DeleteBranch("feature", DeleteScope.LOCAL), "boom")).model().busy());
+                Update.update(deleting, failed(new BranchCmd.DeleteBranch("feature", DeleteScope.LOCAL), "boom")).model().busy().keySet());
     }
 
     @Test

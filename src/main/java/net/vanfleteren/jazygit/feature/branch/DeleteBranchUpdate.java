@@ -31,7 +31,7 @@ public final class DeleteBranchUpdate {
      * Only a known branch that is not checked out can be deleted, and not while it is being pushed or deleted.
      */
     private static Next requested(Model model, String branch) {
-        boolean deletable = Branches.isOtherBranch(model, branch) && !model.busy().contains(branch);
+        boolean deletable = Branches.isOtherBranch(model, branch) && !model.busy().containsKey(branch);
         return deletable ? Next.of(model.openPopup(new DeleteBranchPopup(branch))) : Next.of(model);
     }
 

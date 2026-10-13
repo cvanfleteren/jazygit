@@ -52,7 +52,7 @@ public final class Update {
      * Starts {@code cmd}: its branch, if it has one, is busy until it is done.
      */
     public static Next start(Model model, OperationCmd cmd) {
-        return Next.of(cmd.busyBranch().map(model::withBusyBranch).getOrElse(model), cmd);
+        return Next.of(cmd.busyBranch().map(branch -> model.withBusyBranch(branch, cmd.operation())).getOrElse(model), cmd);
     }
 
     /**

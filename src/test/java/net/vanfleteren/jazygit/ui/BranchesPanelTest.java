@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import org.junit.jupiter.api.Test;
@@ -66,15 +67,32 @@ class BranchesPanelTest {
     }
 
     @Test
-    void aBranchBeingPushedShowsTheSpinnerNextToItsName() throws Exception {
-        Model pushing = before.withBusy(io.vavr.collection.HashSet.of("feature"));
+    void aBranchBeingPushedOrPulledShowsWhatIsDoneLeftOfTheSpinner() throws Exception {
+        Model busy = before.withBusyBranch("feature", Operation.PUSH).withBusyBranch("main", Operation.PULL);
         String frame = BranchesPanel.spinnerFrame(java.time.Instant.EPOCH);
         BranchesPanel panel = new BranchesPanel(msg -> { }, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(pushing, BranchesPanel.ID))) {
-            String screen = RenderedText.of(testRunner, () -> panel.render(pushing, BranchesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(busy, BranchesPanel.ID))) {
+            String screen = RenderedText.of(testRunner, () -> panel.render(busy, BranchesPanel.ID));
+            assertEquals(true, screen.contains("feature Pushing " + frame), screen);
+            assertEquals(true, screen.contains("main Pulling " + frame), screen);
+        }
+    }
+
+    @Test
+    void aBranchBeingDeletedShowsOnlyTheSpinner() throws Exception {
+        Model deleting = before.withBusyBranch("feature", Operation.DELETE_BRANCH);
+        String frame = BranchesPanel.spinnerFrame(java.time.Instant.EPOCH);
+        BranchesPanel panel = new BranchesPanel(msg -> { }, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(deleting, BranchesPanel.ID))) {
+            String screen = RenderedText.of(testRunner, () -> panel.render(deleting, BranchesPanel.ID));
             assertEquals(true, screen.contains("feature " + frame), screen);
             assertEquals(false, screen.contains("main " + frame), screen);
         }
+    }
+
+    @Test
+    void aFastForwardIsShownAsAPull() {
+        assertEquals(BranchesPanel.busyLabel(Operation.PULL), BranchesPanel.busyLabel(Operation.FAST_FORWARD));
     }
 
     @Test

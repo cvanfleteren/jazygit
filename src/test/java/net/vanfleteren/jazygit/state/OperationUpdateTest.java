@@ -29,12 +29,12 @@ class OperationUpdateTest {
 
     @Test
     void aSuccessLogsItsCommandsReleasesItsBranchClearsTheErrorAndReadsTheRepositoryAgain() {
-        Model pushing = TestModels.withCheckoutError(loaded(), "foo", "boom").withBusyBranch("feature");
+        Model pushing = TestModels.withCheckoutError(loaded(), "foo", "boom").withBusyBranch("feature", Operation.PUSH);
 
         Next next = Update.update(pushing, succeeded(PUSH, "git push origin feature"));
 
         assertEquals(List.of(new LogEntry(Operation.PUSH, List.of("git push origin feature"))), next.model().commandLog());
-        assertEquals(HashSet.empty(), next.model().busy());
+        assertEquals(HashSet.empty(), next.model().busy().keySet());
         assertEquals(Option.none(), next.model().error());
         assertEquals(List.of(new LoadStatus(), new LoadBranches(), new LoadStashes()), next.cmds());
     }
@@ -44,10 +44,10 @@ class OperationUpdateTest {
         Failure failure = new Failure.Git(new GitError.CommandFailed("rejected", 1), List.of("git push origin feature"),
                 Option.none());
 
-        Next next = Update.update(loaded().withBusyBranch("feature"), new OperationMsg.Failed(PUSH, failure));
+        Next next = Update.update(loaded().withBusyBranch("feature", Operation.PUSH), new OperationMsg.Failed(PUSH, failure));
 
         assertEquals(List.of(new LogEntry(Operation.PUSH, List.of("git push origin feature"))), next.model().commandLog());
-        assertEquals(HashSet.empty(), next.model().busy());
+        assertEquals(HashSet.empty(), next.model().busy().keySet());
         assertEquals(Option.of(new AppError.OperationFailed(Operation.PUSH, Option.of("feature"), failure)),
                 next.model().error());
         assertEquals(Option.of("Pushing branch feature failed: rejected"), errorText(next.model()));
