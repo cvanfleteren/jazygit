@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.git.GitError.UnknownBranch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.Tag;
 
 import java.nio.file.Path;
 
@@ -85,12 +86,12 @@ public final class CliLog {
     }
 
     /**
-     * The tag names among the ref names of a commit, as {@code %D} prints them: {@code HEAD -> main, tag: v1}.
+     * The tags among the ref names of a commit, as {@code %D} prints them: {@code HEAD -> main, tag: v1}.
      */
-    static List<String> tags(String refNames) {
+    static List<Tag> tags(String refNames) {
         return List.of(refNames.split(",")).map(String::strip)
                 .filter(name -> name.startsWith(TAG_PREFIX))
-                .map(name -> name.substring(TAG_PREFIX.length()));
+                .map(name -> new Tag(name.substring(TAG_PREFIX.length())));
     }
 
     /**

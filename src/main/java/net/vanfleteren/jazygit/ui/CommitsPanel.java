@@ -83,7 +83,7 @@ public class CommitsPanel {
         String graph = commit.isMerge() ? rails + "◎─╮ " : joins ? rails + "○─╯ " : rails + "○ ";
         LoadableList.Seg prefix = LoadableList.Seg.of(commit.shortSha() + " " + initials(commit.authorName()) + " " + graph);
         List<LoadableList.Seg> tags = commit.tags()
-                .map(tag -> LoadableList.Seg.styled("[" + tag + "] ", Theme.Classes.TAG));
+                .map(tag -> LoadableList.Seg.styled("[" + tag.name() + "] ", Theme.Classes.TAG));
         return new LoadableList.Row(tags.prepend(prefix).append(LoadableList.Seg.of(commit.message())));
     }
 

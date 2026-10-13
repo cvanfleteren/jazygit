@@ -7,6 +7,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.Tag;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
@@ -41,7 +42,7 @@ class CommitsPanelTest {
     @Test
     void tagsComeBeforeTheMessageInTheirOwnColour() {
         Commit tagged = new Commit(new Sha("abcdef0"), "Ada", "ada@example.com", Instant.EPOCH, "Release", "",
-                List.empty(), List.of("v1", "v1.1"));
+                List.empty(), List.of(new Tag("v1"), new Tag("v1.1")));
 
         LoadableList.Row row = CommitsPanel.row(new CommitGraph.Node(tagged, 0, false), false);
 

@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.Tag;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import org.junit.jupiter.api.Test;
 
@@ -66,7 +67,7 @@ class CliParseTest {
 
         assertEquals(List.of(
                         new Commit(new Sha(A), "Ada", "ada@example.com", Instant.ofEpochSecond(60), "Subject",
-                                "Body\nmore", List.of(new Sha(B)), List.of("v1", "v1.1")),
+                                "Body\nmore", List.of(new Sha(B)), List.of(new Tag("v1"), new Tag("v1.1"))),
                         new Commit(new Sha(B), "Bob", "bob@example.com", Instant.EPOCH, "Root", "", List.empty())),
                 CliLog.parse(raw).get());
     }
