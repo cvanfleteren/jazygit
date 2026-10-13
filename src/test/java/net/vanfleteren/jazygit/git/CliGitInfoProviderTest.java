@@ -36,6 +36,9 @@ class CliGitInfoProviderTest {
     void setUp() throws Exception {
         assumeTrue(gitAvailable(), "git is not installed");
         git("init", "-q", "-b", "main");
+        git("config", "user.name", "Test");
+        git("config", "user.email", "test@example.com");
+        git("config", "commit.gpgsign", "false");
         Files.writeString(repo.resolve("README.md"), "hello\n");
         git("add", "README.md");
         git("commit", "-q", "-m", "Initial commit");
