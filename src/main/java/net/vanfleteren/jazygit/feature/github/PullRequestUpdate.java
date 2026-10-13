@@ -2,13 +2,17 @@ package net.vanfleteren.jazygit.feature.github;
 
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.CreatePullRequest;
+import net.vanfleteren.jazygit.feature.github.PullRequestCmd.LoadPullRequestDetails;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.LoadPullRequests;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.OpenPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.AppError;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.OperationMsg;
 import net.vanfleteren.jazygit.state.OperationUpdate;
@@ -39,6 +43,11 @@ public final class PullRequestUpdate {
                 // A read that is still running may have missed it, so this one is started anyway.
                 yield new Next(reading(shown), done.cmds().append(new LoadPullRequests()));
             }
+            case PullRequestMsg.DetailsLoaded(int number, var details) -> Next.of(shown(model, number, Either.right(details)));
+            case PullRequestMsg.DetailsFailed(int number, var failure) -> Next.of(shown(model, number, Either.left(failure)));
+            case PullRequestMsg.OpenConfirmed() -> Update.confirm(model, PullRequestPopup.class,
+                    popup -> Option.of(new OpenPullRequest(popup.branch(), popup.pullRequest().number())));
+            case PullRequestMsg.InfoClosed() -> Next.of(model.withoutPopup(PullRequestPopup.class));
             case PullRequestMsg.Refresh() -> load(Next.of(model));
             case PullRequestMsg.Loaded(List<PullRequest> pullRequests) -> Next.of(read(model)
                     .withPullRequests(byHeadBranch(pullRequests)).withPullRequestsFailure(Option.none()));
@@ -46,6 +55,17 @@ public final class PullRequestUpdate {
             // That is no reason to bother the user until they ask for a pull request, see requested().
             case PullRequestMsg.LoadFailed(var failure) -> Next.of(read(model).withPullRequestsFailure(Option.of(failure)));
         };
+    }
+
+    /**
+     * {@code model} showing what was read about pull request {@code number}; unchanged when it is no longer
+     * shown, as the user closed it, or opened another one, while it was being read.
+     */
+    private static Model shown(Model model, int number, Either<Failure, PullRequestDetails> read) {
+        return model.popup(PullRequestPopup.class)
+                .filter(popup -> popup.pullRequest().number() == number)
+                .map(popup -> model.openPopup(popup.with(read)))
+                .getOrElse(model);
     }
 
     /**
@@ -77,14 +97,15 @@ public final class PullRequestUpdate {
     }
 
     /**
-     * Opens the pull request of the branch. A branch without one gets one, once it is pushed: the user is asked
+     * Shows the pull request of the branch, reading what there is to know about it. A branch without one gets one, once it is pushed: the user is asked
      * which branch it merges into.
      */
     private static Next requested(Model model, String branch) {
         return model.branch(branch)
                 .filter(known -> !model.busy().containsKey(branch))
                 .map(known -> model.pullRequest(known)
-                        .map(pr -> Update.start(model.clearError(), new OpenPullRequest(branch, pr.number())))
+                        .map(pr -> Next.of(model.openPopup(PullRequestPopup.loading(branch, pr)).clearError(),
+                                new LoadPullRequestDetails(pr.number())))
                         .getOrElse(() -> model.pullRequestsFailure().isDefined()
                                 // Without the pull requests it is unknown whether there is one to open.
                                 ? Next.of(model.fail(new AppError.PullRequestsUnavailable(model.pullRequestsFailure().get())))

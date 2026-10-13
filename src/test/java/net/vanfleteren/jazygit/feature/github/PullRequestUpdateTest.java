@@ -1,14 +1,17 @@
 package net.vanfleteren.jazygit.feature.github;
 
 import io.vavr.collection.List;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.CreatePullRequest;
+import net.vanfleteren.jazygit.feature.github.PullRequestCmd.LoadPullRequestDetails;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.LoadPullRequests;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.OpenPullRequest;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -42,6 +45,15 @@ class PullRequestUpdateTest {
     private static final Branch AHEAD = new Branch("ahead", false, new Sha("5"), Instant.EPOCH, true, false,
             Option.of(new Upstream("origin/ahead", 2, 0)));
     private static final PullRequest FEATURE_PR = new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED);
+
+    private static Model withPr() {
+        return Update.update(model(), new PullRequestMsg.Loaded(List.of(FEATURE_PR))).model();
+    }
+
+    private static Env env() {
+        return new Env(new StubGitProvider() {
+        }, StubGitHub.empty());
+    }
 
     private static Model model() {
         // The default branch is listed last, to see it offered first.
@@ -84,10 +96,52 @@ class PullRequestUpdateTest {
     }
 
     @Test
-    void aBranchWithAPullRequestOpensIt() {
-        Model withPr = Update.update(model(), new PullRequestMsg.Loaded(List.of(FEATURE_PR))).model();
+    void aBranchWithAPullRequestShowsItWhileItsDetailsAreRead() {
+        Next shown = Update.update(withPr(), new PullRequestMsg.Requested("feature"));
 
-        Next opened = Update.update(withPr, new PullRequestMsg.Requested("feature"));
+        assertEquals(Option.of(PullRequestPopup.loading("feature", FEATURE_PR)), shown.model().popup());
+        assertEquals(List.of(new LoadPullRequestDetails(42)), shown.cmds());
+    }
+
+    @Test
+    void theDetailsReadShowInThePopup() {
+        Model shown = Update.update(withPr(), new PullRequestMsg.Requested("feature")).model();
+        PullRequestDetails details = StubGitHub.empty().pullRequestDetails(42).get();
+
+        Model loaded = Update.update(shown, new LoadPullRequestDetails(42).run(env())).model();
+
+        assertEquals(Option.of(PullRequestPopup.loading("feature", FEATURE_PR).with(Either.right(details))),
+                loaded.popup());
+    }
+
+    @Test
+    void failingToReadTheDetailsShowsWhyInThePopup() {
+        Model shown = Update.update(withPr(), new PullRequestMsg.Requested("feature")).model();
+        var failure = refused("gh: not logged in");
+
+        Model failed = Update.update(shown, new PullRequestMsg.DetailsFailed(42, failure)).model();
+
+        assertEquals(Option.of(PullRequestPopup.loading("feature", FEATURE_PR).with(Either.left(failure))),
+                failed.popup());
+        assertEquals(Option.none(), failed.error());
+    }
+
+    @Test
+    void detailsReadAfterThePopupClosedOrForAnotherPullRequestAreDropped() {
+        Model shown = Update.update(withPr(), new PullRequestMsg.Requested("feature")).model();
+        PullRequestDetails details = StubGitHub.empty().pullRequestDetails(7).get();
+
+        assertEquals(shown, Update.update(shown, new PullRequestMsg.DetailsLoaded(7, details)).model());
+        Model closed = Update.update(shown, new PullRequestMsg.InfoClosed()).model();
+        assertEquals(Option.none(), closed.popup());
+        assertEquals(closed, Update.update(closed, new PullRequestMsg.DetailsLoaded(42, details)).model());
+    }
+
+    @Test
+    void confirmingThePopupOpensThePullRequestInTheBrowser() {
+        Model shown = Update.update(withPr(), new PullRequestMsg.Requested("feature")).model();
+
+        Next opened = Update.update(shown, new PullRequestMsg.OpenConfirmed());
 
         assertEquals(List.of(new OpenPullRequest("feature", 42)), opened.cmds());
         assertEquals(Option.none(), opened.model().popup());

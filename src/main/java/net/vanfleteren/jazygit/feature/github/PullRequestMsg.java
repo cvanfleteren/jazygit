@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.github;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
@@ -17,9 +18,27 @@ public sealed interface PullRequestMsg extends Msg {
     }
 
     /**
-     * The user asked for the pull request of a branch: to open it, or to create it when there is none.
+     * The user asked for the pull request of a branch: to show it, or to create it when there is none.
      */
     record Requested(String branch) implements PullRequestMsg {
+    }
+
+    /**
+     * The details of pull request {@code number} were read.
+     */
+    record DetailsLoaded(int number, PullRequestDetails details) implements PullRequestMsg {
+    }
+
+    record DetailsFailed(int number, Failure failure) implements PullRequestMsg {
+    }
+
+    /**
+     * The user asked to open the pull request that is shown in the browser.
+     */
+    record OpenConfirmed() implements PullRequestMsg {
+    }
+
+    record InfoClosed() implements PullRequestMsg {
     }
 
     /**

@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -15,6 +16,11 @@ public interface GitHub {
      * The open pull requests of the repository, from branches of the repository itself (not from forks).
      */
     Either<GhError, List<PullRequest>> pullRequests();
+
+    /**
+     * What there is to know about pull request {@code number}.
+     */
+    Either<GhError, PullRequestDetails> pullRequestDetails(int number);
 
     /**
      * Creates a pull request from the remote branch {@code head} into {@code base}; its title and description

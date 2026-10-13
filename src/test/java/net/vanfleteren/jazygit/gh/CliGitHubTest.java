@@ -6,7 +6,15 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Mergeable;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Reviewer;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewerState;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import org.junit.jupiter.api.Test;
+
+import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -58,5 +66,46 @@ class CliGitHubTest {
         assertEquals(Review.APPROVED, CliGitHub.review("APPROVED"));
         assertEquals(Review.CHANGES_REQUESTED, CliGitHub.review("CHANGES_REQUESTED"));
         assertEquals(Review.NONE, CliGitHub.review(""));
+    }
+
+    @Test
+    void parsesTheDetailsOfAPullRequest() {
+        String raw = "pr\t42\tAdd\\trename\tcvf\tOPEN\ttrue\tsupport_rename\tmain\t2026-10-10T08:00:00Z\t120\t34\t7"
+                + "\tMERGEABLE\tCHANGES_REQUESTED\t2\n"
+                + "label\tui\n"
+                + "review\tbob\tCHANGES_REQUESTED\n"
+                + "review\tcarol\tAPPROVED\n"
+                + "review\tdave\tDISMISSED\n"
+                + "requested\tcarol\n"
+                + "requested\tcore-team\n"
+                + "check\tbuild\tPENDING\n"
+                + "check\tci/lint\tSUCCESS\n";
+
+        assertEquals(Either.right(new PullRequestDetails(42, "Add\trename", "cvf", State.OPEN, true, "support_rename",
+                        "main", Instant.parse("2026-10-10T08:00:00Z"), 120, 34, 7, Mergeable.MERGEABLE,
+                        Review.CHANGES_REQUESTED, 2, List.of("ui"),
+                        List.of(new Reviewer("bob", ReviewerState.CHANGES_REQUESTED),
+                                new Reviewer("carol", ReviewerState.REQUESTED),
+                                new Reviewer("core-team", ReviewerState.REQUESTED)),
+                        List.of(new Check("build", Checks.PENDING), new Check("ci/lint", Checks.PASSING)))),
+                CliGitHub.parseDetails(raw));
+    }
+
+    @Test
+    void aMergedPullRequestWithoutChecksLabelsOrReviewers() {
+        String raw = "pr\t5\tFix\t\tMERGED\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\n";
+
+        assertEquals(Either.right(new PullRequestDetails(5, "Fix", "", State.MERGED, false, "fix", "main",
+                        Instant.parse("2026-01-01T00:00:00Z"), 1, 0, 1, Mergeable.UNKNOWN, Review.NONE, 0,
+                        List.empty(), List.empty(), List.empty())),
+                CliGitHub.parseDetails(raw));
+    }
+
+    @Test
+    void detailsThatCannotBeReadAreUnexpectedOutput() {
+        assertTrue(CliGitHub.parseDetails("").isLeft());
+        assertTrue(CliGitHub.parseDetails("label\tui\n").isLeft());
+        assertTrue(CliGitHub.parseDetails("pr\tx\n").isLeft());
+        assertTrue(CliGitHub.parseDetails("something\telse\n").isLeft());
     }
 }

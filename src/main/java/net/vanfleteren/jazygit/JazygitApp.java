@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.feature.commit.CommitDialog;
 import net.vanfleteren.jazygit.feature.commit.CommitDialogs;
 import net.vanfleteren.jazygit.feature.discard.DiscardDialog;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
+import net.vanfleteren.jazygit.feature.github.PullRequestDialog;
 import net.vanfleteren.jazygit.feature.github.PullRequestDialogs;
 import net.vanfleteren.jazygit.feature.github.PullRequestMsg;
 import net.vanfleteren.jazygit.feature.help.HelpDialog;
@@ -96,6 +97,7 @@ public class JazygitApp extends ToolkitApp {
             new PopupSlot(new TextInputDialog<>(BranchDialogs.SET_UPSTREAM, dispatch), () -> BranchesPanel.ID),
             new PopupSlot(new ConfirmDialog<>(BranchDialogs.STASH_CHECKOUT, dispatch), () -> BranchesPanel.ID),
             new PopupSlot(new PickDialog<>(PullRequestDialogs.BASE, dispatch), () -> BranchesPanel.ID),
+            new PopupSlot(new PullRequestDialog(dispatch), () -> BranchesPanel.ID),
             new PopupSlot(new ConfirmDialog<>(CommitDialogs.AMEND, dispatch), () -> FilesPanel.ID),
             new PopupSlot(new ConfirmDialog<>(StashDialogs.DROP, dispatch), () -> StashPanel.ID),
             new PopupSlot(new TextInputDialog<>(StashDialogs.STASH, dispatch), () -> FilesPanel.ID),

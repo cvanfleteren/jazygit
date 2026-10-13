@@ -72,6 +72,24 @@ public sealed interface PullRequestCmd extends Cmd {
     }
 
     /**
+     * Reads the details of pull request {@code number}, which the user is waiting for.
+     */
+    record LoadPullRequestDetails(int number) implements PullRequestCmd {
+
+        @Override
+        public Msg run(Env env) {
+            return env.gitHub().pullRequestDetails(number).fold(
+                    error -> failed(new Failure.GitHub(error)),
+                    details -> new PullRequestMsg.DetailsLoaded(number, details));
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return new PullRequestMsg.DetailsFailed(number, failure);
+        }
+    }
+
+    /**
      * Reads the open pull requests. It runs in the background, as it talks to GitHub, and nobody waits for it.
      */
     record LoadPullRequests() implements PullRequestCmd {

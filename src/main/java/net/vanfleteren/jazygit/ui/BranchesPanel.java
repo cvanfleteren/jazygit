@@ -44,7 +44,7 @@ public class BranchesPanel {
     /**
      * The time since the last commit as a number and one unit: s, m, h or d.
      */
-    static String age(Duration since) {
+    public static String age(Duration since) {
         long seconds = Math.max(0, since.toSeconds());
         return seconds < 60 ? Messages.get("branches.age.seconds", String.valueOf(seconds))
                 : seconds < 3600 ? Messages.get("branches.age.minutes", String.valueOf(seconds / 60))
@@ -55,7 +55,7 @@ public class BranchesPanel {
     /**
      * The frame of the spinner of a busy branch to show at {@code now}.
      */
-    static String spinnerFrame(Instant now) {
+    public static String spinnerFrame(Instant now) {
         return SPINNER.frame((int) (now.toEpochMilli() / SPINNER_FRAME_MILLIS % SPINNER.frameCount()));
     }
 
@@ -116,27 +116,13 @@ public class BranchesPanel {
         return pullRequest.toList().flatMap(pr -> List.of(
                         Option.of(LoadableList.Seg.styled(" #" + pr.number(),
                                 pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST)),
-                        checks(pr.checks()),
-                        review(pr.review()))
+                        PullRequestSymbols.checks(pr.checks()).map(BranchesPanel::symbol),
+                        PullRequestSymbols.review(pr.review()).map(BranchesPanel::symbol))
                 .flatMap(o -> o));
     }
 
-    private static Option<LoadableList.Seg> checks(PullRequest.Checks checks) {
-        return switch (checks) {
-            case NONE -> Option.none();
-            case PASSING -> Option.of(LoadableList.Seg.styled(" ✓", Theme.Classes.CHECKS_PASSED));
-            case FAILING -> Option.of(LoadableList.Seg.styled(" ✗", Theme.Classes.CHECKS_FAILED));
-            case PENDING -> Option.of(LoadableList.Seg.styled(" ●", Theme.Classes.CHECKS_RUNNING));
-        };
-    }
-
-    private static Option<LoadableList.Seg> review(PullRequest.Review review) {
-        return switch (review) {
-            case NONE -> Option.none();
-            case APPROVED -> Option.of(LoadableList.Seg.styled(" ✔", Theme.Classes.REVIEW_APPROVED));
-            case CHANGES_REQUESTED -> Option.of(LoadableList.Seg.styled(" ✎", Theme.Classes.REVIEW_CHANGES));
-            case REQUIRED -> Option.of(LoadableList.Seg.styled(" ?", Theme.Classes.DIM));
-        };
+    private static LoadableList.Seg symbol(PullRequestSymbols.Symbol symbol) {
+        return LoadableList.Seg.styled(" " + symbol.text(), symbol.cssClass());
     }
 
     /**

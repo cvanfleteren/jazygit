@@ -93,7 +93,7 @@ public final class ConfirmDialog<P extends Popup> implements PopupView {
     /**
      * How many lines {@code text} takes when wrapped at {@code width} on spaces.
      */
-    static int lines(String text, int width) {
+    public static int lines(String text, int width) {
         record Wrapped(int lines, int used) {
         }
         return List.of(text.split(" "))
