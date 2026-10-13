@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.Tag;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import org.junit.jupiter.api.Test;
 
@@ -60,12 +61,13 @@ class CliParseTest {
 
     @Test
     void commitsKeepTheirParentsSubjectAndBody() {
-        String raw = String.join("\u001f", A, B, "Ada", "ada@example.com", "60", "Subject", "Subject\n\nBody\nmore\n")
-                + "\0" + String.join("\u001f", B, "", "Bob", "bob@example.com", "0", "Root", "Root\n");
+        String raw = String.join("\u001f", A, B, "Ada", "ada@example.com", "60", "Subject",
+                "HEAD -> main, tag: v1, tag: v1.1, origin/main", "Subject\n\nBody\nmore\n")
+                + "\0" + String.join("\u001f", B, "", "Bob", "bob@example.com", "0", "Root", "", "Root\n");
 
         assertEquals(List.of(
                         new Commit(new Sha(A), "Ada", "ada@example.com", Instant.ofEpochSecond(60), "Subject",
-                                "Body\nmore", List.of(new Sha(B))),
+                                "Body\nmore", List.of(new Sha(B)), List.of(new Tag("v1"), new Tag("v1.1"))),
                         new Commit(new Sha(B), "Bob", "bob@example.com", Instant.EPOCH, "Root", "", List.empty())),
                 CliLog.parse(raw).get());
     }
@@ -77,7 +79,7 @@ class CliParseTest {
         assertEquals(new GitError.UnexpectedOutput("soon"),
                 CliBranches.parse(ref("refs/heads/main", A, "soon", "*", "", "", "", "")).getLeft());
         assertEquals(new GitError.UnexpectedOutput(" "),
-                CliLog.parse(String.join("\u001f", " ", "", "Ada", "ada@example.com", "60", "S", "S\n")).getLeft());
+                CliLog.parse(String.join("\u001f", " ", "", "Ada", "ada@example.com", "60", "S", "", "S\n")).getLeft());
         assertEquals(new GitError.UnexpectedOutput("stash@{0} without a separator"),
                 CliStash.parse("stash@{0} without a separator\n").getLeft());
         assertEquals(new GitError.UnexpectedOutput("1 M"), CliStatus.parse("# branch.head main\0001 M\0").getLeft());

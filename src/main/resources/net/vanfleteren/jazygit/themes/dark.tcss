@@ -26,4 +26,5 @@ Span.diff-removed { color: red; }
 Span.diff-hunk { color: cyan; }
 Span.current-branch { color: yellow; }
 Span.sha { color: yellow; }
+Span.tag { color: green; }
 Span.bold { text-style: bold; }

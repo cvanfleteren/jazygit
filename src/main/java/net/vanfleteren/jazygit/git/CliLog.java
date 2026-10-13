@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.git.GitError.UnknownBranch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.Tag;
 
 import java.nio.file.Path;
 
@@ -22,8 +23,9 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
 public final class CliLog {
 
     static final int MAX_COMMITS = 300;
-    // sha, parents, author name, author email, author time, subject, raw message
-    private static final List<String> FIELDS = List.of("%H", "%P", "%an", "%ae", "%at", "%s", "%B");
+    // sha, parents, author name, author email, author time, subject, ref names, raw message
+    private static final List<String> FIELDS = List.of("%H", "%P", "%an", "%ae", "%at", "%s", "%D", "%B");
+    private static final String TAG_PREFIX = "tag: ";
     private static final String FORMAT = FIELDS.mkString(GitOutput.PRETTY_FIELD_SEPARATOR);
 
     private CliLog() {
@@ -79,8 +81,17 @@ public final class CliLog {
     private static Either<UnexpectedOutput, Commit> commit(String record) {
         return GitOutput.fields(record, FIELDS.size()).flatMap(f -> GitOutput.sha(f.get(0)).flatMap(sha ->
                 GitOutput.epochSeconds(f.get(4)).map(time -> new Commit(sha, f.get(2), f.get(3), time, f.get(5),
-                        extendedMessage(f.get(6)),
-                        List.of(f.get(1).split(" ")).flatMap(Sha::parse)))));
+                        extendedMessage(f.get(7)),
+                        List.of(f.get(1).split(" ")).flatMap(Sha::parse), tags(f.get(6))))));
+    }
+
+    /**
+     * The tags among the ref names of a commit, as {@code %D} prints them: {@code HEAD -> main, tag: v1}.
+     */
+    static List<Tag> tags(String refNames) {
+        return List.of(refNames.split(",")).map(String::strip)
+                .filter(name -> name.startsWith(TAG_PREFIX))
+                .map(name -> new Tag(name.substring(TAG_PREFIX.length())));
     }
 
     /**

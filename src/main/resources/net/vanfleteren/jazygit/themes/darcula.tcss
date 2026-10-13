@@ -45,4 +45,5 @@ Span.diff-removed { color: $removed; }
 Span.diff-hunk { color: $hunk; }
 Span.current-branch { color: $warn; }
 Span.sha { color: $warn; }
+Span.tag { color: green; }
 Span.bold { text-style: bold; }
