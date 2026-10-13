@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.branch.BranchKeys;
 import net.vanfleteren.jazygit.feature.commit.CommitKeys;
 import net.vanfleteren.jazygit.feature.discard.DiscardKeys;
+import net.vanfleteren.jazygit.feature.github.PullRequestKeys;
 import net.vanfleteren.jazygit.feature.stage.StageKeys;
 import net.vanfleteren.jazygit.feature.stash.StashKeys;
 
@@ -20,6 +21,7 @@ final class Standard {
                     DiscardKeys::register,
                     StashKeys::register,
                     BranchKeys::register,
+                    PullRequestKeys::register,
                     GlobalKeys::register)
             .foldLeft(Keymap.empty(), (keymap, feature) -> feature.apply(keymap));
 

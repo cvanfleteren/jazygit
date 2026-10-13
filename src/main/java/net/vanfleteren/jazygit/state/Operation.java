@@ -24,6 +24,8 @@ public enum Operation {
     FAST_FORWARD("log.title.fastForward", "error.fastForward.failed"),
     REBASE("log.title.rebase", "error.rebase.failed"),
     MERGE("log.title.merge", "error.merge.failed"),
+    CREATE_PR("log.title.createPr", "error.createPr.failed"),
+    OPEN_PR("log.title.openPr", "error.openPr.failed"),
     STASH("log.title.stash", "error.stash.failed"),
     STASH_POP("log.title.stashPop", "error.stashPop.failed"),
     STASH_DROP("log.title.stashDrop", "error.stashDrop.failed");

@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.fetch;
 import static net.vanfleteren.jazygit.state.TestModels.refused;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.github.PullRequestCmd;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Fetching;
 import net.vanfleteren.jazygit.state.Model;
@@ -44,6 +45,7 @@ class FetchUpdateTest {
         Next done = Update.update(upstream.model(), new FetchMsg.Fetched("upstream"));
         assertEquals(Option.none(), done.model().fetching());
         assertTrue(done.cmds().contains(new LoadBranches()));
+        assertTrue(done.cmds().contains(new PullRequestCmd.LoadPullRequests()));
         // Neither logged nor reported.
         assertEquals(List.of(), done.model().commandLog());
         assertEquals(Option.none(), done.model().error());

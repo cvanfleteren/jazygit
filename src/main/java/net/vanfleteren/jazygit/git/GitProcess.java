@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.process.ExecutedCommand;
+
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -9,20 +11,16 @@ import net.vanfleteren.jazygit.git.GitError.Interrupted;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.TimedOut;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
-import org.zeroturnaround.exec.ProcessExecutor;
-import org.zeroturnaround.exec.ProcessResult;
+import net.vanfleteren.jazygit.process.Exec;
+import net.vanfleteren.jazygit.process.ExecFailure;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 
 /**
- * Runs {@link GitCommand}s through the {@code git} command line tool. The only place that starts git.
+ * Runs {@link GitCommand}s through the {@code git} command line tool, with {@link Exec}. The only place that
+ * starts git.
  */
 final class GitProcess {
 
@@ -87,30 +85,15 @@ final class GitProcess {
     }
 
     private static Either<ProcessError, Output> execute(Path workTree, GitCommand command) {
-        ByteArrayOutputStream stderr = new ByteArrayOutputStream();
-        try {
-            ProcessResult result = new ProcessExecutor()
-                    .command(command.commandLine().toJavaList())
-                    .directory(workTree.toFile())
-                    .environment(command.environment().toJavaMap())
-                    .readOutput(true)
-                    .redirectError(stderr)
-                    .exitValueAny()
-                    .timeout(command.timeout().toMillis(), TimeUnit.MILLISECONDS)
-                    .execute();
-            return result.getExitValue() == 0
-                    ? Either.right(new Output(result.outputUTF8(), command.executed()))
-                    : Either.left(new CommandFailed(
-                    explanation(stderr.toString(StandardCharsets.UTF_8), result.outputUTF8()),
-                    result.getExitValue()));
-        } catch (IOException e) {
-            return Either.left(new GitUnavailable(e));
-        } catch (TimeoutException e) {
-            return Either.left(new TimedOut(command.operation(), workTree));
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return Either.left(new Interrupted(command.operation()));
-        }
+        return Exec.run(workTree, command.commandLine(), command.environment(), command.timeout())
+                .<ProcessError>mapLeft(failure -> switch (failure) {
+                    case ExecFailure.NotStarted(var cause) -> new GitUnavailable(cause);
+                    case ExecFailure.TimedOut() -> new TimedOut(command.operation(), workTree);
+                    case ExecFailure.Interrupted() -> new Interrupted(command.operation());
+                    case ExecFailure.NonZero(int exitCode, String stderr, String stdout) ->
+                            new CommandFailed(explanation(stderr, stdout), exitCode);
+                })
+                .map(stdout -> new Output(stdout, command.executed()));
     }
 
     /**
@@ -118,10 +101,6 @@ final class GitProcess {
      * the following files would be overwritten by checkout:}. Its error output is looked at first.
      */
     static Option<String> explanation(String stderr, String stdout) {
-        return firstLine(stderr).orElse(() -> firstLine(stdout));
-    }
-
-    private static Option<String> firstLine(String output) {
-        return GitOutput.lines(output).map(String::strip).find(line -> !line.isEmpty());
+        return Exec.explanation(stderr, stdout);
     }
 }

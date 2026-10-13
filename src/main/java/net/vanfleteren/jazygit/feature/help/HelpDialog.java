@@ -6,10 +6,15 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyEvent;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
+import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.Theme;
@@ -31,6 +36,15 @@ public final class HelpDialog implements PopupView {
     // The key right-aligned in a column of this many characters, then a space and the description.
     private static final int KEY_COLUMN = 12;
     private static final String KEY_FORMAT = "%" + KEY_COLUMN + "s %s";
+
+    /**
+     * What the symbols in a panel mean, as the symbols and the message keys of their descriptions.
+     */
+    private static final Map<String, List<Tuple2<String, String>>> LEGENDS = HashMap.of(
+            Scopes.BRANCHES.id(), List.of(
+                    Tuple.of("#42", "help.branches.legend.pullRequest"),
+                    Tuple.of("✓ ✗ ●", "help.branches.legend.checks"),
+                    Tuple.of("✔ ✎ ?", "help.branches.legend.review")));
 
     private final Consumer<Msg> dispatch;
     private final Keymap keymap;
@@ -62,6 +76,7 @@ public final class HelpDialog implements PopupView {
                 keymap.titleKey(scopeId).map(titleKey -> {
                     List<StyledElement<?>> rows = keymap.bindings(scopeId)
                             .<StyledElement<?>>map(b -> row(b.label(), b.descriptionKey()))
+                            .appendAll(legend(scopeId))
                             .append(text(""))
                             .append(text(Messages.get("dialog.help.global")).addClass(Theme.Classes.BOLD))
                             .appendAll(keymap.globals().map(g -> row(g.label(), g.descriptionKey())));
@@ -75,6 +90,17 @@ public final class HelpDialog implements PopupView {
                             .onConfirm(this::close)
                             .onCancel(this::close);
                 }));
+    }
+
+    /**
+     * What the symbols of the panel {@code scopeId} mean, under a heading; nothing for a panel without any.
+     */
+    private static List<StyledElement<?>> legend(String scopeId) {
+        return LEGENDS.get(scopeId)
+                .map(symbols -> List.<StyledElement<?>>of(text(""),
+                                text(Messages.get("dialog.help.legend")).addClass(Theme.Classes.BOLD))
+                        .appendAll(symbols.map(symbol -> row(symbol._1, symbol._2))))
+                .getOrElse(List.empty());
     }
 
     private static StyledElement<?> row(String key, String descriptionKey) {

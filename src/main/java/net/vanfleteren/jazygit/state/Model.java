@@ -7,6 +7,7 @@ import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import lombok.With;
+import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Diffs;
@@ -14,6 +15,7 @@ import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
+import net.vanfleteren.jazygit.git.model.Upstream;
 
 /**
  * The complete, immutable state of the repository as shown by the UI.
@@ -36,6 +38,8 @@ import net.vanfleteren.jazygit.git.model.Stash;
  *                       operation: they show a
  *                       spinner, and take no other operation until it is done
  * @param fetching       the background fetch from the remotes that is running, if any; the next one waits
+ * @param pullRequests   the open pull requests on GitHub, by the remote branch they merge from; empty when
+ *                       they could not be read
  * @param commandLog     the mutating git commands that were executed, oldest first
  * @param popup          the popup that is open, if any; only one can be
  * @param theme          the name of the theme the UI is drawn in
@@ -53,6 +57,7 @@ public record Model(String repositoryName,
                     Option<AppError> error,
                     Map<String, Operation> busy,
                     Option<Fetching> fetching,
+                    Map<String, PullRequest> pullRequests,
                     List<LogEntry> commandLog,
                     Option<Popup> popup,
                     String theme) {
@@ -63,7 +68,7 @@ public record Model(String repositoryName,
     public static Model initial(String repositoryName) {
         return new Model(repositoryName, Loadable.loading(), Loadable.loading(), Loadable.loading(),
                 Loadable.loading(), Option.none(),
-                Option.none(), Option.none(), HashSet.empty(), Option.none(), HashMap.empty(), Option.none(), List.empty(), Option.none(),
+                Option.none(), Option.none(), HashSet.empty(), Option.none(), HashMap.empty(), Option.none(), HashMap.empty(), List.empty(), Option.none(),
                 DEFAULT_THEME);
     }
 
@@ -93,6 +98,18 @@ public record Model(String repositoryName,
      */
     public Option<Branch> currentBranch() {
         return branches.toOption().flatMap(loaded -> loaded.find(Branch::current));
+    }
+
+    /**
+     * The open pull request from {@code branch}: the one from the branch it follows on the remote, else from
+     * the branch of the same name.
+     */
+    public Option<PullRequest> pullRequest(Branch branch) {
+        return branch.upstream()
+                .map(Upstream::name)
+                .map(name -> name.substring(name.indexOf('/') + 1))
+                .flatMap(pullRequests::get)
+                .orElse(() -> pullRequests.get(branch.name()));
     }
 
     /**

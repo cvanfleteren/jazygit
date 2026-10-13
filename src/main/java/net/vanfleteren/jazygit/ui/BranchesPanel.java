@@ -7,6 +7,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
+import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
@@ -19,10 +20,12 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * Left-side panel listing the local branches, with the current branch marked. Space checks out
  * the highlighted branch, P pushes it, d asks where to delete it, n asks for the name of a new branch starting at it.
+ * A branch with a pull request shows its number, its CI checks and its review.
  */
 public class BranchesPanel {
 
@@ -35,6 +38,8 @@ public class BranchesPanel {
     private final Keymap keymap = Keymap.standard();
     // The branches an operation runs on, shown with a spinner; the rows are built from it on every render.
     private Map<String, Operation> busy = HashMap.empty();
+    // The pull request of a branch, as of the last render; the rows are built from it on every render.
+    private Function<Branch, Option<PullRequest>> pullRequests = branch -> Option.none();
 
     /**
      * The time since the last commit as a number and one unit: s, m, h or d.
@@ -62,6 +67,7 @@ public class BranchesPanel {
         return switch (operation) {
             case PUSH -> Option.of(Messages.get("branches.busy.push"));
             case PULL, FAST_FORWARD -> Option.of(Messages.get("branches.busy.pull"));
+            case CREATE_PR -> Option.of(Messages.get("branches.busy.pullRequest"));
             default -> Option.none();
         };
     }
@@ -69,10 +75,12 @@ public class BranchesPanel {
     /**
      * @param spinner the label and the spinner frame of a busy branch, as one text
      */
-    private static LoadableList.Row row(Branch b, Duration since, Option<String> spinner) {
+    private static LoadableList.Row row(Branch b, Duration since, Option<PullRequest> pullRequest,
+                                        Option<String> spinner) {
         return new LoadableList.Row(
                 List.of(LoadableList.Seg.of("%4s ".formatted(age(since)) + (b.current() ? "* " : "  ") + b.name()))
                         .appendAll(sync(b))
+                        .appendAll(pullRequest(pullRequest))
                         .appendAll(spinner.map(text -> LoadableList.Seg.styled(" " + text, Theme.Classes.SPINNER))));
     }
 
@@ -94,6 +102,37 @@ public class BranchesPanel {
                         Option.of(branch.behind()).filter(n -> n > 0)
                                 .map(n -> LoadableList.Seg.styled(" ↓" + n, Theme.Classes.BEHIND)))
                 .flatMap(o -> o);
+    }
+
+    /**
+     * The pull request of a branch, with a leading space: its number (dimmed for a draft), how its CI checks
+     * are doing and where its review stands, each as a coloured symbol; nothing for a branch without one.
+     */
+    static List<LoadableList.Seg> pullRequest(Option<PullRequest> pullRequest) {
+        return pullRequest.toList().flatMap(pr -> List.of(
+                        Option.of(LoadableList.Seg.styled(" #" + pr.number(),
+                                pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST)),
+                        checks(pr.checks()),
+                        review(pr.review()))
+                .flatMap(o -> o));
+    }
+
+    private static Option<LoadableList.Seg> checks(PullRequest.Checks checks) {
+        return switch (checks) {
+            case NONE -> Option.none();
+            case PASSING -> Option.of(LoadableList.Seg.styled(" ✓", Theme.Classes.CHECKS_PASSED));
+            case FAILING -> Option.of(LoadableList.Seg.styled(" ✗", Theme.Classes.CHECKS_FAILED));
+            case PENDING -> Option.of(LoadableList.Seg.styled(" ●", Theme.Classes.CHECKS_RUNNING));
+        };
+    }
+
+    private static Option<LoadableList.Seg> review(PullRequest.Review review) {
+        return switch (review) {
+            case NONE -> Option.none();
+            case APPROVED -> Option.of(LoadableList.Seg.styled(" ✔", Theme.Classes.REVIEW_APPROVED));
+            case CHANGES_REQUESTED -> Option.of(LoadableList.Seg.styled(" ✎", Theme.Classes.REVIEW_CHANGES));
+            case REQUIRED -> Option.of(LoadableList.Seg.styled(" ?", Theme.Classes.DIM));
+        };
     }
 
     /**
@@ -129,6 +168,7 @@ public class BranchesPanel {
         list = new LoadableList<>(Messages.get("panel.branches.title"), ID,
                 branches -> branches
                         .map(b -> row(b, Duration.between(b.tipTime(), clock.instant()),
+                                pullRequests.apply(b),
                                 busy.get(b.name()).map(operation -> spinner(operation, clock.instant())))),
                 BranchesPanel::reselect);
         // The highlight alone marks the selection; a symbol would indent the rows.
@@ -142,6 +182,7 @@ public class BranchesPanel {
      */
     public Panel render(Model model, String focusedId) {
         busy = model.busy();
+        pullRequests = model::pullRequest;
         return list.render(model.branches(), ID.equals(focusedId));
     }
 

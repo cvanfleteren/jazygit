@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import net.vanfleteren.jazygit.git.ExecutedCommand;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -11,14 +11,15 @@ import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Operation;
-import net.vanfleteren.jazygit.state.OperationCmd;
+import net.vanfleteren.jazygit.state.GitOperationCmd;
 
 /**
  * Commands that act on branches. Each names the branch it acts on in its error message.
  */
-public sealed interface BranchCmd extends OperationCmd {
+public sealed interface BranchCmd extends GitOperationCmd {
 
     /**
      * The branch the command acts on.
@@ -113,8 +114,8 @@ public sealed interface BranchCmd extends OperationCmd {
         }
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.checkout(branch).fold(
+        public Msg run(Env env) {
+            return env.git().checkout(branch).fold(
                     failure -> failure.error() instanceof GitError.LocalChanges
                             ? new CheckoutMsg.NeedsStash(branch)
                             : failedWith(failure),

@@ -7,7 +7,8 @@ It follows the **Elm architecture**:
 - Every event (a key press, a tick, a git result) is a `Msg`.
 - A pure update function turns `(Model, Msg)` into the next `Model` plus the IO to perform, as `Cmd`
   values.
-- Commands run against git on a background thread, and their outcome comes back as a new `Msg`.
+- Commands run against git (and, for GitHub, `gh`) on a background thread, and their outcome comes back as a
+  new `Msg`.
 
 Rendering never talks to git, and update functions never do IO.
 
@@ -18,10 +19,13 @@ graph TD
     App["JazygitApp<br/><i>entry point, layout, popups, focus</i>"]
     UI["ui<br/><i>panels and widgets: render a Model</i>"]
     Keys["keys<br/><i>Keymap: every shortcut, declared once</i>"]
-    Feature["feature.*<br/><i>branch, commit, stage, stash, discard,<br/>selection, help, theme</i>"]
+    Feature["feature.*<br/><i>branch, commit, stage, stash, discard,<br/>github, selection, help, theme</i>"]
     State["state<br/><i>Model, Msg, Update, Cmd, Program</i>"]
     Git["git<br/><i>GitInfoProvider, CliGitInfoProvider, Cli*, GitProcess, GitError</i>"]
     GitModel["git.model<br/><i>Branch, Commit, RepoStatus, Sha, ...</i>"]
+    Gh["gh<br/><i>GitHub, CliGitHub, GhProcess, GhError</i>"]
+    GhModel["gh.model<br/><i>PullRequest</i>"]
+    Process["process<br/><i>Exec, ExecutedCommand</i>"]
     I18n["i18n<br/><i>Messages</i>"]
 
     App --> UI
@@ -34,6 +38,11 @@ graph TD
     Feature --> Git
     State --> Git
     Git --> GitModel
+    Feature --> Gh
+    State --> Gh
+    Gh --> GhModel
+    Git --> Process
+    Gh --> Process
     State --> GitModel
     UI --> I18n
     State --> I18n
@@ -49,6 +58,9 @@ graph TD
 | `state` | The Elm core: `Model`, `Msg`, `Update`, `Cmd`, `Program`, `Loadable`, `Preview`, the operations (`OperationCmd`, `OperationMsg`, `OperationUpdate`), the command log and the errors as data (`AppError`, `Failure`). |
 | `git` | Everything that touches the repository, all through the `git` command line. All results are `Either` values. |
 | `git.model` | Immutable value types describing the repository. |
+| `gh` | Everything that talks to GitHub, all through the `gh` command line. It knows nothing of `git`, and `git` knows nothing of it; the features combine them. |
+| `gh.model` | Immutable value types describing GitHub: `PullRequest`. |
+| `process` | `Exec`, the only place that starts a program, for `git` and `gh` alike; `ExecutedCommand`, a command as it ran. |
 | `i18n` | `Messages`: the user-facing texts, from `messages.properties`. |
 
 ## The runtime loop
@@ -85,7 +97,8 @@ still running. `FetchUpdate` lists the remotes (those `git fetch --all` would fe
 the other with `git fetch <remote>`. `Model.fetching` holds the remote being fetched from, which the line at
 the bottom of the screen shows, and the remotes still queued. When the queue is empty, the branches reload.
 Neither the commands nor the failures are shown, since fetching also runs while offline, and a failing remote
-doesn't stop the others. `ssh` runs with `BatchMode=yes` during the fetch, so it can't prompt for a passphrase
+doesn't stop the others. Once the fetch is done, the open pull requests are read again with `gh` (also once at
+startup), into `Model.pullRequests`; a failure there is not shown either, as gh may be missing or logged out. `ssh` runs with `BatchMode=yes` during the fetch, so it can't prompt for a passphrase
 on the terminal.
 
 ## Core types
@@ -152,12 +165,12 @@ classDiagram
 - **`Msg` applies itself.** Each feature has a sealed sub-interface, for example `RewordMsg`, whose
   `apply` delegates to that feature's update class (`RewordUpdate`). Adding a feature therefore needs
   no change to `Update` or `Msg`.
-- **`Cmd` is immutable data** that knows how to run itself against a `GitInfoProvider` and how to
-  report failure:
+- **`Cmd` is immutable data** that knows how to run itself against an `Env` (the `GitInfoProvider` and the
+  `GitHub`) and how to report failure:
   - `run` folds the provider's `Either` into a `Msg`.
   - `failed(Failure)` turns a failure into the failure `Msg`. A `Failure` is data: `Failure.Git` (the
-    `GitError`, the commands that ran, and why the cleanup failed if it did) or `Failure.Bug` (the command
-    threw, which `Program.perform` catches).
+    `GitError`, the commands that ran, and why the cleanup failed if it did), `Failure.GitHub` (the `GhError`
+    and the commands that ran) or `Failure.Bug` (the command threw, which `Program.perform` catches).
 - **`Cmd.Load`** reads part of the repository into the model, as a `Loadable`. Every `LoadMsg` names its
   load, so `LoadUpdate` marks it as no longer running in one place.
 - **`OperationCmd`** changes the repository. It names its `Operation` (which holds the command log title
@@ -165,7 +178,8 @@ classDiagram
   `OperationMsg.Succeeded` or `OperationMsg.Failed`, which `OperationUpdate` handles the same way for every
   operation: it logs the commands, releases the busy branch, stores an `AppError.OperationFailed` or clears
   the error, and reads the repository again. A feature only adds its own messages for outcomes that really
-  are special, like `CheckoutMsg.NeedsStash`.
+  are special, like `CheckoutMsg.NeedsStash`. A `GitOperationCmd` is one done through git alone: it only
+  implements `perform(GitInfoProvider)`. The others, like creating a pull request, implement `run(Env)` themselves.
 - **Errors are data until the view.** `Model.error` is an `Option<AppError>` and `Loadable.Failed` holds a
   `Failure`; `ErrorText` in `ui` turns them into text. `Model.fail` shows the error in the command log and
   opens an `ErrorPopup`, unless another popup is open, which then keeps what the user entered.
@@ -254,11 +268,24 @@ classDiagram
   - **Writes:** `CliCheckout`, `CliBranch`, `CliIndex`, `CliRebase` and `CliStash`.
   - **Opening:** `CliGitInfoProvider.open` asks `git rev-parse` whether the directory is in a repository,
     whether that is bare, and where its working tree is.
-- **`GitProcess.run(workTree, GitCommand)`** is the only place that starts git:
+- **`GitProcess.run(workTree, GitCommand)`** is the only place that starts git, through `process.Exec`:
   - A `GitCommand` is data: the arguments, the environment and a timeout.
   - Every command runs with `LC_ALL=C` (git's messages are matched in English) and
     `GIT_TERMINAL_PROMPT=0` (fail rather than wait for credentials).
   - It returns `Either<GitFailure<ProcessError>, Output>`.
+
+## The GitHub layer
+
+`gh.GitHub` is what the TUI does with GitHub; `CliGitHub` does it with the `gh` command line tool, which finds
+the GitHub repository from the git remotes itself. It mirrors the git layer without depending on it:
+`GhCommand` (run with `GH_PROMPT_DISABLED=1`), `GhProcess`, and its own errors, `GhError` and `GhFailure`.
+
+- **Reading the pull requests:** `gh pr list --json ... --jq ...`. gh's built-in jq turns the JSON into one
+  tab-separated line per pull request (fork pull requests left out), which `CliGitHub.parse` reads; there is
+  no JSON library. The CI checks are folded into one state: failing, else pending, else passing.
+- **Creating and opening:** `gh pr create --head <branch on the remote> --base <base> --fill` and
+  `gh pr view <n> --web`. The name of the branch on its remote comes from git
+  (`GitBranches.remoteBranch`): `PullRequestCmd.CreatePullRequest` asks git, then gh.
 
 ### Errors as values
 

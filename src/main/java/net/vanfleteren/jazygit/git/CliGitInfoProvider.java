@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.process.ExecutedCommand;
+
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -75,6 +77,13 @@ public final class CliGitInfoProvider implements GitInfoProvider {
                 : error;
     }
 
+    /**
+     * The root of the working tree of the repository.
+     */
+    public Path workTree() {
+        return workTree;
+    }
+
     @Override
     public String repositoryName() {
         // The root directory has no name.
@@ -89,6 +98,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     @Override
     public Either<ProcessError, List<Branch>> branches() {
         return CliBranches.list(workTree);
+    }
+
+    @Override
+    public Either<ProcessError, Option<String>> remoteBranch(String branch) {
+        return CliBranches.remoteBranch(workTree, branch);
     }
 
     @Override

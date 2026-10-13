@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Sha;
 
@@ -15,10 +14,10 @@ import net.vanfleteren.jazygit.git.model.Sha;
 public interface Cmd {
 
     /**
-     * Performs the IO and returns the {@link Msg} that reports its outcome. A {@link RuntimeException}
+     * Performs the IO against {@code env} and returns the {@link Msg} that reports its outcome. A {@link RuntimeException}
      * thrown from here is a bug; {@link Program} still turns it into {@link #failed(Failure)}.
      */
-    Msg run(GitInfoProvider git);
+    Msg run(Env env);
 
     /**
      * The {@link Msg} that reports this command failing for {@code failure}.
@@ -61,56 +60,56 @@ public interface Cmd {
     record LoadStatus() implements Load {
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.status().fold(this::failedWith, LoadMsg.StatusLoaded::new);
+        public Msg run(Env env) {
+            return env.git().status().fold(this::failedWith, LoadMsg.StatusLoaded::new);
         }
     }
 
     record LoadBranches() implements Load {
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.branches().fold(this::failedWith, LoadMsg.BranchesLoaded::new);
+        public Msg run(Env env) {
+            return env.git().branches().fold(this::failedWith, LoadMsg.BranchesLoaded::new);
         }
     }
 
     record LoadStashes() implements Load {
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.stashes().fold(this::failedWith, LoadMsg.StashesLoaded::new);
+        public Msg run(Env env) {
+            return env.git().stashes().fold(this::failedWith, LoadMsg.StashesLoaded::new);
         }
     }
 
     record LoadCommits() implements Load {
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.commits().fold(this::failedWith, LoadMsg.CommitsLoaded::new);
+        public Msg run(Env env) {
+            return env.git().commits().fold(this::failedWith, LoadMsg.CommitsLoaded::new);
         }
     }
 
     record LoadBranchLog(String branch) implements Load {
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.log(branch).fold(this::failedWith, commits -> new LoadMsg.BranchLogLoaded(branch, commits));
+        public Msg run(Env env) {
+            return env.git().log(branch).fold(this::failedWith, commits -> new LoadMsg.BranchLogLoaded(branch, commits));
         }
     }
 
     record LoadCommitDetail(Sha sha) implements Load {
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.commitChanges(sha).fold(this::failedWith, changes -> new LoadMsg.CommitDetailLoaded(sha, changes));
+        public Msg run(Env env) {
+            return env.git().commitChanges(sha).fold(this::failedWith, changes -> new LoadMsg.CommitDetailLoaded(sha, changes));
         }
     }
 
     record LoadFileDiff(List<FileEntry> files) implements Load {
 
         @Override
-        public Msg run(GitInfoProvider git) {
-            return git.diff(files).fold(this::failedWith, diff -> new LoadMsg.FileDiffLoaded(files, diff));
+        public Msg run(Env env) {
+            return env.git().diff(files).fold(this::failedWith, diff -> new LoadMsg.FileDiffLoaded(files, diff));
         }
     }
 }

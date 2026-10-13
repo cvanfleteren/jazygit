@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit;
 
-import net.vanfleteren.jazygit.git.ExecutedCommand;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
@@ -10,12 +10,12 @@ import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Operation;
-import net.vanfleteren.jazygit.state.OperationCmd;
+import net.vanfleteren.jazygit.state.GitOperationCmd;
 
 /**
  * Commands that create or rewrite commits.
  */
-public sealed interface CommitCmd extends OperationCmd {
+public sealed interface CommitCmd extends GitOperationCmd {
 
     /**
      * Stages the paths so they can be committed; the commit dialog opens afterwards.

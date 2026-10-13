@@ -1,16 +1,14 @@
 package net.vanfleteren.jazygit.state;
 
-import net.vanfleteren.jazygit.git.ExecutedCommand;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import io.vavr.collection.List;
-import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.GitFailure;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
 
 /**
  * A command that performs an {@link Operation} on the repository. Its outcome is reported as an
  * {@link OperationMsg}, which {@link OperationUpdate} handles the same way for every operation: the commands
- * are logged, a failure is shown, and the repository is read again.
+ * are logged, a failure is shown, and the repository is read again. {@link GitOperationCmd} is one done
+ * through git alone.
  */
 public interface OperationCmd extends Cmd {
 
@@ -28,18 +26,6 @@ public interface OperationCmd extends Cmd {
      */
     default Option<String> busyBranch() {
         return Option.none();
-    }
-
-    /**
-     * Performs the operation.
-     *
-     * @return the commands that were run, or why it failed
-     */
-    Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git);
-
-    @Override
-    default Msg run(GitInfoProvider git) {
-        return perform(git).fold(this::failedWith, this::succeeded);
     }
 
     /**

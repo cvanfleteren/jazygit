@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.fetch;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.github.PullRequestCmd;
 import net.vanfleteren.jazygit.state.Fetching;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
@@ -36,12 +37,17 @@ public final class FetchUpdate {
 
     /**
      * Fetches from the first of {@code remotes}; with none left, the fetch is done and the branches show what
-     * came in.
+     * came in, and how their pull requests are doing now.
      */
     private static Next next(Model model, List<String> remotes) {
         return remotes.pop2Option()
                 .map(next -> Next.of(model.withFetching(Option.of(new Fetching(Option.of(next._1), next._2))),
                         new FetchCmd.Fetch(next._1)))
-                .getOrElse(() -> Update.refresh(model.withFetching(Option.none())));
+                .getOrElse(() -> done(model));
+    }
+
+    private static Next done(Model model) {
+        Next refreshed = Update.refresh(model.withFetching(Option.none()));
+        return new Next(refreshed.model(), refreshed.cmds().append(new PullRequestCmd.LoadPullRequests()));
     }
 }

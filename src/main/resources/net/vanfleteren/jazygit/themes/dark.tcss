@@ -19,6 +19,12 @@ Panel.focused {
 .spinner { color: yellow; }
 .ahead { color: green; }
 .behind { color: red; }
+.pull-request { color: cyan; }
+.checks-passed { color: green; }
+.checks-failed { color: red; }
+.checks-running { color: yellow; }
+.review-approved { color: green; }
+.review-changes { color: red; }
 
 Span.diff-header { text-style: bold; }
 Span.diff-added { color: green; }

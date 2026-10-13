@@ -31,6 +31,12 @@ Panel.focused {
 .spinner { color: $warn; }
 .ahead { color: $added; }
 .behind { color: $removed; }
+.pull-request { color: $accent; }
+.checks-passed { color: $added; }
+.checks-failed { color: $removed; }
+.checks-running { color: $warn; }
+.review-approved { color: $added; }
+.review-changes { color: $removed; }
 
 Span.diff-header { text-style: bold; }
 Span.diff-added { color: $added; }
