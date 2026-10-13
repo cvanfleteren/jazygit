@@ -4,7 +4,6 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
-import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.CheckoutError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
@@ -39,10 +38,11 @@ public interface GitBranches {
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> createBranch(String name, String startPoint);
 
     /**
-     * Deletes the branch {@code name}, locally and/or on its remote. With both, the remote one goes
-     * first, so a failure leaves the local branch in place.
+     * Deletes the branch {@code name}, locally and/or {@code remote}, the branch it is pushed to. With both, the
+     * remote one goes first, so a failure leaves the local branch in place.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(String name, DeleteScope scope);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(String name, RemoteBranch remote,
+                                                                         DeleteScope scope);
 
     /**
      * Merges {@code branch} into the checked out branch, as {@code mode} says. A merge that stops on conflicts
@@ -57,10 +57,9 @@ public interface GitBranches {
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> rebase(String onto);
 
     /**
-     * Pushes the local branch {@code branch} to its upstream. A branch without one is pushed to the
-     * branch of the same name on {@code origin}, which becomes its upstream.
+     * Pushes the local branch {@code branch} to {@code upstream}, the branch it tracks.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(String branch, PushMode mode);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(String branch, RemoteBranch upstream, PushMode mode);
 
     /**
      * Pushes the local branch {@code branch} to {@code upstream}, which becomes its upstream once the push
@@ -76,14 +75,8 @@ public interface GitBranches {
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> pull();
 
     /**
-     * Fast-forwards the local branch {@code branch}, which is not checked out, to its upstream. Fails when that
-     * is not a fast-forward.
+     * Fast-forwards the local branch {@code branch}, which is not checked out, to {@code upstream}, the branch it
+     * tracks. Fails when that is not a fast-forward.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(String branch);
-
-    /**
-     * The name of the branch {@code branch} follows on its remote, e.g. {@code main} for an upstream
-     * {@code origin/main}; none without an upstream.
-     */
-    Either<ProcessError, Option<String>> remoteBranch(String branch);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(String branch, RemoteBranch upstream);
 }

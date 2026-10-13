@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
@@ -139,7 +140,7 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(String branch, PushMode mode) {
+        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(String branch, RemoteBranch upstream, PushMode mode) {
             pushed.add(branch + (mode == PushMode.FORCE_WITH_LEASE ? " force" : ""));
             return StubGitProvider.ran("git push");
         }
@@ -161,7 +162,7 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(String name, DeleteScope scope) {
+        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(String name, RemoteBranch remote, DeleteScope scope) {
             deleted.add(name + (scope.local() ? " local" : "") + (scope.remote() ? " remote" : ""));
             return StubGitProvider.ran("git deleteBranch");
         }

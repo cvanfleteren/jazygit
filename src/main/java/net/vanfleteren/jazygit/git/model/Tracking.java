@@ -20,8 +20,8 @@ public sealed interface Tracking {
     /**
      * Its upstream is configured, but the remote branch is deleted, e.g. after its pull request was merged.
      *
-     * @param name the short name the upstream had, e.g. {@code origin/feature}
+     * @param branch the branch on its remote that it followed, e.g. {@code feature} on {@code origin}
      */
-    record Gone(String name) implements Tracking {
+    record Gone(RemoteBranch branch) implements Tracking {
     }
 }

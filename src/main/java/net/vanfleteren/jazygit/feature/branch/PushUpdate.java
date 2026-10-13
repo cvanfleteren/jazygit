@@ -4,6 +4,7 @@ import net.vanfleteren.jazygit.state.Update;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.Push;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.PushSettingUpstream;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.AppError;
@@ -25,7 +26,8 @@ public final class PushUpdate {
             case PushMsg.UpstreamCancelled() -> Next.of(model.withoutPopup(SetUpstreamPopup.class));
             case PushMsg.UpstreamConfirmed(String upstream) -> upstreamConfirmed(model, upstream);
             case PushMsg.ForceConfirmed() -> Update.confirm(model, ForcePushPopup.class,
-                    popup -> Option.of(new Push(popup.branch(), PushMode.FORCE_WITH_LEASE)));
+                    popup -> model.branch(popup.branch()).flatMap(Branch::upstream)
+                            .map(upstream -> new Push(popup.branch(), upstream.branch(), PushMode.FORCE_WITH_LEASE)));
         };
     }
 
@@ -35,11 +37,11 @@ public final class PushUpdate {
         // which the user must confirm.
         return model.branch(branch)
                 .filter(known -> !model.busy().containsKey(branch))
-                .map(known -> known.upstream().isEmpty()
-                        ? Next.of(model.openPopup(new SetUpstreamPopup(branch)).clearError())
-                        : known.behind() > 0
-                        ? Next.of(model.openPopup(new ForcePushPopup(branch)).clearError())
-                        : Update.start(model.clearError(), new Push(branch, PushMode.FAST_FORWARD)))
+                .map(known -> known.upstream()
+                        .map(upstream -> known.behind() > 0
+                                ? Next.of(model.openPopup(new ForcePushPopup(branch)).clearError())
+                                : Update.start(model.clearError(), new Push(branch, upstream.branch(), PushMode.FAST_FORWARD)))
+                        .getOrElse(() -> Next.of(model.openPopup(new SetUpstreamPopup(branch)).clearError())))
                 .getOrElse(() -> Next.of(model));
     }
 

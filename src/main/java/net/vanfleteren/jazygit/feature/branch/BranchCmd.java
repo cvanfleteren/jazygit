@@ -47,7 +47,10 @@ public sealed interface BranchCmd extends GitOperationCmd {
         }
     }
 
-    record DeleteBranch(String branch, DeleteScope scope) implements BranchCmd {
+    /**
+     * Deletes {@code branch} where {@code scope} says; on its remote, that is {@code remote}.
+     */
+    record DeleteBranch(String branch, RemoteBranch remote, DeleteScope scope) implements BranchCmd {
 
         @Override
         public Operation operation() {
@@ -61,7 +64,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return git.deleteBranch(branch, scope);
+            return git.deleteBranch(branch, remote, scope);
         }
     }
 
@@ -160,7 +163,10 @@ public sealed interface BranchCmd extends GitOperationCmd {
         }
     }
 
-    record Push(String branch, PushMode mode) implements BranchCmd {
+    /**
+     * Pushes {@code branch} to {@code upstream}, the branch it tracks.
+     */
+    record Push(String branch, RemoteBranch upstream, PushMode mode) implements BranchCmd {
 
         @Override
         public Operation operation() {
@@ -174,7 +180,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return git.push(branch, mode);
+            return git.push(branch, upstream, mode);
         }
     }
 
@@ -200,9 +206,9 @@ public sealed interface BranchCmd extends GitOperationCmd {
     }
 
     /**
-     * Fast-forwards {@code branch}, which is not checked out, to its upstream.
+     * Fast-forwards {@code branch}, which is not checked out, to {@code upstream}, the branch it tracks.
      */
-    record FastForward(String branch) implements BranchCmd {
+    record FastForward(String branch, RemoteBranch upstream) implements BranchCmd {
 
         @Override
         public Operation operation() {
@@ -216,7 +222,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return git.fastForward(branch);
+            return git.fastForward(branch, upstream);
         }
     }
 }

@@ -101,7 +101,7 @@ class BranchUpdateTest {
         return Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(
                 new Branch("main", true, new Sha("aaaa")),
                 new Branch("feature", false, new Sha("ffff"), Instant.EPOCH, true, false,
-                        Option.of(new Upstream("origin/feature", 0, 0)))))).model();
+                        Option.of(new Upstream(new RemoteBranch("origin", "feature"), 0, 0)))))).model();
     }
 
     @Test
@@ -143,11 +143,11 @@ class BranchUpdateTest {
 
     @Test
     void pushRequestOfAKnownBranchPushesIt() {
-        Model failedBefore = Update.update(tracking(), failed(new BranchCmd.Push("feature", PushMode.FAST_FORWARD), "boom")).model();
+        Model failedBefore = Update.update(tracking(), failed(new BranchCmd.Push("feature", new RemoteBranch("origin", "feature"), PushMode.FAST_FORWARD), "boom")).model();
 
         Next next = Update.update(failedBefore, new PushMsg.Requested("feature"));
 
-        assertEquals(List.of(new BranchCmd.Push("feature", PushMode.FAST_FORWARD)), next.cmds());
+        assertEquals(List.of(new BranchCmd.Push("feature", new RemoteBranch("origin", "feature"), PushMode.FAST_FORWARD)), next.cmds());
         assertEquals(Option.none(), next.model().error());
         assertEquals(io.vavr.collection.HashSet.of("feature"), next.model().busy().keySet());
         // Not pushed again while it is being pushed.
@@ -159,7 +159,7 @@ class BranchUpdateTest {
     void pushRequestOfADivergedBranchAsksForConfirmationInsteadOfPushing() {
         Model diverged = Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(
                 new Branch("main", true, new Sha("aaaa")),
-                new Branch("feature", false, new Sha("ffff"), Instant.EPOCH, true, false, Option.of(new Upstream("origin/" + "feature", 1, 2)))))).model();
+                new Branch("feature", false, new Sha("ffff"), Instant.EPOCH, true, false, Option.of(new Upstream(new RemoteBranch("origin", "feature"), 1, 2)))))).model();
 
         Next asked = Update.update(diverged, new PushMsg.Requested("feature"));
 
@@ -168,7 +168,7 @@ class BranchUpdateTest {
         assertEquals(io.vavr.collection.HashSet.empty(), asked.model().busy().keySet());
 
         Next confirmed = Update.update(asked.model(), new PushMsg.ForceConfirmed());
-        assertEquals(List.of(new BranchCmd.Push("feature", PushMode.FORCE_WITH_LEASE)), confirmed.cmds());
+        assertEquals(List.of(new BranchCmd.Push("feature", new RemoteBranch("origin", "feature"), PushMode.FORCE_WITH_LEASE)), confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());
         assertEquals(io.vavr.collection.HashSet.of("feature"), confirmed.model().busy().keySet());
 
@@ -184,14 +184,14 @@ class BranchUpdateTest {
 
     @Test
     void failedPushIsStoredAndASuccessfulOneReloadsTheBranches() {
-        Model failed = Update.update(loaded(), failed(new BranchCmd.Push("feature", PushMode.FAST_FORWARD), "boom")).model();
+        Model failed = Update.update(loaded(), failed(new BranchCmd.Push("feature", new RemoteBranch("origin", "feature"), PushMode.FAST_FORWARD), "boom")).model();
         assertEquals(Option.of("Pushing branch feature failed: boom"), errorText(failed));
 
         Model pushing = Update.update(loaded(), new PushMsg.Requested("feature")).model();
-        assertEquals(io.vavr.collection.HashSet.empty(), Update.update(pushing, failed(new BranchCmd.Push("feature", PushMode.FAST_FORWARD), "boom")).model().busy().keySet());
-        assertEquals(io.vavr.collection.HashSet.empty(), Update.update(pushing, succeeded(new BranchCmd.Push("feature", PushMode.FAST_FORWARD))).model().busy().keySet());
+        assertEquals(io.vavr.collection.HashSet.empty(), Update.update(pushing, failed(new BranchCmd.Push("feature", new RemoteBranch("origin", "feature"), PushMode.FAST_FORWARD), "boom")).model().busy().keySet());
+        assertEquals(io.vavr.collection.HashSet.empty(), Update.update(pushing, succeeded(new BranchCmd.Push("feature", new RemoteBranch("origin", "feature"), PushMode.FAST_FORWARD))).model().busy().keySet());
 
-        Next done = Update.update(withCheckoutError(loaded(), "foo", "boom"), succeeded(new BranchCmd.Push("feature", PushMode.FAST_FORWARD)));
+        Next done = Update.update(withCheckoutError(loaded(), "foo", "boom"), succeeded(new BranchCmd.Push("feature", new RemoteBranch("origin", "feature"), PushMode.FAST_FORWARD)));
         assertEquals(Option.none(), done.model().error());
         assertEquals(true, done.cmds().contains(new LoadBranches()));
     }
@@ -202,9 +202,9 @@ class BranchUpdateTest {
     private static Model pullable(int mainAhead, int featureAhead) {
         return Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(
                 new Branch("main", true, new Sha("aaaa"), Instant.EPOCH, true, true,
-                        Option.of(new Upstream("origin/main", mainAhead, 1))),
+                        Option.of(new Upstream(new RemoteBranch("origin", "main"), mainAhead, 1))),
                 new Branch("feature", false, new Sha("ffff"), Instant.EPOCH, true, false,
-                        Option.of(new Upstream("origin/feature", featureAhead, 1)))))).model();
+                        Option.of(new Upstream(new RemoteBranch("origin", "feature"), featureAhead, 1)))))).model();
     }
 
     @Test
@@ -224,7 +224,7 @@ class BranchUpdateTest {
     void pullRequestOfAnotherBranchFastForwardsIt() {
         Next next = Update.update(pullable(0, 0), new PullMsg.Requested("feature"));
 
-        assertEquals(List.of(new BranchCmd.FastForward("feature")), next.cmds());
+        assertEquals(List.of(new BranchCmd.FastForward("feature", new RemoteBranch("origin", "feature"))), next.cmds());
         assertEquals(io.vavr.collection.HashSet.of("feature"), next.model().busy().keySet());
     }
 
@@ -250,7 +250,7 @@ class BranchUpdateTest {
     @Test
     void aBranchWhoseUpstreamIsGoneIsNotPulledAndTheErrorSaysWhy() {
         Branch gone = new Branch("old", false, new Sha("9"), Instant.EPOCH, false, false,
-                new Tracking.Gone("origin/old"));
+                new Tracking.Gone(new RemoteBranch("origin", "old")));
         Model model = Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(gone))).model();
 
         Next pulled = Update.update(model, new PullMsg.Requested("old"));
@@ -268,7 +268,7 @@ class BranchUpdateTest {
         assertEquals(Option.of("Pulling branch main failed: boom"),
                 errorText(Update.update(loaded(), failed(new BranchCmd.Pull("main"), "boom")).model()));
         assertEquals(Option.of("Fast-forwarding branch feature failed: boom"),
-                errorText(Update.update(loaded(), failed(new BranchCmd.FastForward("feature"), "boom")).model()));
+                errorText(Update.update(loaded(), failed(new BranchCmd.FastForward("feature", new RemoteBranch("origin", "feature")), "boom")).model()));
     }
 
     @Test
@@ -338,7 +338,7 @@ class BranchUpdateTest {
             assertEquals(List.of(), next.cmds());
             assertEquals(Option.of(new DeleteBranchPopup("feature")), next.model().popup());
         }
-        assertEquals(List.of(new BranchCmd.DeleteBranch("feature", DeleteScope.LOCAL)),
+        assertEquals(List.of(new BranchCmd.DeleteBranch("feature", new RemoteBranch("origin", "feature"), DeleteScope.LOCAL)),
                 Update.update(open, new DeleteBranchMsg.Chosen(DeleteScope.LOCAL)).cmds());
     }
 
@@ -350,7 +350,7 @@ class BranchUpdateTest {
 
         assertEquals(List.of(), Update.update(open, new DeleteBranchMsg.Chosen(DeleteScope.REMOTE)).cmds());
         assertEquals(List.of(), Update.update(open, new DeleteBranchMsg.Chosen(DeleteScope.BOTH)).cmds());
-        assertEquals(List.of(new BranchCmd.DeleteBranch("trunk", DeleteScope.LOCAL)),
+        assertEquals(List.of(new BranchCmd.DeleteBranch("trunk", new RemoteBranch("origin", "trunk"), DeleteScope.LOCAL)),
                 Update.update(open, new DeleteBranchMsg.Chosen(DeleteScope.LOCAL)).cmds());
     }
 
@@ -362,7 +362,7 @@ class BranchUpdateTest {
 
         Next next = Update.update(open, new DeleteBranchMsg.Chosen(DeleteScope.REMOTE));
 
-        assertEquals(List.of(new BranchCmd.DeleteBranch("feature", DeleteScope.REMOTE)), next.cmds());
+        assertEquals(List.of(new BranchCmd.DeleteBranch("feature", new RemoteBranch("origin", "feature"), DeleteScope.REMOTE)), next.cmds());
         assertEquals(Option.none(), next.model().popup());
         assertEquals(io.vavr.collection.HashSet.of("feature"), next.model().busy().keySet());
     }
@@ -377,9 +377,9 @@ class BranchUpdateTest {
         assertEquals(Option.none(), Update.update(deleting, new DeleteBranchMsg.Requested("feature")).model().popup());
 
         assertEquals(io.vavr.collection.HashSet.empty(),
-                Update.update(deleting, succeeded(new BranchCmd.DeleteBranch("feature", DeleteScope.LOCAL))).model().busy().keySet());
+                Update.update(deleting, succeeded(new BranchCmd.DeleteBranch("feature", new RemoteBranch("origin", "feature"), DeleteScope.LOCAL))).model().busy().keySet());
         assertEquals(io.vavr.collection.HashSet.empty(),
-                Update.update(deleting, failed(new BranchCmd.DeleteBranch("feature", DeleteScope.LOCAL), "boom")).model().busy().keySet());
+                Update.update(deleting, failed(new BranchCmd.DeleteBranch("feature", new RemoteBranch("origin", "feature"), DeleteScope.LOCAL), "boom")).model().busy().keySet());
     }
 
     @Test
@@ -394,7 +394,7 @@ class BranchUpdateTest {
 
     @Test
     void failedDeletionIsStored() {
-        Model model = Update.update(loaded(), failed(new BranchCmd.DeleteBranch("feature", DeleteScope.LOCAL), "boom")).model();
+        Model model = Update.update(loaded(), failed(new BranchCmd.DeleteBranch("feature", new RemoteBranch("origin", "feature"), DeleteScope.LOCAL), "boom")).model();
 
         assertEquals(Option.of("Deleting branch feature failed: boom"), errorText(model));
     }

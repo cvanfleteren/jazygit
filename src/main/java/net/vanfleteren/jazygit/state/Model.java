@@ -15,7 +15,6 @@ import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
-import net.vanfleteren.jazygit.git.model.Upstream;
 
 /**
  * The complete, immutable state of the repository as shown by the UI.
@@ -110,8 +109,7 @@ public record Model(String repositoryName,
      */
     public Option<PullRequest> pullRequest(Branch branch) {
         return branch.upstream()
-                .map(Upstream::name)
-                .map(name -> name.substring(name.indexOf('/') + 1))
+                .map(upstream -> upstream.branch().branch())
                 .flatMap(pullRequests::get)
                 .orElse(() -> pullRequests.get(branch.name()));
     }

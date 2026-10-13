@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.PushMode;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadStashes;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
@@ -28,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 class OperationUpdateTest {
 
-    private static final BranchCmd.Push PUSH = new BranchCmd.Push("feature", PushMode.FAST_FORWARD);
+    private static final BranchCmd.Push PUSH = new BranchCmd.Push("feature", new RemoteBranch("origin", "feature"), PushMode.FAST_FORWARD);
 
     @Test
     void aSuccessLogsItsCommandsReleasesItsBranchClearsTheErrorAndReadsTheRepositoryAgain() {
@@ -71,7 +72,7 @@ class OperationUpdateTest {
     void aCommandThatThrowsIsReportedAsABugOfThatCommand() {
         GitInfoProvider throwing = new StubGitProvider() {
             @Override
-            public Either<GitFailure<GitError.ProcessError>, List<ExecutedCommand>> push(String branch, PushMode mode) {
+            public Either<GitFailure<GitError.ProcessError>, List<ExecutedCommand>> push(String branch, RemoteBranch upstream, PushMode mode) {
                 throw new IllegalStateException("unexpected");
             }
         };

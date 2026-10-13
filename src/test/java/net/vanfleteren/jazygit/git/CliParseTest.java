@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Tag;
 import net.vanfleteren.jazygit.git.model.Tracking;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import org.junit.jupiter.api.Test;
 
@@ -28,35 +29,46 @@ class CliParseTest {
 
     @Test
     void branchesKnowTheirUpstreamRemoteAndWhetherTheyAreTheDefault() {
-        String raw = ref("refs/heads/feature", B, "200", " ", "origin/feature", "[ahead 1, behind 2]", "",
+        String raw = ref("refs/heads/feature", B, "200", " ", "origin", "refs/heads/feature", "[ahead 1, behind 2]", "",
                 "refs/remotes/origin/feature")
-                + ref("refs/heads/gone", B, "100", " ", "origin/gone", "[gone]", "", "refs/remotes/origin/gone")
-                + ref("refs/heads/trunk", A, "300", "*", "origin/trunk", "", "", "refs/remotes/origin/trunk")
-                + ref("refs/remotes/origin/HEAD", A, "300", " ", "", "", "refs/remotes/origin/trunk", "")
-                + ref("refs/remotes/origin/feature", B, "200", " ", "", "", "", "")
-                + ref("refs/remotes/origin/trunk", A, "300", " ", "", "", "", "");
+                + ref("refs/heads/gone", B, "100", " ", "origin", "refs/heads/gone", "[gone]", "", "refs/remotes/origin/gone")
+                + ref("refs/heads/trunk", A, "300", "*", "origin", "refs/heads/trunk", "", "", "refs/remotes/origin/trunk")
+                + ref("refs/remotes/origin/HEAD", A, "300", " ", "", "", "", "refs/remotes/origin/trunk", "")
+                + ref("refs/remotes/origin/feature", B, "200", " ", "", "", "", "", "")
+                + ref("refs/remotes/origin/trunk", A, "300", " ", "", "", "", "", "");
 
         assertEquals(List.of(
                         new Branch("trunk", true, new Sha(A), Instant.ofEpochSecond(300), true, true,
-                                Option.of(new Upstream("origin/trunk", 0, 0))),
+                                Option.of(new Upstream(new RemoteBranch("origin", "trunk"), 0, 0))),
                         new Branch("feature", false, new Sha(B), Instant.ofEpochSecond(200), true, false,
-                                Option.of(new Upstream("origin/feature", 1, 2))),
+                                Option.of(new Upstream(new RemoteBranch("origin", "feature"), 1, 2))),
                         new Branch("gone", false, new Sha(B), Instant.ofEpochSecond(100), false, false,
-                                new Tracking.Gone("origin/gone"))),
+                                new Tracking.Gone(new RemoteBranch("origin", "gone")))),
                 CliBranches.parse(raw).get());
     }
 
     @Test
     void aBranchIsOnItsRemoteWhenItsUpstreamIsEvenUnderAnotherName() {
-        String raw = ref("refs/heads/local", A, "1", "*", "origin/elsewhere", "", "", "refs/remotes/origin/elsewhere")
-                + ref("refs/remotes/origin/elsewhere", A, "1", " ", "", "", "", "");
+        String raw = ref("refs/heads/local", A, "1", "*", "origin", "refs/heads/elsewhere", "", "",
+                "refs/remotes/origin/elsewhere")
+                + ref("refs/remotes/origin/elsewhere", A, "1", " ", "", "", "", "", "");
 
         assertEquals(List.of(true), CliBranches.parse(raw).get().map(Branch::hasRemote));
     }
 
     @Test
+    void anUpstreamKeepsItsRemoteApartFromItsBranchEvenWhenTheRemoteNameHasASlash() {
+        String raw = ref("refs/heads/local", A, "1", "*", "my/fork", "refs/heads/feature/x", "", "",
+                "refs/remotes/my/fork/feature/x");
+
+        Branch local = CliBranches.parse(raw).get().head();
+        assertEquals(Option.of(new RemoteBranch("my/fork", "feature/x")), local.upstream().map(Upstream::branch));
+        assertEquals(new RemoteBranch("my/fork", "feature/x"), local.pushTarget());
+    }
+
+    @Test
     void withoutOriginHeadMainOrMasterIsTheDefault() {
-        String raw = ref("refs/heads/master", A, "1", "*", "", "", "", "");
+        String raw = ref("refs/heads/master", A, "1", "*", "", "", "", "", "");
 
         assertEquals(List.of(true), CliBranches.parse(raw).get().map(Branch::isDefault));
     }
@@ -79,7 +91,7 @@ class CliParseTest {
         assertEquals(new GitError.UnexpectedOutput("refs/heads/main\u001f" + A),
                 CliBranches.parse(ref("refs/heads/main", A)).getLeft());
         assertEquals(new GitError.UnexpectedOutput("soon"),
-                CliBranches.parse(ref("refs/heads/main", A, "soon", "*", "", "", "", "")).getLeft());
+                CliBranches.parse(ref("refs/heads/main", A, "soon", "*", "", "", "", "", "")).getLeft());
         assertEquals(new GitError.UnexpectedOutput(" "),
                 CliLog.parse(String.join("\u001f", " ", "", "Ada", "ada@example.com", "60", "S", "", "S\n")).getLeft());
         assertEquals(new GitError.UnexpectedOutput("stash@{0} without a separator"),

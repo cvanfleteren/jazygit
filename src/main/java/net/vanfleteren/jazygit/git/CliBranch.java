@@ -31,12 +31,13 @@ public final class CliBranch {
     }
 
     /**
-     * Deletes the branch {@code name} where {@code scope} says. With both, the remote one goes first, so a
-     * failure leaves the local branch in place.
+     * Deletes the branch {@code name} where {@code scope} says: locally, and/or {@code remote}, the branch it is
+     * pushed to. With both, the remote one goes first, so a failure leaves the local branch in place.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> delete(Path workTree, String name, DeleteScope scope) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> delete(Path workTree, String name,
+                                                                          RemoteBranch remote, DeleteScope scope) {
         return GitFailure.sequence(
-                () -> scope.remote() ? deleteRemote(workTree, name) : GitFailure.nothing(),
+                () -> scope.remote() ? deleteRemote(workTree, remote) : GitFailure.nothing(),
                 () -> scope.local() ? deleteLocal(workTree, name) : GitFailure.nothing());
     }
 
@@ -48,25 +49,21 @@ public final class CliBranch {
     }
 
     /**
-     * Runs {@code git push <remote> --delete <branch>} in {@code workTree}: deletes the branch {@code name}
-     * tracks, or the one of the same name on {@code origin}.
+     * Runs {@code git push <remote> --delete <branch>} in {@code workTree}.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemote(Path workTree, String name) {
-        return tracking(workTree, name).flatMap(tracking -> GitProcess.log(workTree,
-                git("push", tracking.target().remote(), "--delete", tracking.target().branch())));
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemote(Path workTree, RemoteBranch remote) {
+        return GitProcess.log(workTree, git("push", remote.remote(), "--delete", remote.branch()));
     }
 
     /**
-     * Pushes {@code name} to the branch it tracks. A branch without an upstream is pushed to the branch of the
-     * same name on {@code origin}, which becomes its upstream, as with {@code --set-upstream}.
+     * Pushes {@code name} to {@code upstream}, the branch it tracks.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Path workTree, String name, PushMode mode) {
-        return tracking(workTree, name).flatMap(tracking -> GitProcess.log(workTree, git(List.of("push")
-                .appendAll(!tracking.hasUpstream() ? List.of("--set-upstream")
-                        : mode == PushMode.FORCE_WITH_LEASE ? List.of("--force-with-lease")
-                        : List.empty())
-                .append(tracking.target().remote())
-                .append(refspec(name, tracking.target())))));
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Path workTree, String name,
+                                                                        RemoteBranch upstream, PushMode mode) {
+        return GitProcess.log(workTree, git(List.of("push")
+                .appendAll(mode == PushMode.FORCE_WITH_LEASE ? List.of("--force-with-lease") : List.empty())
+                .append(upstream.remote())
+                .append(refspec(name, upstream))));
     }
 
     /**
@@ -105,13 +102,13 @@ public final class CliBranch {
 
     /**
      * Runs {@code git fetch <remote> refs/heads/<upstream>:refs/heads/<name>}: fast-forwards {@code name}, which
-     * is not checked out, to the branch it tracks. Git refuses when that is not a fast-forward. A branch without
-     * an upstream is fast-forwarded to the branch of the same name on {@code origin}.
+     * is not checked out, to {@code upstream}, the branch it tracks. Git refuses when that is not a fast-forward.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(Path workTree, String name) {
-        return tracking(workTree, name).flatMap(tracking -> GitProcess.log(workTree,
-                git("fetch", tracking.target().remote(), Refs.head(tracking.target().branch()) + ":" + Refs.head(name))
-                        .withTimeout(PULL_TIMEOUT)));
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(Path workTree, String name,
+                                                                               RemoteBranch upstream) {
+        return GitProcess.log(workTree,
+                git("fetch", upstream.remote(), Refs.head(upstream.branch()) + ":" + Refs.head(name))
+                        .withTimeout(PULL_TIMEOUT));
     }
 
     /**
@@ -120,37 +117,5 @@ public final class CliBranch {
      */
     private static String refspec(String name, RemoteBranch target) {
         return target.branch().equals(name) ? name : name + ":" + Refs.head(target.branch());
-    }
-
-    /**
-     * Whether a branch has an upstream, and the remote branch it is pushed to: its upstream, or the branch
-     * of the same name on {@code origin}.
-     */
-    private record Tracking(boolean hasUpstream, RemoteBranch target) {
-    }
-
-    /**
-     * Looks up how {@code name} tracks its remote. Only the command that uses this is logged.
-     */
-    private static Either<GitFailure<ProcessError>, Tracking> tracking(Path workTree, String name) {
-        GitCommand lookup = git("for-each-ref",
-                "--format=%(upstream:remotename)" + GitOutput.REF_FIELD_SEPARATOR + "%(upstream:remoteref)",
-                Refs.head(name));
-        return GitProcess.read(workTree, lookup, raw -> Either.right(tracking(raw, name)))
-                .mapLeft(error -> new GitFailure<>(error, List.of(lookup.executed())));
-    }
-
-    /**
-     * Parses {@code <remote name><separator><remote ref>}, which is just the separator without an upstream.
-     */
-    private static Tracking tracking(String raw, String name) {
-        // Not stripped: the separator is whitespace too.
-        return GitOutput.lines(raw).headOption()
-                .flatMap(line -> GitOutput.fields(line, 2).toOption())
-                .filter(fields -> !fields.head().isEmpty())
-                .flatMap(fields -> GitOutput.after(fields.last(), Refs.HEADS)
-                        .map(branch -> new RemoteBranch(fields.head(), branch)))
-                .map(upstream -> new Tracking(true, upstream))
-                .getOrElse(() -> new Tracking(false, new RemoteBranch(Refs.DEFAULT_REMOTE, name)));
     }
 }

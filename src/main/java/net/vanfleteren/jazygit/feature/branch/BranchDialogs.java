@@ -17,8 +17,6 @@ import net.vanfleteren.jazygit.ui.widgets.TextInputDialog;
  */
 public final class BranchDialogs {
 
-    private static final String DEFAULT_REMOTE = "origin";
-
     /**
      * Asks for the name of a new branch. A blank name keeps it open.
      */
@@ -35,7 +33,7 @@ public final class BranchDialogs {
     public static final TextInputDialog.Spec<SetUpstreamPopup> SET_UPSTREAM = new TextInputDialog.Spec<>(
             "set-upstream", SetUpstreamPopup.class,
             popup -> Messages.get("dialog.setUpstream.title"), Option.none(),
-            popup -> new RemoteBranch(DEFAULT_REMOTE, popup.branch()).text(),
+            popup -> new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, popup.branch()).text(),
             PushMsg.UpstreamConfirmed::new, PushMsg.UpstreamCancelled::new);
 
     /**

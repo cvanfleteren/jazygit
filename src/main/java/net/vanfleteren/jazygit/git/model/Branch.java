@@ -38,10 +38,20 @@ public record Branch(String name, boolean current, Sha tipOid, Instant tipTime, 
     }
 
     /**
-     * The name its upstream had, when that was deleted on the remote.
+     * The remote branch its upstream was, when that was deleted on the remote.
      */
-    public Option<String> goneUpstream() {
-        return tracking instanceof Tracking.Gone(String upstream) ? Option.of(upstream) : Option.none();
+    public Option<RemoteBranch> goneUpstream() {
+        return tracking instanceof Tracking.Gone(RemoteBranch upstream) ? Option.of(upstream) : Option.none();
+    }
+
+    /**
+     * The remote branch it is pushed to: its upstream, even when that is gone, or the branch of the same name
+     * on {@code origin}.
+     */
+    public RemoteBranch pushTarget() {
+        return upstream().map(Upstream::branch)
+                .orElse(this::goneUpstream)
+                .getOrElse(() -> new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, name));
     }
 
     /**

@@ -101,11 +101,6 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<ProcessError, Option<String>> remoteBranch(String branch) {
-        return CliBranches.remoteBranch(workTree, branch);
-    }
-
-    @Override
     public Either<ProcessError, List<Stash>> stashes() {
         return CliStash.list(workTree);
     }
@@ -151,8 +146,8 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(String branch, PushMode mode) {
-        return CliBranch.push(workTree, branch, mode);
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(String branch, RemoteBranch upstream, PushMode mode) {
+        return CliBranch.push(workTree, branch, upstream, mode);
     }
 
     @Override
@@ -166,8 +161,8 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(String branch) {
-        return CliBranch.fastForward(workTree, branch);
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(String branch, RemoteBranch upstream) {
+        return CliBranch.fastForward(workTree, branch, upstream);
     }
 
     @Override
@@ -191,8 +186,8 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(String name, DeleteScope scope) {
-        return CliBranch.delete(workTree, name, scope);
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(String name, RemoteBranch remote, DeleteScope scope) {
+        return CliBranch.delete(workTree, name, remote, scope);
     }
 
     @Override

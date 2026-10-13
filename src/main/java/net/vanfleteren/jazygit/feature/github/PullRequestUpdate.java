@@ -31,7 +31,9 @@ public final class PullRequestUpdate {
         return switch (msg) {
             case PullRequestMsg.Requested(String branch) -> requested(model, branch);
             case PullRequestMsg.BaseChosen(String base) -> Update.confirm(model, BasePopup.class,
-                    popup -> Option.of(new CreatePullRequest(popup.branch(), base)));
+                    // The branch can have another name on its remote; gh needs that one.
+                    popup -> model.branch(popup.branch()).map(known ->
+                            new CreatePullRequest(known.name(), known.pushTarget().branch(), base)));
             case PullRequestMsg.BaseCancelled() -> Next.of(model.withoutPopup(BasePopup.class));
             case PullRequestMsg.Created(CreatePullRequest cmd, var pullRequest, var commands) -> {
                 // Done like any operation. The new pull request shows at once, as GitHub may not list it yet;

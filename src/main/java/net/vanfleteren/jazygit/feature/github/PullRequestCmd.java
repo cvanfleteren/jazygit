@@ -17,9 +17,10 @@ import net.vanfleteren.jazygit.state.OperationCmd;
 public sealed interface PullRequestCmd extends Cmd {
 
     /**
-     * Creates a pull request from {@code branch}, as it is on its remote, into {@code base}.
+     * Creates a pull request from {@code branch}, as it is on its remote under the name {@code head}, into
+     * {@code base}.
      */
-    record CreatePullRequest(String branch, String base) implements PullRequestCmd, OperationCmd {
+    record CreatePullRequest(String branch, String head, String base) implements PullRequestCmd, OperationCmd {
 
         @Override
         public Operation operation() {
@@ -38,15 +39,11 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            // The branch can have another name on its remote; gh needs that one.
-            return env.git().remoteBranch(branch).fold(this::failedWith, remote -> {
-                String head = remote.getOrElse(branch);
-                return env.gitHub().createPullRequest(head, base).fold(
-                        failure -> failed(Failure.of(failure)),
-                        created -> new PullRequestMsg.Created(this,
-                                created.number().map(number -> new PullRequest(number, head, false, Checks.NONE, Review.NONE)),
-                                created.commands()));
-            });
+            return env.gitHub().createPullRequest(head, base).fold(
+                    failure -> failed(Failure.of(failure)),
+                    created -> new PullRequestMsg.Created(this,
+                            created.number().map(number -> new PullRequest(number, head, false, Checks.NONE, Review.NONE)),
+                            created.commands()));
         }
     }
 

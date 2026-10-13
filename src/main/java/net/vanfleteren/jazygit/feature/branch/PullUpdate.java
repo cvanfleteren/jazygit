@@ -28,15 +28,15 @@ public final class PullUpdate {
         // A branch that is not checked out can only be fast-forwarded, which its own commits would prevent.
         return model.branch(branch)
                 .filter(known -> !model.busy().containsKey(branch))
-                .map(known -> known.upstream().isEmpty()
-                        ? Next.of(model.fail(known.goneUpstream()
-                        .<AppError>map(upstream -> new AppError.UpstreamGone(branch, upstream))
-                        .getOrElse(() -> new AppError.NoUpstream(branch))))
-                        : known.current()
-                        ? Update.start(model.clearError(), new Pull(branch))
-                        : known.ahead() > 0
-                        ? Next.of(model.fail(new AppError.UnpushedCommits(branch)))
-                        : Update.start(model.clearError(), new FastForward(branch)))
+                .map(known -> known.upstream()
+                        .map(upstream -> known.current()
+                                ? Update.start(model.clearError(), new Pull(branch))
+                                : known.ahead() > 0
+                                ? Next.of(model.fail(new AppError.UnpushedCommits(branch)))
+                                : Update.start(model.clearError(), new FastForward(branch, upstream.branch())))
+                        .getOrElse(() -> Next.of(model.fail(known.goneUpstream()
+                                .<AppError>map(upstream -> new AppError.UpstreamGone(branch, upstream.shortName()))
+                                .getOrElse(() -> new AppError.NoUpstream(branch))))))
                 .getOrElse(() -> Next.of(model));
     }
 }

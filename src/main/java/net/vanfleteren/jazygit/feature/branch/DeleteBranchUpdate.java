@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
 import net.vanfleteren.jazygit.state.Update;
-import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.DeleteBranch;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Cancelled;
@@ -37,9 +36,9 @@ public final class DeleteBranchUpdate {
 
     private static Next chosen(Model model, DeleteScope scope) {
         // Deleting on the remote is not possible for a local-only branch, nor for the default one.
-        return Update.confirm(model, DeleteBranchPopup.class, popup -> Option.of(popup.branch())
-                .filter(branch -> scope == DeleteScope.LOCAL || remoteDeletable(model, branch))
-                .map(branch -> new DeleteBranch(branch, scope)));
+        return Update.confirm(model, DeleteBranchPopup.class, popup -> model.branch(popup.branch())
+                .filter(branch -> scope == DeleteScope.LOCAL || branch.remoteDeletable())
+                .map(branch -> new DeleteBranch(branch.name(), branch.pushTarget(), scope)));
     }
 
     static boolean remoteDeletable(Model model, String branch) {

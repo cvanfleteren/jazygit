@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.git.model.Tracking;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.git.model.Sha;
 import dev.tamboui.tui.event.KeyCode;
@@ -73,7 +74,7 @@ class BranchesPanelTest {
     void aBranchWhoseUpstreamIsGoneSaysSo() {
         assertEquals(List.of(LoadableList.Seg.styled(" gone", Theme.Classes.GONE)),
                 BranchesPanel.sync(new Branch("b", false, new Sha("1"), java.time.Instant.EPOCH, false, false,
-                        new Tracking.Gone("origin/b"))));
+                        new Tracking.Gone(new RemoteBranch("origin", "b")))));
         // A branch that was never pushed shows nothing.
         assertEquals(List.of(), BranchesPanel.sync(new Branch("b", false, new Sha("1"))));
     }
@@ -81,14 +82,14 @@ class BranchesPanelTest {
     @Test
     void syncShowsAnAheadArrowForUnpushedAndABehindOneForIncomingCommits() {
         java.time.Instant t = java.time.Instant.EPOCH;
-        assertEquals(List.of(), BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, Option.of(new Upstream("origin/" + "b", 0, 0)))));
+        assertEquals(List.of(), BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, Option.of(new Upstream(new RemoteBranch("origin", "b"), 0, 0)))));
         assertEquals(List.of(LoadableList.Seg.styled(" ↑2", Theme.Classes.AHEAD)),
-                BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, Option.of(new Upstream("origin/" + "b", 2, 0)))));
+                BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, Option.of(new Upstream(new RemoteBranch("origin", "b"), 2, 0)))));
         assertEquals(List.of(LoadableList.Seg.styled(" ↓1", Theme.Classes.BEHIND)),
-                BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, Option.of(new Upstream("origin/" + "b", 0, 1)))));
+                BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, Option.of(new Upstream(new RemoteBranch("origin", "b"), 0, 1)))));
         assertEquals(List.of(LoadableList.Seg.styled(" ↑2", Theme.Classes.AHEAD),
                         LoadableList.Seg.styled(" ↓1", Theme.Classes.BEHIND)),
-                BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, Option.of(new Upstream("origin/" + "b", 2, 1)))));
+                BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, Option.of(new Upstream(new RemoteBranch("origin", "b"), 2, 1)))));
     }
 
     @Test

@@ -110,7 +110,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(String name, DeleteScope scope) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(String name, RemoteBranch remote, DeleteScope scope) {
         return ran();
     }
 
@@ -135,7 +135,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(String branch, PushMode mode) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(String branch, RemoteBranch upstream, PushMode mode) {
         return ran();
     }
 
@@ -150,13 +150,8 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(String branch) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(String branch, RemoteBranch upstream) {
         return ran();
-    }
-
-    @Override
-    default Either<ProcessError, Option<String>> remoteBranch(String branch) {
-        return Either.right(Option.of(branch));
     }
 
     @Override

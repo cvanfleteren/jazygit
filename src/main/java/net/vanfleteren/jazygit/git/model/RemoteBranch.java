@@ -8,6 +8,11 @@ import io.vavr.control.Option;
 public record RemoteBranch(String remote, String branch) {
 
     /**
+     * The remote a branch without an upstream is pushed to.
+     */
+    public static final String DEFAULT_REMOTE = "origin";
+
+    /**
      * The remote branch written as {@code <remote> <branch>}; none unless that is exactly two words.
      * Neither a remote nor a branch name can contain whitespace.
      */
@@ -21,5 +26,13 @@ public record RemoteBranch(String remote, String branch) {
      */
     public String text() {
         return remote + " " + branch;
+    }
+
+    /**
+     * The name git shows for it, e.g. {@code origin/main}; just the branch for one of this repository, whose
+     * remote is {@code .}.
+     */
+    public String shortName() {
+        return remote.equals(".") ? branch : remote + "/" + branch;
     }
 }

@@ -454,7 +454,7 @@ class CliGitInfoProviderTest {
     @Test
     void aFailingCommandReportsTheCommandsRunUpToAndIncludingIt() {
         assertEquals(List.of("git branch --delete --force missing"),
-                provider.deleteBranch("missing", DeleteScope.LOCAL).getLeft().commands().map(ExecutedCommand::line));
+                provider.deleteBranch("missing", new RemoteBranch("origin", "missing"), DeleteScope.LOCAL).getLeft().commands().map(ExecutedCommand::line));
         assertEquals(List.of("git add -- missing.txt"), provider.stage(List.of("missing.txt")).getLeft().commands().map(ExecutedCommand::line));
     }
 
@@ -538,13 +538,13 @@ class CliGitInfoProviderTest {
         git("init", "-q", "--bare", "-b", "main", bare.toString());
         git("remote", "add", "origin", bare.toString());
 
-        provider.push("main", PushMode.FAST_FORWARD).get();
+        provider.pushSettingUpstream("main", new RemoteBranch("origin", "main")).get();
         assertEquals(List.of(0, 0), counts("main"));
         assertTrue(provider.branches().get().filter(b -> b.name().equals("main")).forAll(Branch::hasRemote));
 
         git("commit", "-q", "--allow-empty", "-m", "local");
         assertEquals(List.of(1, 0), counts("main"));
-        provider.push("main", PushMode.FAST_FORWARD).get();
+        provider.push("main", new RemoteBranch("origin", "main"), PushMode.FAST_FORWARD).get();
         assertEquals(List.of(0, 0), counts("main"));
     }
 
@@ -557,14 +557,14 @@ class CliGitInfoProviderTest {
         assertEquals(List.of("git push --set-upstream mirror main:refs/heads/shared"),
                 provider.pushSettingUpstream("main", new RemoteBranch("mirror", "shared")).get().map(ExecutedCommand::line));
         Branch main = provider.branches().get().head();
-        assertEquals(Option.of(new Upstream("mirror/shared", 0, 0)), main.upstream());
+        assertEquals(Option.of(new Upstream(new RemoteBranch("mirror", "shared"), 0, 0)), main.upstream());
         assertTrue(main.hasRemote());
 
         git("commit", "-q", "--allow-empty", "-m", "local");
-        assertEquals(List.of("git push mirror main:refs/heads/shared"), provider.push("main", PushMode.FAST_FORWARD).get().map(ExecutedCommand::line));
+        assertEquals(List.of("git push mirror main:refs/heads/shared"), provider.push("main", main.pushTarget(), PushMode.FAST_FORWARD).get().map(ExecutedCommand::line));
         assertEquals(List.of(0, 0), counts("main"));
 
-        assertEquals(List.of("git push mirror --delete shared"), provider.deleteBranch("main", DeleteScope.REMOTE).get().map(ExecutedCommand::line));
+        assertEquals(List.of("git push mirror --delete shared"), provider.deleteBranch("main", main.pushTarget(), DeleteScope.REMOTE).get().map(ExecutedCommand::line));
         assertTrue(gitSucceedsIn(repo, "fetch", "-q", "--prune", "mirror"));
         assertEquals(Option.none(), provider.branches().get().head().upstream());
     }
@@ -593,9 +593,9 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "--allow-empty", "-m", "ours");
         assertEquals(List.of(1, 1), counts("main"));
 
-        assertTrue(provider.push("main", PushMode.FAST_FORWARD).isLeft());
+        assertTrue(provider.push("main", new RemoteBranch("origin", "main"), PushMode.FAST_FORWARD).isLeft());
 
-        provider.push("main", PushMode.FORCE_WITH_LEASE).get();
+        provider.push("main", new RemoteBranch("origin", "main"), PushMode.FORCE_WITH_LEASE).get();
         git("fetch", "-q", "origin");
         assertEquals(List.of(0, 0), counts("main"));
     }
@@ -670,7 +670,7 @@ class CliGitInfoProviderTest {
         git("checkout", "-q", "-b", "other");
         assertEquals(List.of(0, 1), counts("main"));
 
-        assertEquals(List.of("git fetch origin refs/heads/main:refs/heads/main"), provider.fastForward("main").get().map(ExecutedCommand::line));
+        assertEquals(List.of("git fetch origin refs/heads/main:refs/heads/main"), provider.fastForward("main", new RemoteBranch("origin", "main")).get().map(ExecutedCommand::line));
 
         assertEquals(List.of(0, 0), counts("main"));
     }
@@ -681,13 +681,13 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "--allow-empty", "-m", "ours");
         git("checkout", "-q", "-b", "other");
 
-        assertTrue(provider.fastForward("main").isLeft());
+        assertTrue(provider.fastForward("main", new RemoteBranch("origin", "main")).isLeft());
         assertEquals(List.of(1, 1), counts("main"));
     }
 
     @Test
     void pushFailsWithGitsExplanationWithoutARemote() {
-        assertTrue(provider.push("main", PushMode.FAST_FORWARD).isLeft());
+        assertTrue(provider.push("main", new RemoteBranch("origin", "main"), PushMode.FAST_FORWARD).isLeft());
     }
 
     @Test
@@ -719,14 +719,14 @@ class CliGitInfoProviderTest {
     void deleteBranchRemovesTheLocalBranch() throws Exception {
         git("branch", "topic");
 
-        provider.deleteBranch("topic", DeleteScope.LOCAL).get();
+        provider.deleteBranch("topic", new RemoteBranch("origin", "topic"), DeleteScope.LOCAL).get();
 
         assertEquals(List.of("main"), provider.branches().get().map(Branch::name).toList());
     }
 
     @Test
     void deleteBranchFailsForTheCheckedOutBranch() {
-        assertTrue(provider.deleteBranch("main", DeleteScope.LOCAL).isLeft());
+        assertTrue(provider.deleteBranch("main", new RemoteBranch("origin", "main"), DeleteScope.LOCAL).isLeft());
     }
 
     @Test

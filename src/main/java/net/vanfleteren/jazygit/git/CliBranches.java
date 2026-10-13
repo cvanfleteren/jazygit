@@ -7,6 +7,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Tracking;
 import net.vanfleteren.jazygit.git.model.Upstream;
@@ -27,7 +28,8 @@ public final class CliBranches {
 
     private static final String ORIGIN = Refs.remote(DEFAULT_REMOTE, "");
     private static final List<String> FIELDS = List.of("%(refname)", "%(objectname)", "%(committerdate:unix)",
-            "%(HEAD)", "%(upstream:short)", "%(upstream:track)", "%(symref)", "%(upstream)");
+            "%(HEAD)", "%(upstream:remotename)", "%(upstream:remoteref)", "%(upstream:track)", "%(symref)",
+            "%(upstream)");
     private static final String FORMAT = FIELDS.mkString(GitOutput.REF_FIELD_SEPARATOR);
     private static final Pattern AHEAD = Pattern.compile("ahead (\\d{1,9})");
     private static final Pattern BEHIND = Pattern.compile("behind (\\d{1,9})");
@@ -48,38 +50,24 @@ public final class CliBranches {
     }
 
     /**
-     * The name of the branch {@code branch} follows on its remote, read from git's configuration.
-     */
-    public static Either<ProcessError, Option<String>> remoteBranch(Path workTree, String branch) {
-        return GitProcess.read(workTree,
-                GitCommand.reading("for-each-ref", "--format=%(upstream:remoteref)", Refs.head(branch)),
-                raw -> Either.right(remoteBranch(raw)));
-    }
-
-    /**
-     * Parses {@code %(upstream:remoteref)}, e.g. {@code refs/heads/main}; it is empty without an upstream.
-     */
-    static Option<String> remoteBranch(String raw) {
-        String ref = raw.strip();
-        return GitOutput.after(ref, HEADS).orElse(Option.of(ref)).filter(name -> !name.isEmpty());
-    }
-
-    /**
      * One line of {@code for-each-ref} output.
      *
-     * @param upstream    the short name of the upstream, e.g. {@code origin/main}
+     * @param remote      the remote of the upstream, e.g. {@code origin}
+     * @param remoteRef   the ref of the upstream on its remote, e.g. {@code refs/heads/main}
      * @param track       how far the branch is from its upstream, e.g. {@code [ahead 1, behind 2]}; none when
      *                    they are equal, {@code [gone]} when the upstream does not exist
      * @param symref      what a symbolic ref points to, e.g. {@code refs/remotes/origin/main}
      * @param upstreamRef the remote-tracking ref of the upstream, e.g. {@code refs/remotes/origin/main}
      */
-    private record Ref(String name, Sha tip, Instant time, boolean head, Option<String> upstream,
-                       Option<String> track, Option<String> symref, Option<String> upstreamRef) {
+    private record Ref(String name, Sha tip, Instant time, boolean head, Option<String> remote,
+                       Option<String> remoteRef, Option<String> track, Option<String> symref,
+                       Option<String> upstreamRef) {
 
         static Either<UnexpectedOutput, Ref> parse(String line) {
             return GitOutput.fields(line, FIELDS.size()).flatMap(f -> GitOutput.sha(f.get(1)).flatMap(tip ->
                     GitOutput.epochSeconds(f.get(2)).map(time -> new Ref(f.get(0), tip, time, f.get(3).equals("*"),
-                            present(f.get(4)), present(f.get(5)), present(f.get(6)), present(f.get(7))))));
+                            present(f.get(4)), present(f.get(5)), present(f.get(6)), present(f.get(7)),
+                            present(f.get(8))))));
         }
 
         private static Option<String> present(String field) {
@@ -91,6 +79,14 @@ public final class CliBranches {
          */
         Option<String> localName() {
             return GitOutput.after(name, HEADS);
+        }
+
+        /**
+         * The branch it follows on its remote, as git's configuration says, whether or not that still exists.
+         */
+        Option<RemoteBranch> upstream() {
+            return remote.flatMap(r -> remoteRef.flatMap(ref -> GitOutput.after(ref, HEADS))
+                    .map(branch -> new RemoteBranch(r, branch)));
         }
 
         /**
@@ -132,9 +128,9 @@ public final class CliBranches {
     private static Tracking tracking(Ref ref) {
         String track = ref.track().getOrElse("");
         return ref.upstream()
-                .<Tracking>map(name -> track.equals("[gone]")
-                        ? new Tracking.Gone(name)
-                        : new Tracking.Tracks(new Upstream(name, count(AHEAD, track), count(BEHIND, track))))
+                .<Tracking>map(branch -> track.equals("[gone]")
+                        ? new Tracking.Gone(branch)
+                        : new Tracking.Tracks(new Upstream(branch, count(AHEAD, track), count(BEHIND, track))))
                 .getOrElse(new Tracking.None());
     }
 
