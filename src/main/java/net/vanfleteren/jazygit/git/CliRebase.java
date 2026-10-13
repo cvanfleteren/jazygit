@@ -33,7 +33,7 @@ public final class CliRebase {
      *
      * @return the command lines that were run
      */
-    public static Either<GitFailure<RewordError>, List<String>> rewordAny(Path workTree, Sha sha,
+    public static Either<GitFailure<RewordError>, List<ExecutedCommand>> rewordAny(Path workTree, Sha sha,
                                                                         CommitMessage message) {
         return GitFailure.<RewordError, Option<Sha>>widen(CliLog.resolve(workTree, "HEAD"))
                 .flatMap(head -> head.contains(sha)
@@ -49,13 +49,13 @@ public final class CliRebase {
      *
      * @return the command lines that were run
      */
-    public static Either<GitFailure<RewordError>, List<String>> reword(Path workTree, Sha sha, CommitMessage message) {
+    public static Either<GitFailure<RewordError>, List<ExecutedCommand>> reword(Path workTree, Sha sha, CommitMessage message) {
         // A merge in the todo list is "merge -C <commit>", which has to become "-c" for git to ask for a message.
         String sequenceEditor = sequenceEditor(sha, "pick", "reword")
                 + " -e 's/^merge -C " + sha.shortSha() + "/merge -c " + sha.shortSha() + "/'";
         return TempFiles.using("jazygit-message", file -> Files.writeString(file, message.text()),
                 failed -> new GitFailure<RewordError>(failed, List.empty()),
-                file -> GitFailure.<RewordError, List<String>>widen(base(workTree, sha.value()).flatMap(base ->
+                file -> GitFailure.<RewordError, List<ExecutedCommand>>widen(base(workTree, sha.value()).flatMap(base ->
                         rebase(workTree, git(INTERACTIVE.append(base)).withEnvironment(HashMap.of(
                                 "GIT_SEQUENCE_EDITOR", sequenceEditor,
                                 "GIT_EDITOR", CommandLine.format(List.of("cp", file.toString()))))))));
@@ -68,7 +68,7 @@ public final class CliRebase {
      *
      * @return the command lines that were run
      */
-    public static Either<GitFailure<ProcessError>, List<String>> onto(Path workTree, String onto) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> onto(Path workTree, String onto) {
         return rebase(workTree, git(REBASE.append("--no-autosquash").append(onto)));
     }
 
@@ -81,7 +81,7 @@ public final class CliRebase {
      * @param sha the object id of a commit that has exactly one parent
      * @return the command lines that were run
      */
-    public static Either<GitFailure<ProcessError>, List<String>> squash(Path workTree, Sha sha) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Path workTree, Sha sha) {
         return GitProcess.run(workTree, git("rev-parse", sha.value() + "^"))
                 .flatMap(parent -> base(workTree, parent.stdout().strip()))
                 .flatMap(base -> rebase(workTree, git(INTERACTIVE.append("--no-autosquash").append(base))
@@ -101,7 +101,7 @@ public final class CliRebase {
     /**
      * Runs {@code rebase}, and aborts it again when it fails.
      */
-    private static Either<GitFailure<ProcessError>, List<String>> rebase(Path workTree, GitCommand rebase) {
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> rebase(Path workTree, GitCommand rebase) {
         return GitProcess.runOrUndo(workTree, rebase, ABORT, () -> true);
     }
 

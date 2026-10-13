@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import net.vanfleteren.jazygit.git.ExecutedCommand;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -40,7 +41,7 @@ public sealed interface BranchCmd extends OperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return git.createBranch(branch, base);
         }
     }
@@ -58,7 +59,7 @@ public sealed interface BranchCmd extends OperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return git.deleteBranch(branch, scope);
         }
     }
@@ -74,7 +75,7 @@ public sealed interface BranchCmd extends OperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return git.merge(branch, mode);
         }
     }
@@ -90,7 +91,7 @@ public sealed interface BranchCmd extends OperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return git.rebase(branch);
         }
     }
@@ -107,7 +108,7 @@ public sealed interface BranchCmd extends OperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return git.checkout(branch);
         }
 
@@ -132,7 +133,7 @@ public sealed interface BranchCmd extends OperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return git.checkoutWithStash(branch);
         }
     }
@@ -153,7 +154,7 @@ public sealed interface BranchCmd extends OperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return git.pushSettingUpstream(branch, upstream);
         }
     }
@@ -171,7 +172,7 @@ public sealed interface BranchCmd extends OperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return git.push(branch, mode);
         }
     }
@@ -192,7 +193,7 @@ public sealed interface BranchCmd extends OperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return git.pull();
         }
     }
@@ -213,7 +214,7 @@ public sealed interface BranchCmd extends OperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return git.fastForward(branch);
         }
     }

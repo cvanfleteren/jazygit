@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
+import net.vanfleteren.jazygit.git.ExecutedCommand;
+import static net.vanfleteren.jazygit.git.StubGitProvider.executed;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
@@ -33,7 +35,7 @@ class OperationUpdateTest {
 
         Next next = Update.update(pushing, succeeded(PUSH, "git push origin feature"));
 
-        assertEquals(List.of(new LogEntry(Operation.PUSH, List.of("git push origin feature"))), next.model().commandLog());
+        assertEquals(List.of(new LogEntry(Operation.PUSH, executed("git push origin feature"))), next.model().commandLog());
         assertEquals(HashSet.empty(), next.model().busy().keySet());
         assertEquals(Option.none(), next.model().error());
         assertEquals(List.of(new LoadStatus(), new LoadBranches(), new LoadStashes()), next.cmds());
@@ -41,12 +43,12 @@ class OperationUpdateTest {
 
     @Test
     void aFailureLogsTheCommandsThatRanAndShowsWhy() {
-        Failure failure = new Failure.Git(new GitError.CommandFailed("rejected", 1), List.of("git push origin feature"),
+        Failure failure = new Failure.Git(new GitError.CommandFailed("rejected", 1), executed("git push origin feature"),
                 Option.none());
 
         Next next = Update.update(loaded().withBusyBranch("feature", Operation.PUSH), new OperationMsg.Failed(PUSH, failure));
 
-        assertEquals(List.of(new LogEntry(Operation.PUSH, List.of("git push origin feature"))), next.model().commandLog());
+        assertEquals(List.of(new LogEntry(Operation.PUSH, executed("git push origin feature"))), next.model().commandLog());
         assertEquals(HashSet.empty(), next.model().busy().keySet());
         assertEquals(Option.of(new AppError.OperationFailed(Operation.PUSH, Option.of("feature"), failure)),
                 next.model().error());
@@ -68,7 +70,7 @@ class OperationUpdateTest {
     void aCommandThatThrowsIsReportedAsABugOfThatCommand() {
         GitInfoProvider throwing = new StubGitProvider() {
             @Override
-            public Either<GitFailure<GitError.ProcessError>, List<String>> push(String branch, PushMode mode) {
+            public Either<GitFailure<GitError.ProcessError>, List<ExecutedCommand>> push(String branch, PushMode mode) {
                 throw new IllegalStateException("unexpected");
             }
         };

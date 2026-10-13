@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
+import net.vanfleteren.jazygit.git.ExecutedCommand;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError;
@@ -15,14 +16,14 @@ public sealed interface Failure {
      * The command lines that were executed before it failed, the failing one last; they belong in the
      * command log.
      */
-    List<String> commands();
+    List<ExecutedCommand> commands();
 
     /**
      * Git failed.
      *
      * @param cleanupFailed why cleaning up after the failure failed too, if it did
      */
-    record Git(GitError error, List<String> commands, Option<ProcessError> cleanupFailed) implements Failure {
+    record Git(GitError error, List<ExecutedCommand> commands, Option<ProcessError> cleanupFailed) implements Failure {
 
         public Git(GitError error) {
             this(error, List.empty(), Option.none());
@@ -35,7 +36,7 @@ public sealed interface Failure {
     record Bug(Throwable cause) implements Failure {
 
         @Override
-        public List<String> commands() {
+        public List<ExecutedCommand> commands() {
             return List.empty();
         }
     }

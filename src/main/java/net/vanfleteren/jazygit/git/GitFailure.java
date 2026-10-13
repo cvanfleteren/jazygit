@@ -14,16 +14,16 @@ import java.util.function.Supplier;
  *
  * @param cleanupFailed why cleaning up after the failure, e.g. aborting a rebase, failed too, if it did
  */
-public record GitFailure<E extends GitError>(E error, List<String> commands, Option<ProcessError> cleanupFailed) {
+public record GitFailure<E extends GitError>(E error, List<ExecutedCommand> commands, Option<ProcessError> cleanupFailed) {
 
-    public GitFailure(E error, List<String> commands) {
+    public GitFailure(E error, List<ExecutedCommand> commands) {
         this(error, commands, Option.none());
     }
 
     /**
      * This failure, as part of a sequence in which the {@code earlier} commands already succeeded.
      */
-    public GitFailure<E> after(List<String> earlier) {
+    public GitFailure<E> after(List<ExecutedCommand> earlier) {
         return new GitFailure<>(error, earlier.appendAll(commands), cleanupFailed);
     }
 
@@ -31,7 +31,7 @@ public record GitFailure<E extends GitError>(E error, List<String> commands, Opt
      * This failure, followed by the {@code cleanup} that was run after it: its commands are added, and when
      * it failed too, so is why.
      */
-    public GitFailure<E> followedBy(Either<GitFailure<ProcessError>, List<String>> cleanup) {
+    public GitFailure<E> followedBy(Either<GitFailure<ProcessError>, List<ExecutedCommand>> cleanup) {
         return cleanup.fold(
                 failed -> new GitFailure<>(error, commands.appendAll(failed.commands()), Option.of(failed.error())),
                 done -> new GitFailure<>(error, commands.appendAll(done), cleanupFailed));
@@ -62,7 +62,7 @@ public record GitFailure<E extends GitError>(E error, List<String> commands, Opt
     /**
      * Nothing to do: no command ran, and nothing failed.
      */
-    public static <E extends GitError> Either<GitFailure<E>, List<String>> nothing() {
+    public static <E extends GitError> Either<GitFailure<E>, List<ExecutedCommand>> nothing() {
         return Either.right(List.empty());
     }
 
@@ -71,8 +71,8 @@ public record GitFailure<E extends GitError>(E error, List<String> commands, Opt
      * stops the sequence, and its failure also carries the commands of the steps before it.
      */
     @SafeVarargs
-    public static <E extends GitError> Either<GitFailure<E>, List<String>> sequence(
-            Supplier<Either<GitFailure<E>, List<String>>>... steps) {
+    public static <E extends GitError> Either<GitFailure<E>, List<ExecutedCommand>> sequence(
+            Supplier<Either<GitFailure<E>, List<ExecutedCommand>>>... steps) {
         return sequence(List.of(steps));
     }
 
@@ -80,8 +80,8 @@ public record GitFailure<E extends GitError>(E error, List<String> commands, Opt
      * Runs the steps in order and returns all command lines they executed. The first step that fails
      * stops the sequence, and its failure also carries the commands of the steps before it.
      */
-    public static <E extends GitError> Either<GitFailure<E>, List<String>> sequence(
-            List<Supplier<Either<GitFailure<E>, List<String>>>> steps) {
+    public static <E extends GitError> Either<GitFailure<E>, List<ExecutedCommand>> sequence(
+            List<Supplier<Either<GitFailure<E>, List<ExecutedCommand>>>> steps) {
         return steps.foldLeft(nothing(), (done, step) -> done.flatMap(earlier ->
                 step.get().map(earlier::appendAll).mapLeft(failure -> failure.after(earlier))));
     }

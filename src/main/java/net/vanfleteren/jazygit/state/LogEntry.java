@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
+import net.vanfleteren.jazygit.git.ExecutedCommand;
 import io.vavr.collection.List;
 
 /**
@@ -8,5 +9,5 @@ import io.vavr.collection.List;
  * @param operation what was done, e.g. a push
  * @param commands  the command lines that were executed for it
  */
-public record LogEntry(Operation operation, List<String> commands) {
+public record LogEntry(Operation operation, List<ExecutedCommand> commands) {
 }

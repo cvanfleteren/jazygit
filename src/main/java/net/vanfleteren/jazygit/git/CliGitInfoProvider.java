@@ -97,17 +97,17 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<String>> drop(String ref) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> drop(String ref) {
         return CliStash.drop(workTree, ref);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<String>> pop(String ref) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pop(String ref) {
         return CliStash.pop(workTree, ref);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<String>> stash(String message) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> stash(String message) {
         return CliStash.push(workTree, message);
     }
 
@@ -122,42 +122,42 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<CheckoutError>, List<String>> checkout(String branch) {
+    public Either<GitFailure<CheckoutError>, List<ExecutedCommand>> checkout(String branch) {
         return CliCheckout.checkout(workTree, branch);
     }
 
     @Override
-    public Either<GitFailure<StashCheckoutError>, List<String>> checkoutWithStash(String branch) {
+    public Either<GitFailure<StashCheckoutError>, List<ExecutedCommand>> checkoutWithStash(String branch) {
         return CliCheckout.checkoutWithStash(workTree, branch);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<String>> createBranch(String name, String startPoint) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> createBranch(String name, String startPoint) {
         return CliCheckout.createBranch(workTree, name, startPoint);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<String>> push(String branch, PushMode mode) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(String branch, PushMode mode) {
         return CliBranch.push(workTree, branch, mode);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<String>> pushSettingUpstream(String branch, RemoteBranch upstream) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(String branch, RemoteBranch upstream) {
         return CliBranch.pushSettingUpstream(workTree, branch, upstream);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<String>> pull() {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pull() {
         return CliBranch.pull(workTree);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<String>> fastForward(String branch) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(String branch) {
         return CliBranch.fastForward(workTree, branch);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<String>> merge(String branch, MergeMode mode) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> merge(String branch, MergeMode mode) {
         return CliMerge.merge(workTree, branch, mode);
     }
 
@@ -167,57 +167,57 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<String>> fetch(String remote) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(String remote) {
         return CliRemote.fetch(workTree, remote, Option.of(System.getenv("GIT_SSH_COMMAND")));
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<String>> rebase(String onto) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> rebase(String onto) {
         return CliRebase.onto(workTree, onto);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<String>> deleteBranch(String name, DeleteScope scope) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(String name, DeleteScope scope) {
         return CliBranch.delete(workTree, name, scope);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<String>> stage(List<String> paths) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> stage(List<String> paths) {
         return CliIndex.add(workTree, paths);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<String>> unstageNew(List<String> paths) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> unstageNew(List<String> paths) {
         return CliIndex.removeCached(workTree, paths);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<String>> unstage(List<String> paths) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> unstage(List<String> paths) {
         return CliIndex.reset(workTree, paths);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<String>> commit(CommitMessage message) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> commit(CommitMessage message) {
         return CliIndex.commit(workTree, message);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<String>> amendLastCommit() {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> amendLastCommit() {
         return CliIndex.amend(workTree);
     }
 
     @Override
-    public Either<GitFailure<RewordError>, List<String>> reword(Sha sha, CommitMessage message) {
+    public Either<GitFailure<RewordError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message) {
         return CliRebase.rewordAny(workTree, sha, message);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<String>> squash(Sha sha) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Sha sha) {
         return CliRebase.squash(workTree, sha);
     }
 
     @Override
-    public Either<GitFailure<DiscardError>, List<String>> discard(DiscardPlan plan) {
+    public Either<GitFailure<DiscardError>, List<ExecutedCommand>> discard(DiscardPlan plan) {
         return CliIndex.discard(workTree, plan);
     }
 

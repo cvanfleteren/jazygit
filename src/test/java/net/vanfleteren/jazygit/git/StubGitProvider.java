@@ -31,17 +31,24 @@ import net.vanfleteren.jazygit.git.model.Stash;
 public interface StubGitProvider extends GitInfoProvider {
 
     /**
-     * A successful operation that ran nothing.
+     * Commands as they would have been executed, each written as its arguments separated by spaces.
      */
-    static <E extends GitError> Either<GitFailure<E>, List<String>> ran(String... commands) {
-        return Either.right(List.of(commands));
+    static List<ExecutedCommand> executed(String... lines) {
+        return List.of(lines).map(line -> new ExecutedCommand(List.of(line.split(" "))));
+    }
+
+    /**
+     * A successful operation that ran {@code commands}, or nothing.
+     */
+    static <E extends GitError> Either<GitFailure<E>, List<ExecutedCommand>> ran(String... commands) {
+        return Either.right(executed(commands));
     }
 
     /**
      * An operation that git refused with {@code explanation}, after running {@code command}.
      */
-    static Either<GitFailure<ProcessError>, List<String>> refused(String command, String explanation) {
-        return Either.left(new GitFailure<>(new GitError.CommandFailed(explanation, 1), List.of(command)));
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> refused(String command, String explanation) {
+        return Either.left(new GitFailure<>(new GitError.CommandFailed(explanation, 1), executed(command)));
     }
 
     @Override
@@ -85,27 +92,27 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<CheckoutError>, List<String>> checkout(String branch) {
+    default Either<GitFailure<CheckoutError>, List<ExecutedCommand>> checkout(String branch) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<StashCheckoutError>, List<String>> checkoutWithStash(String branch) {
+    default Either<GitFailure<StashCheckoutError>, List<ExecutedCommand>> checkoutWithStash(String branch) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<String>> createBranch(String name, String startPoint) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> createBranch(String name, String startPoint) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<String>> deleteBranch(String name, DeleteScope scope) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(String name, DeleteScope scope) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<String>> merge(String branch, MergeMode mode) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> merge(String branch, MergeMode mode) {
         return ran();
     }
 
@@ -115,87 +122,87 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<String>> fetch(String remote) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(String remote) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<String>> rebase(String onto) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> rebase(String onto) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<String>> push(String branch, PushMode mode) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(String branch, PushMode mode) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<String>> pushSettingUpstream(String branch, RemoteBranch upstream) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(String branch, RemoteBranch upstream) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<String>> pull() {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> pull() {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<String>> fastForward(String branch) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(String branch) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<String>> stage(List<String> paths) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> stage(List<String> paths) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<String>> unstageNew(List<String> paths) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> unstageNew(List<String> paths) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<DiscardError>, List<String>> discard(DiscardPlan plan) {
+    default Either<GitFailure<DiscardError>, List<ExecutedCommand>> discard(DiscardPlan plan) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<String>> unstage(List<String> paths) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> unstage(List<String> paths) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<String>> commit(CommitMessage message) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> commit(CommitMessage message) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<String>> amendLastCommit() {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> amendLastCommit() {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<RewordError>, List<String>> reword(Sha sha, CommitMessage message) {
+    default Either<GitFailure<RewordError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<String>> squash(Sha sha) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Sha sha) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<String>> stash(String message) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> stash(String message) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<String>> pop(String ref) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> pop(String ref) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<String>> drop(String ref) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> drop(String ref) {
         return ran();
     }
 }

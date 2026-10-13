@@ -15,20 +15,20 @@ public interface GitIndex {
     /**
      * Stages the changes of {@code paths}.
      */
-    Either<GitFailure<ProcessError>, List<String>> stage(List<String> paths);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> stage(List<String> paths);
 
     /**
      * Removes the newly added {@code paths} from the index; they stay in the working tree, untracked.
      */
-    Either<GitFailure<ProcessError>, List<String>> unstageNew(List<String> paths);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> unstageNew(List<String> paths);
 
     /**
      * Throws changes away as described by {@code plan}. This cannot be undone.
      */
-    Either<GitFailure<DiscardError>, List<String>> discard(DiscardPlan plan);
+    Either<GitFailure<DiscardError>, List<ExecutedCommand>> discard(DiscardPlan plan);
 
     /**
      * Resets the index entries of {@code paths} to HEAD.
      */
-    Either<GitFailure<ProcessError>, List<String>> unstage(List<String> paths);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> unstage(List<String> paths);
 }

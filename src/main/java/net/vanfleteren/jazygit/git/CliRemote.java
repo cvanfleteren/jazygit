@@ -66,7 +66,7 @@ public final class CliRemote {
      *
      * @param environment the value of the environment variable {@code GIT_SSH_COMMAND}, if it is set
      */
-    public static Either<GitFailure<ProcessError>, List<String>> fetch(Path workTree, String remote,
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(Path workTree, String remote,
                                                                      Option<String> environment) {
         return configuredSsh(workTree, environment).flatMap(ssh -> GitProcess.log(workTree,
                 git("fetch", "--quiet", remote)

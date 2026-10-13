@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.discard;
 
+import net.vanfleteren.jazygit.git.ExecutedCommand;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitFailure;
@@ -21,7 +22,7 @@ public sealed interface DiscardCmd extends OperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return git.discard(plan);
         }
     }

@@ -17,5 +17,5 @@ public interface GitRemotes {
     /**
      * Fetches from {@code remote}. It never asks for credentials or passphrases: what would need them fails.
      */
-    Either<GitFailure<ProcessError>, List<String>> fetch(String remote);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(String remote);
 }

@@ -32,13 +32,13 @@ final class GitProcess {
     /**
      * What a command that succeeded printed on its standard output, and the line it was run as.
      */
-    record Output(String stdout, String line) {
+    record Output(String stdout, ExecutedCommand command) {
 
         /**
          * The command log of this one command.
          */
-        List<String> log() {
-            return List.of(line);
+        List<ExecutedCommand> log() {
+            return List.of(command);
         }
     }
 
@@ -46,13 +46,13 @@ final class GitProcess {
      * Runs {@code command} in {@code workTree}. A non-zero exit code is a {@link CommandFailed}.
      */
     static Either<GitFailure<ProcessError>, Output> run(Path workTree, GitCommand command) {
-        return execute(workTree, command).mapLeft(error -> new GitFailure<>(error, List.of(command.line())));
+        return execute(workTree, command).mapLeft(error -> new GitFailure<>(error, List.of(command.executed())));
     }
 
     /**
      * Runs {@code command} for its effect, and returns the command log.
      */
-    static Either<GitFailure<ProcessError>, List<String>> log(Path workTree, GitCommand command) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> log(Path workTree, GitCommand command) {
         return run(workTree, command).map(Output::log);
     }
 
@@ -80,7 +80,7 @@ final class GitProcess {
      * Runs {@code command}, and {@code undo} when it fails and {@code needsUndo} says so. The undo's commands
      * join the failure's, and so does why the undo failed, if it did.
      */
-    static Either<GitFailure<ProcessError>, List<String>> runOrUndo(Path workTree, GitCommand command, GitCommand undo,
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> runOrUndo(Path workTree, GitCommand command, GitCommand undo,
                                                                   BooleanSupplier needsUndo) {
         return log(workTree, command)
                 .mapLeft(failure -> needsUndo.getAsBoolean() ? failure.followedBy(log(workTree, undo)) : failure);
@@ -99,7 +99,7 @@ final class GitProcess {
                     .timeout(command.timeout().toMillis(), TimeUnit.MILLISECONDS)
                     .execute();
             return result.getExitValue() == 0
-                    ? Either.right(new Output(result.outputUTF8(), command.line()))
+                    ? Either.right(new Output(result.outputUTF8(), command.executed()))
                     : Either.left(new CommandFailed(
                     explanation(stderr.toString(StandardCharsets.UTF_8), result.outputUTF8()),
                     result.getExitValue()));

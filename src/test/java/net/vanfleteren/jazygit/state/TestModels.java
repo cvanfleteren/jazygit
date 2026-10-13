@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
+import net.vanfleteren.jazygit.git.StubGitProvider;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Option;
@@ -104,7 +105,7 @@ public final class TestModels {
      * {@code cmd} having run {@code commands}.
      */
     public static OperationMsg succeeded(OperationCmd cmd, String... commands) {
-        return new OperationMsg.Succeeded(cmd, List.of(commands));
+        return new OperationMsg.Succeeded(cmd, StubGitProvider.executed(commands));
     }
 
     /**

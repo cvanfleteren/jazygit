@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
+import net.vanfleteren.jazygit.git.ExecutedCommand;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -32,9 +33,9 @@ public interface OperationCmd extends Cmd {
     /**
      * Performs the operation.
      *
-     * @return the command lines that were run, or why it failed
+     * @return the commands that were run, or why it failed
      */
-    Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git);
+    Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git);
 
     @Override
     default Msg run(GitInfoProvider git) {
@@ -44,7 +45,7 @@ public interface OperationCmd extends Cmd {
     /**
      * The {@link Msg} that reports this operation running {@code commands} successfully.
      */
-    default Msg succeeded(List<String> commands) {
+    default Msg succeeded(List<ExecutedCommand> commands) {
         return new OperationMsg.Succeeded(this, commands);
     }
 

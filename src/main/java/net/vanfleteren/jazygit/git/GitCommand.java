@@ -50,10 +50,10 @@ record GitCommand(List<String> args, Map<String, String> environment, Duration t
     }
 
     /**
-     * The command as one would type it in a shell.
+     * The command, as it is logged once it ran.
      */
-    String line() {
-        return CommandLine.format(commandLine());
+    ExecutedCommand executed() {
+        return new ExecutedCommand(commandLine());
     }
 
     /**

@@ -29,7 +29,7 @@ public final class CliIndex {
     /**
      * {@code git add -- <paths>}: stages the changes of the paths.
      */
-    public static Either<GitFailure<ProcessError>, List<String>> add(Path workTree, List<String> paths) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> add(Path workTree, List<String> paths) {
         return onPaths(workTree, List.of("add"), paths);
     }
 
@@ -37,42 +37,42 @@ public final class CliIndex {
      * {@code git rm --cached --force -- <paths>}: removes newly added paths from the index, leaving
      * them untracked in the working tree.
      */
-    public static Either<GitFailure<ProcessError>, List<String>> removeCached(Path workTree, List<String> paths) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> removeCached(Path workTree, List<String> paths) {
         return onPaths(workTree, List.of("rm", "--cached", "--force", "--quiet"), paths);
     }
 
     /**
      * {@code git reset HEAD -- <paths>}: resets the index entries of the paths to HEAD.
      */
-    public static Either<GitFailure<ProcessError>, List<String>> reset(Path workTree, List<String> paths) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> reset(Path workTree, List<String> paths) {
         return onPaths(workTree, List.of("reset", "--quiet", "HEAD"), paths);
     }
 
     /**
      * {@code git checkout -- <paths>}: resets the working tree of the paths to the index.
      */
-    public static Either<GitFailure<ProcessError>, List<String>> checkoutFromIndex(Path workTree, List<String> paths) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutFromIndex(Path workTree, List<String> paths) {
         return onPaths(workTree, List.of("checkout", "--quiet"), paths);
     }
 
     /**
      * {@code git checkout HEAD -- <paths>}: resets the index and the working tree of the paths to HEAD.
      */
-    public static Either<GitFailure<ProcessError>, List<String>> checkoutFromHead(Path workTree, List<String> paths) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutFromHead(Path workTree, List<String> paths) {
         return onPaths(workTree, List.of("checkout", "--quiet", "HEAD"), paths);
     }
 
     /**
      * {@code git rm --force -- <paths>}: removes newly added paths from the index and the working tree.
      */
-    public static Either<GitFailure<ProcessError>, List<String>> removeAdded(Path workTree, List<String> paths) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> removeAdded(Path workTree, List<String> paths) {
         return onPaths(workTree, List.of("rm", "--force", "--quiet"), paths);
     }
 
     /**
      * Throws changes away as {@code plan} says.
      */
-    public static Either<GitFailure<DiscardError>, List<String>> discard(Path workTree, DiscardPlan plan) {
+    public static Either<GitFailure<DiscardError>, List<ExecutedCommand>> discard(Path workTree, DiscardPlan plan) {
         return GitFailure.<DiscardError>sequence(
                 () -> GitFailure.widen(removeAdded(workTree, plan.added())),
                 () -> GitFailure.widen(checkoutFromHead(workTree, plan.fromHead())),
@@ -84,18 +84,18 @@ public final class CliIndex {
      * Deletes untracked files and directories (like {@code rm -r}). Paths outside the working tree, and
      * the working tree itself, are refused.
      */
-    public static Either<GitFailure<DeleteUntrackedError>, List<String>> deleteUntracked(Path workTree,
+    public static Either<GitFailure<DeleteUntrackedError>, List<ExecutedCommand>> deleteUntracked(Path workTree,
                                                                                        List<String> paths) {
         Path root = workTree.toAbsolutePath().normalize();
         return GitFailure.sequence(paths.map(path -> () -> deleteUntracked(root, path,
-                List.of(CommandLine.format(List.of("rm", "-r", "--", path))))));
+                List.of(ExecutedCommand.of("rm", "-r", "--", path)))));
     }
 
     /**
      * Deletes the untracked {@code path}, logging it as {@code log}.
      */
-    private static Either<GitFailure<DeleteUntrackedError>, List<String>> deleteUntracked(Path root, String path,
-                                                                                        List<String> log) {
+    private static Either<GitFailure<DeleteUntrackedError>, List<ExecutedCommand>> deleteUntracked(Path root, String path,
+                                                                                        List<ExecutedCommand> log) {
         return Either.<DeleteUntrackedError, Path>narrow(inside(root, path))
                 .flatMap(target -> deleteTree(target, path))
                 .map(deleted -> log)
@@ -127,14 +127,14 @@ public final class CliIndex {
     /**
      * {@code git commit -m <summary> [-m <description>]}: commits the index.
      */
-    public static Either<GitFailure<ProcessError>, List<String>> commit(Path workTree, CommitMessage message) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> commit(Path workTree, CommitMessage message) {
         return run(workTree, List.of("commit", "--quiet").appendAll(messageArgs(message)));
     }
 
     /**
      * {@code git commit --amend --no-edit}: amends the last commit with the index.
      */
-    public static Either<GitFailure<ProcessError>, List<String>> amend(Path workTree) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> amend(Path workTree) {
         return run(workTree, List.of("commit", "--quiet", "--amend", "--no-edit"));
     }
 
@@ -142,7 +142,7 @@ public final class CliIndex {
      * {@code git commit --allow-empty --amend --only -m <summary> [-m <description>]}: replaces the
      * message of the last commit, whatever is staged.
      */
-    public static Either<GitFailure<ProcessError>, List<String>> reword(Path workTree, CommitMessage message) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> reword(Path workTree, CommitMessage message) {
         return run(workTree, List.of("commit", "--quiet", "--allow-empty", "--amend", "--only")
                 .appendAll(messageArgs(message)));
     }
@@ -156,12 +156,12 @@ public final class CliIndex {
     /**
      * Runs {@code subcommand -- paths}; nothing when there are no paths.
      */
-    private static Either<GitFailure<ProcessError>, List<String>> onPaths(Path workTree, List<String> subcommand,
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> onPaths(Path workTree, List<String> subcommand,
                                                                         List<String> paths) {
         return paths.isEmpty() ? GitFailure.nothing() : run(workTree, subcommand.append("--").appendAll(paths));
     }
 
-    private static Either<GitFailure<ProcessError>, List<String>> run(Path workTree, List<String> args) {
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> run(Path workTree, List<String> args) {
         return GitProcess.log(workTree, git(args));
     }
 }

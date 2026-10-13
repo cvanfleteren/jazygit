@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
+import static net.vanfleteren.jazygit.git.StubGitProvider.executed;
 import net.vanfleteren.jazygit.state.Operation;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import io.vavr.collection.List;
@@ -33,7 +34,7 @@ class CommandLogPanelTest {
     @Test
     void showsExecutedCommandsUnderTheirTitle() throws Exception {
         Model model = TestModels.withLog(TestModels.loaded(new SampleData()),
-                new LogEntry(Operation.PUSH, List.of("git push origin main")));
+                new LogEntry(Operation.PUSH, executed("git push origin main")));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> CommandLogPanel.render(model))) {
             String screen = RenderedText.of(testRunner, () -> CommandLogPanel.render(model));
@@ -47,8 +48,8 @@ class CommandLogPanelTest {
     @Test
     void keepsTheNewestLinesWhenTheyDoNotAllFit() throws Exception {
         Model model = TestModels.withLog(TestModels.loaded(new SampleData()),
-                new LogEntry(Operation.STAGE, List.of("git add -- old.txt")),
-                new LogEntry(Operation.COMMIT, List.of("git commit -m a", "git commit -m b", "git commit -m c",
+                new LogEntry(Operation.STAGE, executed("git add -- old.txt")),
+                new LogEntry(Operation.COMMIT, executed("git commit -m a", "git commit -m b", "git commit -m c",
                         "git commit -m d", "git commit -m e", "git commit -m f", "git commit -m g")));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> CommandLogPanel.render(model))) {

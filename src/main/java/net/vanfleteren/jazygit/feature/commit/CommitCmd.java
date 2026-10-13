@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import net.vanfleteren.jazygit.git.ExecutedCommand;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
@@ -27,12 +28,12 @@ public sealed interface CommitCmd extends OperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return git.stage(paths);
         }
 
         @Override
-        public Msg succeeded(List<String> commands) {
+        public Msg succeeded(List<ExecutedCommand> commands) {
             return new CommitMsg.StagedForCommit(this, commands);
         }
     }
@@ -45,7 +46,7 @@ public sealed interface CommitCmd extends OperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return git.commit(message);
         }
     }
@@ -61,7 +62,7 @@ public sealed interface CommitCmd extends OperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return GitFailure.<ProcessError>sequence(() -> git.stage(stage), git::amendLastCommit);
         }
     }
@@ -77,7 +78,7 @@ public sealed interface CommitCmd extends OperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return git.squash(sha);
         }
     }
@@ -93,7 +94,7 @@ public sealed interface CommitCmd extends OperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return git.reword(sha, message);
         }
     }

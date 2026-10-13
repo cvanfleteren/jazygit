@@ -40,8 +40,8 @@ class CliRemoteTest {
 
         List<String> remotes = CliRemote.remotes(repo).get();
         assertEquals(List.of("origin", "other"), remotes);
-        assertEquals(List.of("git fetch --quiet origin"), CliRemote.fetch(repo, "origin", Option.none()).get());
-        assertEquals(List.of("git fetch --quiet other"), CliRemote.fetch(repo, "other", Option.none()).get());
+        assertEquals(List.of("git fetch --quiet origin"), CliRemote.fetch(repo, "origin", Option.none()).get().map(ExecutedCommand::line));
+        assertEquals(List.of("git fetch --quiet other"), CliRemote.fetch(repo, "other", Option.none()).get().map(ExecutedCommand::line));
 
         assertTrue(git(repo, "branch", "-r").contains("origin/main"));
         assertTrue(git(repo, "branch", "-r").contains("other/main"));

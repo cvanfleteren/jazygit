@@ -28,7 +28,7 @@ public final class CommandLogPanel {
 
     public static Panel render(Model model) {
         List<Element> lines = model.commandLog().flatMap(entry -> List.<Element>of(text(Messages.get(entry.operation().logTitleKey())).addClass(Theme.Classes.BOLD))
-                .appendAll(entry.commands().map(command -> text(INDENT + command).addClass(Theme.Classes.DIM))));
+                .appendAll(entry.commands().map(command -> text(INDENT + command.line()).addClass(Theme.Classes.DIM))));
         // The error may wrap, so it is kept out of the tail cut and always shown.
         int room = Math.max(0, VISIBLE_LINES - (model.error().isDefined() ? 1 : 0));
         List<Element> shown = lines.takeRight(room)

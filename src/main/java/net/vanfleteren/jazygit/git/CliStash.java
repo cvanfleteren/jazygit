@@ -45,14 +45,14 @@ public final class CliStash {
      * Runs {@code git stash pop <ref>}. Git refuses e.g. when local changes would be overwritten, or
      * when the stash conflicts, which keeps it.
      */
-    public static Either<GitFailure<ProcessError>, List<String>> pop(Path workTree, String ref) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> pop(Path workTree, String ref) {
         return GitProcess.log(workTree, git("stash", "pop", ref));
     }
 
     /**
      * Runs {@code git stash drop <ref>}.
      */
-    public static Either<GitFailure<ProcessError>, List<String>> drop(Path workTree, String ref) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> drop(Path workTree, String ref) {
         return GitProcess.log(workTree, git("stash", "drop", ref));
     }
 
@@ -60,14 +60,14 @@ public final class CliStash {
      * Runs {@code git stash push --include-untracked --message <message>}: stashes the changes, staged and
      * unstaged, and the untracked files.
      */
-    public static Either<GitFailure<ProcessError>, List<String>> push(Path workTree, String message) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Path workTree, String message) {
         return GitProcess.log(workTree, git("stash", "push", "--include-untracked", "--message", message));
     }
 
     /**
      * Whether {@code git stash push} stashed anything, and the commands that found out.
      */
-    record Stashed(boolean any, List<String> commands) {
+    record Stashed(boolean any, List<ExecutedCommand> commands) {
     }
 
     /**
@@ -84,7 +84,7 @@ public final class CliStash {
     /**
      * Runs {@code git stash pop --quiet}: brings back what {@link #pushQuietly} stashed.
      */
-    static Either<GitFailure<ProcessError>, List<String>> popQuietly(Path workTree) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> popQuietly(Path workTree) {
         return GitProcess.log(workTree, git("stash", "pop", "--quiet"));
     }
 

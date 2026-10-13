@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.stage;
 
+import static net.vanfleteren.jazygit.git.StubGitProvider.executed;
 import net.vanfleteren.jazygit.state.Operation;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -83,7 +84,7 @@ class StageUpdateTest {
     @Test
     void doneLogsTheExecutedCommands() {
         Next staged = Update.update(loaded(), succeeded(new StageCmd.Stage(List.of()), "git add -- a.txt"));
-        assertEquals(List.of(new LogEntry(Operation.STAGE, List.of("git add -- a.txt"))), staged.model().commandLog());
+        assertEquals(List.of(new LogEntry(Operation.STAGE, executed("git add -- a.txt"))), staged.model().commandLog());
 
         Next unstaged = Update.update(staged.model(),
                 succeeded(new StageCmd.Unstage(List.of(), List.of()), "git reset --quiet HEAD -- a.txt"));

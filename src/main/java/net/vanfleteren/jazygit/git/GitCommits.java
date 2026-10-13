@@ -16,12 +16,12 @@ public interface GitCommits {
     /**
      * Commits what is staged.
      */
-    Either<GitFailure<ProcessError>, List<String>> commit(CommitMessage message);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> commit(CommitMessage message);
 
     /**
      * Amends the last commit with what is staged, keeping its message.
      */
-    Either<GitFailure<ProcessError>, List<String>> amendLastCommit();
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> amendLastCommit();
 
     /**
      * Replaces the message of the commit {@code sha}, leaving its content alone. Other than for the last commit,
@@ -30,7 +30,7 @@ public interface GitCommits {
      *
      * @param sha the full object id of the commit
      */
-    Either<GitFailure<RewordError>, List<String>> reword(Sha sha, CommitMessage message);
+    Either<GitFailure<RewordError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message);
 
     /**
      * Squashes the commit {@code sha} into its parent, keeping both messages. This rebases the commits after
@@ -38,5 +38,5 @@ public interface GitCommits {
      *
      * @param sha the full object id of a commit that has exactly one parent
      */
-    Either<GitFailure<ProcessError>, List<String>> squash(Sha sha);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Sha sha);
 }

@@ -22,8 +22,8 @@ class GitProcessTest {
     void aSuccessfulCommandReturnsItsOutputAndLine() {
         GitProcess.Output output = GitProcess.run(dir, git("init", "-q", "-b", "main")).get();
 
-        assertEquals("git init -q -b main", output.line());
-        assertEquals(List.of("git init -q -b main"), output.log());
+        assertEquals("git init -q -b main", output.command().line());
+        assertEquals(List.of("git init -q -b main"), output.log().map(ExecutedCommand::line));
     }
 
     @Test
@@ -33,7 +33,7 @@ class GitProcessTest {
         CommandFailed failed = (CommandFailed) failure.error();
         assertTrue(failed.says("fatal: not a git repository"), failed.toString());
         assertEquals(128, failed.exitCode());
-        assertEquals(List.of("git rev-parse HEAD"), failure.commands());
+        assertEquals(List.of("git rev-parse HEAD"), failure.commands().map(ExecutedCommand::line));
     }
 
     @Test

@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
+import net.vanfleteren.jazygit.git.ExecutedCommand;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -14,7 +15,7 @@ public final class OperationUpdate {
 
     public static Next update(Model model, OperationMsg msg) {
         return switch (msg) {
-            case OperationMsg.Succeeded(OperationCmd cmd, List<String> commands) ->
+            case OperationMsg.Succeeded(OperationCmd cmd, List<ExecutedCommand> commands) ->
                     Update.refresh(done(model, cmd, commands).clearError());
             case OperationMsg.Failed(OperationCmd cmd, Failure failure) -> Update.refresh(done(model, cmd, failure.commands())
                     .fail(new AppError.OperationFailed(cmd.operation(), cmd.subject(), failure)));
@@ -24,7 +25,7 @@ public final class OperationUpdate {
     /**
      * The model once {@code cmd} ran {@code commands}.
      */
-    public static Model done(Model model, OperationCmd cmd, List<String> commands) {
+    public static Model done(Model model, OperationCmd cmd, List<ExecutedCommand> commands) {
         Model released = cmd.busyBranch().map(model::withoutBusyBranch).getOrElse(model);
         return CommandLog.append(released, cmd.operation(), commands);
     }

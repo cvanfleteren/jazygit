@@ -263,11 +263,14 @@ classDiagram
 ### Errors as values
 
 No git operation throws. A read returns `Either<E, T>`. An operation that changes the repository
-returns `Either<GitFailure<E>, List<String>>`:
+returns `Either<GitFailure<E>, List<ExecutedCommand>>`:
 
-- On success, the right side is the command lines that ran.
-- On failure, a `GitFailure` pairs the error with the command lines that ran up to and including the
+- On success, the right side is the commands that ran.
+- On failure, a `GitFailure` pairs the error with the commands that ran up to and including the
   failing one.
+
+An `ExecutedCommand` holds the program and its arguments as they were run; `line()` writes it as one would
+type it in a shell, which is how the command log shows it.
 
 `E` is the narrowest error type the operation can produce, so its signature lists every way it can
 fail.

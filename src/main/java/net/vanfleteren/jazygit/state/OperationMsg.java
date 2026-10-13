@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
+import net.vanfleteren.jazygit.git.ExecutedCommand;
 import io.vavr.collection.List;
 
 /**
@@ -12,7 +13,7 @@ public sealed interface OperationMsg extends Msg {
         return OperationUpdate.update(model, this);
     }
 
-    record Succeeded(OperationCmd cmd, List<String> commands) implements OperationMsg {
+    record Succeeded(OperationCmd cmd, List<ExecutedCommand> commands) implements OperationMsg {
     }
 
     record Failed(OperationCmd cmd, Failure failure) implements OperationMsg {

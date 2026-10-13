@@ -28,7 +28,7 @@ public final class CliMerge {
      *
      * @return the command lines that were run
      */
-    public static Either<GitFailure<ProcessError>, List<String>> merge(Path workTree, String branch, MergeMode mode) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> merge(Path workTree, String branch, MergeMode mode) {
         return switch (mode) {
             case FAST_FORWARD -> merge(workTree, git("merge", "--ff", "--no-edit", branch), ABORT);
             case MERGE_COMMIT -> merge(workTree, git("merge", "--no-ff", "--no-edit", branch), ABORT);
@@ -37,7 +37,7 @@ public final class CliMerge {
         };
     }
 
-    private static Either<GitFailure<ProcessError>, List<String>> squash(Path workTree, String branch) {
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Path workTree, String branch) {
         return merge(workTree, git("merge", "--squash", branch), RESET);
     }
 
@@ -46,7 +46,7 @@ public final class CliMerge {
      * apart from refusing to start, which leaves nothing to undo; the conflicted files in the index do. When
      * that cannot be found out, the undo runs anyway: it does nothing harmful when there is nothing to undo.
      */
-    private static Either<GitFailure<ProcessError>, List<String>> merge(Path workTree, GitCommand merge,
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> merge(Path workTree, GitCommand merge,
                                                                       GitCommand undo) {
         return GitProcess.runOrUndo(workTree, merge, undo, () -> conflicted(workTree).getOrElse(true));
     }
@@ -62,7 +62,7 @@ public final class CliMerge {
      * Commits what the squash staged, with git's message listing the squashed commits. A branch that had
      * nothing to squash staged nothing, and then nothing is committed.
      */
-    private static Either<GitFailure<ProcessError>, List<String>> commitStaged(Path workTree) {
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> commitStaged(Path workTree) {
         // diff --cached --quiet exits with 1, saying nothing, when something is staged.
         return GitProcess.ask(workTree, git("diff", "--cached", "--quiet"))
                 .flatMap(nothingStaged -> nothingStaged.isDefined()

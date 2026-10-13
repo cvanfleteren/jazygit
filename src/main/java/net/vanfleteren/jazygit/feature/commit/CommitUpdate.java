@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import net.vanfleteren.jazygit.git.ExecutedCommand;
 import io.vavr.control.Option;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.commit.CommitCmd.Commit;
@@ -31,7 +32,7 @@ public final class CommitUpdate {
             case Requested() -> requested(model);
             case StageAllCancelled() -> Next.of(model.withoutPopup(StageAllPopup.class));
             case StageAllConfirmed() -> stageAllConfirmed(model);
-            case StagedForCommit(var cmd, List<String> commands) ->
+            case StagedForCommit(var cmd, List<ExecutedCommand> commands) ->
                     Update.refresh(OperationUpdate.done(model, cmd, commands).openPopup(new CommitPopup()));
             case Cancelled() -> Next.of(model.withoutPopup(CommitPopup.class));
             case Confirmed(CommitMessage message) -> confirmed(model, message.stripped());

@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
+import net.vanfleteren.jazygit.git.ExecutedCommand;
 import io.vavr.collection.List;
 
 /**
@@ -16,7 +17,7 @@ public final class CommandLog {
      * The model with an entry for {@code commands} of {@code operation} added; nothing is added when no
      * command was executed.
      */
-    public static Model append(Model model, Operation operation, List<String> commands) {
+    public static Model append(Model model, Operation operation, List<ExecutedCommand> commands) {
         return commands.isEmpty()
                 ? model
                 : model.withCommandLog(model.commandLog()

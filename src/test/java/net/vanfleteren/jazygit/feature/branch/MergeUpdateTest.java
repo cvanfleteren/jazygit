@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import static net.vanfleteren.jazygit.git.StubGitProvider.executed;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.MergeMode;
@@ -53,7 +54,7 @@ class MergeUpdateTest {
     void aMergeIsLoggedAndReloadsAndAFailedOneIsReported() {
         Next done = Update.update(loaded(), succeeded(new BranchCmd.Merge("feature", MergeMode.FAST_FORWARD), "git merge --ff --no-edit feature"));
         assertEquals(List.of(new LoadStatus(), new LoadBranches(), new LoadStashes()), done.cmds());
-        assertEquals(List.of("git merge --ff --no-edit feature"), done.model().commandLog().last().commands());
+        assertEquals(executed("git merge --ff --no-edit feature"), done.model().commandLog().last().commands());
 
         Next failed = Update.update(loaded(), failed(new BranchCmd.Merge("feature", MergeMode.FAST_FORWARD), "CONFLICT (content)"));
         assertEquals(Option.of("Merging feature failed: CONFLICT (content)"), errorText(failed.model()));

@@ -32,7 +32,7 @@ public final class CliBranch {
      * Deletes the branch {@code name} where {@code scope} says. With both, the remote one goes first, so a
      * failure leaves the local branch in place.
      */
-    public static Either<GitFailure<ProcessError>, List<String>> delete(Path workTree, String name, DeleteScope scope) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> delete(Path workTree, String name, DeleteScope scope) {
         return GitFailure.sequence(
                 () -> scope.remote() ? deleteRemote(workTree, name) : GitFailure.nothing(),
                 () -> scope.local() ? deleteLocal(workTree, name) : GitFailure.nothing());
@@ -41,7 +41,7 @@ public final class CliBranch {
     /**
      * Runs {@code git branch -D <name>} in {@code workTree}.
      */
-    public static Either<GitFailure<ProcessError>, List<String>> deleteLocal(Path workTree, String name) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocal(Path workTree, String name) {
         return GitProcess.log(workTree, git("branch", "--delete", "--force", name));
     }
 
@@ -49,7 +49,7 @@ public final class CliBranch {
      * Runs {@code git push <remote> --delete <branch>} in {@code workTree}: deletes the branch {@code name}
      * tracks, or the one of the same name on {@code origin}.
      */
-    public static Either<GitFailure<ProcessError>, List<String>> deleteRemote(Path workTree, String name) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemote(Path workTree, String name) {
         return tracking(workTree, name).flatMap(tracking -> GitProcess.log(workTree,
                 git("push", tracking.target().remote(), "--delete", tracking.target().branch())));
     }
@@ -58,7 +58,7 @@ public final class CliBranch {
      * Pushes {@code name} to the branch it tracks. A branch without an upstream is pushed to the branch of the
      * same name on {@code origin}, which becomes its upstream, as with {@code --set-upstream}.
      */
-    public static Either<GitFailure<ProcessError>, List<String>> push(Path workTree, String name, PushMode mode) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Path workTree, String name, PushMode mode) {
         return tracking(workTree, name).flatMap(tracking -> GitProcess.log(workTree, git(List.of("push")
                 .appendAll(!tracking.hasUpstream() ? List.of("--set-upstream")
                         : mode == PushMode.FORCE_WITH_LEASE ? List.of("--force-with-lease")
@@ -71,7 +71,7 @@ public final class CliBranch {
      * Runs {@code git push --set-upstream <remote> <name>:<branch>}: pushes {@code name} to {@code upstream},
      * which it then tracks. Git only sets the upstream when the push succeeds.
      */
-    public static Either<GitFailure<ProcessError>, List<String>> pushSettingUpstream(Path workTree, String name,
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(Path workTree, String name,
                                                                                    RemoteBranch upstream) {
         return GitProcess.log(workTree, git("push", "--set-upstream", upstream.remote(), refspec(name, upstream)));
     }
@@ -82,7 +82,7 @@ public final class CliBranch {
      * editor, and with {@code pull.rebase=interactive} the todo list is taken as it is. A pull that stops on
      * conflicts is undone again, so the repository is left as it was.
      */
-    public static Either<GitFailure<ProcessError>, List<String>> pull(Path workTree) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> pull(Path workTree) {
         return GitProcess.log(workTree, git("pull", "--no-edit")
                         .withEnvironment(HashMap.of("GIT_SEQUENCE_EDITOR", ":"))
                         .withTimeout(PULL_TIMEOUT))
@@ -106,7 +106,7 @@ public final class CliBranch {
      * is not checked out, to the branch it tracks. Git refuses when that is not a fast-forward. A branch without
      * an upstream is fast-forwarded to the branch of the same name on {@code origin}.
      */
-    public static Either<GitFailure<ProcessError>, List<String>> fastForward(Path workTree, String name) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(Path workTree, String name) {
         return tracking(workTree, name).flatMap(tracking -> GitProcess.log(workTree,
                 git("fetch", tracking.target().remote(), Refs.head(tracking.target().branch()) + ":" + Refs.head(name))
                         .withTimeout(PULL_TIMEOUT)));
@@ -135,7 +135,7 @@ public final class CliBranch {
                 "--format=%(upstream:remotename)" + GitOutput.REF_FIELD_SEPARATOR + "%(upstream:remoteref)",
                 Refs.head(name));
         return GitProcess.read(workTree, lookup, raw -> Either.right(tracking(raw, name)))
-                .mapLeft(error -> new GitFailure<>(error, List.of(lookup.line())));
+                .mapLeft(error -> new GitFailure<>(error, List.of(lookup.executed())));
     }
 
     /**

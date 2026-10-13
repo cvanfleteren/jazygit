@@ -63,7 +63,7 @@ class CliCheckoutTest {
         Files.writeString(repo.resolve("a.txt"), "changed\n");
 
         assertEquals(List.of("git stash push --quiet", "git checkout --quiet feature --", "git stash pop --quiet"),
-                CliCheckout.checkoutWithStash(repo, "feature").get());
+                CliCheckout.checkoutWithStash(repo, "feature").get().map(ExecutedCommand::line));
 
         assertEquals("feature", git("branch", "--show-current").strip());
         assertEquals("changed\n", Files.readString(repo.resolve("a.txt")));
@@ -90,7 +90,7 @@ class CliCheckoutTest {
 
         assertInstanceOf(CommandFailed.class, failure.error());
         assertEquals(List.of("git stash push --quiet", "git checkout --quiet no-such-branch --", "git stash pop --quiet"),
-                failure.commands());
+                failure.commands().map(ExecutedCommand::line));
 
         assertEquals("main", git("branch", "--show-current").strip());
         assertEquals("changed\n", Files.readString(repo.resolve("a.txt")));

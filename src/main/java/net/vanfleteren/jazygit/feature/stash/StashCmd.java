@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.stash;
 
+import net.vanfleteren.jazygit.git.ExecutedCommand;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitFailure;
@@ -23,7 +24,7 @@ public sealed interface StashCmd extends OperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return git.stash(name);
         }
     }
@@ -39,7 +40,7 @@ public sealed interface StashCmd extends OperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return git.drop(ref);
         }
     }
@@ -55,7 +56,7 @@ public sealed interface StashCmd extends OperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return git.pop(ref);
         }
     }
