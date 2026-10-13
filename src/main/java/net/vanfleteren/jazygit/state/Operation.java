@@ -20,6 +20,8 @@ public enum Operation {
     NEW_BRANCH("log.title.newBranch", "error.newBranch.failed"),
     DELETE_BRANCH("log.title.deleteBranch", "error.deleteBranch.failed"),
     PUSH("log.title.push", "error.push.failed"),
+    PULL("log.title.pull", "error.pull.failed"),
+    FAST_FORWARD("log.title.fastForward", "error.fastForward.failed"),
     REBASE("log.title.rebase", "error.rebase.failed"),
     MERGE("log.title.merge", "error.merge.failed"),
     STASH("log.title.stash", "error.stash.failed"),

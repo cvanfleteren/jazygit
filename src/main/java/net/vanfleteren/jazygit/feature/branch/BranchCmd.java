@@ -175,4 +175,46 @@ public sealed interface BranchCmd extends OperationCmd {
             return git.push(branch, mode);
         }
     }
+
+    /**
+     * Pulls {@code branch}, the checked out branch, from its upstream.
+     */
+    record Pull(String branch) implements BranchCmd {
+
+        @Override
+        public Operation operation() {
+            return Operation.PULL;
+        }
+
+        @Override
+        public Option<String> busyBranch() {
+            return Option.of(branch);
+        }
+
+        @Override
+        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+            return git.pull();
+        }
+    }
+
+    /**
+     * Fast-forwards {@code branch}, which is not checked out, to its upstream.
+     */
+    record FastForward(String branch) implements BranchCmd {
+
+        @Override
+        public Operation operation() {
+            return Operation.FAST_FORWARD;
+        }
+
+        @Override
+        public Option<String> busyBranch() {
+            return Option.of(branch);
+        }
+
+        @Override
+        public Either<? extends GitFailure<?>, List<String>> perform(GitInfoProvider git) {
+            return git.fastForward(branch);
+        }
+    }
 }

@@ -135,6 +135,16 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
+    default Either<GitFailure<ProcessError>, List<String>> pull() {
+        return ran();
+    }
+
+    @Override
+    default Either<GitFailure<ProcessError>, List<String>> fastForward(String branch) {
+        return ran();
+    }
+
+    @Override
     default Either<GitFailure<ProcessError>, List<String>> stage(List<String> paths) {
         return ran();
     }

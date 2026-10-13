@@ -1,21 +1,29 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 
 import java.nio.file.Path;
+import java.time.Duration;
 
 import static net.vanfleteren.jazygit.git.GitCommand.git;
 
 /**
- * Deletes and pushes branches through the {@code git} command line tool, so the remote is reached with
+ * Deletes, pushes and pulls branches through the {@code git} command line tool, so the remote is reached with
  * the user's own configuration and credentials.
  */
 public final class CliBranch {
+
+    // Pulling fetches first, which takes a while for a big repository.
+    private static final Duration PULL_TIMEOUT = Duration.ofMinutes(2);
+    private static final GitCommand MERGE_ABORT = git("merge", "--abort");
+    private static final GitCommand REBASE_ABORT = git("rebase", "--abort");
 
     private CliBranch() {
     }
@@ -66,6 +74,42 @@ public final class CliBranch {
     public static Either<GitFailure<ProcessError>, List<String>> pushSettingUpstream(Path workTree, String name,
                                                                                    RemoteBranch upstream) {
         return GitProcess.log(workTree, git("push", "--set-upstream", upstream.remote(), refspec(name, upstream)));
+    }
+
+    /**
+     * Runs {@code git pull --no-edit}: pulls the checked out branch from its upstream, merging or rebasing as
+     * git's {@code pull.rebase} and {@code pull.ff} say. A merge commit gets git's own message instead of an
+     * editor, and with {@code pull.rebase=interactive} the todo list is taken as it is. A pull that stops on
+     * conflicts is undone again, so the repository is left as it was.
+     */
+    public static Either<GitFailure<ProcessError>, List<String>> pull(Path workTree) {
+        return GitProcess.log(workTree, git("pull", "--no-edit")
+                        .withEnvironment(HashMap.of("GIT_SEQUENCE_EDITOR", ":"))
+                        .withTimeout(PULL_TIMEOUT))
+                .mapLeft(failure -> CliMerge.conflicted(workTree).getOrElse(true)
+                        ? failure.followedBy(GitProcess.log(workTree, rebasing(workTree) ? REBASE_ABORT : MERGE_ABORT))
+                        : failure);
+    }
+
+    /**
+     * Whether a rebase stopped on conflicts, rather than a merge. Only asked, so not logged.
+     */
+    private static boolean rebasing(Path workTree) {
+        // rev-parse --verify --quiet exits with 1, saying nothing, when the ref does not exist.
+        return GitProcess.ask(workTree, git("rev-parse", "--verify", "--quiet", "REBASE_HEAD"))
+                .map(Option::isDefined)
+                .getOrElse(false);
+    }
+
+    /**
+     * Runs {@code git fetch <remote> refs/heads/<upstream>:refs/heads/<name>}: fast-forwards {@code name}, which
+     * is not checked out, to the branch it tracks. Git refuses when that is not a fast-forward. A branch without
+     * an upstream is fast-forwarded to the branch of the same name on {@code origin}.
+     */
+    public static Either<GitFailure<ProcessError>, List<String>> fastForward(Path workTree, String name) {
+        return tracking(workTree, name).flatMap(tracking -> GitProcess.log(workTree,
+                git("fetch", tracking.target().remote(), Refs.head(tracking.target().branch()) + ":" + Refs.head(name))
+                        .withTimeout(PULL_TIMEOUT)));
     }
 
     /**

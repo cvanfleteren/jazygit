@@ -598,6 +598,91 @@ class CliGitInfoProviderTest {
         assertEquals(List.of(0, 0), counts("main"));
     }
 
+    /**
+     * A remote that main is pushed to and tracks, and a clone of it in which "theirs" is pushed to
+     * {@code branch}; the repository has fetched that commit.
+     */
+    private Path remoteWithTheirCommitOn(String branch) throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        git("push", "-q", "-u", "origin", "main");
+        java.nio.file.Path clone = Files.createTempDirectory("other").resolve("clone");
+        gitIn(clone.getParent(), "clone", "-q", bare.toString(), "clone");
+        gitIn(clone, "checkout", "-q", "-B", branch);
+        Files.writeString(clone.resolve("README.md"), "theirs\n");
+        gitIn(clone, "commit", "-q", "-am", "theirs");
+        gitIn(clone, "push", "-q", "origin", branch);
+        git("fetch", "-q", "origin");
+        return clone;
+    }
+
+    @Test
+    void pullMergesTheUpstreamWithoutAskingForAMessage() throws Exception {
+        remoteWithTheirCommitOn("main");
+        git("config", "pull.rebase", "false");
+        git("config", "pull.ff", "true");
+        git("commit", "-q", "--allow-empty", "-m", "ours");
+        assertEquals(List.of(1, 1), counts("main"));
+
+        assertEquals(List.of("git pull --no-edit"), provider.pull().get());
+
+        assertEquals(List.of(2, 0), counts("main"));
+        assertEquals("theirs\n", Files.readString(repo.resolve("README.md")));
+    }
+
+    @Test
+    void aPullThatConflictsIsUndone() throws Exception {
+        remoteWithTheirCommitOn("main");
+        git("config", "pull.rebase", "false");
+        git("config", "pull.ff", "true");
+        Files.writeString(repo.resolve("README.md"), "ours\n");
+        git("commit", "-q", "-am", "ours");
+
+        GitFailure<GitError.ProcessError> failure = provider.pull().getLeft();
+
+        assertEquals(List.of("git pull --no-edit", "git merge --abort"), failure.commands());
+        assertEquals(Option.none(), failure.cleanupFailed());
+        assertEquals("ours\n", Files.readString(repo.resolve("README.md")));
+        assertTrue(!gitSucceedsIn(repo, "rev-parse", "--verify", "--quiet", "MERGE_HEAD"));
+    }
+
+    @Test
+    void aRebasingPullThatConflictsIsUndone() throws Exception {
+        remoteWithTheirCommitOn("main");
+        git("config", "pull.rebase", "true");
+        Files.writeString(repo.resolve("README.md"), "ours\n");
+        git("commit", "-q", "-am", "ours");
+
+        GitFailure<GitError.ProcessError> failure = provider.pull().getLeft();
+
+        assertEquals(List.of("git pull --no-edit", "git rebase --abort"), failure.commands());
+        assertEquals(Option.none(), failure.cleanupFailed());
+        assertEquals("ours\n", Files.readString(repo.resolve("README.md")));
+        assertEquals(List.of(1, 1), counts("main"));
+    }
+
+    @Test
+    void fastForwardMovesABranchThatIsNotCheckedOutToItsUpstream() throws Exception {
+        remoteWithTheirCommitOn("main");
+        git("checkout", "-q", "-b", "other");
+        assertEquals(List.of(0, 1), counts("main"));
+
+        assertEquals(List.of("git fetch origin refs/heads/main:refs/heads/main"), provider.fastForward("main").get());
+
+        assertEquals(List.of(0, 0), counts("main"));
+    }
+
+    @Test
+    void fastForwardRefusesABranchThatHasDiverged() throws Exception {
+        remoteWithTheirCommitOn("main");
+        git("commit", "-q", "--allow-empty", "-m", "ours");
+        git("checkout", "-q", "-b", "other");
+
+        assertTrue(provider.fastForward("main").isLeft());
+        assertEquals(List.of(1, 1), counts("main"));
+    }
+
     @Test
     void pushFailsWithGitsExplanationWithoutARemote() {
         assertTrue(provider.push("main", PushMode.FAST_FORWARD).isLeft());

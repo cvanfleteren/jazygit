@@ -54,7 +54,7 @@ public final class CliMerge {
     /**
      * Whether the index holds conflicted files. Only asked, so not logged.
      */
-    private static Either<ProcessError, Boolean> conflicted(Path workTree) {
+    static Either<ProcessError, Boolean> conflicted(Path workTree) {
         return GitProcess.read(workTree, git("ls-files", "--unmerged"), raw -> Either.right(!raw.isBlank()));
     }
 

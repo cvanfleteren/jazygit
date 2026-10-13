@@ -64,4 +64,17 @@ public interface GitBranches {
      * succeeded.
      */
     Either<GitFailure<ProcessError>, List<String>> pushSettingUpstream(String branch, RemoteBranch upstream);
+
+    /**
+     * Pulls the checked out branch from its upstream, as git's {@code pull.rebase} and {@code pull.ff} say,
+     * without asking for a merge message. A pull that stops on conflicts is undone again, so the repository is
+     * left as it was.
+     */
+    Either<GitFailure<ProcessError>, List<String>> pull();
+
+    /**
+     * Fast-forwards the local branch {@code branch}, which is not checked out, to its upstream. Fails when that
+     * is not a fast-forward.
+     */
+    Either<GitFailure<ProcessError>, List<String>> fastForward(String branch);
 }

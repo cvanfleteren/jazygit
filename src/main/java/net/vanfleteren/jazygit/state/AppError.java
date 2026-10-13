@@ -38,4 +38,17 @@ public sealed interface AppError {
      */
     record InvalidUpstream(String text) implements AppError {
     }
+
+    /**
+     * A pull was asked for, but the branch has no upstream to pull from.
+     */
+    record NoUpstream(String branch) implements AppError {
+    }
+
+    /**
+     * A pull of a branch that is not checked out was asked for, but its commits not yet pushed keep it from
+     * being fast-forwarded.
+     */
+    record UnpushedCommits(String branch) implements AppError {
+    }
 }

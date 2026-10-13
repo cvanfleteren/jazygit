@@ -195,6 +195,65 @@ class BranchUpdateTest {
         assertEquals(true, done.cmds().contains(new LoadBranches()));
     }
 
+    /**
+     * The loaded model, with main checked out and feature not, both tracking their remote branch.
+     */
+    private static Model pullable(int mainAhead, int featureAhead) {
+        return Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(
+                new Branch("main", true, new Sha("aaaa"), Instant.EPOCH, true, true,
+                        Option.of(new Upstream("origin/main", mainAhead, 1))),
+                new Branch("feature", false, new Sha("ffff"), Instant.EPOCH, true, false,
+                        Option.of(new Upstream("origin/feature", featureAhead, 1)))))).model();
+    }
+
+    @Test
+    void pullRequestOfTheCheckedOutBranchPullsItEvenWhenItHasDiverged() {
+        Model failedBefore = Update.update(pullable(2, 0), failed(new BranchCmd.Pull("main"), "boom")).model();
+
+        Next next = Update.update(failedBefore, new PullMsg.Requested("main"));
+
+        assertEquals(List.of(new BranchCmd.Pull("main")), next.cmds());
+        assertEquals(Option.none(), next.model().error());
+        assertEquals(io.vavr.collection.HashSet.of("main"), next.model().busy());
+        // Not pulled again while it is being pulled.
+        assertEquals(List.of(), Update.update(next.model(), new PullMsg.Requested("main")).cmds());
+    }
+
+    @Test
+    void pullRequestOfAnotherBranchFastForwardsIt() {
+        Next next = Update.update(pullable(0, 0), new PullMsg.Requested("feature"));
+
+        assertEquals(List.of(new BranchCmd.FastForward("feature")), next.cmds());
+        assertEquals(io.vavr.collection.HashSet.of("feature"), next.model().busy());
+    }
+
+    @Test
+    void anotherBranchWithCommitsToPushIsNotFastForwarded() {
+        Next next = Update.update(pullable(0, 1), new PullMsg.Requested("feature"));
+
+        assertEquals(List.of(), next.cmds());
+        assertEquals(Option.of("Cannot fast-forward branch feature: it has commits that are not pushed"),
+                errorText(next.model()));
+    }
+
+    @Test
+    void aBranchWithoutUpstreamIsNotPulled() {
+        Next current = Update.update(loaded(), new PullMsg.Requested("main"));
+        assertEquals(List.of(), current.cmds());
+        assertEquals(Option.of("Cannot pull branch main: it has no upstream"), errorText(current.model()));
+
+        assertEquals(List.of(), Update.update(loaded(), new PullMsg.Requested("feature")).cmds());
+        assertEquals(List.of(), Update.update(loaded(), new PullMsg.Requested("gone")).cmds());
+    }
+
+    @Test
+    void failedPullIsStored() {
+        assertEquals(Option.of("Pulling branch main failed: boom"),
+                errorText(Update.update(loaded(), failed(new BranchCmd.Pull("main"), "boom")).model()));
+        assertEquals(Option.of("Fast-forwarding branch feature failed: boom"),
+                errorText(Update.update(loaded(), failed(new BranchCmd.FastForward("feature"), "boom")).model()));
+    }
+
     @Test
     void newBranchRequestOpensTheDialogAndCancelClosesIt() {
         Model open = Update.update(loaded(), new NewBranchMsg.Requested("feature")).model();

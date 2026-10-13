@@ -147,6 +147,16 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<GitFailure<ProcessError>, List<String>> pull() {
+        return CliBranch.pull(workTree);
+    }
+
+    @Override
+    public Either<GitFailure<ProcessError>, List<String>> fastForward(String branch) {
+        return CliBranch.fastForward(workTree, branch);
+    }
+
+    @Override
     public Either<GitFailure<ProcessError>, List<String>> merge(String branch, MergeMode mode) {
         return CliMerge.merge(workTree, branch, mode);
     }
