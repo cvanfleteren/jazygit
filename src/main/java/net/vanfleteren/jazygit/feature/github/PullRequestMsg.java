@@ -77,16 +77,4 @@ public sealed interface PullRequestMsg extends Msg {
     record Created(PullRequestCmd.CreatePullRequest cmd, Option<PullRequest> pullRequest, List<ExecutedCommand> commands)
             implements PullRequestMsg {
     }
-
-    /**
-     * Read the pull requests again.
-     */
-    record Refresh() implements PullRequestMsg {
-    }
-
-    record Loaded(List<PullRequest> pullRequests) implements PullRequestMsg {
-    }
-
-    record LoadFailed(Failure failure) implements PullRequestMsg {
-    }
 }

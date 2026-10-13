@@ -3,8 +3,8 @@ package net.vanfleteren.jazygit.feature.fetch;
 import static net.vanfleteren.jazygit.state.TestModels.refused;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.github.PullRequestCmd;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
+import net.vanfleteren.jazygit.state.LoadPullRequests;
 import net.vanfleteren.jazygit.state.Fetching;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
@@ -45,7 +45,7 @@ class FetchUpdateTest {
         Next done = Update.update(upstream.model(), new FetchMsg.Fetched("upstream"));
         assertEquals(Option.none(), done.model().fetching());
         assertTrue(done.cmds().contains(new LoadBranches()));
-        assertTrue(done.cmds().contains(new PullRequestCmd.LoadPullRequests()));
+        assertTrue(done.cmds().contains(new LoadPullRequests()));
         // Neither logged nor reported.
         assertEquals(List.of(), done.model().commandLog());
         assertEquals(Option.none(), done.model().error());
@@ -60,5 +60,42 @@ class FetchUpdateTest {
         assertEquals(Option.none(), failed.fetching());
         assertEquals(Option.none(), failed.error());
         assertEquals(List.of(new FetchCmd.ListRemotes()), Update.update(failed, new FetchMsg.Tick()).cmds());
+    }
+
+    @Test
+    void aRequestedFetchStartsAtOnceWhenNoneIsRunning() {
+        Next started = FetchUpdate.requested(Next.of(loaded()));
+
+        assertEquals(List.of(new FetchCmd.ListRemotes()), started.cmds());
+        assertEquals(Option.of(Fetching.LISTING), started.model().fetching());
+    }
+
+    @Test
+    void aFetchRequestedWhileOneRunsFollowsItOnceItIsDone() {
+        Model fetching = Update.update(Update.update(loaded(), new FetchMsg.Tick()).model(),
+                new FetchMsg.RemotesListed(List.of("origin"))).model();
+
+        Next requested = FetchUpdate.requested(Next.of(fetching));
+        assertEquals(List.of(), requested.cmds());
+        assertTrue(requested.model().fetching().exists(Fetching::again));
+
+        Next done = Update.update(requested.model(), new FetchMsg.Fetched("origin"));
+        assertTrue(done.cmds().contains(new LoadBranches()));
+        assertTrue(done.cmds().contains(new FetchCmd.ListRemotes()), done.cmds().toString());
+        assertEquals(Option.of(Fetching.LISTING), done.model().fetching());
+
+        // That one is not followed by another.
+        Model listed = Update.update(done.model(), new FetchMsg.RemotesListed(List.of("origin"))).model();
+        assertEquals(Option.none(), Update.update(listed, new FetchMsg.Fetched("origin")).model().fetching());
+    }
+
+    @Test
+    void aFetchRequestedWhileTheRemotesCouldNotBeListedStillRuns() {
+        Model listing = FetchUpdate.requested(Next.of(Update.update(loaded(), new FetchMsg.Tick()).model())).model();
+
+        Next failed = Update.update(listing, new FetchMsg.ListingFailed(refused("boom")));
+
+        assertEquals(List.of(new FetchCmd.ListRemotes()), failed.cmds());
+        assertEquals(Option.of(Fetching.LISTING), failed.model().fetching());
     }
 }

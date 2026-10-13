@@ -22,7 +22,7 @@ import net.vanfleteren.jazygit.feature.discard.DiscardDialog;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
 import net.vanfleteren.jazygit.feature.github.PullRequestDialog;
 import net.vanfleteren.jazygit.feature.github.PullRequestDialogs;
-import net.vanfleteren.jazygit.feature.github.PullRequestMsg;
+import net.vanfleteren.jazygit.state.PullRequestsMsg;
 import net.vanfleteren.jazygit.feature.help.HelpDialog;
 import net.vanfleteren.jazygit.feature.error.ErrorDialog;
 import net.vanfleteren.jazygit.feature.stash.StashDialogs;
@@ -163,7 +163,7 @@ public class JazygitApp extends ToolkitApp {
         runner.scheduleRepeating(() -> runner.runOnRenderThread(() -> dispatch.accept(new FetchMsg.Tick())),
                 FETCH_INTERVAL);
         // The first fetch is a while off; the pull requests show from the start.
-        dispatch.accept(new PullRequestMsg.Refresh());
+        dispatch.accept(new PullRequestsMsg.Refresh());
     }
 
     private static ExecutorService singleThread(String name) {

@@ -99,9 +99,14 @@ the other with `git fetch --prune <remote>`, so branches deleted on the remote s
 the bottom of the screen shows, and the remotes still queued. When the queue is empty, the branches reload.
 Neither the commands nor the failures are shown, since fetching also runs while offline, and a failing remote
 doesn't stop the others. Once the fetch is done, the open pull requests are read again with `gh` (also once at
-startup), into `Model.pullRequests`. While that runs, the line at the bottom says so, and
-`Model.readingPullRequests` keeps another read from starting; a failure there is not shown either, as gh may
-be missing or logged out. `ssh` runs with `BatchMode=yes` during the fetch, so it can't prompt for a passphrase
+startup), into `Model.pullRequests`. That read lives in `state` (`PullRequestsUpdate`, `LoadPullRequests`),
+next to the other periodic reads, so the fetch does not depend on the GitHub feature. While it runs, the line
+at the bottom says so, and `Model.readingPullRequests` keeps another read from starting; a failure there is
+not shown either, as gh may be missing or logged out.
+
+A change made on GitHub (creating, merging or closing a pull request) asks for a fetch at once, through
+`FetchUpdate.requested`, so the branches show it without waiting for the next tick. When a fetch is already
+running, it may have missed the change, so `Fetching.again` makes another one follow it. `ssh` runs with `BatchMode=yes` during the fetch, so it can't prompt for a passphrase
 on the terminal.
 
 ## Core types
