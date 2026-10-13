@@ -146,27 +146,4 @@ public sealed interface PullRequestCmd extends Cmd {
             return new PullRequestMsg.DetailsFailed(number, failure);
         }
     }
-
-    /**
-     * Reads the open pull requests. It runs in the background, as it talks to GitHub, and nobody waits for it.
-     */
-    record LoadPullRequests() implements PullRequestCmd {
-
-        @Override
-        public boolean background() {
-            return true;
-        }
-
-        @Override
-        public Msg run(Env env) {
-            return env.gitHub().pullRequests().fold(
-                    error -> failed(new Failure.GitHub(error)),
-                    PullRequestMsg.Loaded::new);
-        }
-
-        @Override
-        public Msg failed(Failure failure) {
-            return new PullRequestMsg.LoadFailed(failure);
-        }
-    }
 }

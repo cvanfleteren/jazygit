@@ -1,18 +1,16 @@
 package net.vanfleteren.jazygit.feature.github;
 
 import io.vavr.collection.List;
-import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.fetch.FetchUpdate;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.ChangingCmd;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.ClosePullRequest;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.CreatePullRequest;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.MergePullRequest;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.LoadPullRequestDetails;
-import net.vanfleteren.jazygit.feature.github.PullRequestCmd.LoadPullRequests;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.OpenPullRequest;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
-import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.AppError;
@@ -20,6 +18,7 @@ import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.OperationMsg;
 import net.vanfleteren.jazygit.state.OperationUpdate;
+import net.vanfleteren.jazygit.state.PullRequestsUpdate;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -46,8 +45,9 @@ public final class PullRequestUpdate {
                 Model shown = pullRequest
                         .map(pr -> done.model().withPullRequests(done.model().pullRequests().put(pr.headBranch(), pr)))
                         .getOrElse(done.model());
-                // A read that is still running may have missed it, so this one is started anyway.
-                yield new Next(reading(shown), done.cmds().append(new LoadPullRequests()));
+                // A read that is still running may have missed it, so this one is started anyway. GitHub may have
+                // changed the remote too, which a fetch brings in.
+                yield FetchUpdate.requested(PullRequestsUpdate.loadAnyway(new Next(shown, done.cmds())));
             }
             case PullRequestMsg.DetailsLoaded(int number, var details) -> Next.of(shown(model, number, Either.right(details)));
             case PullRequestMsg.DetailsFailed(int number, var failure) -> Next.of(shown(model, number, Either.left(failure)));
@@ -63,19 +63,14 @@ public final class PullRequestUpdate {
                     popup -> Option.when(popup.open(),
                             () -> new ClosePullRequest(popup.branch(), popup.pullRequest().number())));
             case PullRequestMsg.Ended(ChangingCmd cmd, var commands) -> {
-                // Done like any operation. The pull request is no longer open, which reading them again confirms.
+                // Done like any operation. The pull request is no longer open, which reading them again confirms;
+                // a merge changed the base branch on the remote, which a fetch brings in.
                 Next done = OperationUpdate.update(model, new OperationMsg.Succeeded(cmd, commands));
                 Model ended = done.model().withPullRequests(
                         done.model().pullRequests().filterValues(pr -> pr.number() != cmd.number()));
-                yield load(new Next(ended, done.cmds()));
+                yield FetchUpdate.requested(PullRequestsUpdate.load(new Next(ended, done.cmds())));
             }
             case PullRequestMsg.InfoClosed() -> Next.of(model.withoutPopup(PullRequestPopup.class));
-            case PullRequestMsg.Refresh() -> load(Next.of(model));
-            case PullRequestMsg.Loaded(List<PullRequest> pullRequests) -> Next.of(read(model)
-                    .withPullRequests(byHeadBranch(pullRequests)).withPullRequestsFailure(Option.none()));
-            // gh can be missing, logged out or offline, or the remote not on GitHub: then no pull requests show.
-            // That is no reason to bother the user until they ask for a pull request, see requested().
-            case PullRequestMsg.LoadFailed(var failure) -> Next.of(read(model).withPullRequestsFailure(Option.of(failure)));
         };
     }
 
@@ -88,34 +83,6 @@ public final class PullRequestUpdate {
                 .filter(popup -> popup.pullRequest().number() == number)
                 .map(popup -> model.openPopup(popup.with(read)))
                 .getOrElse(model);
-    }
-
-    /**
-     * {@code next}, also reading the pull requests again; unless a read is still running, which gets the
-     * latest state already.
-     */
-    public static Next load(Next next) {
-        return next.model().readingPullRequests() > 0
-                ? next
-                : new Next(reading(next.model()), next.cmds().append(new LoadPullRequests()));
-    }
-
-    private static Model reading(Model model) {
-        return model.withReadingPullRequests(model.readingPullRequests() + 1);
-    }
-
-    private static Model read(Model model) {
-        return model.withReadingPullRequests(Math.max(0, model.readingPullRequests() - 1));
-    }
-
-    /**
-     * The pull requests by the branch they merge from. Several can merge from the same branch, into different
-     * bases: the newest, the one with the highest number, is kept, so the choice does not depend on the order
-     * gh lists them in.
-     */
-    static Map<String, PullRequest> byHeadBranch(List<PullRequest> pullRequests) {
-        // Vavr's toMap has no merge function; a later entry replaces an earlier one, so ascending numbers keep the newest.
-        return pullRequests.sortBy(PullRequest::number).toMap(PullRequest::headBranch, pr -> pr);
     }
 
     /**

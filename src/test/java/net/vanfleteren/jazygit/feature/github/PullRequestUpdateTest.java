@@ -3,10 +3,12 @@ package net.vanfleteren.jazygit.feature.github;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.fetch.FetchCmd;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.ClosePullRequest;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.CreatePullRequest;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.LoadPullRequestDetails;
-import net.vanfleteren.jazygit.feature.github.PullRequestCmd.LoadPullRequests;
+import net.vanfleteren.jazygit.state.PullRequestsMsg;
+import net.vanfleteren.jazygit.state.LoadPullRequests;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.MergePullRequest;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.OpenPullRequest;
 import net.vanfleteren.jazygit.gh.GhError;
@@ -39,7 +41,6 @@ import static net.vanfleteren.jazygit.state.TestModels.errorText;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static net.vanfleteren.jazygit.state.TestModels.refused;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PullRequestUpdateTest {
@@ -56,7 +57,7 @@ class PullRequestUpdateTest {
     private static final PullRequest FEATURE_PR = new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED);
 
     private static Model withPr() {
-        return Update.update(model(), new PullRequestMsg.Loaded(List.of(FEATURE_PR))).model();
+        return Update.update(model(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR))).model();
     }
 
     private static Env env() {
@@ -176,6 +177,8 @@ class PullRequestUpdateTest {
         assertEquals(Option.none(), done.model().pullRequests().get("feature"));
         assertEquals(Option.none(), done.model().busy().get("feature"));
         assertTrue(done.cmds().contains(new LoadPullRequests()), done.cmds().toString());
+        // The merge changed the base branch on the remote.
+        assertTrue(done.cmds().contains(new FetchCmd.ListRemotes()), done.cmds().toString());
         assertEquals("gh pr merge 42 --merge", done.model().commandLog().last().commands().last().line());
     }
 
@@ -225,7 +228,7 @@ class PullRequestUpdateTest {
     void thePullRequestOfABranchIsFoundByItsNameOnTheRemote() {
         Branch renamed = new Branch("mine", false, new Sha("6"), Instant.EPOCH, true, false,
                 Option.of(new Upstream(new RemoteBranch("origin", "feature"), 0, 0)));
-        Model withPr = Update.update(model(), new PullRequestMsg.Loaded(List.of(FEATURE_PR))).model();
+        Model withPr = Update.update(model(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR))).model();
 
         assertEquals(Option.of(FEATURE_PR), withPr.pullRequest(renamed));
         assertEquals(Option.none(), withPr.pullRequest(UNPUSHED));
@@ -235,50 +238,20 @@ class PullRequestUpdateTest {
     void thePullRequestOfABranchIsFoundEvenWhenItsRemoteNameHasASlash() {
         Branch onFork = new Branch("mine", false, new Sha("6"), Instant.EPOCH, true, false,
                 Option.of(new Upstream(new RemoteBranch("my/fork", "feature"), 0, 0)));
-        Model withPr = Update.update(model(), new PullRequestMsg.Loaded(List.of(FEATURE_PR))).model();
+        Model withPr = Update.update(model(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR))).model();
 
         assertEquals(Option.of(FEATURE_PR), withPr.pullRequest(onFork));
     }
 
     @Test
-    void ofSeveralPullRequestsFromTheSameBranchTheNewestIsKeptWhateverTheOrder() {
-        PullRequest older = new PullRequest(7, "feature", false, Checks.NONE, Review.NONE);
-
-        assertEquals(Option.of(FEATURE_PR),
-                Update.update(model(), new PullRequestMsg.Loaded(List.of(older, FEATURE_PR))).model().pullRequests().get("feature"));
-        assertEquals(Option.of(FEATURE_PR),
-                Update.update(model(), new PullRequestMsg.Loaded(List.of(FEATURE_PR, older))).model().pullRequests().get("feature"));
-    }
-
-    @Test
-    void failingToReadThePullRequestsKeepsTheOnesShownWithoutAnError() {
-        Model withPr = Update.update(model(), new PullRequestMsg.Loaded(List.of(FEATURE_PR))).model();
-
-        Model failed = Update.update(withPr, new PullRequestMsg.LoadFailed(refused("gh: not logged in"))).model();
-
-        assertEquals(withPr.pullRequests(), failed.pullRequests());
-        assertEquals(Option.none(), failed.error());
-        assertEquals(Option.none(), failed.popup());
-    }
-
-    @Test
     void askingForAPullRequestAfterFailingToReadThemTellsWhy() {
         var failure = refused("gh: not logged in");
-        Model failed = Update.update(model(), new PullRequestMsg.LoadFailed(failure)).model();
+        Model failed = Update.update(model(), new PullRequestsMsg.LoadFailed(failure)).model();
 
         Next asked = Update.update(failed, new PullRequestMsg.Requested("feature"));
 
         assertEquals(Option.of(new AppError.PullRequestsUnavailable(failure)), asked.model().error());
         assertEquals(List.empty(), asked.cmds());
-    }
-
-    @Test
-    void readingThePullRequestsAgainForgetsTheFailure() {
-        Model failed = Update.update(model(), new PullRequestMsg.LoadFailed(refused("offline"))).model();
-
-        Model loaded = Update.update(failed, new PullRequestMsg.Loaded(List.empty())).model();
-
-        assertEquals(Option.none(), loaded.pullRequestsFailure());
     }
 
     @Test
@@ -292,6 +265,7 @@ class PullRequestUpdateTest {
 
         assertTrue(done.cmds().contains(new LoadPullRequests()), done.cmds().toString());
         assertEquals(Option.none(), done.model().busy().get("feature"));
+        assertTrue(done.cmds().contains(new FetchCmd.ListRemotes()), done.cmds().toString());
         assertEquals("gh pr create --head feature --base main --fill",
                 done.model().commandLog().last().commands().last().line());
     }
@@ -309,25 +283,4 @@ class PullRequestUpdateTest {
         assertTrue(done.cmds().contains(new LoadPullRequests()));
     }
 
-    @Test
-    void aReadOfThePullRequestsIsCountedWhileItRunsAndNotStartedTwice() {
-        Next reading = Update.update(model(), new PullRequestMsg.Refresh());
-        assertEquals(1, reading.model().readingPullRequests());
-
-        Next again = Update.update(reading.model(), new PullRequestMsg.Refresh());
-        assertEquals(List.empty(), again.cmds());
-        assertEquals(1, again.model().readingPullRequests());
-
-        assertEquals(0, Update.update(reading.model(), new PullRequestMsg.Loaded(List.empty())).model().readingPullRequests());
-        assertEquals(0, Update.update(reading.model(), new PullRequestMsg.LoadFailed(refused("offline"))).model()
-                .readingPullRequests());
-    }
-
-    @Test
-    void refreshingReadsThePullRequests() {
-        assertEquals(List.of(new LoadPullRequests()), Update.update(model(), new PullRequestMsg.Refresh()).cmds());
-        assertInstanceOf(PullRequestMsg.Loaded.class,
-                new LoadPullRequests().run(new Env(new StubGitProvider() {
-                }, StubGitHub.empty())));
-    }
 }
