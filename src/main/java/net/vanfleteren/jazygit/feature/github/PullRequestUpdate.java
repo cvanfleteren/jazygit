@@ -53,8 +53,8 @@ public final class PullRequestUpdate {
      * gh lists them in.
      */
     static Map<String, PullRequest> byHeadBranch(List<PullRequest> pullRequests) {
-        return pullRequests.toMap(PullRequest::headBranch, pr -> pr,
-                (a, b) -> a.number() >= b.number() ? a : b);
+        // Vavr's toMap has no merge function; a later entry replaces an earlier one, so ascending numbers keep the newest.
+        return pullRequests.sortBy(PullRequest::number).toMap(PullRequest::headBranch, pr -> pr);
     }
 
     /**
