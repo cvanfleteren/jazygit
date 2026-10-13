@@ -35,7 +35,9 @@ public record PullRequestPopup(String branch, PullRequest pullRequest,
     }
 
     /**
-     * Whether it can be merged as far as is known: it is open, not a draft, and does not conflict.
+     * Whether it can be merged as far as is known: it is open, not a draft, and does not conflict. GitHub works
+     * out whether it conflicts lazily, so an unknown answer does not stop it. Failing checks, missing reviews
+     * and branch protection are left to gh, whose refusal is shown as the error of the merge.
      */
     public boolean mergeable() {
         return open() && readDetails().exists(details -> !details.draft()

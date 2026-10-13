@@ -9,7 +9,10 @@ import net.vanfleteren.jazygit.feature.github.PullRequestCmd.LoadPullRequestDeta
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.LoadPullRequests;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.MergePullRequest;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.OpenPullRequest;
+import net.vanfleteren.jazygit.gh.GhError;
+import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -22,6 +25,7 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Env;
+import net.vanfleteren.jazygit.state.ErrorPopup;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Operation;
@@ -31,6 +35,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 
+import static net.vanfleteren.jazygit.state.TestModels.errorText;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static net.vanfleteren.jazygit.state.TestModels.refused;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -172,6 +177,35 @@ class PullRequestUpdateTest {
         assertEquals(Option.none(), done.model().busy().get("feature"));
         assertTrue(done.cmds().contains(new LoadPullRequests()), done.cmds().toString());
         assertEquals("gh pr merge 42 --merge", done.model().commandLog().last().commands().last().line());
+    }
+
+    @Test
+    void aMergeThatGitHubRefusesIsShownAsAnErrorAndKeepsThePullRequest() {
+        Model shown = Update.update(withPr(), new PullRequestMsg.Requested("feature")).model();
+        Model read = Update.update(shown, new PullRequestMsg.DetailsLoaded(42,
+                StubGitHub.empty().pullRequestDetails(42).get())).model();
+        Next merging = Update.update(read, new PullRequestMsg.MergeChosen(MergeMethod.SQUASH));
+        MergePullRequest cmd = (MergePullRequest) merging.cmds().head();
+        // What gh says when e.g. a required check fails or a review is missing.
+        StubGitHub refusing = new StubGitHub() {
+            @Override
+            public Either<GhFailure, List<ExecutedCommand>> mergePullRequest(int number, MergeMethod method) {
+                return Either.left(new GhFailure(new GhError.CommandFailed(
+                        Option.of("Pull request #42 is not mergeable: the base branch policy prohibits the merge."), 1),
+                        List.of(ExecutedCommand.of("gh", "pr", "merge", "42", "--squash"))));
+            }
+        };
+
+        Next failed = Update.update(merging.model(), cmd.run(new Env(new StubGitProvider() {
+        }, refusing)));
+
+        // The pull request dialog stays closed; the error comes up in its own popup.
+        assertEquals(Option.none(), failed.model().popup(PullRequestPopup.class));
+        assertTrue(failed.model().popup(ErrorPopup.class).isDefined(), failed.model().popup().toString());
+        assertEquals(Option.of("Merging the pull request of feature failed: Pull request #42 is not mergeable: "
+                + "the base branch policy prohibits the merge."), errorText(failed.model()));
+        assertEquals(Option.none(), failed.model().busy().get("feature"));
+        assertEquals(Option.of(FEATURE_PR), failed.model().pullRequests().get("feature"));
     }
 
     @Test
