@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import io.vavr.collection.List;
@@ -45,6 +46,7 @@ public final class TestModels {
         Model model = Update.init("repo").model();
         model = Update.update(model, new LoadMsg.StatusLoaded(CLEAN)).model();
         model = Update.update(model, new LoadMsg.BranchesLoaded(BRANCHES)).model();
+        model = Update.update(model, new LoadMsg.RemoteBranchesLoaded(io.vavr.collection.List.of())).model();
         model = Update.update(model, new LoadMsg.StashesLoaded(io.vavr.collection.List.of())).model();
         return Update.update(model, new LoadMsg.CommitsLoaded(COMMITS)).model();
     }
@@ -61,7 +63,7 @@ public final class TestModels {
      */
     public static Model loaded(GitInfoProvider provider, String branch) {
         Program program = Program.start(new Env(provider, StubGitHub.empty()), Runnable::run, Runnable::run, Runnable::run);
-        program.dispatch(new SelectionMsg.BranchSelected(branch));
+        program.dispatch(new SelectionMsg.BranchSelected(new BranchRef.Local(branch)));
         return program.model();
     }
 
@@ -127,6 +129,6 @@ public final class TestModels {
      * {@code model} with the log of {@code branch} still loading, while the log it replaced stays visible.
      */
     public static Model switchingBranch(Model model, String branch) {
-        return model.withBranchLog(Option.of(Preview.loading(branch, model.branchLog())));
+        return model.withBranchLog(Option.of(Preview.loading(new BranchRef.Local(branch), model.branchLog())));
     }
 }

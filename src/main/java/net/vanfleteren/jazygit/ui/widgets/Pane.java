@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.ui.widgets;
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.layout.Alignment;
+import dev.tamboui.text.Line;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Panel;
 import io.vavr.control.Option;
@@ -22,7 +23,16 @@ public final class Pane {
      * @param count    the number of rows, or empty to show no position, as long as they are not known
      */
     public static Panel bordered(String title, Element content, boolean focused, int selected, Option<Integer> count) {
-        Panel panel = panel(title, content);
+        return bordered(Line.from(title), content, focused, selected, count);
+    }
+
+    /**
+     * @param title    the title, in styles of its own
+     * @param selected the index of the selected row
+     * @param count    the number of rows, or empty to show no position, as long as they are not known
+     */
+    public static Panel bordered(Line title, Element content, boolean focused, int selected, Option<Integer> count) {
+        Panel panel = panel(content).title(title);
         if (focused) {
             panel.addClass(Theme.Classes.FOCUSED);
         }

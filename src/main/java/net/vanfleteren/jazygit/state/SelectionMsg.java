@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Sha;
 
@@ -15,9 +16,9 @@ public sealed interface SelectionMsg extends Msg {
     }
 
     /**
-     * The user highlighted a branch in the branches pane.
+     * The user highlighted a branch, local or remote, in the branches pane.
      */
-    record BranchSelected(String branch) implements SelectionMsg {
+    record BranchSelected(BranchRef branch) implements SelectionMsg {
     }
 
     /**

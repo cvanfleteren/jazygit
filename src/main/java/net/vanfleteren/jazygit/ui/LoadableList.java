@@ -5,6 +5,7 @@ import static dev.tamboui.toolkit.Toolkit.*;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.elements.Panel;
+import dev.tamboui.text.Line;
 import dev.tamboui.toolkit.Toolkit;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.widgets.common.ScrollBarPolicy;
@@ -30,6 +31,7 @@ final class LoadableList<T> {
     private Option<Loadable<T>> shown = Option.none();
     private List<Row> shownRows = List.of();
     private Option<Integer> count = Option.none();
+    private Option<String> empty = Option.none();
     private boolean focused;
 
     /**
@@ -130,11 +132,21 @@ final class LoadableList<T> {
     }
 
     Panel render(Loadable<T> value, boolean focused) {
+        return render(value, focused, Line.from(title));
+    }
+
+    /**
+     * @param title the title to show instead of the one the list was made with
+     */
+    Panel render(Loadable<T> value, boolean focused, Line title) {
         this.focused = focused;
+        List<Row> items = value.toOption().map(this.items).getOrElse(List.empty());
         List<Row> rows = switch (value) {
             case Loadable.Loading<T>() -> List.of(Row.of(Placeholders.loading()));
             case Loadable.Failed<T>(Failure failure) -> List.of(Row.of(Placeholders.error(failure)));
-            case Loadable.Loaded<T>(T loaded) -> items.apply(loaded);
+            case Loadable.Loaded<T>(T loaded) -> items.isEmpty()
+                    ? empty.map(text -> List.of(Row.of(Seg.styled(text, Theme.Classes.DIM)))).getOrElse(items)
+                    : items;
         };
         if (!shown.exists(previous -> previous == value)) {
             Option<T> before = shown.flatMap(Loadable::toOption);
@@ -145,7 +157,7 @@ final class LoadableList<T> {
             if (list.selected() >= rows.size()) {
                 list.selected(Math.max(0, rows.size() - 1));
             }
-            count = value.toOption().map(loaded -> rows.size());
+            count = value.toOption().map(loaded -> items.size());
         } else if (!rows.equals(shownRows)) {
             // The rows can depend on more than the value, e.g. on the time.
             show(rows);
@@ -180,6 +192,13 @@ final class LoadableList<T> {
      */
     boolean focused() {
         return focused;
+    }
+
+    /**
+     * Sets the dimmed line shown instead of the rows when the loaded value has none.
+     */
+    void whenEmpty(String text) {
+        empty = Option.of(text);
     }
 
     /**

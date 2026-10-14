@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Tracking;
 import net.vanfleteren.jazygit.git.model.Upstream;
@@ -37,6 +38,12 @@ public final class CliBranches {
             .thenComparing(Comparator.comparing(Branch::tipTime).reversed())
             .thenComparing(Branch::name);
 
+    private static final List<String> REMOTE_FIELDS = List.of("%(refname)", "%(objectname)", "%(committerdate:unix)",
+            "%(symref)");
+    private static final String REMOTE_FORMAT = REMOTE_FIELDS.mkString(GitOutput.REF_FIELD_SEPARATOR);
+    private static final Comparator<RemoteRef> REMOTE_ORDER = Comparator.comparing(RemoteRef::tipTime).reversed()
+            .thenComparing(ref -> ref.branch().shortName());
+
     private CliBranches() {
     }
 
@@ -46,6 +53,32 @@ public final class CliBranches {
     public static Either<ProcessError, List<Branch>> list(Path workTree) {
         return GitProcess.read(workTree, GitCommand.reading("for-each-ref", "--format=" + FORMAT, HEADS, REMOTES),
                 CliBranches::parse);
+    }
+
+    /**
+     * The remote-tracking branches, the most recently committed to first; not the {@code HEAD} of a remote,
+     * which only names one of the others.
+     */
+    public static Either<ProcessError, List<RemoteRef>> remotes(Path workTree) {
+        return GitProcess.read(workTree, GitCommand.reading("for-each-ref", "--format=" + REMOTE_FORMAT, REMOTES),
+                CliBranches::parseRemotes);
+    }
+
+    static Either<UnexpectedOutput, List<RemoteRef>> parseRemotes(String raw) {
+        return Either.sequenceRight(GitOutput.nonBlankLines(raw).map(CliBranches::remoteRef))
+                .map(refs -> refs.flatMap(ref -> ref).toList().sorted(REMOTE_ORDER));
+    }
+
+    /**
+     * A line of {@code for-each-ref} output for a remote-tracking ref; none for a symbolic one.
+     * The remote is the part of the name before the first slash, as a remote's name has none in practice.
+     */
+    private static Either<UnexpectedOutput, Option<RemoteRef>> remoteRef(String line) {
+        return GitOutput.fields(line, REMOTE_FIELDS.size()).flatMap(f -> GitOutput.sha(f.get(1)).flatMap(tip ->
+                GitOutput.epochSeconds(f.get(2)).map(time -> GitOutput.after(f.get(0), REMOTES)
+                        .filter(name -> f.get(3).isEmpty() && name.indexOf('/') > 0)
+                        .map(name -> new RemoteRef(new RemoteBranch(name.substring(0, name.indexOf('/')),
+                                name.substring(name.indexOf('/') + 1)), tip, time)))));
     }
 
     /**

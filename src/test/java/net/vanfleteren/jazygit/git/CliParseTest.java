@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.git.model.Tag;
 import net.vanfleteren.jazygit.git.model.Tracking;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +27,22 @@ class CliParseTest {
 
     private static String ref(String... fields) {
         return String.join("\u001f", fields) + "\n";
+    }
+
+    @Test
+    void remoteBranchesAreTheMostRecentlyCommittedToFirstWithoutTheHeadOfARemote() {
+        String raw = ref("refs/remotes/origin/HEAD", A, "300", "refs/remotes/origin/trunk")
+                + ref("refs/remotes/origin/trunk", A, "300", "")
+                + ref("refs/remotes/upstream/feature/nested", B, "400", "")
+                + ref("refs/remotes/origin/old", B, "100", "");
+
+        assertEquals(List.of(
+                        new RemoteRef(new RemoteBranch("upstream", "feature/nested"), new Sha(B), Instant.ofEpochSecond(400)),
+                        new RemoteRef(new RemoteBranch("origin", "trunk"), new Sha(A), Instant.ofEpochSecond(300)),
+                        new RemoteRef(new RemoteBranch("origin", "old"), new Sha(B), Instant.ofEpochSecond(100))),
+                CliBranches.parseRemotes(raw).get());
+        assertEquals(new GitError.UnexpectedOutput("refs/remotes/origin/x"),
+                CliBranches.parseRemotes("refs/remotes/origin/x\n").getLeft());
     }
 
     @Test

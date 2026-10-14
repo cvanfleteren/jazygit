@@ -141,15 +141,15 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "--allow-empty", "-m", "Side subject", "-m", "Side detail\nsecond line");
         git("checkout", "-q", "main");
 
-        List<Commit> side = provider.log("side").get();
+        List<Commit> side = provider.log(new BranchRef.Local("side")).get();
         assertEquals(List.of("Side subject", "Initial commit"), side.map(Commit::message).toList());
         assertEquals("Side detail\nsecond line", side.get(0).body());
         assertEquals("", side.get(1).body());
         assertEquals("Test", side.get(0).authorName());
         assertEquals("test@example.com", side.get(0).authorEmail());
 
-        assertEquals(List.of("Initial commit"), provider.log("main").get().map(Commit::message).toList());
-        assertEquals(new GitError.UnknownBranch("gone"), provider.log("gone").getLeft());
+        assertEquals(List.of("Initial commit"), provider.log(new BranchRef.Local("main")).get().map(Commit::message).toList());
+        assertEquals(new GitError.UnknownBranch("gone"), provider.log(new BranchRef.Local("gone")).getLeft());
     }
 
     @Test
@@ -605,6 +605,32 @@ class CliGitInfoProviderTest {
                 .filter(b -> !b.name().equals("main"))
                 .sorted(java.util.Comparator.comparing(Branch::name).reversed())
                 .map(Branch::hasRemote));
+    }
+
+    @Test
+    void remoteBranchesCanBeListedLoggedAndCheckedOutAsABranchThatFollowsThem() throws Exception {
+        git("branch", "feature");
+        git("checkout", "-q", "feature");
+        git("commit", "-q", "--allow-empty", "-m", "On feature");
+        git("checkout", "-q", "main");
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        git("push", "-q", "origin", "main", "feature");
+        git("remote", "set-head", "origin", "main");
+        git("branch", "-D", "feature");
+        RemoteBranch feature = new RemoteBranch("origin", "feature");
+
+        assertEquals(List.of("origin/feature", "origin/main"), provider.remoteBranches().get()
+                .map(ref -> ref.branch().shortName()).sorted());
+        assertEquals(List.of("On feature", "Initial commit"),
+                provider.log(new BranchRef.Remote(feature)).get().map(Commit::message).toList());
+
+        provider.createTrackingBranch("feature", feature).get();
+
+        Branch local = provider.branches().get().find(b -> b.name().equals("feature")).get();
+        assertTrue(local.current());
+        assertEquals(Option.of(feature), local.upstream().map(upstream -> upstream.branch()));
     }
 
     @Test

@@ -24,7 +24,7 @@ public final class BranchDialogs {
             "new-branch-name", NewBranchPopup.class,
             popup -> Messages.get("dialog.newBranch.title", popup.label()),
             Option.of(Messages.get("dialog.newBranch.placeholder")),
-            popup -> "", NewBranchMsg.Confirmed::new, NewBranchMsg.Cancelled::new);
+            NewBranchPopup::name, NewBranchMsg.Confirmed::new, NewBranchMsg.Cancelled::new);
 
     /**
      * Asks where to push a branch without an upstream, as {@code <remote> <branch>}; it starts out with the

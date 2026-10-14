@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Sha;
 
@@ -89,6 +90,14 @@ public interface Cmd {
         }
     }
 
+    record LoadRemoteBranches() implements Load {
+
+        @Override
+        public Msg run(Env env) {
+            return env.git().remoteBranches().fold(this::failedWith, LoadMsg.RemoteBranchesLoaded::new);
+        }
+    }
+
     record LoadStashes() implements Load {
 
         @Override
@@ -105,7 +114,7 @@ public interface Cmd {
         }
     }
 
-    record LoadBranchLog(String branch) implements Load {
+    record LoadBranchLog(BranchRef branch) implements Load {
 
         @Override
         public Msg run(Env env) {

@@ -8,6 +8,12 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyModifiers;
 import dev.tamboui.tui.pilot.Pilot;
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.RemoteRef;
+import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.state.BranchesTab;
+import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.commit.CommitMsg;
 import net.vanfleteren.jazygit.feature.commit.RewordMsg;
@@ -26,6 +32,7 @@ import net.vanfleteren.jazygit.ui.StatusPanel;
 import net.vanfleteren.jazygit.ui.Theme;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -120,6 +127,39 @@ class JazygitAppPilotTest {
     }
 
     @Test
+    void theRemoteBranchesAreOneStopOfTheTabCycleAndTheirKeysWorkThere() throws Exception {
+        SampleData data = new SampleData();
+        java.util.List<Msg> dispatched = new ArrayList<>();
+        RemoteBranch feature = new RemoteBranch("origin", "feature");
+        Model remote = TestModels.loaded(data).withBranchesTab(BranchesTab.REMOTE)
+                .withRemoteBranches(new Loadable.Loaded<>(List.of(
+                        new RemoteRef(feature, new Sha("0a1b2c3d4e5f60718293a4b5c6d7e8f901234567"), Instant.EPOCH))));
+        Fixture fixture = new Fixture(data, remote, dispatched, new ArrayList<>(), new FilesPanel(dispatched::add, () -> { }),
+                new BranchesPanel(dispatched::add), new CommitsPanel(dispatched::add, () -> { }),
+                new StashPanel(dispatched::add), new AtomicReference<>());
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
+            FocusManager focusManager = testRunner.runner().focusManager();
+            fixture.focusManagerRef().set(focusManager);
+            focusManager.setFocus(FilesPanel.ID);
+
+            Pilot pilot = testRunner.pilot();
+            pilot.press(KeyCode.TAB);
+            pilot.pause();
+            assertEquals(BranchesPanel.ID, focusManager.focusedId());
+            assertEquals(new SelectionMsg.BranchSelected(new BranchRef.Remote(feature)), fixture.selections().getLast());
+
+            pilot.press(' ');
+            pilot.press(KeyCode.TAB);
+            pilot.pause();
+            assertEquals(CommitsPanel.ID, focusManager.focusedId());
+
+            pilot.quit();
+        }
+        assertEquals(java.util.List.of(new CheckoutMsg.RemoteRequested(feature)), dispatched);
+    }
+
+    @Test
     void upDownNavigatesSelectionWithinFocusedPaneAndClampsAtBoundaries() throws Exception {
         Fixture fixture = new Fixture();
 
@@ -164,11 +204,11 @@ class JazygitAppPilotTest {
 
             Pilot pilot = testRunner.pilot();
             pilot.pause();
-            assertEquals(new SelectionMsg.BranchSelected("main"), fixture.selections().getLast());
+            assertEquals(new SelectionMsg.BranchSelected(new BranchRef.Local("main")), fixture.selections().getLast());
 
             pilot.press(KeyCode.DOWN);
             pilot.pause();
-            assertEquals(new SelectionMsg.BranchSelected("feature/initial-layout"), fixture.selections().getLast());
+            assertEquals(new SelectionMsg.BranchSelected(new BranchRef.Local("feature/initial-layout")), fixture.selections().getLast());
 
             pilot.quit();
         }

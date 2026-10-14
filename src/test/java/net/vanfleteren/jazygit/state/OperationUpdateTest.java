@@ -40,7 +40,7 @@ class OperationUpdateTest {
         assertEquals(List.of(new LogEntry(Operation.PUSH, executed("git push origin feature"))), next.model().commandLog());
         assertEquals(HashSet.empty(), next.model().busy().keySet());
         assertEquals(Option.none(), next.model().error());
-        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new LoadStashes()), next.cmds());
+        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(), new LoadStashes()), next.cmds());
     }
 
     @Test

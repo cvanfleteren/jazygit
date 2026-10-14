@@ -250,7 +250,7 @@ public final class ContentPanel {
         return model.branchLog()
                 .map(Preview::shown)
                 .<StyledElement<?>>map(log -> {
-                    String title = Messages.get("panel.log.titleFor", log.key());
+                    String title = Messages.get("panel.log.titleFor", log.key().name());
                     return whenLoaded(title, log.value(), commits ->
                             logArea.with(logLines(commits, ZoneId.systemDefault()).mkString("\n")).show(title));
                 })

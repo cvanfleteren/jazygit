@@ -117,7 +117,8 @@ flowchart LR
     Result -- "ui.execute" --> Dispatch
 ```
 
-Every 500 ms a `Msg.Tick` triggers `Update.refresh`, which re-reads the status, branches and stashes.
+Every 500 ms a `Msg.Tick` triggers `Update.refresh`, which re-reads the status, the local and remote
+branches, and the stashes.
 That keeps the screen in sync with changes made outside the app. A periodic load is skipped while an
 equal one is still running: `Model.refreshing` holds the loads that are running.
 
@@ -332,7 +333,8 @@ Every `Cli*` class runs git through `GitProcess`; only a few of those arrows are
   - **Reads:**
     - `CliStatus` reads `git status --porcelain=v2`.
     - `CliBranches` runs one `git for-each-ref` for all branches, with their upstream and ahead/behind
-      counts.
+      counts, and another one for the remote-tracking branches, which the branches pane shows on its
+      second tab (`Model.branchesTab`, switched with `[` and `]`).
     - `CliLog` runs `git rev-parse` and `git log -z`.
     - `CliStash` runs `git stash list`, and `CliRemote` reads the remotes.
     - These each have a pure parser for git's output. `CliDiff` and `CliShow` return git's text, cut off

@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Diffs;
@@ -41,6 +43,14 @@ public sealed interface LoadMsg extends Msg {
         }
     }
 
+    record RemoteBranchesLoaded(List<RemoteRef> branches) implements LoadMsg {
+
+        @Override
+        public Cmd.Load cmd() {
+            return new Cmd.LoadRemoteBranches();
+        }
+    }
+
     record StashesLoaded(List<Stash> stashes) implements LoadMsg {
 
         @Override
@@ -57,7 +67,7 @@ public sealed interface LoadMsg extends Msg {
         }
     }
 
-    record BranchLogLoaded(String branch, List<Commit> commits) implements LoadMsg {
+    record BranchLogLoaded(BranchRef branch, List<Commit> commits) implements LoadMsg {
 
         @Override
         public Cmd.Load cmd() {

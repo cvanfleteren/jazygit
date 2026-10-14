@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -17,6 +18,19 @@ public sealed interface CheckoutMsg extends Msg {
      * The user asked to check out a branch.
      */
     record Requested(String branch) implements CheckoutMsg {
+    }
+
+    /**
+     * The user asked to check out the remote branch {@code branch}: the local branch that follows it, or a new
+     * one that does.
+     */
+    record RemoteRequested(RemoteBranch branch) implements CheckoutMsg {
+    }
+
+    /**
+     * {@code cmd} ran {@code commands} and left a local branch checked out.
+     */
+    record CheckedOut(BranchCmd.ChecksOutBranch cmd, List<ExecutedCommand> commands) implements CheckoutMsg {
     }
 
     /**

@@ -42,6 +42,13 @@ public record RemoteBranch(String remote, String branch) {
     }
 
     /**
+     * Its remote-tracking ref, e.g. {@code refs/remotes/origin/main}.
+     */
+    public String trackingRef() {
+        return "refs/remotes/" + remote + "/" + branch;
+    }
+
+    /**
      * The name git shows for it, e.g. {@code origin/main}; just the branch for one of this repository, whose
      * remote is {@code .}.
      */

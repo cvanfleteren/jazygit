@@ -43,9 +43,21 @@ public sealed interface BranchCmd extends GitOperationCmd {
     }
 
     /**
+     * A command that leaves a local branch checked out, new or not. Once it succeeded, the branches pane shows the
+     * local branches, where that branch is then highlighted, also when it was started from the remote ones.
+     */
+    sealed interface ChecksOutBranch extends BranchCmd {
+
+        @Override
+        default Msg succeeded(List<ExecutedCommand> commands) {
+            return new CheckoutMsg.CheckedOut(this, commands);
+        }
+    }
+
+    /**
      * Creates the branch {@code branch} at {@code base} and switches to it.
      */
-    record CreateBranch(String branch, String base) implements BranchCmd {
+    record CreateBranch(String branch, String base) implements ChecksOutBranch {
 
         @Override
         public Operation operation() {
@@ -110,7 +122,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
      * Checks out {@code branch}. When uncommitted changes are in the way, the user is offered to take them
      * along instead of being told it failed.
      */
-    record Checkout(String branch) implements BranchCmd {
+    record Checkout(String branch) implements ChecksOutBranch {
 
         @Override
         public Operation operation() {
@@ -133,9 +145,31 @@ public sealed interface BranchCmd extends GitOperationCmd {
     }
 
     /**
+     * Creates the local branch {@code branch} at the remote branch {@code upstream}, following it, and checks it
+     * out. The remote branch shows as busy meanwhile, as the local one does not exist yet.
+     */
+    record CheckoutRemote(String branch, RemoteBranch upstream) implements ChecksOutBranch {
+
+        @Override
+        public Operation operation() {
+            return Operation.CHECKOUT;
+        }
+
+        @Override
+        public Option<String> busyBranch() {
+            return Option.of(upstream.shortName());
+        }
+
+        @Override
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+            return git.createTrackingBranch(branch, upstream);
+        }
+    }
+
+    /**
      * Checks out {@code branch}, taking the uncommitted changes along through a stash.
      */
-    record CheckoutWithStash(String branch) implements BranchCmd {
+    record CheckoutWithStash(String branch) implements ChecksOutBranch {
 
         @Override
         public Operation operation() {

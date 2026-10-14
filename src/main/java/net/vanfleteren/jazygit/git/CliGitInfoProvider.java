@@ -30,6 +30,8 @@ import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.RemoteRef;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
@@ -128,7 +130,12 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<LogError, List<Commit>> log(String branch) {
+    public Either<ProcessError, List<RemoteRef>> remoteBranches() {
+        return CliBranches.remotes(workTree);
+    }
+
+    @Override
+    public Either<LogError, List<Commit>> log(BranchRef branch) {
         return CliLog.log(workTree, branch);
     }
 
@@ -145,6 +152,12 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> createBranch(String name, String startPoint) {
         return CliCheckout.createBranch(workTree, name, startPoint);
+    }
+
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> createTrackingBranch(String name,
+                                                                                       RemoteBranch upstream) {
+        return CliCheckout.createTrackingBranch(workTree, name, upstream);
     }
 
     @Override

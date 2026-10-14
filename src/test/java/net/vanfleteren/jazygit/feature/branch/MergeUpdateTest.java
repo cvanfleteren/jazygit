@@ -53,7 +53,7 @@ class MergeUpdateTest {
     @Test
     void aMergeIsLoggedAndReloadsAndAFailedOneIsReported() {
         Next done = Update.update(loaded(), succeeded(new BranchCmd.Merge("feature", MergeMode.FAST_FORWARD), "git merge --ff --no-edit feature"));
-        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new LoadStashes()), done.cmds());
+        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(), new LoadStashes()), done.cmds());
         assertEquals(executed("git merge --ff --no-edit feature"), done.model().commandLog().last().commands());
 
         Next failed = Update.update(loaded(), failed(new BranchCmd.Merge("feature", MergeMode.FAST_FORWARD), "CONFLICT (content)"));

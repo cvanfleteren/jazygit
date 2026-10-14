@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import io.vavr.collection.List;
@@ -110,7 +111,8 @@ class ProgramTest {
         }
 
         @Override
-        public Either<LogError, List<Commit>> log(String branch) {
+        public Either<LogError, List<Commit>> log(BranchRef ref) {
+            String branch = ref.name();
             logLoads.add(branch);
             return Either.right(List.of(commit(branch + "-tip")));
         }
@@ -459,10 +461,10 @@ class ProgramTest {
     void selectingABranchLoadsItsLog() {
         settle();
 
-        program.dispatch(new SelectionMsg.BranchSelected("other"));
+        program.dispatch(new SelectionMsg.BranchSelected(new BranchRef.Local("other")));
         settle();
 
-        assertEquals(Option.of(new Preview<>("other", new Loaded<>(List.of(FakeProvider.commit("other-tip"))))),
+        assertEquals(Option.of(new Preview<>(new BranchRef.Local("other"), new Loaded<>(List.of(FakeProvider.commit("other-tip"))))),
                 program.model().branchLog());
         assertEquals(java.util.List.of("other"), provider.logLoads);
     }
