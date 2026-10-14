@@ -13,6 +13,7 @@ import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.branch.NewBranchMsg;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
@@ -42,7 +43,7 @@ class BranchesPanelTest {
     private static final Branch FEATURE = new Branch("feature", false, new Sha("2"));
     private static final Branch OLD = new Branch("old", false, new Sha("3"));
 
-    private final BranchesPanel panel = new BranchesPanel(msg -> { });
+    private final BranchesPanel panel = new BranchesPanel(msg -> { }, tab -> { });
     private final Model before = with(TestModels.loaded(new SampleData()), List.of(MAIN, FEATURE, OLD));
 
     @Test
@@ -113,7 +114,7 @@ class BranchesPanelTest {
     void aBranchBeingPushedOrPulledShowsWhatIsDoneLeftOfTheSpinner() throws Exception {
         Model busy = before.withBusyBranch("feature", Operation.PUSH).withBusyBranch("main", Operation.PULL);
         String frame = net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(java.time.Instant.EPOCH);
-        BranchesPanel panel = new BranchesPanel(msg -> { }, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
+        BranchesPanel panel = new BranchesPanel(msg -> { }, tab -> { }, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(busy, BranchesPanel.ID))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(busy, BranchesPanel.ID));
             assertEquals(true, screen.contains("feature Pushing " + frame), screen);
@@ -125,7 +126,7 @@ class BranchesPanelTest {
     void aBranchBeingDeletedShowsOnlyTheSpinner() throws Exception {
         Model deleting = before.withBusyBranch("feature", Operation.DELETE_BRANCH);
         String frame = net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(java.time.Instant.EPOCH);
-        BranchesPanel panel = new BranchesPanel(msg -> { }, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
+        BranchesPanel panel = new BranchesPanel(msg -> { }, tab -> { }, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(deleting, BranchesPanel.ID))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(deleting, BranchesPanel.ID));
             assertEquals(true, screen.contains("feature " + frame), screen);
@@ -154,7 +155,7 @@ class BranchesPanelTest {
     @Test
     void nAsksForANewBranchStartingAtTheHighlightedBranch() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        BranchesPanel panel = new BranchesPanel(dispatched::add);
+        BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> { });
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
             testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
             RenderedText.of(testRunner, () -> panel.render(before, BranchesPanel.ID));
@@ -170,7 +171,7 @@ class BranchesPanelTest {
     @Test
     void shiftPPushesTheHighlightedBranch() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        BranchesPanel panel = new BranchesPanel(dispatched::add);
+        BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> { });
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
             testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
             RenderedText.of(testRunner, () -> panel.render(before, BranchesPanel.ID));
@@ -186,7 +187,7 @@ class BranchesPanelTest {
     @Test
     void pPullsTheHighlightedBranch() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        BranchesPanel panel = new BranchesPanel(dispatched::add);
+        BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> { });
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
             testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
             RenderedText.of(testRunner, () -> panel.render(before, BranchesPanel.ID));
@@ -202,7 +203,7 @@ class BranchesPanelTest {
     @Test
     void questionMarkAsksForTheKeybindingsOfThePanel() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        BranchesPanel panel = new BranchesPanel(dispatched::add);
+        BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> { });
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
             testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
             RenderedText.of(testRunner, () -> panel.render(before, BranchesPanel.ID));
@@ -246,7 +247,7 @@ class BranchesPanelTest {
     @Test
     void onTheRemoteTabSpaceChecksOutTheHighlightedRemoteBranchAndTheBracketsSwitchBack() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        BranchesPanel panel = new BranchesPanel(dispatched::add);
+        BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> { });
         Model remote = withRemotes(before);
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(remote, BranchesPanel.ID))) {
             testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
@@ -269,7 +270,7 @@ class BranchesPanelTest {
     @Test
     void onTheLocalTabTheBracketsSwitchToTheRemoteBranches() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        BranchesPanel panel = new BranchesPanel(dispatched::add);
+        BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> { });
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
             testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
             RenderedText.of(testRunner, () -> panel.render(before, BranchesPanel.ID));
@@ -279,6 +280,37 @@ class BranchesPanelTest {
         }
 
         assertEquals(java.util.List.of(new BranchesTabMsg.Switched()), dispatched);
+    }
+
+    @Test
+    void clickingTheNameOfAListInTheTitleReportsThatList() throws Exception {
+        java.util.List<BranchesTab> clicked = new java.util.ArrayList<>();
+        BranchesPanel panel = new BranchesPanel(msg -> { }, clicked::add);
+        int local = Messages.get("panel.branches.title").length();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, null))) {
+            RenderedText.of(testRunner, () -> panel.render(before, null));
+            // The title starts after the corner of the border.
+            testRunner.pilot().click(local + 4, 0);
+            testRunner.pilot().click(1, 0);
+            testRunner.pilot().pause();
+            testRunner.pilot().quit();
+        }
+
+        assertEquals(java.util.List.of(BranchesTab.REMOTE, BranchesTab.LOCAL), clicked);
+    }
+
+    @Test
+    void onlyTheNamesInTheTitleAreTabs() {
+        int local = Messages.get("panel.branches.title").length();
+        int remote = Messages.get("panel.remoteBranches.title").length();
+
+        assertEquals(Option.of(BranchesTab.LOCAL), BranchesPanel.tabAt(0));
+        assertEquals(Option.of(BranchesTab.LOCAL), BranchesPanel.tabAt(local - 1));
+        assertEquals(Option.none(), BranchesPanel.tabAt(local + 1));
+        assertEquals(Option.of(BranchesTab.REMOTE), BranchesPanel.tabAt(local + 3));
+        assertEquals(Option.of(BranchesTab.REMOTE), BranchesPanel.tabAt(local + 3 + remote - 1));
+        assertEquals(Option.none(), BranchesPanel.tabAt(local + 3 + remote));
+        assertEquals(Option.none(), BranchesPanel.tabAt(-1));
     }
 
     @Test

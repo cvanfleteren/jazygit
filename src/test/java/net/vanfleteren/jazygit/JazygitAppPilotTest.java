@@ -64,7 +64,7 @@ class JazygitAppPilotTest {
         }
 
         private Fixture(SampleData data, java.util.List<Msg> dispatched) {
-            this(data, TestModels.loaded(data), dispatched, new ArrayList<>(), new FilesPanel(dispatched::add, () -> { }), new BranchesPanel(dispatched::add),
+            this(data, TestModels.loaded(data), dispatched, new ArrayList<>(), new FilesPanel(dispatched::add, () -> { }), new BranchesPanel(dispatched::add, tab -> { }),
                     new CommitsPanel(dispatched::add, () -> { }), new StashPanel(dispatched::add), new AtomicReference<>());
         }
 
@@ -135,7 +135,7 @@ class JazygitAppPilotTest {
                 .withRemoteBranches(new Loadable.Loaded<>(List.of(
                         new RemoteRef(feature, new Sha("0a1b2c3d4e5f60718293a4b5c6d7e8f901234567"), Instant.EPOCH))));
         Fixture fixture = new Fixture(data, remote, dispatched, new ArrayList<>(), new FilesPanel(dispatched::add, () -> { }),
-                new BranchesPanel(dispatched::add), new CommitsPanel(dispatched::add, () -> { }),
+                new BranchesPanel(dispatched::add, tab -> { }), new CommitsPanel(dispatched::add, () -> { }),
                 new StashPanel(dispatched::add), new AtomicReference<>());
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {

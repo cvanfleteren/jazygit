@@ -52,6 +52,17 @@ class RemoteBranchUpdateTest {
     }
 
     @Test
+    void choosingATabShowsItWhicheverWasShown() {
+        Model remote = Update.update(loaded(), new BranchesTabMsg.Chosen(BranchesTab.REMOTE)).model();
+        assertEquals(BranchesTab.REMOTE, remote.branchesTab());
+
+        assertEquals(BranchesTab.REMOTE,
+                Update.update(remote, new BranchesTabMsg.Chosen(BranchesTab.REMOTE)).model().branchesTab());
+        assertEquals(BranchesTab.LOCAL,
+                Update.update(remote, new BranchesTabMsg.Chosen(BranchesTab.LOCAL)).model().branchesTab());
+    }
+
+    @Test
     void checkingOutARemoteBranchWithoutALocalOneCreatesOneThatFollowsIt() {
         Next next = Update.update(withRemotes(), new CheckoutMsg.RemoteRequested(ORIGIN_NEW));
 

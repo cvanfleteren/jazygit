@@ -1,8 +1,12 @@
 package net.vanfleteren.jazygit.ui;
 
+import dev.tamboui.layout.Rect;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import dev.tamboui.toolkit.elements.Panel;
+import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.tui.event.MouseEvent;
+import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
@@ -35,15 +39,18 @@ import java.util.function.Predicate;
  * <p>
  * {@code [} and {@code ]} switch to the remote-tracking branches and back, in the same pane, so the focus moves
  * through it as one. Space checks out the highlighted remote branch, n starts a new branch at it. A remote branch
- * that a local branch follows is dimmed.
+ * that a local branch follows is dimmed. Clicking the name of a list in the title shows that list.
  */
 public class BranchesPanel {
 
     public static final String ID = Scopes.BRANCHES.id();
 
+    private static final String TITLE_SEPARATOR = " │ ";
+
     private final LoadableList<List<Branch>> list;
     private final LoadableList<List<RemoteRef>> remoteList;
     private final Keymap keymap = Keymap.standard();
+    private final Consumer<BranchesTab> tabClicked;
     // The list the pane shows, as of the last render; the keys of the other one do nothing.
     private BranchesTab tab = BranchesTab.LOCAL;
     // Whether a local branch follows a remote branch, as of the last render.
@@ -94,8 +101,22 @@ public class BranchesPanel {
         Span local = Span.raw(Messages.get("panel.branches.title"));
         Span remote = Span.raw(Messages.get("panel.remoteBranches.title"));
         return tab == BranchesTab.LOCAL
-                ? Line.from(local.bold(), Span.raw(" │ "), remote.dim())
-                : Line.from(local.dim(), Span.raw(" │ "), remote.bold());
+                ? Line.from(local.bold(), Span.raw(TITLE_SEPARATOR), remote.dim())
+                : Line.from(local.dim(), Span.raw(TITLE_SEPARATOR), remote.bold());
+    }
+
+    /**
+     * The list whose name in the title is {@code column} cells from the start of the title, if any; the
+     * separator between them is none.
+     */
+    static Option<BranchesTab> tabAt(int column) {
+        int local = Span.raw(Messages.get("panel.branches.title")).width();
+        int remoteStart = local + Span.raw(TITLE_SEPARATOR).width();
+        int remoteEnd = remoteStart + Span.raw(Messages.get("panel.remoteBranches.title")).width();
+        if (column >= 0 && column < local) {
+            return Option.of(BranchesTab.LOCAL);
+        }
+        return Option.when(column >= remoteStart && column < remoteEnd, BranchesTab.REMOTE);
     }
 
     /**
@@ -159,16 +180,18 @@ public class BranchesPanel {
     }
 
     /**
-     * @param dispatch receives the messages for the user's actions, on the render thread
+     * @param dispatch   receives the messages for the user's actions, on the render thread
+     * @param tabClicked called when the name of a list in the title is clicked, with that list
      */
-    public BranchesPanel(Consumer<Msg> dispatch) {
-        this(dispatch, Clock.systemUTC());
+    public BranchesPanel(Consumer<Msg> dispatch, Consumer<BranchesTab> tabClicked) {
+        this(dispatch, tabClicked, Clock.systemUTC());
     }
 
     /**
      * @param clock tells how long ago the branches were last committed to
      */
-    public BranchesPanel(Consumer<Msg> dispatch, Clock clock) {
+    public BranchesPanel(Consumer<Msg> dispatch, Consumer<BranchesTab> tabClicked, Clock clock) {
+        this.tabClicked = tabClicked;
         list = new LoadableList<>(Messages.get("panel.branches.title"), ID,
                 branches -> branches
                         .map(b -> row(b, Duration.between(b.tipTime(), clock.instant()),
@@ -201,10 +224,27 @@ public class BranchesPanel {
         tab = model.branchesTab();
         tracked = remote -> model.trackingBranch(remote).isDefined();
         boolean focused = ID.equals(focusedId);
-        return switch (tab) {
+        Panel panel = switch (tab) {
             case LOCAL -> list.render(model.branches(), focused, title(tab));
             case REMOTE -> remoteList.render(model.remoteBranches(), focused, title(tab));
         };
+        return panel.onMouseEvent(event -> titleClick(panel.renderedArea(), event));
+    }
+
+    /**
+     * Shows the list whose name in the title of the pane, drawn in {@code area}, is clicked. The title starts
+     * after the corner of the border.
+     */
+    private EventResult titleClick(Rect area, MouseEvent event) {
+        return Option.when(event.kind() == MouseEventKind.PRESS && event.isLeftButton()
+                                && area != null && event.y() == area.top(),
+                        event.x() - area.left() - 1)
+                .flatMap(BranchesPanel::tabAt)
+                .map(clicked -> {
+                    tabClicked.accept(clicked);
+                    return EventResult.HANDLED;
+                })
+                .getOrElse(EventResult.UNHANDLED);
     }
 
     /**

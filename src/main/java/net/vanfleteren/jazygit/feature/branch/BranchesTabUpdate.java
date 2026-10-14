@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import net.vanfleteren.jazygit.feature.branch.BranchesTabMsg.Chosen;
 import net.vanfleteren.jazygit.feature.branch.BranchesTabMsg.Switched;
+import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -15,6 +17,7 @@ public final class BranchesTabUpdate {
     public static Next update(Model model, BranchesTabMsg msg) {
         return switch (msg) {
             case Switched() -> Next.of(model.withBranchesTab(model.branchesTab().other()));
+            case Chosen(BranchesTab tab) -> Next.of(model.withBranchesTab(tab));
         };
     }
 }

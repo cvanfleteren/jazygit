@@ -16,6 +16,7 @@ import io.vavr.control.Try;
 import dev.tamboui.css.engine.StyleEngine;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.feature.branch.BranchDialogs;
+import net.vanfleteren.jazygit.feature.branch.BranchesTabMsg;
 import net.vanfleteren.jazygit.feature.commit.CommitDialog;
 import net.vanfleteren.jazygit.feature.commit.CommitDialogs;
 import net.vanfleteren.jazygit.feature.discard.DiscardDialog;
@@ -27,6 +28,7 @@ import net.vanfleteren.jazygit.feature.help.HelpDialog;
 import net.vanfleteren.jazygit.feature.error.ErrorDialog;
 import net.vanfleteren.jazygit.feature.stash.StashDialogs;
 import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
+import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.gh.CliGitHub;
 import net.vanfleteren.jazygit.git.CliGitInfoProvider;
@@ -88,7 +90,7 @@ public class JazygitApp extends ToolkitApp {
     private final Consumer<Msg> dispatch = msg -> this.runtime.forEach(running -> running.program().dispatch(msg));
     private final ContentPanel contentPanel;
     private final FilesPanel filesPanel = new FilesPanel(dispatch, () -> openContent(FilesPanel.ID));
-    private final BranchesPanel branchesPanel = new BranchesPanel(dispatch);
+    private final BranchesPanel branchesPanel = new BranchesPanel(dispatch, this::showBranchesTab);
     private final CommitsPanel commitsPanel = new CommitsPanel(dispatch, () -> openContent(CommitsPanel.ID));
     private final StashPanel stashPanel = new StashPanel(dispatch);
     // Every popup, with where the focus goes when it closes. At most one is open.
@@ -138,6 +140,14 @@ public class JazygitApp extends ToolkitApp {
      */
     private void openContent(String paneId) {
         contentPanel.areaOfPane(paneId).forEach(id -> runner().focusManager().setFocus(id));
+    }
+
+    /**
+     * Moves the focus to the branches pane, as a click on it does, and shows the list {@code tab} in it.
+     */
+    private void showBranchesTab(BranchesTab tab) {
+        runner().focusManager().setFocus(BranchesPanel.ID);
+        dispatch.accept(new BranchesTabMsg.Chosen(tab));
     }
 
     /**
