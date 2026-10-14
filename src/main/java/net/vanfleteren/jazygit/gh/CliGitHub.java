@@ -33,16 +33,18 @@ public final class CliGitHub implements GitHub {
 
     private static final String LIMIT = "200";
     private static final String FIELDS = "number,headRefName,isDraft,isCrossRepository,reviewDecision,statusCheckRollup";
+    // The state of a check, in jq: a check run that is not completed yet is PENDING; a commit status gives its state.
+    private static final String CHECK_STATE = "(if .__typename == \"CheckRun\""
+            + " then (if .status == \"COMPLETED\" then (.conclusion // \"\") else \"PENDING\" end)"
+            + " else (.state // \"\") end)";
     /*
      * One line per pull request that is not from a fork:
      * number, head branch, whether it is a draft, its review decision and the states of its checks, separated
-     * by tabs. A check run that is not completed yet is PENDING; a commit status gives its state.
+     * by tabs.
      */
     private static final String JQ = ".[] | select(.isCrossRepository | not)"
             + " | [(.number | tostring), .headRefName, (.isDraft | tostring), (.reviewDecision // \"\"),"
-            + " ([.statusCheckRollup[]? | if .__typename == \"CheckRun\""
-            + " then (if .status == \"COMPLETED\" then (.conclusion // \"\") else \"PENDING\" end)"
-            + " else (.state // \"\") end] | join(\",\"))] | @tsv";
+            + " ([.statusCheckRollup[]? | " + CHECK_STATE + "] | join(\",\"))] | @tsv";
     private static final int FIELD_COUNT = 5;
 
     private static final String DETAIL_FIELDS = "number,title,author,state,isDraft,headRefName,baseRefName,createdAt,"
@@ -62,9 +64,7 @@ public final class CliGitHub implements GitHub {
             + " (.reviewRequests[]? | [\"requested\", (.login // .name // \"\")] | @tsv),"
             + " (.statusCheckRollup[]? | [\"check\","
             + " ((if .__typename == \"CheckRun\" then .name else .context end) // \"\"),"
-            + " (if .__typename == \"CheckRun\""
-            + " then (if .status == \"COMPLETED\" then (.conclusion // \"\") else \"PENDING\" end)"
-            + " else (.state // \"\") end)] | @tsv))";
+            + " " + CHECK_STATE + "] | @tsv))";
     private static final int DETAIL_FIELD_COUNT = 15;
 
     private static final Set<String> FAILED = HashSet.of(

@@ -32,8 +32,8 @@ public final class RewordUpdate {
      */
     private static Next requested(Model model, Sha sha) {
         return model.commit(sha)
-                .map(commit -> Next.of(model.clearError().openPopup(new RewordPopup(commit))))
-                .getOrElse(() -> Next.of(model));
+                .map(RewordPopup::new)
+                .transform(popup -> Update.ask(model, popup));
     }
 
     private static Next confirmed(Model model, CommitMessage message) {

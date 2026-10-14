@@ -2,9 +2,7 @@ package net.vanfleteren.jazygit.ui.widgets;
 
 import static dev.tamboui.toolkit.Toolkit.*;
 
-import dev.tamboui.style.Overflow;
 import dev.tamboui.toolkit.element.Element;
-import dev.tamboui.widgets.paragraph.Paragraph;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.Model;
@@ -24,8 +22,6 @@ import java.util.function.Supplier;
 public final class ConfirmDialog<P extends Popup> implements PopupView {
 
     private static final int WIDTH = 60;
-    // The popup's border and padding on both sides.
-    private static final int INNER_WIDTH = WIDTH - 2 - 2;
     // The blank line and the hint below the message, plus the top and bottom border.
     private static final int EXTRA_HEIGHT = 2 + 2;
 
@@ -63,10 +59,6 @@ public final class ConfirmDialog<P extends Popup> implements PopupView {
         this.dispatch = dispatch;
     }
 
-    public String id() {
-        return spec.id();
-    }
-
     @Override
     public List<String> ids() {
         return List.of(spec.id());
@@ -79,9 +71,9 @@ public final class ConfirmDialog<P extends Popup> implements PopupView {
     public Option<Element> render(Model model) {
         return model.popup(spec.popupType()).map(popup -> {
             String text = spec.message().apply(popup);
-            int messageHeight = lines(text, INNER_WIDTH);
+            int messageHeight = DialogFrame.wrappedHeight(text, WIDTH, Integer.MAX_VALUE);
             return DialogFrame.withHint(spec.title().apply(popup), WIDTH, spec.hintKey(), List.of(
-                            widget(Paragraph.builder().text(text).overflow(Overflow.WRAP_WORD).build()).length(messageHeight)))
+                            DialogFrame.wrapped(text, WIDTH, Integer.MAX_VALUE)))
                     .id(spec.id())
                     .focusable()
                     .length(messageHeight + EXTRA_HEIGHT)

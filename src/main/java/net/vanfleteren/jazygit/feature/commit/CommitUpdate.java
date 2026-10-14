@@ -32,8 +32,10 @@ public final class CommitUpdate {
             case Requested() -> requested(model);
             case StageAllCancelled() -> Next.of(model.withoutPopup(StageAllPopup.class));
             case StageAllConfirmed() -> stageAllConfirmed(model);
-            case StagedForCommit(var cmd, List<ExecutedCommand> commands) ->
-                    Update.refresh(OperationUpdate.done(model, cmd, commands).openPopupIfFree(new CommitPopup()));
+            case StagedForCommit(var cmd, List<ExecutedCommand> commands) -> {
+                Next staged = OperationUpdate.succeeded(model, cmd, commands);
+                yield new Next(staged.model().openPopupIfFree(new CommitPopup()), staged.cmds());
+            }
             case Cancelled() -> Next.of(model.withoutPopup(CommitPopup.class));
             case Confirmed(CommitMessage message) -> confirmed(model, message.stripped());
         };
@@ -44,9 +46,9 @@ public final class CommitUpdate {
      */
     private static Next requested(Model model) {
         return Update.withFiles(model, files -> files.exists(FileEntry::staged)
-                ? Next.of(model.clearError().openPopup(new CommitPopup()))
+                ? Update.ask(model, new CommitPopup())
                 : files.isEmpty() ? Next.of(model.fail(new AppError.NothingToCommit()))
-                : Next.of(model.clearError().openPopup(new StageAllPopup())));
+                : Update.ask(model, new StageAllPopup()));
     }
 
     private static Next stageAllConfirmed(Model model) {

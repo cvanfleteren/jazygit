@@ -26,8 +26,6 @@ public final class RebaseUpdate {
      * Only a known branch other than the checked out one can be rebased onto.
      */
     private static Next requested(Model model, String onto) {
-        return Branches.checkedOutAnd(model, onto)
-                .map(both -> Next.of(model.openPopup(new RebasePopup(both._1, both._2)).clearError()))
-                .getOrElse(() -> Next.of(model));
+        return Update.ask(model, Branches.checkedOutAnd(model, onto).map(both -> new RebasePopup(both._1, both._2)));
     }
 }

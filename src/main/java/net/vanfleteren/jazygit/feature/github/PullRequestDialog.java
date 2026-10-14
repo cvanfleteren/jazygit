@@ -2,10 +2,8 @@ package net.vanfleteren.jazygit.feature.github;
 
 import static dev.tamboui.toolkit.Toolkit.*;
 
-import dev.tamboui.style.Overflow;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
-import dev.tamboui.widgets.paragraph.Paragraph;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
@@ -17,14 +15,13 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.ui.BranchesPanel;
+import net.vanfleteren.jazygit.ui.TimeText;
 import net.vanfleteren.jazygit.ui.ErrorText;
 import net.vanfleteren.jazygit.ui.PullRequestSymbols;
 import net.vanfleteren.jazygit.ui.PullRequestSymbols.Symbol;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceList;
-import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
@@ -43,8 +40,6 @@ public final class PullRequestDialog implements PopupView {
     public static final String ID = "pull-request";
 
     private static final int WIDTH = 60;
-    // The popup's border and padding on both sides.
-    private static final int INNER_WIDTH = WIDTH - 2 - 2;
     // The labels right-aligned in a column of this many characters, then two spaces and the value.
     private static final int LABEL_COLUMN = 11;
     private static final String LABEL_FORMAT = "%" + LABEL_COLUMN + "s  ";
@@ -132,9 +127,8 @@ public final class PullRequestDialog implements PopupView {
          * {@code text}, wrapped at the width of the dialog, and cut after {@code maxLines}.
          */
         static Line wrapped(String text, String cssClass, int maxLines) {
-            int height = Math.min(maxLines, ConfirmDialog.lines(text, INNER_WIDTH));
-            return new Line(widget(Paragraph.builder().text(text).overflow(Overflow.WRAP_WORD).build())
-                    .addClass(cssClass).length(height), height);
+            return new Line(DialogFrame.wrapped(text, WIDTH, maxLines).addClass(cssClass),
+                    DialogFrame.wrappedHeight(text, WIDTH, maxLines));
         }
 
         /**
@@ -154,7 +148,7 @@ public final class PullRequestDialog implements PopupView {
                 Line.labelled("dialog.pullRequest.branch", text(popup.pullRequest().headBranch())),
                 Line.blank(),
                 Line.pieces(List.of(text(Messages.get("dialog.pullRequest.loading") + " ").addClass(Theme.Classes.DIM),
-                        text(BranchesPanel.spinnerFrame(clock.instant())).addClass(Theme.Classes.SPINNER))));
+                        text(TimeText.spinnerFrame(clock.instant())).addClass(Theme.Classes.SPINNER))));
     }
 
     private static List<Line> failed(Failure failure) {
@@ -202,7 +196,7 @@ public final class PullRequestDialog implements PopupView {
     private String created(PullRequestDetails pr) {
         return Messages.get("dialog.pullRequest.created.value",
                 LocalDate.ofInstant(pr.createdAt(), clock.getZone()).toString(),
-                BranchesPanel.age(Duration.between(pr.createdAt(), clock.instant())));
+                TimeText.age(Duration.between(pr.createdAt(), clock.instant())));
     }
 
     private static StyledElement<?> mergeable(PullRequestDetails.Mergeable mergeable) {

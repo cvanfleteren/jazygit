@@ -15,11 +15,18 @@ public final class OperationUpdate {
 
     public static Next update(Model model, OperationMsg msg) {
         return switch (msg) {
-            case OperationMsg.Succeeded(OperationCmd cmd, List<ExecutedCommand> commands) ->
-                    Update.refresh(done(model, cmd, commands).clearError());
+            case OperationMsg.Succeeded(OperationCmd cmd, List<ExecutedCommand> commands) -> succeeded(model, cmd, commands);
             case OperationMsg.Failed(OperationCmd cmd, Failure failure) -> Update.refresh(done(model, cmd, failure.commands())
                     .fail(new AppError.OperationFailed(cmd.operation(), cmd.subject(), failure)));
         };
+    }
+
+    /**
+     * What happens when {@code cmd} succeeded running {@code commands}, also for an operation that reports its
+     * success with a message of its own: what any success does, which that message then adds to.
+     */
+    public static Next succeeded(Model model, OperationCmd cmd, List<ExecutedCommand> commands) {
+        return Update.refresh(done(model, cmd, commands).clearError());
     }
 
     /**

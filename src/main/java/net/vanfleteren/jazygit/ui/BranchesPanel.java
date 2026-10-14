@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.elements.Panel;
-import dev.tamboui.widgets.spinner.SpinnerStyle;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
@@ -31,33 +30,12 @@ public class BranchesPanel {
 
     public static final String ID = Scopes.BRANCHES.id();
 
-    private static final SpinnerStyle SPINNER = SpinnerStyle.BOUNCING_BAR;
-    private static final long SPINNER_FRAME_MILLIS = 120;
-
     private final LoadableList<List<Branch>> list;
     private final Keymap keymap = Keymap.standard();
     // The branches an operation runs on, shown with a spinner; the rows are built from it on every render.
     private Map<String, Operation> busy = HashMap.empty();
     // The pull request of a branch, as of the last render; the rows are built from it on every render.
     private Function<Branch, Option<PullRequest>> pullRequests = branch -> Option.none();
-
-    /**
-     * The time since the last commit as a number and one unit: s, m, h or d.
-     */
-    public static String age(Duration since) {
-        long seconds = Math.max(0, since.toSeconds());
-        return seconds < 60 ? Messages.get("branches.age.seconds", String.valueOf(seconds))
-                : seconds < 3600 ? Messages.get("branches.age.minutes", String.valueOf(seconds / 60))
-                : seconds < 86400 ? Messages.get("branches.age.hours", String.valueOf(seconds / 3600))
-                : Messages.get("branches.age.days", String.valueOf(seconds / 86400));
-    }
-
-    /**
-     * The frame of the spinner of a busy branch to show at {@code now}.
-     */
-    public static String spinnerFrame(Instant now) {
-        return SPINNER.frame((int) (now.toEpochMilli() / SPINNER_FRAME_MILLIS % SPINNER.frameCount()));
-    }
 
     /**
      * What a busy branch shows on the left of its spinner: what is being done to it, for the operations that
@@ -80,7 +58,7 @@ public class BranchesPanel {
     private static LoadableList.Row row(Branch b, Duration since, Option<PullRequest> pullRequest,
                                         Option<String> spinner) {
         return new LoadableList.Row(
-                List.of(LoadableList.Seg.of("%4s ".formatted(age(since)) + (b.current() ? "* " : "  ") + b.name()))
+                List.of(LoadableList.Seg.of("%4s ".formatted(TimeText.age(since)) + (b.current() ? "* " : "  ") + b.name()))
                         .appendAll(sync(b))
                         .appendAll(pullRequest(pullRequest))
                         .appendAll(spinner.map(text -> LoadableList.Seg.styled(" " + text, Theme.Classes.SPINNER))));
@@ -90,7 +68,7 @@ public class BranchesPanel {
      * The spinner of a branch that {@code operation} runs on, preceded by its label if it has one.
      */
     static String spinner(Operation operation, Instant now) {
-        return busyLabel(operation).map(label -> label + " ").getOrElse("") + spinnerFrame(now);
+        return busyLabel(operation).map(label -> label + " ").getOrElse("") + TimeText.spinnerFrame(now);
     }
 
     /**

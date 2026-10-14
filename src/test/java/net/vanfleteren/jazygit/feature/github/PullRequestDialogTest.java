@@ -65,7 +65,7 @@ class PullRequestDialogTest {
         assertTrue(screen.contains("Pull request #42"), screen);
         assertTrue(screen.contains("Branch  support_rename"), screen);
         assertTrue(screen.contains("Reading the pull request from GitHub… "
-                + BranchesPanel.spinnerFrame(NOW)), screen);
+                + net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(NOW)), screen);
         assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
     }
 

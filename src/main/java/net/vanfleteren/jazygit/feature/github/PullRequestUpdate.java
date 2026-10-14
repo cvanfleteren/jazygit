@@ -16,7 +16,6 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.OperationMsg;
 import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.PullRequestsUpdate;
 import net.vanfleteren.jazygit.state.Update;
@@ -41,7 +40,7 @@ public final class PullRequestUpdate {
             case PullRequestMsg.Created(CreatePullRequest cmd, var pullRequest, var commands) -> {
                 // Done like any operation. The new pull request shows at once, as GitHub may not list it yet;
                 // reading the pull requests then gives its checks and review.
-                Next done = OperationUpdate.update(model, new OperationMsg.Succeeded(cmd, commands));
+                Next done = OperationUpdate.succeeded(model, cmd, commands);
                 Model shown = pullRequest
                         .map(pr -> done.model().withPullRequests(done.model().pullRequests().map(open -> open.put(pr.headBranch(), pr))))
                         .getOrElse(done.model());
@@ -65,7 +64,7 @@ public final class PullRequestUpdate {
             case PullRequestMsg.Ended(ChangingCmd cmd, var commands) -> {
                 // Done like any operation. The pull request is no longer open, which reading them again confirms;
                 // a merge changed the base branch on the remote, which a fetch brings in.
-                Next done = OperationUpdate.update(model, new OperationMsg.Succeeded(cmd, commands));
+                Next done = OperationUpdate.succeeded(model, cmd, commands);
                 Model ended = done.model().withPullRequests(done.model().pullRequests()
                         .map(open -> open.filterValues(pr -> pr.number() != cmd.number())));
                 // A read that is still running may have missed it, and would show it open again.
@@ -93,7 +92,7 @@ public final class PullRequestUpdate {
     private static Next requested(Model model, String branch) {
         return model.idleBranch(branch)
                 .map(known -> model.pullRequest(known)
-                        .map(pr -> Next.of(model.openPopup(PullRequestPopup.loading(branch, pr)).clearError(),
+                        .map(pr -> Next.of(Update.ask(model, PullRequestPopup.loading(branch, pr)).model(),
                                 new LoadPullRequestDetails(pr.number())))
                         // Without the pull requests it is unknown whether there is one to open.
                         .getOrElse(() -> model.pullRequestsFailure().isDefined() || model.pullRequests().isEmpty()
@@ -102,7 +101,7 @@ public final class PullRequestUpdate {
                                         .getOrElse(AppError.PullRequestsNotRead::new)))
                                 : known.remoteUpstream().isEmpty() || known.ahead() > 0
                                 ? Next.of(model.fail(new AppError.NotPushed(branch)))
-                                : Next.of(model.openPopup(new BasePopup(branch, bases(model, branch))).clearError())))
+                                : Update.ask(model, new BasePopup(branch, bases(model, branch)))))
                 .getOrElse(() -> Next.of(model));
     }
 

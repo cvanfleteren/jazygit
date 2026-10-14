@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Chosen;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Requested;
 import net.vanfleteren.jazygit.git.model.Branch;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -30,8 +31,7 @@ public final class DeleteBranchUpdate {
      * Only a known branch that is not checked out can be deleted, and not while it is being pushed or deleted.
      */
     private static Next requested(Model model, String branch) {
-        boolean deletable = Branches.isOtherIdleBranch(model, branch);
-        return deletable ? Next.of(model.openPopup(new DeleteBranchPopup(branch))) : Next.of(model);
+        return Update.ask(model, Option.when(Branches.isOtherIdleBranch(model, branch), () -> new DeleteBranchPopup(branch)));
     }
 
     private static Next chosen(Model model, DeleteScope scope) {

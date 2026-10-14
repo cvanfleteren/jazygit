@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.gh.GhError;
+import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -36,6 +38,20 @@ public interface Cmd {
      */
     default Msg failedWith(GitFailure<?> failure) {
         return failed(Failure.of(failure));
+    }
+
+    /**
+     * The {@link Msg} that reports this command failing with {@code failure} of gh.
+     */
+    default Msg failedWith(GhFailure failure) {
+        return failed(Failure.of(failure));
+    }
+
+    /**
+     * The {@link Msg} that reports this command failing with {@code error} of gh, before any command ran.
+     */
+    default Msg failedWith(GhError error) {
+        return failed(new Failure.GitHub(error));
     }
 
     /**

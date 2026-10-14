@@ -27,9 +27,6 @@ import java.util.function.Supplier;
  */
 public final class PickDialog<P extends Popup> implements PopupView {
 
-    private static final int WIDTH = 40;
-    // The padding and the border.
-    private static final int ROW_OVERHEAD = 2 + 2;
     // The rows shown at most; the list scrolls through the others.
     private static final int MAX_ROWS = 15;
 
@@ -79,7 +76,7 @@ public final class PickDialog<P extends Popup> implements PopupView {
         return model.popup(spec.popupType()).map(popup -> {
             show(spec.options().apply(popup));
             int widest = shown.map(String::length).max().getOrElse(0);
-            return DialogFrame.withHint(spec.title().apply(popup), Math.max(WIDTH, widest + ROW_OVERHEAD),
+            return DialogFrame.withHint(spec.title().apply(popup), Math.max(DialogFrame.LIST_WIDTH, widest + DialogFrame.FRAME),
                     "dialog.hint.pickCancel", List.of(list.length(Math.clamp(shown.size(), 1, MAX_ROWS))));
         });
     }

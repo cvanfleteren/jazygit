@@ -24,7 +24,7 @@ public final class StashUpdate {
             case StashMsg.PopRequested(var stash) ->
                     listed(model, stash) ? Update.start(model.clearError(), new StashCmd.Pop(stash)) : Next.of(model);
             case StashMsg.DropRequested(var stash) ->
-                    listed(model, stash) ? Next.of(model.clearError().openPopup(new StashDropPopup(stash))) : Next.of(model);
+                    Update.ask(model, Option.when(listed(model, stash), () -> new StashDropPopup(stash)));
             case StashMsg.DropCancelled() -> Next.of(model.withoutPopup(StashDropPopup.class));
             case StashMsg.DropConfirmed() ->
                     Update.confirm(model, StashDropPopup.class, popup -> Option.of(new StashCmd.Drop(popup.stash())));
@@ -37,7 +37,7 @@ public final class StashUpdate {
     private static Next requested(Model model) {
         return Update.withFiles(model, files -> files.isEmpty()
                 ? Next.of(model.fail(new AppError.NothingToStash()))
-                : Next.of(model.clearError().openPopup(new StashPopup())));
+                : Update.ask(model, new StashPopup()));
     }
 
     /**

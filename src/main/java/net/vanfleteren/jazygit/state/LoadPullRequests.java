@@ -13,7 +13,7 @@ public record LoadPullRequests() implements Cmd {
     @Override
     public Msg run(Env env) {
         return env.gitHub().pullRequests().fold(
-                error -> failed(new Failure.GitHub(error)),
+                this::failedWith,
                 PullRequestsMsg.Loaded::new);
     }
 

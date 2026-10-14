@@ -95,7 +95,7 @@ class BranchesPanelTest {
     @Test
     void spinnerFramesBounceAsTimePasses() {
         java.util.Set<String> frames = java.util.stream.IntStream.range(0, 20)
-                .mapToObj(i -> BranchesPanel.spinnerFrame(java.time.Instant.ofEpochMilli(i * 120L)))
+                .mapToObj(i -> net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(java.time.Instant.ofEpochMilli(i * 120L)))
                 .collect(java.util.stream.Collectors.toSet());
         assertEquals(java.util.Set.copyOf(java.util.Arrays.asList(dev.tamboui.widgets.spinner.SpinnerStyle.BOUNCING_BAR.frames())), frames);
     }
@@ -103,7 +103,7 @@ class BranchesPanelTest {
     @Test
     void aBranchBeingPushedOrPulledShowsWhatIsDoneLeftOfTheSpinner() throws Exception {
         Model busy = before.withBusyBranch("feature", Operation.PUSH).withBusyBranch("main", Operation.PULL);
-        String frame = BranchesPanel.spinnerFrame(java.time.Instant.EPOCH);
+        String frame = net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(java.time.Instant.EPOCH);
         BranchesPanel panel = new BranchesPanel(msg -> { }, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(busy, BranchesPanel.ID))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(busy, BranchesPanel.ID));
@@ -115,7 +115,7 @@ class BranchesPanelTest {
     @Test
     void aBranchBeingDeletedShowsOnlyTheSpinner() throws Exception {
         Model deleting = before.withBusyBranch("feature", Operation.DELETE_BRANCH);
-        String frame = BranchesPanel.spinnerFrame(java.time.Instant.EPOCH);
+        String frame = net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(java.time.Instant.EPOCH);
         BranchesPanel panel = new BranchesPanel(msg -> { }, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(deleting, BranchesPanel.ID))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(deleting, BranchesPanel.ID));
@@ -131,15 +131,15 @@ class BranchesPanelTest {
 
     @Test
     void ageIsShownInTheLargestFittingUnit() {
-        assertEquals("45s", BranchesPanel.age(java.time.Duration.ofSeconds(45)));
-        assertEquals("2m", BranchesPanel.age(java.time.Duration.ofSeconds(150)));
-        assertEquals("5m", BranchesPanel.age(java.time.Duration.ofMinutes(5)));
-        assertEquals("3h", BranchesPanel.age(java.time.Duration.ofHours(3)));
-        assertEquals("3h", BranchesPanel.age(java.time.Duration.ofMinutes(181)));
-        assertEquals("3h", BranchesPanel.age(java.time.Duration.ofMinutes(210)));
-        assertEquals("3h", BranchesPanel.age(java.time.Duration.ofMinutes(239)));
-        assertEquals("4h", BranchesPanel.age(java.time.Duration.ofMinutes(240)));
-        assertEquals("2d", BranchesPanel.age(java.time.Duration.ofDays(2)));
+        assertEquals("45s", net.vanfleteren.jazygit.ui.TimeText.age(java.time.Duration.ofSeconds(45)));
+        assertEquals("2m", net.vanfleteren.jazygit.ui.TimeText.age(java.time.Duration.ofSeconds(150)));
+        assertEquals("5m", net.vanfleteren.jazygit.ui.TimeText.age(java.time.Duration.ofMinutes(5)));
+        assertEquals("3h", net.vanfleteren.jazygit.ui.TimeText.age(java.time.Duration.ofHours(3)));
+        assertEquals("3h", net.vanfleteren.jazygit.ui.TimeText.age(java.time.Duration.ofMinutes(181)));
+        assertEquals("3h", net.vanfleteren.jazygit.ui.TimeText.age(java.time.Duration.ofMinutes(210)));
+        assertEquals("3h", net.vanfleteren.jazygit.ui.TimeText.age(java.time.Duration.ofMinutes(239)));
+        assertEquals("4h", net.vanfleteren.jazygit.ui.TimeText.age(java.time.Duration.ofMinutes(240)));
+        assertEquals("2d", net.vanfleteren.jazygit.ui.TimeText.age(java.time.Duration.ofDays(2)));
     }
 
     @Test

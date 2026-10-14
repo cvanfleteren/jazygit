@@ -34,7 +34,7 @@ public final class AmendUpdate {
     private static Next requested(Model model) {
         return Update.withFiles(model, files -> files.isEmpty()
                 ? Next.of(model.fail(new AppError.NothingToAmend()))
-                : Next.of(model.clearError().openPopup(new AmendPopup())));
+                : Update.ask(model, new AmendPopup()));
     }
 
     /**

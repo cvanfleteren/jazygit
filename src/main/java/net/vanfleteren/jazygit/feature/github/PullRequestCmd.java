@@ -43,7 +43,7 @@ public sealed interface PullRequestCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return env.gitHub().createPullRequest(head, base).fold(
-                    failure -> failed(Failure.of(failure)),
+                    this::failedWith,
                     created -> new PullRequestMsg.Created(this,
                             created.number().map(number -> new PullRequest(number, head, false, Checks.NONE, Review.NONE)),
                             created.commands()));
@@ -67,7 +67,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub().openPullRequest(number).fold(failure -> failed(Failure.of(failure)), this::succeeded);
+            return env.gitHub().openPullRequest(number).fold(this::failedWith, this::succeeded);
         }
     }
 
@@ -83,7 +83,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub().mergePullRequest(number, method).fold(failure -> failed(Failure.of(failure)), this::succeeded);
+            return env.gitHub().mergePullRequest(number, method).fold(this::failedWith, this::succeeded);
         }
     }
 
@@ -99,7 +99,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub().closePullRequest(number).fold(failure -> failed(Failure.of(failure)), this::succeeded);
+            return env.gitHub().closePullRequest(number).fold(this::failedWith, this::succeeded);
         }
     }
 
@@ -137,7 +137,7 @@ public sealed interface PullRequestCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return env.gitHub().pullRequestDetails(number).fold(
-                    error -> failed(new Failure.GitHub(error)),
+                    this::failedWith,
                     details -> new PullRequestMsg.DetailsLoaded(number, details));
         }
 

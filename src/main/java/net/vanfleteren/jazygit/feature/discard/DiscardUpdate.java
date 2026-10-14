@@ -33,7 +33,7 @@ public final class DiscardUpdate {
     }
 
     private static Next requested(Model model, List<FileEntry> files) {
-        return files.isEmpty() ? Next.of(model) : Next.of(model.openPopup(new DiscardPopup(files)));
+        return Update.ask(model, Option.when(!files.isEmpty(), () -> new DiscardPopup(files)));
     }
 
     private static Next chosen(Model model, Scope scope) {

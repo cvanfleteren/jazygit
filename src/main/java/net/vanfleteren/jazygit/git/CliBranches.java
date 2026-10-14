@@ -17,7 +17,6 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.regex.Pattern;
 
-import static net.vanfleteren.jazygit.git.Refs.DEFAULT_REMOTE;
 import static net.vanfleteren.jazygit.git.Refs.HEADS;
 import static net.vanfleteren.jazygit.git.Refs.REMOTES;
 
@@ -26,7 +25,7 @@ import static net.vanfleteren.jazygit.git.Refs.REMOTES;
  */
 public final class CliBranches {
 
-    private static final String ORIGIN = Refs.remote(DEFAULT_REMOTE, "");
+    private static final String ORIGIN = Refs.remote(RemoteBranch.DEFAULT_REMOTE, "");
     private static final List<String> FIELDS = List.of("%(refname)", "%(objectname)", "%(committerdate:unix)",
             "%(HEAD)", "%(upstream:remotename)", "%(upstream:remoteref)", "%(upstream:track)", "%(symref)",
             "%(upstream)");

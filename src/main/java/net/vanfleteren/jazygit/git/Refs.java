@@ -1,7 +1,5 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
-
 /**
  * The names of refs.
  */
@@ -9,10 +7,6 @@ final class Refs {
 
     static final String HEADS = "refs/heads/";
     static final String REMOTES = "refs/remotes/";
-    /**
-     * The remote a branch without an upstream is pushed to.
-     */
-    static final String DEFAULT_REMOTE = RemoteBranch.DEFAULT_REMOTE;
 
     private Refs() {
     }

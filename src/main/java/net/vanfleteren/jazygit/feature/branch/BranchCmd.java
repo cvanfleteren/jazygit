@@ -32,6 +32,17 @@ public sealed interface BranchCmd extends GitOperationCmd {
     }
 
     /**
+     * A command that keeps its branch busy while it runs, as it talks to the remote or deletes it.
+     */
+    sealed interface KeepsBranchBusy extends BranchCmd {
+
+        @Override
+        default Option<String> busyBranch() {
+            return Option.of(branch());
+        }
+    }
+
+    /**
      * Creates the branch {@code branch} at {@code base} and switches to it.
      */
     record CreateBranch(String branch, String base) implements BranchCmd {
@@ -50,16 +61,11 @@ public sealed interface BranchCmd extends GitOperationCmd {
     /**
      * Deletes {@code branch} where {@code scope} says; on its remote, that is {@code remote}.
      */
-    record DeleteBranch(String branch, RemoteBranch remote, DeleteScope scope) implements BranchCmd {
+    record DeleteBranch(String branch, RemoteBranch remote, DeleteScope scope) implements KeepsBranchBusy {
 
         @Override
         public Operation operation() {
             return Operation.DELETE_BRANCH;
-        }
-
-        @Override
-        public Option<String> busyBranch() {
-            return Option.of(branch);
         }
 
         @Override
@@ -145,16 +151,11 @@ public sealed interface BranchCmd extends GitOperationCmd {
     /**
      * Pushes {@code branch} to {@code upstream}, which it then tracks.
      */
-    record PushSettingUpstream(String branch, RemoteBranch upstream) implements BranchCmd {
+    record PushSettingUpstream(String branch, RemoteBranch upstream) implements KeepsBranchBusy {
 
         @Override
         public Operation operation() {
             return Operation.PUSH;
-        }
-
-        @Override
-        public Option<String> busyBranch() {
-            return Option.of(branch);
         }
 
         @Override
@@ -166,16 +167,11 @@ public sealed interface BranchCmd extends GitOperationCmd {
     /**
      * Pushes {@code branch} to {@code upstream}, the branch it tracks.
      */
-    record Push(String branch, RemoteBranch upstream, PushMode mode) implements BranchCmd {
+    record Push(String branch, RemoteBranch upstream, PushMode mode) implements KeepsBranchBusy {
 
         @Override
         public Operation operation() {
             return Operation.PUSH;
-        }
-
-        @Override
-        public Option<String> busyBranch() {
-            return Option.of(branch);
         }
 
         @Override
@@ -187,16 +183,11 @@ public sealed interface BranchCmd extends GitOperationCmd {
     /**
      * Pulls {@code branch}, the checked out branch, from its upstream.
      */
-    record Pull(String branch) implements BranchCmd {
+    record Pull(String branch) implements KeepsBranchBusy {
 
         @Override
         public Operation operation() {
             return Operation.PULL;
-        }
-
-        @Override
-        public Option<String> busyBranch() {
-            return Option.of(branch);
         }
 
         @Override
@@ -208,16 +199,11 @@ public sealed interface BranchCmd extends GitOperationCmd {
     /**
      * Fast-forwards {@code branch}, which is not checked out, to {@code upstream}, the branch it tracks.
      */
-    record FastForward(String branch, RemoteBranch upstream) implements BranchCmd {
+    record FastForward(String branch, RemoteBranch upstream) implements KeepsBranchBusy {
 
         @Override
         public Operation operation() {
             return Operation.FAST_FORWARD;
-        }
-
-        @Override
-        public Option<String> busyBranch() {
-            return Option.of(branch);
         }
 
         @Override

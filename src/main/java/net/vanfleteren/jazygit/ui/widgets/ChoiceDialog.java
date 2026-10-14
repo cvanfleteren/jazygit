@@ -22,9 +22,6 @@ import java.util.function.Supplier;
  */
 public final class ChoiceDialog<P extends Popup> implements PopupView {
 
-    private static final int WIDTH = 40;
-    // The padding and the border.
-    private static final int ROW_OVERHEAD = 2 + 2;
 
     /**
      * An option of the dialog.
@@ -82,10 +79,6 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
         this.list = new ChoiceList<>(spec.id(), spec.choices(), spec.onCancel(), dispatch);
     }
 
-    public String id() {
-        return spec.id();
-    }
-
     @Override
     public List<String> ids() {
         return List.of(spec.id());
@@ -98,7 +91,7 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
     public Option<Element> render(Model model) {
         return model.popup(spec.popupType()).map(popup -> {
             StyledElement<?> rows = list.render(model, popup);
-            return DialogFrame.withHint(spec.title().apply(popup), Math.max(WIDTH, list.width() + ROW_OVERHEAD),
+            return DialogFrame.withHint(spec.title().apply(popup), Math.max(DialogFrame.LIST_WIDTH, list.width() + DialogFrame.FRAME),
                     "dialog.hint.selectCancel", List.of(rows));
         });
     }

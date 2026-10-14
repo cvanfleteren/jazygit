@@ -57,10 +57,6 @@ public final class TextInputDialog<P extends Popup> implements PopupView {
         this.dispatch = dispatch;
     }
 
-    public String id() {
-        return spec.id();
-    }
-
     @Override
     public List<String> ids() {
         return List.of(spec.id());

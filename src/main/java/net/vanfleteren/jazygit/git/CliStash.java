@@ -124,7 +124,10 @@ public final class CliStash {
                         Either::right);
     }
 
+    /**
+     * How many stashes there are. Only asked, so not logged.
+     */
     private static Either<GitFailure<ProcessError>, Integer> count(Path workTree) {
-        return GitProcess.run(workTree, GitCommand.reading("stash", "list")).map(output -> GitOutput.nonBlankLines(output.stdout()).size());
+        return list(workTree).map(List::size).mapLeft(error -> new GitFailure<>(error, List.empty()));
     }
 }

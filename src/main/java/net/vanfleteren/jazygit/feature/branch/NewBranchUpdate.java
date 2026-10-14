@@ -20,9 +20,7 @@ public final class NewBranchUpdate {
 
     public static Next update(Model model, NewBranchMsg msg) {
         return switch (msg) {
-            case Requested(String base) -> model.idleBranch(base)
-                    .map(known -> Next.of(model.openPopup(new NewBranchPopup(base))))
-                    .getOrElse(() -> Next.of(model));
+            case Requested(String base) -> Update.ask(model, model.idleBranch(base).map(known -> new NewBranchPopup(base)));
             case NewBranchMsg.RequestedAtCommit(var sha) -> atCommit(model, sha);
             case Cancelled() -> Next.of(model.withoutPopup(NewBranchPopup.class));
             case Confirmed(String name) -> confirmed(model, name);
@@ -30,9 +28,7 @@ public final class NewBranchUpdate {
     }
 
     private static Next atCommit(Model model, Sha sha) {
-        return model.commit(sha)
-                .map(commit -> Next.of(model.openPopup(new NewBranchPopup(commit.sha().value(), commit.shortSha()))))
-                .getOrElse(() -> Next.of(model));
+        return Update.ask(model, model.commit(sha).map(commit -> new NewBranchPopup(commit.sha().value(), commit.shortSha())));
     }
 
     private static Next confirmed(Model model, String name) {

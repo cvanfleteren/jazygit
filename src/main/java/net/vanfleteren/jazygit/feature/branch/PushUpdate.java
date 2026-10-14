@@ -38,9 +38,9 @@ public final class PushUpdate {
         return model.idleBranch(branch)
                 .map(known -> known.remoteUpstream()
                         .map(upstream -> known.behind() > 0
-                                ? Next.of(model.openPopup(new ForcePushPopup(branch)).clearError())
+                                ? Update.ask(model, new ForcePushPopup(branch))
                                 : Update.start(model.clearError(), new Push(branch, upstream.branch(), PushMode.FAST_FORWARD)))
-                        .getOrElse(() -> Next.of(model.openPopup(new SetUpstreamPopup(branch)).clearError())))
+                        .getOrElse(() -> Update.ask(model, new SetUpstreamPopup(branch))))
                 .getOrElse(() -> Next.of(model));
     }
 

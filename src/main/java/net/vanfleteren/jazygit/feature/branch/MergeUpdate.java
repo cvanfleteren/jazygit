@@ -28,8 +28,6 @@ public final class MergeUpdate {
      * Only a known branch other than the checked out one can be merged, and only into a checked out branch.
      */
     private static Next requested(Model model, String branch) {
-        return Branches.checkedOutAnd(model, branch)
-                .map(both -> Next.of(model.openPopup(new MergePopup(both._1, both._2)).clearError()))
-                .getOrElse(() -> Next.of(model));
+        return Update.ask(model, Branches.checkedOutAnd(model, branch).map(both -> new MergePopup(both._1, both._2)));
     }
 }

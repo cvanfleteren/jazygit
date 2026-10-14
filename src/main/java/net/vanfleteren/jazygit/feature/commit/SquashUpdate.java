@@ -34,8 +34,7 @@ public final class SquashUpdate {
                 .flatMap(commit -> onlyParent(commit)
                         .flatMap(model::commit)
                         .map(into -> new SquashPopup(commit, into)))
-                .map(popup -> Next.of(model.clearError().openPopup(popup)))
-                .getOrElse(() -> Next.of(model));
+                .transform(popup -> Update.ask(model, popup));
     }
 
     /**
