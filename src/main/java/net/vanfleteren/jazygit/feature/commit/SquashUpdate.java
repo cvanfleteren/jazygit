@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.commit;
 import net.vanfleteren.jazygit.state.Update;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.feature.commit.CommitCmd.Squash;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.state.Model;
@@ -21,7 +22,7 @@ public final class SquashUpdate {
             case SquashMsg.Requested(Sha sha) -> requested(model, sha);
             case SquashMsg.Cancelled() -> Next.of(model.withoutPopup(SquashPopup.class));
             case SquashMsg.Confirmed() ->
-                    Update.confirm(model, SquashPopup.class, popup -> Option.of(new Squash(popup.commit().sha())));
+                    Update.confirm(model, SquashPopup.class, popup -> Option.of(new Squash(popup.commit().sha(), SquashMode.SQUASH)));
         };
     }
 
@@ -41,7 +42,7 @@ public final class SquashUpdate {
      * The parent of {@code commit}, if it has exactly one: a root commit has nothing to squash into, and a
      * merge has no single commit below it.
      */
-    private static Option<Sha> onlyParent(Commit commit) {
+    static Option<Sha> onlyParent(Commit commit) {
         return commit.parents().headOption().filter(parent -> commit.parents().size() == 1);
     }
 }

@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.RewordError;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.SquashMode;
 
 /**
  * Operations that create or rewrite commits. Each returns the command lines it ran, or why it failed
@@ -35,10 +36,10 @@ public interface GitCommits {
     Either<GitFailure<RewordError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message);
 
     /**
-     * Squashes the commit {@code sha} into its parent, keeping both messages. This rebases the commits after
-     * it, uncommitted changes being stashed meanwhile; the rebase is aborted when it fails.
+     * Folds the commit {@code sha} into its parent, keeping the messages {@code mode} says. This rebases the
+     * commits after it, uncommitted changes being stashed meanwhile; the rebase is aborted when it fails.
      *
      * @param sha the full object id of a commit that has exactly one parent
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Sha sha);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode);
 }

@@ -1,6 +1,10 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
+import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
 
 /**
@@ -25,6 +29,16 @@ public final class CommitDialogs {
             popup -> Messages.get("dialog.squash.title"),
             popup -> Messages.get("dialog.squash.message"),
             SquashMsg.Confirmed::new, SquashMsg.Cancelled::new);
+
+    /**
+     * Asks which message to keep when fixing up a commit into the one below it.
+     */
+    public static final ChoiceDialog.Spec<FixupPopup> FIXUP = new ChoiceDialog.Spec<>(
+            "fixup-commit", FixupPopup.class,
+            popup -> Messages.get("dialog.fixup.title", popup.commit().sha().shortSha(), popup.into().sha().shortSha()),
+            List.of(new Choice<>('f', "dialog.fixup.fixup", () -> new FixupMsg.Chosen(SquashMode.FIXUP)),
+                    new Choice<>('C', "dialog.fixup.keepMessage", () -> new FixupMsg.Chosen(SquashMode.FIXUP_KEEP_MESSAGE))),
+            FixupMsg.Cancelled::new);
 
     /**
      * Asks whether to stage all files, because a commit needs something staged.

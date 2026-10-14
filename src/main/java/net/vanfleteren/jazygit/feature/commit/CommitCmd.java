@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.GitOperationCmd;
@@ -68,18 +69,18 @@ public sealed interface CommitCmd extends GitOperationCmd {
     }
 
     /**
-     * Squashes a commit into its parent.
+     * Folds a commit into its parent: a squash, or a fixup when {@code mode} drops either message.
      */
-    record Squash(Sha sha) implements CommitCmd {
+    record Squash(Sha sha, SquashMode mode) implements CommitCmd {
 
         @Override
         public Operation operation() {
-            return Operation.SQUASH;
+            return mode == SquashMode.SQUASH ? Operation.SQUASH : Operation.FIXUP;
         }
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return git.squash(sha);
+            return git.squash(sha, mode);
         }
     }
 
