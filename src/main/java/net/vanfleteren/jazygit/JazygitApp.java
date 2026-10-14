@@ -112,6 +112,7 @@ public class JazygitApp extends ToolkitApp {
             new PopupSlot(new ConfirmDialog<>(CommitDialogs.STAGE_ALL, dispatch), model -> FilesPanel.ID),
             new PopupSlot(new CommitDialog(dispatch), model -> FilesPanel.ID),
             new PopupSlot(new ConfirmDialog<>(CommitDialogs.SQUASH, dispatch), model -> CommitsPanel.ID),
+            new PopupSlot(new ChoiceDialog<>(CommitDialogs.FIXUP, dispatch), model -> CommitsPanel.ID),
             new PopupSlot(CommitDialog.reword(dispatch), model -> CommitsPanel.ID),
             // Help is opened from a pane, which has the focus then.
             new PopupSlot(new HelpDialog(dispatch), JazygitApp::focusedPane),

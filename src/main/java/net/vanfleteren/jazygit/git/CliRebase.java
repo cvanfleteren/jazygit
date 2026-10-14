@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.RewordError;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.SquashMode;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -80,19 +81,19 @@ public final class CliRebase {
     }
 
     /**
-     * Squashes the commit {@code sha} into its parent with an interactive rebase that is told to turn that
-     * commit's {@code pick} into {@code squash} and to keep the combined message as git proposes it:
+     * Folds the commit {@code sha} into its parent with an interactive rebase that is told to turn that
+     * commit's {@code pick} into the command of {@code mode}, and to keep the message as git proposes it:
      * {@code git rebase --interactive --autostash --keep-empty --rebase-merges --no-autosquash <parent>^}, or
      * {@code --root} when the parent has no parent. Uncommitted changes are stashed and brought back.
      *
      * @param sha the object id of a commit that has exactly one parent
      * @return the command lines that were run
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Path workTree, Sha sha) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Path workTree, Sha sha, SquashMode mode) {
         return GitProcess.run(workTree, git("rev-parse", sha.value() + "^"))
                 .flatMap(parent -> base(workTree, parent.stdout().strip()))
                 .flatMap(base -> rebase(workTree, interactive(INTERACTIVE.append("--no-autosquash").append(base),
-                        sequenceEditor(sha, List.of(new Tuple2<>("pick", "squash"))), "true")));
+                        sequenceEditor(sha, List.of(new Tuple2<>("pick", mode.todoCommand()))), "true")));
     }
 
     /**

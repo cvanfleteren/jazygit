@@ -6,6 +6,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -71,7 +72,7 @@ class SquashUpdateTest {
 
         Next next = Update.update(open, new SquashMsg.Confirmed());
 
-        assertEquals(List.of(new CommitCmd.Squash(new Sha("c3"))), next.cmds());
+        assertEquals(List.of(new CommitCmd.Squash(new Sha("c3"), SquashMode.SQUASH)), next.cmds());
         assertEquals(Option.none(), next.model().popup(SquashPopup.class));
     }
 
@@ -87,7 +88,7 @@ class SquashUpdateTest {
 
     @Test
     void aFailureShowsTheError() {
-        Next next = Update.update(TestModels.loaded(), failed(new CommitCmd.Squash(new Sha("aaaa")), "conflict"));
+        Next next = Update.update(TestModels.loaded(), failed(new CommitCmd.Squash(new Sha("aaaa"), SquashMode.SQUASH), "conflict"));
 
         assertEquals(Option.of("Squash failed: conflict"), errorText(next.model()));
     }

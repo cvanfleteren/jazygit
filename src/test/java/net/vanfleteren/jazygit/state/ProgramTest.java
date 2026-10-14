@@ -42,6 +42,7 @@ import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
@@ -183,7 +184,7 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Sha sha) {
+        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode) {
             return StubGitProvider.ran("git squash");
         }
 

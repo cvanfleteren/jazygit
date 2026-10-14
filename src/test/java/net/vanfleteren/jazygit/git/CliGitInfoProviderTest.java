@@ -322,7 +322,7 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "dirty\n");
         List<Commit> before = provider.commits().get();
 
-        List<String> executed = provider.squash(before.get(1).sha()).get().map(ExecutedCommand::line);
+        List<String> executed = provider.squash(before.get(1).sha(), SquashMode.SQUASH).get().map(ExecutedCommand::line);
 
         assertTrue(executed.head().startsWith("git -c rebase.abbreviateCommands=false -c core.abbrev=no"
                         + " rebase --interactive --autostash --keep-empty --rebase-merges"),
@@ -340,9 +340,52 @@ class CliGitInfoProviderTest {
         git("add", "a.txt");
         git("commit", "-q", "-m", "Second");
 
-        provider.squash(provider.commits().get().head().sha()).get();
+        provider.squash(provider.commits().get().head().sha(), SquashMode.SQUASH).get();
 
         assertEquals(List.of("Initial commit"), provider.commits().get().map(Commit::message).toList());
+    }
+
+    @Test
+    void fixupFoldsACommitIntoItsParentAndKeepsOnlyTheParentsMessage() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "-m", "Third", "-m", "Third body");
+        Files.writeString(repo.resolve("c.txt"), "c\n");
+        git("add", "c.txt");
+        git("commit", "-q", "-m", "Fourth");
+        Files.writeString(repo.resolve("README.md"), "dirty\n");
+        List<Commit> before = provider.commits().get();
+
+        provider.squash(before.get(1).sha(), SquashMode.FIXUP).get();
+
+        List<Commit> after = provider.commits().get();
+        assertEquals(List.of("Fourth", "Second", "Initial commit"), after.map(Commit::message).toList());
+        assertEquals("", after.get(1).body().strip());
+        assertTrue(Files.exists(repo.resolve("b.txt")));
+        assertEquals("dirty\n", Files.readString(repo.resolve("README.md")));
+    }
+
+    @Test
+    void fixupKeepingTheMessageTakesTheCommitsMessageAndTheParentsAuthor() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "--author", "Other <other@example.com>", "-m", "Third", "-m", "Third body");
+        List<Commit> before = provider.commits().get();
+
+        provider.squash(before.head().sha(), SquashMode.FIXUP_KEEP_MESSAGE).get();
+
+        List<Commit> after = provider.commits().get();
+        assertEquals(List.of("Third", "Initial commit"), after.map(Commit::message).toList());
+        assertEquals("Third body", after.head().body().strip());
+        assertEquals("Test", after.head().authorName());
+        assertTrue(Files.exists(repo.resolve("a.txt")));
+        assertTrue(Files.exists(repo.resolve("b.txt")));
     }
 
     @Test
@@ -429,7 +472,7 @@ class CliGitInfoProviderTest {
         Sha elsewhere = provider.commits().get().head().sha();
         git("checkout", "-q", "main");
 
-        assertTrue(provider.squash(elsewhere).isLeft());
+        assertTrue(provider.squash(elsewhere, SquashMode.SQUASH).isLeft());
 
         assertEquals(List.of("Second", "Initial commit"), provider.commits().get().map(Commit::message).toList());
         assertTrue(Files.notExists(repo.resolve(".git/rebase-merge")));

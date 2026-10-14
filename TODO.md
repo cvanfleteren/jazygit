@@ -55,5 +55,5 @@ Refactorings that were left out of the functional/immutable cleanup, and why.
 - [ ] **Show what the repository is in the middle of.** A merge or rebase in progress isn't shown. Operations
   on it are left to git, which refuses most of them, and the app no longer undoes what the user started.
 - [ ] **Run the app by hand** (`./run.sh`) after the refactoring, and try the main operations: checkout,
-  push, merge, rebase, reword, squash and stash. Force a failure too, such as a rebase conflict, and check
+  push, merge, rebase, reword, squash, fixup and stash. Force a failure too, such as a rebase conflict, and check
   the error text and the command log.
