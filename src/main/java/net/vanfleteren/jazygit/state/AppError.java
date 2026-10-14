@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.settings.SettingsProblem;
 
 /**
  * What the user is told went wrong, as data; the view turns it into text.
@@ -78,5 +79,17 @@ public sealed interface AppError {
      * has one.
      */
     record PullRequestsUnavailable(Failure failure) implements AppError {
+    }
+
+    /**
+     * The settings could not be read, or not all of them; the defaults are used instead.
+     */
+    record SettingsNotLoaded(SettingsProblem problem) implements AppError {
+    }
+
+    /**
+     * A changed setting could not be kept for the next session; it still holds in this one.
+     */
+    record SettingsNotSaved(Failure failure) implements AppError {
     }
 }

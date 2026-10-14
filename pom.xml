@@ -21,6 +21,7 @@
         <slf4j.version>2.0.17</slf4j.version>
         <zt-exec.version>1.13.0</zt-exec.version>
         <archunit.version>1.4.1</archunit.version>
+        <night-config.version>3.9.0</night-config.version>
         <main.class>net.vanfleteren.jazygit.JazygitApp</main.class>
     </properties>
 
@@ -69,6 +70,11 @@
         <dependency>
             <groupId>dev.tamboui</groupId>
             <artifactId>tamboui-jline3-backend</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.electronwill.night-config</groupId>
+            <artifactId>toml</artifactId>
+            <version>${night-config.version}</version>
         </dependency>
         <dependency>
             <groupId>org.zeroturnaround</groupId>

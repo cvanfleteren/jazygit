@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.settings.Settings;
 
 /**
  * IO that {@link Update} asks for. Commands are immutable data that know how to run themselves and
@@ -61,6 +62,23 @@ public interface Cmd {
      */
     default boolean background() {
         return false;
+    }
+
+    /**
+     * Keeps {@code next}, which the user changed from {@code previous}, for the next session.
+     */
+    record SaveSettings(Settings previous, Settings next) implements Cmd {
+
+        @Override
+        public Msg run(Env env) {
+            return env.settings().save(previous, next)
+                    .fold(problem -> failed(new Failure.Settings(problem)), saved -> new SettingsMsg.Saved());
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return new SettingsMsg.NotSaved(failure);
+        }
     }
 
     /**

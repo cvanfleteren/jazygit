@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
+import net.vanfleteren.jazygit.settings.Settings;
 
 /**
  * The complete, immutable state of the repository as shown by the UI.
@@ -49,7 +50,7 @@ import net.vanfleteren.jazygit.git.model.Stash;
  * @param readingPullRequests how many reads of the pull requests are running; the line at the bottom says so
  * @param commandLog     the mutating git commands that were executed, oldest first
  * @param popup          the popup that is open, if any; only one can be
- * @param theme          the name of the theme the UI is drawn in
+ * @param settings       what the user chose to keep from one session to the next, like the theme
  * @param focusedPane    the id of the element outside the popups that had the focus last, which a closing popup
  *                       gives it back to; none before the view reported one
  */
@@ -73,17 +74,14 @@ public record Model(String repositoryName,
                     int readingPullRequests,
                     List<LogEntry> commandLog,
                     Option<Popup> popup,
-                    String theme,
+                    Settings settings,
                     Option<String> focusedPane) {
-
-    /** The theme of a new session; one of the themes of {@code ui.Theme}. */
-    public static final String DEFAULT_THEME = "dark";
 
     public static Model initial(String repositoryName) {
         return new Model(repositoryName, Loadable.loading(), Loadable.loading(), Loadable.loading(),
                 BranchesTab.LOCAL, Loadable.loading(), Loadable.loading(), Option.none(),
                 Option.none(), Option.none(), HashSet.empty(), Option.none(), HashMap.empty(), Option.none(), Option.none(), Option.none(), 0, List.empty(),
-                Option.none(), DEFAULT_THEME, Option.none());
+                Option.none(), Settings.DEFAULT, Option.none());
     }
 
     /**

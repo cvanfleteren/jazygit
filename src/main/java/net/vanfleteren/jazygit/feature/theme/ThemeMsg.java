@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.theme;
 
+import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -20,6 +21,6 @@ public sealed interface ThemeMsg extends Msg {
     record Cancelled() implements ThemeMsg {
     }
 
-    record Chosen(String theme) implements ThemeMsg {
+    record Chosen(ThemeName theme) implements ThemeMsg {
     }
 }

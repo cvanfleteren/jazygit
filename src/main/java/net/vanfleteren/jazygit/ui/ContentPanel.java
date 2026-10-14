@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
@@ -111,7 +112,7 @@ public final class ContentPanel {
         private Object key = "";
         // How the text of what is shown is built, and the theme it was built in.
         private Supplier<Text> text = Text::empty;
-        private String theme = "";
+        private Option<ThemeName> theme = Option.none();
 
         ScrollArea(String id, Option<String> pane, Function<String, Text> styling, BooleanSupplier leaveScrollArea,
                    Consumer<String> focus) {
@@ -165,9 +166,9 @@ public final class ContentPanel {
          * Builds the text shown again when the theme is not {@code current} anymore, as its colours are
          * resolved when it is built; the scroll position stays.
          */
-        void restyle(String current) {
-            if (!current.equals(theme)) {
-                theme = current;
+        void restyle(ThemeName current) {
+            if (!theme.contains(current)) {
+                theme = Option.of(current);
                 element.text(text.get());
             }
         }
@@ -194,7 +195,7 @@ public final class ContentPanel {
      * pane the popup was opened from.
      */
     public StyledElement<?> render(Model model, String focusedId) {
-        List.of(stagedArea, unstagedArea, commitArea, logArea).forEach(area -> area.restyle(model.theme()));
+        List.of(stagedArea, unstagedArea, commitArea, logArea).forEach(area -> area.restyle(model.settings().theme()));
         boolean inContent = focusableAreas.exists(area -> area.id().equals(focusedId));
         focusableAreas.forEach(area -> area.tabbable(inContent));
         String pane = model.popup().isDefined() ? model.focusedPane().getOrElse(focusedId) : focusedId;

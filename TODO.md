@@ -33,7 +33,7 @@ Refactorings that were left out of the functional/immutable cleanup, and why.
   and a helper would be no shorter. A generic `PopupMsg.Closed(type)` sent by the dialog widgets would remove
   some 20 `Cancelled` records, at the cost of a message that is not about a feature.
 - [ ] **Telescoping constructors** on `Branch`, `Commit` and `FileEntry` (cleanup only).
-- [ ] **Stronger types** for branch names, stash refs, remotes and the theme, which are now plain `String`s.
+- [ ] **Stronger types** for branch names, stash refs and remotes, which are now plain `String`s.
   Also for the stage target, where `""` stands for the repository root; a sealed `Target` would be clearer.
 - [ ] **Typed reasons for ignored requests.** Some requests do nothing and don't say why, for example
   squashing a root or merge commit, or deleting the current or a busy branch. They could report an

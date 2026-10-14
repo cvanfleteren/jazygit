@@ -8,9 +8,10 @@ import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.settings.SettingsProblem;
 
 /**
- * Why a {@link Cmd} failed, as data: git or gh refused, or there is a bug.
+ * Why a {@link Cmd} failed, as data: git or gh refused, the settings could not be kept, or there is a bug.
  */
 public sealed interface Failure {
 
@@ -39,6 +40,17 @@ public sealed interface Failure {
 
         public GitHub(GhError error) {
             this(error, List.empty());
+        }
+    }
+
+    /**
+     * The settings could not be kept.
+     */
+    record Settings(SettingsProblem problem) implements Failure {
+
+        @Override
+        public List<ExecutedCommand> commands() {
+            return List.empty();
         }
     }
 

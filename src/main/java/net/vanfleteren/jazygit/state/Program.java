@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.control.Try;
+import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 import java.util.concurrent.Executor;
@@ -41,18 +42,20 @@ public final class Program {
      * @param ui         the thread that owns the model, i.e. the render thread
      */
     public static Program start(Env env, Executor io, Executor background, Executor ui) {
-        return start(env, io, background, ui, bug -> {
+        return start(env, SettingsStore.Loaded.DEFAULT, io, background, ui, bug -> {
         });
     }
 
     /**
      * Creates the program and starts its initial loads.
      *
-     * @param bugs told about every command that threw, which the user is only shown the message of
+     * @param settings the settings the session starts with
+     * @param bugs     told about every command that threw, which the user is only shown the message of
      */
-    public static Program start(Env env, Executor io, Executor background, Executor ui, Consumer<Throwable> bugs) {
+    public static Program start(Env env, SettingsStore.Loaded settings, Executor io, Executor background, Executor ui,
+                                Consumer<Throwable> bugs) {
         Program program = new Program(env, io, background, ui, bugs);
-        program.apply(Update.init(env.git().repositoryName()));
+        program.apply(Update.init(env.git().repositoryName(), settings));
         return program;
     }
 

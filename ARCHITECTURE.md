@@ -27,6 +27,7 @@ graph TD
     GhModel["gh.model<br/><i>PullRequest, PullRequestDetails, ...</i>"]
     Process["process<br/><i>Exec, ExecutedCommand, CommandLine</i>"]
     I18n["i18n<br/><i>Messages</i>"]
+    Settings["settings<br/><i>Settings, SettingsFile, SettingsPaths</i>"]
 
     App --> UI
     App --> State
@@ -51,6 +52,10 @@ graph TD
     Gh --> Process
     State --> Process
     UI --> I18n
+    App --> Settings
+    State --> Settings
+    Feature --> Settings
+    UI --> Settings
     Keys --> I18n
     Feature --> I18n
 ```
@@ -65,6 +70,7 @@ The arrows are the dependencies `ArchitectureTest` allows; it fails on any other
   - Nothing in `ui`, `keys` or a dialog runs git or gh.
 - **`git` and `gh` know nothing of each other**, nor of anything above them.
 - **Only views use `i18n`.** `state` does not.
+- **`settings` knows nothing of the application**, and is the only part that reads or writes TOML.
 
 | Package | Responsibility |
 |---|---|
@@ -79,6 +85,29 @@ The arrows are the dependencies `ArchitectureTest` allows; it fails on any other
 | `gh.model` | Immutable value types describing GitHub: `PullRequest`, `PullRequestDetails`, `MergeMethod`. |
 | `process` | `Exec`, the only place that starts a program, for `git` and `gh` alike, and its `ExecFailure`; `ExecutedCommand`, a command as it ran; `CommandLine`, how a command line is written. |
 | `i18n` | `Messages`: the user-facing texts, from `messages.properties`. |
+| `settings` | What the user keeps from one session to the next (`Settings`, `ThemeName`), where it is kept (`SettingsPaths`) and the TOML file it is kept in (`SettingsFile`, behind `SettingsStore`). |
+
+## Settings
+
+The settings live in `config.toml`, in the directory that is the standard for the OS:
+
+- **Linux:** `$XDG_CONFIG_HOME/jazygit` if that is set to an absolute path, else `~/.config/jazygit`.
+- **macOS:** `$XDG_CONFIG_HOME/jazygit` if that is set, else `~/Library/Application Support/jazygit`.
+- **Windows:** `%APPDATA%\jazygit`.
+- **`$JAZYGIT_CONFIG_DIR`** overrides the directory on all of them.
+
+`main` loads them before the app starts, so the first frame is drawn in the right theme. A problem with the
+file never stops the app:
+
+- A missing file gives the defaults. The file is only made when a setting is first changed.
+- A file that cannot be read, or a value that is not valid, gives the defaults, and the command log says so.
+- Keys jazygit does not know are ignored.
+
+A change in the app, like choosing a theme, updates the `Model` and returns a `Cmd.SaveSettings` with the
+settings before and after. It writes only the settings that changed, so a hand edit made while jazygit runs
+stays. Saving keeps the other keys, their order and their comments. It writes a temporary file and moves it
+over the old one, and leaves a file that is not valid TOML alone. When saving fails, the error is shown, and
+the setting still holds until jazygit stops.
 
 ## The runtime loop
 

@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
@@ -41,8 +42,16 @@ public final class Update {
     }
 
     public static Next init(String repositoryName) {
+        return init(repositoryName, SettingsStore.Loaded.DEFAULT);
+    }
+
+    /**
+     * The start of a session with {@code settings}; what was wrong with them shows in the command log.
+     */
+    public static Next init(String repositoryName, SettingsStore.Loaded settings) {
         // Commits are loaded once the first status tells us where HEAD is.
-        return refresh(Model.initial(repositoryName));
+        return refresh(Model.initial(repositoryName).withSettings(settings.settings())
+                .withError(settings.problem().map(AppError.SettingsNotLoaded::new)));
     }
 
     public static Next update(Model model, Msg msg) {

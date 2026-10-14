@@ -9,6 +9,7 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.model.SampleData;
+import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -31,18 +32,18 @@ class ThemeDialogTest {
 
     @Test
     void lettersChooseATheme() throws Exception {
-        assertEquals(List.of(new ThemeMsg.Chosen("dark")), pressing(r -> r.pilot().press('d')));
+        assertEquals(List.of(new ThemeMsg.Chosen(ThemeName.DARK)), pressing(r -> r.pilot().press('d')));
         dispatched.clear();
-        assertEquals(List.of(new ThemeMsg.Chosen("light")), pressing(r -> r.pilot().press('l')));
+        assertEquals(List.of(new ThemeMsg.Chosen(ThemeName.LIGHT)), pressing(r -> r.pilot().press('l')));
         dispatched.clear();
-        assertEquals(List.of(new ThemeMsg.Chosen("darcula")), pressing(r -> r.pilot().press('a')));
+        assertEquals(List.of(new ThemeMsg.Chosen(ThemeName.DARCULA)), pressing(r -> r.pilot().press('a')));
         dispatched.clear();
-        assertEquals(List.of(new ThemeMsg.Chosen("dark-colorblind")), pressing(r -> r.pilot().press('b')));
+        assertEquals(List.of(new ThemeMsg.Chosen(ThemeName.DARK_COLORBLIND)), pressing(r -> r.pilot().press('b')));
     }
 
     @Test
     void arrowsAndEnterChooseTheSelectedLine() throws Exception {
-        assertEquals(List.of(new ThemeMsg.Chosen("light")), pressing(r -> {
+        assertEquals(List.of(new ThemeMsg.Chosen(ThemeName.LIGHT)), pressing(r -> {
             r.pilot().press(KeyCode.DOWN);
             r.pilot().press(KeyCode.ENTER);
         }));

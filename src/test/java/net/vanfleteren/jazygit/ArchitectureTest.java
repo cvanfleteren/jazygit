@@ -69,6 +69,24 @@ class ArchitectureTest {
             .should().dependOnClassesThat().resideInAnyPackage("..jazygit.git..", "..jazygit.gh..");
 
     /**
+     * The settings stand on their own: what is kept, and where, knows nothing of the application.
+     */
+    @ArchTest
+    static final ArchRule settingsKnowNothingOfTheApplication = classes()
+            .that().resideInAPackage("..jazygit.settings..")
+            .should().onlyDependOnClassesThat()
+            .resideInAnyPackage("java..", "io.vavr..", "lombok..", "com.electronwill.nightconfig..",
+                    "..jazygit.settings..");
+
+    /**
+     * How the settings file is read and written stays inside the settings.
+     */
+    @ArchTest
+    static final ArchRule onlyTheSettingsReadToml = noClasses()
+            .that().resideOutsideOfPackage("..jazygit.settings..")
+            .should().dependOnClassesThat().resideInAPackage("com.electronwill.nightconfig..");
+
+    /**
      * {@code Exec} is the only place that starts a program.
      */
     @ArchTest
@@ -159,7 +177,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule fieldsAreFinal = fields()
             .that().areDeclaredInClassesThat().resideInAnyPackage("..jazygit.state..", "..jazygit.git.model..",
-                    "..jazygit.gh.model..", "..jazygit.feature..")
+                    "..jazygit.gh.model..", "..jazygit.feature..", "..jazygit.settings..")
             .and().areNotDeclaredIn(Program.class)
             .and().areDeclaredInClassesThat().haveNameNotMatching(DIALOGS)
             .should().beFinal();

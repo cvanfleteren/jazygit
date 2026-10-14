@@ -4,6 +4,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.settings.SettingsProblem;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Failure;
 
@@ -31,6 +32,8 @@ public final class ErrorText {
             case AppError.PullRequestsNotRead() -> Messages.get("error.pullRequest.notRead");
             case AppError.PullRequestsUnavailable(Failure failure) ->
                     Messages.get("error.pullRequest.unavailable", of(failure));
+            case AppError.SettingsNotLoaded(SettingsProblem problem) -> of(problem);
+            case AppError.SettingsNotSaved(Failure failure) -> Messages.get("error.settings.notSaved", of(failure));
         };
     }
 
@@ -40,7 +43,16 @@ public final class ErrorText {
                     .map(cleanup -> Messages.get("error.cleanupFailed", of(error), of(cleanup)))
                     .getOrElse(() -> of(error));
             case Failure.GitHub(GhError error, var commands) -> of(error);
+            case Failure.Settings(SettingsProblem problem) -> of(problem);
             case Failure.Bug(Throwable cause) -> Messages.get("error.bug", reason(cause));
+        };
+    }
+
+    public static String of(SettingsProblem problem) {
+        return switch (problem) {
+            case SettingsProblem.Unreadable(var file, String reason) -> Messages.get("settings.unreadable", file, reason);
+            case SettingsProblem.Invalid(var file, var keys) -> Messages.get("settings.invalid", file, keys.mkString(", "));
+            case SettingsProblem.Unwritable(var file, String reason) -> Messages.get("settings.unwritable", file, reason);
         };
     }
 

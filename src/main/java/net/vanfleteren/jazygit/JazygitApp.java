@@ -30,6 +30,9 @@ import net.vanfleteren.jazygit.feature.error.ErrorDialog;
 import net.vanfleteren.jazygit.feature.stash.StashDialogs;
 import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
 import net.vanfleteren.jazygit.state.BranchesTab;
+import net.vanfleteren.jazygit.settings.SettingsFile;
+import net.vanfleteren.jazygit.settings.SettingsPaths;
+import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.gh.CliGitHub;
 import net.vanfleteren.jazygit.git.CliGitInfoProvider;
@@ -88,6 +91,7 @@ public class JazygitApp extends ToolkitApp {
     private static final Duration FETCH_INTERVAL = Duration.ofMinutes(1);
 
     private final Env env;
+    private final SettingsStore.Loaded settings;
     private final StyleEngine styleEngine;
     private final Consumer<Msg> dispatch = msg -> this.runtime.forEach(running -> running.program().dispatch(msg));
     private final ContentPanel contentPanel;
@@ -134,8 +138,12 @@ public class JazygitApp extends ToolkitApp {
     private record Runtime(ThreadPoolExecutor io, ThreadPoolExecutor fetch, Program program) {
     }
 
-    public JazygitApp(Env env, StyleEngine styleEngine) {
+    /**
+     * @param settings the settings the session starts with, as {@code env} loaded them
+     */
+    public JazygitApp(Env env, SettingsStore.Loaded settings, StyleEngine styleEngine) {
         this.env = env;
+        this.settings = settings;
         this.styleEngine = styleEngine;
         this.contentPanel = new ContentPanel(Theme.spanStyles(styleEngine), this::leaveScrollArea,
                 id -> runner().focusManager().setFocus(id));
@@ -199,7 +207,7 @@ public class JazygitApp extends ToolkitApp {
         runner.focusManager().setFocus(FilesPanel.ID);
         ThreadPoolExecutor io = singleThread("git-io");
         ThreadPoolExecutor fetch = singleThread("git-fetch");
-        runtime = Option.of(new Runtime(io, fetch, Program.start(env, io, fetch, runner::runOnRenderThread, JazygitApp::logBug)));
+        runtime = Option.of(new Runtime(io, fetch, Program.start(env, settings, io, fetch, runner::runOnRenderThread, JazygitApp::logBug)));
         runner.scheduleRepeating(() -> runner.runOnRenderThread(() -> dispatch.accept(new Msg.Tick())),
                 REFRESH_INTERVAL);
         runner.scheduleRepeating(() -> runner.runOnRenderThread(() -> dispatch.accept(new FetchMsg.Tick())),
@@ -248,7 +256,7 @@ public class JazygitApp extends ToolkitApp {
     protected Element render() {
         Model model = runtime.map(running -> running.program().model())
                 .getOrElse(() -> Model.initial(env.git().repositoryName()));
-        Theme.activate(styleEngine, model.theme());
+        Theme.activate(styleEngine, model.settings().theme());
         String focusedId = runner().focusManager().focusedId();
         String activeId = activePane(model, focusedId);
         Panel branches = branchesPanel.render(model, focusedId, activeId);
@@ -341,7 +349,11 @@ public class JazygitApp extends ToolkitApp {
                 .mapLeft(ErrorText::of)
                 .flatMap(provider -> Theme.createEngine()
                         .mapLeft(failed -> Messages.get("theme.loadFailed", failed.theme(), ErrorText.reason(failed.cause())))
-                        .map(engine -> new JazygitApp(new Env(provider, new CliGitHub(provider.workTree())), engine)));
+                        .map(engine -> {
+                            Env env = new Env(provider, new CliGitHub(provider.workTree()),
+                                    new SettingsFile(SettingsPaths.configFile()));
+                            return new JazygitApp(env, env.settings().load(), engine);
+                        }));
         app.flatMap(jazygit -> Try.run(jazygit::run).toEither().mapLeft(ErrorText::reason))
                 .orElseRun(problem -> {
                     System.err.println(problem);

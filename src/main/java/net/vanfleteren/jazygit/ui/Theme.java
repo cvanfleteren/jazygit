@@ -8,6 +8,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
+import net.vanfleteren.jazygit.settings.ThemeName;
 
 import java.util.Set;
 
@@ -18,13 +19,6 @@ import java.util.Set;
 public final class Theme {
 
     private static final String RESOURCE_DIR = "/net/vanfleteren/jazygit/themes/";
-    public static final String DARK = "dark";
-    public static final String LIGHT = "light";
-    public static final String DARCULA = "darcula";
-    /** The dark theme with blue and vermillion for red and green, for red/green colour blindness. */
-    public static final String DARK_COLORBLIND = "dark-colorblind";
-    /** The themes, in the order they are offered. */
-    public static final List<String> NAMES = List.of(DARK, LIGHT, DARCULA, DARK_COLORBLIND);
 
     /** CSS class names referenced from the stylesheets. */
     public static final class Classes {
@@ -75,21 +69,21 @@ public final class Theme {
      */
     public static Either<LoadFailed, StyleEngine> createEngine() {
         StyleEngine engine = StyleEngine.create();
-        return NAMES.foldLeft(Either.<LoadFailed, StyleEngine>right(engine), (loaded, name) -> loaded.flatMap(e ->
+        return List.of(ThemeName.values()).map(ThemeName::id)
+                .foldLeft(Either.<LoadFailed, StyleEngine>right(engine), (loaded, name) -> loaded.flatMap(e ->
                         Try.run(() -> e.loadStylesheet(name, RESOURCE_DIR + name + ".tcss"))
                                 .toEither()
                                 .<LoadFailed>mapLeft(cause -> new LoadFailed(name, cause))
                                 .map(done -> e)))
-                .peek(e -> e.setActiveStylesheet(DARK));
+                .peek(e -> e.setActiveStylesheet(ThemeName.DARK.id()));
     }
 
     /**
-     * Makes {@code name} the active theme, if it is not yet; the next render picks it up. An unknown name
-     * leaves the theme as it is.
+     * Makes {@code theme} the active theme, if it is not yet; the next render picks it up.
      */
-    public static void activate(StyleEngine engine, String name) {
-        if (NAMES.contains(name) && !Option.ofOptional(engine.getActiveStylesheet()).contains(name)) {
-            engine.setActiveStylesheet(name);
+    public static void activate(StyleEngine engine, ThemeName theme) {
+        if (!Option.ofOptional(engine.getActiveStylesheet()).contains(theme.id())) {
+            engine.setActiveStylesheet(theme.id());
         }
     }
 
