@@ -160,7 +160,9 @@ public final class CliIndex {
      */
     private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> onPaths(Path workTree, List<String> subcommand,
                                                                         List<String> paths) {
-        return paths.isEmpty() ? GitFailure.nothing() : run(workTree, subcommand.append("--").appendAll(paths));
+        return paths.isEmpty()
+                ? GitFailure.nothing()
+                : GitProcess.log(workTree, git(subcommand.append("--").appendAll(paths)).withLiteralPaths());
     }
 
     private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> run(Path workTree, List<String> args) {

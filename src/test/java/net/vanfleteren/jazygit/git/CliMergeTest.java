@@ -141,6 +141,36 @@ class CliMergeTest {
         assertEquals("A  b.txt\n", git("status", "--porcelain"));
     }
 
+    @Test
+    void aMergeTheUserIsResolvingIsLeftAlone() throws Exception {
+        conflict();
+        write("a.txt", "main\n");
+        git("commit", "-qam", "main changes a");
+        gitAnyExit("merge", "conflicting");
+        write("a.txt", "resolved\n");
+
+        GitFailure<GitError.ProcessError> failure = CliMerge.merge(repo, "feature", MergeMode.MERGE_COMMIT).getLeft();
+
+        assertEquals(List.of("git merge --no-ff --no-edit feature"), failure.commands().map(ExecutedCommand::line));
+        assertTrue(Files.exists(repo.resolve(".git/MERGE_HEAD")));
+        assertEquals("resolved\n", Files.readString(repo.resolve("a.txt")));
+    }
+
+    @Test
+    void aSquashOverConflictsLeftByAnotherCommandLeavesThemAlone() throws Exception {
+        conflict();
+        write("a.txt", "main\n");
+        git("commit", "-qam", "main changes a");
+        // A merge whose MERGE_HEAD is gone, as after a conflicting "git stash pop": only the conflicts remain.
+        gitAnyExit("merge", "conflicting");
+        Files.delete(repo.resolve(".git/MERGE_HEAD"));
+
+        GitFailure<GitError.ProcessError> failure = CliMerge.merge(repo, "feature", MergeMode.SQUASH).getLeft();
+
+        assertEquals(List.of("git merge --squash feature"), failure.commands().map(ExecutedCommand::line));
+        assertTrue(git("status", "--porcelain").contains("UU a.txt"));
+    }
+
     private void commitOnMain() throws Exception {
         write("c.txt", "main\n");
         git("add", ".");
@@ -163,6 +193,12 @@ class CliMergeTest {
 
     private void write(String name, String content) throws Exception {
         Files.writeString(repo.resolve(name), content);
+    }
+
+    private void gitAnyExit(String... args) throws Exception {
+        java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of("git"));
+        command.addAll(java.util.List.of(args));
+        new ProcessExecutor().command(command).directory(repo.toFile()).readOutput(true).exitValueAny().execute();
     }
 
     private String git(String... args) throws Exception {

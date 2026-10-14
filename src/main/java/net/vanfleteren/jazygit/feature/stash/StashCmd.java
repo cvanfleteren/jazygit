@@ -31,9 +31,9 @@ public sealed interface StashCmd extends GitOperationCmd {
     }
 
     /**
-     * Deletes the stash {@code ref}.
+     * Deletes {@code stash}.
      */
-    record Drop(String ref) implements StashCmd {
+    record Drop(net.vanfleteren.jazygit.git.model.Stash stash) implements StashCmd {
 
         @Override
         public Operation operation() {
@@ -42,14 +42,14 @@ public sealed interface StashCmd extends GitOperationCmd {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return git.drop(ref);
+            return git.drop(stash);
         }
     }
 
     /**
-     * Applies the stash {@code ref} and drops it.
+     * Applies {@code stash} and drops it.
      */
-    record Pop(String ref) implements StashCmd {
+    record Pop(net.vanfleteren.jazygit.git.model.Stash stash) implements StashCmd {
 
         @Override
         public Operation operation() {
@@ -58,7 +58,7 @@ public sealed interface StashCmd extends GitOperationCmd {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return git.pop(ref);
+            return git.pop(stash);
         }
     }
 }

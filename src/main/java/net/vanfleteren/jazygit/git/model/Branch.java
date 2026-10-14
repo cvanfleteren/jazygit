@@ -38,6 +38,14 @@ public record Branch(String name, boolean current, Sha tipOid, Instant tipTime, 
     }
 
     /**
+     * Its upstream, if that is a branch on a remote, which it can be pushed to; none when it follows a local
+     * branch.
+     */
+    public Option<Upstream> remoteUpstream() {
+        return upstream().filter(upstream -> !upstream.branch().local());
+    }
+
+    /**
      * The remote branch its upstream was, when that was deleted on the remote.
      */
     public Option<RemoteBranch> goneUpstream() {
@@ -46,11 +54,12 @@ public record Branch(String name, boolean current, Sha tipOid, Instant tipTime, 
 
     /**
      * The remote branch it is pushed to: its upstream, even when that is gone, or the branch of the same name
-     * on {@code origin}.
+     * on {@code origin} when it has none, or follows a local branch.
      */
     public RemoteBranch pushTarget() {
         return upstream().map(Upstream::branch)
                 .orElse(this::goneUpstream)
+                .filter(upstream -> !upstream.local())
                 .getOrElse(() -> new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, name));
     }
 

@@ -117,6 +117,20 @@ class CliDiscardTest {
         assertEquals("", git("status", "--porcelain"));
     }
 
+    @Test
+    void aPathIsTheFileOfThatNameNeverAPattern() throws Exception {
+        write("*.txt", "one\n");
+        git("add", "*.txt");
+        git("commit", "-qm", "a file named like a pattern");
+        write("*.txt", "changed\n");
+        write("a.txt", "changed\n");
+
+        CliIndex.checkoutFromHead(repo, List.of("*.txt"));
+
+        assertEquals("one\n", read("*.txt"));
+        assertEquals("changed\n", read("a.txt"));
+    }
+
     private void write(String name, String content) throws Exception {
         Path file = repo.resolve(name);
         Files.createDirectories(file.getParent());

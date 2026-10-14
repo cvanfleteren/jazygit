@@ -6,6 +6,8 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.GitError.StashError;
+import net.vanfleteren.jazygit.git.model.Stash;
 
 /**
  * Operations on stashes. Each returns the command lines it ran, or why it failed together with the
@@ -19,13 +21,12 @@ public interface GitStash {
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> stash(Option<String> message);
 
     /**
-     * Applies the stash {@code ref} (e.g. {@code stash@{1}}) to the working tree and drops it. When that
-     * conflicts, the stash is kept.
+     * Applies {@code stash} to the working tree and drops it. When that conflicts, the stash is kept.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> pop(String ref);
+    Either<GitFailure<StashError>, List<ExecutedCommand>> pop(Stash stash);
 
     /**
-     * Deletes the stash {@code ref} (e.g. {@code stash@{1}}) without applying it.
+     * Deletes {@code stash} without applying it.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> drop(String ref);
+    Either<GitFailure<StashError>, List<ExecutedCommand>> drop(Stash stash);
 }

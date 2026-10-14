@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.git.model.Tag;
 import net.vanfleteren.jazygit.git.model.Tracking;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -96,6 +97,8 @@ class CliParseTest {
                 CliLog.parse(String.join("\u001f", " ", "", "Ada", "ada@example.com", "60", "S", "", "S\n")).getLeft());
         assertEquals(new GitError.UnexpectedOutput("stash@{0} without a separator"),
                 CliStash.parse("stash@{0} without a separator\n").getLeft());
+        assertEquals(List.of(new Stash("stash@{0}", new Sha(A), "work")),
+                CliStash.parse("stash@{0}\u001f" + A + "\u001fOn main: work\n").get());
         assertEquals(new GitError.UnexpectedOutput("1 M"), CliStatus.parse("# branch.head main\0001 M\0").getLeft());
     }
 

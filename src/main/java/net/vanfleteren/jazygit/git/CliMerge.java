@@ -4,6 +4,7 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.MergeMode;
 
@@ -13,12 +14,13 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
 
 /**
  * Merges branches through {@code git merge}. A merge that stops on conflicts is undone again, so the
- * repository is left as it was; git itself refuses to start one while changes are staged, or while
- * uncommitted changes would be overwritten.
+ * repository is left as it was; git itself refuses to start one while changes are staged, while
+ * uncommitted changes would be overwritten, or while the repository is in the middle of something else,
+ * which is then left alone.
  */
 public final class CliMerge {
 
-    private static final GitCommand ABORT = git("merge", "--abort");
+    static final GitCommand ABORT = git("merge", "--abort");
     // A squash leaves no merge to abort, so its conflicts are undone by resetting the merge.
     private static final GitCommand RESET = git("reset", "--merge");
 
@@ -45,12 +47,11 @@ public final class CliMerge {
 
     /**
      * Runs {@code merge}, and {@code undo} when it stopped on conflicts. Git's exit code does not tell that
-     * apart from refusing to start, which leaves nothing to undo; the conflicted files in the index do. When
-     * that cannot be found out, the undo runs anyway: it does nothing harmful when there is nothing to undo.
+     * apart from refusing to start, which leaves nothing to undo; the conflicted files in the index do.
      */
     private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> merge(Path workTree, GitCommand merge,
                                                                       GitCommand undo) {
-        return GitProcess.runOrUndo(workTree, merge, undo, () -> conflicted(workTree).getOrElse(true));
+        return Unfinished.runOrUndo(workTree, merge, left -> Option.when(left.conflicted(), undo));
     }
 
     /**

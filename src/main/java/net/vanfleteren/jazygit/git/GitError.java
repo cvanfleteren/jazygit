@@ -57,6 +57,12 @@ public sealed interface GitError {
     }
 
     /**
+     * The failures of applying or deleting a stash.
+     */
+    sealed interface StashError extends GitError {
+    }
+
+    /**
      * The failures of deleting untracked files.
      */
     sealed interface DeleteUntrackedError extends DiscardError {
@@ -65,7 +71,8 @@ public sealed interface GitError {
     /**
      * A failure that running any git command can have.
      */
-    sealed interface ProcessError extends CheckoutError, RewordError, DiscardError, DiffError, LogError, OpenError {
+    sealed interface ProcessError extends CheckoutError, RewordError, DiscardError, DiffError, LogError, OpenError,
+            StashError {
     }
 
     /**
@@ -91,13 +98,14 @@ public sealed interface GitError {
     /**
      * Git ran, but refused.
      *
-     * @param explanation the first line git printed about why, preferring its error output; none if it
-     *                    printed nothing
+     * @param explanation the line git printed about why, preferring its error output; none if it printed
+     *                    nothing
+     * @param output      everything git printed on its error output
      */
-    record CommandFailed(Option<String> explanation, int exitCode) implements ProcessError {
+    record CommandFailed(Option<String> explanation, int exitCode, String output) implements ProcessError {
 
         public CommandFailed(String explanation, int exitCode) {
-            this(Option.of(explanation).filter(text -> !text.isEmpty()), exitCode);
+            this(Option.of(explanation).filter(text -> !text.isEmpty()), exitCode, explanation);
         }
 
         /**
@@ -109,10 +117,10 @@ public sealed interface GitError {
         }
 
         /**
-         * Whether git's explanation contains {@code text}.
+         * Whether git printed {@code text}, in its explanation or elsewhere on its error output.
          */
         public boolean says(String text) {
-            return explanation.exists(line -> line.contains(text));
+            return explanation.exists(line -> line.contains(text)) || output.contains(text);
         }
     }
 
@@ -158,6 +166,14 @@ public sealed interface GitError {
      * the stash.
      */
     record StashNotRestored(ProcessError cause) implements StashCheckoutError {
+    }
+
+    /**
+     * The stash is not there anymore: it was popped or dropped since it was listed.
+     *
+     * @param message what it was stashed as
+     */
+    record StashGone(String message) implements StashError {
     }
 
     /**

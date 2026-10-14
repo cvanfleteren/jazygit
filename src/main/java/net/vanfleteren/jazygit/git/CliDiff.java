@@ -94,6 +94,6 @@ public final class CliDiff {
     }
 
     private static Either<ProcessError, String> run(Path workTree, List<String> args, Map<String, String> env) {
-        return GitProcess.read(workTree, git(args).withEnvironment(env), Either::right);
+        return GitProcess.read(workTree, git(args).withEnvironment(env).withLiteralPaths(), Either::right);
     }
 }

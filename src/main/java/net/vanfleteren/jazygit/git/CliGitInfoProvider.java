@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.git.GitError.NoWorkTree;
 import net.vanfleteren.jazygit.git.GitError.NotARepository;
 import net.vanfleteren.jazygit.git.GitError.OpenError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.GitError.StashError;
 import net.vanfleteren.jazygit.git.GitError.RewordError;
 import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
@@ -107,13 +108,13 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> drop(String ref) {
-        return CliStash.drop(workTree, ref);
+    public Either<GitFailure<StashError>, List<ExecutedCommand>> drop(Stash stash) {
+        return CliStash.drop(workTree, stash);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pop(String ref) {
-        return CliStash.pop(workTree, ref);
+    public Either<GitFailure<StashError>, List<ExecutedCommand>> pop(Stash stash) {
+        return CliStash.pop(workTree, stash);
     }
 
     @Override

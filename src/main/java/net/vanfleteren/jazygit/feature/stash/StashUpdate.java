@@ -21,13 +21,13 @@ public final class StashUpdate {
             case StashMsg.Requested() -> requested(model);
             case StashMsg.Cancelled() -> Next.of(model.withoutPopup(StashPopup.class));
             case StashMsg.Confirmed(String name) -> confirmed(model, name);
-            case StashMsg.PopRequested(String ref) ->
-                    listed(model, ref) ? Next.of(model.clearError(), new StashCmd.Pop(ref)) : Next.of(model);
-            case StashMsg.DropRequested(String ref) ->
-                    listed(model, ref) ? Next.of(model.clearError().openPopup(new StashDropPopup(ref))) : Next.of(model);
+            case StashMsg.PopRequested(var stash) ->
+                    listed(model, stash) ? Next.of(model.clearError(), new StashCmd.Pop(stash)) : Next.of(model);
+            case StashMsg.DropRequested(var stash) ->
+                    listed(model, stash) ? Next.of(model.clearError().openPopup(new StashDropPopup(stash))) : Next.of(model);
             case StashMsg.DropCancelled() -> Next.of(model.withoutPopup(StashDropPopup.class));
             case StashMsg.DropConfirmed() ->
-                    Update.confirm(model, StashDropPopup.class, popup -> Option.of(new StashCmd.Drop(popup.ref())));
+                    Update.confirm(model, StashDropPopup.class, popup -> Option.of(new StashCmd.Drop(popup.stash())));
         };
     }
 
@@ -43,8 +43,8 @@ public final class StashUpdate {
     /**
      * Only a stash that is listed is unstashed or deleted.
      */
-    private static boolean listed(Model model, String ref) {
-        return model.stashes().getOrElse(List.empty()).exists(stash -> stash.ref().equals(ref));
+    private static boolean listed(Model model, net.vanfleteren.jazygit.git.model.Stash stash) {
+        return model.stashes().getOrElse(List.empty()).exists(listed -> listed.sha().equals(stash.sha()));
     }
 
     private static Next confirmed(Model model, String name) {

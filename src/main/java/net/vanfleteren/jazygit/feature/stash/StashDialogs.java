@@ -25,7 +25,7 @@ public final class StashDialogs {
     public static final ConfirmDialog.Spec<StashDropPopup> DROP = new ConfirmDialog.Spec<>(
             "stash-drop", StashDropPopup.class,
             popup -> Messages.get("dialog.stashDrop.title"),
-            popup -> Messages.get("dialog.stashDrop.message"),
+            popup -> Messages.get("dialog.stashDrop.message", popup.stash().message()),
             StashMsg.DropConfirmed::new, StashMsg.DropCancelled::new);
 
     private StashDialogs() {

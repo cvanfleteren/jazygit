@@ -112,7 +112,7 @@ public record Model(String repositoryName,
      * the branch of the same name.
      */
     public Option<PullRequest> pullRequest(Branch branch) {
-        return branch.upstream()
+        return branch.remoteUpstream()
                 .map(upstream -> upstream.branch().branch())
                 .flatMap(pullRequests::get)
                 .orElse(() -> pullRequests.get(branch.name()));

@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.git.GitError.LogError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.RewordError;
 import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
+import net.vanfleteren.jazygit.git.GitError.StashError;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
@@ -201,12 +202,12 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> pop(String ref) {
+    default Either<GitFailure<StashError>, List<ExecutedCommand>> pop(Stash stash) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> drop(String ref) {
+    default Either<GitFailure<StashError>, List<ExecutedCommand>> drop(Stash stash) {
         return ran();
     }
 }

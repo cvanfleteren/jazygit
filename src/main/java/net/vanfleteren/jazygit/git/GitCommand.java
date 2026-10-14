@@ -36,11 +36,34 @@ record GitCommand(List<String> args, Map<String, String> environment, Duration t
      * the user runs meanwhile, as the periodic reads would otherwise do.
      */
     static GitCommand reading(String... args) {
-        return git(List.of(args).prepend("--no-optional-locks"));
+        return reading(List.of(args));
+    }
+
+    static GitCommand reading(List<String> args) {
+        return git(args.prepend("--no-optional-locks"));
     }
 
     GitCommand withEnvironment(Map<String, String> variables) {
         return new GitCommand(args, environment.merge(variables, (current, given) -> given), timeout);
+    }
+
+    /**
+     * This command with its paths taken as the files of that name, never as patterns: discarding a file named
+     * {@code *.txt} must not discard every text file. Not for every command, as some, like
+     * {@code git stash --include-untracked}, use patterns themselves.
+     */
+    GitCommand withLiteralPaths() {
+        return withEnvironment(HashMap.of("GIT_LITERAL_PATHSPECS", "1"));
+    }
+
+    /**
+     * This command with the configuration {@code key} set to {@code value}, whatever the user's says:
+     * {@code git -c <key>=<value> ...}.
+     */
+    GitCommand withConfig(String key, String value) {
+        // After the ones set before, so they are listed in the order they were set.
+        int configured = args.grouped(2).takeWhile(pair -> pair.head().equals("-c")).size() * 2;
+        return new GitCommand(args.insertAll(configured, List.of("-c", key + "=" + value)), environment, timeout);
     }
 
     GitCommand withTimeout(Duration timeout) {
@@ -62,6 +85,10 @@ record GitCommand(List<String> args, Map<String, String> environment, Duration t
      * The git subcommand, e.g. {@code checkout}.
      */
     String operation() {
-        return args.find(arg -> !arg.startsWith("-")).getOrElse("git");
+        // The value of a "-c" is no subcommand either.
+        return args.zip(args.prepend("").init())
+                .find(arg -> !arg._1.startsWith("-") && !arg._2.equals("-c"))
+                .map(arg -> arg._1)
+                .getOrElse("git");
     }
 }

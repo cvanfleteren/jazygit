@@ -15,7 +15,6 @@ import net.vanfleteren.jazygit.process.Exec;
 import net.vanfleteren.jazygit.process.ExecFailure;
 
 import java.nio.file.Path;
-import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 
 /**
@@ -74,16 +73,6 @@ final class GitProcess {
                 output -> Either.right(Option.of(output)));
     }
 
-    /**
-     * Runs {@code command}, and {@code undo} when it fails and {@code needsUndo} says so. The undo's commands
-     * join the failure's, and so does why the undo failed, if it did.
-     */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> runOrUndo(Path workTree, GitCommand command, GitCommand undo,
-                                                                  BooleanSupplier needsUndo) {
-        return log(workTree, command)
-                .mapLeft(failure -> needsUndo.getAsBoolean() ? failure.followedBy(log(workTree, undo)) : failure);
-    }
-
     private static Either<ProcessError, Output> execute(Path workTree, GitCommand command) {
         return Exec.run(workTree, command.commandLine(), command.environment(), command.timeout())
                 .<ProcessError>mapLeft(failure -> switch (failure) {
@@ -91,16 +80,8 @@ final class GitProcess {
                     case ExecFailure.TimedOut() -> new TimedOut(command.operation(), workTree);
                     case ExecFailure.Interrupted() -> new Interrupted(command.operation());
                     case ExecFailure.NonZero(int exitCode, String stderr, String stdout) ->
-                            new CommandFailed(explanation(stderr, stdout), exitCode);
+                            new CommandFailed(Exec.explanation(stderr, stdout), exitCode, stderr);
                 })
                 .map(stdout -> new Output(stdout, command.executed()));
-    }
-
-    /**
-     * The first line git printed, which states why it failed, e.g. {@code error: Your local changes to
-     * the following files would be overwritten by checkout:}. Its error output is looked at first.
-     */
-    static Option<String> explanation(String stderr, String stdout) {
-        return Exec.explanation(stderr, stdout);
     }
 }

@@ -191,7 +191,7 @@ class CliGitInfoProviderTest {
         git("branch", "feature");
         Files.writeString(repo.resolve("README.md"), "dirty\n");
         assertEquals(List.of("git stash push --quiet", "git checkout --quiet feature --",
-                "git stash pop --quiet"), provider.checkoutWithStash("feature").get().map(ExecutedCommand::line));
+                "git stash pop --index --quiet"), provider.checkoutWithStash("feature").get().map(ExecutedCommand::line));
     }
 
     @Test
@@ -227,7 +227,8 @@ class CliGitInfoProviderTest {
 
         List<String> executed = provider.reword(before.get(1).sha(), new CommitMessage("Second, better", "because")).get().map(ExecutedCommand::line);
 
-        assertEquals(List.of("git rebase --interactive --autostash --keep-empty --rebase-merges " + before.get(1).sha() + "^"),
+        assertEquals(List.of("git -c rebase.abbreviateCommands=false -c core.abbrev=no -c commit.cleanup=whitespace"
+                        + " rebase --interactive --autostash --keep-empty --rebase-merges " + before.get(1).sha() + "^"),
                 executed);
         List<Commit> after = provider.commits().get();
         assertEquals(List.of("Third", "Second, better", "Initial commit"),
@@ -323,7 +324,8 @@ class CliGitInfoProviderTest {
 
         List<String> executed = provider.squash(before.get(1).sha()).get().map(ExecutedCommand::line);
 
-        assertTrue(executed.head().startsWith("git rebase --interactive --autostash --keep-empty --rebase-merges"),
+        assertTrue(executed.head().startsWith("git -c rebase.abbreviateCommands=false -c core.abbrev=no"
+                        + " rebase --interactive --autostash --keep-empty --rebase-merges"),
                 executed.toString());
         List<Commit> after = provider.commits().get();
         assertEquals(List.of("Fourth", "Second", "Initial commit"), after.map(Commit::message).toList());
@@ -388,6 +390,66 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void rewordFindsTheCommitWhateverTheTodoListLooksLike() throws Exception {
+        git("config", "rebase.abbreviateCommands", "true");
+        git("config", "core.abbrev", "5");
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "-m", "Second");
+        Commit initial = provider.commits().get().get(1);
+
+        provider.reword(initial.sha(), new CommitMessage("First", "")).get();
+
+        assertEquals(List.of("Second", "First"), provider.commits().get().map(Commit::message).toList());
+    }
+
+    @Test
+    void rewordKeepsLinesThatStartWithAHash() throws Exception {
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "-m", "Second");
+        Commit initial = provider.commits().get().get(1);
+
+        provider.reword(initial.sha(), new CommitMessage("#12 First", "#13 too")).get();
+
+        Commit reworded = provider.commits().get().get(1);
+        assertEquals("#12 First", reworded.message());
+        assertEquals("#13 too", reworded.body());
+    }
+
+    @Test
+    void squashOfACommitThatIsNotInTheLogFailsInsteadOfDoingNothing() throws Exception {
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "-m", "Second");
+        git("checkout", "-q", "-b", "elsewhere");
+        Files.writeString(repo.resolve("c.txt"), "c\n");
+        git("add", "c.txt");
+        git("commit", "-q", "-m", "Elsewhere");
+        Sha elsewhere = provider.commits().get().head().sha();
+        git("checkout", "-q", "main");
+
+        assertTrue(provider.squash(elsewhere).isLeft());
+
+        assertEquals(List.of("Second", "Initial commit"), provider.commits().get().map(Commit::message).toList());
+        assertTrue(Files.notExists(repo.resolve(".git/rebase-merge")));
+    }
+
+    @Test
+    void aRebaseTheUserStoppedIsLeftAlone() throws Exception {
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "-m", "Second");
+        git("branch", "other");
+        gitWithEnvironment("GIT_SEQUENCE_EDITOR", "sed -i -e 's/^pick/edit/'", "rebase", "-i", "--root");
+
+        GitFailure<GitError.ProcessError> failure = provider.rebase("other").getLeft();
+
+        assertTrue(failure.commands().forAll(command -> !command.line().contains("--abort")), failure.commands().toString());
+        assertTrue(Files.exists(repo.resolve(".git/rebase-merge")));
+    }
+
+    @Test
     void aFailingRebaseIsAbortedAndReported() throws Exception {
         GitFailure<GitError.RewordError> failure =
                 provider.reword(new Sha("0123456789012345678901234567890123456789"), new CommitMessage("x", "")).getLeft();
@@ -406,7 +468,7 @@ class CliGitInfoProviderTest {
 
         assertEquals(List.of("git stash push --include-untracked --message 'my work'"), executed);
         assertEquals(List.of(), provider.status().get().files());
-        assertEquals(List.of(new Stash("stash@{0}", "my work")), provider.stashes().get());
+        assertEquals(List.of("stash@{0} my work"), provider.stashes().get().map(stash -> stash.ref() + " " + stash.message()));
     }
 
     @Test
@@ -426,7 +488,7 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "changed\n");
         provider.stash(Option.of("work")).get();
 
-        List<String> executed = provider.pop("stash@{0}").get().map(ExecutedCommand::line);
+        List<String> executed = provider.pop(provider.stashes().get().head()).get().map(ExecutedCommand::line);
 
         assertEquals(1, executed.size());
         assertTrue(executed.head().startsWith("git stash pop"), executed.toString());
@@ -439,7 +501,7 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "changed\n");
         provider.stash(Option.of("work")).get();
 
-        List<String> executed = provider.drop("stash@{0}").get().map(ExecutedCommand::line);
+        List<String> executed = provider.drop(provider.stashes().get().head()).get().map(ExecutedCommand::line);
 
         assertEquals(1, executed.size());
         assertTrue(executed.head().startsWith("git stash drop"), executed.toString());
@@ -448,8 +510,29 @@ class CliGitInfoProviderTest {
     }
 
     @Test
-    void popOfAnUnknownStashFailsWithTheCommand() {
-        assertEquals(1, provider.pop("stash@{3}").getLeft().commands().size());
+    void popOfAStashThatIsGoneFailsWithoutRunningAnything() throws Exception {
+        Files.writeString(repo.resolve("README.md"), "changed\n");
+        provider.stash(Option.of("work")).get();
+        Stash work = provider.stashes().get().head();
+        provider.drop(work).get();
+
+        GitFailure<GitError.StashError> failure = provider.pop(work).getLeft();
+
+        assertEquals(new GitError.StashGone("work"), failure.error());
+        assertEquals(List.of(), failure.commands());
+    }
+
+    @Test
+    void aStashIsFoundUnderItsNewNameOnceAnotherWasAdded() throws Exception {
+        Files.writeString(repo.resolve("README.md"), "one\n");
+        provider.stash(Option.of("first")).get();
+        Stash first = provider.stashes().get().head();
+        Files.writeString(repo.resolve("README.md"), "two\n");
+        provider.stash(Option.of("second")).get();
+
+        assertEquals(List.of("git stash drop 'stash@{1}'"), provider.drop(first).get().map(ExecutedCommand::line));
+
+        assertEquals(List.of("second"), provider.stashes().get().map(Stash::message));
     }
 
     @Test
@@ -460,8 +543,8 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "two\n");
         provider.stash(Option.of("second")).get();
 
-        assertEquals(List.of(new Stash("stash@{0}", "second"), new Stash("stash@{1}", "first")),
-                provider.stashes().get());
+        assertEquals(List.of("stash@{0} second", "stash@{1} first"),
+                provider.stashes().get().map(stash -> stash.ref() + " " + stash.message()));
     }
 
     @Test
@@ -852,6 +935,14 @@ class CliGitInfoProviderTest {
                 .execute();
         assertEquals(0, result.getExitValue(),
                 () -> "git " + String.join(" ", args) + " failed: " + result.outputUTF8());
+    }
+
+    private void gitWithEnvironment(String variable, String value, String... args) throws Exception {
+        java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of("git"));
+        command.addAll(java.util.List.of(args));
+        ProcessResult result = new ProcessExecutor().command(command).directory(repo.toFile())
+                .environment(variable, value).redirectErrorStream(true).readOutput(true).exitValueAny().execute();
+        assertEquals(0, result.getExitValue(), result::outputUTF8);
     }
 
     private static boolean gitSucceedsIn(Path dir, String... args) throws IOException, InterruptedException, TimeoutException {

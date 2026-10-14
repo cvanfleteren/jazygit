@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.stash;
 
+import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -29,17 +30,15 @@ public sealed interface StashMsg extends Msg {
 
 
     /**
-     * The user asked to unstash the stash {@code ref}.
+     * The user asked to unstash {@code stash}.
      */
-    record PopRequested(String ref) implements StashMsg {
+    record PopRequested(Stash stash) implements StashMsg {
     }
 
-
-
     /**
-     * The user asked to delete the stash {@code ref}; confirmation is still to be given.
+     * The user asked to delete {@code stash}; confirmation is still to be given.
      */
-    record DropRequested(String ref) implements StashMsg {
+    record DropRequested(Stash stash) implements StashMsg {
     }
 
     record DropCancelled() implements StashMsg {

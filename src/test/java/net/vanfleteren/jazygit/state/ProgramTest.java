@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.git.GitError.DiffError;
 import net.vanfleteren.jazygit.git.GitError.DiscardError;
 import net.vanfleteren.jazygit.git.GitError.LogError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.GitError.StashError;
 import net.vanfleteren.jazygit.git.GitError.RewordError;
 import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
 import net.vanfleteren.jazygit.git.GitFailure;
@@ -40,6 +41,7 @@ import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import org.junit.jupiter.api.Test;
@@ -81,13 +83,13 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> drop(String ref) {
-            return StubGitProvider.ran("git stash drop " + ref);
+        public Either<GitFailure<StashError>, List<ExecutedCommand>> drop(Stash stash) {
+            return StubGitProvider.ran("git stash drop " + stash.ref());
         }
 
         @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pop(String ref) {
-            return StubGitProvider.ran("git stash pop " + ref);
+        public Either<GitFailure<StashError>, List<ExecutedCommand>> pop(Stash stash) {
+            return StubGitProvider.ran("git stash pop " + stash.ref());
         }
 
         @Override

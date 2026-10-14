@@ -24,8 +24,6 @@ public final class CliBranch {
 
     // Pulling fetches first, which takes a while for a big repository.
     private static final Duration PULL_TIMEOUT = Duration.ofMinutes(2);
-    private static final GitCommand MERGE_ABORT = git("merge", "--abort");
-    private static final GitCommand REBASE_ABORT = git("rebase", "--abort");
 
     private CliBranch() {
     }
@@ -79,25 +77,15 @@ public final class CliBranch {
      * Runs {@code git pull --no-edit}: pulls the checked out branch from its upstream, merging or rebasing as
      * git's {@code pull.rebase} and {@code pull.ff} say. A merge commit gets git's own message instead of an
      * editor, and with {@code pull.rebase=interactive} the todo list is taken as it is. A pull that stops on
-     * conflicts is undone again, so the repository is left as it was.
+     * conflicts is undone again, so the repository is left as it was; one that git refuses to start, as the
+     * repository is in the middle of something else, leaves that alone.
      */
     public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> pull(Path workTree) {
-        return GitProcess.log(workTree, git("pull", "--no-edit")
+        return Unfinished.runOrUndo(workTree, git("pull", "--no-edit")
                         .withEnvironment(HashMap.of("GIT_SEQUENCE_EDITOR", ":"))
-                        .withTimeout(PULL_TIMEOUT))
-                .mapLeft(failure -> CliMerge.conflicted(workTree).getOrElse(true)
-                        ? failure.followedBy(GitProcess.log(workTree, rebasing(workTree) ? REBASE_ABORT : MERGE_ABORT))
-                        : failure);
-    }
-
-    /**
-     * Whether a rebase stopped on conflicts, rather than a merge. Only asked, so not logged.
-     */
-    private static boolean rebasing(Path workTree) {
-        // rev-parse --verify --quiet exits with 1, saying nothing, when the ref does not exist.
-        return GitProcess.ask(workTree, git("rev-parse", "--verify", "--quiet", "REBASE_HEAD"))
-                .map(Option::isDefined)
-                .getOrElse(false);
+                        .withTimeout(PULL_TIMEOUT),
+                left -> left.rebasing() ? Option.of(CliRebase.ABORT)
+                        : Option.when(left.conflicted(), CliMerge.ABORT));
     }
 
     /**

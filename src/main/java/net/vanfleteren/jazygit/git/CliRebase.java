@@ -4,6 +4,7 @@ import net.vanfleteren.jazygit.process.CommandLine;
 
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
+import io.vavr.Tuple2;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
@@ -20,11 +21,12 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
 
 /**
  * Rewrites history through {@code git rebase}, driven without an interactive editor. When a rebase
- * fails, it is aborted again, so the repository is left as it was.
+ * stops half-way, it is aborted again, so the repository is left as it was; a rebase that was already
+ * running is left alone.
  */
 public final class CliRebase {
 
-    private static final GitCommand ABORT = git("rebase", "--abort");
+    static final GitCommand ABORT = git("rebase", "--abort");
     // Merges are recreated instead of flattened, and uncommitted changes are stashed and brought back.
     private static final List<String> REBASE = List.of("rebase", "--autostash", "--keep-empty", "--rebase-merges");
     private static final List<String> INTERACTIVE = REBASE.insert(1, "--interactive");
@@ -55,14 +57,15 @@ public final class CliRebase {
      */
     public static Either<GitFailure<RewordError>, List<ExecutedCommand>> reword(Path workTree, Sha sha, CommitMessage message) {
         // A merge in the todo list is "merge -C <commit>", which has to become "-c" for git to ask for a message.
-        String sequenceEditor = sequenceEditor(sha, "pick", "reword")
-                + " -e 's/^merge -C " + sha.shortSha() + "/merge -c " + sha.shortSha() + "/'";
+        String sequenceEditor = sequenceEditor(sha, List.of(new Tuple2<>("pick", "reword"), new Tuple2<>("merge -C", "merge -c")));
         return TempFiles.using("jazygit-message", file -> Files.writeString(file, message.text()),
                 failed -> new GitFailure<RewordError>(failed, List.empty()),
                 file -> GitFailure.<RewordError, List<ExecutedCommand>>widen(base(workTree, sha.value()).flatMap(base ->
-                        rebase(workTree, git(INTERACTIVE.append(base)).withEnvironment(HashMap.of(
-                                "GIT_SEQUENCE_EDITOR", sequenceEditor,
-                                "GIT_EDITOR", CommandLine.format(List.of("cp", file.toString()))))))));
+                        rebase(workTree, interactive(INTERACTIVE.append(base), sequenceEditor,
+                                CommandLine.format(List.of("cp", file.toString())))
+                                // The message is taken as it was entered: git would strip lines starting with
+                                // "#", like "#123", from a message that comes from an editor.
+                                .withConfig("commit.cleanup", "whitespace")))));
     }
 
     /**
@@ -88,25 +91,40 @@ public final class CliRebase {
     public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Path workTree, Sha sha) {
         return GitProcess.run(workTree, git("rev-parse", sha.value() + "^"))
                 .flatMap(parent -> base(workTree, parent.stdout().strip()))
-                .flatMap(base -> rebase(workTree, git(INTERACTIVE.append("--no-autosquash").append(base))
-                        .withEnvironment(HashMap.of(
-                                "GIT_SEQUENCE_EDITOR", sequenceEditor(sha, "pick", "squash"),
-                                "GIT_EDITOR", "true"))));
+                .flatMap(base -> rebase(workTree, interactive(INTERACTIVE.append("--no-autosquash").append(base),
+                        sequenceEditor(sha, List.of(new Tuple2<>("pick", "squash"))), "true")));
     }
 
     /**
-     * A {@code sed} command that turns the {@code from} line of {@code sha} in the todo list into a
-     * {@code to} line. The todo list names the commit by an abbreviation of at least 7 characters.
+     * An interactive rebase whose todo list is edited by {@code sequenceEditor}, and whose messages by
+     * {@code editor}. The todo list names every commit by its full object id and spells out its commands,
+     * whatever the user's configuration says, so the sequence editor can find the commit it is after.
      */
-    private static String sequenceEditor(Sha sha, String from, String to) {
-        return "sed -i -e 's/^" + from + " " + sha.shortSha() + "/" + to + " " + sha.shortSha() + "/'";
+    private static GitCommand interactive(List<String> args, String sequenceEditor, String editor) {
+        return git(args)
+                .withConfig("rebase.abbreviateCommands", "false")
+                .withConfig("core.abbrev", "no")
+                .withEnvironment(HashMap.of("GIT_SEQUENCE_EDITOR", sequenceEditor, "GIT_EDITOR", editor));
     }
 
     /**
-     * Runs {@code rebase}, and aborts it again when it fails.
+     * A shell function, run by git on the todo list, that turns the line of {@code sha} that starts with
+     * the command {@code _1} of one of the {@code replacements} into one with its command {@code _2}. When the
+     * todo list has no such line, it fails, so git stops the rebase instead of doing it unchanged.
+     */
+    private static String sequenceEditor(Sha sha, List<Tuple2<String, String>> replacements) {
+        // Plain sed and mv, as "sed -i" differs between GNU and BSD.
+        String find = replacements.map(r -> "-e '^" + r._1 + " " + sha.value() + " '").mkString(" ");
+        String replace = replacements.map(r -> "-e 's/^" + r._1 + " " + sha.value() + " /" + r._2 + " " + sha.value() + " /'")
+                .mkString(" ");
+        return "f() { grep -q " + find + " \"$1\" && sed " + replace + " \"$1\" > \"$1.tmp\" && mv \"$1.tmp\" \"$1\"; }; f";
+    }
+
+    /**
+     * Runs {@code rebase}, and aborts it again when it stopped half-way.
      */
     private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> rebase(Path workTree, GitCommand rebase) {
-        return GitProcess.runOrUndo(workTree, rebase, ABORT, () -> true);
+        return Unfinished.runOrUndo(workTree, rebase, left -> Option.when(left.rebasing(), ABORT));
     }
 
     /**

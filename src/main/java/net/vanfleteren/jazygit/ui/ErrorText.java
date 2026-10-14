@@ -59,7 +59,7 @@ public final class ErrorText {
             case GitError.GitUnavailable(var cause) -> Messages.get("git.notInstalled");
             case GitError.TimedOut(String operation, var workTree) -> Messages.get("git.timedOut", operation, workTree);
             case GitError.Interrupted(String operation) -> Messages.get("git.interrupted", operation);
-            case GitError.CommandFailed(var explanation, int exitCode) ->
+            case GitError.CommandFailed(var explanation, int exitCode, var output) ->
                     explanation.getOrElse(() -> Messages.get("git.exitedWithCode", String.valueOf(exitCode)));
             case GitError.UnexpectedOutput(String output) -> Messages.get("git.unexpectedOutput", output);
             case GitError.NotARepository(var directory) -> Messages.get("git.notRepository", directory);
@@ -67,6 +67,7 @@ public final class ErrorText {
             case GitError.UnknownBranch(String branch) -> Messages.get("git.unknownBranch", branch);
             case GitError.LocalChanges(String explanation) -> explanation;
             case GitError.StashNotRestored(var cause) -> Messages.get("git.stashPopFailed", of(cause));
+            case GitError.StashGone(String message) -> Messages.get("git.stashGone", message);
             case GitError.TempFileFailed(Throwable cause) -> Messages.get("git.tempFileFailed", reason(cause));
             case GitError.RefusedPath(String path) -> Messages.get("git.refusedPath", path);
             case GitError.DeleteFailed(String path, Throwable cause) -> Messages.get("git.deleteFailed", path, reason(cause));

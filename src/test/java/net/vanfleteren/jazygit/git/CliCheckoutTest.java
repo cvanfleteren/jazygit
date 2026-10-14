@@ -64,12 +64,22 @@ class CliCheckoutTest {
     void checkoutWithStashBringsTheChangesAcrossAndLeavesNoStash() throws Exception {
         Files.writeString(repo.resolve("a.txt"), "changed\n");
 
-        assertEquals(List.of("git stash push --quiet", "git checkout --quiet feature --", "git stash pop --quiet"),
+        assertEquals(List.of("git stash push --quiet", "git checkout --quiet feature --", "git stash pop --index --quiet"),
                 CliCheckout.checkoutWithStash(repo, "feature").get().map(ExecutedCommand::line));
 
         assertEquals("feature", git("branch", "--show-current").strip());
         assertEquals("changed\n", Files.readString(repo.resolve("a.txt")));
         assertEquals("", git("stash", "list"));
+    }
+
+    @Test
+    void checkoutWithStashKeepsStagedChangesStaged() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "staged\n");
+        git("add", "a.txt");
+
+        assertTrue(CliCheckout.checkoutWithStash(repo, "feature").isRight());
+
+        assertEquals("M  a.txt\n", git("status", "--porcelain"));
     }
 
     @Test
@@ -91,7 +101,7 @@ class CliCheckoutTest {
         GitFailure<GitError.StashCheckoutError> failure = CliCheckout.checkoutWithStash(repo, "no-such-branch").getLeft();
 
         assertInstanceOf(CommandFailed.class, failure.error());
-        assertEquals(List.of("git stash push --quiet", "git checkout --quiet no-such-branch --", "git stash pop --quiet"),
+        assertEquals(List.of("git stash push --quiet", "git checkout --quiet no-such-branch --", "git stash pop --index --quiet"),
                 failure.commands().map(ExecutedCommand::line));
 
         assertEquals("main", git("branch", "--show-current").strip());

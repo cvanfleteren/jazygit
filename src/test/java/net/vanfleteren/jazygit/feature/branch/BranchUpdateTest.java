@@ -125,6 +125,20 @@ class BranchUpdateTest {
     }
 
     @Test
+    void aBranchThatFollowsALocalBranchIsPushedWhereTheUserSaysRatherThanOntoThatBranch() {
+        Model model = Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(
+                new Branch("main", true, new Sha("aaaa")),
+                new Branch("feature", false, new Sha("ffff"), Instant.EPOCH, true, false,
+                        Option.of(new Upstream(new RemoteBranch(".", "main"), 1, 0)))))).model();
+
+        Next asked = Update.update(model, new PushMsg.Requested("feature"));
+
+        assertEquals(List.of(), asked.cmds());
+        assertEquals(Option.of(new SetUpstreamPopup("feature")), asked.model().popup());
+        assertEquals(new RemoteBranch("origin", "feature"), model.branch("feature").get().pushTarget());
+    }
+
+    @Test
     void anUpstreamThatIsNotARemoteAndABranchKeepsTheDialogOpen() {
         Model asked = Update.update(loaded(), new PushMsg.Requested("feature")).model();
 

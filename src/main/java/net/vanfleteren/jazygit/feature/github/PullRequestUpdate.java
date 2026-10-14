@@ -98,7 +98,7 @@ public final class PullRequestUpdate {
                         .getOrElse(() -> model.pullRequestsFailure().isDefined()
                                 // Without the pull requests it is unknown whether there is one to open.
                                 ? Next.of(model.fail(new AppError.PullRequestsUnavailable(model.pullRequestsFailure().get())))
-                                : known.upstream().isEmpty() || known.ahead() > 0
+                                : known.remoteUpstream().isEmpty() || known.ahead() > 0
                                 ? Next.of(model.fail(new AppError.NotPushed(branch)))
                                 : Next.of(model.openPopup(new BasePopup(branch, bases(model, branch))).clearError())))
                 .getOrElse(() -> Next.of(model));

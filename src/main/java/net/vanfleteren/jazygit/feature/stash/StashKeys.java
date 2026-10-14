@@ -17,7 +17,7 @@ public final class StashKeys {
     public static Keymap register(Keymap keys) {
         return keys.add(Scopes.FILES, Binding.<FileTree>always("s", "help.files.stash", StashMsg.Requested::new))
                 .add(Scopes.STASH,
-                Binding.<Stash>onSelected("g", "help.stash.pop", stash -> new StashMsg.PopRequested(stash.ref())),
-                Binding.<Stash>onSelected("d", "help.stash.drop", stash -> new StashMsg.DropRequested(stash.ref())));
+                Binding.<Stash>onSelected("g", "help.stash.pop", StashMsg.PopRequested::new),
+                Binding.<Stash>onSelected("d", "help.stash.drop", StashMsg.DropRequested::new));
     }
 }

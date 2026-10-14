@@ -26,18 +26,18 @@ public final class PushUpdate {
             case PushMsg.UpstreamCancelled() -> Next.of(model.withoutPopup(SetUpstreamPopup.class));
             case PushMsg.UpstreamConfirmed(String upstream) -> upstreamConfirmed(model, upstream);
             case PushMsg.ForceConfirmed() -> Update.confirm(model, ForcePushPopup.class,
-                    popup -> model.branch(popup.branch()).flatMap(Branch::upstream)
+                    popup -> model.branch(popup.branch()).flatMap(Branch::remoteUpstream)
                             .map(upstream -> new Push(popup.branch(), upstream.branch(), PushMode.FORCE_WITH_LEASE)));
         };
     }
 
     private static Next requested(Model model, String branch) {
-        // A branch that is being pushed or deleted is not pushed meanwhile. A branch without an upstream (or
-        // whose upstream is gone) is pushed where the user says. Pushing a diverged branch needs a force push,
-        // which the user must confirm.
+        // A branch that is being pushed or deleted is not pushed meanwhile. A branch without an upstream on a
+        // remote (none, one that is gone, or a local branch, which a push would move) is pushed where the user
+        // says. Pushing a diverged branch needs a force push, which the user must confirm.
         return model.branch(branch)
                 .filter(known -> !model.busy().containsKey(branch))
-                .map(known -> known.upstream()
+                .map(known -> known.remoteUpstream()
                         .map(upstream -> known.behind() > 0
                                 ? Next.of(model.openPopup(new ForcePushPopup(branch)).clearError())
                                 : Update.start(model.clearError(), new Push(branch, upstream.branch(), PushMode.FAST_FORWARD)))

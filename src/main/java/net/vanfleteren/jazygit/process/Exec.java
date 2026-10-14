@@ -20,6 +20,9 @@ import java.util.concurrent.TimeoutException;
  */
 public final class Exec {
 
+    // How git starts the lines that say what went wrong.
+    private static final List<String> ERROR_PREFIXES = List.of("fatal:", "error:", "CONFLICT");
+
     private Exec() {
     }
 
@@ -56,14 +59,16 @@ public final class Exec {
     }
 
     /**
-     * The first non-blank line a program printed, which usually states why it failed. Its error output is
-     * looked at first.
+     * The line of what a program printed that states why it failed: the first one that says it is an error,
+     * like {@code error: failed to push some refs}, as progress or hints may come before it; else the first
+     * non-blank one. Its error output is looked at first.
      */
     public static Option<String> explanation(String stderr, String stdout) {
-        return firstLine(stderr).orElse(() -> firstLine(stdout));
+        List<String> lines = lines(stderr).appendAll(lines(stdout));
+        return lines.find(line -> ERROR_PREFIXES.exists(line::startsWith)).orElse(lines::headOption);
     }
 
-    private static Option<String> firstLine(String output) {
-        return List.of(output.split("\\R")).map(String::strip).find(line -> !line.isEmpty());
+    private static List<String> lines(String output) {
+        return List.of(output.split("\\R")).map(String::strip).filter(line -> !line.isEmpty());
     }
 }

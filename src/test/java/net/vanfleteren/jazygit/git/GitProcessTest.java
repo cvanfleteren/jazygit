@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.process.Exec;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import io.vavr.collection.HashMap;
@@ -40,9 +41,34 @@ class GitProcessTest {
 
     @Test
     void theExplanationPrefersTheErrorOutput() {
-        assertEquals(Option.of("error: boom"), GitProcess.explanation("\n error: boom\nmore", "On branch main"));
-        assertEquals(Option.of("On branch main"), GitProcess.explanation("", "\nOn branch main\n"));
-        assertEquals(Option.none(), GitProcess.explanation("", ""));
+        assertEquals(Option.of("error: boom"), Exec.explanation("\n error: boom\nmore", "On branch main"));
+        assertEquals(Option.of("On branch main"), Exec.explanation("", "\nOn branch main\n"));
+        assertEquals(Option.none(), Exec.explanation("", ""));
+    }
+
+    @Test
+    void theExplanationIsTheLineThatSaysWhatWentWrong() {
+        String rejected = """
+                To github.com:o/r.git
+                 ! [rejected]        main -> main (fetch first)
+                error: failed to push some refs to 'github.com:o/r.git'
+                hint: Updates were rejected because the remote contains work that you do not have
+                """;
+
+        assertEquals(Option.of("error: failed to push some refs to 'github.com:o/r.git'"), Exec.explanation(rejected, ""));
+    }
+
+    @Test
+    void aRefusalSaysWhatGitPrintedAfterItsExplanationToo() {
+        CommandFailed failed = new CommandFailed(Option.of("error: patch failed: f:1"), 1,
+                "error: patch failed: f:1\nerror: conflicts in index. Try without --index.\n");
+
+        assertTrue(failed.says("Try without --index"));
+    }
+
+    @Test
+    void aConfigValueIsNoSubcommand() {
+        assertEquals("rebase", git("rebase", "--root").withConfig("core.abbrev", "no").operation());
     }
 
     @Test
