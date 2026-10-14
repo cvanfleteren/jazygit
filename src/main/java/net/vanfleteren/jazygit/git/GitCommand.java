@@ -16,10 +16,16 @@ import java.time.Duration;
  */
 record GitCommand(List<String> args, Map<String, String> environment, Duration timeout) {
 
-    private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(30);
+    // A command that changes the repository can run hooks, like a pre-commit hook running the tests.
+    private static final Duration DEFAULT_TIMEOUT = Duration.ofMinutes(5);
+    // A read keeps the others waiting, and only reads.
+    private static final Duration READING_TIMEOUT = Duration.ofSeconds(30);
     private static final Map<String, String> DEFAULT_ENVIRONMENT = HashMap.of(
             // Fail instead of waiting for credentials that cannot be typed.
             "GIT_TERMINAL_PROMPT", "0",
+            // Fail instead of opening an editor on the terminal the TUI owns; a command that is to edit
+            // something says how.
+            "GIT_EDITOR", "false",
             // Git's messages are matched in English.
             "LC_ALL", "C");
 
@@ -33,14 +39,15 @@ record GitCommand(List<String> args, Map<String, String> environment, Duration t
 
     /**
      * A command that only reads. It takes no optional locks, so it does not get in the way of git commands
-     * the user runs meanwhile, as the periodic reads would otherwise do.
+     * the user runs meanwhile, as the periodic reads would otherwise do; and it gets less time than one that
+     * changes the repository.
      */
     static GitCommand reading(String... args) {
         return reading(List.of(args));
     }
 
     static GitCommand reading(List<String> args) {
-        return git(args.prepend("--no-optional-locks"));
+        return git(args.prepend("--no-optional-locks")).withTimeout(READING_TIMEOUT);
     }
 
     GitCommand withEnvironment(Map<String, String> variables) {

@@ -17,6 +17,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
 import static net.vanfleteren.jazygit.git.GitCommand.git;
+import static net.vanfleteren.jazygit.git.GitCommand.reading;
 
 /**
  * Reads the diff of changed files through the git command line tool.
@@ -63,12 +64,15 @@ public final class CliDiff {
     }
 
     /**
-     * Copies the {@code index} file, if there is one yet, keeping its modification time: that keeps git's
-     * check for files changed within the same second as the index working on the copy.
+     * Copies the {@code index} file, keeping its modification time: that keeps git's check for files changed
+     * within the same second as the index working on the copy. Without an index yet, as before anything was
+     * added, there is no copy either, which git takes as an empty index; an empty file it would refuse.
      */
     private static void copyIndex(Path index, Path copy) throws IOException {
         if (Files.exists(index)) {
             Files.copy(index, copy, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
+        } else {
+            Files.delete(copy);
         }
     }
 
@@ -94,6 +98,6 @@ public final class CliDiff {
     }
 
     private static Either<ProcessError, String> run(Path workTree, List<String> args, Map<String, String> env) {
-        return GitProcess.read(workTree, git(args).withEnvironment(env).withLiteralPaths(), Either::right);
+        return GitProcess.read(workTree, reading(args).withEnvironment(env).withLiteralPaths(), Either::right);
     }
 }

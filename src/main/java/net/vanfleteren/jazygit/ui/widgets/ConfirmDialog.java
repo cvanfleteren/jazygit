@@ -91,15 +91,30 @@ public final class ConfirmDialog<P extends Popup> implements PopupView {
     }
 
     /**
-     * How many lines {@code text} takes when wrapped at {@code width} on spaces.
+     * How many lines {@code text} takes when wrapped at {@code width} on spaces: each of its own lines starts a
+     * new one, and a word longer than the width is cut over several.
      */
     public static int lines(String text, int width) {
+        return List.of(text.split("\\R", -1)).map(line -> wrapped(line, width)).sum().intValue();
+    }
+
+    private static int wrapped(String line, int width) {
         record Wrapped(int lines, int used) {
+
+            /**
+             * With {@code word} starting at the beginning of the last line.
+             */
+            Wrapped starting(int word, int width) {
+                int cut = Math.max(0, word - 1) / width;
+                return new Wrapped(lines + cut, word - cut * width);
+            }
         }
-        return List.of(text.split(" "))
-                .foldLeft(new Wrapped(1, 0), (wrapped, word) -> wrapped.used() > 0 && wrapped.used() + 1 + word.length() > width
-                        ? new Wrapped(wrapped.lines() + 1, word.length())
-                        : new Wrapped(wrapped.lines(), wrapped.used() + (wrapped.used() > 0 ? 1 : 0) + word.length()))
+        return List.of(line.split(" ")).filter(word -> !word.isEmpty())
+                .foldLeft(new Wrapped(1, 0), (wrapped, word) -> wrapped.used() == 0
+                        ? wrapped.starting(word.length(), width)
+                        : wrapped.used() + 1 + word.length() <= width
+                        ? new Wrapped(wrapped.lines(), wrapped.used() + 1 + word.length())
+                        : new Wrapped(wrapped.lines() + 1, 0).starting(word.length(), width))
                 .lines();
     }
 }

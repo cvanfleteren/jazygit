@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static net.vanfleteren.jazygit.git.GitCommand.reading;
 
@@ -64,10 +65,25 @@ record Unfinished(boolean merging, boolean rebasing, boolean picking, boolean co
         return read(workTree)
                 .<GitFailure<ProcessError>>mapLeft(error -> new GitFailure<>(error, List.empty()))
                 .flatMap(before -> GitProcess.log(workTree, command)
-                        .mapLeft(failure -> before.any() ? failure : read(workTree).fold(
+                        .mapLeft(failure -> before.any() ? failure : uninterrupted(() -> read(workTree).fold(
                                 error -> new GitFailure<>(failure.error(), failure.commands(), Option.of(error)),
                                 after -> undo.apply(after)
                                         .map(cleanup -> failure.followedBy(GitProcess.log(workTree, cleanup)))
-                                        .getOrElse(failure))));
+                                        .getOrElse(failure)))));
+    }
+
+    /**
+     * Runs {@code cleanup} as if the thread was not interrupted: a command that was, was killed half-way, and
+     * what it left still has to be undone, which would else be killed right away too. The interrupt is kept.
+     */
+    private static <T> T uninterrupted(Supplier<T> cleanup) {
+        boolean interrupted = Thread.interrupted();
+        try {
+            return cleanup.get();
+        } finally {
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 }

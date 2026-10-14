@@ -78,5 +78,6 @@ class GitProcessTest {
         assertEquals("status", command.operation());
         assertEquals("nl_BE", command.environment().get("LC_ALL").get());
         assertEquals("0", command.environment().get("GIT_TERMINAL_PROMPT").get());
+        assertEquals("false", command.environment().get("GIT_EDITOR").get());
     }
 }

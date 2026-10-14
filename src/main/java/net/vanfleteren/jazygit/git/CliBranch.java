@@ -12,7 +12,6 @@ import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 
 import java.nio.file.Path;
-import java.time.Duration;
 
 import static net.vanfleteren.jazygit.git.GitCommand.git;
 
@@ -22,8 +21,6 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
  */
 public final class CliBranch {
 
-    // Pulling fetches first, which takes a while for a big repository.
-    private static final Duration PULL_TIMEOUT = Duration.ofMinutes(2);
 
     private CliBranch() {
     }
@@ -50,7 +47,7 @@ public final class CliBranch {
      * Runs {@code git push <remote> --delete <branch>} in {@code workTree}.
      */
     public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemote(Path workTree, RemoteBranch remote) {
-        return GitProcess.log(workTree, git("push", remote.remote(), "--delete", remote.branch()));
+        return log(workTree, git("push", remote.remote(), "--delete", remote.branch()));
     }
 
     /**
@@ -58,7 +55,7 @@ public final class CliBranch {
      */
     public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Path workTree, String name,
                                                                         RemoteBranch upstream, PushMode mode) {
-        return GitProcess.log(workTree, git(List.of("push")
+        return log(workTree, git(List.of("push")
                 .appendAll(mode == PushMode.FORCE_WITH_LEASE ? List.of("--force-with-lease") : List.empty())
                 .append(upstream.remote())
                 .append(refspec(name, upstream))));
@@ -70,7 +67,7 @@ public final class CliBranch {
      */
     public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(Path workTree, String name,
                                                                                    RemoteBranch upstream) {
-        return GitProcess.log(workTree, git("push", "--set-upstream", upstream.remote(), refspec(name, upstream)));
+        return log(workTree, git("push", "--set-upstream", upstream.remote(), refspec(name, upstream)));
     }
 
     /**
@@ -81,11 +78,10 @@ public final class CliBranch {
      * repository is in the middle of something else, leaves that alone.
      */
     public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> pull(Path workTree) {
-        return Unfinished.runOrUndo(workTree, git("pull", "--no-edit")
-                        .withEnvironment(HashMap.of("GIT_SEQUENCE_EDITOR", ":"))
-                        .withTimeout(PULL_TIMEOUT),
-                left -> left.rebasing() ? Option.of(CliRebase.ABORT)
-                        : Option.when(left.conflicted(), CliMerge.ABORT));
+        return CliRemote.toRemote(workTree, git("pull", "--no-edit").withEnvironment(HashMap.of("GIT_SEQUENCE_EDITOR", ":")))
+                .flatMap(pull -> Unfinished.runOrUndo(workTree, pull, left -> left.rebasing()
+                        ? Option.of(CliRebase.ABORT)
+                        : Option.when(left.conflicted(), CliMerge.ABORT)));
     }
 
     /**
@@ -94,9 +90,14 @@ public final class CliBranch {
      */
     public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(Path workTree, String name,
                                                                                RemoteBranch upstream) {
-        return GitProcess.log(workTree,
-                git("fetch", upstream.remote(), Refs.head(upstream.branch()) + ":" + Refs.head(name))
-                        .withTimeout(PULL_TIMEOUT));
+        return log(workTree, git("fetch", upstream.remote(), Refs.head(upstream.branch()) + ":" + Refs.head(name)));
+    }
+
+    /**
+     * Runs {@code command}, which talks to a remote, for its effect.
+     */
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> log(Path workTree, GitCommand command) {
+        return CliRemote.toRemote(workTree, command).flatMap(remote -> GitProcess.log(workTree, remote));
     }
 
     /**

@@ -59,12 +59,12 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     public static Either<OpenError, CliGitInfoProvider> open(Path startDir) {
         return !Files.isDirectory(startDir)
                 ? Either.left(new NotARepository(startDir))
-                : Either.<OpenError, Boolean>narrow(GitProcess.read(startDir, git("rev-parse", "--is-bare-repository"),
+                : Either.<OpenError, Boolean>narrow(GitProcess.read(startDir, GitCommand.reading("rev-parse", "--is-bare-repository"),
                                 raw -> Either.right(raw.strip().equals("true")))
                         .mapLeft(error -> notARepository(error, startDir)))
                 .flatMap(bare -> bare
                         ? Either.left(new NoWorkTree(startDir))
-                        : Either.narrow(GitProcess.read(startDir, git("rev-parse", "--show-toplevel"),
+                        : Either.narrow(GitProcess.read(startDir, GitCommand.reading("rev-parse", "--show-toplevel"),
                         CliGitInfoProvider::path)))
                 .map(CliGitInfoProvider::new);
     }

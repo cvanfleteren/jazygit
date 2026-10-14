@@ -125,6 +125,6 @@ public final class CliStash {
     }
 
     private static Either<GitFailure<ProcessError>, Integer> count(Path workTree) {
-        return GitProcess.run(workTree, git("stash", "list")).map(output -> GitOutput.nonBlankLines(output.stdout()).size());
+        return GitProcess.run(workTree, GitCommand.reading("stash", "list")).map(output -> GitOutput.nonBlankLines(output.stdout()).size());
     }
 }

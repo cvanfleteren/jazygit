@@ -20,7 +20,8 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
 public final class CliRemote {
 
     // A first fetch of a big repository takes a while; a fetch that is still running is not started again.
-    private static final Duration FETCH_TIMEOUT = Duration.ofMinutes(2);
+    // Talking to a remote takes a while for a big repository, or over a slow connection.
+    private static final Duration TIMEOUT = Duration.ofMinutes(2);
     private static final String REMOTE_KEY = "remote.";
     private static final String SKIP_FETCH_ALL_KEY = ".skipfetchall";
 
@@ -31,7 +32,7 @@ public final class CliRemote {
      * The remotes {@code git fetch --all} would fetch: all of them but those with {@code skipFetchAll} set.
      */
     public static Either<ProcessError, List<String>> remotes(Path workTree) {
-        return GitProcess.read(workTree, git("remote"), raw -> Either.right(names(raw)))
+        return GitProcess.read(workTree, GitCommand.reading("remote"), raw -> Either.right(names(raw)))
                 .flatMap(remotes -> skippedByFetchAll(workTree).map(remotes::removeAll).mapLeft(GitFailure::error));
     }
 
@@ -44,7 +45,7 @@ public final class CliRemote {
      */
     private static Either<GitFailure<ProcessError>, List<String>> skippedByFetchAll(Path workTree) {
         // git config --get-regexp exits with 1, saying nothing, when no key matches.
-        return GitProcess.ask(workTree, git("config", "--bool", "--get-regexp", "^remote\\..*\\.skipfetchall$"))
+        return GitProcess.ask(workTree, GitCommand.reading("config", "--bool", "--get-regexp", "^remote\\..*\\.skipfetchall$"))
                 .map(answer -> answer.map(output -> skipped(output.stdout())).getOrElse(List.empty()));
     }
 
@@ -71,10 +72,29 @@ public final class CliRemote {
      */
     public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(Path workTree, String remote,
                                                                      Option<String> environment) {
-        return configuredSsh(workTree, environment).flatMap(ssh -> GitProcess.log(workTree,
-                git("fetch", "--quiet", "--prune", remote)
-                        .withEnvironment(HashMap.of("GIT_SSH_COMMAND", batchMode(ssh)))
-                        .withTimeout(FETCH_TIMEOUT)));
+        return toRemote(workTree, git("fetch", "--quiet", "--prune", remote), environment)
+                .flatMap(fetch -> GitProcess.log(workTree, fetch));
+    }
+
+    /**
+     * {@code command}, which talks to a remote, run so that ssh fails instead of asking for a passphrase or about
+     * an unknown host on the terminal, which the TUI owns; and with the time the network takes.
+     *
+     * @param environment the value of the environment variable {@code GIT_SSH_COMMAND}, if it is set
+     */
+    static Either<GitFailure<ProcessError>, GitCommand> toRemote(Path workTree, GitCommand command,
+                                                                 Option<String> environment) {
+        return configuredSsh(workTree, environment).map(ssh -> command
+                .withEnvironment(HashMap.of("GIT_SSH_COMMAND", batchMode(ssh)))
+                .withTimeout(TIMEOUT));
+    }
+
+    /**
+     * {@code command}, which talks to a remote, as {@link #toRemote(Path, GitCommand, Option)} runs it, with the
+     * ssh command of this process's environment.
+     */
+    static Either<GitFailure<ProcessError>, GitCommand> toRemote(Path workTree, GitCommand command) {
+        return toRemote(workTree, command, Option.of(System.getenv("GIT_SSH_COMMAND")));
     }
 
     /**
@@ -87,7 +107,7 @@ public final class CliRemote {
         // git config --get exits with 1, saying nothing, when the key is not set.
         return set.isDefined()
                 ? Either.right(set)
-                : GitProcess.ask(workTree, git("config", "--get", "core.sshCommand"))
+                : GitProcess.ask(workTree, GitCommand.reading("config", "--get", "core.sshCommand"))
                 .map(answer -> answer.map(output -> output.stdout().strip()).filter(command -> !command.isEmpty()));
     }
 

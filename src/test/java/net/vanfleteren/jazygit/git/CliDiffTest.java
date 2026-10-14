@@ -22,6 +22,17 @@ class CliDiffTest {
     Path repo;
 
     @Test
+    void showsUntrackedFilesOfARepositoryWithoutAnIndexYet() throws Exception {
+        git("init", "-q");
+        Files.writeString(repo.resolve("new.txt"), "first\n");
+
+        Diffs diffs = CliDiff.diff(repo, List.of(new FileEntry("new.txt", ChangeType.UNTRACKED))).get();
+
+        assertTrue(diffs.unstaged().text().contains("+first"), diffs.unstaged().text());
+        assertFalse(Files.exists(repo.resolve(".git/index")));
+    }
+
+    @Test
     void showsUnstagedAndUntrackedFilesWithoutTouchingTheIndex() throws Exception {
         git("init", "-q");
         git("config", "user.email", "t@t");

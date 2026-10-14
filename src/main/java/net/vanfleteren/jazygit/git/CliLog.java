@@ -37,7 +37,7 @@ public final class CliLog {
      */
     public static Either<GitFailure<ProcessError>, Option<Sha>> resolve(Path workTree, String revision) {
         // rev-parse --verify --quiet exits with 1, saying nothing, when the revision names nothing.
-        return GitProcess.ask(workTree, git("rev-parse", "--verify", "--quiet", revision + "^{commit}"))
+        return GitProcess.ask(workTree, GitCommand.reading("rev-parse", "--verify", "--quiet", revision + "^{commit}"))
                 .flatMap(answer -> answer.fold(
                         () -> Either.right(Option.none()),
                         found -> GitOutput.sha(found.stdout())

@@ -58,7 +58,7 @@ public final class CliMerge {
      * Whether the index holds conflicted files. Only asked, so not logged.
      */
     static Either<ProcessError, Boolean> conflicted(Path workTree) {
-        return GitProcess.read(workTree, git("ls-files", "--unmerged"), raw -> Either.right(!raw.isBlank()));
+        return GitProcess.read(workTree, GitCommand.reading("ls-files", "--unmerged"), raw -> Either.right(!raw.isBlank()));
     }
 
     /**
@@ -67,7 +67,7 @@ public final class CliMerge {
      */
     private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> commitStaged(Path workTree) {
         // diff --cached --quiet exits with 1, saying nothing, when something is staged.
-        return GitProcess.ask(workTree, git("diff", "--cached", "--quiet"))
+        return GitProcess.ask(workTree, GitCommand.reading("diff", "--cached", "--quiet"))
                 .flatMap(nothingStaged -> nothingStaged.isDefined()
                         ? GitFailure.nothing()
                         : GitProcess.log(workTree, git("commit", "--quiet", "--no-edit")));

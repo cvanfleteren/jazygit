@@ -50,10 +50,15 @@ import net.vanfleteren.jazygit.ui.widgets.PickDialog;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 import net.vanfleteren.jazygit.ui.widgets.TextInputDialog;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.time.Instant;
 import java.time.Duration;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -73,6 +78,8 @@ public class JazygitApp extends ToolkitApp {
     private static final int COMMITS_PERCENT = 30;
     // A border around a single blank line.
     private static final int MIN_STASH_HEIGHT = 3;
+    // Where the commands that threw are written down.
+    private static final Path BUG_LOG = Path.of(System.getProperty("java.io.tmpdir"), "jazygit-bugs.log");
     private static final Duration REFRESH_INTERVAL = Duration.ofMillis(500);
     private static final Duration FETCH_INTERVAL = Duration.ofMinutes(1);
 
@@ -117,7 +124,7 @@ public class JazygitApp extends ToolkitApp {
      * @param io    where git is called
      * @param fetch where git talks to the remotes
      */
-    private record Runtime(ExecutorService io, ExecutorService fetch, Program program) {
+    private record Runtime(ThreadPoolExecutor io, ThreadPoolExecutor fetch, Program program) {
     }
 
     public JazygitApp(Env env, StyleEngine styleEngine) {
@@ -155,9 +162,9 @@ public class JazygitApp extends ToolkitApp {
                 })
                 .getOrElse(EventResult.UNHANDLED));
         runner.focusManager().setFocus(FilesPanel.ID);
-        ExecutorService io = singleThread("git-io");
-        ExecutorService fetch = singleThread("git-fetch");
-        runtime = Option.of(new Runtime(io, fetch, Program.start(env, io, fetch, runner::runOnRenderThread)));
+        ThreadPoolExecutor io = singleThread("git-io");
+        ThreadPoolExecutor fetch = singleThread("git-fetch");
+        runtime = Option.of(new Runtime(io, fetch, Program.start(env, io, fetch, runner::runOnRenderThread, JazygitApp::logBug)));
         runner.scheduleRepeating(() -> runner.runOnRenderThread(() -> dispatch.accept(new Msg.Tick())),
                 REFRESH_INTERVAL);
         runner.scheduleRepeating(() -> runner.runOnRenderThread(() -> dispatch.accept(new FetchMsg.Tick())),
@@ -166,22 +173,36 @@ public class JazygitApp extends ToolkitApp {
         dispatch.accept(new PullRequestsMsg.Refresh());
     }
 
-    private static ExecutorService singleThread(String name) {
-        return Executors.newSingleThreadExecutor(Thread.ofPlatform().name(name).daemon().factory());
+    private static ThreadPoolExecutor singleThread(String name) {
+        return new ThreadPoolExecutor(1, 1, 0, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(),
+                Thread.ofPlatform().name(name).daemon().factory());
+    }
+
+    /**
+     * Writes how a command threw to {@link #BUG_LOG}, as the terminal is the TUI's; failing that, it is lost.
+     */
+    private static void logBug(Throwable bug) {
+        StringWriter trace = new StringWriter();
+        bug.printStackTrace(new PrintWriter(trace));
+        Try.run(() -> Files.writeString(BUG_LOG, Instant.now() + " " + trace + System.lineSeparator(),
+                StandardOpenOption.CREATE, StandardOpenOption.APPEND));
     }
 
 
     @Override
     protected TuiConfig configure() {
-        return TuiConfig.builder().mouseCapture(true).fpsOverlay(true).build();
+        return TuiConfig.builder().mouseCapture(true).build();
     }
 
     @Override
     protected void onStop() {
         runtime.forEach(running -> {
-            running.io().shutdownNow();
+            // What is queued is not started anymore. The git command that runs is not interrupted, which would
+            // kill it half-way, say in the middle of a rebase: it is given a moment to finish, and else finishes
+            // by itself once the app is gone. A fetch can stop half-way, and is not waited for.
+            running.io().getQueue().clear();
+            running.io().shutdown();
             running.fetch().shutdownNow();
-            // Let a running git call finish before the process exits; a fetch is not waited for.
             Try.of(() -> running.io().awaitTermination(2, TimeUnit.SECONDS))
                     .onFailure(InterruptedException.class, e -> Thread.currentThread().interrupt());
         });

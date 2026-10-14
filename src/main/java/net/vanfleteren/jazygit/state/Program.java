@@ -4,6 +4,7 @@ import io.vavr.control.Try;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 
 /**
  * The runtime around {@link Update}: holds the current {@link Model}, performs the commands
@@ -19,13 +20,15 @@ public final class Program {
     private final Executor io;
     private final Executor background;
     private final Executor ui;
+    private final Consumer<Throwable> bugs;
     private Model model;
 
-    private Program(Env env, Executor io, Executor background, Executor ui) {
+    private Program(Env env, Executor io, Executor background, Executor ui, Consumer<Throwable> bugs) {
         this.env = env;
         this.io = io;
         this.background = background;
         this.ui = ui;
+        this.bugs = bugs;
     }
 
     /**
@@ -38,7 +41,17 @@ public final class Program {
      * @param ui         the thread that owns the model, i.e. the render thread
      */
     public static Program start(Env env, Executor io, Executor background, Executor ui) {
-        Program program = new Program(env, io, background, ui);
+        return start(env, io, background, ui, bug -> {
+        });
+    }
+
+    /**
+     * Creates the program and starts its initial loads.
+     *
+     * @param bugs told about every command that threw, which the user is only shown the message of
+     */
+    public static Program start(Env env, Executor io, Executor background, Executor ui, Consumer<Throwable> bugs) {
+        Program program = new Program(env, io, background, ui, bugs);
         program.apply(Update.init(env.git().repositoryName()));
         return program;
     }
@@ -55,16 +68,23 @@ public final class Program {
         model = next.model();
         // Once the app stops, the executors take nothing anymore, and what is left is dropped.
         next.cmds().forEach(cmd -> Try.run(() -> (cmd.background() ? background : io).execute(() -> {
-            Msg result = perform(env, cmd);
+            Msg result = perform(env, cmd, bugs);
             Try.run(() -> ui.execute(() -> dispatch(result)));
         })));
     }
 
     static Msg perform(Env env, Cmd cmd) {
+        return perform(env, cmd, bug -> {
+        });
+    }
+
+    static Msg perform(Env env, Cmd cmd, Consumer<Throwable> bugs) {
         try {
             return cmd.run(env);
-        } catch (RuntimeException e) {
-            // A bug rather than a git failure, which commands report as a Msg; still keep the app going.
+        } catch (Throwable e) {
+            // A bug rather than a git failure, which commands report as a Msg. Still keep the app going, and
+            // always answer: a command that never does would keep its load running and its branch busy.
+            bugs.accept(e);
             return cmd.failed(new Failure.Bug(e));
         }
     }

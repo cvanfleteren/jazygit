@@ -172,7 +172,8 @@ public final class CliGitHub implements GitHub {
                 .appendAll(requested.map(login -> new Reviewer(login, ReviewerState.REQUESTED)));
         List<String> labels = lines.filter(f -> f.head().equals("label")).map(f -> f.get(1));
         List<Check> checks = lines.filter(f -> f.head().equals("check"))
-                .map(f -> new Check(f.get(1), checks(List.of(f.get(2)))));
+                // A check without a state yet, like a status nobody set, is neither passing nor failing.
+                .map(f -> new Check(f.get(1), checks(List.of(f.get(2)).filter(state -> !state.isEmpty()))));
         return lines.find(f -> f.head().equals("pr"))
                 .flatMap(f -> Try.of(() -> new PullRequestDetails(Integer.parseInt(f.get(1)), f.get(2), f.get(3),
                         PullRequestDetails.State.valueOf(f.get(4)), f.get(5).equals("true"), f.get(6), f.get(7),

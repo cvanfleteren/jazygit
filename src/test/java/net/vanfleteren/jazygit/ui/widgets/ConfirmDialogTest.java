@@ -94,6 +94,9 @@ class ConfirmDialogTest {
     void countsTheWrappedLines() {
         assertEquals(1, ConfirmDialog.lines("short", 56));
         assertEquals(2, ConfirmDialog.lines("a".repeat(40) + " " + "b".repeat(40), 56));
+        assertEquals(3, ConfirmDialog.lines("one\ntwo\nthree", 56));
+        assertEquals(3, ConfirmDialog.lines("x".repeat(120), 56));
+        assertEquals(1, ConfirmDialog.lines("", 56));
     }
 
     private ToolkitTestRunner start(ConfirmDialog<AskPopup> dialog) throws Exception {

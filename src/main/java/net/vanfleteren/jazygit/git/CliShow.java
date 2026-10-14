@@ -23,7 +23,8 @@ final class CliShow {
      */
     static Either<ProcessError, DiffText> changes(Path workTree, Sha sha) {
         return GitProcess.read(workTree,
-                git("show", "--format=", "--stat=1000", "--patch", "--no-color", "--no-ext-diff", sha.value()),
+                GitCommand.reading("show", "--format=", "--stat=1000", "--patch", "--no-color", "--no-ext-diff",
+                        "--no-show-signature", sha.value()),
                 output -> Either.right(CliDiff.truncated(output)));
     }
 }

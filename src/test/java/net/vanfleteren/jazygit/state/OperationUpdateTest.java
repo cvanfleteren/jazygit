@@ -86,6 +86,22 @@ class OperationUpdateTest {
     }
 
     @Test
+    void aCommandThatThrowsAnErrorStillAnswersSoItsBranchIsReleased() {
+        GitInfoProvider throwing = new StubGitProvider() {
+            @Override
+            public Either<GitFailure<GitError.ProcessError>, List<ExecutedCommand>> push(String branch, RemoteBranch upstream, PushMode mode) {
+                throw new StackOverflowError();
+            }
+        };
+        java.util.List<Throwable> bugs = new java.util.ArrayList<>();
+
+        Msg msg = Program.perform(new Env(throwing, StubGitHub.empty()), PUSH, bugs::add);
+
+        assertInstanceOf(Failure.Bug.class, assertInstanceOf(OperationMsg.Failed.class, msg).failure());
+        assertInstanceOf(StackOverflowError.class, bugs.getFirst());
+    }
+
+    @Test
     void anUnexpectedRefusalReportsWhatWasRefused() {
         assertEquals(Option.of("Pushing branch feature failed: boom"),
                 errorText(Update.update(loaded(), failed(PUSH, "boom")).model()));
