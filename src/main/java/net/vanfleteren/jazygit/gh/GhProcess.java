@@ -1,7 +1,5 @@
 package net.vanfleteren.jazygit.gh;
 
-import io.vavr.Tuple;
-import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.process.Exec;
@@ -20,20 +18,30 @@ final class GhProcess {
     }
 
     /**
-     * Runs {@code command} for its effect, and returns the command log.
+     * What a command that succeeded printed on its standard output, and the line it was run as.
      */
-    static Either<GhFailure, List<ExecutedCommand>> log(Path workTree, GhCommand command) {
-        return execute(workTree, command)
-                .bimap(error -> new GhFailure(error, List.of(command.executed())), stdout -> List.of(command.executed()));
+    record Output(String stdout, ExecutedCommand command) {
+
+        /**
+         * The command log of this one command.
+         */
+        List<ExecutedCommand> log() {
+            return List.of(command);
+        }
     }
 
     /**
-     * Runs {@code command} for its effect, and returns what it printed with the command log.
+     * Runs {@code command} for its effect, and returns what it printed with the line it was run as.
      */
-    static Either<GhFailure, Tuple2<String, List<ExecutedCommand>>> logWithOutput(Path workTree, GhCommand command) {
-        return execute(workTree, command)
-                .bimap(error -> new GhFailure(error, List.of(command.executed())),
-                        stdout -> Tuple.of(stdout, List.of(command.executed())));
+    static Either<GhFailure, Output> run(Path workTree, GhCommand command) {
+        return execute(workTree, command).mapLeft(error -> new GhFailure(error, List.of(command.executed())));
+    }
+
+    /**
+     * Runs {@code command} for its effect, and returns the command log.
+     */
+    static Either<GhFailure, List<ExecutedCommand>> log(Path workTree, GhCommand command) {
+        return run(workTree, command).map(Output::log);
     }
 
     /**
@@ -41,17 +49,18 @@ final class GhProcess {
      */
     static <T> Either<GhError, T> read(Path workTree, GhCommand command,
                                        Function<String, Either<GhError.UnexpectedOutput, T>> parse) {
-        return execute(workTree, command).flatMap(stdout -> Either.narrow(parse.apply(stdout)));
+        return execute(workTree, command).flatMap(output -> Either.<GhError, T>narrow(parse.apply(output.stdout())));
     }
 
-    private static Either<GhError, String> execute(Path workTree, GhCommand command) {
+    private static Either<GhError, Output> execute(Path workTree, GhCommand command) {
         return Exec.run(workTree, command.commandLine(), command.environment(), command.timeout())
-                .mapLeft(failure -> switch (failure) {
+                .<GhError>mapLeft(failure -> switch (failure) {
                     case ExecFailure.NotStarted(var cause) -> new GhError.GhUnavailable(cause);
                     case ExecFailure.TimedOut() -> new GhError.TimedOut(command.operation());
                     case ExecFailure.Interrupted() -> new GhError.Interrupted(command.operation());
                     case ExecFailure.NonZero(int exitCode, String stderr, String stdout) ->
                             new GhError.CommandFailed(Exec.explanation(stderr, stdout), exitCode);
-                });
+                })
+                .map(stdout -> new Output(stdout, command.executed()));
     }
 }

@@ -95,8 +95,8 @@ public final class CliGitHub implements GitHub {
 
     @Override
     public Either<GhFailure, Created> createPullRequest(String head, String base) {
-        return GhProcess.logWithOutput(workTree, gh("pr", "create", "--head", head, "--base", base, "--fill"))
-                .map(out -> new Created(createdNumber(out._1), out._2));
+        return GhProcess.run(workTree, gh("pr", "create", "--head", head, "--base", base, "--fill"))
+                .map(output -> new Created(createdNumber(output.stdout()), output.log()));
     }
 
     /**
