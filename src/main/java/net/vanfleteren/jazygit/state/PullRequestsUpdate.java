@@ -19,7 +19,7 @@ public final class PullRequestsUpdate {
         return switch (msg) {
             case PullRequestsMsg.Refresh() -> load(Next.of(model));
             case PullRequestsMsg.Loaded(List<PullRequest> pullRequests) -> Next.of(read(model)
-                    .withPullRequests(byHeadBranch(pullRequests)).withPullRequestsFailure(Option.none()));
+                    .withPullRequests(Option.of(byHeadBranch(pullRequests))).withPullRequestsFailure(Option.none()));
             // gh can be missing, logged out or offline, or the remote not on GitHub: then no pull requests show.
             // That is no reason to bother the user until they ask for a pull request.
             case PullRequestsMsg.LoadFailed(var failure) -> Next.of(read(model).withPullRequestsFailure(Option.of(failure)));

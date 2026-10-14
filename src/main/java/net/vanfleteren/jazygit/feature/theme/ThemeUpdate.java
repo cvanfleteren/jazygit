@@ -13,7 +13,8 @@ public final class ThemeUpdate {
 
     public static Next update(Model model, ThemeMsg msg) {
         return switch (msg) {
-            case ThemeMsg.Requested() -> Next.of(model.openPopup(new ThemePopup(model.theme())));
+            // The key works everywhere, also while a dialog is open, which it does not take away.
+            case ThemeMsg.Requested() -> Next.of(model.openPopupIfFree(new ThemePopup(model.theme())));
             case ThemeMsg.Cancelled() -> Next.of(model.withoutPopup(ThemePopup.class));
             case ThemeMsg.Chosen(String theme) -> Next.of(model.withoutPopup(ThemePopup.class).withTheme(theme));
         };

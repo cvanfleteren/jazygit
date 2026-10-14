@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit;
 
-import net.vanfleteren.jazygit.feature.branch.NewBranchMsg;
+import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.FileTree;
 import net.vanfleteren.jazygit.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.keys.Keymap;
@@ -20,8 +20,7 @@ public final class CommitKeys {
                         Binding.<FileTree>always("c", "help.files.commit", CommitMsg.Requested::new),
                         Binding.<FileTree>always("A", "help.files.amend", AmendMsg.Requested::new))
                 .add(Scopes.COMMITS,
-                        Binding.<Integer>onSelected("r", "help.commits.reword", RewordMsg.Requested::new),
-                        Binding.<Integer>onSelected("n", "help.commits.newBranch", NewBranchMsg.RequestedAtCommit::new),
-                        Binding.<Integer>onSelected("s", "help.commits.squash", SquashMsg.Requested::new));
+                        Binding.<Commit>onSelected("r", "help.commits.reword", commit -> new RewordMsg.Requested(commit.sha())),
+                        Binding.<Commit>onSelected("s", "help.commits.squash", commit -> new SquashMsg.Requested(commit.sha())));
     }
 }

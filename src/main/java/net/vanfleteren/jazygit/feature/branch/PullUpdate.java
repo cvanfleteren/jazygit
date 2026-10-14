@@ -26,8 +26,7 @@ public final class PullUpdate {
         // A branch that is busy is not pulled meanwhile. A branch without an upstream, or whose upstream was
         // deleted, has nothing to pull from.
         // A branch that is not checked out can only be fast-forwarded, which its own commits would prevent.
-        return model.branch(branch)
-                .filter(known -> !model.busy().containsKey(branch))
+        return model.idleBranch(branch)
                 .map(known -> known.upstream()
                         .map(upstream -> known.current()
                                 ? Update.start(model.clearError(), new Pull(branch))

@@ -20,13 +20,14 @@ final class Branches {
     static Option<Tuple2<String, String>> checkedOutAnd(Model model, String other) {
         return model.currentBranch()
                 .filter(current -> !current.name().equals(other))
-                .flatMap(current -> model.branch(other).map(found -> Tuple.of(current.name(), found.name())));
+                .flatMap(current -> model.idleBranch(current.name()))
+                .flatMap(current -> model.idleBranch(other).map(found -> Tuple.of(current.name(), found.name())));
     }
 
     /**
-     * Whether {@code name} is a known branch that is not checked out.
+     * Whether {@code name} is a known branch that is not checked out, and that no operation runs on.
      */
-    static boolean isOtherBranch(Model model, String name) {
-        return model.branch(name).exists(branch -> !branch.current());
+    static boolean isOtherIdleBranch(Model model, String name) {
+        return model.idleBranch(name).exists(branch -> !branch.current());
     }
 }

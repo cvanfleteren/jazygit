@@ -19,6 +19,15 @@ class ThemeUpdateTest {
     }
 
     @Test
+    void requestWhileADialogIsOpenLeavesThatDialogOpen() {
+        Model typing = TestModels.loaded().openPopup(new net.vanfleteren.jazygit.feature.commit.CommitPopup());
+
+        Model model = Update.update(typing, new ThemeMsg.Requested()).model();
+
+        assertEquals(typing.popup(), model.popup());
+    }
+
+    @Test
     void choosingAThemeClosesThePopupAndSwitches() {
         Model open = Update.update(TestModels.loaded(), new ThemeMsg.Requested()).model();
 

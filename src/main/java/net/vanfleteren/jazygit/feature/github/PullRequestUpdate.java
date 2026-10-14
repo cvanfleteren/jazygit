@@ -43,7 +43,7 @@ public final class PullRequestUpdate {
                 // reading the pull requests then gives its checks and review.
                 Next done = OperationUpdate.update(model, new OperationMsg.Succeeded(cmd, commands));
                 Model shown = pullRequest
-                        .map(pr -> done.model().withPullRequests(done.model().pullRequests().put(pr.headBranch(), pr)))
+                        .map(pr -> done.model().withPullRequests(done.model().pullRequests().map(open -> open.put(pr.headBranch(), pr))))
                         .getOrElse(done.model());
                 // A read that is still running may have missed it, so this one is started anyway. GitHub may have
                 // changed the remote too, which a fetch brings in.
@@ -66,9 +66,10 @@ public final class PullRequestUpdate {
                 // Done like any operation. The pull request is no longer open, which reading them again confirms;
                 // a merge changed the base branch on the remote, which a fetch brings in.
                 Next done = OperationUpdate.update(model, new OperationMsg.Succeeded(cmd, commands));
-                Model ended = done.model().withPullRequests(
-                        done.model().pullRequests().filterValues(pr -> pr.number() != cmd.number()));
-                yield FetchUpdate.requested(PullRequestsUpdate.load(new Next(ended, done.cmds())));
+                Model ended = done.model().withPullRequests(done.model().pullRequests()
+                        .map(open -> open.filterValues(pr -> pr.number() != cmd.number())));
+                // A read that is still running may have missed it, and would show it open again.
+                yield FetchUpdate.requested(PullRequestsUpdate.loadAnyway(new Next(ended, done.cmds())));
             }
             case PullRequestMsg.InfoClosed() -> Next.of(model.withoutPopup(PullRequestPopup.class));
         };
@@ -90,14 +91,15 @@ public final class PullRequestUpdate {
      * which branch it merges into.
      */
     private static Next requested(Model model, String branch) {
-        return model.branch(branch)
-                .filter(known -> !model.busy().containsKey(branch))
+        return model.idleBranch(branch)
                 .map(known -> model.pullRequest(known)
                         .map(pr -> Next.of(model.openPopup(PullRequestPopup.loading(branch, pr)).clearError(),
                                 new LoadPullRequestDetails(pr.number())))
-                        .getOrElse(() -> model.pullRequestsFailure().isDefined()
-                                // Without the pull requests it is unknown whether there is one to open.
-                                ? Next.of(model.fail(new AppError.PullRequestsUnavailable(model.pullRequestsFailure().get())))
+                        // Without the pull requests it is unknown whether there is one to open.
+                        .getOrElse(() -> model.pullRequestsFailure().isDefined() || model.pullRequests().isEmpty()
+                                ? Next.of(model.fail(model.pullRequestsFailure()
+                                        .<AppError>map(AppError.PullRequestsUnavailable::new)
+                                        .getOrElse(AppError.PullRequestsNotRead::new)))
                                 : known.remoteUpstream().isEmpty() || known.ahead() > 0
                                 ? Next.of(model.fail(new AppError.NotPushed(branch)))
                                 : Next.of(model.openPopup(new BasePopup(branch, bases(model, branch))).clearError())))

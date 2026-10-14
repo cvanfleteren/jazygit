@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.feature.commit.RewordMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.commit.RewordMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.commit.RewordMsg.Requested;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -20,7 +21,7 @@ public final class RewordUpdate {
 
     public static Next update(Model model, RewordMsg msg) {
         return switch (msg) {
-            case Requested(int index) -> requested(model, index);
+            case Requested(var sha) -> requested(model, sha);
             case Cancelled() -> Next.of(model.withoutPopup(RewordPopup.class));
             case Confirmed(CommitMessage message) -> confirmed(model, message.stripped());
         };
@@ -29,8 +30,8 @@ public final class RewordUpdate {
     /**
      * Any commit can be reworded; the dialog starts out with its message.
      */
-    private static Next requested(Model model, int index) {
-        return model.commitAt(index)
+    private static Next requested(Model model, Sha sha) {
+        return model.commit(sha)
                 .map(commit -> Next.of(model.clearError().openPopup(new RewordPopup(commit))))
                 .getOrElse(() -> Next.of(model));
     }

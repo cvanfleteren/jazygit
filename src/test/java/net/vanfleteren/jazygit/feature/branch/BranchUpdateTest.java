@@ -46,10 +46,32 @@ class BranchUpdateTest {
 
     @Test
     void checkoutRefusedForLocalChangesAsksToStashThem() {
-        Next next = Update.update(loaded(), new CheckoutMsg.NeedsStash("feature"));
+        Next next = Update.update(loaded(), new CheckoutMsg.NeedsStash(new BranchCmd.Checkout("feature"),
+                net.vanfleteren.jazygit.git.StubGitProvider.executed("git checkout --quiet feature --")));
 
-        assertEquals(List.of(), next.cmds());
         assertEquals(Option.of(new StashCheckoutPopup("feature")), next.model().popup(StashCheckoutPopup.class));
+        // The checkout that ran is logged like any other.
+        assertEquals(List.of("git checkout --quiet feature --"),
+                next.model().commandLog().flatMap(entry -> entry.commands()).map(command -> command.line()));
+    }
+
+    @Test
+    void theOfferToStashDoesNotTakeAwayADialogTheUserIsTypingIn() {
+        Model typing = Update.update(tracking(), new NewBranchMsg.Requested("main")).model();
+
+        Model next = Update.update(typing, new CheckoutMsg.NeedsStash(new BranchCmd.Checkout("feature"), List.empty())).model();
+
+        assertEquals(typing.popup(), next.popup());
+    }
+
+    @Test
+    void aBusyBranchIsNotCheckedOutMergedRebasedOrBranchedFrom() {
+        Model pushing = tracking().withBusyBranch("feature", net.vanfleteren.jazygit.state.Operation.PUSH);
+
+        assertEquals(List.of(), Update.update(pushing, new CheckoutMsg.Requested("feature")).cmds());
+        assertEquals(Option.none(), Update.update(pushing, new MergeMsg.Requested("feature")).model().popup());
+        assertEquals(Option.none(), Update.update(pushing, new RebaseMsg.Requested("feature")).model().popup());
+        assertEquals(Option.none(), Update.update(pushing, new NewBranchMsg.Requested("feature")).model().popup());
     }
 
     @Test
@@ -62,7 +84,7 @@ class BranchUpdateTest {
 
     @Test
     void confirmingTheStashChecksOutThroughAStashAndClosesThePopup() {
-        Model asked = Update.update(loaded(), new CheckoutMsg.NeedsStash("feature")).model();
+        Model asked = Update.update(loaded(), new CheckoutMsg.NeedsStash(new BranchCmd.Checkout("feature"), List.empty())).model();
 
         Next next = Update.update(asked, new CheckoutMsg.StashConfirmed());
 
@@ -72,7 +94,7 @@ class BranchUpdateTest {
 
     @Test
     void cancellingTheStashClosesThePopupWithoutCheckingOut() {
-        Model asked = Update.update(loaded(), new CheckoutMsg.NeedsStash("feature")).model();
+        Model asked = Update.update(loaded(), new CheckoutMsg.NeedsStash(new BranchCmd.Checkout("feature"), List.empty())).model();
 
         Next next = Update.update(asked, new CheckoutMsg.StashCancelled());
 
@@ -302,8 +324,8 @@ class BranchUpdateTest {
         Model model = Update.update(loaded(), new net.vanfleteren.jazygit.state.LoadMsg.CommitsLoaded(List.of(commit))).model();
 
         assertEquals(Option.of(new NewBranchPopup("abc1234567", "abc1234")),
-                Update.update(model, new NewBranchMsg.RequestedAtCommit(0)).model().popup());
-        assertEquals(Option.none(), Update.update(model, new NewBranchMsg.RequestedAtCommit(5)).model().popup());
+                Update.update(model, new NewBranchMsg.RequestedAtCommit(commit.sha())).model().popup());
+        assertEquals(Option.none(), Update.update(model, new NewBranchMsg.RequestedAtCommit(new Sha("elsewhere"))).model().popup());
     }
 
     @Test

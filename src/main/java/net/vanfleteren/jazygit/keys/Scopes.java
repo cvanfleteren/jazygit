@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.keys;
 
+import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.FileTree;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.keys.Keymap.Scope;
@@ -13,8 +14,8 @@ public final class Scopes {
     public static final Scope<FileTree> FILES = new Scope<>("files", "panel.files.title");
     /** The name of the selected branch. */
     public static final Scope<String> BRANCHES = new Scope<>("branches", "panel.branches.title");
-    /** The index of the selected commit. */
-    public static final Scope<Integer> COMMITS = new Scope<>("commits", "panel.commits.title");
+    /** The selected commit. */
+    public static final Scope<Commit> COMMITS = new Scope<>("commits", "panel.commits.title");
     /** The selected stash. */
     public static final Scope<Stash> STASH = new Scope<>("stash", "panel.stash.title");
 

@@ -38,8 +38,8 @@ import net.vanfleteren.jazygit.git.model.Stash;
  *                       operation: they show a
  *                       spinner, and take no other operation until it is done
  * @param fetching       the background fetch from the remotes that is running, if any; the next one waits
- * @param pullRequests   the open pull requests on GitHub, by the remote branch they merge from; empty when
- *                       they could not be read
+ * @param pullRequests   the open pull requests on GitHub, by the remote branch they merge from; none until they
+ *                       were read once, and the ones read last when reading them again failed
  * @param pullRequestsFailure why the pull requests could not be read the last time, if they could not
  * @param readingPullRequests how many reads of the pull requests are running; the line at the bottom says so
  * @param commandLog     the mutating git commands that were executed, oldest first
@@ -61,7 +61,7 @@ public record Model(String repositoryName,
                     Option<AppError> error,
                     Map<String, Operation> busy,
                     Option<Fetching> fetching,
-                    Map<String, PullRequest> pullRequests,
+                    Option<Map<String, PullRequest>> pullRequests,
                     Option<Failure> pullRequestsFailure,
                     int readingPullRequests,
                     List<LogEntry> commandLog,
@@ -75,7 +75,7 @@ public record Model(String repositoryName,
     public static Model initial(String repositoryName) {
         return new Model(repositoryName, Loadable.loading(), Loadable.loading(), Loadable.loading(),
                 Loadable.loading(), Option.none(),
-                Option.none(), Option.none(), HashSet.empty(), Option.none(), HashMap.empty(), Option.none(), HashMap.empty(), Option.none(), 0, List.empty(),
+                Option.none(), Option.none(), HashSet.empty(), Option.none(), HashMap.empty(), Option.none(), Option.none(), Option.none(), 0, List.empty(),
                 Option.none(), DEFAULT_THEME, Option.none());
     }
 
@@ -87,10 +87,10 @@ public record Model(String repositoryName,
     }
 
     /**
-     * The commit at {@code index} in the log of HEAD, if it is loaded and has one there.
+     * The commit {@code sha} in the log of HEAD, if the log is loaded and has it.
      */
-    public Option<Commit> commitAt(int index) {
-        return commits.toOption().flatMap(loaded -> loaded.lift().apply(index));
+    public Option<Commit> commit(Sha sha) {
+        return commits.toOption().flatMap(loaded -> loaded.find(commit -> commit.sha().equals(sha)));
     }
 
     /**
@@ -98,6 +98,14 @@ public record Model(String repositoryName,
      */
     public Option<Branch> branch(String name) {
         return branches.toOption().flatMap(loaded -> loaded.find(branch -> branch.name().equals(name)));
+    }
+
+    /**
+     * The local branch {@code name}, if it is one and no operation runs on it: a branch that is being pushed,
+     * pulled or deleted takes no other operation meanwhile.
+     */
+    public Option<Branch> idleBranch(String name) {
+        return branch(name).filter(known -> !busy.containsKey(name));
     }
 
     /**
@@ -112,10 +120,10 @@ public record Model(String repositoryName,
      * the branch of the same name.
      */
     public Option<PullRequest> pullRequest(Branch branch) {
-        return branch.remoteUpstream()
+        return pullRequests.flatMap(open -> branch.remoteUpstream()
                 .map(upstream -> upstream.branch().branch())
-                .flatMap(pullRequests::get)
-                .orElse(() -> pullRequests.get(branch.name()));
+                .flatMap(open::get)
+                .orElse(() -> open.get(branch.name())));
     }
 
     /**
@@ -153,6 +161,14 @@ public record Model(String repositoryName,
      */
     public Model openPopup(Popup popup) {
         return withPopup(Option.of(popup));
+    }
+
+    /**
+     * This model with {@code popup} open, unless another one is: what comes up by itself, like the outcome of a
+     * command, does not take away a dialog the user is typing in.
+     */
+    public Model openPopupIfFree(Popup popup) {
+        return this.popup.isDefined() ? this : openPopup(popup);
     }
 
     /**

@@ -27,7 +27,7 @@ class StashCheckoutDialogTest {
     private final Model open = openModel();
 
     private static Model openModel() {
-        return Update.update(TestModels.loaded(), new CheckoutMsg.NeedsStash("feature")).model();
+        return Update.update(TestModels.loaded(), new CheckoutMsg.NeedsStash(new BranchCmd.Checkout("feature"), List.empty())).model();
     }
 
     @Test

@@ -100,6 +100,14 @@ public final class Update {
                 .getOrElse(() -> new Next(model, cmds));
     }
 
+    /**
+     * What {@code then} makes of the changed files, once the status is loaded; until then, or when it failed to
+     * load, nothing happens, as it is unknown what changed.
+     */
+    public static Next withFiles(Model model, Function<List<FileEntry>, Next> then) {
+        return model.status().toOption().map(RepoStatus::files).map(then).getOrElse(() -> Next.of(model));
+    }
+
     public static List<FileEntry> files(Model model) {
         return model.status().toOption().map(RepoStatus::files).getOrElse(List.empty());
     }

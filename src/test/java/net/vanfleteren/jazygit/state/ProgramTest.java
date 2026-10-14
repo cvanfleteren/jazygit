@@ -394,7 +394,7 @@ class ProgramTest {
     void rewordingTheLastCommit() {
         settle();
 
-        program.dispatch(new RewordMsg.Requested(0));
+        program.dispatch(new RewordMsg.Requested(program.model().commits().toOption().get().head().sha()));
         program.dispatch(new RewordMsg.Confirmed(new CommitMessage("new summary", "new body")));
         settle();
 

@@ -33,7 +33,7 @@ class SquashDialogTest {
         Commit below = new Commit(new Sha("c1"), "Ada", "ada@example.com", Instant.EPOCH, "Below", "");
         Commit selected = new Commit(new Sha("c2"), "Ada", "ada@example.com", Instant.EPOCH, "Selected", "", List.of(new Sha("c1")));
         Model model = Update.update(TestModels.loaded(), new LoadMsg.CommitsLoaded(List.of(selected, below))).model();
-        return Update.update(model, new SquashMsg.Requested(0)).model();
+        return Update.update(model, new SquashMsg.Requested(selected.sha())).model();
     }
 
     @Test

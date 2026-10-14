@@ -32,9 +32,9 @@ public final class AmendUpdate {
      * Asks for confirmation, when the last commit has something to be amended with.
      */
     private static Next requested(Model model) {
-        return Update.files(model).isEmpty()
+        return Update.withFiles(model, files -> files.isEmpty()
                 ? Next.of(model.fail(new AppError.NothingToAmend()))
-                : Next.of(model.clearError().openPopup(new AmendPopup()));
+                : Next.of(model.clearError().openPopup(new AmendPopup())));
     }
 
     /**

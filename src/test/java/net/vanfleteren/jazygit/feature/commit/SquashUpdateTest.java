@@ -38,7 +38,7 @@ class SquashUpdateTest {
     void requestOpensTheQuestionWithTheCommitAndItsParent() {
         Model model = withCommits(TIP, MIDDLE, ROOT);
 
-        Next next = Update.update(model, new SquashMsg.Requested(0));
+        Next next = Update.update(model, new SquashMsg.Requested(TIP.sha()));
 
         assertEquals(Option.of(new SquashPopup(TIP, MIDDLE)), next.model().popup(SquashPopup.class));
         assertEquals(List.of(), next.cmds());
@@ -48,26 +48,26 @@ class SquashUpdateTest {
     void theFirstCommitHasNothingToSquashInto() {
         Model model = withCommits(MIDDLE, ROOT);
 
-        assertEquals(Option.none(), Update.update(model, new SquashMsg.Requested(1)).model().popup(SquashPopup.class));
+        assertEquals(Option.none(), Update.update(model, new SquashMsg.Requested(ROOT.sha())).model().popup(SquashPopup.class));
     }
 
     @Test
     void aMergeCannotBeSquashed() {
         Model model = withCommits(MERGE, TIP, MIDDLE, ROOT);
 
-        assertEquals(Option.none(), Update.update(model, new SquashMsg.Requested(0)).model().popup(SquashPopup.class));
+        assertEquals(Option.none(), Update.update(model, new SquashMsg.Requested(MERGE.sha())).model().popup(SquashPopup.class));
     }
 
     @Test
-    void anUnknownIndexDoesNothing() {
+    void anUnknownCommitDoesNothing() {
         Model model = withCommits(TIP, MIDDLE, ROOT);
 
-        assertEquals(Option.none(), Update.update(model, new SquashMsg.Requested(7)).model().popup(SquashPopup.class));
+        assertEquals(Option.none(), Update.update(model, new SquashMsg.Requested(new Sha("elsewhere"))).model().popup(SquashPopup.class));
     }
 
     @Test
     void confirmingClosesThePopupAndSquashes() {
-        Model open = Update.update(withCommits(TIP, MIDDLE, ROOT), new SquashMsg.Requested(0)).model();
+        Model open = Update.update(withCommits(TIP, MIDDLE, ROOT), new SquashMsg.Requested(TIP.sha())).model();
 
         Next next = Update.update(open, new SquashMsg.Confirmed());
 
@@ -77,7 +77,7 @@ class SquashUpdateTest {
 
     @Test
     void cancellingClosesThePopup() {
-        Model open = Update.update(withCommits(TIP, MIDDLE, ROOT), new SquashMsg.Requested(0)).model();
+        Model open = Update.update(withCommits(TIP, MIDDLE, ROOT), new SquashMsg.Requested(TIP.sha())).model();
 
         Next next = Update.update(open, new SquashMsg.Cancelled());
 

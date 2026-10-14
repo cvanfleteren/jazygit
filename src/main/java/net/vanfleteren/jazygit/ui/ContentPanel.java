@@ -97,6 +97,9 @@ public final class ContentPanel {
         private final Function<String, Text> styling;
         // What is shown, which only changes the text and the scroll position when it changes.
         private Object key = "";
+        // How the text of what is shown is built, and the theme it was built in.
+        private Supplier<Text> text = Text::empty;
+        private String theme = "";
 
         ScrollArea(String id, Option<String> pane, Function<String, Text> styling, BooleanSupplier leaveScrollArea) {
             this.id = id;
@@ -130,10 +133,22 @@ public final class ContentPanel {
         ScrollArea with(Object newKey, Supplier<Text> text) {
             if (!newKey.equals(key)) {
                 key = newKey;
+                this.text = text;
                 element.text(text.get());
                 element.state().scrollToTop();
             }
             return this;
+        }
+
+        /**
+         * Builds the text shown again when the theme is not {@code current} anymore, as its colours are
+         * resolved when it is built; the scroll position stays.
+         */
+        void restyle(String current) {
+            if (!current.equals(theme)) {
+                theme = current;
+                element.text(text.get());
+            }
         }
 
         boolean hasContent() {
@@ -145,11 +160,17 @@ public final class ContentPanel {
         }
     }
 
+    /**
+     * What goes with the pane that has the focus, {@code focusedId}; while a popup has it, what goes with the
+     * pane the popup was opened from.
+     */
     public StyledElement<?> render(Model model, String focusedId) {
-        if (BranchesPanel.ID.equals(focusedId)) {
+        List.of(stagedArea, unstagedArea, commitArea, logArea).forEach(area -> area.restyle(model.theme()));
+        String pane = model.popup().isDefined() ? model.focusedPane().getOrElse(focusedId) : focusedId;
+        if (BranchesPanel.ID.equals(pane)) {
             return branchLogView(model);
         }
-        if (CommitsPanel.ID.equals(focusedId) || COMMIT_AREA_ID.equals(focusedId)) {
+        if (CommitsPanel.ID.equals(pane) || COMMIT_AREA_ID.equals(pane)) {
             return commitDiffView(model);
         }
         return fileDiffView(model);

@@ -63,6 +63,27 @@ class CommitsPanelTest {
     }
 
     @Test
+    void theSelectionFollowsItsCommitWhenANewOneComesOnTop() throws Exception {
+        List<Commit> log = List.of(commit("s1"), commit("s0"));
+        java.util.concurrent.atomic.AtomicReference<Model> model = new java.util.concurrent.atomic.AtomicReference<>(
+                TestModels.loaded(new SampleData()).withCommits(new Loadable.Loaded<>(log)));
+        CommitsPanel panel = new CommitsPanel(msg -> { }, () -> { });
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model.get(), CommitsPanel.ID))) {
+            testRunner.runner().focusManager().setFocus(CommitsPanel.ID);
+            testRunner.pilot().pause();
+            testRunner.pilot().press(KeyCode.DOWN);
+            testRunner.pilot().pause();
+            model.set(model.get().withCommits(new Loadable.Loaded<>(log.prepend(commit("s2")))));
+            RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), CommitsPanel.ID));
+
+            assertEquals(commit("s0").sha(), panel.selectedCommit().get().sha());
+
+            testRunner.pilot().quit();
+        }
+    }
+
+    @Test
     void theListScrollsAlongWithTheSelection() throws Exception {
         List<Commit> log = List.range(0, 80).map(i -> commit("s" + i));
         Model model = TestModels.loaded(new SampleData()).withCommits(new Loadable.Loaded<>(log));

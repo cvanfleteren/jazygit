@@ -89,7 +89,7 @@ class CommitDialogTest {
     @Test
     void rewordStartsOutWithTheCurrentMessageAndConfirmsIt() throws Exception {
         CommitDialog reword = CommitDialog.reword(dispatched::add);
-        Model rewording = Update.update(TestModels.loaded(new SampleData()), new RewordMsg.Requested(0)).model();
+        Model rewording = Update.update(TestModels.loaded(new SampleData()), new RewordMsg.Requested(new SampleData().commits().get().head().sha())).model();
         Commit last = rewording.popup(RewordPopup.class).get().commit();
 
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> reword.render(rewording).get())) {
@@ -106,7 +106,7 @@ class CommitDialogTest {
     @Test
     void typingInTheRewordDialogAddsToTheEndOfTheCurrentSummary() throws Exception {
         CommitDialog reword = CommitDialog.reword(dispatched::add);
-        Model rewording = Update.update(TestModels.loaded(new SampleData()), new RewordMsg.Requested(0)).model();
+        Model rewording = Update.update(TestModels.loaded(new SampleData()), new RewordMsg.Requested(new SampleData().commits().get().head().sha())).model();
         Commit last = rewording.popup(RewordPopup.class).get().commit();
 
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> reword.render(rewording).get())) {

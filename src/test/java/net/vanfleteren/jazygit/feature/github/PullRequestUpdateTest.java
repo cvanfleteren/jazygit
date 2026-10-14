@@ -65,10 +65,24 @@ class PullRequestUpdateTest {
         }, StubGitHub.empty());
     }
 
+    /**
+     * The branches, and no pull request from any of them.
+     */
     private static Model model() {
         // The default branch is listed last, to see it offered first.
-        return Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(RELEASE, PUSHED, UNPUSHED, AHEAD, MAIN)))
+        Model branches = Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(RELEASE, PUSHED, UNPUSHED, AHEAD, MAIN)))
                 .model();
+        return Update.update(branches, new PullRequestsMsg.Loaded(List.empty())).model();
+    }
+
+    @Test
+    void beforeThePullRequestsAreReadNoneIsCreated() {
+        Model starting = Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(PUSHED, MAIN))).model();
+
+        Next asked = Update.update(starting, new PullRequestMsg.Requested("feature"));
+
+        assertEquals(Option.of(new AppError.PullRequestsNotRead()), asked.model().error());
+        assertEquals(List.empty(), asked.cmds());
     }
 
     @Test
@@ -167,6 +181,18 @@ class PullRequestUpdateTest {
     }
 
     @Test
+    void aMergedPullRequestIsReadAgainEvenWhileAnEarlierReadRuns() {
+        MergePullRequest cmd = new MergePullRequest("feature", 42, MergeMethod.MERGE);
+        // The running read started before the merge, and would list the pull request as still open.
+        Model merging = withPr().withBusyBranch("feature", Operation.MERGE_PR).withReadingPullRequests(1);
+
+        Next done = Update.update(merging, cmd.run(new Env(new StubGitProvider() {
+        }, StubGitHub.empty())));
+
+        assertTrue(done.cmds().contains(new LoadPullRequests()), done.cmds().toString());
+    }
+
+    @Test
     void aMergedPullRequestIsNoLongerListedAndThePullRequestsAreReadAgain() {
         MergePullRequest cmd = new MergePullRequest("feature", 42, MergeMethod.MERGE);
         Model merging = withPr().withBusyBranch("feature", Operation.MERGE_PR);
@@ -174,7 +200,7 @@ class PullRequestUpdateTest {
         Next done = Update.update(merging, cmd.run(new Env(new StubGitProvider() {
         }, StubGitHub.empty())));
 
-        assertEquals(Option.none(), done.model().pullRequests().get("feature"));
+        assertEquals(Option.none(), done.model().pullRequests().flatMap(open -> open.get("feature")));
         assertEquals(Option.none(), done.model().busy().get("feature"));
         assertTrue(done.cmds().contains(new LoadPullRequests()), done.cmds().toString());
         // The merge changed the base branch on the remote.
@@ -208,7 +234,7 @@ class PullRequestUpdateTest {
         assertEquals(Option.of("Merging the pull request of feature failed: Pull request #42 is not mergeable: "
                 + "the base branch policy prohibits the merge."), errorText(failed.model()));
         assertEquals(Option.none(), failed.model().busy().get("feature"));
-        assertEquals(Option.of(FEATURE_PR), failed.model().pullRequests().get("feature"));
+        assertEquals(Option.of(FEATURE_PR), failed.model().pullRequests().flatMap(open -> open.get("feature")));
     }
 
     @Test
@@ -279,7 +305,7 @@ class PullRequestUpdateTest {
 
         Next done = Update.update(creating, new PullRequestMsg.Created(cmd, Option.of(created), List.empty()));
 
-        assertEquals(Option.of(created), done.model().pullRequests().get("feature"));
+        assertEquals(Option.of(created), done.model().pullRequests().flatMap(open -> open.get("feature")));
         assertTrue(done.cmds().contains(new LoadPullRequests()));
     }
 

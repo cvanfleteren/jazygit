@@ -99,6 +99,18 @@ final class LoadableList<T> {
          * @return the index to select in {@code next}
          */
         int apply(T previous, T next, int selected);
+
+        /**
+         * The selection follows its item, as {@code key} identifies it, when items are added or removed before
+         * it; when it is gone, the selection stays where it was.
+         */
+        static <E, K> Reselect<List<E>> following(Function<E, K> key) {
+            return (previous, next, selected) -> previous.lift().apply(selected)
+                    .map(key)
+                    .map(item -> next.indexWhere(candidate -> key.apply(candidate).equals(item)))
+                    .filter(index -> index >= 0)
+                    .getOrElse(selected);
+        }
     }
 
     LoadableList(String title, String id, Function<T, List<Row>> items) {

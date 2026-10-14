@@ -74,6 +74,16 @@ class ContentPanelTest {
     }
 
     @Test
+    void aPopupOpenedFromTheBranchesKeepsShowingTheBranchLog() throws Exception {
+        Model withPopup = model.withFocusedPane(io.vavr.control.Option.of(BranchesPanel.ID))
+                .openPopup(new net.vanfleteren.jazygit.feature.help.HelpPopup(BranchesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(withPopup, "help"))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> content.render(withPopup, "help"));
+            assertTrue(screen.contains("Log: feature/initial-layout"), screen);
+        }
+    }
+
+    @Test
     void branchesFocusedShowsLoadingBeforeABranchIsSelected() throws Exception {
         Model unselected = TestModels.loaded(new SampleData());
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(unselected, BranchesPanel.ID))) {

@@ -35,8 +35,7 @@ public final class PushUpdate {
         // A branch that is being pushed or deleted is not pushed meanwhile. A branch without an upstream on a
         // remote (none, one that is gone, or a local branch, which a push would move) is pushed where the user
         // says. Pushing a diverged branch needs a force push, which the user must confirm.
-        return model.branch(branch)
-                .filter(known -> !model.busy().containsKey(branch))
+        return model.idleBranch(branch)
                 .map(known -> known.remoteUpstream()
                         .map(upstream -> known.behind() > 0
                                 ? Next.of(model.openPopup(new ForcePushPopup(branch)).clearError())

@@ -28,6 +28,7 @@ public final class ErrorText {
                     Messages.get("error.pull.upstreamGone", branch, upstream);
             case AppError.UnpushedCommits(String branch) -> Messages.get("error.fastForward.unpushed", branch);
             case AppError.NotPushed(String branch) -> Messages.get("error.pullRequest.notPushed", branch);
+            case AppError.PullRequestsNotRead() -> Messages.get("error.pullRequest.notRead");
             case AppError.PullRequestsUnavailable(Failure failure) ->
                     Messages.get("error.pullRequest.unavailable", of(failure));
         };

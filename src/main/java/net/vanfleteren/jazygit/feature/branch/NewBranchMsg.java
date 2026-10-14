@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -18,9 +19,9 @@ public sealed interface NewBranchMsg extends Msg {
     }
 
     /**
-     * The user asked for a new branch starting at the commit at {@code index} in the commit log.
+     * The user asked for a new branch starting at the commit {@code sha}.
      */
-    record RequestedAtCommit(int index) implements NewBranchMsg {
+    record RequestedAtCommit(Sha sha) implements NewBranchMsg {
     }
 
     record Cancelled() implements NewBranchMsg {

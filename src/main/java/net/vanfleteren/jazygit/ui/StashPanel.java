@@ -20,7 +20,8 @@ public final class StashPanel {
     public static final String ID = Scopes.STASH.id();
 
     private final LoadableList<List<Stash>> list = new LoadableList<>(Messages.get("panel.stash.title"), ID,
-            stashes -> stashes.zipWithIndex((stash, index) -> LoadableList.Row.of(row(index, stash))));
+            stashes -> stashes.zipWithIndex((stash, index) -> LoadableList.Row.of(row(index, stash))),
+            LoadableList.Reselect.following(Stash::sha));
     private final Keymap keymap = Keymap.standard();
 
     /**

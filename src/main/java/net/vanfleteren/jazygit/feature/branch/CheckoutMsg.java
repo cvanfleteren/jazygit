@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import io.vavr.collection.List;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -18,9 +20,10 @@ public sealed interface CheckoutMsg extends Msg {
     }
 
     /**
-     * Git refused to check out {@code branch} because uncommitted changes would be overwritten.
+     * Git refused the checkout {@code cmd}, which ran {@code commands}, because uncommitted changes would be
+     * overwritten.
      */
-    record NeedsStash(String branch) implements CheckoutMsg {
+    record NeedsStash(BranchCmd.Checkout cmd, List<ExecutedCommand> commands) implements CheckoutMsg {
     }
 
     /**

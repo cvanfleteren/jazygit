@@ -23,7 +23,7 @@ public class CommitsPanel {
     public static final String ID = Scopes.COMMITS.id();
 
     private final LoadableList<List<Commit>> list = new LoadableList<>(Messages.get("panel.commits.title"), ID,
-            commits -> rows(CommitGraph.layout(commits)));
+            commits -> rows(CommitGraph.layout(commits)), LoadableList.Reselect.following(Commit::sha));
     private final Keymap keymap = Keymap.standard();
 
     /**
@@ -33,7 +33,7 @@ public class CommitsPanel {
     public CommitsPanel(Consumer<Msg> dispatch, Runnable openCommit) {
         list.onKey(event -> event.code() == KeyCode.ENTER && selectedCommit().isDefined()
                 ? Option.of(openCommit)
-                : PaneKeys.sending(keymap.handle(Scopes.COMMITS, event, Option.of(selectedIndex())), dispatch));
+                : PaneKeys.sending(keymap.handle(Scopes.COMMITS, event, selectedCommit()), dispatch));
     }
 
     /**

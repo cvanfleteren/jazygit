@@ -67,6 +67,13 @@ public sealed interface AppError {
     }
 
     /**
+     * A pull request was asked for before the pull requests were read, so it is unknown whether the branch has
+     * one yet.
+     */
+    record PullRequestsNotRead() implements AppError {
+    }
+
+    /**
      * A pull request was asked for, but the pull requests could not be read, so it is unknown whether the branch
      * has one.
      */

@@ -120,7 +120,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
         public Msg run(Env env) {
             return env.git().checkout(branch).fold(
                     failure -> failure.error() instanceof GitError.LocalChanges
-                            ? new CheckoutMsg.NeedsStash(branch)
+                            ? new CheckoutMsg.NeedsStash(this, failure.commands())
                             : failedWith(failure),
                     this::succeeded);
         }

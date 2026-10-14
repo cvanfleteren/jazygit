@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.feature.commit;
 import net.vanfleteren.jazygit.state.Update;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Sha;
-import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.commit.CommitCmd.Squash;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.state.Model;
@@ -19,7 +18,7 @@ public final class SquashUpdate {
 
     public static Next update(Model model, SquashMsg msg) {
         return switch (msg) {
-            case SquashMsg.Requested(int index) -> requested(model, index);
+            case SquashMsg.Requested(Sha sha) -> requested(model, sha);
             case SquashMsg.Cancelled() -> Next.of(model.withoutPopup(SquashPopup.class));
             case SquashMsg.Confirmed() ->
                     Update.confirm(model, SquashPopup.class, popup -> Option.of(new Squash(popup.commit().sha())));
@@ -30,10 +29,10 @@ public final class SquashUpdate {
      * A commit with exactly one parent can be squashed into it: a root commit has nothing to squash into, and
      * a merge has no single commit below it.
      */
-    private static Next requested(Model model, int index) {
-        return model.commitAt(index)
+    private static Next requested(Model model, Sha sha) {
+        return model.commit(sha)
                 .flatMap(commit -> onlyParent(commit)
-                        .flatMap(parent -> model.commits().getOrElse(List.empty()).find(c -> c.sha().equals(parent)))
+                        .flatMap(model::commit)
                         .map(into -> new SquashPopup(commit, into)))
                 .map(popup -> Next.of(model.clearError().openPopup(popup)))
                 .getOrElse(() -> Next.of(model));

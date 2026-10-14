@@ -26,6 +26,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 class CommitUpdateTest {
 
+    @Test
+    void nothingIsSaidToBeUnchangedBeforeTheStatusIsRead() {
+        Model starting = loaded().withStatus(net.vanfleteren.jazygit.state.Loadable.loading());
+
+        for (net.vanfleteren.jazygit.state.Msg msg : List.<net.vanfleteren.jazygit.state.Msg>of(new CommitMsg.Requested(),
+                new AmendMsg.Requested(), new net.vanfleteren.jazygit.feature.stash.StashMsg.Requested())) {
+            Model next = Update.update(starting, msg).model();
+            assertEquals(Option.none(), next.error(), msg.toString());
+            assertEquals(Option.none(), next.popup(), msg.toString());
+        }
+    }
+
     private Model withFiles(FileEntry... files) {
         return loaded().withStatus(new Loaded<>(new RepoStatus(Head.onBranch("main", new Sha("aaaa")), List.of(files))));
     }
@@ -35,35 +47,39 @@ class CommitUpdateTest {
     }
 
     private static Commit commit(String message, String body) {
-        return new Commit(new Sha("abc1234"), "me", "me@example.com", Instant.EPOCH, message, body);
+        return commit("abc1234", message, body);
+    }
+
+    private static Commit commit(String sha, String message, String body) {
+        return new Commit(new Sha(sha), "me", "me@example.com", Instant.EPOCH, message, body);
     }
 
     @Test
     void rewordOpensTheDialogForTheLastCommit() {
         Commit last = commit("last", "details");
-        Model model = Update.update(withCommits(last, commit("older", "")), new RewordMsg.Requested(0)).model();
+        Model model = Update.update(withCommits(last, commit("def5678", "older", "")), new RewordMsg.Requested(last.sha())).model();
 
         assertEquals(Option.of(new RewordPopup(last)), model.popup());
     }
 
     @Test
     void anyCommitCanBeReworded() {
-        Commit older = commit("older", "why");
-        Model model = Update.update(withCommits(commit("last", ""), older), new RewordMsg.Requested(1)).model();
+        Commit older = commit("def5678", "older", "why");
+        Model model = Update.update(withCommits(commit("last", ""), older), new RewordMsg.Requested(older.sha())).model();
 
         assertEquals(Option.of(new RewordPopup(older)), model.popup());
     }
 
     @Test
     void rewordOfAnUnknownCommitDoesNothing() {
-        Model model = Update.update(withCommits(commit("last", "")), new RewordMsg.Requested(3)).model();
+        Model model = Update.update(withCommits(commit("last", "")), new RewordMsg.Requested(new Sha("elsewhere"))).model();
 
         assertEquals(Option.none(), model.popup());
     }
 
     @Test
     void confirmingTheRewordRewordsAndClosesTheDialog() {
-        Model open = Update.update(withCommits(commit("last", "")), new RewordMsg.Requested(0)).model();
+        Model open = Update.update(withCommits(commit("last", "")), new RewordMsg.Requested(new Sha("abc1234"))).model();
 
         Next next = Update.update(open, new RewordMsg.Confirmed(new CommitMessage(" better ", "\nwhy\n")));
 
@@ -73,7 +89,7 @@ class CommitUpdateTest {
 
     @Test
     void blankSummaryKeepsTheRewordDialogOpen() {
-        Model open = Update.update(withCommits(commit("last", "")), new RewordMsg.Requested(0)).model();
+        Model open = Update.update(withCommits(commit("last", "")), new RewordMsg.Requested(new Sha("abc1234"))).model();
 
         Next next = Update.update(open, new RewordMsg.Confirmed(new CommitMessage(" ", "why")));
 
@@ -83,7 +99,7 @@ class CommitUpdateTest {
 
     @Test
     void cancellingTheRewordClosesTheDialog() {
-        Model open = Update.update(withCommits(commit("last", "")), new RewordMsg.Requested(0)).model();
+        Model open = Update.update(withCommits(commit("last", "")), new RewordMsg.Requested(new Sha("abc1234"))).model();
 
         assertEquals(Option.none(), Update.update(open, new RewordMsg.Cancelled()).model().popup());
     }
