@@ -95,14 +95,16 @@ public class BranchesPanel {
     }
 
     /**
-     * The title of the pane: the names of both lists, the one shown in bold, the other dimmed.
+     * The title of the pane: the names of both lists, the one shown in bold and underlined, the other dimmed.
+     * The title takes the colour of the border, so they differ in text style only; underlining shows the
+     * difference in themes with colours that bold and dim barely change.
      */
     static Line title(BranchesTab tab) {
         Span local = Span.raw(Messages.get("panel.branches.title"));
         Span remote = Span.raw(Messages.get("panel.remoteBranches.title"));
         return tab == BranchesTab.LOCAL
-                ? Line.from(local.bold(), Span.raw(TITLE_SEPARATOR), remote.dim())
-                : Line.from(local.dim(), Span.raw(TITLE_SEPARATOR), remote.bold());
+                ? Line.from(local.bold().underlined(), Span.raw(TITLE_SEPARATOR), remote.dim())
+                : Line.from(local.dim(), Span.raw(TITLE_SEPARATOR), remote.bold().underlined());
     }
 
     /**

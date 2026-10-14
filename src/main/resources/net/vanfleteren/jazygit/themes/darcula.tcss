@@ -1,7 +1,7 @@
 /* Inspired by IntelliJ's Darcula. */
 $fg: #a9b7c6;
 $bg: #2b2b2b;
-$border: #5a5d5f;
+$border: #45494a;
 $accent: #cc7832;
 $muted: #808080;
 $selection: #214283;

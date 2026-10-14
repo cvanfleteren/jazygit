@@ -3,7 +3,7 @@
  * green and red, from the Okabe-Ito palette. Yellow, for what is still running, is much lighter than
  * vermillion, so the two stay apart.
  */
-$border: white;
+$border: dark-gray;
 $accent: cyan;
 $good: #56b4e9;
 $bad: #d55e00;

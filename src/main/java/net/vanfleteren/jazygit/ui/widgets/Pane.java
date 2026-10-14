@@ -4,6 +4,7 @@ import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.layout.Alignment;
 import dev.tamboui.text.Line;
+import dev.tamboui.text.Span;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Panel;
 import io.vavr.control.Option;
@@ -23,7 +24,14 @@ public final class Pane {
      * @param count    the number of rows, or empty to show no position, as long as they are not known
      */
     public static Panel bordered(String title, Element content, boolean focused, int selected, Option<Integer> count) {
-        return bordered(Line.from(title), content, focused, selected, count);
+        return bordered(title(title), content, focused, selected, count);
+    }
+
+    /**
+     * A plain title, in bold like the name of the shown list in a title with more than one.
+     */
+    public static Line title(String title) {
+        return Line.from(Span.raw(title).bold());
     }
 
     /**

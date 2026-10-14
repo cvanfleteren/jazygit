@@ -314,10 +314,12 @@ class BranchesPanelTest {
     }
 
     @Test
-    void theTitleShowsWhichTabIsShownInBold() {
-        assertEquals(List.of(true, false), List.ofAll(BranchesPanel.title(BranchesTab.LOCAL).spans())
+    void theTitleShowsWhichTabIsShownInBoldAndUnderlined() {
+        assertEquals(List.of(true, false), List.ofAll(BranchesPanel.title(BranchesTab.REMOTE).spans())
                 .filter(span -> !span.content().contains("│"))
-                .map(span -> span.style().addModifiers().contains(dev.tamboui.style.Modifier.BOLD)));
+                .map(span -> span.style().addModifiers().containsAll(java.util.Set.of(
+                        dev.tamboui.style.Modifier.BOLD, dev.tamboui.style.Modifier.UNDERLINED)))
+                .reverse());
     }
 
     private static Model withRemotes(Model model) {

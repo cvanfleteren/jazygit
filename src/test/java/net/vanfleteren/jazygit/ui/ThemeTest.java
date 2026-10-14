@@ -25,13 +25,13 @@ class ThemeTest {
     }
 
     @Test
-    void focusedPanelBorderUsesTheAccentColor() {
+    void focusedPanelBorderIsHighlightedAndTheOthersDimmed() {
         var engine = Theme.createEngine().get();
 
         var plain = engine.resolve(new Node("Panel", Set.of()));
         var focused = engine.resolve(new Node("Panel", Set.of(Theme.Classes.FOCUSED)));
 
-        assertEquals(java.util.Optional.of(Color.WHITE), plain.borderColor());
+        assertEquals(java.util.Optional.of(Color.DARK_GRAY), plain.borderColor());
         assertEquals(java.util.Optional.of(Color.CYAN), focused.borderColor());
     }
 

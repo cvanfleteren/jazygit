@@ -1,4 +1,4 @@
-$border: white;
+$border: dark-gray;
 $accent: cyan;
 
 Panel, TextInputElement, TextAreaElement, RichTextAreaElement {

@@ -132,7 +132,7 @@ final class LoadableList<T> {
     }
 
     Panel render(Loadable<T> value, boolean focused) {
-        return render(value, focused, Line.from(title));
+        return render(value, focused, Pane.title(title));
     }
 
     /**
