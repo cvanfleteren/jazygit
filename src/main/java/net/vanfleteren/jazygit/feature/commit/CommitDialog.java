@@ -27,7 +27,7 @@ import java.util.function.Supplier;
  * lives in the {@link Model}; the text being typed lives in the input widgets.
  *
  * <p>There are two flavours: {@link #commit} asks for the message of a new commit, {@link #reword}
- * for a new message of the last commit, starting out with the current one.
+ * for a new message of any commit, starting out with its current one.
  */
 public final class CommitDialog implements PopupView {
 
@@ -134,7 +134,7 @@ public final class CommitDialog implements PopupView {
     private void confirm() {
         String message = summary.text();
         String details = description.text();
-        // A blank summary keeps the popup open, see Update.
+        // A blank summary keeps the popup open, see CommitUpdate and RewordUpdate.
         if (!message.isBlank()) {
             clear();
         }

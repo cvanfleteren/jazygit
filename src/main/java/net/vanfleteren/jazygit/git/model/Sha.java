@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.git.model;
 import io.vavr.control.Option;
 
 /**
- * The full object id of a git commit.
+ * The object id of a git commit, as git printed it: in full, unless said otherwise.
  */
 public record Sha(String value) {
 

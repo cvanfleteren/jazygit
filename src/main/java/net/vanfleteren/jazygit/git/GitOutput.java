@@ -18,7 +18,8 @@ final class GitOutput {
 
     /**
      * What separates the fields of one record in a {@code --format}: the unit separator, which git writes
-     * as {@code %x1f}. It does not occur in names, messages or paths.
+     * as {@code %x1f}. It does not occur in ref names or paths; a commit message or author name could hold one,
+     * which is then read as two fields, so a field that holds free text goes last where it can.
      */
     static final String FIELD_SEPARATOR = "\u001f";
     /**

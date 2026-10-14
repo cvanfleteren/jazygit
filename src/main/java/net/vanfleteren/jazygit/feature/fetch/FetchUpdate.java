@@ -10,7 +10,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
  * Fetching from the remotes in the background, one after the other, so the remote being fetched from can be
- * shown. Neither the commands nor the failures are: it runs every few seconds, also while offline. A remote
+ * shown. Neither the commands nor the failures are: it runs every minute, also while offline. A remote
  * that cannot be fetched from does not keep the others from being fetched.
  */
 public final class FetchUpdate {
