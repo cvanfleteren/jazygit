@@ -17,7 +17,7 @@ import net.vanfleteren.jazygit.feature.commit.CommitMsg;
 import net.vanfleteren.jazygit.feature.commit.CommitPopup;
 import net.vanfleteren.jazygit.feature.commit.RewordMsg;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
-import net.vanfleteren.jazygit.feature.selection.SelectionMsg;
+import net.vanfleteren.jazygit.state.SelectionMsg;
 import net.vanfleteren.jazygit.feature.stage.StageMsg;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError;

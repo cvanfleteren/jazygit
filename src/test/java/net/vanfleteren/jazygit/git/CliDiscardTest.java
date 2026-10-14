@@ -77,11 +77,22 @@ class CliDiscardTest {
         write("dir/y.txt", "y\n");
         write("z.txt", "z\n");
 
-        assertEquals(List.of("rm -r -- dir", "rm -r -- z.txt"), CliIndex.deleteUntracked(repo, List.of("dir", "z.txt")).get().map(ExecutedCommand::line));
+        assertEquals(List.of("git clean --force -d --quiet -- dir z.txt"),
+                CliIndex.deleteUntracked(repo, List.of("dir", "z.txt")).get().map(ExecutedCommand::line));
 
         assertFalse(Files.exists(repo.resolve("dir")));
         assertFalse(Files.exists(repo.resolve("z.txt")));
         assertTrue(Files.exists(repo.resolve("a.txt")));
+    }
+
+    @Test
+    void aRepositoryNestedInTheWorkingTreeIsNotDeletedWithItsHistory() throws Exception {
+        write("nested/x.txt", "x\n");
+        git("-C", "nested", "init", "-q");
+
+        CliIndex.deleteUntracked(repo, List.of("nested"));
+
+        assertTrue(Files.exists(repo.resolve("nested/.git")));
     }
 
     @Test

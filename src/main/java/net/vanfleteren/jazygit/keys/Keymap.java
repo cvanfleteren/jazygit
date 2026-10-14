@@ -6,6 +6,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Msg;
 
 import java.util.function.Function;
@@ -20,7 +21,10 @@ import java.util.function.Supplier;
  */
 public final class Keymap {
 
-    private static final String HELP_KEY = "?";
+    /**
+     * The key that shows the keys of the panel that has the focus, and closes that help again.
+     */
+    public static final String HELP_KEY = "?";
 
     /**
      * A panel that has keys of its own.
@@ -60,7 +64,7 @@ public final class Keymap {
          * How the key is shown to the user.
          */
         public String label() {
-            return " ".equals(key) ? "space" : key;
+            return " ".equals(key) ? Messages.get("key.space") : key;
         }
     }
 
@@ -133,8 +137,14 @@ public final class Keymap {
      */
     @SafeVarargs
     public final <S> Keymap add(Scope<S> scope, Binding<S>... bindings) {
-        List<Binding<?>> existing = bindings(scope.id());
-        return new Keymap(sections.put(scope.id(), new Section(scope, existing.appendAll(List.of(bindings)))), globals);
+        List<Binding<?>> all = bindings(scope.id()).appendAll(List.of(bindings));
+        // A key bound twice would only do what it was bound to first, silently; the help key does nothing else.
+        all.map(Binding::key).append(HELP_KEY).groupBy(key -> key).filterValues(keys -> keys.size() > 1).keySet()
+                .headOption()
+                .forEach(key -> {
+                    throw new IllegalArgumentException("The key \"" + key + "\" is bound twice in " + scope.id());
+                });
+        return new Keymap(sections.put(scope.id(), new Section(scope, all)), globals);
     }
 
     /**

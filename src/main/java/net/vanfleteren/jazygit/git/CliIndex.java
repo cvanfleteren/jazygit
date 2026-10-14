@@ -4,8 +4,6 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
-import io.vavr.control.Try;
-import net.vanfleteren.jazygit.git.GitError.DeleteFailed;
 import net.vanfleteren.jazygit.git.GitError.DeleteUntrackedError;
 import net.vanfleteren.jazygit.git.GitError.DiscardError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
@@ -13,10 +11,7 @@ import net.vanfleteren.jazygit.git.GitError.RefusedPath;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
 
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.util.Comparator;
 
 import static net.vanfleteren.jazygit.git.GitCommand.git;
 
@@ -83,25 +78,17 @@ public final class CliIndex {
     }
 
     /**
-     * Deletes untracked files and directories (like {@code rm -r}). Paths outside the working tree, and
-     * the working tree itself, are refused.
+     * {@code git clean --force -d --quiet -- <paths>}: deletes untracked files, and untracked directories with
+     * what is untracked in them. Git leaves ignored files alone, and a repository nested in the working tree.
+     * Paths outside the working tree, and the working tree itself, are refused before git runs.
      */
     public static Either<GitFailure<DeleteUntrackedError>, List<ExecutedCommand>> deleteUntracked(Path workTree,
                                                                                        List<String> paths) {
         Path root = workTree.toAbsolutePath().normalize();
-        return GitFailure.sequence(paths.map(path -> () -> deleteUntracked(root, path,
-                List.of(ExecutedCommand.of("rm", "-r", "--", path)))));
-    }
-
-    /**
-     * Deletes the untracked {@code path}, logging it as {@code log}.
-     */
-    private static Either<GitFailure<DeleteUntrackedError>, List<ExecutedCommand>> deleteUntracked(Path root, String path,
-                                                                                        List<ExecutedCommand> log) {
-        return Either.<DeleteUntrackedError, Path>narrow(inside(root, path))
-                .flatMap(target -> deleteTree(target, path))
-                .map(deleted -> log)
-                .mapLeft(error -> new GitFailure<>(error, log));
+        return paths.map(path -> inside(root, path)).find(Either::isLeft)
+                .<Either<GitFailure<DeleteUntrackedError>, List<ExecutedCommand>>>map(refused ->
+                        Either.left(new GitFailure<>(refused.getLeft(), List.empty())))
+                .getOrElse(() -> GitFailure.widen(onPaths(workTree, List.of("clean", "--force", "-d", "--quiet"), paths)));
     }
 
     /**
@@ -113,17 +100,6 @@ public final class CliIndex {
         return target.equals(root) || !target.startsWith(root) || target.startsWith(root.resolve(".git"))
                 ? Either.left(new RefusedPath(path))
                 : Either.right(target);
-    }
-
-    private static Either<DeleteUntrackedError, Path> deleteTree(Path target, String path) {
-        return Try.withResources(() -> Files.walk(target))
-                // Children before their directory.
-                .of(tree -> List.ofAll(tree.sorted(Comparator.reverseOrder())::iterator))
-                .flatMap(files -> Try.traverse(files, file -> Try.of(() -> Files.deleteIfExists(file))))
-                .map(deleted -> target)
-                .recover(NoSuchFileException.class, target) // already gone
-                .toEither()
-                .mapLeft(e -> new DeleteFailed(path, e));
     }
 
     /**

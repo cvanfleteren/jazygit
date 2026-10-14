@@ -304,9 +304,9 @@ public class JazygitApp extends ToolkitApp {
         Either<String, JazygitApp> app = CliGitInfoProvider.open(start)
                 .mapLeft(ErrorText::of)
                 .flatMap(provider -> Theme.createEngine()
-                        .mapLeft(failed -> Messages.get("theme.loadFailed", failed.theme(), failed.cause()))
+                        .mapLeft(failed -> Messages.get("theme.loadFailed", failed.theme(), ErrorText.reason(failed.cause())))
                         .map(engine -> new JazygitApp(new Env(provider, new CliGitHub(provider.workTree())), engine)));
-        app.flatMap(jazygit -> Try.run(jazygit::run).toEither().mapLeft(Throwable::toString))
+        app.flatMap(jazygit -> Try.run(jazygit::run).toEither().mapLeft(ErrorText::reason))
                 .orElseRun(problem -> {
                     System.err.println(problem);
                     System.exit(1);

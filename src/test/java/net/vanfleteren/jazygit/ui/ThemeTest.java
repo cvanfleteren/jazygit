@@ -67,11 +67,4 @@ class ThemeTest {
             assertTrue(engine.resolve(new Node("Panel", Set.of())).borderColor().isPresent(), name);
         }
     }
-
-    @Test
-    void ctrlTIsTheToggleKey() {
-        assertTrue(Theme.isThemeKey(KeyEvent.ofChar('t', KeyModifiers.CTRL)));
-        assertFalse(Theme.isThemeKey(KeyEvent.ofChar('t')));
-        assertFalse(Theme.isThemeKey(KeyEvent.ofChar('x', KeyModifiers.CTRL)));
-    }
 }

@@ -1,11 +1,8 @@
-package net.vanfleteren.jazygit.feature.selection;
+package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Update;
 
 /**
  * The user moved the highlight in one of the panes.

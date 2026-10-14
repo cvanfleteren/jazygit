@@ -12,6 +12,9 @@ import net.vanfleteren.jazygit.state.Program;
 import static com.tngtech.archunit.base.DescribedPredicate.not;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.equivalentTo;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAnyPackage;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.simpleName;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.simpleNameEndingWith;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.simpleNameStartingWith;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.fields;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
@@ -47,6 +50,61 @@ class ArchitectureTest {
                     "..jazygit.keys..", "..jazygit.ui..", "..jazygit.i18n..", "dev.tamboui..");
 
     /**
+     * git and gh are reached each on their own; the features combine them. The process layer runs any program,
+     * and knows neither.
+     */
+    @ArchTest
+    static final ArchRule gitKnowsNothingOfGh = noClasses()
+            .that().resideInAPackage("..jazygit.git..")
+            .should().dependOnClassesThat().resideInAPackage("..jazygit.gh..");
+
+    @ArchTest
+    static final ArchRule ghKnowsNothingOfGit = noClasses()
+            .that().resideInAPackage("..jazygit.gh..")
+            .should().dependOnClassesThat().resideInAPackage("..jazygit.git..");
+
+    @ArchTest
+    static final ArchRule processKnowsNeitherGitNorGh = noClasses()
+            .that().resideInAPackage("..jazygit.process..")
+            .should().dependOnClassesThat().resideInAnyPackage("..jazygit.git..", "..jazygit.gh..");
+
+    /**
+     * {@code Exec} is the only place that starts a program.
+     */
+    @ArchTest
+    static final ArchRule onlyExecStartsPrograms = noClasses()
+            .that().resideOutsideOfPackage("..jazygit.process..")
+            .should().dependOnClassesThat().resideInAPackage("org.zeroturnaround.exec..")
+            .orShould().dependOnClassesThat().belongToAnyOf(ProcessBuilder.class)
+            .orShould().callMethod(Runtime.class, "exec", String.class);
+
+    /**
+     * Rendering never talks to git or gh: the views only draw the model, and send messages.
+     */
+    @ArchTest
+    static final ArchRule viewsDoNotRunGitOrGh = noClasses()
+            .that().resideInAnyPackage("..jazygit.ui..", "..jazygit.keys..")
+            .or().haveNameMatching(DIALOGS)
+            .should().dependOnClassesThat(runsGitOrGh());
+
+    private static DescribedPredicate<JavaClass> runsGitOrGh() {
+        return resideInAnyPackage("..jazygit.git", "..jazygit.gh")
+                .and(simpleNameStartingWith("Cli").or(simpleNameEndingWith("Process")))
+                .or(resideInAnyPackage("..jazygit.process").and(simpleName("Exec")))
+                .as("run git or gh");
+    }
+
+    /**
+     * The top-level parts depend on each other one way only. The keymap is the exception: it lists the keys
+     * of the features, which declare them with its types.
+     */
+    @ArchTest
+    static final ArchRule partsAreFreeOfCycles = slices()
+            .matching(ROOT + ".(*)..")
+            .should().beFreeOfCycles()
+            .ignoreDependency(resideInAnyPackage("..jazygit.keys"), resideInAnyPackage("..jazygit.feature.."));
+
+    /**
      * The core of the application knows neither the features built on it nor how it is shown.
      */
     @ArchTest
@@ -61,12 +119,16 @@ class ArchitectureTest {
      */
     @ArchTest
     static final ArchRule updatesArePure = noClasses()
-            .that().haveNameMatching(".*\\.(\\w*(Update|Msg|Popup)|Model)(\\$.*)?")
-            .should().dependOnClassesThat(effects());
+            .that().haveNameMatching(".*\\.(\\w*(Update|Msg|Popup)|Model|Preview|Loadable|Fetching|AppError|Operation"
+                    + "|LogEntry|CommandLog)(\\$.*)?")
+            .should().dependOnClassesThat(effects())
+            .orShould().callMethod(java.time.Instant.class, "now")
+            .orShould().callMethod(System.class, "currentTimeMillis");
 
     private static DescribedPredicate<JavaClass> effects() {
         return resideInAnyPackage("..jazygit.git", "..jazygit.gh", "..jazygit.process..", "..jazygit.ui..",
-                "..jazygit.i18n..", "dev.tamboui..")
+                "..jazygit.i18n..", "dev.tamboui..", "java.io..", "java.nio.file..")
+                .or(JavaClass.Predicates.belongToAnyOf(Thread.class, ProcessBuilder.class, java.time.Clock.class))
                 .and(not(equivalentTo(ExecutedCommand.class)))
                 .as("run git or gh, or show something");
     }

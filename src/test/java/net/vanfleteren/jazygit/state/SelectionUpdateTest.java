@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.feature.selection;
+package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
@@ -14,17 +14,12 @@ import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
-import net.vanfleteren.jazygit.state.Cmd;
-import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Loadable.Loading;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Preview;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.state.Msg.Tick;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.Update;
 import org.junit.jupiter.api.Test;
 
 import static net.vanfleteren.jazygit.state.TestModels.*;

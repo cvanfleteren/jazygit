@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.ui;
 import dev.tamboui.css.Styleable;
 import dev.tamboui.css.engine.StyleEngine;
 import dev.tamboui.style.Style;
-import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 
 import io.vavr.control.Either;
@@ -78,11 +77,6 @@ public final class Theme {
                                 .<LoadFailed>mapLeft(cause -> new LoadFailed(name, cause))
                                 .map(done -> e)))
                 .peek(e -> e.setActiveStylesheet(DARK));
-    }
-
-    /** Whether {@code event} is the shortcut that asks which theme to use. */
-    public static boolean isThemeKey(KeyEvent event) {
-        return event.hasCtrl() && event.isCharIgnoreCase('t');
     }
 
     /**

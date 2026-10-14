@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.keys;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.tui.event.KeyEvent;
@@ -14,6 +15,23 @@ import org.junit.jupiter.api.Test;
 class KeymapTest {
 
     private final Keymap keymap = Keymap.standard();
+
+    @Test
+    void ctrlTAsksForTheTheme() {
+        assertTrue(GlobalKeys.isThemeKey(KeyEvent.ofChar('t', dev.tamboui.tui.event.KeyModifiers.CTRL)));
+        assertFalse(GlobalKeys.isThemeKey(KeyEvent.ofChar('t')));
+        assertFalse(GlobalKeys.isThemeKey(KeyEvent.ofChar('x', dev.tamboui.tui.event.KeyModifiers.CTRL)));
+    }
+
+    @Test
+    void aKeyCannotBeBoundTwiceInAPanel() {
+        Keymap once = Keymap.empty().add(Scopes.BRANCHES, Keymap.Binding.<String>onSelected("x", "help.global.quit", CheckoutMsg.Requested::new));
+
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> once.add(Scopes.BRANCHES,
+                Keymap.Binding.<String>onSelected("x", "help.global.quit", CheckoutMsg.Requested::new)));
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> once.add(Scopes.BRANCHES,
+                Keymap.Binding.<String>onSelected(Keymap.HELP_KEY, "help.global.quit", CheckoutMsg.Requested::new)));
+    }
 
     @Test
     void aKeyActsOnTheSelection() {

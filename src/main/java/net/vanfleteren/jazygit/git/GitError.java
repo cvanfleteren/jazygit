@@ -71,8 +71,8 @@ public sealed interface GitError {
     /**
      * A failure that running any git command can have.
      */
-    sealed interface ProcessError extends CheckoutError, RewordError, DiscardError, DiffError, LogError, OpenError,
-            StashError {
+    sealed interface ProcessError extends CheckoutError, RewordError, DeleteUntrackedError, DiffError, LogError,
+            OpenError, StashError {
     }
 
     /**
@@ -188,9 +188,4 @@ public sealed interface GitError {
     record RefusedPath(String path) implements DeleteUntrackedError {
     }
 
-    /**
-     * An untracked path that could not be deleted.
-     */
-    record DeleteFailed(String path, Throwable cause) implements DeleteUntrackedError {
-    }
 }

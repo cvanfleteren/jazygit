@@ -42,7 +42,7 @@ public final class HelpDialog implements PopupView {
      */
     private static final Map<String, List<Tuple2<String, String>>> LEGENDS = HashMap.of(
             Scopes.BRANCHES.id(), List.of(
-                    Tuple.of("gone", "help.branches.legend.gone"),
+                    Tuple.of(Messages.get("branches.gone"), "help.branches.legend.gone"),
                     Tuple.of("#42", "help.branches.legend.pullRequest"),
                     Tuple.of("✓ ✗ ●", "help.branches.legend.checks"),
                     Tuple.of("✔ ✎ ?", "help.branches.legend.review")));
@@ -109,7 +109,7 @@ public final class HelpDialog implements PopupView {
     }
 
     private EventResult handleKey(KeyEvent event) {
-        if (event.isChar('?')) {
+        if (Keymap.HELP_KEY.equals(event.string())) {
             close();
             return EventResult.HANDLED;
         }

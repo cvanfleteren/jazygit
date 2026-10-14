@@ -71,14 +71,13 @@ public final class ErrorText {
             case GitError.StashGone(String message) -> Messages.get("git.stashGone", message);
             case GitError.TempFileFailed(Throwable cause) -> Messages.get("git.tempFileFailed", reason(cause));
             case GitError.RefusedPath(String path) -> Messages.get("git.refusedPath", path);
-            case GitError.DeleteFailed(String path, Throwable cause) -> Messages.get("git.deleteFailed", path, reason(cause));
         };
     }
 
     /**
      * What an exception says about why it happened, or what kind it is when it says nothing.
      */
-    private static String reason(Throwable cause) {
+    public static String reason(Throwable cause) {
         return Option.of(cause.getMessage()).filter(message -> !message.isBlank())
                 .getOrElse(() -> cause.getClass().getSimpleName());
     }
