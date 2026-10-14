@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
@@ -50,7 +51,7 @@ class PanePositionTest {
         }
 
         @Override
-        public Either<LogError, List<Commit>> log(String branch) {
+        public Either<LogError, List<Commit>> log(BranchRef branch) {
             return Either.right(commitList);
         }
     }

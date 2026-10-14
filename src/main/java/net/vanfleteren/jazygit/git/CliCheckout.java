@@ -11,6 +11,8 @@ import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
 import net.vanfleteren.jazygit.git.GitError.StashNotRestored;
 
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
+
 import java.nio.file.Path;
 
 import static net.vanfleteren.jazygit.git.GitCommand.git;
@@ -77,5 +79,15 @@ public final class CliCheckout {
     public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> createBranch(Path workTree, String name,
                                                                             String startPoint) {
         return GitProcess.log(workTree, git("checkout", "--quiet", "-b", name, startPoint, "--"));
+    }
+
+    /**
+     * Runs {@code git checkout --track -b <name> <remote-tracking ref>} in {@code workTree}: creates the branch
+     * at the remote-tracking branch of {@code upstream}, following it, and checks it out.
+     */
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> createTrackingBranch(Path workTree, String name,
+                                                                                              RemoteBranch upstream) {
+        return GitProcess.log(workTree, git("checkout", "--quiet", "--track", "-b", name,
+                Refs.remote(upstream.remote(), upstream.branch()), "--"));
     }
 }

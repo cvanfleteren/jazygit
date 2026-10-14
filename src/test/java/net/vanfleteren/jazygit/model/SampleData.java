@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.model;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError;
@@ -50,8 +51,8 @@ public final class SampleData implements StubGitProvider {
     }
 
     @Override
-    public Either<LogError, List<Commit>> log(String branch) {
-        return switch (branch) {
+    public Either<LogError, List<Commit>> log(BranchRef branch) {
+        return switch (branch.name()) {
             case "main" -> Either.right(MAIN);
             case "feature/initial-layout" -> Either.right(List.of(
                     commit("0a1b2c3", ADA, "2026-10-09T16:05:00Z", "Split the screen into panes", ""),
@@ -61,7 +62,7 @@ public final class SampleData implements StubGitProvider {
                     commit("1a2b3c4", LINUS, "2026-10-08T21:15:00Z", "Read branches through JGit",
                             "Replaces the hard-coded branch list.\nThe current branch is marked.")));
             case "bugfix/focus-cycling" -> Either.right(MAIN.drop(2));
-            default -> Either.left(new GitError.UnknownBranch(branch));
+            default -> Either.left(new GitError.UnknownBranch(branch.name()));
         };
     }
 

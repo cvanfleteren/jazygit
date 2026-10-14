@@ -38,6 +38,12 @@ public interface GitBranches {
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> createBranch(String name, String startPoint);
 
     /**
+     * Creates the local branch {@code name} at the remote-tracking branch of {@code upstream}, following it, and
+     * checks it out.
+     */
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> createTrackingBranch(String name, RemoteBranch upstream);
+
+    /**
      * Deletes the branch {@code name}, locally and/or {@code remote}, the branch it is pushed to. With both, the
      * remote one goes first, so a failure leaves the local branch in place.
      */

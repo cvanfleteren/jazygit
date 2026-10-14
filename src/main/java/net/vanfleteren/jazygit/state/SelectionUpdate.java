@@ -21,7 +21,7 @@ public final class SelectionUpdate {
 
     public static Next update(Model model, SelectionMsg msg) {
         return switch (msg) {
-            case BranchSelected(String branch) ->
+            case BranchSelected(var branch) ->
                     selected(model, branch, model.branchLog(), model::withBranchLog, LoadBranchLog::new);
             case CommitSelected(var sha) ->
                     selected(model, sha, model.commitDetail(), model::withCommitDetail, LoadCommitDetail::new);

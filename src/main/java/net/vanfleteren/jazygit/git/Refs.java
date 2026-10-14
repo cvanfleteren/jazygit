@@ -1,5 +1,8 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
+
 /**
  * The names of refs.
  */
@@ -23,5 +26,15 @@ final class Refs {
      */
     static String remote(String remote, String branch) {
         return REMOTES + remote + "/" + branch;
+    }
+
+    /**
+     * The ref of {@code branch}, local or remote-tracking.
+     */
+    static String of(BranchRef branch) {
+        return switch (branch) {
+            case BranchRef.Local(String name) -> head(name);
+            case BranchRef.Remote(RemoteBranch remote) -> remote(remote.remote(), remote.branch());
+        };
     }
 }

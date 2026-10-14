@@ -20,9 +20,18 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.feature.branch.BranchesTabMsg;
+import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
+import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.RemoteRef;
+import net.vanfleteren.jazygit.state.BranchesTab;
+import net.vanfleteren.jazygit.state.Loadable;
+import net.vanfleteren.jazygit.state.SelectionMsg;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The highlighted row of the branches pane follows its branch when the list is reordered.
@@ -204,6 +213,85 @@ class BranchesPanelTest {
 
         assertEquals(java.util.List.of(new net.vanfleteren.jazygit.feature.help.HelpMsg.Requested(
                 net.vanfleteren.jazygit.keys.Scopes.BRANCHES.id())), dispatched);
+    }
+
+    @Test
+    void theRemoteTabListsTheRemoteBranchesUnderItsOwnTitle() throws Exception {
+        Model remote = withRemotes(before);
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(remote, BranchesPanel.ID))) {
+            String screen = RenderedText.of(testRunner, () -> panel.render(remote, BranchesPanel.ID));
+            testRunner.pilot().quit();
+
+            assertTrue(screen.contains("Branches │ Remotes"), screen);
+            assertTrue(screen.contains("origin/feature"), screen);
+            assertTrue(screen.contains("upstream/main"), screen);
+            assertFalse(screen.contains(" old"), screen);
+        }
+        assertEquals(Option.of(new SelectionMsg.BranchSelected(new BranchRef.Remote(new RemoteBranch("origin", "feature")))),
+                panel.selectionChange(remote));
+    }
+
+    @Test
+    void theRemoteTabSaysWhenThereAreNoRemoteBranches() throws Exception {
+        Model none = before.withBranchesTab(BranchesTab.REMOTE).withRemoteBranches(new Loadable.Loaded<>(List.empty()));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(none, BranchesPanel.ID))) {
+            String screen = RenderedText.of(testRunner, () -> panel.render(none, BranchesPanel.ID));
+            testRunner.pilot().quit();
+
+            assertTrue(screen.contains("No remote branches"), screen);
+        }
+        assertEquals(Option.none(), panel.selectionChange(none));
+    }
+
+    @Test
+    void onTheRemoteTabSpaceChecksOutTheHighlightedRemoteBranchAndTheBracketsSwitchBack() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        BranchesPanel panel = new BranchesPanel(dispatched::add);
+        Model remote = withRemotes(before);
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(remote, BranchesPanel.ID))) {
+            testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
+            RenderedText.of(testRunner, () -> panel.render(remote, BranchesPanel.ID));
+            testRunner.pilot().press(KeyCode.DOWN);
+            testRunner.pilot().press(' ');
+            testRunner.pilot().press('n');
+            testRunner.pilot().press('[');
+            testRunner.pilot().press('P');
+            testRunner.pilot().pause();
+            testRunner.pilot().quit();
+        }
+
+        RemoteBranch upstreamMain = new RemoteBranch("upstream", "main");
+        // P pushes a local branch; it does nothing here.
+        assertEquals(java.util.List.of(new CheckoutMsg.RemoteRequested(upstreamMain),
+                new NewBranchMsg.RequestedAtRemote(upstreamMain), new BranchesTabMsg.Switched()), dispatched);
+    }
+
+    @Test
+    void onTheLocalTabTheBracketsSwitchToTheRemoteBranches() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        BranchesPanel panel = new BranchesPanel(dispatched::add);
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
+            testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
+            RenderedText.of(testRunner, () -> panel.render(before, BranchesPanel.ID));
+            testRunner.pilot().press(']');
+            testRunner.pilot().pause();
+            testRunner.pilot().quit();
+        }
+
+        assertEquals(java.util.List.of(new BranchesTabMsg.Switched()), dispatched);
+    }
+
+    @Test
+    void theTitleShowsWhichTabIsShownInBold() {
+        assertEquals(List.of(true, false), List.ofAll(BranchesPanel.title(BranchesTab.LOCAL).spans())
+                .filter(span -> !span.content().contains("│"))
+                .map(span -> span.style().addModifiers().contains(dev.tamboui.style.Modifier.BOLD)));
+    }
+
+    private static Model withRemotes(Model model) {
+        return model.withBranchesTab(BranchesTab.REMOTE).withRemoteBranches(new Loadable.Loaded<>(List.of(
+                new RemoteRef(new RemoteBranch("origin", "feature"), new Sha("2"), java.time.Instant.EPOCH),
+                new RemoteRef(new RemoteBranch("upstream", "main"), new Sha("1"), java.time.Instant.EPOCH))));
     }
 
     private String highlightedAfterMovingTo(int index, Model after) throws Exception {

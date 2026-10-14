@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import io.vavr.collection.List;
@@ -82,7 +84,12 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<LogError, List<Commit>> log(String branch) {
+    default Either<ProcessError, List<RemoteRef>> remoteBranches() {
+        return Either.right(List.empty());
+    }
+
+    @Override
+    default Either<LogError, List<Commit>> log(BranchRef branch) {
         return Either.right(List.empty());
     }
 
@@ -108,6 +115,12 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<GitFailure<ProcessError>, List<ExecutedCommand>> createBranch(String name, String startPoint) {
+        return ran();
+    }
+
+    @Override
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> createTrackingBranch(String name,
+                                                                                        RemoteBranch upstream) {
         return ran();
     }
 

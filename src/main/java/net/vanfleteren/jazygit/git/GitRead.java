@@ -6,6 +6,8 @@ import net.vanfleteren.jazygit.git.GitError.DiffError;
 import net.vanfleteren.jazygit.git.GitError.LogError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -33,6 +35,11 @@ public interface GitRead {
     Either<ProcessError, List<Branch>> branches();
 
     /**
+     * The remote-tracking branches, the most recently committed to first.
+     */
+    Either<ProcessError, List<RemoteRef>> remoteBranches();
+
+    /**
      * The stashes, newest first.
      */
     Either<ProcessError, List<Stash>> stashes();
@@ -43,9 +50,9 @@ public interface GitRead {
     Either<ProcessError, List<Commit>> commits();
 
     /**
-     * The log of the local branch {@code branch}, newest first.
+     * The log of the branch {@code branch}, local or remote-tracking, newest first.
      */
-    Either<LogError, List<Commit>> log(String branch);
+    Either<LogError, List<Commit>> log(BranchRef branch);
 
     /**
      * What the commit {@code sha} changed, like {@code git show}: the changed files, a summary of the

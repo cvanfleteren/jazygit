@@ -23,8 +23,16 @@ public class CommitsPanel {
     public static final String ID = Scopes.COMMITS.id();
 
     private final LoadableList<List<Commit>> list = new LoadableList<>(Messages.get("panel.commits.title"), ID,
-            commits -> rows(CommitGraph.layout(commits)), LoadableList.Reselect.following(Commit::sha));
+            commits -> rows(CommitGraph.layout(commits)), CommitsPanel::reselect);
     private final Keymap keymap = Keymap.standard();
+
+    /**
+     * The selection follows its commit when commits come on top, except on the newest one: it stays there, so a
+     * new commit gets highlighted.
+     */
+    private static int reselect(List<Commit> previous, List<Commit> next, int selected) {
+        return selected == 0 ? 0 : LoadableList.Reselect.following(Commit::sha).apply(previous, next, selected);
+    }
 
     /**
      * @param dispatch   receives the messages for the user's actions, on the render thread

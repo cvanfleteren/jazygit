@@ -9,9 +9,12 @@ import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -23,9 +26,11 @@ import net.vanfleteren.jazygit.git.model.Stash;
  * @param repositoryName the name of the repository
  * @param status         the working tree status and HEAD
  * @param branches       the local branches
+ * @param remoteBranches the remote-tracking branches
+ * @param branchesTab    which branches the branches pane lists; it stays when the focus leaves the pane
  * @param commits        the commit log of HEAD
  * @param stashes        the stashes, newest first
- * @param branchLog      the log of the branch highlighted in the branches pane, once one is
+ * @param branchLog      the log of the branch, local or remote, highlighted in the branches pane, once one is
  *                       highlighted
  * @param commitDetail   what the commit highlighted in the commits pane changed (its files, a summary and its
  *                       diff), once one is highlighted
@@ -52,9 +57,11 @@ import net.vanfleteren.jazygit.git.model.Stash;
 public record Model(String repositoryName,
                     Loadable<RepoStatus> status,
                     Loadable<List<Branch>> branches,
+                    Loadable<List<RemoteRef>> remoteBranches,
+                    BranchesTab branchesTab,
                     Loadable<List<Commit>> commits,
                     Loadable<List<Stash>> stashes,
-                    Option<Preview<String, List<Commit>>> branchLog,
+                    Option<Preview<BranchRef, List<Commit>>> branchLog,
                     Option<Preview<Sha, DiffText>> commitDetail,
                     Option<Preview<List<FileEntry>, Diffs>> fileDiff,
                     Set<Cmd.Load> refreshing,
@@ -74,7 +81,7 @@ public record Model(String repositoryName,
 
     public static Model initial(String repositoryName) {
         return new Model(repositoryName, Loadable.loading(), Loadable.loading(), Loadable.loading(),
-                Loadable.loading(), Option.none(),
+                BranchesTab.LOCAL, Loadable.loading(), Loadable.loading(), Option.none(),
                 Option.none(), Option.none(), HashSet.empty(), Option.none(), HashMap.empty(), Option.none(), Option.none(), Option.none(), 0, List.empty(),
                 Option.none(), DEFAULT_THEME, Option.none());
     }
@@ -106,6 +113,21 @@ public record Model(String repositoryName,
      */
     public Option<Branch> idleBranch(String name) {
         return branch(name).filter(known -> !busy.containsKey(name));
+    }
+
+    /**
+     * The remote-tracking branch of {@code branch}, if the remote branches are loaded and it is one of them.
+     */
+    public Option<RemoteRef> remoteBranch(RemoteBranch branch) {
+        return remoteBranches.toOption().flatMap(loaded -> loaded.find(ref -> ref.branch().equals(branch)));
+    }
+
+    /**
+     * The local branch that follows {@code upstream}, if the branches are loaded and one does.
+     */
+    public Option<Branch> trackingBranch(RemoteBranch upstream) {
+        return branches.toOption().flatMap(loaded -> loaded.find(branch ->
+                branch.upstream().exists(followed -> followed.branch().equals(upstream))));
     }
 
     /**
