@@ -58,6 +58,22 @@ class FilesPanelTest {
     }
 
     @Test
+    void theHighlightedNodeOnlyShowsWhileThePaneIsInUse() throws Exception {
+        Model model = TestModels.loaded(new FixedProvider(List.of(FileEntry.conflicted("both.txt", Conflict.of('U', 'U')))));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.ID))) {
+            String active = RenderedText.of(testRunner, () -> panel.render(model, FilesPanel.ID));
+            assertTrue(active.contains("> "), active);
+
+            String inactive = RenderedText.of(testRunner, () -> panel.render(model, CommitsPanel.ID, CommitsPanel.ID));
+            assertFalse(inactive.contains(">"), inactive);
+            assertTrue(inactive.contains("UU both.txt"), inactive);
+
+            testRunner.pilot().quit();
+        }
+    }
+
+    @Test
     void renamedFilesShowWhereTheyCameFrom() throws Exception {
         Model sameDirectory = TestModels.loaded(new FixedProvider(List.of(
                 FileEntry.renamed("b.txt", "a.txt", true, false),

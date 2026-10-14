@@ -52,6 +52,10 @@ public final class Theme {
         public static final String CURRENT_BRANCH = "current-branch";
         public static final String SHA = "sha";
         public static final String TAG = "tag";
+        /** The highlighted row of the left pane that is in use. */
+        public static final String SELECTION = "selection";
+        /** The highlighted row of the other left panes, which the built-in themes hide. */
+        public static final String INACTIVE_SELECTION = "inactive-selection";
 
         private Classes() {
         }
@@ -94,7 +98,52 @@ public final class Theme {
      * element of its own.
      */
     public static SpanStyles spanStyles(StyleEngine engine) {
-        return cssClass -> engine.resolve(new SpanNode(Set.of(cssClass))).toStyle();
+        return cssClass -> engine.resolve(new Node("Span", Set.of(cssClass))).toStyle();
+    }
+
+    /**
+     * How {@code engine} highlights the selected row: as the {@link Classes#SELECTION} rule says in the pane in
+     * use, reversed when the theme has none, and as the {@link Classes#INACTIVE_SELECTION} rule says in the
+     * others, not at all when the theme has none.
+     */
+    public static Highlights highlights(StyleEngine engine) {
+        return active -> active
+                ? Option.of(ownStyle(engine, Classes.SELECTION)).filter(style -> !style.equals(Style.EMPTY))
+                        .getOrElse(Highlights.DEFAULT.of(true))
+                : ownStyle(engine, Classes.INACTIVE_SELECTION);
+    }
+
+    /**
+     * What the rules for {@code cssClass} declare themselves, without what every element gets, like the colours
+     * of {@code *}: patched over a row, those would hide the colours of its pieces.
+     */
+    private static Style ownStyle(StyleEngine engine, String cssClass) {
+        Style base = engine.resolve(new Node("Highlight", Set.of())).toStyle();
+        Style styled = engine.resolve(new Node("Highlight", Set.of(cssClass))).toStyle();
+        Style withFg = Option.ofOptional(styled.fg())
+                .filter(fg -> !base.fg().equals(java.util.Optional.of(fg)))
+                .map(Style.EMPTY::fg)
+                .getOrElse(Style.EMPTY);
+        Style withBg = Option.ofOptional(styled.bg())
+                .filter(bg -> !base.bg().equals(java.util.Optional.of(bg)))
+                .map(withFg::bg)
+                .getOrElse(withFg);
+        return List.ofAll(styled.addModifiers()).removeAll(base.addModifiers())
+                .foldLeft(withBg, Style::addModifier);
+    }
+
+    /**
+     * How the selected row of a left pane is highlighted, in the pane in use and in the others.
+     */
+    @FunctionalInterface
+    public interface Highlights {
+
+        /**
+         * The highlight before a theme is known: reversed in the pane in use, none in the others.
+         */
+        Highlights DEFAULT = active -> active ? Style.EMPTY.reversed() : Style.EMPTY;
+
+        Style of(boolean active);
     }
 
     /**
@@ -111,11 +160,7 @@ public final class Theme {
         Style of(String cssClass);
     }
 
-    private record SpanNode(Set<String> cssClasses) implements Styleable {
-        @Override
-        public String styleType() {
-            return "Span";
-        }
+    private record Node(String styleType, Set<String> cssClasses) implements Styleable {
 
         @Override
         public java.util.Optional<String> cssId() {

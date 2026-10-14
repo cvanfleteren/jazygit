@@ -104,4 +104,30 @@ class StashPanelTest {
             testRunner.pilot().quit();
         }
     }
+
+    @Test
+    void theHighlightOnlyShowsWhileThePaneIsInUseAndComesBackWhereItWas() throws Exception {
+        Model model = withStashes(List.of(new Stash("stash@{0}", new Sha("s0"), "newest"),
+                new Stash("stash@{1}", new Sha("s1"), "older")));
+        StashPanel panel = new StashPanel(msg -> { });
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, StashPanel.ID))) {
+            testRunner.runner().focusManager().setFocus(StashPanel.ID);
+            testRunner.pilot().pause();
+            testRunner.pilot().press(KeyCode.DOWN);
+            testRunner.pilot().pause();
+
+            String inactive = RenderedText.ofLarge(testRunner,
+                    () -> panel.render(model, CommitsPanel.ID, CommitsPanel.ID));
+            assertTrue(inactive.contains("  0 newest"), inactive);
+            assertTrue(inactive.contains("  1 older"), inactive);
+            assertFalse(inactive.contains(">"), inactive);
+
+            // Still in use while, say, a popup opened from it has the focus.
+            String active = RenderedText.ofLarge(testRunner, () -> panel.render(model, null, StashPanel.ID));
+            assertTrue(active.contains("> 1 older"), active);
+            assertEquals("older", panel.selectedStash().get().message());
+            testRunner.pilot().quit();
+        }
+    }
 }

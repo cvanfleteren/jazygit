@@ -14,6 +14,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
 import dev.tamboui.css.engine.StyleEngine;
+import dev.tamboui.style.Style;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.feature.branch.BranchDialogs;
 import net.vanfleteren.jazygit.feature.branch.BranchesTabMsg;
@@ -57,6 +58,7 @@ import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.Duration;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -89,10 +91,12 @@ public class JazygitApp extends ToolkitApp {
     private final StyleEngine styleEngine;
     private final Consumer<Msg> dispatch = msg -> this.runtime.forEach(running -> running.program().dispatch(msg));
     private final ContentPanel contentPanel;
-    private final FilesPanel filesPanel = new FilesPanel(dispatch, () -> openContent(FilesPanel.ID));
-    private final BranchesPanel branchesPanel = new BranchesPanel(dispatch, this::showBranchesTab);
-    private final CommitsPanel commitsPanel = new CommitsPanel(dispatch, () -> openContent(CommitsPanel.ID));
-    private final StashPanel stashPanel = new StashPanel(dispatch);
+    private final FilesPanel filesPanel = new FilesPanel(dispatch, () -> openContent(FilesPanel.ID), this::highlight);
+    private final BranchesPanel branchesPanel = new BranchesPanel(dispatch, this::showBranchesTab,
+            Clock.systemUTC(), this::highlight);
+    private final CommitsPanel commitsPanel = new CommitsPanel(dispatch, () -> openContent(CommitsPanel.ID),
+            this::highlight);
+    private final StashPanel stashPanel = new StashPanel(dispatch, this::highlight);
     // Every popup, with where the focus goes when it closes. At most one is open.
     private final List<PopupSlot> popups = List.of(
             new PopupSlot(new TextInputDialog<>(BranchDialogs.NEW_BRANCH, dispatch), JazygitApp::focusedPane),
@@ -133,7 +137,27 @@ public class JazygitApp extends ToolkitApp {
     public JazygitApp(Env env, StyleEngine styleEngine) {
         this.env = env;
         this.styleEngine = styleEngine;
-        this.contentPanel = new ContentPanel(Theme.spanStyles(styleEngine), this::leaveScrollArea);
+        this.contentPanel = new ContentPanel(Theme.spanStyles(styleEngine), this::leaveScrollArea,
+                id -> runner().focusManager().setFocus(id));
+    }
+
+    /**
+     * How the active theme highlights the selected row of a left pane, in use or not.
+     */
+    private Style highlight(boolean active) {
+        return Theme.highlights(styleEngine).of(active);
+    }
+
+    /**
+     * The left pane in use, whose highlighted row shows: the one with the focus, also while the content it
+     * selects has the focus, or a popup that has it.
+     */
+    private String activePane(Model model, String focusedId) {
+        return Option.of(focusedId)
+                .filter(id -> popups.forAll(slot -> !slot.view().ids().contains(id)))
+                .orElse(model.focusedPane())
+                .map(id -> contentPanel.paneOfArea(id).getOrElse(id))
+                .getOrNull();
     }
 
     /**
@@ -226,24 +250,25 @@ public class JazygitApp extends ToolkitApp {
                 .getOrElse(() -> Model.initial(env.git().repositoryName()));
         Theme.activate(styleEngine, model.theme());
         String focusedId = runner().focusManager().focusedId();
-        Panel branches = branchesPanel.render(model, focusedId);
+        String activeId = activePane(model, focusedId);
+        Panel branches = branchesPanel.render(model, focusedId, activeId);
         // The highlighted branch lives in the list widget, which knows it once rendered; the
         // content panel then shows the log of that branch.
         branchesPanel.selectionChange(model).forEach(dispatch);
         commitsPanel.selectionChange(model).forEach(dispatch);
         filesPanel.selectionChange(model).forEach(dispatch);
-        Panel stash = stashPanel.render(model, focusedId);
+        Panel stash = stashPanel.render(model, focusedId, activeId);
         Option<Integer> stashHeight = stashHeight(model);
         var panes = row(
                 column(
                         StatusPanel.render(model),
-                        filesPanel.render(model, focusedId).percent(FILES_PERCENT),
+                        filesPanel.render(model, focusedId, activeId).percent(FILES_PERCENT),
                         branches.percent(BRANCHES_PERCENT),
                         // With the stash sized to its content, the commits take what is left, which is
                         // their share when the stash is as tall as it may get.
                         stashHeight.isDefined()
-                                ? commitsPanel.render(model, focusedId).fill()
-                                : commitsPanel.render(model, focusedId).percent(COMMITS_PERCENT),
+                                ? commitsPanel.render(model, focusedId, activeId).fill()
+                                : commitsPanel.render(model, focusedId, activeId).percent(COMMITS_PERCENT),
                         stashHeight.map(stash::length).getOrElse(stash::fill))
                         .percent(30),
                 column(

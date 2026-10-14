@@ -19,15 +19,23 @@ public final class StashPanel {
 
     public static final String ID = Scopes.STASH.id();
 
-    private final LoadableList<List<Stash>> list = new LoadableList<>(Messages.get("panel.stash.title"), ID,
-            stashes -> stashes.zipWithIndex((stash, index) -> LoadableList.Row.of(row(index, stash))),
-            LoadableList.Reselect.following(Stash::sha));
+    private final LoadableList<List<Stash>> list;
     private final Keymap keymap = Keymap.standard();
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public StashPanel(Consumer<Msg> dispatch) {
+        this(dispatch, Theme.Highlights.DEFAULT);
+    }
+
+    /**
+     * @param highlights how the highlighted stash is shown, also when the pane is not in use
+     */
+    public StashPanel(Consumer<Msg> dispatch, Theme.Highlights highlights) {
+        list = new LoadableList<>(Messages.get("panel.stash.title"), ID,
+                stashes -> stashes.zipWithIndex((stash, index) -> LoadableList.Row.of(row(index, stash))),
+                LoadableList.Reselect.following(Stash::sha), highlights);
         list.onKey(event -> PaneKeys.sending(keymap.handle(Scopes.STASH, event, selectedStash()), dispatch));
     }
 
@@ -36,7 +44,14 @@ public final class StashPanel {
      *                  {@code runner().focusManager().focusedId()}
      */
     public Panel render(Model model, String focusedId) {
-        return list.render(model.stashes(), ID.equals(focusedId));
+        return render(model, focusedId, focusedId);
+    }
+
+    /**
+     * @param activeId the id of the left pane in use, whose highlighted row shows
+     */
+    public Panel render(Model model, String focusedId, String activeId) {
+        return list.render(model.stashes(), ID.equals(focusedId), ID.equals(activeId));
     }
 
     /**

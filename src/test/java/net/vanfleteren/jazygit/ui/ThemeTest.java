@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.css.Styleable;
 import dev.tamboui.style.Color;
+import dev.tamboui.style.Style;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
 import org.junit.jupiter.api.Test;
@@ -66,5 +67,38 @@ class ThemeTest {
 
             assertTrue(engine.resolve(new Node("Panel", Set.of())).borderColor().isPresent(), name);
         }
+    }
+
+    @Test
+    void everyThemeHidesTheSelectionOfThePanesNotInUseAndOnlyColoursTheBackgroundOfTheOne() {
+        for (String name : Theme.NAMES) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
+            Theme.Highlights highlights = Theme.highlights(engine);
+
+            assertEquals(Style.EMPTY, highlights.of(false), name);
+            // A colour of its own would hide the colours of the pieces of the row.
+            assertTrue(highlights.of(true).bg().isPresent(), name);
+            assertFalse(highlights.of(true).fg().isPresent(), name);
+        }
+    }
+
+    @Test
+    void aThemeWithoutHighlightRulesReversesTheSelectionOfThePaneInUse() {
+        var engine = dev.tamboui.css.engine.StyleEngine.create();
+        engine.addStylesheet("bare", "* { color: white; }");
+        engine.setActiveStylesheet("bare");
+
+        assertEquals(Style.EMPTY.reversed(), Theme.highlights(engine).of(true));
+        assertEquals(Style.EMPTY, Theme.highlights(engine).of(false));
+    }
+
+    @Test
+    void aThemeCanShowTheSelectionOfThePanesNotInUse() {
+        var engine = dev.tamboui.css.engine.StyleEngine.create();
+        engine.addStylesheet("dimmed", "* { color: white; } .inactive-selection { text-style: dim; }");
+        engine.setActiveStylesheet("dimmed");
+
+        assertEquals(Style.EMPTY.dim(), Theme.highlights(engine).of(false));
     }
 }

@@ -8,6 +8,7 @@ import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.RichTextAreaElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.Tuple;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -28,6 +29,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.function.Function;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -55,12 +57,22 @@ public final class ContentPanel {
      *                        area had it, and says whether it did
      */
     public ContentPanel(Theme.SpanStyles styles, BooleanSupplier leaveScrollArea) {
+        this(styles, leaveScrollArea, id -> { });
+    }
+
+    /**
+     * @param focus called with the id of a focusable area that is clicked, to give it the focus
+     */
+    public ContentPanel(Theme.SpanStyles styles, BooleanSupplier leaveScrollArea, Consumer<String> focus) {
         this.styles = styles;
-        stagedArea = new ScrollArea("diff-staged", Option.of(FilesPanel.ID), text -> diffText(text, styles), leaveScrollArea);
+        stagedArea = new ScrollArea("diff-staged", Option.of(FilesPanel.ID), text -> diffText(text, styles), leaveScrollArea,
+                focus);
         unstagedArea = new ScrollArea("diff-unstaged", Option.of(FilesPanel.ID), text -> diffText(text, styles),
-                leaveScrollArea);
-        commitArea = new ScrollArea(COMMIT_AREA_ID, Option.of(CommitsPanel.ID), ContentPanel::plainText, leaveScrollArea);
-        logArea = new ScrollArea("branch-log", Option.none(), text -> logText(text, styles), leaveScrollArea);
+                leaveScrollArea, focus);
+        commitArea = new ScrollArea(COMMIT_AREA_ID, Option.of(CommitsPanel.ID), ContentPanel::plainText, leaveScrollArea,
+                focus);
+        logArea = new ScrollArea("branch-log", Option.none(), text -> logText(text, styles), leaveScrollArea,
+                focus);
         focusableAreas = List.of(stagedArea, unstagedArea, commitArea);
     }
 
@@ -101,13 +113,22 @@ public final class ContentPanel {
         private Supplier<Text> text = Text::empty;
         private String theme = "";
 
-        ScrollArea(String id, Option<String> pane, Function<String, Text> styling, BooleanSupplier leaveScrollArea) {
+        ScrollArea(String id, Option<String> pane, Function<String, Text> styling, BooleanSupplier leaveScrollArea,
+                   Consumer<String> focus) {
             this.id = id;
             this.pane = pane;
             this.styling = styling;
             element = richTextArea().id(id).rounded().scrollbar().fill();
+            // Only focusable, and so part of the Tab cycle, while the content has the focus; a click still
+            // gives it the focus from the panes.
             if (pane.isDefined()) {
-                element.focusable();
+                element.onMouseEvent(event -> {
+                    if (event.kind() == MouseEventKind.PRESS && event.isLeftButton()) {
+                        focus.accept(id);
+                        return EventResult.HANDLED;
+                    }
+                    return EventResult.UNHANDLED;
+                });
             }
             element.onKeyEvent(event -> {
                 // Key handlers also see keys typed elsewhere; the callback checks that a diff has focus.
@@ -155,6 +176,14 @@ public final class ContentPanel {
             return !(key instanceof String content) || !content.isBlank();
         }
 
+        /**
+         * Makes the area part of the Tab cycle while {@code inContent}, so Tab goes from one area to the
+         * other then, but from the last pane back to the first otherwise.
+         */
+        void tabbable(boolean inContent) {
+            element.focusable(pane.isDefined() && inContent);
+        }
+
         RichTextAreaElement show(String title) {
             return element.title(title);
         }
@@ -166,6 +195,8 @@ public final class ContentPanel {
      */
     public StyledElement<?> render(Model model, String focusedId) {
         List.of(stagedArea, unstagedArea, commitArea, logArea).forEach(area -> area.restyle(model.theme()));
+        boolean inContent = focusableAreas.exists(area -> area.id().equals(focusedId));
+        focusableAreas.forEach(area -> area.tabbable(inContent));
         String pane = model.popup().isDefined() ? model.focusedPane().getOrElse(focusedId) : focusedId;
         if (BranchesPanel.ID.equals(pane)) {
             return branchLogView(model);

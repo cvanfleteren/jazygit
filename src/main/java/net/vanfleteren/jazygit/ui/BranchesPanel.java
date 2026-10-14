@@ -193,13 +193,21 @@ public class BranchesPanel {
      * @param clock tells how long ago the branches were last committed to
      */
     public BranchesPanel(Consumer<Msg> dispatch, Consumer<BranchesTab> tabClicked, Clock clock) {
+        this(dispatch, tabClicked, clock, Theme.Highlights.DEFAULT);
+    }
+
+    /**
+     * @param highlights how the highlighted branch is shown, also when the pane is not in use
+     */
+    public BranchesPanel(Consumer<Msg> dispatch, Consumer<BranchesTab> tabClicked, Clock clock,
+                         Theme.Highlights highlights) {
         this.tabClicked = tabClicked;
         list = new LoadableList<>(Messages.get("panel.branches.title"), ID,
                 branches -> branches
                         .map(b -> row(b, Duration.between(b.tipTime(), clock.instant()),
                                 pullRequests.apply(b),
                                 busy.get(b.name()).map(operation -> spinner(operation, clock.instant())))),
-                BranchesPanel::reselect);
+                BranchesPanel::reselect, highlights);
         // The highlight alone marks the selection; a symbol would indent the rows.
         list.highlightSymbol("");
         list.onKey(event -> Option.when(tab == BranchesTab.LOCAL, event)
@@ -208,7 +216,7 @@ public class BranchesPanel {
                 refs -> refs.map(ref -> remoteRow(ref, Duration.between(ref.tipTime(), clock.instant()),
                         tracked.test(ref.branch()),
                         busy.get(ref.branch().shortName()).map(operation -> spinner(operation, clock.instant())))),
-                LoadableList.Reselect.following(RemoteRef::branch));
+                LoadableList.Reselect.following(RemoteRef::branch), highlights);
         remoteList.highlightSymbol("");
         remoteList.whenEmpty(Messages.get("remoteBranches.empty"));
         remoteList.onKey(event -> Option.when(tab == BranchesTab.REMOTE, event)
@@ -221,14 +229,22 @@ public class BranchesPanel {
      *                  {@code runner().focusManager().focusedId()}
      */
     public Panel render(Model model, String focusedId) {
+        return render(model, focusedId, focusedId);
+    }
+
+    /**
+     * @param activeId the id of the left pane in use, whose highlighted row shows
+     */
+    public Panel render(Model model, String focusedId, String activeId) {
         busy = model.busy();
         pullRequests = model::pullRequest;
         tab = model.branchesTab();
         tracked = remote -> model.trackingBranch(remote).isDefined();
         boolean focused = ID.equals(focusedId);
+        boolean active = ID.equals(activeId);
         Panel panel = switch (tab) {
-            case LOCAL -> list.render(model.branches(), focused, title(tab));
-            case REMOTE -> remoteList.render(model.remoteBranches(), focused, title(tab));
+            case LOCAL -> list.render(model.branches(), focused, active, title(tab));
+            case REMOTE -> remoteList.render(model.remoteBranches(), focused, active, title(tab));
         };
         return panel.onMouseEvent(event -> titleClick(panel.renderedArea(), event));
     }

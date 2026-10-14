@@ -22,8 +22,7 @@ public class CommitsPanel {
 
     public static final String ID = Scopes.COMMITS.id();
 
-    private final LoadableList<List<Commit>> list = new LoadableList<>(Messages.get("panel.commits.title"), ID,
-            commits -> rows(CommitGraph.layout(commits)), CommitsPanel::reselect);
+    private final LoadableList<List<Commit>> list;
     private final Keymap keymap = Keymap.standard();
 
     /**
@@ -39,6 +38,15 @@ public class CommitsPanel {
      * @param openCommit called when Enter is pressed on a commit, to move focus to its content
      */
     public CommitsPanel(Consumer<Msg> dispatch, Runnable openCommit) {
+        this(dispatch, openCommit, Theme.Highlights.DEFAULT);
+    }
+
+    /**
+     * @param highlights how the highlighted commit is shown, also when the pane is not in use
+     */
+    public CommitsPanel(Consumer<Msg> dispatch, Runnable openCommit, Theme.Highlights highlights) {
+        list = new LoadableList<>(Messages.get("panel.commits.title"), ID,
+                commits -> rows(CommitGraph.layout(commits)), CommitsPanel::reselect, highlights);
         list.onKey(event -> event.code() == KeyCode.ENTER && selectedCommit().isDefined()
                 ? Option.of(openCommit)
                 : PaneKeys.sending(keymap.handle(Scopes.COMMITS, event, selectedCommit()), dispatch));
@@ -49,7 +57,14 @@ public class CommitsPanel {
      *                  {@code runner().focusManager().focusedId()}
      */
     public Panel render(Model model, String focusedId) {
-        return list.render(model.commits(), ID.equals(focusedId));
+        return render(model, focusedId, focusedId);
+    }
+
+    /**
+     * @param activeId the id of the left pane in use, whose highlighted row shows
+     */
+    public Panel render(Model model, String focusedId, String activeId) {
+        return list.render(model.commits(), ID.equals(focusedId), ID.equals(activeId));
     }
 
     /**

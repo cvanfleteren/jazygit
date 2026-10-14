@@ -38,6 +38,8 @@ public class FilesPanel {
 
     // A virtual directory holding everything, so that all changes can be (un)staged at once.
     private static final String ROOT_NAME = "/";
+    // TamboUI's default, which indents every node.
+    private static final String HIGHLIGHT_SYMBOL = "> ";
 
 
     private final TreeElement<FileTree> tree = Toolkit.<FileTree>tree()
@@ -51,12 +53,21 @@ public class FilesPanel {
     // The tree's key handler also sees keys typed in other panes, so it must know whether it has focus.
     private boolean focused;
     private final Keymap keymap = Keymap.standard();
+    private final Theme.Highlights highlights;
 
     /**
      * @param dispatch  receives the messages for the user's actions, on the render thread
      * @param openDiff  called when Enter is pressed on a file or directory, to move focus to its diff
      */
     public FilesPanel(Consumer<Msg> dispatch, Runnable openDiff) {
+        this(dispatch, openDiff, Theme.Highlights.DEFAULT);
+    }
+
+    /**
+     * @param highlights how the highlighted node is shown, also when the pane is not in use
+     */
+    public FilesPanel(Consumer<Msg> dispatch, Runnable openDiff, Theme.Highlights highlights) {
+        this.highlights = highlights;
         tree.onKeyEvent(PaneKeys.whileFocused(() -> focused, event -> event.code() == KeyCode.ENTER && selected().isDefined()
                 ? Option.of(openDiff)
                 : PaneKeys.sending(keymap.handle(Scopes.FILES, event, selected()), dispatch)));
@@ -82,7 +93,18 @@ public class FilesPanel {
      *                  {@code runner().focusManager().focusedId()}
      */
     public Panel render(Model model, String focusedId) {
+        return render(model, focusedId, focusedId);
+    }
+
+    /**
+     * @param activeId the id of the left pane in use, whose highlighted node shows, as it is again when it
+     *                 is back in use
+     */
+    public Panel render(Model model, String focusedId, String activeId) {
         focused = ID.equals(focusedId);
+        boolean active = ID.equals(activeId);
+        tree.highlightStyle(highlights.of(active))
+                .highlightSymbol(active ? HIGHLIGHT_SYMBOL : " ".repeat(HIGHLIGHT_SYMBOL.length()));
         if (!shown.contains(model.status())) {
             shown = Option.of(model.status());
             rebuild(model.status());

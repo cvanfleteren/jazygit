@@ -19,7 +19,8 @@ import java.util.function.Function;
 
 /**
  * A focusable list showing a {@link Loadable} value. The list widget keeps its own selection, so
- * its items are only rebuilt when the value changes.
+ * its items are only rebuilt when the value changes. The selection is only highlighted while the list
+ * is the one in use, and comes back as it was when it is again.
  */
 final class LoadableList<T> {
 
@@ -27,6 +28,9 @@ final class LoadableList<T> {
     private final ListElement<?> list;
     private final Function<T, List<Row>> items;
     private final Reselect<T> reselect;
+    private final Theme.Highlights highlights;
+    // TamboUI's default, which indents every row.
+    private String highlightSymbol = "> ";
     // The value the last render showed, and its rows.
     private Option<Loadable<T>> shown = Option.none();
     private List<Row> shownRows = List.of();
@@ -115,14 +119,16 @@ final class LoadableList<T> {
         }
     }
 
-    LoadableList(String title, String id, Function<T, List<Row>> items) {
-        this(title, id, items, (previous, next, selected) -> selected);
+    LoadableList(String title, String id, Function<T, List<Row>> items, Theme.Highlights highlights) {
+        this(title, id, items, (previous, next, selected) -> selected, highlights);
     }
 
-    LoadableList(String title, String id, Function<T, List<Row>> items, Reselect<T> reselect) {
+    LoadableList(String title, String id, Function<T, List<Row>> items, Reselect<T> reselect,
+                 Theme.Highlights highlights) {
         this.title = title;
         this.items = items;
         this.reselect = reselect;
+        this.highlights = highlights;
         this.list = list()
                 .id(id)
                 .focusable()
@@ -131,15 +137,22 @@ final class LoadableList<T> {
                 .fill();
     }
 
-    Panel render(Loadable<T> value, boolean focused) {
-        return render(value, focused, Pane.title(title));
+    /**
+     * @param focused whether the list has the focus, which its keys need
+     * @param active  whether the list is the one in use, which shows its selection: also while what it
+     *                selects or a popup opened from it has the focus
+     */
+    Panel render(Loadable<T> value, boolean focused, boolean active) {
+        return render(value, focused, active, Pane.title(title));
     }
 
     /**
      * @param title the title to show instead of the one the list was made with
      */
-    Panel render(Loadable<T> value, boolean focused, Line title) {
+    Panel render(Loadable<T> value, boolean focused, boolean active, Line title) {
         this.focused = focused;
+        list.highlightStyle(highlights.of(active))
+                .highlightSymbol(active ? highlightSymbol : " ".repeat(highlightSymbol.length()));
         List<Row> items = value.toOption().map(this.items).getOrElse(List.empty());
         List<Row> rows = switch (value) {
             case Loadable.Loading<T>() -> List.of(Row.of(Placeholders.loading()));
@@ -205,7 +218,7 @@ final class LoadableList<T> {
      * Sets the text drawn before the highlighted row. The default one indents every row.
      */
     void highlightSymbol(String symbol) {
-        list.highlightSymbol(symbol);
+        highlightSymbol = symbol;
     }
 
     /**

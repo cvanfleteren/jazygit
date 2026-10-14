@@ -1,5 +1,6 @@
 $border: dark-gray;
 $accent: cyan;
+$selection: dark-gray;
 
 Panel, TextInputElement, TextAreaElement, RichTextAreaElement {
     border-type: rounded;
@@ -8,6 +9,17 @@ Panel, TextInputElement, TextAreaElement, RichTextAreaElement {
 
 Panel.focused {
     border-color: $accent;
+}
+
+/*
+ * The highlighted row: in the left pane in use, and in popups; in the other left panes it is hidden, as the
+ * empty rule says. Only what these rules declare themselves is laid over the row.
+ */
+ListElement-item:selected, TreeElement-node:selected, .selection {
+    background: $selection;
+}
+
+.inactive-selection {
 }
 
 .bold { text-style: bold; }

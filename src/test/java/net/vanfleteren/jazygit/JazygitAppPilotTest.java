@@ -11,7 +11,11 @@ import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
+import net.vanfleteren.jazygit.git.model.Diffs;
+import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.state.LoadMsg;
+import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
@@ -121,6 +125,41 @@ class JazygitAppPilotTest {
             pilot.press(KeyCode.TAB, KeyModifiers.SHIFT);
             pilot.pause();
             assertEquals(CommitsPanel.ID, focusManager.focusedId());
+
+            pilot.quit();
+        }
+    }
+
+    @Test
+    void theDiffAreasAreOnlyPartOfTheTabCycleOnceTheyHaveTheFocus() throws Exception {
+        SampleData data = new SampleData();
+        Model loaded = TestModels.loaded(data);
+        io.vavr.collection.List<FileEntry> files = loaded.status().toOption().get().files();
+        Model model = Update.update(Update.update(loaded, new SelectionMsg.FilesSelected(files)).model(),
+                new LoadMsg.FileDiffLoaded(files, new Diffs("+staged\n", "+unstaged\n"))).model();
+        java.util.List<Msg> dispatched = new ArrayList<>();
+        Fixture fixture = new Fixture(data, model, dispatched, new ArrayList<>(),
+                new FilesPanel(dispatched::add, () -> { }), new BranchesPanel(dispatched::add, tab -> { }),
+                new CommitsPanel(dispatched::add, () -> { }), new StashPanel(dispatched::add), new AtomicReference<>());
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
+            FocusManager focusManager = testRunner.runner().focusManager();
+            fixture.focusManagerRef().set(focusManager);
+            focusManager.setFocus(StashPanel.ID);
+
+            Pilot pilot = testRunner.pilot();
+            pilot.pause();
+            pilot.press(KeyCode.TAB);
+            pilot.pause();
+            assertEquals(FilesPanel.ID, focusManager.focusedId(), "Tab from the last pane should skip the diffs");
+
+            // As Enter on a file does; the key after it renders the diffs with the focus.
+            focusManager.setFocus("diff-staged");
+            pilot.press(KeyCode.DOWN);
+            pilot.pause();
+            pilot.press(KeyCode.TAB);
+            pilot.pause();
+            assertEquals("diff-unstaged", focusManager.focusedId(), "Tab should go from one diff to the other");
 
             pilot.quit();
         }
