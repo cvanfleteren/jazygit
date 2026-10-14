@@ -9,6 +9,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Msg;
 import org.junit.jupiter.api.Test;
 
@@ -25,18 +26,18 @@ class KeymapTest {
 
     @Test
     void aKeyCannotBeBoundTwiceInAPanel() {
-        Keymap once = Keymap.empty().add(Scopes.BRANCHES, Keymap.Binding.<String>onSelected("x", "help.global.quit", CheckoutMsg.Requested::new));
+        Keymap once = Keymap.empty().add(Scopes.BRANCHES, Keymap.Binding.<Branch.Name>onSelected("x", "help.global.quit", CheckoutMsg.Requested::new));
 
         org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> once.add(Scopes.BRANCHES,
-                Keymap.Binding.<String>onSelected("x", "help.global.quit", CheckoutMsg.Requested::new)));
+                Keymap.Binding.<Branch.Name>onSelected("x", "help.global.quit", CheckoutMsg.Requested::new)));
         org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> once.add(Scopes.BRANCHES,
-                Keymap.Binding.<String>onSelected(Keymap.HELP_KEY, "help.global.quit", CheckoutMsg.Requested::new)));
+                Keymap.Binding.<Branch.Name>onSelected(Keymap.HELP_KEY, "help.global.quit", CheckoutMsg.Requested::new)));
     }
 
     @Test
     void aKeyActsOnTheSelection() {
-        assertEquals(Option.of(new CheckoutMsg.Requested("x")),
-                keymap.handle(Scopes.BRANCHES, KeyEvent.ofChar(' '), Option.of("x")));
+        assertEquals(Option.of(new CheckoutMsg.Requested(new Branch.Name("x"))),
+                keymap.handle(Scopes.BRANCHES, KeyEvent.ofChar(' '), Option.of(new Branch.Name("x"))));
     }
 
     @Test
@@ -46,7 +47,7 @@ class KeymapTest {
 
     @Test
     void unknownKeysDoNothing() {
-        assertEquals(Option.none(), keymap.handle(Scopes.BRANCHES, KeyEvent.ofChar('Z'), Option.of("x")));
+        assertEquals(Option.none(), keymap.handle(Scopes.BRANCHES, KeyEvent.ofChar('Z'), Option.of(new Branch.Name("x"))));
     }
 
     @Test

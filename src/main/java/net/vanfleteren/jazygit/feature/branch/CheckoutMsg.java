@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Model;
@@ -17,7 +18,7 @@ public sealed interface CheckoutMsg extends Msg {
     /**
      * The user asked to check out a branch.
      */
-    record Requested(String branch) implements CheckoutMsg {
+    record Requested(Branch.Name branch) implements CheckoutMsg {
     }
 
     /**

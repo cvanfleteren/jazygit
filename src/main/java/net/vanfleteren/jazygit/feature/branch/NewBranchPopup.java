@@ -25,6 +25,6 @@ public record NewBranchPopup(String base, String label, String name, Option<Remo
      * Asking for the name of a new branch that follows {@code remote}, starting out with the name it has there.
      */
     static NewBranchPopup following(RemoteBranch remote) {
-        return new NewBranchPopup(remote.trackingRef(), remote.shortName(), remote.branch(), Option.of(remote));
+        return new NewBranchPopup(remote.trackingRef(), remote.shortName(), remote.branch().value(), Option.of(remote));
     }
 }

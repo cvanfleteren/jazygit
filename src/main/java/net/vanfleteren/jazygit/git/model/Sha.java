@@ -26,9 +26,4 @@ public record Sha(String value) {
     public String shortSha() {
         return value.substring(0, Math.min(SHORT_LENGTH, value.length()));
     }
-
-    @Override
-    public String toString() {
-        return value;
-    }
 }

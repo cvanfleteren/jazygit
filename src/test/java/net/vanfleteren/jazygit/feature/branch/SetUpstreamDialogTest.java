@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.branch;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -25,7 +26,7 @@ class SetUpstreamDialogTest {
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final net.vanfleteren.jazygit.ui.widgets.TextInputDialog<SetUpstreamPopup> dialog = new net.vanfleteren.jazygit.ui.widgets.TextInputDialog<>(BranchDialogs.SET_UPSTREAM, dispatched::add);
     // In the test models, feature has no upstream.
-    private final Model open = Update.update(TestModels.loaded(), new PushMsg.Requested("feature")).model();
+    private final Model open = Update.update(TestModels.loaded(), new PushMsg.Requested(new Branch.Name("feature"))).model();
 
     @Test
     void showsTheTitleAndStartsOutWithTheSameBranchOnOrigin() throws Exception {

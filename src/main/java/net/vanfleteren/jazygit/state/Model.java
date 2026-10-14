@@ -67,9 +67,9 @@ public record Model(String repositoryName,
                     Option<Preview<List<FileEntry>, Diffs>> fileDiff,
                     Set<Cmd.Load> refreshing,
                     Option<AppError> error,
-                    Map<String, Operation> busy,
+                    Map<BranchRef, Operation> busy,
                     Option<Fetching> fetching,
-                    Option<Map<String, PullRequest>> pullRequests,
+                    Option<Map<Branch.Name, PullRequest>> pullRequests,
                     Option<Failure> pullRequestsFailure,
                     int readingPullRequests,
                     List<LogEntry> commandLog,
@@ -101,7 +101,7 @@ public record Model(String repositoryName,
     /**
      * The local branch {@code name}, if the branches are loaded and it is one of them.
      */
-    public Option<Branch> branch(String name) {
+    public Option<Branch> branch(Branch.Name name) {
         return branches.toOption().flatMap(loaded -> loaded.find(branch -> branch.name().equals(name)));
     }
 
@@ -109,8 +109,8 @@ public record Model(String repositoryName,
      * The local branch {@code name}, if it is one and no operation runs on it: a branch that is being pushed,
      * pulled or deleted takes no other operation meanwhile.
      */
-    public Option<Branch> idleBranch(String name) {
-        return branch(name).filter(known -> !busy.containsKey(name));
+    public Option<Branch> idleBranch(Branch.Name name) {
+        return branch(name).filter(known -> !busy.containsKey(new BranchRef.Local(name)));
     }
 
     /**
@@ -165,14 +165,14 @@ public record Model(String repositoryName,
     /**
      * This model with {@code operation} running on {@code branch}.
      */
-    public Model withBusyBranch(String branch, Operation operation) {
+    public Model withBusyBranch(BranchRef branch, Operation operation) {
         return withBusy(busy.put(branch, operation));
     }
 
     /**
      * This model with the operation on {@code branch} done.
      */
-    public Model withoutBusyBranch(String branch) {
+    public Model withoutBusyBranch(BranchRef branch) {
         return withBusy(busy.remove(branch));
     }
 

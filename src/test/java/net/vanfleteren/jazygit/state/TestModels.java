@@ -1,15 +1,15 @@
 package net.vanfleteren.jazygit.state;
 
-import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.SelectionMsg;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
-import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -26,11 +26,11 @@ import java.time.Instant;
  */
 public final class TestModels {
 
-    public static final RepoStatus CLEAN = new RepoStatus(Head.onBranch("main", new Sha("aaaa")), List.of());
-    public static final RepoStatus DIRTY = new RepoStatus(Head.onBranch("main", new Sha("aaaa")), List.of(new FileEntry("a.txt", ChangeType.UNTRACKED)));
-    public static final RepoStatus MOVED = new RepoStatus(Head.onBranch("main", new Sha("bbbb")), List.of());
-    public static final List<Branch> BRANCHES = List.of(new Branch("main", true, new Sha("aaaa")),
-            new Branch("feature", false, new Sha("ffff")));
+    public static final RepoStatus CLEAN = new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), List.of());
+    public static final RepoStatus DIRTY = new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), List.of(new FileEntry("a.txt", ChangeType.UNTRACKED)));
+    public static final RepoStatus MOVED = new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("bbbb")), List.of());
+    public static final List<Branch> BRANCHES = List.of(new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
+            new Branch(new Branch.Name("feature"), false, new Sha("ffff")));
     public static final List<Commit> COMMITS = List.of(
             new Commit(new Sha("aaaa"), "Ada", "ada@example.com", Instant.EPOCH, "First", ""));
     public static final List<Commit> FEATURE_COMMITS = List.of(
@@ -63,7 +63,7 @@ public final class TestModels {
      */
     public static Model loaded(GitInfoProvider provider, String branch) {
         Program program = Program.start(new Env(provider, StubGitHub.empty()), Runnable::run, Runnable::run, Runnable::run);
-        program.dispatch(new SelectionMsg.BranchSelected(new BranchRef.Local(branch)));
+        program.dispatch(new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name(branch))));
         return program.model();
     }
 
@@ -129,6 +129,6 @@ public final class TestModels {
      * {@code model} with the log of {@code branch} still loading, while the log it replaced stays visible.
      */
     public static Model switchingBranch(Model model, String branch) {
-        return model.withBranchLog(Option.of(Preview.loading(new BranchRef.Local(branch), model.branchLog())));
+        return model.withBranchLog(Option.of(Preview.loading(new BranchRef.Local(new Branch.Name(branch)), model.branchLog())));
     }
 }

@@ -4,6 +4,7 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -24,7 +25,7 @@ class NewBranchDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final net.vanfleteren.jazygit.ui.widgets.TextInputDialog<NewBranchPopup> dialog = new net.vanfleteren.jazygit.ui.widgets.TextInputDialog<>(BranchDialogs.NEW_BRANCH, dispatched::add);
-    private final Model open = Update.update(TestModels.loaded(new SampleData()), new NewBranchMsg.Requested("main"))
+    private final Model open = Update.update(TestModels.loaded(new SampleData()), new NewBranchMsg.Requested(new Branch.Name("main")))
             .model();
 
     @Test

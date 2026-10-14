@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.collection.List;
@@ -29,7 +30,7 @@ class FilesPanelTest {
 
         @Override
         public Either<ProcessError, RepoStatus> status() {
-            return Either.right(new RepoStatus(Head.onBranch("main", new Sha("aaaa")), files));
+            return Either.right(new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), files));
         }
     }
 

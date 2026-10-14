@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
@@ -24,11 +26,11 @@ public sealed interface BranchCmd extends GitOperationCmd {
     /**
      * The branch the command acts on.
      */
-    String branch();
+    Branch.Name branch();
 
     @Override
     default Option<String> subject() {
-        return Option.of(branch());
+        return Option.of(branch().value());
     }
 
     /**
@@ -37,8 +39,8 @@ public sealed interface BranchCmd extends GitOperationCmd {
     sealed interface KeepsBranchBusy extends BranchCmd {
 
         @Override
-        default Option<String> busyBranch() {
-            return Option.of(branch());
+        default Option<BranchRef> busyBranch() {
+            return Option.of(new BranchRef.Local(branch()));
         }
     }
 
@@ -57,7 +59,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
     /**
      * Creates the branch {@code branch} at {@code base} and switches to it.
      */
-    record CreateBranch(String branch, String base) implements ChecksOutBranch {
+    record CreateBranch(Branch.Name branch, String base) implements ChecksOutBranch {
 
         @Override
         public Operation operation() {
@@ -73,7 +75,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
     /**
      * Deletes {@code branch} where {@code scope} says; on its remote, that is {@code remote}.
      */
-    record DeleteBranch(String branch, RemoteBranch remote, DeleteScope scope) implements KeepsBranchBusy {
+    record DeleteBranch(Branch.Name branch, RemoteBranch remote, DeleteScope scope) implements KeepsBranchBusy {
 
         @Override
         public Operation operation() {
@@ -89,7 +91,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
     /**
      * Merges {@code branch} into the checked out branch.
      */
-    record Merge(String branch, MergeMode mode) implements BranchCmd {
+    record Merge(Branch.Name branch, MergeMode mode) implements BranchCmd {
 
         @Override
         public Operation operation() {
@@ -105,7 +107,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
     /**
      * Rebases the checked out branch onto {@code branch}.
      */
-    record Rebase(String branch) implements BranchCmd {
+    record Rebase(Branch.Name branch) implements BranchCmd {
 
         @Override
         public Operation operation() {
@@ -122,7 +124,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
      * Checks out {@code branch}. When uncommitted changes are in the way, the user is offered to take them
      * along instead of being told it failed.
      */
-    record Checkout(String branch) implements ChecksOutBranch {
+    record Checkout(Branch.Name branch) implements ChecksOutBranch {
 
         @Override
         public Operation operation() {
@@ -148,7 +150,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
      * Creates the local branch {@code branch} at the remote branch {@code upstream}, following it, and checks it
      * out. The remote branch shows as busy meanwhile, as the local one does not exist yet.
      */
-    record CheckoutRemote(String branch, RemoteBranch upstream) implements ChecksOutBranch {
+    record CheckoutRemote(Branch.Name branch, RemoteBranch upstream) implements ChecksOutBranch {
 
         @Override
         public Operation operation() {
@@ -156,8 +158,8 @@ public sealed interface BranchCmd extends GitOperationCmd {
         }
 
         @Override
-        public Option<String> busyBranch() {
-            return Option.of(upstream.shortName());
+        public Option<BranchRef> busyBranch() {
+            return Option.of(new BranchRef.Remote(upstream));
         }
 
         @Override
@@ -169,7 +171,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
     /**
      * Checks out {@code branch}, taking the uncommitted changes along through a stash.
      */
-    record CheckoutWithStash(String branch) implements ChecksOutBranch {
+    record CheckoutWithStash(Branch.Name branch) implements ChecksOutBranch {
 
         @Override
         public Operation operation() {
@@ -185,7 +187,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
     /**
      * Pushes {@code branch} to {@code upstream}, which it then tracks.
      */
-    record PushSettingUpstream(String branch, RemoteBranch upstream) implements KeepsBranchBusy {
+    record PushSettingUpstream(Branch.Name branch, RemoteBranch upstream) implements KeepsBranchBusy {
 
         @Override
         public Operation operation() {
@@ -201,7 +203,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
     /**
      * Pushes {@code branch} to {@code upstream}, the branch it tracks.
      */
-    record Push(String branch, RemoteBranch upstream, PushMode mode) implements KeepsBranchBusy {
+    record Push(Branch.Name branch, RemoteBranch upstream, PushMode mode) implements KeepsBranchBusy {
 
         @Override
         public Operation operation() {
@@ -217,7 +219,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
     /**
      * Pulls {@code branch}, the checked out branch, from its upstream.
      */
-    record Pull(String branch) implements KeepsBranchBusy {
+    record Pull(Branch.Name branch) implements KeepsBranchBusy {
 
         @Override
         public Operation operation() {
@@ -233,7 +235,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
     /**
      * Fast-forwards {@code branch}, which is not checked out, to {@code upstream}, the branch it tracks.
      */
-    record FastForward(String branch, RemoteBranch upstream) implements KeepsBranchBusy {
+    record FastForward(Branch.Name branch, RemoteBranch upstream) implements KeepsBranchBusy {
 
         @Override
         public Operation operation() {

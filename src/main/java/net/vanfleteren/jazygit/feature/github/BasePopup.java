@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.github;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Popup;
 
 /**
@@ -8,5 +9,5 @@ import net.vanfleteren.jazygit.state.Popup;
  *
  * @param bases the branches to choose from, the default branch first
  */
-public record BasePopup(String branch, List<String> bases) implements Popup {
+public record BasePopup(Branch.Name branch, List<Branch.Name> bases) implements Popup {
 }

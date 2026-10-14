@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import io.vavr.collection.HashMap;
@@ -29,7 +30,7 @@ public final class CliBranch {
      * Deletes the branch {@code name} where {@code scope} says: locally, and/or {@code remote}, the branch it is
      * pushed to. With both, the remote one goes first, so a failure leaves the local branch in place.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> delete(Path workTree, String name,
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> delete(Path workTree, Branch.Name name,
                                                                           RemoteBranch remote, DeleteScope scope) {
         return GitFailure.sequence(
                 () -> scope.remote() ? deleteRemote(workTree, remote) : GitFailure.nothing(),
@@ -39,21 +40,21 @@ public final class CliBranch {
     /**
      * Runs {@code git branch -D <name>} in {@code workTree}.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocal(Path workTree, String name) {
-        return GitProcess.log(workTree, git("branch", "--delete", "--force", name));
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocal(Path workTree, Branch.Name name) {
+        return GitProcess.log(workTree, git("branch", "--delete", "--force", name.value()));
     }
 
     /**
      * Runs {@code git push <remote> --delete <branch>} in {@code workTree}.
      */
     public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemote(Path workTree, RemoteBranch remote) {
-        return log(workTree, git("push", remote.remote(), "--delete", remote.branch()));
+        return log(workTree, git("push", remote.remote(), "--delete", remote.branch().value()));
     }
 
     /**
      * Pushes {@code name} to {@code upstream}, the branch it tracks.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Path workTree, String name,
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Path workTree, Branch.Name name,
                                                                         RemoteBranch upstream, PushMode mode) {
         return log(workTree, git(List.of("push")
                 .appendAll(mode == PushMode.FORCE_WITH_LEASE ? List.of("--force-with-lease") : List.empty())
@@ -65,7 +66,7 @@ public final class CliBranch {
      * Runs {@code git push --set-upstream <remote> <name>:<branch>}: pushes {@code name} to {@code upstream},
      * which it then tracks. Git only sets the upstream when the push succeeds.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(Path workTree, String name,
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(Path workTree, Branch.Name name,
                                                                                    RemoteBranch upstream) {
         return log(workTree, git("push", "--set-upstream", upstream.remote(), refspec(name, upstream)));
     }
@@ -88,7 +89,7 @@ public final class CliBranch {
      * Runs {@code git fetch <remote> refs/heads/<upstream>:refs/heads/<name>}: fast-forwards {@code name}, which
      * is not checked out, to {@code upstream}, the branch it tracks. Git refuses when that is not a fast-forward.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(Path workTree, String name,
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(Path workTree, Branch.Name name,
                                                                                RemoteBranch upstream) {
         return log(workTree, git("fetch", upstream.remote(), Refs.head(upstream.branch()) + ":" + Refs.head(name)));
     }
@@ -104,7 +105,7 @@ public final class CliBranch {
      * What to push {@code name} as: just the name when the remote branch has it too, so the command reads as
      * one would type it.
      */
-    private static String refspec(String name, RemoteBranch target) {
-        return target.branch().equals(name) ? name : name + ":" + Refs.head(target.branch());
+    private static String refspec(Branch.Name name, RemoteBranch target) {
+        return target.branch().equals(name) ? name.value() : name.value() + ":" + Refs.head(target.branch());
     }
 }

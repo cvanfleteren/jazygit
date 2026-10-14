@@ -1,11 +1,13 @@
 package net.vanfleteren.jazygit.feature.github;
 
+import net.vanfleteren.jazygit.git.model.Branch;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
@@ -23,7 +25,7 @@ public sealed interface PullRequestCmd extends Cmd {
      * Creates a pull request from {@code branch}, as it is on its remote under the name {@code head}, into
      * {@code base}.
      */
-    record CreatePullRequest(String branch, String head, String base) implements PullRequestCmd, OperationCmd {
+    record CreatePullRequest(Branch.Name branch, Branch.Name head, Branch.Name base) implements PullRequestCmd, OperationCmd {
 
         @Override
         public Operation operation() {
@@ -32,20 +34,20 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Option<String> subject() {
-            return Option.of(branch);
+            return Option.of(branch.value());
         }
 
         @Override
-        public Option<String> busyBranch() {
-            return Option.of(branch);
+        public Option<BranchRef> busyBranch() {
+            return Option.of(new BranchRef.Local(branch));
         }
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub().createPullRequest(head, base).fold(
+            return env.gitHub().createPullRequest(head.value(), base.value()).fold(
                     this::failedWith,
                     created -> new PullRequestMsg.Created(this,
-                            created.number().map(number -> new PullRequest(number, head, false, Checks.NONE, Review.NONE)),
+                            created.number().map(number -> new PullRequest(number, head.value(), false, Checks.NONE, Review.NONE)),
                             created.commands()));
         }
     }
@@ -53,7 +55,7 @@ public sealed interface PullRequestCmd extends Cmd {
     /**
      * Opens pull request {@code number}, from {@code branch}, in the browser.
      */
-    record OpenPullRequest(String branch, int number) implements PullRequestCmd, OperationCmd {
+    record OpenPullRequest(Branch.Name branch, int number) implements PullRequestCmd, OperationCmd {
 
         @Override
         public Operation operation() {
@@ -62,7 +64,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Option<String> subject() {
-            return Option.of(branch);
+            return Option.of(branch.value());
         }
 
         @Override
@@ -74,7 +76,7 @@ public sealed interface PullRequestCmd extends Cmd {
     /**
      * Merges pull request {@code number}, from {@code branch}, as {@code method} says.
      */
-    record MergePullRequest(String branch, int number, MergeMethod method) implements PullRequestCmd, ChangingCmd {
+    record MergePullRequest(Branch.Name branch, int number, MergeMethod method) implements PullRequestCmd, ChangingCmd {
 
         @Override
         public Operation operation() {
@@ -90,7 +92,7 @@ public sealed interface PullRequestCmd extends Cmd {
     /**
      * Closes pull request {@code number}, from {@code branch}, without merging it.
      */
-    record ClosePullRequest(String branch, int number) implements PullRequestCmd, ChangingCmd {
+    record ClosePullRequest(Branch.Name branch, int number) implements PullRequestCmd, ChangingCmd {
 
         @Override
         public Operation operation() {
@@ -109,18 +111,18 @@ public sealed interface PullRequestCmd extends Cmd {
      */
     sealed interface ChangingCmd extends OperationCmd {
 
-        String branch();
+        Branch.Name branch();
 
         int number();
 
         @Override
         default Option<String> subject() {
-            return Option.of(branch());
+            return Option.of(branch().value());
         }
 
         @Override
-        default Option<String> busyBranch() {
-            return Option.of(branch());
+        default Option<BranchRef> busyBranch() {
+            return Option.of(new BranchRef.Local(branch()));
         }
 
         @Override

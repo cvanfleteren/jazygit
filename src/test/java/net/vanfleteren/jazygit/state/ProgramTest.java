@@ -1,7 +1,8 @@
 package net.vanfleteren.jazygit.state;
 
-import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.PushMode;
@@ -33,7 +34,6 @@ import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
-import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Diffs;
@@ -65,7 +65,7 @@ class ProgramTest {
 
     private static final class FakeProvider implements StubGitProvider {
 
-        RepoStatus status = new RepoStatus(Head.onBranch("main", new Sha("aaaa")), List.of());
+        RepoStatus status = new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), List.of());
         String statusError;
         String checkoutError;
         String indexError;
@@ -101,8 +101,8 @@ class ProgramTest {
 
         @Override
         public Either<ProcessError, List<Branch>> branches() {
-            return Either.right(List.of(new Branch("main", status.head().branchName().contains("main"), new Sha("main-tip")),
-                    new Branch("other", status.head().branchName().contains("other"), new Sha("other-tip"), Instant.EPOCH, true)));
+            return Either.right(List.of(new Branch(new Branch.Name("main"), status.head().branchName().contains(new Branch.Name("main")), new Sha("main-tip")),
+                    new Branch(new Branch.Name("other"), status.head().branchName().contains(new Branch.Name("other")), new Sha("other-tip"), Instant.EPOCH, true)));
         }
 
         @Override
@@ -123,31 +123,31 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<CheckoutError>, List<ExecutedCommand>> checkout(String branch) {
+        public Either<GitFailure<CheckoutError>, List<ExecutedCommand>> checkout(Branch.Name branch) {
             return GitFailure.widen(switchTo(branch, "git checkout"));
         }
 
         @Override
-        public Either<GitFailure<StashCheckoutError>, List<ExecutedCommand>> checkoutWithStash(String branch) {
+        public Either<GitFailure<StashCheckoutError>, List<ExecutedCommand>> checkoutWithStash(Branch.Name branch) {
             return GitFailure.widen(switchTo(branch, "git checkoutWithStash"));
         }
 
         @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> createBranch(String name, String startPoint) {
+        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> createBranch(Branch.Name name, String startPoint) {
             return switchTo(name, "git createBranch");
         }
 
-        private Either<GitFailure<ProcessError>, List<ExecutedCommand>> switchTo(String branch, String command) {
+        private Either<GitFailure<ProcessError>, List<ExecutedCommand>> switchTo(Branch.Name branch, String command) {
             if (checkoutError != null) {
                 return StubGitProvider.refused(command, checkoutError);
             }
-            status = new RepoStatus(Head.onBranch(branch, new Sha(branch + "-head")), List.of());
+            status = new RepoStatus(Head.onBranch(branch, new Sha(branch.value() + "-head")), List.of());
             return StubGitProvider.ran(command);
         }
 
         @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(String branch, RemoteBranch upstream, PushMode mode) {
-            pushed.add(branch + (mode == PushMode.FORCE_WITH_LEASE ? " force" : ""));
+        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Branch.Name branch, RemoteBranch upstream, PushMode mode) {
+            pushed.add(branch.value() + (mode == PushMode.FORCE_WITH_LEASE ? " force" : ""));
             return StubGitProvider.ran("git push");
         }
 
@@ -163,13 +163,13 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> rebase(String onto) {
+        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> rebase(Branch.Name onto) {
             return StubGitProvider.ran("git rebase");
         }
 
         @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(String name, RemoteBranch remote, DeleteScope scope) {
-            deleted.add(name + (scope.local() ? " local" : "") + (scope.remote() ? " remote" : ""));
+        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(Branch.Name name, RemoteBranch remote, DeleteScope scope) {
+            deleted.add(name.value() + (scope.local() ? " local" : "") + (scope.remote() ? " remote" : ""));
             return StubGitProvider.ran("git deleteBranch");
         }
 
@@ -221,7 +221,7 @@ class ProgramTest {
 
         @Override
         public Either<ProcessError, DiffText> commitChanges(Sha sha) {
-            return Either.right(DiffText.of("changes of " + sha));
+            return Either.right(DiffText.of("changes of " + sha.value()));
         }
 
         @Override
@@ -251,7 +251,7 @@ class ProgramTest {
 
         Model model = program.model();
         assertEquals(new Loaded<>(provider.status), model.status());
-        assertEquals(new Loaded<>(List.of(new Branch("main", true, new Sha("main-tip")), new Branch("other", false, new Sha("other-tip"), Instant.EPOCH, true))), model.branches());
+        assertEquals(new Loaded<>(List.of(new Branch(new Branch.Name("main"), true, new Sha("main-tip")), new Branch(new Branch.Name("other"), false, new Sha("other-tip"), Instant.EPOCH, true))), model.branches());
         assertEquals(1, provider.commitLoads);
     }
 
@@ -259,7 +259,7 @@ class ProgramTest {
     void ticksPickUpWorkingTreeChangesWithoutReloadingCommits() {
         settle();
 
-        provider.status = new RepoStatus(Head.onBranch("main", new Sha("aaaa")), List.of(new FileEntry("a.txt", ChangeType.UNTRACKED)));
+        provider.status = new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), List.of(new FileEntry("a.txt", ChangeType.UNTRACKED)));
         program.dispatch(new Msg.Tick());
         settle();
 
@@ -271,7 +271,7 @@ class ProgramTest {
     void ticksReloadCommitsWhenHeadMoves() {
         settle();
 
-        provider.status = new RepoStatus(Head.onBranch("main", new Sha("bbbb")), List.of());
+        provider.status = new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("bbbb")), List.of());
         program.dispatch(new Msg.Tick());
         settle();
 
@@ -296,12 +296,12 @@ class ProgramTest {
     void checkoutReloadsStatusBranchesAndCommits() {
         settle();
 
-        program.dispatch(new CheckoutMsg.Requested("other"));
+        program.dispatch(new CheckoutMsg.Requested(new Branch.Name("other")));
         settle();
 
         Model model = program.model();
         assertEquals(new Loaded<>(provider.status), model.status());
-        assertEquals(new Loaded<>(List.of(new Branch("main", false, new Sha("main-tip")), new Branch("other", true, new Sha("other-tip"), Instant.EPOCH, true))), model.branches());
+        assertEquals(new Loaded<>(List.of(new Branch(new Branch.Name("main"), false, new Sha("main-tip")), new Branch(new Branch.Name("other"), true, new Sha("other-tip"), Instant.EPOCH, true))), model.branches());
         assertEquals("other-head", ((Loaded<List<Commit>>) model.commits()).value().get(0).sha().value());
         assertEquals(Option.none(), model.error());
     }
@@ -310,12 +310,12 @@ class ProgramTest {
     void confirmedNewBranchIsCreatedAndShownAsCurrent() {
         settle();
 
-        program.dispatch(new NewBranchMsg.Requested("other"));
+        program.dispatch(new NewBranchMsg.Requested(new Branch.Name("other")));
         program.dispatch(new NewBranchMsg.Confirmed("topic"));
         settle();
 
         Model model = program.model();
-        assertEquals("topic", ((Loaded<RepoStatus>) model.status()).value().head().branchName().get());
+        assertEquals(new Branch.Name("topic"), ((Loaded<RepoStatus>) model.status()).value().head().branchName().get());
         assertEquals(Option.none(), model.popup());
         assertEquals(Option.none(), model.error());
     }
@@ -325,7 +325,7 @@ class ProgramTest {
         settle();
         provider.checkoutError = "fatal: exists";
 
-        program.dispatch(new NewBranchMsg.Requested("other"));
+        program.dispatch(new NewBranchMsg.Requested(new Branch.Name("other")));
         program.dispatch(new NewBranchMsg.Confirmed("topic"));
         settle();
 
@@ -336,7 +336,7 @@ class ProgramTest {
     void deletingABranchCallsTheProviderWithTheChosenScope() {
         settle();
 
-        program.dispatch(new DeleteBranchMsg.Requested("other"));
+        program.dispatch(new DeleteBranchMsg.Requested(new Branch.Name("other")));
         program.dispatch(new DeleteBranchMsg.Chosen(DeleteScope.BOTH));
         settle();
 
@@ -361,7 +361,7 @@ class ProgramTest {
 
     @Test
     void stagingAllAndCommitting() {
-        provider.status = new RepoStatus(Head.onBranch("main", new Sha("aaaa")), List.of(new FileEntry("a.txt", ChangeType.UNTRACKED)));
+        provider.status = new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), List.of(new FileEntry("a.txt", ChangeType.UNTRACKED)));
         settle();
 
         program.dispatch(new CommitMsg.Requested());
@@ -381,7 +381,7 @@ class ProgramTest {
 
     @Test
     void amendingStagesAllFilesWhenNoneIsStaged() {
-        provider.status = new RepoStatus(Head.onBranch("main", new Sha("aaaa")), List.of(new FileEntry("a.txt", ChangeType.MODIFIED)));
+        provider.status = new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), List.of(new FileEntry("a.txt", ChangeType.MODIFIED)));
         settle();
 
         program.dispatch(new AmendMsg.Requested());
@@ -408,7 +408,7 @@ class ProgramTest {
 
     @Test
     void failedCommitIsReported() {
-        provider.status = new RepoStatus(Head.onBranch("main", new Sha("aaaa")), List.of(new FileEntry("a.txt", ChangeType.ADDED)));
+        provider.status = new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), List.of(new FileEntry("a.txt", ChangeType.ADDED)));
         provider.commitFailure = "boom";
         settle();
 
@@ -446,26 +446,26 @@ class ProgramTest {
         settle();
 
         provider.checkoutError = "error: Your local changes would be overwritten";
-        program.dispatch(new CheckoutMsg.Requested("other"));
+        program.dispatch(new CheckoutMsg.Requested(new Branch.Name("other")));
         settle();
         assertEquals(Option.of("Checkout of other failed: error: Your local changes would be overwritten"), errorText(program.model()));
-        assertEquals("main", ((Loaded<RepoStatus>) program.model().status()).value().head().branchName().get());
+        assertEquals(new Branch.Name("main"), ((Loaded<RepoStatus>) program.model().status()).value().head().branchName().get());
 
         provider.checkoutError = null;
-        program.dispatch(new CheckoutMsg.Requested("other"));
+        program.dispatch(new CheckoutMsg.Requested(new Branch.Name("other")));
         settle();
         assertEquals(Option.none(), program.model().error());
-        assertEquals("other", ((Loaded<RepoStatus>) program.model().status()).value().head().branchName().get());
+        assertEquals(new Branch.Name("other"), ((Loaded<RepoStatus>) program.model().status()).value().head().branchName().get());
     }
 
     @Test
     void selectingABranchLoadsItsLog() {
         settle();
 
-        program.dispatch(new SelectionMsg.BranchSelected(new BranchRef.Local("other")));
+        program.dispatch(new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("other"))));
         settle();
 
-        assertEquals(Option.of(new Preview<>(new BranchRef.Local("other"), new Loaded<>(List.of(FakeProvider.commit("other-tip"))))),
+        assertEquals(Option.of(new Preview<>(new BranchRef.Local(new Branch.Name("other")), new Loaded<>(List.of(FakeProvider.commit("other-tip"))))),
                 program.model().branchLog());
         assertEquals(java.util.List.of("other"), provider.logLoads);
     }

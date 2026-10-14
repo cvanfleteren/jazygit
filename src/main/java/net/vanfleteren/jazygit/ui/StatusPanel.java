@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.ui;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.elements.TextElement;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -40,7 +41,7 @@ public final class StatusPanel {
      */
     static String branchLabel(Head head) {
         return switch (head) {
-            case Head.OnBranch(String branch, Option<Sha> tip) -> branch;
+            case Head.OnBranch(Branch.Name branch, Option<Sha> tip) -> branch.value();
             case Head.Detached(Sha at) -> Messages.get("status.headDetached", at.shortSha());
         };
     }

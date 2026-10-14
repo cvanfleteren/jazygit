@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.error;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
 import net.vanfleteren.jazygit.feature.branch.SetUpstreamPopup;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.ErrorPopup;
 import net.vanfleteren.jazygit.state.Model;
@@ -19,7 +20,7 @@ class ErrorUpdateTest {
 
     @Test
     void aFailedOperationOpensTheErrorPopup() {
-        Model failed = Update.update(loaded(), failed(new BranchCmd.Pull("main"), "boom")).model();
+        Model failed = Update.update(loaded(), failed(new BranchCmd.Pull(new Branch.Name("main")), "boom")).model();
 
         assertEquals(failed.error().map(ErrorPopup::new), failed.popup());
     }
@@ -33,9 +34,9 @@ class ErrorUpdateTest {
 
     @Test
     void anOpenPopupIsNotReplacedByTheErrorPopup() {
-        Model failed = loaded().openPopup(new SetUpstreamPopup("feature")).fail(new AppError.InvalidUpstream("x"));
+        Model failed = loaded().openPopup(new SetUpstreamPopup(new Branch.Name("feature"))).fail(new AppError.InvalidUpstream("x"));
 
-        assertEquals(Option.of(new SetUpstreamPopup("feature")), failed.popup());
+        assertEquals(Option.of(new SetUpstreamPopup(new Branch.Name("feature"))), failed.popup());
         assertEquals(Option.of(new AppError.InvalidUpstream("x")), failed.error());
     }
 

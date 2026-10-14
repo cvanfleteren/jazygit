@@ -5,6 +5,8 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Tracking;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Upstream;
@@ -12,7 +14,6 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.branch.NewBranchMsg;
-import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.LoadMsg;
@@ -23,7 +24,6 @@ import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.feature.branch.BranchesTabMsg;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
-import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Loadable;
@@ -39,16 +39,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class BranchesPanelTest {
 
-    private static final Branch MAIN = new Branch("main", true, new Sha("1"));
-    private static final Branch FEATURE = new Branch("feature", false, new Sha("2"));
-    private static final Branch OLD = new Branch("old", false, new Sha("3"));
+    private static final Branch MAIN = new Branch(new Branch.Name("main"), true, new Sha("1"));
+    private static final Branch FEATURE = new Branch(new Branch.Name("feature"), false, new Sha("2"));
+    private static final Branch OLD = new Branch(new Branch.Name("old"), false, new Sha("3"));
 
     private final BranchesPanel panel = new BranchesPanel(msg -> { }, tab -> { });
     private final Model before = with(TestModels.loaded(new SampleData()), List.of(MAIN, FEATURE, OLD));
 
     @Test
     void afterACheckoutTheNewCurrentBranchIsHighlighted() throws Exception {
-        Model after = with(before, List.of(new Branch("old", true, new Sha("3")), new Branch("main", false, new Sha("1")), FEATURE));
+        Model after = with(before, List.of(new Branch(new Branch.Name("old"), true, new Sha("3")), new Branch(new Branch.Name("main"), false, new Sha("1")), FEATURE));
 
         assertEquals("old", highlightedAfterMovingTo(2, after));
     }
@@ -83,23 +83,23 @@ class BranchesPanelTest {
     @Test
     void aBranchWhoseUpstreamIsGoneSaysSo() {
         assertEquals(List.of(LoadableList.Seg.styled(" gone", Theme.Classes.GONE)),
-                BranchesPanel.sync(new Branch("b", false, new Sha("1"), java.time.Instant.EPOCH, false, false,
-                        new Tracking.Gone(new RemoteBranch("origin", "b")))));
+                BranchesPanel.sync(new Branch(new Branch.Name("b"), false, new Sha("1"), java.time.Instant.EPOCH, false, false,
+                        new Tracking.Gone(new RemoteBranch("origin", new Branch.Name("b"))))));
         // A branch that was never pushed shows nothing.
-        assertEquals(List.of(), BranchesPanel.sync(new Branch("b", false, new Sha("1"))));
+        assertEquals(List.of(), BranchesPanel.sync(new Branch(new Branch.Name("b"), false, new Sha("1"))));
     }
 
     @Test
     void syncShowsAnAheadArrowForUnpushedAndABehindOneForIncomingCommits() {
         java.time.Instant t = java.time.Instant.EPOCH;
-        assertEquals(List.of(), BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, Option.of(new Upstream(new RemoteBranch("origin", "b"), 0, 0)))));
+        assertEquals(List.of(), BranchesPanel.sync(new Branch(new Branch.Name("b"), false, new Sha("1"), t, true, false, Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("b")), 0, 0)))));
         assertEquals(List.of(LoadableList.Seg.styled(" ↑2", Theme.Classes.AHEAD)),
-                BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, Option.of(new Upstream(new RemoteBranch("origin", "b"), 2, 0)))));
+                BranchesPanel.sync(new Branch(new Branch.Name("b"), false, new Sha("1"), t, true, false, Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("b")), 2, 0)))));
         assertEquals(List.of(LoadableList.Seg.styled(" ↓1", Theme.Classes.BEHIND)),
-                BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, Option.of(new Upstream(new RemoteBranch("origin", "b"), 0, 1)))));
+                BranchesPanel.sync(new Branch(new Branch.Name("b"), false, new Sha("1"), t, true, false, Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("b")), 0, 1)))));
         assertEquals(List.of(LoadableList.Seg.styled(" ↑2", Theme.Classes.AHEAD),
                         LoadableList.Seg.styled(" ↓1", Theme.Classes.BEHIND)),
-                BranchesPanel.sync(new Branch("b", false, new Sha("1"), t, true, false, Option.of(new Upstream(new RemoteBranch("origin", "b"), 2, 1)))));
+                BranchesPanel.sync(new Branch(new Branch.Name("b"), false, new Sha("1"), t, true, false, Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("b")), 2, 1)))));
     }
 
     @Test
@@ -112,7 +112,7 @@ class BranchesPanelTest {
 
     @Test
     void aBranchBeingPushedOrPulledShowsWhatIsDoneLeftOfTheSpinner() throws Exception {
-        Model busy = before.withBusyBranch("feature", Operation.PUSH).withBusyBranch("main", Operation.PULL);
+        Model busy = before.withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), Operation.PUSH).withBusyBranch(new BranchRef.Local(new Branch.Name("main")), Operation.PULL);
         String frame = net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(java.time.Instant.EPOCH);
         BranchesPanel panel = new BranchesPanel(msg -> { }, tab -> { }, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(busy, BranchesPanel.ID))) {
@@ -124,7 +124,7 @@ class BranchesPanelTest {
 
     @Test
     void aBranchBeingDeletedShowsOnlyTheSpinner() throws Exception {
-        Model deleting = before.withBusyBranch("feature", Operation.DELETE_BRANCH);
+        Model deleting = before.withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), Operation.DELETE_BRANCH);
         String frame = net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(java.time.Instant.EPOCH);
         BranchesPanel panel = new BranchesPanel(msg -> { }, tab -> { }, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(deleting, BranchesPanel.ID))) {
@@ -165,7 +165,7 @@ class BranchesPanelTest {
             testRunner.pilot().quit();
         }
 
-        assertEquals(java.util.List.of(new NewBranchMsg.Requested("feature")), dispatched);
+        assertEquals(java.util.List.of(new NewBranchMsg.Requested(new Branch.Name("feature"))), dispatched);
     }
 
     @Test
@@ -181,7 +181,7 @@ class BranchesPanelTest {
             testRunner.pilot().quit();
         }
 
-        assertEquals(java.util.List.of(new net.vanfleteren.jazygit.feature.branch.PushMsg.Requested("feature")), dispatched);
+        assertEquals(java.util.List.of(new net.vanfleteren.jazygit.feature.branch.PushMsg.Requested(new Branch.Name("feature"))), dispatched);
     }
 
     @Test
@@ -197,7 +197,7 @@ class BranchesPanelTest {
             testRunner.pilot().quit();
         }
 
-        assertEquals(java.util.List.of(new net.vanfleteren.jazygit.feature.branch.PullMsg.Requested("feature")), dispatched);
+        assertEquals(java.util.List.of(new net.vanfleteren.jazygit.feature.branch.PullMsg.Requested(new Branch.Name("feature"))), dispatched);
     }
 
     @Test
@@ -228,7 +228,7 @@ class BranchesPanelTest {
             assertTrue(screen.contains("upstream/main"), screen);
             assertFalse(screen.contains(" old"), screen);
         }
-        assertEquals(Option.of(new SelectionMsg.BranchSelected(new BranchRef.Remote(new RemoteBranch("origin", "feature")))),
+        assertEquals(Option.of(new SelectionMsg.BranchSelected(new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("feature"))))),
                 panel.selectionChange(remote));
     }
 
@@ -261,7 +261,7 @@ class BranchesPanelTest {
             testRunner.pilot().quit();
         }
 
-        RemoteBranch upstreamMain = new RemoteBranch("upstream", "main");
+        RemoteBranch upstreamMain = new RemoteBranch("upstream", new Branch.Name("main"));
         // P pushes a local branch; it does nothing here.
         assertEquals(java.util.List.of(new CheckoutMsg.RemoteRequested(upstreamMain),
                 new NewBranchMsg.RequestedAtRemote(upstreamMain), new BranchesTabMsg.Switched()), dispatched);
@@ -324,8 +324,8 @@ class BranchesPanelTest {
 
     private static Model withRemotes(Model model) {
         return model.withBranchesTab(BranchesTab.REMOTE).withRemoteBranches(new Loadable.Loaded<>(List.of(
-                new RemoteRef(new RemoteBranch("origin", "feature"), new Sha("2"), java.time.Instant.EPOCH),
-                new RemoteRef(new RemoteBranch("upstream", "main"), new Sha("1"), java.time.Instant.EPOCH))));
+                new RemoteRef(new RemoteBranch("origin", new Branch.Name("feature")), new Sha("2"), java.time.Instant.EPOCH),
+                new RemoteRef(new RemoteBranch("upstream", new Branch.Name("main")), new Sha("1"), java.time.Instant.EPOCH))));
     }
 
     private String highlightedAfterMovingTo(int index, Model after) throws Exception {
@@ -340,7 +340,7 @@ class BranchesPanelTest {
 
             RenderedText.of(testRunner, () -> panel.render(after, BranchesPanel.ID));
             testRunner.pilot().quit();
-            return panel.selectedBranch().get();
+            return panel.selectedBranch().get().value();
         }
     }
 

@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import io.vavr.collection.List;
@@ -39,7 +40,7 @@ class CommitUpdateTest {
     }
 
     private Model withFiles(FileEntry... files) {
-        return loaded().withStatus(new Loaded<>(new RepoStatus(Head.onBranch("main", new Sha("aaaa")), List.of(files))));
+        return loaded().withStatus(new Loaded<>(new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), List.of(files))));
     }
 
     private Model withCommits(Commit... commits) {

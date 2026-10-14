@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
@@ -27,9 +28,9 @@ class PullRequestsUpdateTest {
         PullRequest older = new PullRequest(7, "feature", false, Checks.NONE, Review.NONE);
 
         assertEquals(Option.of(FEATURE_PR),
-                Update.update(loaded(), new PullRequestsMsg.Loaded(List.of(older, FEATURE_PR))).model().pullRequests().flatMap(open -> open.get("feature")));
+                Update.update(loaded(), new PullRequestsMsg.Loaded(List.of(older, FEATURE_PR))).model().pullRequests().flatMap(open -> open.get(new Branch.Name("feature"))));
         assertEquals(Option.of(FEATURE_PR),
-                Update.update(loaded(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR, older))).model().pullRequests().flatMap(open -> open.get("feature")));
+                Update.update(loaded(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR, older))).model().pullRequests().flatMap(open -> open.get(new Branch.Name("feature"))));
     }
 
     @Test

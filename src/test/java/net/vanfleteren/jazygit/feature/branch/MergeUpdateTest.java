@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.branch;
 import static net.vanfleteren.jazygit.git.StubGitProvider.executed;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadStashes;
@@ -22,25 +23,25 @@ class MergeUpdateTest {
 
     @Test
     void aMergeRequestAsksHowToMerge() {
-        Next asked = Update.update(withCheckoutError(loaded(), "foo", "boom"), new MergeMsg.Requested("feature"));
+        Next asked = Update.update(withCheckoutError(loaded(), "foo", "boom"), new MergeMsg.Requested(new Branch.Name("feature")));
 
-        assertEquals(Option.of(new MergePopup("main", "feature")), asked.model().popup());
+        assertEquals(Option.of(new MergePopup(new Branch.Name("main"), new Branch.Name("feature"))), asked.model().popup());
         assertEquals(Option.none(), asked.model().error());
         assertEquals(List.of(), asked.cmds());
     }
 
     @Test
     void theCheckedOutBranchAndUnknownBranchesCannotBeMerged() {
-        assertEquals(Option.none(), Update.update(loaded(), new MergeMsg.Requested("main")).model().popup());
-        assertEquals(Option.none(), Update.update(loaded(), new MergeMsg.Requested("gone")).model().popup());
+        assertEquals(Option.none(), Update.update(loaded(), new MergeMsg.Requested(new Branch.Name("main"))).model().popup());
+        assertEquals(Option.none(), Update.update(loaded(), new MergeMsg.Requested(new Branch.Name("gone"))).model().popup());
     }
 
     @Test
     void choosingMergesTheBranchThatWayAndCancellingDoesNot() {
-        Model asked = Update.update(loaded(), new MergeMsg.Requested("feature")).model();
+        Model asked = Update.update(loaded(), new MergeMsg.Requested(new Branch.Name("feature"))).model();
 
         Next chosen = Update.update(asked, new MergeMsg.Chosen(MergeMode.SQUASH));
-        assertEquals(List.of(new BranchCmd.Merge("feature", MergeMode.SQUASH)), chosen.cmds());
+        assertEquals(List.of(new BranchCmd.Merge(new Branch.Name("feature"), MergeMode.SQUASH)), chosen.cmds());
         assertEquals(Option.none(), chosen.model().popup());
 
         Next cancelled = Update.update(asked, new MergeMsg.Cancelled());
@@ -52,11 +53,11 @@ class MergeUpdateTest {
 
     @Test
     void aMergeIsLoggedAndReloadsAndAFailedOneIsReported() {
-        Next done = Update.update(loaded(), succeeded(new BranchCmd.Merge("feature", MergeMode.FAST_FORWARD), "git merge --ff --no-edit feature"));
+        Next done = Update.update(loaded(), succeeded(new BranchCmd.Merge(new Branch.Name("feature"), MergeMode.FAST_FORWARD), "git merge --ff --no-edit feature"));
         assertEquals(List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(), new LoadStashes()), done.cmds());
         assertEquals(executed("git merge --ff --no-edit feature"), done.model().commandLog().last().commands());
 
-        Next failed = Update.update(loaded(), failed(new BranchCmd.Merge("feature", MergeMode.FAST_FORWARD), "CONFLICT (content)"));
+        Next failed = Update.update(loaded(), failed(new BranchCmd.Merge(new Branch.Name("feature"), MergeMode.FAST_FORWARD), "CONFLICT (content)"));
         assertEquals(Option.of("Merging feature failed: CONFLICT (content)"), errorText(failed.model()));
     }
 }

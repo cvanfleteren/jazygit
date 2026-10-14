@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import io.vavr.collection.List;
@@ -32,17 +33,17 @@ public final class CliMerge {
      *
      * @return the command lines that were run
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> merge(Path workTree, String branch, MergeMode mode) {
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> merge(Path workTree, Branch.Name branch, MergeMode mode) {
         return switch (mode) {
-            case FAST_FORWARD -> merge(workTree, git("merge", "--ff", "--no-edit", branch), ABORT);
-            case MERGE_COMMIT -> merge(workTree, git("merge", "--no-ff", "--no-edit", branch), ABORT);
+            case FAST_FORWARD -> merge(workTree, git("merge", "--ff", "--no-edit", branch.value()), ABORT);
+            case MERGE_COMMIT -> merge(workTree, git("merge", "--no-ff", "--no-edit", branch.value()), ABORT);
             case SQUASH -> squash(workTree, branch);
             case SQUASH_AND_COMMIT -> GitFailure.sequence(() -> squash(workTree, branch), () -> commitStaged(workTree));
         };
     }
 
-    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Path workTree, String branch) {
-        return merge(workTree, git("merge", "--squash", branch), RESET);
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Path workTree, Branch.Name branch) {
+        return merge(workTree, git("merge", "--squash", branch.value()), RESET);
     }
 
     /**

@@ -4,6 +4,7 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -26,7 +27,7 @@ class MergeDialogTest {
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<MergePopup> dialog = new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(BranchDialogs.MERGE, dispatched::add);
     // In the test models, main is checked out.
-    private final Model open = Update.update(TestModels.loaded(), new MergeMsg.Requested("feature")).model();
+    private final Model open = Update.update(TestModels.loaded(), new MergeMsg.Requested(new Branch.Name("feature"))).model();
 
     @Test
     void listsTheFourWaysToMergeAndCancel() throws Exception {

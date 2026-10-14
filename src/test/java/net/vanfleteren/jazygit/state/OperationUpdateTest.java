@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.state;
 
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import static net.vanfleteren.jazygit.git.StubGitProvider.executed;
 import io.vavr.collection.HashSet;
@@ -29,11 +31,11 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 class OperationUpdateTest {
 
-    private static final BranchCmd.Push PUSH = new BranchCmd.Push("feature", new RemoteBranch("origin", "feature"), PushMode.FAST_FORWARD);
+    private static final BranchCmd.Push PUSH = new BranchCmd.Push(new Branch.Name("feature"), new RemoteBranch("origin", new Branch.Name("feature")), PushMode.FAST_FORWARD);
 
     @Test
     void aSuccessLogsItsCommandsReleasesItsBranchClearsTheErrorAndReadsTheRepositoryAgain() {
-        Model pushing = TestModels.withCheckoutError(loaded(), "foo", "boom").withBusyBranch("feature", Operation.PUSH);
+        Model pushing = TestModels.withCheckoutError(loaded(), "foo", "boom").withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), Operation.PUSH);
 
         Next next = Update.update(pushing, succeeded(PUSH, "git push origin feature"));
 
@@ -48,7 +50,7 @@ class OperationUpdateTest {
         Failure failure = new Failure.Git(new GitError.CommandFailed("rejected", 1), executed("git push origin feature"),
                 Option.none());
 
-        Next next = Update.update(loaded().withBusyBranch("feature", Operation.PUSH), new OperationMsg.Failed(PUSH, failure));
+        Next next = Update.update(loaded().withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), Operation.PUSH), new OperationMsg.Failed(PUSH, failure));
 
         assertEquals(List.of(new LogEntry(Operation.PUSH, executed("git push origin feature"))), next.model().commandLog());
         assertEquals(HashSet.empty(), next.model().busy().keySet());
@@ -62,7 +64,7 @@ class OperationUpdateTest {
         Failure failure = new Failure.Git(new GitError.CommandFailed("CONFLICT", 1), List.of(),
                 Option.of(new GitError.CommandFailed("fatal: no rebase in progress", 128)));
 
-        Next next = Update.update(loaded(), new OperationMsg.Failed(new BranchCmd.Rebase("main"), failure));
+        Next next = Update.update(loaded(), new OperationMsg.Failed(new BranchCmd.Rebase(new Branch.Name("main")), failure));
 
         assertEquals(Option.of("Rebasing onto main failed: CONFLICT; cleaning up afterwards failed too: "
                 + "fatal: no rebase in progress"), errorText(next.model()));
@@ -72,7 +74,7 @@ class OperationUpdateTest {
     void aCommandThatThrowsIsReportedAsABugOfThatCommand() {
         GitInfoProvider throwing = new StubGitProvider() {
             @Override
-            public Either<GitFailure<GitError.ProcessError>, List<ExecutedCommand>> push(String branch, RemoteBranch upstream, PushMode mode) {
+            public Either<GitFailure<GitError.ProcessError>, List<ExecutedCommand>> push(Branch.Name branch, RemoteBranch upstream, PushMode mode) {
                 throw new IllegalStateException("unexpected");
             }
         };
@@ -89,7 +91,7 @@ class OperationUpdateTest {
     void aCommandThatThrowsAnErrorStillAnswersSoItsBranchIsReleased() {
         GitInfoProvider throwing = new StubGitProvider() {
             @Override
-            public Either<GitFailure<GitError.ProcessError>, List<ExecutedCommand>> push(String branch, RemoteBranch upstream, PushMode mode) {
+            public Either<GitFailure<GitError.ProcessError>, List<ExecutedCommand>> push(Branch.Name branch, RemoteBranch upstream, PushMode mode) {
                 throw new StackOverflowError();
             }
         };

@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.git;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.git.model.ChangeType;
@@ -46,13 +47,13 @@ class CliStatusTest {
     void parsesBranchHeaders() {
         RepoStatus status = CliStatus.parse(
                 "# branch.oid 0123abcd\0# branch.head main\0# branch.upstream origin/main\0").get();
-        assertEquals(Head.onBranch("main", new Sha("0123abcd")), status.head());
+        assertEquals(Head.onBranch(new Branch.Name("main"), new Sha("0123abcd")), status.head());
         assertEquals(List.of(), status.files());
     }
 
     @Test
     void parsesInitialAndDetachedHeads() {
-        assertEquals(new Head.OnBranch("main", Option.none()),
+        assertEquals(new Head.OnBranch(new Branch.Name("main"), Option.none()),
                 CliStatus.parse("# branch.oid (initial)\0# branch.head main\0").get().head());
         assertEquals(new Head.Detached(new Sha("0123abcd")),
                 CliStatus.parse("# branch.oid 0123abcd\0# branch.head (detached)\0").get().head());

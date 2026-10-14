@@ -65,7 +65,7 @@ public final class LoadUpdate {
     }
 
     private static Next branchesLoaded(Model before, Model next) {
-        return reloadMovedLog(next, branch -> branch instanceof BranchRef.Local(String name)
+        return reloadMovedLog(next, branch -> branch instanceof BranchRef.Local(Branch.Name name)
                 ? Option.of(tip(before.branches(), name, Branch::name, Branch::tipOid)
                         .equals(tip(next.branches(), name, Branch::name, Branch::tipOid)))
                 : Option.none());

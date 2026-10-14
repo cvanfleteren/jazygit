@@ -4,6 +4,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Popup;
 
@@ -13,13 +14,13 @@ import net.vanfleteren.jazygit.state.Popup;
  * @param pullRequest what is known of it from the list of pull requests
  * @param details     what was read about it, or why that failed; nothing while it is being read
  */
-public record PullRequestPopup(String branch, PullRequest pullRequest,
+public record PullRequestPopup(Branch.Name branch, PullRequest pullRequest,
                                Option<Either<Failure, PullRequestDetails>> details) implements Popup {
 
     /**
      * The popup while its details are being read.
      */
-    static PullRequestPopup loading(String branch, PullRequest pullRequest) {
+    static PullRequestPopup loading(Branch.Name branch, PullRequest pullRequest) {
         return new PullRequestPopup(branch, pullRequest, Option.none());
     }
 

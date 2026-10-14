@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.branch;
 
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.FastForward;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.Pull;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
@@ -18,11 +19,11 @@ public final class PullUpdate {
 
     public static Next update(Model model, PullMsg msg) {
         return switch (msg) {
-            case PullMsg.Requested(String branch) -> requested(model, branch);
+            case PullMsg.Requested(Branch.Name branch) -> requested(model, branch);
         };
     }
 
-    private static Next requested(Model model, String branch) {
+    private static Next requested(Model model, Branch.Name branch) {
         // A branch that is busy is not pulled meanwhile. A branch without an upstream, or whose upstream was
         // deleted, has nothing to pull from.
         // A branch that is not checked out can only be fast-forwarded, which its own commits would prevent.

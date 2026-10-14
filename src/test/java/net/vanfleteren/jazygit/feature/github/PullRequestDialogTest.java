@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Mergeable;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Reviewer;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewerState;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -60,7 +61,7 @@ class PullRequestDialogTest {
 
     @Test
     void showsTheBranchWhileTheDetailsAreRead() throws Exception {
-        String screen = screen(PullRequestPopup.loading("support_rename", PR));
+        String screen = screen(PullRequestPopup.loading(new Branch.Name("support_rename"), PR));
 
         assertTrue(screen.contains("Pull request #42"), screen);
         assertTrue(screen.contains("Branch  support_rename"), screen);
@@ -71,7 +72,7 @@ class PullRequestDialogTest {
 
     @Test
     void showsTheDetailsAsLabelledRows() throws Exception {
-        String screen = screen(PullRequestPopup.loading("support_rename", PR).with(Either.right(DETAILS)));
+        String screen = screen(PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(DETAILS)));
 
         assertTrue(screen.contains("Add rename support to the files panel"), screen);
         assertTrue(screen.contains("    State  Open · Draft"), screen);
@@ -97,7 +98,7 @@ class PullRequestDialogTest {
         PullRequestDetails details = new PullRequestDetails(42, "t", "", State.OPEN, false, "a", "b", NOW, 0, 0, 0,
                 Mergeable.UNKNOWN, Review.NONE, 0, List.empty(), List.empty(), checks);
 
-        String screen = screen(PullRequestPopup.loading("a", PR).with(Either.right(details)));
+        String screen = screen(PullRequestPopup.loading(new Branch.Name("a"), PR).with(Either.right(details)));
 
         assertTrue(screen.contains("check4"), screen);
         assertFalse(screen.contains("check5"), screen);
@@ -109,7 +110,7 @@ class PullRequestDialogTest {
 
     @Test
     void tellsWhyTheDetailsCouldNotBeRead() throws Exception {
-        String screen = screen(PullRequestPopup.loading("support_rename", PR).with(Either.left(refused("not logged in"))));
+        String screen = screen(PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.left(refused("not logged in"))));
 
         assertTrue(screen.contains("Could not read the pull request: not logged in"), screen);
         assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
@@ -122,7 +123,7 @@ class PullRequestDialogTest {
                 + "at the width of the dialog, so that it must be cut to keep the dialog from growing", "cvf",
                 State.OPEN, false, "a", "b", NOW, 0, 0, 0, Mergeable.UNKNOWN, Review.APPROVED, 0, List.of("ui"),
                 DETAILS.reviewers(), checks);
-        PullRequestPopup loading = PullRequestPopup.loading("support_rename", PR);
+        PullRequestPopup loading = PullRequestPopup.loading(new Branch.Name("support_rename"), PR);
 
         int hintLine = hintLine(screen(loading));
 
@@ -137,7 +138,7 @@ class PullRequestDialogTest {
 
     @Test
     void listsWhatCanBeDoneWithThePullRequest() throws Exception {
-        String screen = screen(PullRequestPopup.loading("support_rename", PR).with(Either.right(READY)));
+        String screen = screen(PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(READY)));
 
         assertTrue(screen.contains("(o) Open in browser"), screen);
         assertTrue(screen.contains("(m) Merge"), screen);
@@ -149,7 +150,7 @@ class PullRequestDialogTest {
 
     @Test
     void lettersMergeOrCloseAPullRequestThatIsReady() throws Exception {
-        Model model = TestModels.loaded().openPopup(PullRequestPopup.loading("support_rename", PR).with(Either.right(READY)));
+        Model model = TestModels.loaded().openPopup(PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(READY)));
         try (ToolkitTestRunner runner = start(model)) {
             for (char key : new char[]{'m', 's', 'r', 'x', 'o'}) {
                 runner.pilot().press(key);
@@ -164,7 +165,7 @@ class PullRequestDialogTest {
 
     @Test
     void aDraftCanBeClosedButNotMergedAndNothingIsDoneBeforeTheDetailsAreRead() throws Exception {
-        PullRequestPopup loading = PullRequestPopup.loading("support_rename", PR);
+        PullRequestPopup loading = PullRequestPopup.loading(new Branch.Name("support_rename"), PR);
         for (PullRequestPopup popup : List.of(loading, loading.with(Either.right(DETAILS)))) {
             try (ToolkitTestRunner runner = start(TestModels.loaded().openPopup(popup))) {
                 runner.pilot().press('m');
@@ -180,7 +181,7 @@ class PullRequestDialogTest {
 
     @Test
     void enterOpensInTheBrowserAndEscapeCloses() throws Exception {
-        Model model = TestModels.loaded().openPopup(PullRequestPopup.loading("support_rename", PR));
+        Model model = TestModels.loaded().openPopup(PullRequestPopup.loading(new Branch.Name("support_rename"), PR));
         try (ToolkitTestRunner runner = start(model)) {
             runner.pilot().press(KeyCode.ENTER);
             runner.pilot().pause();

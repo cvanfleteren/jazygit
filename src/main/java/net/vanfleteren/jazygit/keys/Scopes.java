@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.keys;
 
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.FileTree;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -14,7 +15,7 @@ public final class Scopes {
     /** The selected node of the file tree. */
     public static final Scope<FileTree> FILES = new Scope<>("files", "panel.files.title");
     /** The name of the selected branch. */
-    public static final Scope<String> BRANCHES = new Scope<>("branches", "panel.branches.title");
+    public static final Scope<Branch.Name> BRANCHES = new Scope<>("branches", "panel.branches.title");
     /** The selected remote-tracking branch. */
     public static final Scope<RemoteBranch> REMOTE_BRANCHES = new Scope<>("remoteBranches",
             "panel.remoteBranches.title");

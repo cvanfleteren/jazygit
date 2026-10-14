@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.commit;
 
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import dev.tamboui.toolkit.element.Element;
@@ -35,7 +36,7 @@ class AmendDialogTest {
 
     private static Model openModel() {
         Model unstaged = Update.update(TestModels.loaded(new SampleData()), new LoadMsg.StatusLoaded(
-                new RepoStatus(Head.onBranch("main", new Sha("aaaa")), List.of(new FileEntry("a.txt", ChangeType.MODIFIED))))).model();
+                new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), List.of(new FileEntry("a.txt", ChangeType.MODIFIED))))).model();
         return Update.update(unstaged, new AmendMsg.Requested()).model();
     }
 

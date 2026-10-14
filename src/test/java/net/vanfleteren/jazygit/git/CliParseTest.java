@@ -37,9 +37,9 @@ class CliParseTest {
                 + ref("refs/remotes/origin/old", B, "100", "");
 
         assertEquals(List.of(
-                        new RemoteRef(new RemoteBranch("upstream", "feature/nested"), new Sha(B), Instant.ofEpochSecond(400)),
-                        new RemoteRef(new RemoteBranch("origin", "trunk"), new Sha(A), Instant.ofEpochSecond(300)),
-                        new RemoteRef(new RemoteBranch("origin", "old"), new Sha(B), Instant.ofEpochSecond(100))),
+                        new RemoteRef(new RemoteBranch("upstream", new Branch.Name("feature/nested")), new Sha(B), Instant.ofEpochSecond(400)),
+                        new RemoteRef(new RemoteBranch("origin", new Branch.Name("trunk")), new Sha(A), Instant.ofEpochSecond(300)),
+                        new RemoteRef(new RemoteBranch("origin", new Branch.Name("old")), new Sha(B), Instant.ofEpochSecond(100))),
                 CliBranches.parseRemotes(raw).get());
         assertEquals(new GitError.UnexpectedOutput("refs/remotes/origin/x"),
                 CliBranches.parseRemotes("refs/remotes/origin/x\n").getLeft());
@@ -56,12 +56,12 @@ class CliParseTest {
                 + ref("refs/remotes/origin/trunk", A, "300", " ", "", "", "", "", "");
 
         assertEquals(List.of(
-                        new Branch("trunk", true, new Sha(A), Instant.ofEpochSecond(300), true, true,
-                                Option.of(new Upstream(new RemoteBranch("origin", "trunk"), 0, 0))),
-                        new Branch("feature", false, new Sha(B), Instant.ofEpochSecond(200), true, false,
-                                Option.of(new Upstream(new RemoteBranch("origin", "feature"), 1, 2))),
-                        new Branch("gone", false, new Sha(B), Instant.ofEpochSecond(100), false, false,
-                                new Tracking.Gone(new RemoteBranch("origin", "gone")))),
+                        new Branch(new Branch.Name("trunk"), true, new Sha(A), Instant.ofEpochSecond(300), true, true,
+                                Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("trunk")), 0, 0))),
+                        new Branch(new Branch.Name("feature"), false, new Sha(B), Instant.ofEpochSecond(200), true, false,
+                                Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("feature")), 1, 2))),
+                        new Branch(new Branch.Name("gone"), false, new Sha(B), Instant.ofEpochSecond(100), false, false,
+                                new Tracking.Gone(new RemoteBranch("origin", new Branch.Name("gone"))))),
                 CliBranches.parse(raw).get());
     }
 
@@ -80,8 +80,8 @@ class CliParseTest {
                 "refs/remotes/my/fork/feature/x");
 
         Branch local = CliBranches.parse(raw).get().head();
-        assertEquals(Option.of(new RemoteBranch("my/fork", "feature/x")), local.upstream().map(Upstream::branch));
-        assertEquals(new RemoteBranch("my/fork", "feature/x"), local.pushTarget());
+        assertEquals(Option.of(new RemoteBranch("my/fork", new Branch.Name("feature/x"))), local.upstream().map(Upstream::branch));
+        assertEquals(new RemoteBranch("my/fork", new Branch.Name("feature/x")), local.pushTarget());
     }
 
     @Test

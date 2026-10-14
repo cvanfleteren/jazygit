@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.keys.Keymap.Binding;
@@ -17,13 +18,13 @@ public final class BranchKeys {
     public static Keymap register(Keymap keys) {
         return keys
                 .add(Scopes.BRANCHES,
-                        Binding.<String>onSelected(" ", "help.branches.checkout", CheckoutMsg.Requested::new),
-                        Binding.<String>onSelected("P", "help.branches.push", PushMsg.Requested::new),
-                        Binding.<String>onSelected("p", "help.branches.pull", PullMsg.Requested::new),
-                        Binding.<String>onSelected("n", "help.branches.new", NewBranchMsg.Requested::new),
-                        Binding.<String>onSelected("m", "help.branches.merge", MergeMsg.Requested::new),
-                        Binding.<String>onSelected("r", "help.branches.rebase", RebaseMsg.Requested::new),
-                        Binding.<String>onSelected("d", "help.branches.delete", DeleteBranchMsg.Requested::new),
+                        Binding.<Branch.Name>onSelected(" ", "help.branches.checkout", CheckoutMsg.Requested::new),
+                        Binding.<Branch.Name>onSelected("P", "help.branches.push", PushMsg.Requested::new),
+                        Binding.<Branch.Name>onSelected("p", "help.branches.pull", PullMsg.Requested::new),
+                        Binding.<Branch.Name>onSelected("n", "help.branches.new", NewBranchMsg.Requested::new),
+                        Binding.<Branch.Name>onSelected("m", "help.branches.merge", MergeMsg.Requested::new),
+                        Binding.<Branch.Name>onSelected("r", "help.branches.rebase", RebaseMsg.Requested::new),
+                        Binding.<Branch.Name>onSelected("d", "help.branches.delete", DeleteBranchMsg.Requested::new),
                         Binding.always("[", "help.branches.previousTab", BranchesTabMsg.Switched::new),
                         Binding.always("]", "help.branches.nextTab", BranchesTabMsg.Switched::new))
                 .add(Scopes.REMOTE_BRANCHES,

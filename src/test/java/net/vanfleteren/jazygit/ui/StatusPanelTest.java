@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.model.SampleData;
@@ -35,7 +36,7 @@ class StatusPanelTest {
 
     @Test
     void aDetachedHeadIsDescribedByItsCommit() {
-        assertEquals("main", StatusPanel.branchLabel(Head.onBranch("main", new Sha("0123456789"))));
+        assertEquals("main", StatusPanel.branchLabel(Head.onBranch(new Branch.Name("main"), new Sha("0123456789"))));
         assertEquals("HEAD detached at 0123456", StatusPanel.branchLabel(new Head.Detached(new Sha("0123456789"))));
     }
 

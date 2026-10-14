@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.branch;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Model;
 
 /**
@@ -17,7 +18,7 @@ final class Branches {
      * The checked out branch and {@code other}, if {@code other} is a known branch other than the checked out
      * one: what merging and rebasing work with.
      */
-    static Option<Tuple2<String, String>> checkedOutAnd(Model model, String other) {
+    static Option<Tuple2<Branch.Name, Branch.Name>> checkedOutAnd(Model model, Branch.Name other) {
         return model.currentBranch()
                 .filter(current -> !current.name().equals(other))
                 .flatMap(current -> model.idleBranch(current.name()))
@@ -27,7 +28,7 @@ final class Branches {
     /**
      * Whether {@code name} is a known branch that is not checked out, and that no operation runs on.
      */
-    static boolean isOtherIdleBranch(Model model, String name) {
+    static boolean isOtherIdleBranch(Model model, Branch.Name name) {
         return model.idleBranch(name).exists(branch -> !branch.current());
     }
 }

@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.process.CommandLine;
 
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -76,8 +77,8 @@ public final class CliRebase {
      *
      * @return the command lines that were run
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> onto(Path workTree, String onto) {
-        return rebase(workTree, git(REBASE.append("--no-autosquash").append(onto)));
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> onto(Path workTree, Branch.Name onto) {
+        return rebase(workTree, git(REBASE.append("--no-autosquash").append(onto.value())));
     }
 
     /**

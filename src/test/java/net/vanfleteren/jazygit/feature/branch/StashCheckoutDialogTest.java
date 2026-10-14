@@ -5,6 +5,7 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -27,7 +28,7 @@ class StashCheckoutDialogTest {
     private final Model open = openModel();
 
     private static Model openModel() {
-        return Update.update(TestModels.loaded(), new CheckoutMsg.NeedsStash(new BranchCmd.Checkout("feature"), List.empty())).model();
+        return Update.update(TestModels.loaded(), new CheckoutMsg.NeedsStash(new BranchCmd.Checkout(new Branch.Name("feature")), List.empty())).model();
     }
 
     @Test

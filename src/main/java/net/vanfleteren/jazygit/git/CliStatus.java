@@ -7,6 +7,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Conflict;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -60,7 +61,7 @@ public final class CliStatus {
         Option<Sha> commit = oid.filter(o -> !o.equals("(initial)")).flatMap(Sha::parse);
         return commit.filter(c -> branch.equals("(detached)"))
                 .<Head>map(Head.Detached::new)
-                .getOrElse(() -> new Head.OnBranch(branch, commit));
+                .getOrElse(() -> new Head.OnBranch(new Branch.Name(branch), commit));
     }
 
     /**

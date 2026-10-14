@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import io.vavr.collection.List;
@@ -22,7 +23,7 @@ public interface GitBranches {
      * Checks out the local branch {@code branch}. Fails with {@link GitError.LocalChanges} when
      * uncommitted changes would be overwritten.
      */
-    Either<GitFailure<CheckoutError>, List<ExecutedCommand>> checkout(String branch);
+    Either<GitFailure<CheckoutError>, List<ExecutedCommand>> checkout(Branch.Name branch);
 
     /**
      * Checks out the local branch {@code branch}, taking the uncommitted changes along: they are stashed
@@ -30,48 +31,48 @@ public interface GitBranches {
      * where they were; when popping them on {@code branch} fails, they stay in the stash, which is a
      * {@link GitError.StashNotRestored}.
      */
-    Either<GitFailure<StashCheckoutError>, List<ExecutedCommand>> checkoutWithStash(String branch);
+    Either<GitFailure<StashCheckoutError>, List<ExecutedCommand>> checkoutWithStash(Branch.Name branch);
 
     /**
      * Creates the local branch {@code name} at {@code startPoint} and checks it out.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> createBranch(String name, String startPoint);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> createBranch(Branch.Name name, String startPoint);
 
     /**
      * Creates the local branch {@code name} at the remote-tracking branch of {@code upstream}, following it, and
      * checks it out.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> createTrackingBranch(String name, RemoteBranch upstream);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> createTrackingBranch(Branch.Name name, RemoteBranch upstream);
 
     /**
      * Deletes the branch {@code name}, locally and/or {@code remote}, the branch it is pushed to. With both, the
      * remote one goes first, so a failure leaves the local branch in place.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(String name, RemoteBranch remote,
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(Branch.Name name, RemoteBranch remote,
                                                                          DeleteScope scope);
 
     /**
      * Merges {@code branch} into the checked out branch, as {@code mode} says. A merge that stops on conflicts
      * is undone again, so the repository is left as it was.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> merge(String branch, MergeMode mode);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> merge(Branch.Name branch, MergeMode mode);
 
     /**
      * Rebases the checked out branch onto {@code onto}, bringing uncommitted changes along. When the rebase
      * fails, it is aborted again, so the repository is left as it was.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> rebase(String onto);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> rebase(Branch.Name onto);
 
     /**
      * Pushes the local branch {@code branch} to {@code upstream}, the branch it tracks.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(String branch, RemoteBranch upstream, PushMode mode);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Branch.Name branch, RemoteBranch upstream, PushMode mode);
 
     /**
      * Pushes the local branch {@code branch} to {@code upstream}, which becomes its upstream once the push
      * succeeded.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(String branch, RemoteBranch upstream);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(Branch.Name branch, RemoteBranch upstream);
 
     /**
      * Pulls the checked out branch from its upstream, as git's {@code pull.rebase} and {@code pull.ff} say,
@@ -84,5 +85,5 @@ public interface GitBranches {
      * Fast-forwards the local branch {@code branch}, which is not checked out, to {@code upstream}, the branch it
      * tracks. Fails when that is not a fast-forward.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(String branch, RemoteBranch upstream);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(Branch.Name branch, RemoteBranch upstream);
 }

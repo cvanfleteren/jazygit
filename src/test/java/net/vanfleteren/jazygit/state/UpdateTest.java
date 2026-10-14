@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
@@ -57,7 +58,7 @@ class UpdateTest {
     void unchangedStatusKeepsTheSameInstanceAndDoesNotReloadCommits() {
         Model model = loaded();
 
-        Next next = Update.update(model, new LoadMsg.StatusLoaded(new RepoStatus(Head.onBranch("main", new Sha("aaaa")), List.of())));
+        Next next = Update.update(model, new LoadMsg.StatusLoaded(new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), List.of())));
 
         assertSame(model.status(), next.model().status());
         assertEquals(List.of(), next.cmds());

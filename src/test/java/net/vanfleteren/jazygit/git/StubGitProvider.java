@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -19,7 +20,6 @@ import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.RewordError;
 import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
 import net.vanfleteren.jazygit.git.GitError.StashError;
-import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.Diffs;
@@ -66,7 +66,7 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<ProcessError, RepoStatus> status() {
-        return Either.right(new RepoStatus(Head.onBranch("main", new Sha("aaaa")), List.empty()));
+        return Either.right(new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), List.empty()));
     }
 
     @Override
@@ -105,33 +105,33 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<CheckoutError>, List<ExecutedCommand>> checkout(String branch) {
+    default Either<GitFailure<CheckoutError>, List<ExecutedCommand>> checkout(Branch.Name branch) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<StashCheckoutError>, List<ExecutedCommand>> checkoutWithStash(String branch) {
+    default Either<GitFailure<StashCheckoutError>, List<ExecutedCommand>> checkoutWithStash(Branch.Name branch) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> createBranch(String name, String startPoint) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> createBranch(Branch.Name name, String startPoint) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> createTrackingBranch(String name,
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> createTrackingBranch(Branch.Name name,
                                                                                         RemoteBranch upstream) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(String name, RemoteBranch remote, DeleteScope scope) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(Branch.Name name, RemoteBranch remote, DeleteScope scope) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> merge(String branch, MergeMode mode) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> merge(Branch.Name branch, MergeMode mode) {
         return ran();
     }
 
@@ -146,17 +146,17 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> rebase(String onto) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> rebase(Branch.Name onto) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(String branch, RemoteBranch upstream, PushMode mode) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Branch.Name branch, RemoteBranch upstream, PushMode mode) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(String branch, RemoteBranch upstream) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(Branch.Name branch, RemoteBranch upstream) {
         return ran();
     }
 
@@ -166,7 +166,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(String branch, RemoteBranch upstream) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(Branch.Name branch, RemoteBranch upstream) {
         return ran();
     }
 

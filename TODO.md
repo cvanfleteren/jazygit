@@ -26,15 +26,10 @@ Refactorings that were left out of the functional/immutable cleanup, and why.
 
 ## Smaller items
 
-- [ ] **The 23 one-line `Msg.apply` overrides**, one per feature message interface, are kept: each one is how
-  a feature's messages reach its update class. Removing them would mean a central dispatch, which the
-  design avoids on purpose.
-- [ ] **No `Update.cancel` helper.** The cancel cases are one-liners, `Next.of(model.withoutPopup(X.class))`,
-  and a helper would be no shorter. A generic `PopupMsg.Closed(type)` sent by the dialog widgets would remove
-  some 20 `Cancelled` records, at the cost of a message that is not about a feature.
 - [ ] **Telescoping constructors** on `Branch`, `Commit` and `FileEntry` (cleanup only).
-- [ ] **Stronger types** for branch names, stash refs and remotes, which are now plain `String`s.
-  Also for the stage target, where `""` stands for the repository root; a sealed `Target` would be clearer.
+- [ ] **Stronger types** for stash refs and remotes, which are now plain `String`s, like branch names are now
+  `Branch.Name`. Also for the stage target, where `""` stands for the repository root; a sealed `Target` would
+  be clearer. The `gh` layer keeps branch names as `String`s, as it knows nothing of git.
 - [ ] **Typed reasons for ignored requests.** Some requests do nothing and don't say why, for example
   squashing a root or merge commit, or deleting the current or a busy branch. They could report an
   `AppError` instead.
@@ -54,6 +49,3 @@ Refactorings that were left out of the functional/immutable cleanup, and why.
   - Opening the app from inside `.git` reports a failed command, not that there is no working tree.
 - [ ] **Show what the repository is in the middle of.** A merge or rebase in progress isn't shown. Operations
   on it are left to git, which refuses most of them, and the app no longer undoes what the user started.
-- [ ] **Run the app by hand** (`./run.sh`) after the refactoring, and try the main operations: checkout,
-  push, merge, rebase, reword, squash, fixup and stash. Force a failure too, such as a rebase conflict, and check
-  the error text and the command log.

@@ -5,7 +5,7 @@ import io.vavr.control.Option;
 /**
  * A branch on a remote, e.g. {@code feature} on {@code origin}.
  */
-public record RemoteBranch(String remote, String branch) {
+public record RemoteBranch(String remote, Branch.Name branch) {
 
     /**
      * The remote a branch without an upstream is pushed to.
@@ -23,14 +23,14 @@ public record RemoteBranch(String remote, String branch) {
      */
     public static Option<RemoteBranch> parse(String text) {
         String[] words = text.strip().split("\\s+");
-        return words.length == 2 ? Option.of(new RemoteBranch(words[0], words[1])) : Option.none();
+        return words.length == 2 ? Option.of(new RemoteBranch(words[0], new Branch.Name(words[1]))) : Option.none();
     }
 
     /**
      * The remote branch as {@link #parse} reads it.
      */
     public String text() {
-        return remote + " " + branch;
+        return remote + " " + branch.value();
     }
 
     /**
@@ -45,7 +45,7 @@ public record RemoteBranch(String remote, String branch) {
      * Its remote-tracking ref, e.g. {@code refs/remotes/origin/main}.
      */
     public String trackingRef() {
-        return "refs/remotes/" + remote + "/" + branch;
+        return "refs/remotes/" + remote + "/" + branch.value();
     }
 
     /**
@@ -53,6 +53,6 @@ public record RemoteBranch(String remote, String branch) {
      * remote is {@code .}.
      */
     public String shortName() {
-        return local() ? branch : remote + "/" + branch;
+        return local() ? branch.value() : remote + "/" + branch.value();
     }
 }

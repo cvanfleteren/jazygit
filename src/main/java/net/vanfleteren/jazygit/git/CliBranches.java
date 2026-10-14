@@ -26,7 +26,7 @@ import static net.vanfleteren.jazygit.git.Refs.REMOTES;
  */
 public final class CliBranches {
 
-    private static final String ORIGIN = Refs.remote(RemoteBranch.DEFAULT_REMOTE, "");
+    private static final String ORIGIN = Refs.REMOTES + RemoteBranch.DEFAULT_REMOTE + "/";
     private static final List<String> FIELDS = List.of("%(refname)", "%(objectname)", "%(committerdate:unix)",
             "%(HEAD)", "%(upstream:remotename)", "%(upstream:remoteref)", "%(upstream:track)", "%(symref)",
             "%(upstream)");
@@ -36,7 +36,7 @@ public final class CliBranches {
     // The checked out branch first, then the most recently committed to.
     private static final Comparator<Branch> ORDER = Comparator.comparing(Branch::current).reversed()
             .thenComparing(Comparator.comparing(Branch::tipTime).reversed())
-            .thenComparing(Branch::name);
+            .thenComparing(branch -> branch.name().value());
 
     private static final List<String> REMOTE_FIELDS = List.of("%(refname)", "%(objectname)", "%(committerdate:unix)",
             "%(symref)");
@@ -78,7 +78,7 @@ public final class CliBranches {
                 GitOutput.epochSeconds(f.get(2)).map(time -> GitOutput.after(f.get(0), REMOTES)
                         .filter(name -> f.get(3).isEmpty() && name.indexOf('/') > 0)
                         .map(name -> new RemoteRef(new RemoteBranch(name.substring(0, name.indexOf('/')),
-                                name.substring(name.indexOf('/') + 1)), tip, time)))));
+                                new Branch.Name(name.substring(name.indexOf('/') + 1))), tip, time)))));
     }
 
     /**
@@ -109,8 +109,8 @@ public final class CliBranches {
         /**
          * The name of the local branch, if this is one.
          */
-        Option<String> localName() {
-            return GitOutput.after(name, HEADS);
+        Option<Branch.Name> localName() {
+            return GitOutput.after(name, HEADS).map(Branch.Name::new);
         }
 
         /**
@@ -118,15 +118,15 @@ public final class CliBranches {
          */
         Option<RemoteBranch> upstream() {
             return remote.flatMap(r -> remoteRef.flatMap(ref -> GitOutput.after(ref, HEADS))
-                    .map(branch -> new RemoteBranch(r, branch)));
+                    .map(branch -> new RemoteBranch(r, new Branch.Name(branch))));
         }
 
         /**
          * The remote-tracking ref of the branch it is pushed to: its upstream, or the one of the same name
          * on {@code origin}.
          */
-        String pushedTo(String branch) {
-            return upstreamRef.getOrElse(() -> ORIGIN + branch);
+        String pushedTo(Branch.Name branch) {
+            return upstreamRef.getOrElse(() -> ORIGIN + branch.value());
         }
     }
 
@@ -136,8 +136,8 @@ public final class CliBranches {
 
     private static List<Branch> branches(List<Ref> refs) {
         Set<String> remote = refs.map(Ref::name).filter(name -> name.startsWith(REMOTES)).toSet();
-        List<String> local = refs.flatMap(Ref::localName);
-        Option<String> defaultBranch = defaultBranch(refs, local);
+        List<Branch.Name> local = refs.flatMap(Ref::localName);
+        Option<Branch.Name> defaultBranch = defaultBranch(refs, local);
         return refs
                 .flatMap(ref -> ref.localName().map(name -> new Branch(name, ref.head(), ref.tip(), ref.time(),
                         remote.contains(ref.pushedTo(name)),
@@ -150,11 +150,12 @@ public final class CliBranches {
      * The main branch: the one {@code origin/HEAD} points to, as set by a clone. Without it, the
      * first of {@code main} and {@code master} that is among {@code branches}.
      */
-    private static Option<String> defaultBranch(List<Ref> refs, List<String> branches) {
+    private static Option<Branch.Name> defaultBranch(List<Ref> refs, List<Branch.Name> branches) {
         return refs.find(ref -> ref.name().equals(ORIGIN + "HEAD"))
                 .flatMap(Ref::symref)
                 .flatMap(target -> GitOutput.after(target, ORIGIN))
-                .orElse(() -> List.of("main", "master").find(branches::contains));
+                .map(Branch.Name::new)
+                .orElse(() -> List.of("main", "master").map(Branch.Name::new).find(branches::contains));
     }
 
     private static Tracking tracking(Ref ref) {

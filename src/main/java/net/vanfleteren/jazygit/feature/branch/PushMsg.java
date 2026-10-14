@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -14,7 +15,7 @@ public sealed interface PushMsg extends Msg {
     /**
      * The user asked to push a branch.
      */
-    record Requested(String branch) implements PushMsg {
+    record Requested(Branch.Name branch) implements PushMsg {
     }
 
     record ForceCancelled() implements PushMsg {

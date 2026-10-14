@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Update;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.CheckoutRemote;
@@ -21,7 +22,7 @@ public final class NewBranchUpdate {
 
     public static Next update(Model model, NewBranchMsg msg) {
         return switch (msg) {
-            case Requested(String base) -> Update.ask(model, model.idleBranch(base).map(known -> new NewBranchPopup(base)));
+            case Requested(Branch.Name base) -> Update.ask(model, model.idleBranch(base).map(known -> new NewBranchPopup(base.value())));
             case NewBranchMsg.RequestedAtCommit(var sha) -> atCommit(model, sha);
             case NewBranchMsg.RequestedAtRemote(var remote) -> Update.ask(model, model.remoteBranch(remote)
                     .map(known -> new NewBranchPopup(remote.trackingRef(), remote.shortName())));
@@ -35,10 +36,8 @@ public final class NewBranchUpdate {
     }
 
     private static Next confirmed(Model model, String name) {
-        String trimmed = name.strip();
-        // A blank name keeps the dialog open.
-        return Update.confirm(model, NewBranchPopup.class, popup -> Option.of(trimmed)
-                .filter(branch -> !branch.isEmpty())
+        // A name that is no branch name, like a blank one, keeps the dialog open.
+        return Update.confirm(model, NewBranchPopup.class, popup -> Branch.Name.parse(name)
                 .map(branch -> popup.following()
                         .<BranchCmd>map(remote -> new CheckoutRemote(branch, remote))
                         .getOrElse(() -> new CreateBranch(branch, popup.base()))));

@@ -59,7 +59,7 @@ public final class CliLog {
      */
     public static Either<LogError, List<Commit>> log(Path workTree, BranchRef branch) {
         return Either.<LogError, Option<Sha>>narrow(resolve(workTree, Refs.of(branch)).mapLeft(GitFailure::error))
-                .flatMap(tip -> tip.<LogError>toEither(() -> new UnknownBranch(branch.name())))
+                .flatMap(tip -> tip.<LogError>toEither(() -> new UnknownBranch(branch)))
                 .flatMap(tip -> Either.narrow(log(workTree, tip)));
     }
 

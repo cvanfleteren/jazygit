@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.model;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Either;
@@ -25,7 +26,7 @@ public final class SampleData implements StubGitProvider {
 
     @Override
     public Either<ProcessError, RepoStatus> status() {
-        return Either.right(new RepoStatus(Head.onBranch("main", new Sha("a1b2c3d4e5f60718293a4b5c6d7e8f9012345678")), List.of(
+        return Either.right(new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("a1b2c3d4e5f60718293a4b5c6d7e8f9012345678")), List.of(
                 new FileEntry("src/main/java/net/vanfleteren/jazygit/JazygitApp.java", ChangeType.MODIFIED),
                 new FileEntry("src/main/java/net/vanfleteren/jazygit/ui/ContentPanel.java", ChangeType.ADDED),
                 new FileEntry("src/main/java/net/vanfleteren/jazygit/model/SampleData.java", ChangeType.ADDED),
@@ -38,10 +39,10 @@ public final class SampleData implements StubGitProvider {
     @Override
     public Either<ProcessError, List<Branch>> branches() {
         return Either.right(List.of(
-                new Branch("main", true, new Sha("a1b2c3d4e5f60718293a4b5c6d7e8f9012345678"), Instant.EPOCH, true, true),
-                new Branch("feature/initial-layout", false, new Sha("0a1b2c3d4e5f60718293a4b5c6d7e8f901234567"), Instant.EPOCH, true),
-                new Branch("feature/jgit-backend", false, new Sha("1a2b3c4d5e6f708192a3b4c5d6e7f80912345678")),
-                new Branch("bugfix/focus-cycling", false, new Sha("c3d4e5f60718293a4b5c6d7e8f9012345678a1b2"))
+                new Branch(new Branch.Name("main"), true, new Sha("a1b2c3d4e5f60718293a4b5c6d7e8f9012345678"), Instant.EPOCH, true, true),
+                new Branch(new Branch.Name("feature/initial-layout"), false, new Sha("0a1b2c3d4e5f60718293a4b5c6d7e8f901234567"), Instant.EPOCH, true),
+                new Branch(new Branch.Name("feature/jgit-backend"), false, new Sha("1a2b3c4d5e6f708192a3b4c5d6e7f80912345678")),
+                new Branch(new Branch.Name("bugfix/focus-cycling"), false, new Sha("c3d4e5f60718293a4b5c6d7e8f9012345678a1b2"))
         ));
     }
 
@@ -62,7 +63,7 @@ public final class SampleData implements StubGitProvider {
                     commit("1a2b3c4", LINUS, "2026-10-08T21:15:00Z", "Read branches through JGit",
                             "Replaces the hard-coded branch list.\nThe current branch is marked.")));
             case "bugfix/focus-cycling" -> Either.right(MAIN.drop(2));
-            default -> Either.left(new GitError.UnknownBranch(branch.name()));
+            default -> Either.left(new GitError.UnknownBranch(branch));
         };
     }
 
@@ -94,7 +95,7 @@ public final class SampleData implements StubGitProvider {
 
     @Override
     public Either<ProcessError, DiffText> commitChanges(Sha sha) {
-        return Either.right(DiffText.of("1 file changed, 1 insertion(+)\n\ndiff --git a/" + sha + " b/" + sha + "\n"));
+        return Either.right(DiffText.of("1 file changed, 1 insertion(+)\n\ndiff --git a/" + sha.value() + " b/" + sha.value() + "\n"));
     }
 
     @Override

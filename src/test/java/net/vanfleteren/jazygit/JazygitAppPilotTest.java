@@ -8,6 +8,7 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyModifiers;
 import dev.tamboui.tui.pilot.Pilot;
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
@@ -169,7 +170,7 @@ class JazygitAppPilotTest {
     void theRemoteBranchesAreOneStopOfTheTabCycleAndTheirKeysWorkThere() throws Exception {
         SampleData data = new SampleData();
         java.util.List<Msg> dispatched = new ArrayList<>();
-        RemoteBranch feature = new RemoteBranch("origin", "feature");
+        RemoteBranch feature = new RemoteBranch("origin", new Branch.Name("feature"));
         Model remote = TestModels.loaded(data).withBranchesTab(BranchesTab.REMOTE)
                 .withRemoteBranches(new Loadable.Loaded<>(List.of(
                         new RemoteRef(feature, new Sha("0a1b2c3d4e5f60718293a4b5c6d7e8f901234567"), Instant.EPOCH))));
@@ -243,11 +244,11 @@ class JazygitAppPilotTest {
 
             Pilot pilot = testRunner.pilot();
             pilot.pause();
-            assertEquals(new SelectionMsg.BranchSelected(new BranchRef.Local("main")), fixture.selections().getLast());
+            assertEquals(new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("main"))), fixture.selections().getLast());
 
             pilot.press(KeyCode.DOWN);
             pilot.pause();
-            assertEquals(new SelectionMsg.BranchSelected(new BranchRef.Local("feature/initial-layout")), fixture.selections().getLast());
+            assertEquals(new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("feature/initial-layout"))), fixture.selections().getLast());
 
             pilot.quit();
         }
@@ -267,7 +268,7 @@ class JazygitAppPilotTest {
             pilot.press(KeyCode.DOWN);
             pilot.press(' ');
             pilot.pause();
-            assertEquals(java.util.List.of(new CheckoutMsg.Requested("feature/initial-layout")), fixture.dispatched());
+            assertEquals(java.util.List.of(new CheckoutMsg.Requested(new Branch.Name("feature/initial-layout"))), fixture.dispatched());
 
             focusManager.setFocus(CommitsPanel.ID);
             pilot.pause();

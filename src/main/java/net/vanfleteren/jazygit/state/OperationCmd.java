@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -24,7 +25,7 @@ public interface OperationCmd extends Cmd {
     /**
      * The branch that is marked busy while this runs, if any; it is released when this is done.
      */
-    default Option<String> busyBranch() {
+    default Option<BranchRef> busyBranch() {
         return Option.none();
     }
 

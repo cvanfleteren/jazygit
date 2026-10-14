@@ -31,8 +31,8 @@ public final class PullRequestUpdate {
 
     public static Next update(Model model, PullRequestMsg msg) {
         return switch (msg) {
-            case PullRequestMsg.Requested(String branch) -> requested(model, branch);
-            case PullRequestMsg.BaseChosen(String base) -> Update.confirm(model, BasePopup.class,
+            case PullRequestMsg.Requested(Branch.Name branch) -> requested(model, branch);
+            case PullRequestMsg.BaseChosen(Branch.Name base) -> Update.confirm(model, BasePopup.class,
                     // The branch can have another name on its remote; gh needs that one.
                     popup -> model.branch(popup.branch()).map(known ->
                             new CreatePullRequest(known.name(), known.pushTarget().branch(), base)));
@@ -42,7 +42,7 @@ public final class PullRequestUpdate {
                 // reading the pull requests then gives its checks and review.
                 Next done = OperationUpdate.succeeded(model, cmd, commands);
                 Model shown = pullRequest
-                        .map(pr -> done.model().withPullRequests(done.model().pullRequests().map(open -> open.put(pr.headBranch(), pr))))
+                        .map(pr -> done.model().withPullRequests(done.model().pullRequests().map(open -> open.put(new Branch.Name(pr.headBranch()), pr))))
                         .getOrElse(done.model());
                 // A read that is still running may have missed it, so this one is started anyway. GitHub may have
                 // changed the remote too, which a fetch brings in.
@@ -89,7 +89,7 @@ public final class PullRequestUpdate {
      * Shows the pull request of the branch, reading what there is to know about it. A branch without one gets one, once it is pushed: the user is asked
      * which branch it merges into.
      */
-    private static Next requested(Model model, String branch) {
+    private static Next requested(Model model, Branch.Name branch) {
         return model.idleBranch(branch)
                 .map(known -> model.pullRequest(known)
                         .map(pr -> Next.of(Update.ask(model, PullRequestPopup.loading(branch, pr)).model(),
@@ -109,7 +109,7 @@ public final class PullRequestUpdate {
      * The branches a pull request from {@code branch} can merge into: the others that are on their remote, the
      * default branch first.
      */
-    static List<String> bases(Model model, String branch) {
+    static List<Branch.Name> bases(Model model, Branch.Name branch) {
         return model.branches().toOption().getOrElse(List.empty())
                 .filter(b -> b.hasRemote() && !b.name().equals(branch))
                 .sortBy(b -> !b.isDefault())

@@ -41,7 +41,7 @@ public final class BranchDialogs {
      */
     public static final ConfirmDialog.Spec<ForcePushPopup> FORCE_PUSH = new ConfirmDialog.Spec<>(
             "force-push", ForcePushPopup.class,
-            popup -> Messages.get("dialog.forcePush.title", popup.branch()),
+            popup -> Messages.get("dialog.forcePush.title", popup.branch().value()),
             popup -> Messages.get("dialog.forcePush.message"),
             PushMsg.ForceConfirmed::new, PushMsg.ForceCancelled::new);
 
@@ -50,7 +50,7 @@ public final class BranchDialogs {
      */
     public static final ConfirmDialog.Spec<StashCheckoutPopup> STASH_CHECKOUT = new ConfirmDialog.Spec<>(
             "stash-checkout", StashCheckoutPopup.class,
-            popup -> Messages.get("dialog.stashCheckout.title", popup.branch()),
+            popup -> Messages.get("dialog.stashCheckout.title", popup.branch().value()),
             popup -> Messages.get("dialog.stashCheckout.message"),
             CheckoutMsg.StashConfirmed::new, CheckoutMsg.StashCancelled::new);
 
@@ -60,7 +60,7 @@ public final class BranchDialogs {
      */
     public static final ChoiceDialog.Spec<DeleteBranchPopup> DELETE_BRANCH = new ChoiceDialog.Spec<>(
             "delete-branch", DeleteBranchPopup.class,
-            popup -> Messages.get("dialog.deleteBranch.title", popup.branch()),
+            popup -> Messages.get("dialog.deleteBranch.title", popup.branch().value()),
             List.of(new Choice<>('d', "dialog.deleteBranch.local", () -> new DeleteBranchMsg.Chosen(DeleteScope.LOCAL)),
                     new Choice<>('r', "dialog.deleteBranch.remote", () -> new DeleteBranchMsg.Chosen(DeleteScope.REMOTE),
                             BranchDialogs::remoteDeletable),
@@ -73,7 +73,7 @@ public final class BranchDialogs {
      */
     public static final ChoiceDialog.Spec<MergePopup> MERGE = new ChoiceDialog.Spec<>(
             "merge", MergePopup.class,
-            popup -> Messages.get("dialog.merge.title", popup.branch(), popup.into()),
+            popup -> Messages.get("dialog.merge.title", popup.branch().value(), popup.into().value()),
             List.of(new Choice<>('m', "dialog.merge.fastForward", () -> new MergeMsg.Chosen(MergeMode.FAST_FORWARD)),
                     new Choice<>('n', "dialog.merge.mergeCommit", () -> new MergeMsg.Chosen(MergeMode.MERGE_COMMIT)),
                     new Choice<>('s', "dialog.merge.squash", () -> new MergeMsg.Chosen(MergeMode.SQUASH)),
@@ -86,8 +86,8 @@ public final class BranchDialogs {
      */
     public static final ChoiceDialog.Spec<RebasePopup> REBASE = new ChoiceDialog.Spec<>(
             "rebase", RebasePopup.class,
-            popup -> Messages.get("dialog.rebase.title", popup.branch()),
-            List.of(new Choice<RebasePopup>('s', popup -> Messages.get("dialog.rebase.simple", popup.onto()),
+            popup -> Messages.get("dialog.rebase.title", popup.branch().value()),
+            List.of(new Choice<RebasePopup>('s', popup -> Messages.get("dialog.rebase.simple", popup.onto().value()),
                     RebaseMsg.Chosen::new)),
             RebaseMsg.Cancelled::new);
 

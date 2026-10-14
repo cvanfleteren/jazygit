@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import io.vavr.control.Option;
 
 import java.io.IOException;
@@ -147,9 +148,9 @@ public sealed interface GitError {
     }
 
     /**
-     * There is no local branch by that name.
+     * There is no such branch, local or remote-tracking.
      */
-    record UnknownBranch(String branch) implements LogError {
+    record UnknownBranch(BranchRef branch) implements LogError {
     }
 
     /**

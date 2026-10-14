@@ -236,7 +236,12 @@ classDiagram
 
 - **`Msg` applies itself.** Each feature has a sealed sub-interface, for example `RewordMsg`, whose
   `apply` delegates to that feature's update class (`RewordUpdate`). Adding a feature therefore needs
-  no change to `Update` or `Msg`.
+  no change to `Update` or `Msg`. The one-line `apply` overrides, one per feature message interface, are
+  the price of avoiding a central dispatch, and are kept on purpose.
+- **Every dialog has its own `Cancelled`.** Cancelling is a one-liner,
+  `Next.of(model.withoutPopup(X.class))`, so there is no `Update.cancel` helper. A generic
+  `PopupMsg.Closed(type)` sent by the dialog widgets would remove some 20 `Cancelled` records, at the cost
+  of a message that is not about a feature.
 - **`Cmd` is immutable data** that knows how to run itself against an `Env` (the `GitInfoProvider` and the
   `GitHub`) and how to report failure:
   - `run` folds the provider's `Either` into a `Msg`.

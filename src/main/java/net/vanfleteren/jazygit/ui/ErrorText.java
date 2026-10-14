@@ -1,8 +1,10 @@
 package net.vanfleteren.jazygit.ui;
 
+import net.vanfleteren.jazygit.git.model.Branch;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.git.GitError;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.settings.SettingsProblem;
 import net.vanfleteren.jazygit.state.AppError;
@@ -24,11 +26,11 @@ public final class ErrorText {
             case AppError.NothingToAmend() -> Messages.get("error.amend.nothing");
             case AppError.NothingToStash() -> Messages.get("error.stash.nothing");
             case AppError.InvalidUpstream(String text) -> Messages.get("error.upstream.invalid", text.strip());
-            case AppError.NoUpstream(String branch) -> Messages.get("error.pull.noUpstream", branch);
-            case AppError.UpstreamGone(String branch, String upstream) ->
-                    Messages.get("error.pull.upstreamGone", branch, upstream);
-            case AppError.UnpushedCommits(String branch) -> Messages.get("error.fastForward.unpushed", branch);
-            case AppError.NotPushed(String branch) -> Messages.get("error.pullRequest.notPushed", branch);
+            case AppError.NoUpstream(Branch.Name branch) -> Messages.get("error.pull.noUpstream", branch.value());
+            case AppError.UpstreamGone(Branch.Name branch, String upstream) ->
+                    Messages.get("error.pull.upstreamGone", branch.value(), upstream);
+            case AppError.UnpushedCommits(Branch.Name branch) -> Messages.get("error.fastForward.unpushed", branch.value());
+            case AppError.NotPushed(Branch.Name branch) -> Messages.get("error.pullRequest.notPushed", branch.value());
             case AppError.PullRequestsNotRead() -> Messages.get("error.pullRequest.notRead");
             case AppError.PullRequestsUnavailable(Failure failure) ->
                     Messages.get("error.pullRequest.unavailable", of(failure));
@@ -77,7 +79,7 @@ public final class ErrorText {
             case GitError.UnexpectedOutput(String output) -> Messages.get("git.unexpectedOutput", output);
             case GitError.NotARepository(var directory) -> Messages.get("git.notRepository", directory);
             case GitError.NoWorkTree(var directory) -> Messages.get("git.noWorkTree", directory);
-            case GitError.UnknownBranch(String branch) -> Messages.get("git.unknownBranch", branch);
+            case GitError.UnknownBranch(BranchRef branch) -> Messages.get("git.unknownBranch", branch.name());
             case GitError.LocalChanges(String explanation) -> explanation;
             case GitError.StashNotRestored(var cause) -> Messages.get("git.stashPopFailed", of(cause));
             case GitError.StashGone(String message) -> Messages.get("git.stashGone", message);

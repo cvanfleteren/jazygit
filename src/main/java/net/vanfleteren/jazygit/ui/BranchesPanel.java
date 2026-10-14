@@ -11,10 +11,10 @@ import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.state.SelectionMsg;
-import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.state.SelectionMsg;
+import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -56,7 +56,7 @@ public class BranchesPanel {
     // Whether a local branch follows a remote branch, as of the last render.
     private Predicate<RemoteBranch> tracked = remote -> false;
     // The branches an operation runs on, shown with a spinner; the rows are built from it on every render.
-    private Map<String, Operation> busy = HashMap.empty();
+    private Map<BranchRef, Operation> busy = HashMap.empty();
     // The pull request of a branch, as of the last render; the rows are built from it on every render.
     private Function<Branch, Option<PullRequest>> pullRequests = branch -> Option.none();
 
@@ -81,7 +81,7 @@ public class BranchesPanel {
     private static LoadableList.Row row(Branch b, Duration since, Option<PullRequest> pullRequest,
                                         Option<String> spinner) {
         return new LoadableList.Row(
-                List.of(LoadableList.Seg.of("%4s ".formatted(TimeText.age(since)) + (b.current() ? "* " : "  ") + b.name()))
+                List.of(LoadableList.Seg.of("%4s ".formatted(TimeText.age(since)) + (b.current() ? "* " : "  ") + b.name().value()))
                         .appendAll(sync(b))
                         .appendAll(pullRequest(pullRequest))
                         .appendAll(spinner.map(text -> LoadableList.Seg.styled(" " + text, Theme.Classes.SPINNER))));
@@ -167,8 +167,8 @@ public class BranchesPanel {
      * current branch, which is listed first.
      */
     private static int reselect(List<Branch> previous, List<Branch> next, int selected) {
-        Option<String> before = current(previous);
-        Option<String> target = before.equals(current(next))
+        Option<Branch.Name> before = current(previous);
+        Option<Branch.Name> target = before.equals(current(next))
                 ? Option.of(selected).filter(i -> i < previous.size()).map(i -> previous.get(i).name())
                 : current(next);
         return target
@@ -177,7 +177,7 @@ public class BranchesPanel {
                 .getOrElse(selected);
     }
 
-    private static Option<String> current(List<Branch> branches) {
+    private static Option<Branch.Name> current(List<Branch> branches) {
         return branches.find(Branch::current).map(Branch::name);
     }
 
@@ -206,7 +206,7 @@ public class BranchesPanel {
                 branches -> branches
                         .map(b -> row(b, Duration.between(b.tipTime(), clock.instant()),
                                 pullRequests.apply(b),
-                                busy.get(b.name()).map(operation -> spinner(operation, clock.instant())))),
+                                busy.get(new BranchRef.Local(b.name())).map(operation -> spinner(operation, clock.instant())))),
                 BranchesPanel::reselect, highlights);
         // The highlight alone marks the selection; a symbol would indent the rows.
         list.highlightSymbol("");
@@ -215,7 +215,7 @@ public class BranchesPanel {
         remoteList = new LoadableList<>(Messages.get("panel.remoteBranches.title"), ID,
                 refs -> refs.map(ref -> remoteRow(ref, Duration.between(ref.tipTime(), clock.instant()),
                         tracked.test(ref.branch()),
-                        busy.get(ref.branch().shortName()).map(operation -> spinner(operation, clock.instant())))),
+                        busy.get(new BranchRef.Remote(ref.branch())).map(operation -> spinner(operation, clock.instant())))),
                 LoadableList.Reselect.following(RemoteRef::branch), highlights);
         remoteList.highlightSymbol("");
         remoteList.whenEmpty(Messages.get("remoteBranches.empty"));
@@ -275,7 +275,7 @@ public class BranchesPanel {
     /**
      * The name of the highlighted branch, once the branches are shown.
      */
-    public Option<String> selectedBranch() {
+    public Option<Branch.Name> selectedBranch() {
         return list.selected(branches -> branches).map(Branch::name);
     }
 

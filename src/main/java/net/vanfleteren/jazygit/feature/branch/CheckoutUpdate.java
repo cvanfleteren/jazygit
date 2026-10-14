@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.state.Update;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.Checkout;
@@ -27,7 +29,7 @@ public final class CheckoutUpdate {
 
     public static Next update(Model model, CheckoutMsg msg) {
         return switch (msg) {
-            case Requested(String branch) -> requested(model, branch);
+            case Requested(Branch.Name branch) -> requested(model, branch);
             case RemoteRequested(RemoteBranch branch) -> remoteRequested(model, branch);
             // The checkout ran, and failed; the stash it needs is offered instead of the failure.
             case NeedsStash(var cmd, var commands) -> Update.refresh(OperationUpdate.done(model, cmd, commands)
@@ -45,7 +47,7 @@ public final class CheckoutUpdate {
      * a local branch that follows something else already has that name, asks for another.
      */
     private static Next remoteRequested(Model model, RemoteBranch remote) {
-        if (model.remoteBranch(remote).isEmpty() || model.busy().containsKey(remote.shortName())) {
+        if (model.remoteBranch(remote).isEmpty() || model.busy().containsKey(new BranchRef.Remote(remote))) {
             return Next.of(model);
         }
         return model.trackingBranch(remote)
@@ -55,7 +57,7 @@ public final class CheckoutUpdate {
                         : Update.start(model.clearError(), new CheckoutRemote(remote.branch(), remote)));
     }
 
-    private static Next requested(Model model, String branch) {
+    private static Next requested(Model model, Branch.Name branch) {
         return Branches.isOtherIdleBranch(model, branch) ? Update.start(model.clearError(), new Checkout(branch)) : Next.of(model);
     }
 }

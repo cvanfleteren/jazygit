@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import io.vavr.collection.List;
@@ -19,7 +21,6 @@ import net.vanfleteren.jazygit.git.GitError.StashError;
 import net.vanfleteren.jazygit.git.GitError.RewordError;
 import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
-import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
@@ -31,7 +32,6 @@ import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
-import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
@@ -141,33 +141,33 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<CheckoutError>, List<ExecutedCommand>> checkout(String branch) {
+    public Either<GitFailure<CheckoutError>, List<ExecutedCommand>> checkout(Branch.Name branch) {
         return CliCheckout.checkout(workTree, branch);
     }
 
     @Override
-    public Either<GitFailure<StashCheckoutError>, List<ExecutedCommand>> checkoutWithStash(String branch) {
+    public Either<GitFailure<StashCheckoutError>, List<ExecutedCommand>> checkoutWithStash(Branch.Name branch) {
         return CliCheckout.checkoutWithStash(workTree, branch);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> createBranch(String name, String startPoint) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> createBranch(Branch.Name name, String startPoint) {
         return CliCheckout.createBranch(workTree, name, startPoint);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> createTrackingBranch(String name,
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> createTrackingBranch(Branch.Name name,
                                                                                        RemoteBranch upstream) {
         return CliCheckout.createTrackingBranch(workTree, name, upstream);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(String branch, RemoteBranch upstream, PushMode mode) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Branch.Name branch, RemoteBranch upstream, PushMode mode) {
         return CliBranch.push(workTree, branch, upstream, mode);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(String branch, RemoteBranch upstream) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(Branch.Name branch, RemoteBranch upstream) {
         return CliBranch.pushSettingUpstream(workTree, branch, upstream);
     }
 
@@ -177,12 +177,12 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(String branch, RemoteBranch upstream) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(Branch.Name branch, RemoteBranch upstream) {
         return CliBranch.fastForward(workTree, branch, upstream);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> merge(String branch, MergeMode mode) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> merge(Branch.Name branch, MergeMode mode) {
         return CliMerge.merge(workTree, branch, mode);
     }
 
@@ -197,12 +197,12 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> rebase(String onto) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> rebase(Branch.Name onto) {
         return CliRebase.onto(workTree, onto);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(String name, RemoteBranch remote, DeleteScope scope) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(Branch.Name name, RemoteBranch remote, DeleteScope scope) {
         return CliBranch.delete(workTree, name, remote, scope);
     }
 

@@ -31,8 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 class RemoteBranchUpdateTest {
 
-    private static final RemoteBranch ORIGIN_FEATURE = new RemoteBranch("origin", "feature");
-    private static final RemoteBranch ORIGIN_NEW = new RemoteBranch("origin", "new");
+    private static final RemoteBranch ORIGIN_FEATURE = new RemoteBranch("origin", new Branch.Name("feature"));
+    private static final RemoteBranch ORIGIN_NEW = new RemoteBranch("origin", new Branch.Name("new"));
 
     /**
      * main and feature locally, where feature follows nothing; origin/feature and origin/new on the remote.
@@ -66,20 +66,20 @@ class RemoteBranchUpdateTest {
     void checkingOutARemoteBranchWithoutALocalOneCreatesOneThatFollowsIt() {
         Next next = Update.update(withRemotes(), new CheckoutMsg.RemoteRequested(ORIGIN_NEW));
 
-        assertEquals(List.of(new CheckoutRemote("new", ORIGIN_NEW)), next.cmds());
+        assertEquals(List.of(new CheckoutRemote(new Branch.Name("new"), ORIGIN_NEW)), next.cmds());
         // The remote branch shows as busy, as the local one is not there yet.
-        assertEquals(Option.of(Operation.CHECKOUT), next.model().busy().get("origin/new"));
+        assertEquals(Option.of(Operation.CHECKOUT), next.model().busy().get(new BranchRef.Remote(ORIGIN_NEW)));
         assertEquals(List.of(), Update.update(next.model(), new CheckoutMsg.RemoteRequested(ORIGIN_NEW)).cmds());
     }
 
     @Test
     void checkingOutARemoteBranchThatALocalOneFollowsChecksOutThatOne() {
         Model model = Update.update(withRemotes(), new LoadMsg.BranchesLoaded(List.of(
-                new Branch("main", true, new Sha("aaaa")),
-                new Branch("mine", false, new Sha("ffff"), Instant.EPOCH, true, false,
+                new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
+                new Branch(new Branch.Name("mine"), false, new Sha("ffff"), Instant.EPOCH, true, false,
                         Option.of(new Upstream(ORIGIN_FEATURE, 0, 0)))))).model();
 
-        assertEquals(List.of(new Checkout("mine")),
+        assertEquals(List.of(new Checkout(new Branch.Name("mine"))),
                 Update.update(model, new CheckoutMsg.RemoteRequested(ORIGIN_FEATURE)).cmds());
     }
 
@@ -89,14 +89,14 @@ class RemoteBranchUpdateTest {
 
         assertEquals(Option.of(new NewBranchPopup("refs/remotes/origin/feature", "origin/feature", "feature",
                 Option.of(ORIGIN_FEATURE))), asked.popup(NewBranchPopup.class));
-        assertEquals(List.of(new CheckoutRemote("feature-2", ORIGIN_FEATURE)),
+        assertEquals(List.of(new CheckoutRemote(new Branch.Name("feature-2"), ORIGIN_FEATURE)),
                 Update.update(asked, new NewBranchMsg.Confirmed("feature-2")).cmds());
     }
 
     @Test
     void anUnknownRemoteBranchIsNotCheckedOut() {
         assertEquals(List.of(), Update.update(withRemotes(),
-                new CheckoutMsg.RemoteRequested(new RemoteBranch("origin", "nowhere"))).cmds());
+                new CheckoutMsg.RemoteRequested(new RemoteBranch("origin", new Branch.Name("nowhere")))).cmds());
     }
 
     @Test
@@ -105,7 +105,7 @@ class RemoteBranchUpdateTest {
 
         assertEquals(Option.of(new NewBranchPopup("refs/remotes/origin/new", "origin/new")),
                 asked.popup(NewBranchPopup.class));
-        assertEquals(List.of(new CreateBranch("topic", "refs/remotes/origin/new")),
+        assertEquals(List.of(new CreateBranch(new Branch.Name("topic"), "refs/remotes/origin/new")),
                 Update.update(asked, new NewBranchMsg.Confirmed("topic")).cmds());
     }
 
@@ -113,8 +113,8 @@ class RemoteBranchUpdateTest {
     void aCheckoutOrANewBranchFromTheRemoteBranchesShowsTheLocalOnesOnceItSucceeded() {
         Model onRemotes = Update.update(withRemotes(), new BranchesTabMsg.Switched()).model();
 
-        List.<BranchCmd>of(new CheckoutRemote("new", ORIGIN_NEW), new Checkout("feature"),
-                        new CreateBranch("topic", "refs/remotes/origin/new"))
+        List.<BranchCmd>of(new CheckoutRemote(new Branch.Name("new"), ORIGIN_NEW), new Checkout(new Branch.Name("feature")),
+                        new CreateBranch(new Branch.Name("topic"), "refs/remotes/origin/new"))
                 .forEach(cmd -> assertEquals(BranchesTab.LOCAL,
                         Update.update(onRemotes, cmd.succeeded(List.empty())).model().branchesTab(), cmd.toString()));
     }
@@ -123,9 +123,9 @@ class RemoteBranchUpdateTest {
     void aSuccessfulCheckoutOfARemoteBranchReleasesIt() {
         Model started = Update.update(withRemotes(), new CheckoutMsg.RemoteRequested(ORIGIN_NEW)).model();
 
-        Model done = Update.update(started, new CheckoutRemote("new", ORIGIN_NEW).succeeded(List.empty())).model();
+        Model done = Update.update(started, new CheckoutRemote(new Branch.Name("new"), ORIGIN_NEW).succeeded(List.empty())).model();
 
-        assertEquals(Option.none(), done.busy().get("origin/new"));
+        assertEquals(Option.none(), done.busy().get(new BranchRef.Remote(ORIGIN_NEW)));
     }
 
     @Test
@@ -133,7 +133,7 @@ class RemoteBranchUpdateTest {
         Model started = Update.update(Update.update(withRemotes(), new BranchesTabMsg.Switched()).model(),
                 new CheckoutMsg.RemoteRequested(ORIGIN_NEW)).model();
 
-        Model failed = Update.update(started, new CheckoutRemote("new", ORIGIN_NEW).failed(
+        Model failed = Update.update(started, new CheckoutRemote(new Branch.Name("new"), ORIGIN_NEW).failed(
                 net.vanfleteren.jazygit.state.TestModels.refused("boom"))).model();
 
         assertEquals(BranchesTab.REMOTE, failed.branchesTab());

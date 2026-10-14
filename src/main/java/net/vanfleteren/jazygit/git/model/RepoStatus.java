@@ -20,7 +20,7 @@ public record RepoStatus(Head head, List<FileEntry> files) {
          *
          * @param tip the commit it points to; none in a repository without commits
          */
-        record OnBranch(String branch, Option<Sha> tip) implements Head {
+        record OnBranch(Branch.Name branch, Option<Sha> tip) implements Head {
         }
 
         /**
@@ -29,7 +29,7 @@ public record RepoStatus(Head head, List<FileEntry> files) {
         record Detached(Sha at) implements Head {
         }
 
-        static Head onBranch(String branch, Sha tip) {
+        static Head onBranch(Branch.Name branch, Sha tip) {
             return new OnBranch(branch, Option.of(tip));
         }
 
@@ -38,7 +38,7 @@ public record RepoStatus(Head head, List<FileEntry> files) {
          */
         default Option<Sha> commit() {
             return switch (this) {
-                case OnBranch(String branch, Option<Sha> tip) -> tip;
+                case OnBranch(Branch.Name branch, Option<Sha> tip) -> tip;
                 case Detached(Sha at) -> Option.of(at);
             };
         }
@@ -46,8 +46,8 @@ public record RepoStatus(Head head, List<FileEntry> files) {
         /**
          * The checked out branch; none for a detached HEAD.
          */
-        default Option<String> branchName() {
-            return this instanceof OnBranch(String branch, Option<Sha> tip) ? Option.of(branch) : Option.none();
+        default Option<Branch.Name> branchName() {
+            return this instanceof OnBranch(Branch.Name branch, Option<Sha> tip) ? Option.of(branch) : Option.none();
         }
     }
 

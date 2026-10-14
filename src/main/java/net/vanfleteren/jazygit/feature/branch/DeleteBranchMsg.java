@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -15,7 +16,7 @@ public sealed interface DeleteBranchMsg extends Msg {
     /**
      * The user asked to delete a branch; where is still to be chosen.
      */
-    record Requested(String branch) implements DeleteBranchMsg {
+    record Requested(Branch.Name branch) implements DeleteBranchMsg {
     }
 
     record Cancelled() implements DeleteBranchMsg {

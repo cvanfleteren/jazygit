@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.settings.SettingsProblem;
 
 /**
@@ -43,7 +44,7 @@ public sealed interface AppError {
     /**
      * A pull was asked for, but the branch has no upstream to pull from.
      */
-    record NoUpstream(String branch) implements AppError {
+    record NoUpstream(Branch.Name branch) implements AppError {
     }
 
     /**
@@ -51,20 +52,20 @@ public sealed interface AppError {
      *
      * @param upstream the short name the upstream had, e.g. {@code origin/feature}
      */
-    record UpstreamGone(String branch, String upstream) implements AppError {
+    record UpstreamGone(Branch.Name branch, String upstream) implements AppError {
     }
 
     /**
      * A pull of a branch that is not checked out was asked for, but its commits not yet pushed keep it from
      * being fast-forwarded.
      */
-    record UnpushedCommits(String branch) implements AppError {
+    record UnpushedCommits(Branch.Name branch) implements AppError {
     }
 
     /**
      * A pull request was asked for, but the branch is not on its remote yet, or not with all its commits.
      */
-    record NotPushed(String branch) implements AppError {
+    record NotPushed(Branch.Name branch) implements AppError {
     }
 
     /**

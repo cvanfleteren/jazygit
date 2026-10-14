@@ -1,12 +1,12 @@
 package net.vanfleteren.jazygit.feature.branch;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.Sha;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
@@ -25,7 +25,7 @@ class DeleteBranchDialogTest {
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<DeleteBranchPopup> dialog = new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(BranchDialogs.DELETE_BRANCH, dispatched::add);
     private final Model open = Update.update(TestModels.loaded(new SampleData()),
-            new DeleteBranchMsg.Requested("feature/initial-layout")).model();
+            new DeleteBranchMsg.Requested(new Branch.Name("feature/initial-layout"))).model();
 
     @Test
     void lettersChooseAnOption() throws Exception {
@@ -55,7 +55,7 @@ class DeleteBranchDialogTest {
     @Test
     void remoteOptionsAreNotActionableForALocalOnlyBranch() throws Exception {
         Model localOnly = Update.update(TestModels.loaded(new SampleData()),
-                new DeleteBranchMsg.Requested("feature/jgit-backend")).model();
+                new DeleteBranchMsg.Requested(new Branch.Name("feature/jgit-backend"))).model();
 
         assertEquals(List.of(), pressing(localOnly, r -> {
             r.pilot().press('r');
@@ -72,9 +72,9 @@ class DeleteBranchDialogTest {
     @Test
     void remoteOptionsAreNotActionableForTheDefaultBranch() throws Exception {
         Model model = Update.update(TestModels.loaded(new SampleData()), new LoadMsg.BranchesLoaded(List.of(
-                new Branch("x", true, new Sha("1")),
-                new Branch("trunk", false, new Sha("2"), java.time.Instant.EPOCH, true, true)))).model();
-        Model open = Update.update(model, new DeleteBranchMsg.Requested("trunk")).model();
+                new Branch(new Branch.Name("x"), true, new Sha("1")),
+                new Branch(new Branch.Name("trunk"), false, new Sha("2"), java.time.Instant.EPOCH, true, true)))).model();
+        Model open = Update.update(model, new DeleteBranchMsg.Requested(new Branch.Name("trunk"))).model();
 
         assertEquals(List.of(), pressing(open, r -> {
             r.pilot().press('r');

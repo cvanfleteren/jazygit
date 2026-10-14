@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.error;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.ErrorPopup;
 import net.vanfleteren.jazygit.state.Model;
@@ -26,7 +27,7 @@ class ErrorDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final ConfirmDialog<ErrorPopup> dialog = new ConfirmDialog<>(ErrorDialog.SPEC, dispatched::add);
-    private final Model open = TestModels.loaded().fail(new AppError.NoUpstream("feature"));
+    private final Model open = TestModels.loaded().fail(new AppError.NoUpstream(new Branch.Name("feature")));
 
     @Test
     void showsTheErrorUnderTheTitleError() throws Exception {

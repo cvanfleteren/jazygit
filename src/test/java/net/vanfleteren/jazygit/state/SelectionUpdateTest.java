@@ -1,10 +1,10 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -35,12 +35,12 @@ class SelectionUpdateTest {
 
     @Test
     void selectingABranchLoadsItsLogOnce() {
-        Next next = Update.update(loaded(), new SelectionMsg.BranchSelected(new BranchRef.Local("feature")));
+        Next next = Update.update(loaded(), new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("feature"))));
 
-        assertEquals(Option.of(new Preview<>(new BranchRef.Local("feature"), new Loading<>())), next.model().branchLog());
-        assertEquals(List.of(new LoadBranchLog(new BranchRef.Local("feature"))), next.cmds());
+        assertEquals(Option.of(new Preview<>(new BranchRef.Local(new Branch.Name("feature")), new Loading<>())), next.model().branchLog());
+        assertEquals(List.of(new LoadBranchLog(new BranchRef.Local(new Branch.Name("feature")))), next.cmds());
 
-        Next again = Update.update(next.model(), new SelectionMsg.BranchSelected(new BranchRef.Local("feature")));
+        Next again = Update.update(next.model(), new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("feature"))));
         assertSame(next.model(), again.model());
         assertEquals(List.of(), again.cmds());
     }
@@ -94,61 +94,61 @@ class SelectionUpdateTest {
     @Test
     void switchingBranchesKeepsTheLastLoadedLogUntilTheNewOneArrives() {
         Model feature = Update.update(
-                Update.update(loaded(), new SelectionMsg.BranchSelected(new BranchRef.Local("feature"))).model(),
-                new LoadMsg.BranchLogLoaded(new BranchRef.Local("feature"), FEATURE_COMMITS)).model();
+                Update.update(loaded(), new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("feature")))).model(),
+                new LoadMsg.BranchLogLoaded(new BranchRef.Local(new Branch.Name("feature")), FEATURE_COMMITS)).model();
         Preview<BranchRef, List<Commit>> featureLog = feature.branchLog().get();
 
-        Model main = Update.update(feature, new SelectionMsg.BranchSelected(new BranchRef.Local("main"))).model();
-        assertEquals(Option.of(new Preview<BranchRef, List<Commit>>(new BranchRef.Local("main"), new Loading<>(), Option.of(featureLog))), main.branchLog());
+        Model main = Update.update(feature, new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("main")))).model();
+        assertEquals(Option.of(new Preview<BranchRef, List<Commit>>(new BranchRef.Local(new Branch.Name("main")), new Loading<>(), Option.of(featureLog))), main.branchLog());
 
-        Model other = Update.update(main, new SelectionMsg.BranchSelected(new BranchRef.Local("other"))).model();
+        Model other = Update.update(main, new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("other")))).model();
         assertEquals(Option.of(featureLog), other.branchLog().get().previous());
 
-        Model done = Update.update(other, new LoadMsg.BranchLogLoaded(new BranchRef.Local("other"), FEATURE_COMMITS)).model();
+        Model done = Update.update(other, new LoadMsg.BranchLogLoaded(new BranchRef.Local(new Branch.Name("other")), FEATURE_COMMITS)).model();
         assertEquals(Option.none(), done.branchLog().get().previous());
     }
 
     @Test
     void loadedLogIsShownForTheSelectedBranch() {
-        Model model = Update.update(loaded(), new SelectionMsg.BranchSelected(new BranchRef.Local("feature"))).model();
+        Model model = Update.update(loaded(), new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("feature")))).model();
 
-        Model next = Update.update(model, new LoadMsg.BranchLogLoaded(new BranchRef.Local("feature"), FEATURE_COMMITS)).model();
+        Model next = Update.update(model, new LoadMsg.BranchLogLoaded(new BranchRef.Local(new Branch.Name("feature")), FEATURE_COMMITS)).model();
 
-        assertEquals(Option.of(new Preview<>(new BranchRef.Local("feature"), new Loaded<>(FEATURE_COMMITS))), next.branchLog());
+        assertEquals(Option.of(new Preview<>(new BranchRef.Local(new Branch.Name("feature")), new Loaded<>(FEATURE_COMMITS))), next.branchLog());
     }
 
     @Test
     void resultsForABranchThatIsNoLongerSelectedAreDropped() {
-        Model model = Update.update(loaded(), new SelectionMsg.BranchSelected(new BranchRef.Local("feature"))).model();
-        model = Update.update(model, new SelectionMsg.BranchSelected(new BranchRef.Local("main"))).model();
+        Model model = Update.update(loaded(), new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("feature")))).model();
+        model = Update.update(model, new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("main")))).model();
 
-        assertEquals(model.branchLog(), Update.update(model, new LoadMsg.BranchLogLoaded(new BranchRef.Local("feature"), FEATURE_COMMITS))
+        assertEquals(model.branchLog(), Update.update(model, new LoadMsg.BranchLogLoaded(new BranchRef.Local(new Branch.Name("feature")), FEATURE_COMMITS))
                 .model().branchLog());
-        assertEquals(model.branchLog(), Update.update(model, new LoadMsg.Failed(new LoadBranchLog(new BranchRef.Local("feature")), refused("boom")))
+        assertEquals(model.branchLog(), Update.update(model, new LoadMsg.Failed(new LoadBranchLog(new BranchRef.Local(new Branch.Name("feature"))), refused("boom")))
                 .model().branchLog());
     }
 
     @Test
     void failedLogIsRetriedOnTheNextTick() {
-        Model model = Update.update(loaded(), new SelectionMsg.BranchSelected(new BranchRef.Local("feature"))).model();
-        model = Update.update(model, new LoadMsg.Failed(new LoadBranchLog(new BranchRef.Local("feature")), refused("boom"))).model();
+        Model model = Update.update(loaded(), new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("feature")))).model();
+        model = Update.update(model, new LoadMsg.Failed(new LoadBranchLog(new BranchRef.Local(new Branch.Name("feature"))), refused("boom"))).model();
 
-        assertEquals(Option.of(new Preview<>(new BranchRef.Local("feature"), new Failed<>(refused("boom")))), model.branchLog());
+        assertEquals(Option.of(new Preview<>(new BranchRef.Local(new Branch.Name("feature")), new Failed<>(refused("boom")))), model.branchLog());
         assertEquals(List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadStashes(), new LoadBranchLog(new BranchRef.Local("feature"))),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadStashes(), new LoadBranchLog(new BranchRef.Local(new Branch.Name("feature")))),
                 Update.update(model, new Tick()).cmds());
     }
 
     @Test
     void movedTipOfTheSelectedBranchReloadsItsLog() {
-        Model model = Update.update(loaded(), new SelectionMsg.BranchSelected(new BranchRef.Local("feature"))).model();
-        model = Update.update(model, new LoadMsg.BranchLogLoaded(new BranchRef.Local("feature"), FEATURE_COMMITS)).model();
+        Model model = Update.update(loaded(), new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("feature")))).model();
+        model = Update.update(model, new LoadMsg.BranchLogLoaded(new BranchRef.Local(new Branch.Name("feature")), FEATURE_COMMITS)).model();
 
         assertEquals(List.of(), Update.update(model, new LoadMsg.BranchesLoaded(BRANCHES)).cmds());
         assertEquals(List.of(), Update.update(model, new LoadMsg.BranchesLoaded(
-                List.of(new Branch("main", true, new Sha("moved")), new Branch("feature", false, new Sha("ffff"))))).cmds());
-        assertEquals(List.of(new LoadBranchLog(new BranchRef.Local("feature"))), Update.update(model, new LoadMsg.BranchesLoaded(
-                List.of(new Branch("main", true, new Sha("aaaa")), new Branch("feature", false, new Sha("moved"))))).cmds());
+                List.of(new Branch(new Branch.Name("main"), true, new Sha("moved")), new Branch(new Branch.Name("feature"), false, new Sha("ffff"))))).cmds());
+        assertEquals(List.of(new LoadBranchLog(new BranchRef.Local(new Branch.Name("feature")))), Update.update(model, new LoadMsg.BranchesLoaded(
+                List.of(new Branch(new Branch.Name("main"), true, new Sha("aaaa")), new Branch(new Branch.Name("feature"), false, new Sha("moved"))))).cmds());
     }
 
     @Test
@@ -195,7 +195,7 @@ class SelectionUpdateTest {
         List<FileEntry> restaged = DIRTY.files()
                 .map(f -> new FileEntry(f.path(), f.type(), !f.staged(), !f.unstaged()));
 
-        Next statusLoaded = Update.update(model, new LoadMsg.StatusLoaded(new RepoStatus(Head.onBranch("main", new Sha("aaaa")), restaged)));
+        Next statusLoaded = Update.update(model, new LoadMsg.StatusLoaded(new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), restaged)));
 
         assertEquals(false, statusLoaded.cmds().contains(new Cmd.LoadFileDiff(DIRTY.files())));
     }
