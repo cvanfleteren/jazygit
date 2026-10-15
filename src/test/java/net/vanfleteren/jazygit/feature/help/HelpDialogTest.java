@@ -9,6 +9,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.PushMsg;
+import net.vanfleteren.jazygit.feature.repos.RecentReposMsg;
 import net.vanfleteren.jazygit.feature.theme.ThemeMsg;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.keys.Keymap;
@@ -121,6 +122,13 @@ class HelpDialogTest {
                 press(onFeature(), r -> r.pilot().press('d')));
         assertEquals(List.of(new HelpMsg.Chosen(new ThemeMsg.Requested())),
                 press(onFeature(), r -> r.pilot().press('t', KeyModifiers.CTRL)));
+    }
+
+    @Test
+    void aGlobalKeyWithCtrlIsNotThePanelKeyWithout() throws Exception {
+        // The branches panel has r, for rebase.
+        assertEquals(List.of(new HelpMsg.Chosen(new RecentReposMsg.Requested())),
+                press(onFeature(), r -> r.pilot().press('r', KeyModifiers.CTRL)));
     }
 
     @Test

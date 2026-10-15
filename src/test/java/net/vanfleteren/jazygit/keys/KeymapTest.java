@@ -46,6 +46,28 @@ class KeymapTest {
     }
 
     @Test
+    void aKeyWithCtrlOrAltIsNotTheKeyWithout() {
+        Option<Branch.Name> selection = Option.of(new Branch.Name("x"));
+
+        assertTrue(keymap.handle(Scopes.BRANCHES, KeyEvent.ofChar('r'), selection).isDefined());
+        assertEquals(Option.none(), keymap.handle(Scopes.BRANCHES,
+                KeyEvent.ofChar('r', dev.tamboui.tui.event.KeyModifiers.CTRL), selection));
+        assertEquals(Option.none(), keymap.handle(Scopes.BRANCHES,
+                KeyEvent.ofChar('r', dev.tamboui.tui.event.KeyModifiers.ALT), selection));
+    }
+
+    @Test
+    void aPanelCanBindAKeyWithCtrl() {
+        Keymap ctrlX = Keymap.empty().add(Scopes.BRANCHES,
+                Keymap.Binding.<Branch.Name>onSelected("ctrl+x", "help.global.quit", CheckoutMsg.Requested::new));
+        Option<Branch.Name> selection = Option.of(new Branch.Name("x"));
+
+        assertEquals(Option.of(new CheckoutMsg.Requested(new Branch.Name("x"))), ctrlX.handle(Scopes.BRANCHES,
+                KeyEvent.ofChar('x', dev.tamboui.tui.event.KeyModifiers.CTRL), selection));
+        assertEquals(Option.none(), ctrlX.handle(Scopes.BRANCHES, KeyEvent.ofChar('x'), selection));
+    }
+
+    @Test
     void unknownKeysDoNothing() {
         assertEquals(Option.none(), keymap.handle(Scopes.BRANCHES, KeyEvent.ofChar('Z'), Option.of(new Branch.Name("x"))));
     }

@@ -39,7 +39,8 @@ public final class Keymap {
     /**
      * A key in a panel.
      *
-     * @param key            the text of the key event, {@code " "} for space
+     * @param key            the key as {@link #name} gives it: the character, {@code " "} for space, prefixed
+     *                       with {@code ctrl+} and {@code alt+} when those must be held, as in {@code ctrl+x}
      * @param descriptionKey the message key of what the key does
      * @param action         the message to send for the key, given the selection if there is one
      * @param <S>            what is selected in the panel
@@ -58,6 +59,13 @@ public final class Keymap {
          */
         public static <S> Binding<S> always(String key, String descriptionKey, Supplier<Msg> msg) {
             return new Binding<>(key, descriptionKey, selection -> Option.of(msg.get()));
+        }
+
+        /**
+         * Whether {@code event} is this key, with the same Ctrl and Alt held.
+         */
+        public boolean matches(KeyEvent event) {
+            return key.equals(name(event));
         }
 
         /**
@@ -160,17 +168,24 @@ public final class Keymap {
      * @param selection what is selected in the panel, if anything
      */
     public <S> Option<Msg> handle(Scope<S> scope, KeyEvent event, Option<S> selection) {
-        String text = event.string();
-        if (HELP_KEY.equals(text)) {
+        if (HELP_KEY.equals(name(event))) {
             return Option.of(new HelpMsg.Requested(scope.id(), actions(scope, selection)));
         }
         return sections.get(scope.id())
-                .flatMap(section -> section.bindings().find(binding -> binding.key().equals(text)))
+                .flatMap(section -> section.bindings().find(binding -> binding.matches(event)))
                 .flatMap(binding -> {
                     @SuppressWarnings("unchecked")
                     Binding<S> typed = (Binding<S>) binding;
                     return typed.action().apply(selection);
                 });
+    }
+
+    /**
+     * The key {@code event} is, as {@link Binding#key() bindings} name it: the character, prefixed with {@code ctrl+} and
+     * {@code alt+} when those are held. Shift is left out, as it is already in the character.
+     */
+    static String name(KeyEvent event) {
+        return (event.hasCtrl() ? "ctrl+" : "") + (event.hasAlt() ? "alt+" : "") + event.string();
     }
 
     /**

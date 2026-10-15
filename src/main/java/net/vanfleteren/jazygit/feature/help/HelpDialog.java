@@ -158,7 +158,7 @@ public final class HelpDialog implements PopupView {
         // A help opened without the actions of the keys runs none of them.
         List<Option<Msg>> actions = popup.actions().padTo(bindings.size(), Option.none());
         return bindings.zipWith(actions, (binding, action) -> (Row) new Key(binding.label(), binding.descriptionKey(),
-                        event -> binding.key().equals(event.string()), action))
+                        binding::matches, action))
                 .appendAll(legend(popup.scopeId()))
                 .append(new Text(""))
                 .append(Text.heading("dialog.help.global"))
