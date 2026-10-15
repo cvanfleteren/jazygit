@@ -23,6 +23,11 @@ Panel.focused {
     border-color: $accent;
 }
 
+/* Popups, which otherwise take the terminal's own colour. */
+DialogElement {
+    border-color: $accent;
+}
+
 /*
  * The highlighted row: in the left pane in use, and in popups; in the other left panes it is hidden, as the
  * empty rule says. Only what these rules declare themselves is laid over the row.

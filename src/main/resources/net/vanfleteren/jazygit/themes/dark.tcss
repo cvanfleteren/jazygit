@@ -11,6 +11,11 @@ Panel.focused {
     border-color: $accent;
 }
 
+/* Popups, which otherwise take the terminal's own colour. */
+DialogElement {
+    border-color: $accent;
+}
+
 /*
  * The highlighted row: in the left pane in use, and in popups; in the other left panes it is hidden, as the
  * empty rule says. Only what these rules declare themselves is laid over the row.
@@ -21,6 +26,9 @@ ListElement-item:selected, TreeElement-node:selected, .selection {
 
 .inactive-selection {
 }
+
+/* Plain text on the highlighted row; the coloured pieces of the row keep their colours. */
+.selected-text { color: white; }
 
 /*
  * Behind an open popup, text in the plain colour takes this one; the rest is dimmed by the terminal, which

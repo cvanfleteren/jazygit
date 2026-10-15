@@ -59,12 +59,16 @@ class ThemeTest {
     }
 
     @Test
-    void theMonoThemeDrawsPopupsInGrey() {
-        var engine = Theme.createEngine().get();
-        Theme.activate(engine, ThemeName.MONO);
+    void everyThemeBordersPopupsLikeTheFocusedPanel() {
+        for (ThemeName name : ThemeName.values()) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
 
-        assertEquals(java.util.Optional.of(Color.hex("#d0d0d0")),
-                engine.resolve(new Node("DialogElement", Set.of())).borderColor());
+            var popup = engine.resolve(new Node("DialogElement", Set.of())).borderColor();
+            assertTrue(popup.isPresent(), name.id());
+            assertEquals(engine.resolve(new Node("Panel", Set.of(Theme.Classes.FOCUSED))).borderColor(), popup,
+                    name.id());
+        }
     }
 
     @Test
@@ -101,6 +105,28 @@ class ThemeTest {
             assertTrue(backdrop.plain().fg().isPresent(), name.id());
             assertFalse(backdrop.plainFg().contains(backdrop.plain().fg().get()), name.id());
         }
+    }
+
+    @Test
+    void theDarkThemesBrightenPlainTextOnTheHighlightedRow() {
+        for (ThemeName name : java.util.List.of(ThemeName.DARK, ThemeName.DARK_COLORBLIND, ThemeName.DARCULA,
+                ThemeName.MONO)) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
+            Theme.SelectedText selectedText = Theme.selectedText(engine);
+
+            assertEquals(Theme.highlights(engine).of(true).bg(), selectedText.rowBg().toJavaOptional(), name.id());
+            assertTrue(selectedText.fg().isDefined(), name.id());
+            assertFalse(selectedText.plainFg().equals(selectedText.fg()), name.id());
+        }
+    }
+
+    @Test
+    void theLightThemeKeepsPlainTextOnTheHighlightedRowAsItIs() {
+        var engine = Theme.createEngine().get();
+        Theme.activate(engine, ThemeName.LIGHT);
+
+        assertTrue(Theme.selectedText(engine).fg().isEmpty());
     }
 
     @Test

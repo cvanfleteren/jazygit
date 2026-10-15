@@ -29,7 +29,7 @@ Panel.focused {
     border-color: $accent;
 }
 
-/* Popups, which otherwise take the terminal's own colour, often not a grey. */
+/* Popups, which otherwise take the terminal's own colour. */
 DialogElement {
     border-color: $accent;
 }
@@ -44,6 +44,9 @@ ListElement-item:selected, TreeElement-node:selected, .selection {
 
 .inactive-selection {
 }
+
+/* Plain text on the highlighted row; the coloured pieces of the row keep their colours. */
+.selected-text { color: $bright; }
 
 /*
  * Behind an open popup, text in the plain colour takes this one; the rest is dimmed by the terminal, which

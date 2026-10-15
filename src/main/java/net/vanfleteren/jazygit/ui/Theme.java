@@ -51,6 +51,8 @@ public final class Theme {
         public static final String SELECTION = "selection";
         /** The highlighted row of the other left panes, which the built-in themes hide. */
         public static final String INACTIVE_SELECTION = "inactive-selection";
+        /** The colour of plain text on a highlighted row, when a theme has one. */
+        public static final String SELECTED_TEXT = "selected-text";
         /** The colour of plain text behind an open popup. */
         public static final String BACKDROP = "backdrop";
 
@@ -118,6 +120,15 @@ public final class Theme {
         return new Backdrop(Option.ofOptional(baseStyle(engine).fg()), ownStyle(engine, Classes.BACKDROP));
     }
 
+    /**
+     * How {@code engine} colours plain text on a highlighted row: as the {@link Classes#SELECTED_TEXT} rule says,
+     * on rows with the background of the {@link Classes#SELECTION} rule.
+     */
+    public static SelectedText selectedText(StyleEngine engine) {
+        return new SelectedText(Option.ofOptional(ownStyle(engine, Classes.SELECTION).bg()),
+                Option.ofOptional(baseStyle(engine).fg()), Option.ofOptional(ownStyle(engine, Classes.SELECTED_TEXT).fg()));
+    }
+
     private static Style baseStyle(StyleEngine engine) {
         return engine.resolve(new Node("Highlight", Set.of())).toStyle();
     }
@@ -176,6 +187,32 @@ public final class Theme {
         public Style dim(Style style) {
             boolean isPlain = Option.ofOptional(style.fg()).equals(plainFg);
             return (isPlain ? style.patch(plain) : style).patch(DIM);
+        }
+    }
+
+    /**
+     * How plain text on a highlighted row is coloured. The highlight itself is laid over every cell of the row, so
+     * it only sets the background, and a colour of its own would hide the colours of the pieces of the row; plain
+     * text takes {@code fg} on top, the pieces keep theirs.
+     *
+     * @param rowBg   the background of a highlighted row, none when the theme highlights rows otherwise
+     * @param plainFg the colour of plain text, none when it is the terminal's default
+     * @param fg      the colour plain text takes on a highlighted row, none to keep it
+     */
+    public record SelectedText(Option<Color> rowBg, Option<Color> plainFg, Option<Color> fg) {
+
+        /**
+         * Plain text keeps its colour, e.g. before a theme is known.
+         */
+        public static final SelectedText UNCHANGED = new SelectedText(Option.none(), Option.none(), Option.none());
+
+        /**
+         * {@code style} as it is on a highlighted row, when it is a cell of one.
+         */
+        public Style of(Style style) {
+            boolean highlighted = rowBg.isDefined() && Option.ofOptional(style.bg()).equals(rowBg);
+            boolean isPlain = Option.ofOptional(style.fg()).equals(plainFg);
+            return highlighted && isPlain ? fg.map(style::fg).getOrElse(style) : style;
         }
     }
 
