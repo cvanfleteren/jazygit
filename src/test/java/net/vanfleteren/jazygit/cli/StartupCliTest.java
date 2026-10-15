@@ -48,7 +48,7 @@ class StartupCliTest {
     @Test
     void anUnknownThemeExitsWithTheThemesThereAre() {
         assertEquals(Either.left(new StartupCli.Exit(2)), parse("--theme", "purple"));
-        assertTrue(err.toString().contains("'purple' is not a theme; expected one of: dark, light, darcula, dark-colorblind"),
+        assertTrue(err.toString().contains("'purple' is not a theme; expected one of: dark, light, darcula, dark-colorblind, mono"),
                 err.toString());
         assertTrue(err.toString().contains("Usage: jazygit"), err.toString());
         assertEquals("", out.toString());

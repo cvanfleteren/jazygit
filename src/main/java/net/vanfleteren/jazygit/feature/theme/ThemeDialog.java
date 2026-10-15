@@ -14,7 +14,7 @@ public final class ThemeDialog {
 
     // The themes, by the key that chooses them, in the order they are listed.
     private static final Map<Character, ThemeName> KEYS = LinkedHashMap.of('d', ThemeName.DARK, 'l', ThemeName.LIGHT,
-            'a', ThemeName.DARCULA, 'b', ThemeName.DARK_COLORBLIND);
+            'a', ThemeName.DARCULA, 'b', ThemeName.DARK_COLORBLIND, 'm', ThemeName.MONO);
 
     /**
      * The themes, opening at the one in use, so the arrow keys preview the others from there.

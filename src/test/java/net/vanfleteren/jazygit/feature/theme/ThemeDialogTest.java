@@ -40,6 +40,8 @@ class ThemeDialogTest {
         assertEquals(List.of(new ThemeMsg.Chosen(ThemeName.DARCULA)), pressing(r -> r.pilot().press('a')));
         dispatched.clear();
         assertEquals(List.of(new ThemeMsg.Chosen(ThemeName.DARK_COLORBLIND)), pressing(r -> r.pilot().press('b')));
+        dispatched.clear();
+        assertEquals(List.of(new ThemeMsg.Chosen(ThemeName.MONO)), pressing(r -> r.pilot().press('m')));
     }
 
     @Test

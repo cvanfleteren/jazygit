@@ -11,7 +11,9 @@ public enum ThemeName {
     LIGHT("light"),
     DARCULA("darcula"),
     /** The dark theme with blue and vermillion for red and green, for red/green colour blindness. */
-    DARK_COLORBLIND("dark-colorblind");
+    DARK_COLORBLIND("dark-colorblind"),
+    /** Mostly black and white, with muted colours only where they tell things apart. */
+    MONO("mono");
 
     private final String id;
 

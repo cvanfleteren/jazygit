@@ -59,6 +59,15 @@ class ThemeTest {
     }
 
     @Test
+    void theMonoThemeDrawsPopupsInGrey() {
+        var engine = Theme.createEngine().get();
+        Theme.activate(engine, ThemeName.MONO);
+
+        assertEquals(java.util.Optional.of(Color.hex("#d0d0d0")),
+                engine.resolve(new Node("DialogElement", Set.of())).borderColor());
+    }
+
+    @Test
     void everyThemeStylesThePanelBorders() {
         for (ThemeName name : ThemeName.values()) {
             var engine = Theme.createEngine().get();

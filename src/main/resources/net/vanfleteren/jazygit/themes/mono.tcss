@@ -1,0 +1,78 @@
+/*
+ * Mostly black and white, after how the dark theme looks dimmed behind a popup: grey text on black, and only
+ * muted colours for what needs telling apart, like good and bad.
+ */
+$fg: #b8b8b8;
+$bright: #e8e8e8;
+$bg: #000000;
+$muted: #6c6c6c;
+$border: #3a3a3a;
+$accent: #d0d0d0;
+$selection: #3a3a3a;
+$good: #7f9f7f;
+$bad: #b5654a;
+$running: #a89060;
+$hunk: #7f8fa6;
+$sha: #9a7b3c;
+
+* {
+    color: $fg;
+    background: $bg;
+}
+
+Panel, TextInputElement, TextAreaElement, RichTextAreaElement {
+    border-type: rounded;
+    border-color: $border;
+}
+
+Panel.focused {
+    border-color: $accent;
+}
+
+/* Popups, which otherwise take the terminal's own colour, often not a grey. */
+DialogElement {
+    border-color: $accent;
+}
+
+/*
+ * The highlighted row: in the left pane in use, and in popups; in the other left panes it is hidden, as the
+ * empty rule says. Only what these rules declare themselves is laid over the row.
+ */
+ListElement-item:selected, TreeElement-node:selected, .selection {
+    background: $selection;
+}
+
+.inactive-selection {
+}
+
+/*
+ * Behind an open popup, text in the plain colour takes this one; the rest is dimmed by the terminal, which
+ * not every terminal does for its default colour.
+ */
+.backdrop { color: #5a5a5a; }
+
+.bold { color: $bright; text-style: bold; }
+.dim { color: $muted; }
+.error { color: $bad; }
+.disabled { color: $muted; text-style: crossed-out; }
+.staged { color: $good; }
+.unstaged { color: $bad; }
+.spinner { color: $running; }
+.ahead { color: $good; }
+.behind { color: $bad; }
+.gone { color: $muted; }
+.pull-request { color: $hunk; }
+.checks-passed { color: $good; }
+.checks-failed { color: $bad; }
+.checks-running { color: $running; }
+.review-approved { color: $good; }
+.review-changes { color: $bad; }
+
+Span.diff-header { color: $bright; text-style: bold; }
+Span.diff-added { color: $good; }
+Span.diff-removed { color: $bad; }
+Span.diff-hunk { color: $hunk; }
+Span.current-branch { color: $bright; text-style: bold; }
+Span.sha { color: $sha; }
+Span.tag { color: $good; }
+Span.bold { color: $bright; text-style: bold; }
