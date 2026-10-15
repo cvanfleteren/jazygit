@@ -88,9 +88,18 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
      * @param choices   the options, in order; a cancel option is added after them
      * @param onCancel  the message for cancelling, by the cancel option or by Escape
      * @param minWidth  the width it takes at least, borders included, so it does not grow as the options change
+     * @param opensAt   the key of the option highlighted when the dialog opens, given the popup; else the first
      */
     public record Spec<P>(String id, Class<P> popupType, Function<P, String> title, List<Choice<P>> choices,
-                          Supplier<Msg> onCancel, int minWidth) {
+                          Supplier<Msg> onCancel, int minWidth, Function<P, Option<Character>> opensAt) {
+
+        /**
+         * A dialog that opens with its first option highlighted.
+         */
+        public Spec(String id, Class<P> popupType, Function<P, String> title, List<Choice<P>> choices,
+                    Supplier<Msg> onCancel, int minWidth) {
+            this(id, popupType, title, choices, onCancel, minWidth, popup -> Option.none());
+        }
 
         /**
          * A dialog as wide as a list, or its widest option.
@@ -99,10 +108,19 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
                     Supplier<Msg> onCancel) {
             this(id, popupType, title, choices, onCancel, DialogFrame.LIST_WIDTH);
         }
+
+        /**
+         * This dialog, opening with the option of the key {@code opensAt} gives highlighted.
+         */
+        public Spec<P> openingAt(Function<P, Option<Character>> opensAt) {
+            return new Spec<>(id, popupType, title, choices, onCancel, minWidth, opensAt);
+        }
     }
 
     private final Spec<P> spec;
     private final ChoiceList<P> list;
+    // The popup the highlight was put in place for, so that is only done when it opens.
+    private Option<P> shownFor = Option.none();
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
@@ -122,7 +140,10 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
      */
     @Override
     public Option<Element> render(Model model) {
-        return model.popup(spec.popupType()).map(popup -> {
+        Option<P> open = model.popup(spec.popupType());
+        open.filter(popup -> !shownFor.contains(popup)).forEach(popup -> list.highlightKey(spec.opensAt().apply(popup)));
+        shownFor = open;
+        return open.map(popup -> {
             StyledElement<?> rows = list.render(model, popup);
             return DialogFrame.withHint(spec.title().apply(popup), Math.max(spec.minWidth(), list.width() + DialogFrame.FRAME),
                     "dialog.hint.selectCancel", List.of(rows));

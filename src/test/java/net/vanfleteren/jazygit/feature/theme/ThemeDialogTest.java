@@ -8,6 +8,7 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Model;
@@ -60,6 +61,23 @@ class ThemeDialogTest {
     }
 
     @Test
+    void opensAtTheThemeInUse() throws Exception {
+        Model light = Update.update(TestModels.loaded(new SampleData()).withThemeOverride(Option.of(ThemeName.LIGHT)),
+                new ThemeMsg.Requested()).model();
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(light))) {
+            runner.runner().focusManager().setFocus(ThemeDialog.SPEC.id());
+            RenderedText.of(runner, () -> view(light));
+            runner.pilot().press(KeyCode.DOWN);
+            runner.pilot().press(KeyCode.ENTER);
+            runner.pilot().pause();
+        }
+
+        assertEquals(List.of(new ThemeMsg.Previewed(ThemeName.DARCULA), new ThemeMsg.Chosen(ThemeName.DARCULA)),
+                List.ofAll(dispatched));
+    }
+
+    @Test
     void escapeAndCCancel() throws Exception {
         assertEquals(List.of(new ThemeMsg.Cancelled()), pressing(r -> r.pilot().press(KeyCode.ESCAPE)));
         dispatched.clear();
@@ -94,6 +112,10 @@ class ThemeDialogTest {
     }
 
     private Element view() {
-        return stack(text("background"), dialog.render(open).get());
+        return view(open);
+    }
+
+    private Element view(Model model) {
+        return stack(text("background"), dialog.render(model).get());
     }
 }

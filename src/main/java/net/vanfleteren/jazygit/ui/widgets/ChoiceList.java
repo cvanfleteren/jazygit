@@ -200,6 +200,16 @@ public final class ChoiceList<P extends Popup> {
         }
     }
 
+    /**
+     * Highlights the option of {@code key}, or the first one when there is none, without previewing it: for when
+     * the list is shown anew.
+     */
+    public void highlightKey(Option<Character> key) {
+        list.selected(key.flatMap(pressed -> choices.find(choice -> choice.key() == pressed))
+                .map(choice -> lines.indexOf(new OptionLine(choices.indexOf(choice))))
+                .getOrElse(this::firstOption));
+    }
+
     private int firstOption() {
         return lines.indexWhere(OptionLine.class::isInstance);
     }
