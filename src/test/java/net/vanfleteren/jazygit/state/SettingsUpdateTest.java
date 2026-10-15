@@ -18,7 +18,7 @@ import java.nio.file.Path;
 class SettingsUpdateTest {
 
     private static final Path FILE = Path.of("/config/jazygit/config.toml");
-    private static final Settings DARCULA = new Settings(ThemeName.DARCULA);
+    private static final Settings DARCULA = Settings.DEFAULT.withTheme(ThemeName.DARCULA);
     private static final Cmd.SaveSettings SAVE = new Cmd.SaveSettings(Settings.DEFAULT, DARCULA);
 
     private static Env env(SettingsStore settings) {

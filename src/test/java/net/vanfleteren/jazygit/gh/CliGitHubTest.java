@@ -74,7 +74,15 @@ class CliGitHubTest {
     @Test
     void browsingOpensTheBranchByItsNameOnTheRemote() {
         assertEquals(List.of("gh", "browse", "--branch", "feature/login"),
-                CliGitHub.browseCommand("feature/login").commandLine());
+                CliGitHub.browseCommand("feature/login").commandLine("gh"));
+    }
+
+    @Test
+    void ghRunsFromItsExecutableButIsLoggedAsGh() {
+        GhCommand command = CliGitHub.browseCommand("main");
+
+        assertEquals("/opt/gh/bin/gh", command.commandLine("/opt/gh/bin/gh").head());
+        assertEquals(List.of("gh", "browse", "--branch", "main"), command.executed().commandLine());
     }
 
     @Test

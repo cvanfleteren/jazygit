@@ -270,7 +270,8 @@ public class JazygitApp extends ToolkitApp {
             // Not waiting for the command that runs keeps the UI going. It finishes by itself, in the other
             // repository, and its outcome goes to the old program, which nobody looks at anymore.
             stop(running);
-            startRuntime(new Env(git, new CliGitHub(git.workTree()), env.settings(), env.recent(), env.repositories()),
+            startRuntime(new Env(git, new CliGitHub(git.workTree(), last.settings().gh()), env.settings(), env.recent(),
+                            env.repositories()),
                     new SettingsStore.Loaded(last.settings(), Option.none()), last.themeOverride());
         });
     }
@@ -425,9 +426,11 @@ public class JazygitApp extends ToolkitApp {
                         .map(engine -> {
                             RecentRepositories recent = new RecentRepositoriesFile(SettingsPaths.stateFile());
                             recent.opened(provider.workTree()).onFailure(JazygitApp::logBug);
-                            Env env = new Env(provider, new CliGitHub(provider.workTree()),
-                                    new SettingsFile(SettingsPaths.configFile()), recent, Repositories.NONE);
-                            return new JazygitApp(env, env.settings().load(), options.theme(), engine);
+                            SettingsStore settings = new SettingsFile(SettingsPaths.configFile());
+                            SettingsStore.Loaded loaded = settings.load();
+                            Env env = new Env(provider, new CliGitHub(provider.workTree(), loaded.settings().gh()),
+                                    settings, recent, Repositories.NONE);
+                            return new JazygitApp(env, loaded, options.theme(), engine);
                         }));
         app.flatMap(jazygit -> Try.run(jazygit::run).toEither().mapLeft(ErrorText::reason))
                 .orElseRun(problem -> {

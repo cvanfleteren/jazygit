@@ -18,7 +18,7 @@ import java.nio.file.Path;
 
 class SettingsFileTest {
 
-    private static final Settings DARCULA = new Settings(ThemeName.DARCULA);
+    private static final Settings DARCULA = Settings.DEFAULT.withTheme(ThemeName.DARCULA);
 
     @TempDir
     Path dir;
@@ -117,7 +117,7 @@ class SettingsFileTest {
                 x = [1, 2]
                 """);
 
-        settingsFile().save(new Settings(ThemeName.LIGHT), DARCULA);
+        settingsFile().save(Settings.DEFAULT.withTheme(ThemeName.LIGHT), DARCULA);
 
         String saved = Files.readString(file());
         List<String> lines = List.of(saved.split("\n")).map(String::strip);
@@ -137,7 +137,58 @@ class SettingsFileTest {
 
         settingsFile().save(Settings.DEFAULT, Settings.DEFAULT);
 
-        assertEquals(new Settings(ThemeName.LIGHT), settingsFile().load().settings());
+        assertEquals(Settings.DEFAULT.withTheme(ThemeName.LIGHT), settingsFile().load().settings());
+    }
+
+    @Test
+    void readsTheGhExecutable() throws IOException {
+        write("""
+                [github]
+                executable = "C:\\\\Tools\\\\gh.exe"
+                """);
+
+        Settings settings = settingsFile().load().settings();
+
+        assertEquals(Option.of("C:\\Tools\\gh.exe"), settings.ghExecutable());
+        assertEquals("C:\\Tools\\gh.exe", settings.gh());
+    }
+
+    @Test
+    void withoutAGhExecutableTheOneOnThePathRuns() {
+        assertEquals("gh", Settings.DEFAULT.gh());
+    }
+
+    @Test
+    void aBlankGhExecutableIsInvalid() throws IOException {
+        write("""
+                [github]
+                executable = " "
+                """);
+
+        Loaded loaded = settingsFile().load();
+
+        assertEquals(Option.none(), loaded.settings().ghExecutable());
+        assertEquals(Option.of(new SettingsProblem.Invalid(file(), List.of("github.executable"))), loaded.problem());
+    }
+
+    @Test
+    void savingTheGhExecutable() {
+        Settings chosen = Settings.DEFAULT.withGhExecutable(Option.of("/opt/gh/bin/gh"));
+
+        settingsFile().save(Settings.DEFAULT, chosen);
+
+        assertEquals(chosen, settingsFile().load().settings());
+    }
+
+    @Test
+    void goingBackToTheGhOnThePathRemovesTheExecutable() throws IOException {
+        Settings chosen = Settings.DEFAULT.withGhExecutable(Option.of("/opt/gh/bin/gh"));
+        settingsFile().save(Settings.DEFAULT, chosen);
+
+        settingsFile().save(chosen, Settings.DEFAULT);
+
+        assertFalse(Files.readString(file()).contains("executable"), Files.readString(file()));
+        assertEquals(Settings.DEFAULT, settingsFile().load().settings());
     }
 
     @Test

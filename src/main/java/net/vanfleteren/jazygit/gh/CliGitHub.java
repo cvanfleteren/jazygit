@@ -96,37 +96,37 @@ public final class CliGitHub implements GitHub {
 
     private static final Pattern CREATED_URL = Pattern.compile("/pull/(\\d{1,9})$");
 
-    private final Path workTree;
+    private final GhProcess process;
 
-    public CliGitHub(Path workTree) {
-        this.workTree = workTree;
+    /**
+     * GitHub for the repository in {@code workTree}, through the gh at {@code executable}.
+     */
+    public CliGitHub(Path workTree, String executable) {
+        this.process = new GhProcess(workTree, executable);
     }
 
     @Override
     public Either<GhError, List<PullRequest>> pullRequests() {
-        return GhProcess.read(workTree,
-                gh("pr", "list", "--state", "open", "--limit", LIMIT, "--json", FIELDS, "--jq", JQ),
+        return process.read(gh("pr", "list", "--state", "open", "--limit", LIMIT, "--json", FIELDS, "--jq", JQ),
                 CliGitHub::parse);
     }
 
     @Override
     public Either<GhError, BranchChecks> branchChecks() {
-        return GhProcess.read(workTree,
-                gh("api", "graphql", "--paginate", "-F", "owner={owner}", "-F", "name={repo}",
+        return process.read(gh("api", "graphql", "--paginate", "-F", "owner={owner}", "-F", "name={repo}",
                         "-f", "query=" + BRANCHES_QUERY, "--jq", BRANCHES_JQ),
                 CliGitHub::parseBranchChecks);
     }
 
     @Override
     public Either<GhError, PullRequestDetails> pullRequestDetails(int number) {
-        return GhProcess.read(workTree,
-                gh("pr", "view", String.valueOf(number), "--json", DETAIL_FIELDS, "--jq", DETAILS_JQ),
+        return process.read(gh("pr", "view", String.valueOf(number), "--json", DETAIL_FIELDS, "--jq", DETAILS_JQ),
                 CliGitHub::parseDetails);
     }
 
     @Override
     public Either<GhFailure, Created> createPullRequest(String head, String base) {
-        return GhProcess.run(workTree, gh("pr", "create", "--head", head, "--base", base, "--fill"))
+        return process.run(gh("pr", "create", "--head", head, "--base", base, "--fill"))
                 .map(output -> new Created(createdNumber(output.stdout()), output.log()));
     }
 
@@ -140,12 +140,12 @@ public final class CliGitHub implements GitHub {
 
     @Override
     public Either<GhFailure, List<ExecutedCommand>> openPullRequest(int number) {
-        return GhProcess.log(workTree, gh("pr", "view", String.valueOf(number), "--web"));
+        return process.log(gh("pr", "view", String.valueOf(number), "--web"));
     }
 
     @Override
     public Either<GhFailure, List<ExecutedCommand>> browse(String branch) {
-        return GhProcess.log(workTree, browseCommand(branch));
+        return process.log(browseCommand(branch));
     }
 
     static GhCommand browseCommand(String branch) {
@@ -154,7 +154,7 @@ public final class CliGitHub implements GitHub {
 
     @Override
     public Either<GhFailure, List<ExecutedCommand>> mergePullRequest(int number, MergeMethod method) {
-        return GhProcess.log(workTree, gh("pr", "merge", String.valueOf(number), mergeFlag(method)));
+        return process.log(gh("pr", "merge", String.valueOf(number), mergeFlag(method)));
     }
 
     /**
@@ -170,7 +170,7 @@ public final class CliGitHub implements GitHub {
 
     @Override
     public Either<GhFailure, List<ExecutedCommand>> closePullRequest(int number) {
-        return GhProcess.log(workTree, gh("pr", "close", String.valueOf(number)));
+        return process.log(gh("pr", "close", String.valueOf(number)));
     }
 
     /**

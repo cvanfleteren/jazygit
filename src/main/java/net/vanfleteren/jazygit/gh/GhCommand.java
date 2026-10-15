@@ -26,15 +26,18 @@ record GhCommand(List<String> args, Map<String, String> environment, Duration ti
         return new GhCommand(List.of(args), DEFAULT_ENVIRONMENT, DEFAULT_TIMEOUT);
     }
 
-    List<String> commandLine() {
-        return args.prepend("gh");
+    /**
+     * The command line that runs this command with the gh at {@code executable}.
+     */
+    List<String> commandLine(String executable) {
+        return args.prepend(executable);
     }
 
     /**
-     * The command, as it is logged once it ran.
+     * The command, as it is logged once it ran: as {@code gh}, wherever the executable is.
      */
     ExecutedCommand executed() {
-        return new ExecutedCommand(commandLine());
+        return new ExecutedCommand(commandLine("gh"));
     }
 
     /**

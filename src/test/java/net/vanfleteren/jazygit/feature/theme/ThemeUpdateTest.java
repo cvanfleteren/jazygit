@@ -39,7 +39,7 @@ class ThemeUpdateTest {
 
         assertEquals(Option.none(), chosen.model().popup(ThemePopup.class));
         assertEquals(ThemeName.DARCULA, chosen.model().settings().theme());
-        assertEquals(List.of(new Cmd.SaveSettings(Settings.DEFAULT, new Settings(ThemeName.DARCULA))), chosen.cmds());
+        assertEquals(List.of(new Cmd.SaveSettings(Settings.DEFAULT, Settings.DEFAULT.withTheme(ThemeName.DARCULA))), chosen.cmds());
     }
 
     @Test
@@ -69,7 +69,7 @@ class ThemeUpdateTest {
 
         assertEquals(Option.none(), chosen.model().themeOverride());
         assertEquals(ThemeName.LIGHT, chosen.model().theme());
-        assertEquals(List.of(new Cmd.SaveSettings(Settings.DEFAULT, new Settings(ThemeName.LIGHT))), chosen.cmds());
+        assertEquals(List.of(new Cmd.SaveSettings(Settings.DEFAULT, Settings.DEFAULT.withTheme(ThemeName.LIGHT))), chosen.cmds());
     }
 
     @Test

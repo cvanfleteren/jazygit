@@ -14,7 +14,15 @@ import java.util.function.Function;
  */
 final class GhProcess {
 
-    private GhProcess() {
+    private final Path workTree;
+    private final String executable;
+
+    /**
+     * Runs gh at {@code executable} in {@code workTree}.
+     */
+    GhProcess(Path workTree, String executable) {
+        this.workTree = workTree;
+        this.executable = executable;
     }
 
     /**
@@ -33,27 +41,26 @@ final class GhProcess {
     /**
      * Runs {@code command} for its effect, and returns what it printed with the line it was run as.
      */
-    static Either<GhFailure, Output> run(Path workTree, GhCommand command) {
-        return execute(workTree, command).mapLeft(error -> new GhFailure(error, List.of(command.executed())));
+    Either<GhFailure, Output> run(GhCommand command) {
+        return execute(command).mapLeft(error -> new GhFailure(error, List.of(command.executed())));
     }
 
     /**
      * Runs {@code command} for its effect, and returns the command log.
      */
-    static Either<GhFailure, List<ExecutedCommand>> log(Path workTree, GhCommand command) {
-        return run(workTree, command).map(Output::log);
+    Either<GhFailure, List<ExecutedCommand>> log(GhCommand command) {
+        return run(command).map(Output::log);
     }
 
     /**
      * Runs {@code command} to read something, which {@code parse} makes of its output. Reads are not logged.
      */
-    static <T> Either<GhError, T> read(Path workTree, GhCommand command,
-                                       Function<String, Either<GhError.UnexpectedOutput, T>> parse) {
-        return execute(workTree, command).flatMap(output -> Either.<GhError, T>narrow(parse.apply(output.stdout())));
+    <T> Either<GhError, T> read(GhCommand command, Function<String, Either<GhError.UnexpectedOutput, T>> parse) {
+        return execute(command).flatMap(output -> Either.<GhError, T>narrow(parse.apply(output.stdout())));
     }
 
-    private static Either<GhError, Output> execute(Path workTree, GhCommand command) {
-        return Exec.run(workTree, command.commandLine(), command.environment(), command.timeout())
+    private Either<GhError, Output> execute(GhCommand command) {
+        return Exec.run(workTree, command.commandLine(executable), command.environment(), command.timeout())
                 .<GhError>mapLeft(failure -> switch (failure) {
                     case ExecFailure.NotStarted(var cause) -> new GhError.GhUnavailable(cause);
                     case ExecFailure.TimedOut() -> new GhError.TimedOut(command.operation());

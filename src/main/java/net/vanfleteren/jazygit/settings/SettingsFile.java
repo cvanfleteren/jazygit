@@ -45,6 +45,12 @@ public final class SettingsFile implements SettingsStore {
                             changed.set(entry._1, entry._2);
                             return changed;
                         }))
+                // A setting back at its default has no entry anymore.
+                .map(config -> previous.entries().keySet().removeAll(next.entries().keySet())
+                        .foldLeft(config, (changed, key) -> {
+                            changed.remove(key);
+                            return changed;
+                        }))
                 .flatMap(config -> TomlFile.write(file, config))
                 .toEither()
                 .<SettingsProblem>mapLeft(cause -> new SettingsProblem.Unwritable(file, TomlFile.reason(cause)))
