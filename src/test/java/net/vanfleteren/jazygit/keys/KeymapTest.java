@@ -54,7 +54,7 @@ class KeymapTest {
     void questionMarkAsksForTheHelpOfThePanel() {
         Option<Msg> msg = keymap.handle(Scopes.STASH, KeyEvent.ofChar('?'), Option.none());
 
-        assertEquals(Option.of(new HelpMsg.Requested(Scopes.STASH.id())), msg);
+        assertEquals(Option.of(new HelpMsg.Requested(Scopes.STASH.id(), List.of(Option.none(), Option.none()))), msg);
     }
 
     @Test

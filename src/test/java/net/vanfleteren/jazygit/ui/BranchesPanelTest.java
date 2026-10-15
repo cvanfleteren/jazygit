@@ -212,8 +212,10 @@ class BranchesPanelTest {
             testRunner.pilot().quit();
         }
 
-        assertEquals(java.util.List.of(new net.vanfleteren.jazygit.feature.help.HelpMsg.Requested(
-                net.vanfleteren.jazygit.keys.Scopes.BRANCHES.id())), dispatched);
+        assertEquals(1, dispatched.size());
+        assertTrue(dispatched.getFirst() instanceof net.vanfleteren.jazygit.feature.help.HelpMsg.Requested(
+                String scopeId, var actions) && scopeId.equals(net.vanfleteren.jazygit.keys.Scopes.BRANCHES.id())
+                && actions.head().isDefined(), dispatched.toString());
     }
 
     @Test

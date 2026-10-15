@@ -89,6 +89,11 @@ public final class Keymap {
         Option<Msg> handle(KeyEvent event);
 
         /**
+         * The message the key sends, as the help runs it.
+         */
+        Msg action();
+
+        /**
          * A key that sends {@code msg}.
          *
          * @param matches whether an event is this key
@@ -98,18 +103,12 @@ public final class Keymap {
 
             @Override
             public Option<Msg> handle(KeyEvent event) {
-                return matches.test(event) ? Option.of(msg.get()) : Option.none();
+                return matches.test(event) ? Option.of(action()) : Option.none();
             }
-        }
-
-        /**
-         * A key that is only listed, because the framework handles it.
-         */
-        record Documented(String label, String descriptionKey) implements Global {
 
             @Override
-            public Option<Msg> handle(KeyEvent event) {
-                return Option.none();
+            public Msg action() {
+                return msg.get();
             }
         }
     }
@@ -163,7 +162,7 @@ public final class Keymap {
     public <S> Option<Msg> handle(Scope<S> scope, KeyEvent event, Option<S> selection) {
         String text = event.string();
         if (HELP_KEY.equals(text)) {
-            return Option.of(new HelpMsg.Requested(scope.id()));
+            return Option.of(new HelpMsg.Requested(scope.id(), actions(scope, selection)));
         }
         return sections.get(scope.id())
                 .flatMap(section -> section.bindings().find(binding -> binding.key().equals(text)))
@@ -172,6 +171,18 @@ public final class Keymap {
                     Binding<S> typed = (Binding<S>) binding;
                     return typed.action().apply(selection);
                 });
+    }
+
+    /**
+     * What each key of {@code scope} would send for {@code selection}, in the order of {@link #bindings}: none
+     * for a key that does nothing then.
+     */
+    public <S> List<Option<Msg>> actions(Scope<S> scope, Option<S> selection) {
+        return bindings(scope.id()).map(binding -> {
+            @SuppressWarnings("unchecked")
+            Binding<S> typed = (Binding<S>) binding;
+            return typed.action().apply(selection);
+        });
     }
 
     /**

@@ -15,6 +15,17 @@ public interface Msg {
     Update.Next apply(Model model);
 
     /**
+     * The user asked to quit. Quitting is up to the app, which stops before the model sees this.
+     */
+    record Quit() implements Msg {
+
+        @Override
+        public Update.Next apply(Model model) {
+            return Update.Next.of(model);
+        }
+    }
+
+    /**
      * Periodic prompt to check the repository for changes made outside the app.
      */
     record Tick() implements Msg {

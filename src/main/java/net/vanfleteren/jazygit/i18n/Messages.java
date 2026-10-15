@@ -48,6 +48,14 @@ public final class Messages {
     }
 
     /**
+     * The message {@code key} in the messages for the locale of the user, if there is one; for texts that are
+     * optional.
+     */
+    public static Option<String> find(String key) {
+        return Option.when(DEFAULT.bundle.containsKey(key), () -> DEFAULT.format(key));
+    }
+
+    /**
      * The message {@code key} with {@code args} filled in; {@code !key!} when there is no such message, or
      * when its pattern is malformed.
      */

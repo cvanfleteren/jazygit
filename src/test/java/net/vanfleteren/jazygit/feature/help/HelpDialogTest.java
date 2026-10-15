@@ -3,7 +3,15 @@ package net.vanfleteren.jazygit.feature.help;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.KeyModifiers;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
+import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg;
+import net.vanfleteren.jazygit.feature.branch.PushMsg;
+import net.vanfleteren.jazygit.feature.theme.ThemeMsg;
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -13,20 +21,34 @@ import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
 import static dev.tamboui.toolkit.Toolkit.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 
 /**
- * The popup listing the keys of a panel: Escape, Enter or ? closes it.
+ * The popup listing the keys of a panel: Enter or the key itself runs one, Escape or ? closes it.
  */
 class HelpDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final HelpDialog dialog = new HelpDialog(dispatched::add);
 
+    private static final Branch.Name FEATURE = new Branch.Name("feature");
+
     private static Model open(String topic) {
-        return Update.update(TestModels.loaded(), new HelpMsg.Requested(topic)).model();
+        return open(topic, Option.none());
+    }
+
+    /**
+     * The help of {@code topic}, opened with {@code selection} selected in the panel.
+     */
+    private static <S> Model open(Keymap.Scope<S> scope, Option<S> selection) {
+        return open(scope.id(), Option.of(Keymap.standard().actions(scope, selection)));
+    }
+
+    private static Model open(String topic, Option<List<Option<Msg>>> actions) {
+        return Update.update(TestModels.loaded(), new HelpMsg.Requested(topic, actions.getOrElse(List.empty()))).model();
     }
 
     @Test
@@ -61,10 +83,82 @@ class HelpDialogTest {
     }
 
     @Test
-    void escapeEnterAndQuestionMarkClose() throws Exception {
+    void escapeAndQuestionMarkClose() throws Exception {
         assertEquals(List.of(new HelpMsg.Closed()), press(r -> r.pilot().press(KeyCode.ESCAPE)));
-        assertEquals(List.of(new HelpMsg.Closed()), press(r -> r.pilot().press(KeyCode.ENTER)));
         assertEquals(List.of(new HelpMsg.Closed()), press(r -> r.pilot().press('?')));
+    }
+
+    @Test
+    void enterRunsTheHighlightedKeyStartingAtTheFirst() throws Exception {
+        assertEquals(List.of(new HelpMsg.Chosen(new CheckoutMsg.Requested(FEATURE))),
+                press(onFeature(), r -> r.pilot().press(KeyCode.ENTER)));
+        assertEquals(List.of(new HelpMsg.Chosen(new PushMsg.Requested(FEATURE))),
+                press(onFeature(), r -> {
+                    r.pilot().press(KeyCode.DOWN);
+                    r.pilot().press(KeyCode.ENTER);
+                }));
+    }
+
+    @Test
+    void theArrowsSkipTheHeadingsAndStopAtTheEnds() throws Exception {
+        int panelKeys = Keymap.standard().bindings(Scopes.BRANCHES.id()).size();
+        // Past the panel keys, the legend and the heading, to the second global key, after ?.
+        assertEquals(List.of(new HelpMsg.Chosen(new ThemeMsg.Requested())), press(onFeature(), r -> {
+            for (int i = 0; i < panelKeys + 1; i++) {
+                r.pilot().press(KeyCode.DOWN);
+            }
+            r.pilot().press(KeyCode.ENTER);
+        }));
+        assertEquals(List.of(new HelpMsg.Chosen(new CheckoutMsg.Requested(FEATURE))), press(onFeature(), r -> {
+            r.pilot().press(KeyCode.UP);
+            r.pilot().press(KeyCode.ENTER);
+        }));
+    }
+
+    @Test
+    void pressingAKeyRunsIt() throws Exception {
+        assertEquals(List.of(new HelpMsg.Chosen(new DeleteBranchMsg.Requested(FEATURE))),
+                press(onFeature(), r -> r.pilot().press('d')));
+        assertEquals(List.of(new HelpMsg.Chosen(new ThemeMsg.Requested())),
+                press(onFeature(), r -> r.pilot().press('t', KeyModifiers.CTRL)));
+    }
+
+    @Test
+    void theGlobalKeysRunToo() throws Exception {
+        int panelKeys = Keymap.standard().bindings(Scopes.BRANCHES.id()).size();
+        assertEquals(List.of(new HelpMsg.Chosen(new HelpMsg.Closed())), press(onFeature(), r -> {
+            for (int i = 0; i < panelKeys; i++) {
+                r.pilot().press(KeyCode.DOWN);
+            }
+            r.pilot().press(KeyCode.ENTER);
+        }));
+        // Quitting goes to the app as is.
+        assertEquals(List.of(new Msg.Quit()), press(onFeature(), r -> r.pilot().press('q')));
+    }
+
+    @Test
+    void aKeyThatNeedsASelectionDoesNothingWithout() throws Exception {
+        Model none = open(Scopes.BRANCHES, Option.none());
+        assertEquals(List.empty(), press(none, r -> r.pilot().press(KeyCode.ENTER)));
+        assertEquals(List.empty(), press(none, r -> r.pilot().press('d')));
+    }
+
+    @Test
+    void theDetailsOfTheHighlightedKeyShowUnderThePopup() throws Exception {
+        Model open = onFeature();
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(open))) {
+            runner.runner().focusManager().setFocus(HelpDialog.ID);
+            String checkout = RenderedText.ofTall(runner, () -> view(open));
+            assertTrue(checkout.contains("Switches to the selected branch."), checkout);
+
+            runner.pilot().press(KeyCode.DOWN);
+            runner.pilot().pause();
+            String push = RenderedText.ofTall(runner, () -> view(open));
+            assertFalse(push.contains("Switches to the selected branch."), push);
+            // The popup stays where it was.
+            assertEquals(checkout.lines().filter(line -> line.contains("Keybindings")).toList(),
+                    push.lines().filter(line -> line.contains("Keybindings")).toList());
+        }
     }
 
     @Test
@@ -72,9 +166,18 @@ class HelpDialogTest {
         assertTrue(dialog.render(TestModels.loaded()).isEmpty());
     }
 
+    private static Model onFeature() {
+        return open(Scopes.BRANCHES, Option.of(FEATURE));
+    }
+
     private List<Msg> press(java.util.function.Consumer<ToolkitTestRunner> keys) throws Exception {
+        return press(open(Scopes.FILES.id()), keys);
+    }
+
+    private List<Msg> press(Model open, java.util.function.Consumer<ToolkitTestRunner> keys) throws Exception {
         dispatched.clear();
-        Model open = open(Scopes.FILES.id());
+        // Closed in between, as the app draws it, so it starts at the top again.
+        dialog.render(TestModels.loaded());
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(open))) {
             runner.runner().focusManager().setFocus(HelpDialog.ID);
             RenderedText.of(runner, () -> view(open));

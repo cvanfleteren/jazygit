@@ -3,6 +3,8 @@ package net.vanfleteren.jazygit.ui;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.feature.stash.StashMsg;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -61,7 +63,8 @@ class StashPanelTest {
             testRunner.pilot().pause();
 
             assertEquals(java.util.List.of(new StashMsg.PopRequested(older), new StashMsg.DropRequested(older),
-                    new HelpMsg.Requested(Scopes.STASH.id())), dispatched);
+                    new HelpMsg.Requested(Scopes.STASH.id(),
+                            Keymap.standard().actions(Scopes.STASH, Option.of(older)))), dispatched);
             testRunner.pilot().quit();
         }
     }

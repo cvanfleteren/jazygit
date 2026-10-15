@@ -103,7 +103,14 @@ public class JazygitApp extends ToolkitApp {
     private final SettingsStore.Loaded settings;
     private final Option<ThemeName> themeOverride;
     private final StyleEngine styleEngine;
-    private final Consumer<Msg> dispatch = msg -> this.runtime.forEach(running -> running.program().dispatch(msg));
+    // Quitting stops the runner, which the model knows nothing of.
+    private final Consumer<Msg> dispatch = msg -> {
+        if (msg instanceof Msg.Quit) {
+            runner().quit();
+        } else {
+            this.runtime.forEach(running -> running.program().dispatch(msg));
+        }
+    };
     private final ContentPanel contentPanel;
     private final FilesPanel filesPanel = new FilesPanel(dispatch, () -> openContent(FilesPanel.ID), this::highlight);
     private final BranchesPanel branchesPanel = new BranchesPanel(dispatch, this::showBranchesTab,
