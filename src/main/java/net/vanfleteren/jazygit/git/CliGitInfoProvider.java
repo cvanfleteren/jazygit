@@ -101,7 +101,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<ProcessError, List<Branch>> branches() {
-        return CliBranches.list(workTree);
+        return CliBranch.list(workTree);
     }
 
     @Override
@@ -131,7 +131,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<ProcessError, List<RemoteRef>> remoteBranches() {
-        return CliBranches.remotes(workTree);
+        return CliBranch.remotes(workTree);
     }
 
     @Override
@@ -150,34 +150,34 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> createBranch(Branch.Name name, String startPoint) {
-        return CliCheckout.createBranch(workTree, name, startPoint);
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(Branch.Name name, String startPoint) {
+        return CliCheckout.checkoutNewBranch(workTree, name, startPoint);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> createTrackingBranch(Branch.Name name,
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewTrackingBranch(Branch.Name name,
                                                                                        RemoteBranch upstream) {
-        return CliCheckout.createTrackingBranch(workTree, name, upstream);
+        return CliCheckout.checkoutNewTrackingBranch(workTree, name, upstream);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Branch.Name branch, RemoteBranch upstream, PushMode mode) {
-        return CliBranch.push(workTree, branch, upstream, mode);
+        return CliPush.push(workTree, branch, upstream, mode);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(Branch.Name branch, RemoteBranch upstream) {
-        return CliBranch.pushSettingUpstream(workTree, branch, upstream);
+        return CliPush.pushSettingUpstream(workTree, branch, upstream);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pull() {
-        return CliBranch.pull(workTree);
+        return CliPull.pull(workTree);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(Branch.Name branch, RemoteBranch upstream) {
-        return CliBranch.fastForward(workTree, branch, upstream);
+        return CliFetch.fastForward(workTree, branch, upstream);
     }
 
     @Override
@@ -192,7 +192,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(String remote) {
-        return CliRemote.fetch(workTree, remote, Option.of(System.getenv("GIT_SSH_COMMAND")));
+        return CliFetch.fetch(workTree, remote, Option.of(System.getenv("GIT_SSH_COMMAND")));
     }
 
     @Override
@@ -222,22 +222,22 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> commit(CommitMessage message) {
-        return CliIndex.commit(workTree, message);
+        return CliCommit.commit(workTree, message);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> amendLastCommit() {
-        return CliIndex.amend(workTree);
+        return CliCommit.amend(workTree);
     }
 
     @Override
     public Either<GitFailure<RewordError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message) {
-        return CliRebase.rewordAny(workTree, sha, message);
+        return CliCommit.reword(workTree, sha, message);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode) {
-        return CliRebase.squash(workTree, sha, mode);
+        return CliCommit.squash(workTree, sha, mode);
     }
 
     @Override

@@ -37,19 +37,6 @@ public final class CliRebase {
     }
 
     /**
-     * Replaces the message of {@code sha}: by amending when it is HEAD, else by {@link #reword}.
-     *
-     * @return the command lines that were run
-     */
-    public static Either<GitFailure<RewordError>, List<ExecutedCommand>> rewordAny(Path workTree, Sha sha,
-                                                                        CommitMessage message) {
-        return GitFailure.<RewordError, Option<Sha>>widen(CliLog.resolve(workTree, "HEAD"))
-                .flatMap(head -> head.contains(sha)
-                        ? GitFailure.widen(CliIndex.reword(workTree, message))
-                        : reword(workTree, sha, message));
-    }
-
-    /**
      * Replaces the message of {@code sha} with an interactive rebase that is told to stop at that commit
      * and which message to use: {@code git rebase --interactive --autostash --keep-empty --rebase-merges <sha>^}, or
      * {@code --root} for a commit without parent. Merges after the commit are recreated, uncommitted changes

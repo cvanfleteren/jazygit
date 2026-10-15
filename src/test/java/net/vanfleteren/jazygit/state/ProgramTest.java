@@ -133,8 +133,8 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> createBranch(Branch.Name name, String startPoint) {
-            return switchTo(name, "git createBranch");
+        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(Branch.Name name, String startPoint) {
+            return switchTo(name, "git checkoutNewBranch");
         }
 
         private Either<GitFailure<ProcessError>, List<ExecutedCommand>> switchTo(Branch.Name branch, String command) {

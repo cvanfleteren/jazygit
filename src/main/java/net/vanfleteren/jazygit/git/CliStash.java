@@ -73,7 +73,7 @@ public final class CliStash {
      * renamed it, and its old name is another stash now. A stash that is gone is a {@link StashGone}.
      */
     private static Either<GitFailure<StashError>, List<ExecutedCommand>> onStash(Path workTree, Stash stash,
-                                                                              Function<String, GitCommand> command) {
+                                                                                 Function<String, GitCommand> command) {
         return list(workTree)
                 .<GitFailure<StashError>>mapLeft(error -> new GitFailure<>(error, List.empty()))
                 .flatMap(stashes -> stashes.find(listed -> listed.sha().equals(stash.sha()))

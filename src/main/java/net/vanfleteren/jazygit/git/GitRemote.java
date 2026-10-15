@@ -1,23 +1,16 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 
 /**
- * Operations on the remotes.
+ * The remotes, as {@code git remote} lists them.
  */
-public interface GitRemotes {
+public interface GitRemote {
 
     /**
      * The remotes that fetching all fetches from: all of them but those with {@code skipFetchAll} set.
      */
     Either<ProcessError, List<String>> remotes();
-
-    /**
-     * Fetches from {@code remote}. It never asks for credentials or passphrases: what would need them fails.
-     */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(String remote);
 }

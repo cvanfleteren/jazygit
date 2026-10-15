@@ -77,7 +77,7 @@ public final class CliCheckout {
      * Runs {@code git checkout -b <name> <startPoint>} in {@code workTree}: creates the branch at
      * {@code startPoint} and switches to it.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> createBranch(Path workTree, Branch.Name name,
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(Path workTree, Branch.Name name,
                                                                             String startPoint) {
         return GitProcess.log(workTree, git("checkout", "--quiet", "-b", name.value(), startPoint, "--"));
     }
@@ -86,7 +86,7 @@ public final class CliCheckout {
      * Runs {@code git checkout --track -b <name> <remote-tracking ref>} in {@code workTree}: creates the branch
      * at the remote-tracking branch of {@code upstream}, following it, and checks it out.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> createTrackingBranch(Path workTree, Branch.Name name,
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewTrackingBranch(Path workTree, Branch.Name name,
                                                                                               RemoteBranch upstream) {
         return GitProcess.log(workTree, git("checkout", "--quiet", "--track", "-b", name.value(),
                 Refs.remote(upstream.remote(), upstream.branch()), "--"));

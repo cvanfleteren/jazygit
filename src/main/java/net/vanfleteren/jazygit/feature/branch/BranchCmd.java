@@ -68,7 +68,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return git.createBranch(branch, base);
+            return git.checkoutNewBranch(branch, base);
         }
     }
 
@@ -164,7 +164,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return git.createTrackingBranch(branch, upstream);
+            return git.checkoutNewTrackingBranch(branch, upstream);
         }
     }
 

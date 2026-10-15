@@ -10,10 +10,15 @@ import net.vanfleteren.jazygit.git.GitError.StashError;
 import net.vanfleteren.jazygit.git.model.Stash;
 
 /**
- * Operations on stashes. Each returns the command lines it ran, or why it failed together with the
- * command lines run up to then.
+ * Listing and changing stashes, as {@code git stash} does. Each change returns the command lines it ran, or
+ * why it failed together with the command lines run up to then.
  */
 public interface GitStash {
+
+    /**
+     * The stashes, newest first.
+     */
+    Either<ProcessError, List<Stash>> stashes();
 
     /**
      * Stashes the changes, staged and unstaged, and the untracked files, under the name {@code message}.

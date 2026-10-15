@@ -651,14 +651,14 @@ class CliGitInfoProviderTest {
     }
 
     @Test
-    void createBranchStartsAtTheGivenBranchAndSwitchesToIt() throws Exception {
+    void checkoutNewBranchStartsAtTheGivenBranchAndSwitchesToIt() throws Exception {
         git("checkout", "-q", "-b", "other");
         Files.writeString(repo.resolve("other.txt"), "other\n");
         git("add", "other.txt");
         git("commit", "-q", "-m", "On other");
         git("checkout", "-q", "main");
 
-        provider.createBranch(new Branch.Name("topic"), "other").get();
+        provider.checkoutNewBranch(new Branch.Name("topic"), "other").get();
 
         assertEquals(Option.of(new Branch.Name("topic")), provider.status().get().head().branchName());
         assertTrue(Files.exists(repo.resolve("other.txt")));
@@ -698,7 +698,7 @@ class CliGitInfoProviderTest {
         assertEquals(List.of("On feature", "Initial commit"),
                 provider.log(new BranchRef.Remote(feature)).get().map(Commit::message).toList());
 
-        provider.createTrackingBranch(new Branch.Name("feature"), feature).get();
+        provider.checkoutNewTrackingBranch(new Branch.Name("feature"), feature).get();
 
         Branch local = provider.branches().get().find(b -> b.name().equals(new Branch.Name("feature"))).get();
         assertTrue(local.current());
@@ -924,10 +924,10 @@ class CliGitInfoProviderTest {
     }
 
     @Test
-    void createBranchFailsWhenTheNameIsTaken() throws Exception {
+    void checkoutNewBranchFailsWhenTheNameIsTaken() throws Exception {
         git("branch", "topic");
 
-        assertTrue(provider.createBranch(new Branch.Name("topic"), "main").isLeft());
+        assertTrue(provider.checkoutNewBranch(new Branch.Name("topic"), "main").isLeft());
     }
 
     @Test

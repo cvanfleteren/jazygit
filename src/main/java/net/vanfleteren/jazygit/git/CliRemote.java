@@ -11,8 +11,6 @@ import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import java.nio.file.Path;
 import java.time.Duration;
 
-import static net.vanfleteren.jazygit.git.GitCommand.git;
-
 /**
  * Talks to the remotes through the {@code git} command line tool, in the background: nothing may ask the
  * user anything.
@@ -63,17 +61,10 @@ public final class CliRemote {
     }
 
     /**
-     * Runs {@code git fetch --prune <remote>}. It always prunes, whatever {@code fetch.prune} says: the
-     * remote-tracking branches of branches deleted on the remote go, so git marks the local branches that
-     * followed them as gone. Git's own prompts are already off; ssh would still ask for a
-     * passphrase or about an unknown host on the terminal, so it runs in batch mode.
-     *
-     * @param environment the value of the environment variable {@code GIT_SSH_COMMAND}, if it is set
+     * Runs {@code command}, which talks to a remote, for its effect.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(Path workTree, String remote,
-                                                                     Option<String> environment) {
-        return toRemote(workTree, git("fetch", "--quiet", "--prune", remote), environment)
-                .flatMap(fetch -> GitProcess.log(workTree, fetch));
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> run(Path workTree, GitCommand command) {
+        return toRemote(workTree, command).flatMap(remote -> GitProcess.log(workTree, remote));
     }
 
     /**

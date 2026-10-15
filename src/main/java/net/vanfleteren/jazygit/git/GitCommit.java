@@ -7,15 +7,15 @@ import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.RewordError;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
-import net.vanfleteren.jazygit.git.model.ResetMode;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 
 /**
- * Operations that create or rewrite commits. Each returns the command lines it ran, or why it failed
- * together with the command lines run up to then.
+ * Creating and rewriting commits, as {@code git commit} does, and through an interactive rebase for older
+ * commits. Each returns the command lines it ran, or why it failed together with the command lines run up to
+ * then.
  */
-public interface GitCommits {
+public interface GitCommit {
 
     /**
      * Commits what is staged.
@@ -43,11 +43,4 @@ public interface GitCommits {
      * @param sha the full object id of a commit that has exactly one parent
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode);
-
-    /**
-     * Moves the checked out branch to the commit {@code sha}, doing with the changes {@code mode} says.
-     *
-     * @param sha the full object id of the commit
-     */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> reset(Sha sha, ResetMode mode);
 }

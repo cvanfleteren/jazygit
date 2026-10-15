@@ -8,7 +8,6 @@ import net.vanfleteren.jazygit.git.GitError.DeleteUntrackedError;
 import net.vanfleteren.jazygit.git.GitError.DiscardError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.RefusedPath;
-import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
 
 import java.nio.file.Path;
@@ -103,35 +102,6 @@ public final class CliIndex {
     }
 
     /**
-     * {@code git commit -m <summary> [-m <description>]}: commits the index.
-     */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> commit(Path workTree, CommitMessage message) {
-        return run(workTree, List.of("commit", "--quiet").appendAll(messageArgs(message)));
-    }
-
-    /**
-     * {@code git commit --amend --no-edit}: amends the last commit with the index.
-     */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> amend(Path workTree) {
-        return run(workTree, List.of("commit", "--quiet", "--amend", "--no-edit"));
-    }
-
-    /**
-     * {@code git commit --allow-empty --amend --only -m <summary> [-m <description>]}: replaces the
-     * message of the last commit, whatever is staged.
-     */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> reword(Path workTree, CommitMessage message) {
-        return run(workTree, List.of("commit", "--quiet", "--allow-empty", "--amend", "--only")
-                .appendAll(messageArgs(message)));
-    }
-
-    private static List<String> messageArgs(CommitMessage message) {
-        return message.hasDescription()
-                ? List.of("-m", message.summary(), "-m", message.description())
-                : List.of("-m", message.summary());
-    }
-
-    /**
      * Runs {@code subcommand -- paths}; nothing when there are no paths.
      */
     private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> onPaths(Path workTree, List<String> subcommand,
@@ -139,9 +109,5 @@ public final class CliIndex {
         return paths.isEmpty()
                 ? GitFailure.nothing()
                 : GitProcess.log(workTree, git(subcommand.append("--").appendAll(paths)).withLiteralPaths());
-    }
-
-    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> run(Path workTree, List<String> args) {
-        return GitProcess.log(workTree, git(args));
     }
 }
