@@ -57,6 +57,37 @@ public sealed interface BranchCmd extends GitOperationCmd {
     }
 
     /**
+     * Deletes {@code remote} on its remote; a local branch that follows it is left alone.
+     */
+    record DeleteRemoteBranch(RemoteBranch remote) implements BranchCmd {
+
+        @Override
+        public Branch.Name branch() {
+            return remote.branch();
+        }
+
+        @Override
+        public Option<String> subject() {
+            return Option.of(remote.shortName());
+        }
+
+        @Override
+        public Operation operation() {
+            return Operation.DELETE_BRANCH;
+        }
+
+        @Override
+        public Option<BranchRef> busyBranch() {
+            return Option.of(new BranchRef.Remote(remote));
+        }
+
+        @Override
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+            return git.deleteRemoteBranch(remote);
+        }
+    }
+
+    /**
      * Creates the branch {@code branch} at {@code base} and switches to it.
      */
     record CreateBranch(Branch.Name branch, String base) implements ChecksOutBranch {

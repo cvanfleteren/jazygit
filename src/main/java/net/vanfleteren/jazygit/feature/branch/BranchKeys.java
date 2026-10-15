@@ -30,6 +30,7 @@ public final class BranchKeys {
                 .add(Scopes.REMOTE_BRANCHES,
                         Binding.<RemoteBranch>onSelected(" ", "help.remoteBranches.checkout", CheckoutMsg.RemoteRequested::new),
                         Binding.<RemoteBranch>onSelected("n", "help.branches.new", NewBranchMsg.RequestedAtRemote::new),
+                        Binding.<RemoteBranch>onSelected("d", "help.remoteBranches.delete", DeleteBranchMsg.RemoteRequested::new),
                         Binding.always("[", "help.branches.previousTab", BranchesTabMsg.Switched::new),
                         Binding.always("]", "help.branches.nextTab", BranchesTabMsg.Switched::new))
                 .add(Scopes.COMMITS,

@@ -32,4 +32,10 @@ public interface GitBranch {
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(Branch.Name name, RemoteBranch remote,
                                                                          DeleteScope scope);
+
+    /**
+     * Deletes {@code remote} on its remote. Returns the command lines it ran, or why it failed together with the
+     * command lines run up to then.
+     */
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemoteBranch(RemoteBranch remote);
 }

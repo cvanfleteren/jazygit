@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.branch;
 
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -23,5 +24,17 @@ public sealed interface DeleteBranchMsg extends Msg {
     }
 
     record Chosen(DeleteScope scope) implements DeleteBranchMsg {
+    }
+
+    /**
+     * The user asked to delete a remote branch; that is still to be confirmed.
+     */
+    record RemoteRequested(RemoteBranch branch) implements DeleteBranchMsg {
+    }
+
+    record RemoteCancelled() implements DeleteBranchMsg {
+    }
+
+    record RemoteConfirmed() implements DeleteBranchMsg {
     }
 }

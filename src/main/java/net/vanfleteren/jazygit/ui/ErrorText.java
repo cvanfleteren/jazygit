@@ -31,6 +31,7 @@ public final class ErrorText {
                     Messages.get("error.pull.upstreamGone", branch.value(), upstream);
             case AppError.UnpushedCommits(Branch.Name branch) -> Messages.get("error.fastForward.unpushed", branch.value());
             case AppError.NotPushed(Branch.Name branch) -> Messages.get("error.pullRequest.notPushed", branch.value());
+            case AppError.DefaultBranch(String branch) -> Messages.get("error.deleteBranch.default", branch);
             case AppError.NotOnRemote(Branch.Name branch) -> Messages.get("error.browse.notOnRemote", branch.value());
             case AppError.PullRequestsNotRead() -> Messages.get("error.pullRequest.notRead");
             case AppError.PullRequestsUnavailable(Failure failure) ->

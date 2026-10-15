@@ -4,6 +4,10 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.DeleteBranch;
+import net.vanfleteren.jazygit.feature.branch.BranchCmd.DeleteRemoteBranch;
+import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Chosen;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Requested;
@@ -24,6 +28,10 @@ public final class DeleteBranchUpdate {
             case Requested(Branch.Name branch) -> requested(model, branch);
             case Cancelled() -> Next.of(model.withoutPopup(DeleteBranchPopup.class));
             case Chosen(DeleteScope scope) -> chosen(model, scope);
+            case DeleteBranchMsg.RemoteRequested(RemoteBranch branch) -> remoteRequested(model, branch);
+            case DeleteBranchMsg.RemoteCancelled() -> Next.of(model.withoutPopup(DeleteRemoteBranchPopup.class));
+            case DeleteBranchMsg.RemoteConfirmed() -> Update.confirm(model, DeleteRemoteBranchPopup.class,
+                    popup -> Option.when(remoteDeletable(model, popup.branch()), () -> new DeleteRemoteBranch(popup.branch())));
         };
     }
 
@@ -39,6 +47,29 @@ public final class DeleteBranchUpdate {
         return Update.confirm(model, DeleteBranchPopup.class, popup -> model.branch(popup.branch())
                 .filter(branch -> scope == DeleteScope.LOCAL || branch.remoteDeletable())
                 .map(branch -> new DeleteBranch(branch.name(), branch.pushTarget(), scope)));
+    }
+
+    /**
+     * Only a known remote branch can be deleted, and not while something runs on it. The default branch is
+     * refused, as deleting it would break every clone.
+     */
+    private static Next remoteRequested(Model model, RemoteBranch branch) {
+        return isDefault(model, branch)
+                ? Next.of(model.fail(new AppError.DefaultBranch(branch.shortName())))
+                : Update.ask(model, Option.when(remoteDeletable(model, branch), () -> new DeleteRemoteBranchPopup(branch)));
+    }
+
+    private static boolean remoteDeletable(Model model, RemoteBranch branch) {
+        return model.remoteBranch(branch).isDefined() && !model.busy().containsKey(new BranchRef.Remote(branch))
+                && !isDefault(model, branch);
+    }
+
+    /**
+     * Whether {@code branch} is the default branch of {@code origin}, as far as the local default branch tells.
+     */
+    private static boolean isDefault(Model model, RemoteBranch branch) {
+        return branch.remote().equals(RemoteBranch.DEFAULT_REMOTE)
+                && model.branch(branch.branch()).exists(Branch::isDefault);
     }
 
     static boolean remoteDeletable(Model model, Branch.Name branch) {

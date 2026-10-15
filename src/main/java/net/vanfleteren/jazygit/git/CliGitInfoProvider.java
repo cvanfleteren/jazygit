@@ -206,6 +206,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemoteBranch(RemoteBranch remote) {
+        return CliBranch.deleteRemote(workTree, remote);
+    }
+
+    @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> stage(List<String> paths) {
         return CliIndex.add(workTree, paths);
     }

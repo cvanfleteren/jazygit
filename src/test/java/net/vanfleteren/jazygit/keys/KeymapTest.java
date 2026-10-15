@@ -8,6 +8,7 @@ import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
+import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg;
 import net.vanfleteren.jazygit.feature.github.BrowseMsg;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -49,6 +50,13 @@ class KeymapTest {
         RemoteBranch remote = new RemoteBranch("origin", new Branch.Name("x"));
         assertEquals(Option.of(new BrowseMsg.RemoteRequested(remote)),
                 keymap.handle(Scopes.REMOTE_BRANCHES, KeyEvent.ofChar('O'), Option.of(remote)));
+    }
+
+    @Test
+    void dDeletesARemoteBranch() {
+        RemoteBranch remote = new RemoteBranch("origin", new Branch.Name("x"));
+        assertEquals(Option.of(new DeleteBranchMsg.RemoteRequested(remote)),
+                keymap.handle(Scopes.REMOTE_BRANCHES, KeyEvent.ofChar('d'), Option.of(remote)));
     }
 
     @Test

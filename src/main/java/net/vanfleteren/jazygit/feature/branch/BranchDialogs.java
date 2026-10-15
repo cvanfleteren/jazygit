@@ -69,6 +69,15 @@ public final class BranchDialogs {
             DeleteBranchMsg.Cancelled::new);
 
     /**
+     * Asks to confirm deleting a remote branch on its remote.
+     */
+    public static final ConfirmDialog.Spec<DeleteRemoteBranchPopup> DELETE_REMOTE_BRANCH = new ConfirmDialog.Spec<>(
+            "delete-remote-branch", DeleteRemoteBranchPopup.class,
+            popup -> Messages.get("dialog.deleteRemoteBranch.title", popup.branch().shortName()),
+            popup -> Messages.get("dialog.deleteRemoteBranch.message", popup.branch().shortName()),
+            DeleteBranchMsg.RemoteConfirmed::new, DeleteBranchMsg.RemoteCancelled::new);
+
+    /**
      * Asks how to merge the highlighted branch into the checked out one.
      */
     public static final ChoiceDialog.Spec<MergePopup> MERGE = new ChoiceDialog.Spec<>(

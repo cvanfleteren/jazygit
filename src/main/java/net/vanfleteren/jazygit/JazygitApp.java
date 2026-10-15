@@ -127,6 +127,7 @@ public class JazygitApp extends ToolkitApp {
             new PopupSlot(new ChoiceDialog<>(BranchDialogs.REBASE, dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new ChoiceDialog<>(BranchDialogs.MERGE, dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new ChoiceDialog<>(BranchDialogs.DELETE_BRANCH, dispatch), model -> BranchesPanel.ID),
+            new PopupSlot(new ConfirmDialog<>(BranchDialogs.DELETE_REMOTE_BRANCH, dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new ConfirmDialog<>(BranchDialogs.FORCE_PUSH, dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new TextInputDialog<>(BranchDialogs.SET_UPSTREAM, dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new ConfirmDialog<>(BranchDialogs.STASH_CHECKOUT, dispatch), model -> BranchesPanel.ID),

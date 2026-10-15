@@ -69,6 +69,14 @@ public sealed interface AppError {
     }
 
     /**
+     * Deleting a remote branch was asked for, but it is the default branch of its remote.
+     *
+     * @param branch the short name of the remote branch, e.g. {@code origin/main}
+     */
+    record DefaultBranch(String branch) implements AppError {
+    }
+
+    /**
      * Opening a branch on GitHub was asked for, but the branch is on no remote, or its upstream is gone.
      */
     record NotOnRemote(Branch.Name branch) implements AppError {
