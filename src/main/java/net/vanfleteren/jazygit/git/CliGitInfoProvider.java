@@ -4,6 +4,7 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
@@ -41,6 +42,7 @@ import net.vanfleteren.jazygit.git.model.Stash;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.function.Supplier;
 
 import static net.vanfleteren.jazygit.git.GitCommand.git;
 
@@ -51,9 +53,20 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
 public final class CliGitInfoProvider implements GitInfoProvider {
 
     private final Path workTree;
+    // Asked each time git talks to a remote.
+    private final Supplier<Map<String, String>> credentials;
 
-    private CliGitInfoProvider(Path workTree) {
+    private CliGitInfoProvider(Path workTree, Supplier<Map<String, String>> credentials) {
         this.workTree = workTree;
+        this.credentials = credentials;
+    }
+
+    /**
+     * This repository, with git told which account to use by the environment variables of {@code credentials}
+     * whenever it talks to a remote, for a credential helper that reads them, such as gh's.
+     */
+    public CliGitInfoProvider withCredentials(Supplier<Map<String, String>> credentials) {
+        return new CliGitInfoProvider(workTree, credentials);
     }
 
     /**
@@ -71,7 +84,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
                         ? Either.left(new NoWorkTree(startDir))
                         : Either.narrow(GitProcess.read(startDir, GitCommand.reading("rev-parse", "--show-toplevel"),
                         CliGitInfoProvider::path)))
-                .map(CliGitInfoProvider::new);
+                .map(workTree -> new CliGitInfoProvider(workTree, HashMap::empty));
     }
 
     private static Either<UnexpectedOutput, Path> path(String raw) {
@@ -163,22 +176,22 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Branch.Name branch, RemoteBranch upstream, PushMode mode) {
-        return CliPush.push(workTree, branch, upstream, mode);
+        return CliPush.push(workTree, branch, upstream, mode, credentials.get());
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(Branch.Name branch, RemoteBranch upstream) {
-        return CliPush.pushSettingUpstream(workTree, branch, upstream);
+        return CliPush.pushSettingUpstream(workTree, branch, upstream, credentials.get());
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pull() {
-        return CliPull.pull(workTree);
+        return CliPull.pull(workTree, credentials.get());
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(Branch.Name branch, RemoteBranch upstream) {
-        return CliFetch.fastForward(workTree, branch, upstream);
+        return CliFetch.fastForward(workTree, branch, upstream, credentials.get());
     }
 
     @Override
@@ -197,8 +210,18 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<ProcessError, Option<String>> localConfig(String key) {
+        return CliConfig.get(workTree, key);
+    }
+
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> setLocalConfig(String key, Option<String> value) {
+        return CliConfig.set(workTree, key, value);
+    }
+
+    @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(String remote) {
-        return CliFetch.fetch(workTree, remote, Option.of(System.getenv("GIT_SSH_COMMAND")));
+        return CliFetch.fetch(workTree, remote, Option.of(System.getenv("GIT_SSH_COMMAND")), credentials.get());
     }
 
     @Override
@@ -208,12 +231,12 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(Branch.Name name, RemoteBranch remote, DeleteScope scope) {
-        return CliBranch.delete(workTree, name, remote, scope);
+        return CliBranch.delete(workTree, name, remote, scope, credentials.get());
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemoteBranch(RemoteBranch remote) {
-        return CliBranch.deleteRemote(workTree, remote);
+        return CliBranch.deleteRemote(workTree, remote, credentials.get());
     }
 
     @Override

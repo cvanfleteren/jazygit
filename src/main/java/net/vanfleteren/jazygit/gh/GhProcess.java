@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.gh;
 
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.process.Exec;
 import net.vanfleteren.jazygit.process.ExecFailure;
@@ -16,13 +17,15 @@ final class GhProcess {
 
     private final Path workTree;
     private final String executable;
+    private final GhToken token;
 
     /**
-     * Runs gh at {@code executable} in {@code workTree}.
+     * Runs gh at {@code executable} in {@code workTree}, as the account of {@code token}.
      */
-    GhProcess(Path workTree, String executable) {
+    GhProcess(Path workTree, String executable, GhToken token) {
         this.workTree = workTree;
         this.executable = executable;
+        this.token = token;
     }
 
     /**
@@ -59,8 +62,33 @@ final class GhProcess {
         return execute(command).flatMap(output -> Either.<GhError, T>narrow(parse.apply(output.stdout())));
     }
 
+    /**
+     * Runs {@code command} as the configured account; once more with the token asked again, when GitHub did not
+     * accept it, as it may have been replaced since.
+     */
     private Either<GhError, Output> execute(GhCommand command) {
-        return Exec.run(workTree, command.commandLine(executable), command.environment(), command.timeout())
+        return token.environment().flatMap(variables -> execute(command, variables).fold(
+                // Without a configured account, gh uses its own, which asking again does not change.
+                error -> variables.isEmpty() || !rejected(error) ? Either.left(error) : executeAgain(command),
+                Either::right));
+    }
+
+    private Either<GhError, Output> executeAgain(GhCommand command) {
+        token.forget();
+        return token.environment().flatMap(variables -> execute(command, variables));
+    }
+
+    /**
+     * Whether gh failed as GitHub did not accept its credentials.
+     */
+    static boolean rejected(GhError error) {
+        return error instanceof GhError.CommandFailed(var explanation, int exitCode)
+                && explanation.exists(line -> line.contains("HTTP 401") || line.contains("Bad credentials"));
+    }
+
+    private Either<GhError, Output> execute(GhCommand command, Map<String, String> variables) {
+        return Exec.run(workTree, command.commandLine(executable), command.environment().merge(variables),
+                        command.timeout())
                 .<GhError>mapLeft(failure -> switch (failure) {
                     case ExecFailure.NotStarted(var cause) -> new GhError.GhUnavailable(cause);
                     case ExecFailure.TimedOut() -> new GhError.TimedOut(command.operation());

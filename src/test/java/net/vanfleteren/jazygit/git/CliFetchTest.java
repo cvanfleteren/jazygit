@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.git;
 
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import org.junit.jupiter.api.Test;
@@ -42,8 +43,8 @@ class CliFetchTest {
 
         List<String> remotes = CliRemote.remotes(repo).get();
         assertEquals(List.of("origin", "other"), remotes);
-        assertEquals(List.of("git fetch --quiet --prune origin"), CliFetch.fetch(repo, "origin", Option.none()).get().map(ExecutedCommand::line));
-        assertEquals(List.of("git fetch --quiet --prune other"), CliFetch.fetch(repo, "other", Option.none()).get().map(ExecutedCommand::line));
+        assertEquals(List.of("git fetch --quiet --prune origin"), CliFetch.fetch(repo, "origin", Option.none(), HashMap.empty()).get().map(ExecutedCommand::line));
+        assertEquals(List.of("git fetch --quiet --prune other"), CliFetch.fetch(repo, "other", Option.none(), HashMap.empty()).get().map(ExecutedCommand::line));
 
         assertTrue(git(repo, "branch", "-r").contains("origin/main"));
         assertTrue(git(repo, "branch", "-r").contains("other/main"));
@@ -61,7 +62,7 @@ class CliFetchTest {
         git(repo, "branch", "-q", "--track", "feature", "origin/feature");
         git(origin, "branch", "-q", "-D", "feature");
 
-        CliFetch.fetch(repo, "origin", Option.none()).get();
+        CliFetch.fetch(repo, "origin", Option.none(), HashMap.empty()).get();
 
         assertTrue(!git(repo, "branch", "-r").contains("origin/feature"));
         assertTrue(git(repo, "branch", "-vv").contains("[origin/feature: gone]"));

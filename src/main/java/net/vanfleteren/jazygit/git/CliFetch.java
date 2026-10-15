@@ -4,6 +4,7 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
@@ -28,10 +29,12 @@ public final class CliFetch {
      * passphrase or about an unknown host on the terminal, so it runs in batch mode.
      *
      * @param environment the value of the environment variable {@code GIT_SSH_COMMAND}, if it is set
+     * @param credentials environment variables that tell the credential helper which account to use
      */
     public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(Path workTree, String remote,
-                                                                     Option<String> environment) {
-        return CliRemote.toRemote(workTree, git("fetch", "--quiet", "--prune", remote), environment)
+                                                                     Option<String> environment,
+                                                                     Map<String, String> credentials) {
+        return CliRemote.toRemote(workTree, git("fetch", "--quiet", "--prune", remote), environment, credentials)
                 .flatMap(fetch -> GitProcess.log(workTree, fetch));
     }
 
@@ -40,7 +43,9 @@ public final class CliFetch {
      * is not checked out, to {@code upstream}, the branch it tracks. Git refuses when that is not a fast-forward.
      */
     public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(Path workTree, Branch.Name name,
-                                                                               RemoteBranch upstream) {
-        return CliRemote.run(workTree, git("fetch", upstream.remote(), Refs.head(upstream.branch()) + ":" + Refs.head(name)));
+                                                                               RemoteBranch upstream,
+                                                                               Map<String, String> credentials) {
+        return CliRemote.run(workTree, git("fetch", upstream.remote(), Refs.head(upstream.branch()) + ":" + Refs.head(name)),
+                credentials);
     }
 }

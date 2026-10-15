@@ -8,7 +8,7 @@ import java.nio.file.Path;
  * new operations belong in the one of the subcommand they run, or in a new one added here.
  */
 public interface GitInfoProvider extends GitStatus, GitBranch, GitCheckout, GitMerge, GitRebase, GitPush, GitPull,
-        GitFetch, GitRemote, GitLog, GitShow, GitDiff, GitStash, GitCommit, GitReset, GitIndex {
+        GitFetch, GitRemote, GitConfig, GitLog, GitShow, GitDiff, GitStash, GitCommit, GitReset, GitIndex {
 
     /**
      * The name of the repository, i.e. the name of its working tree directory.

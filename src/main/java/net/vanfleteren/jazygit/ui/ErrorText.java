@@ -70,6 +70,8 @@ public final class ErrorText {
             case GhError.CommandFailed(var explanation, int exitCode) ->
                     explanation.getOrElse(() -> Messages.get("gh.exitedWithCode", String.valueOf(exitCode)));
             case GhError.UnexpectedOutput(String output) -> Messages.get("gh.unexpectedOutput", output);
+            case GhError.TokenUnavailable(var account, GhError cause) ->
+                    Messages.get("gh.tokenUnavailable", account.user(), account.host(), of(cause));
         };
     }
 

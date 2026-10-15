@@ -160,6 +160,16 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
+    default Either<ProcessError, Option<String>> localConfig(String key) {
+        return Either.right(Option.none());
+    }
+
+    @Override
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> setLocalConfig(String key, Option<String> value) {
+        return ran();
+    }
+
+    @Override
     default Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(String remote) {
         return ran();
     }

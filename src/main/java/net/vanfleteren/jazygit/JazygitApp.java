@@ -9,6 +9,7 @@ import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.TuiConfig;
 import dev.tamboui.tui.event.KeyEvent;
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -42,6 +43,9 @@ import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Repositories;
 import net.vanfleteren.jazygit.gh.CliGitHub;
+import net.vanfleteren.jazygit.gh.GhToken;
+import net.vanfleteren.jazygit.settings.Settings;
+import net.vanfleteren.jazygit.state.GitHubAccount;
 import net.vanfleteren.jazygit.git.CliGitInfoProvider;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.keys.Keymap;
@@ -270,10 +274,21 @@ public class JazygitApp extends ToolkitApp {
             // Not waiting for the command that runs keeps the UI going. It finishes by itself, in the other
             // repository, and its outcome goes to the old program, which nobody looks at anymore.
             stop(running);
-            startRuntime(new Env(git, new CliGitHub(git.workTree(), last.settings().gh()), env.settings(), env.recent(),
-                            env.repositories()),
+            startRuntime(env(git, last.settings(), env.settings(), env.recent(), env.repositories()),
                     new SettingsStore.Loaded(last.settings(), Option.none()), last.themeOverride());
         });
+    }
+
+    /**
+     * What commands run against for the repository {@code git} reads: gh at the executable {@code settings} name,
+     * and both gh and git as the account configured for the repository, if any.
+     */
+    private static Env env(CliGitInfoProvider git, Settings settings, SettingsStore store, RecentRepositories recent,
+                           Repositories repositories) {
+        GhToken token = new GhToken(git.workTree(), settings.gh(), () -> GitHubAccount.configured(git));
+        // Without the token, git still talks to the remotes, as the credential helper's own account.
+        return new Env(git.withCredentials(() -> token.environment().getOrElse(HashMap.empty())),
+                new CliGitHub(git.workTree(), settings.gh(), token), store, recent, repositories);
     }
 
     /**
@@ -428,8 +443,7 @@ public class JazygitApp extends ToolkitApp {
                             recent.opened(provider.workTree()).onFailure(JazygitApp::logBug);
                             SettingsStore settings = new SettingsFile(SettingsPaths.configFile());
                             SettingsStore.Loaded loaded = settings.load();
-                            Env env = new Env(provider, new CliGitHub(provider.workTree(), loaded.settings().gh()),
-                                    settings, recent, Repositories.NONE);
+                            Env env = env(provider, loaded.settings(), settings, recent, Repositories.NONE);
                             return new JazygitApp(env, loaded, options.theme(), engine);
                         }));
         app.flatMap(jazygit -> Try.run(jazygit::run).toEither().mapLeft(ErrorText::reason))

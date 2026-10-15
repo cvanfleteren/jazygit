@@ -2,7 +2,9 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.gh.model.GhAccount;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -42,6 +44,20 @@ class PullRequestsUpdateTest {
         assertEquals(withPr.pullRequests(), failed.pullRequests());
         assertEquals(Option.none(), failed.error());
         assertEquals(Option.none(), failed.popup());
+    }
+
+    @Test
+    void theAccountChosenForTheRepositoryNotBeingAvailableIsShownOnce() {
+        Failure unavailable = new Failure.GitHub(new GhError.TokenUnavailable(new GhAccount("github.com", "alice-work"),
+                new GhError.CommandFailed(Option.of("no oauth token found"), 1)), List.empty());
+
+        Model failed = Update.update(loaded(), new PullRequestsMsg.LoadFailed(unavailable)).model();
+        Model again = Update.update(failed.clearError().withoutPopup(ErrorPopup.class),
+                new PullRequestsMsg.LoadFailed(unavailable)).model();
+
+        assertEquals(Option.of(new AppError.PullRequestsUnavailable(unavailable)), failed.error());
+        assertEquals(Option.none(), again.error());
+        assertEquals(Option.none(), again.popup());
     }
 
     @Test

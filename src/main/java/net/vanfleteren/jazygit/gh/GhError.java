@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.gh;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.GhAccount;
 
 import java.io.IOException;
 
@@ -34,6 +35,15 @@ public sealed interface GhError {
      *                    printed nothing
      */
     record CommandFailed(Option<String> explanation, int exitCode) implements GhError {
+    }
+
+    /**
+     * The token of {@code account}, which the repository is configured to use, could not be had from gh, say as
+     * it is not logged in anymore; no gh command runs without it.
+     *
+     * @param cause why {@code gh auth token} failed
+     */
+    record TokenUnavailable(GhAccount account, GhError cause) implements GhError {
     }
 
     /**

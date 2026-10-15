@@ -91,9 +91,12 @@ public final class CliRemote {
 
     /**
      * Runs {@code command}, which talks to a remote, for its effect.
+     *
+     * @param credentials environment variables that tell the credential helper which account to use
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> run(Path workTree, GitCommand command) {
-        return toRemote(workTree, command).flatMap(remote -> GitProcess.log(workTree, remote));
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> run(Path workTree, GitCommand command,
+                                                                       Map<String, String> credentials) {
+        return toRemote(workTree, command, credentials).flatMap(remote -> GitProcess.log(workTree, remote));
     }
 
     /**
@@ -101,20 +104,23 @@ public final class CliRemote {
      * an unknown host on the terminal, which the TUI owns; and with the time the network takes.
      *
      * @param environment the value of the environment variable {@code GIT_SSH_COMMAND}, if it is set
+     * @param credentials environment variables that tell the credential helper which account to use
      */
     static Either<GitFailure<ProcessError>, GitCommand> toRemote(Path workTree, GitCommand command,
-                                                                 Option<String> environment) {
+                                                                 Option<String> environment,
+                                                                 Map<String, String> credentials) {
         return configuredSsh(workTree, environment).map(ssh -> command
-                .withEnvironment(HashMap.of("GIT_SSH_COMMAND", batchMode(ssh)))
+                .withEnvironment(credentials.put("GIT_SSH_COMMAND", batchMode(ssh)))
                 .withTimeout(TIMEOUT));
     }
 
     /**
-     * {@code command}, which talks to a remote, as {@link #toRemote(Path, GitCommand, Option)} runs it, with the
-     * ssh command of this process's environment.
+     * {@code command}, which talks to a remote, as {@link #toRemote(Path, GitCommand, Option, Map)} runs it, with
+     * the ssh command of this process's environment.
      */
-    static Either<GitFailure<ProcessError>, GitCommand> toRemote(Path workTree, GitCommand command) {
-        return toRemote(workTree, command, Option.of(System.getenv("GIT_SSH_COMMAND")));
+    static Either<GitFailure<ProcessError>, GitCommand> toRemote(Path workTree, GitCommand command,
+                                                                 Map<String, String> credentials) {
+        return toRemote(workTree, command, Option.of(System.getenv("GIT_SSH_COMMAND")), credentials);
     }
 
     /**

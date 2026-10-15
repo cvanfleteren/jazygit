@@ -4,6 +4,7 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
@@ -28,8 +29,9 @@ public final class CliPull {
      * conflicts is undone again, so the repository is left as it was; one that git refuses to start, as the
      * repository is in the middle of something else, leaves that alone.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> pull(Path workTree) {
-        return CliRemote.toRemote(workTree, git("pull", "--no-edit").withEnvironment(HashMap.of("GIT_SEQUENCE_EDITOR", ":")))
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> pull(Path workTree, Map<String, String> credentials) {
+        return CliRemote.toRemote(workTree, git("pull", "--no-edit").withEnvironment(HashMap.of("GIT_SEQUENCE_EDITOR", ":")),
+                        credentials)
                 .flatMap(pull -> Unfinished.runOrUndo(workTree, pull, left -> left.rebasing()
                         ? Option.of(CliRebase.ABORT)
                         : Option.when(left.conflicted(), CliMerge.ABORT)));

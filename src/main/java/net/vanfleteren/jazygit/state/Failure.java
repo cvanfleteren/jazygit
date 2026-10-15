@@ -22,6 +22,13 @@ public sealed interface Failure {
     List<ExecutedCommand> commands();
 
     /**
+     * Whether gh did not run as the account chosen for the repository could not be had.
+     */
+    default boolean accountUnavailable() {
+        return this instanceof GitHub(GhError.TokenUnavailable unavailable, var commands);
+    }
+
+    /**
      * Git failed.
      *
      * @param cleanupFailed why cleaning up after the failure failed too, if it did

@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -73,9 +74,10 @@ public final class CliBranch {
      * pushed to. With both, the remote one goes first, so a failure leaves the local branch in place.
      */
     public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> delete(Path workTree, Branch.Name name,
-                                                                          RemoteBranch remote, DeleteScope scope) {
+                                                                          RemoteBranch remote, DeleteScope scope,
+                                                                          Map<String, String> credentials) {
         return GitFailure.sequence(
-                () -> scope.remote() ? deleteRemote(workTree, remote) : GitFailure.nothing(),
+                () -> scope.remote() ? deleteRemote(workTree, remote, credentials) : GitFailure.nothing(),
                 () -> scope.local() ? deleteLocal(workTree, name) : GitFailure.nothing());
     }
 
@@ -89,8 +91,9 @@ public final class CliBranch {
     /**
      * Runs {@code git push <remote> --delete <branch>} in {@code workTree}.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemote(Path workTree, RemoteBranch remote) {
-        return CliRemote.run(workTree, git("push", remote.remote(), "--delete", remote.branch().value()));
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemote(Path workTree, RemoteBranch remote,
+                                                                                Map<String, String> credentials) {
+        return CliRemote.run(workTree, git("push", remote.remote(), "--delete", remote.branch().value()), credentials);
     }
 
     static Either<UnexpectedOutput, List<RemoteRef>> parseRemotes(String raw) {

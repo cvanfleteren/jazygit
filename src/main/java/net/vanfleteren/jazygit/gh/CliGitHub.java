@@ -99,10 +99,11 @@ public final class CliGitHub implements GitHub {
     private final GhProcess process;
 
     /**
-     * GitHub for the repository in {@code workTree}, through the gh at {@code executable}.
+     * GitHub for the repository in {@code workTree}, through the gh at {@code executable}, as the account of
+     * {@code token}.
      */
-    public CliGitHub(Path workTree, String executable) {
-        this.process = new GhProcess(workTree, executable);
+    public CliGitHub(Path workTree, String executable, GhToken token) {
+        this.process = new GhProcess(workTree, executable, token);
     }
 
     @Override

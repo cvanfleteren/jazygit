@@ -23,8 +23,14 @@ public final class PullRequestsUpdate {
             case PullRequestsMsg.Loaded(List<PullRequest> pullRequests) -> Next.of(read(model)
                     .withPullRequests(Option.of(byHeadBranch(pullRequests))).withPullRequestsFailure(Option.none()));
             // gh can be missing, logged out or offline, or the remote not on GitHub: then no pull requests show.
-            // That is no reason to bother the user until they ask for a pull request.
-            case PullRequestsMsg.LoadFailed(var failure) -> Next.of(read(model).withPullRequestsFailure(Option.of(failure)));
+            // That is no reason to bother the user until they ask for a pull request. The account they chose for
+            // the repository not being available is, once: gh is not run as another one.
+            case PullRequestsMsg.LoadFailed(var failure) -> {
+                Model failed = read(model).withPullRequestsFailure(Option.of(failure));
+                yield Next.of(failure.accountUnavailable() && !model.pullRequestsFailure().contains(failure)
+                        ? failed.fail(new AppError.PullRequestsUnavailable(failure))
+                        : failed);
+            }
         };
     }
 

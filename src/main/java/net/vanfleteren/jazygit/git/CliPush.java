@@ -4,6 +4,7 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.PushMode;
@@ -26,11 +27,12 @@ public final class CliPush {
      * Pushes {@code name} to {@code upstream}, the branch it tracks.
      */
     public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Path workTree, Branch.Name name,
-                                                                        RemoteBranch upstream, PushMode mode) {
+                                                                        RemoteBranch upstream, PushMode mode,
+                                                                        Map<String, String> credentials) {
         return CliRemote.run(workTree, git(List.of("push")
                 .appendAll(mode == PushMode.FORCE_WITH_LEASE ? List.of("--force-with-lease") : List.empty())
                 .append(upstream.remote())
-                .append(refspec(name, upstream))));
+                .append(refspec(name, upstream))), credentials);
     }
 
     /**
@@ -38,8 +40,10 @@ public final class CliPush {
      * which it then tracks. Git only sets the upstream when the push succeeds.
      */
     public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(Path workTree, Branch.Name name,
-                                                                                   RemoteBranch upstream) {
-        return CliRemote.run(workTree, git("push", "--set-upstream", upstream.remote(), refspec(name, upstream)));
+                                                                                   RemoteBranch upstream,
+                                                                                   Map<String, String> credentials) {
+        return CliRemote.run(workTree, git("push", "--set-upstream", upstream.remote(), refspec(name, upstream)),
+                credentials);
     }
 
     /**
