@@ -1,11 +1,10 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -16,34 +15,11 @@ import java.util.function.Supplier;
  *
  * @param cleanupFailed why cleaning up after the failure, e.g. aborting a rebase, failed too, if it did
  */
-public record GitFailure<E extends GitError>(E error, List<ExecutedCommand> commands, Option<ProcessError> cleanupFailed) {
+public record GitFailure<E extends GitError>(E error, List<ExecutedCommand> commands,
+                                             Option<ProcessError> cleanupFailed) {
 
     public GitFailure(E error, List<ExecutedCommand> commands) {
         this(error, commands, Option.none());
-    }
-
-    /**
-     * This failure, as part of a sequence in which the {@code earlier} commands already succeeded.
-     */
-    public GitFailure<E> after(List<ExecutedCommand> earlier) {
-        return new GitFailure<>(error, earlier.appendAll(commands), cleanupFailed);
-    }
-
-    /**
-     * This failure, followed by the {@code cleanup} that was run after it: its commands are added, and when
-     * it failed too, so is why.
-     */
-    public GitFailure<E> followedBy(Either<GitFailure<ProcessError>, List<ExecutedCommand>> cleanup) {
-        return cleanup.fold(
-                failed -> new GitFailure<>(error, commands.appendAll(failed.commands()), Option.of(failed.error())),
-                done -> new GitFailure<>(error, commands.appendAll(done), cleanupFailed));
-    }
-
-    /**
-     * The same commands, failing for the reason {@code reason} makes of this error.
-     */
-    public <F extends GitError> GitFailure<F> map(Function<? super E, ? extends F> reason) {
-        return new GitFailure<>(reason.apply(error), commands, cleanupFailed);
     }
 
     /**
@@ -86,5 +62,29 @@ public record GitFailure<E extends GitError>(E error, List<ExecutedCommand> comm
             List<Supplier<Either<GitFailure<E>, List<ExecutedCommand>>>> steps) {
         return steps.foldLeft(nothing(), (done, step) -> done.flatMap(earlier ->
                 step.get().map(earlier::appendAll).mapLeft(failure -> failure.after(earlier))));
+    }
+
+    /**
+     * This failure, as part of a sequence in which the {@code earlier} commands already succeeded.
+     */
+    public GitFailure<E> after(List<ExecutedCommand> earlier) {
+        return new GitFailure<>(error, earlier.appendAll(commands), cleanupFailed);
+    }
+
+    /**
+     * This failure, followed by the {@code cleanup} that was run after it: its commands are added, and when
+     * it failed too, so is why.
+     */
+    public GitFailure<E> followedBy(Either<GitFailure<ProcessError>, List<ExecutedCommand>> cleanup) {
+        return cleanup.fold(
+                failed -> new GitFailure<>(error, commands.appendAll(failed.commands()), Option.of(failed.error())),
+                done -> new GitFailure<>(error, commands.appendAll(done), cleanupFailed));
+    }
+
+    /**
+     * The same commands, failing for the reason {@code reason} makes of this error.
+     */
+    public <F extends GitError> GitFailure<F> map(Function<? super E, ? extends F> reason) {
+        return new GitFailure<>(reason.apply(error), commands, cleanupFailed);
     }
 }

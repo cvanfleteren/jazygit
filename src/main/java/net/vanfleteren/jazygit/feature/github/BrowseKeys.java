@@ -17,8 +17,8 @@ public final class BrowseKeys {
     public static Keymap register(Keymap keys) {
         return keys
                 .add(Scopes.BRANCHES,
-                        Binding.<Branch.Name>onSelected("O", "help.branches.browse", BrowseMsg.Requested::new))
+                        Binding.onSelected("O", "help.branches.browse", BrowseMsg.Requested::new))
                 .add(Scopes.REMOTE_BRANCHES,
-                        Binding.<RemoteBranch>onSelected("O", "help.branches.browse", BrowseMsg.RemoteRequested::new));
+                        Binding.onSelected("O", "help.branches.browse", BrowseMsg.RemoteRequested::new));
     }
 }

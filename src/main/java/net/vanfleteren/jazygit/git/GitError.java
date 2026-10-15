@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.git.model.BranchRef;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 
 import java.io.IOException;
 import java.nio.file.Path;

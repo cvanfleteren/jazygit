@@ -4,21 +4,11 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.fetch.FetchUpdate;
-import net.vanfleteren.jazygit.feature.github.PullRequestCmd.ChangingCmd;
-import net.vanfleteren.jazygit.feature.github.PullRequestCmd.ClosePullRequest;
-import net.vanfleteren.jazygit.feature.github.PullRequestCmd.CreatePullRequest;
-import net.vanfleteren.jazygit.feature.github.PullRequestCmd.MergePullRequest;
-import net.vanfleteren.jazygit.feature.github.PullRequestCmd.LoadPullRequestDetails;
-import net.vanfleteren.jazygit.feature.github.PullRequestCmd.OpenPullRequest;
+import net.vanfleteren.jazygit.feature.github.PullRequestCmd.*;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.state.AppError;
-import net.vanfleteren.jazygit.state.Failure;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.OperationUpdate;
-import net.vanfleteren.jazygit.state.PullRequestsUpdate;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -48,8 +38,10 @@ public final class PullRequestUpdate {
                 // changed the remote too, which a fetch brings in.
                 yield FetchUpdate.requested(PullRequestsUpdate.loadAnyway(new Next(shown, done.cmds())));
             }
-            case PullRequestMsg.DetailsLoaded(int number, var details) -> Next.of(shown(model, number, Either.right(details)));
-            case PullRequestMsg.DetailsFailed(int number, var failure) -> Next.of(shown(model, number, Either.left(failure)));
+            case PullRequestMsg.DetailsLoaded(int number, var details) ->
+                    Next.of(shown(model, number, Either.right(details)));
+            case PullRequestMsg.DetailsFailed(int number, var failure) ->
+                    Next.of(shown(model, number, Either.left(failure)));
             // The dialog stays open, so the pull request can still be merged or closed from it.
             case PullRequestMsg.OpenConfirmed() -> model.popup(PullRequestPopup.class)
                     .map(popup -> Update.start(model.clearError(),
@@ -97,8 +89,8 @@ public final class PullRequestUpdate {
                         // Without the pull requests it is unknown whether there is one to open.
                         .getOrElse(() -> model.pullRequestsFailure().isDefined() || model.pullRequests().isEmpty()
                                 ? Next.of(model.fail(model.pullRequestsFailure()
-                                        .<AppError>map(AppError.PullRequestsUnavailable::new)
-                                        .getOrElse(AppError.PullRequestsNotRead::new)))
+                                .<AppError>map(AppError.PullRequestsUnavailable::new)
+                                .getOrElse(AppError.PullRequestsNotRead::new)))
                                 : known.remoteUpstream().isEmpty() || known.ahead() > 0
                                 ? Next.of(model.fail(new AppError.NotPushed(branch)))
                                 : Update.ask(model, new BasePopup(branch, bases(model, branch)))))

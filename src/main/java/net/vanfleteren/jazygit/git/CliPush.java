@@ -1,14 +1,13 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import java.nio.file.Path;
 
@@ -40,8 +39,8 @@ final class CliPush {
      * which it then tracks. Git only sets the upstream when the push succeeds.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(Path workTree, Branch.Name name,
-                                                                                   RemoteBranch upstream,
-                                                                                   Map<String, String> credentials) {
+                                                                                       RemoteBranch upstream,
+                                                                                       Map<String, String> credentials) {
         return CliRemote.run(workTree, git("push", "--set-upstream", upstream.remote(), refspec(name, upstream)),
                 credentials);
     }

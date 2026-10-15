@@ -14,7 +14,8 @@ public final class BranchChecksUpdate {
 
     public static Next update(Model model, BranchChecksMsg msg) {
         return switch (msg) {
-            case BranchChecksMsg.Loaded(GitHubChecks checks) -> Next.of(read(model).withBranchChecks(Option.of(checks)));
+            case BranchChecksMsg.Loaded(GitHubChecks checks) ->
+                    Next.of(read(model).withBranchChecks(Option.of(checks)));
             // Like for the pull requests, a failure is no reason to bother the user: the checks read last stay.
             case BranchChecksMsg.LoadFailed(var failure) -> Next.of(read(model));
         };

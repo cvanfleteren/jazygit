@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.feature.commit;
 
-import net.vanfleteren.jazygit.process.ExecutedCommand;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;

@@ -3,10 +3,11 @@ package net.vanfleteren.jazygit.cli;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
-import java.io.PrintWriter;
 import picocli.CommandLine;
 import picocli.CommandLine.ParameterException;
 import picocli.CommandLine.UnmatchedArgumentException;
+
+import java.io.PrintWriter;
 
 /**
  * The command line jazygit is started with.
@@ -14,14 +15,6 @@ import picocli.CommandLine.UnmatchedArgumentException;
 public final class StartupCli {
 
     private StartupCli() {
-    }
-
-    /**
-     * jazygit ends right away, after printing the help, the version or what was wrong with the arguments.
-     *
-     * @param code what the process exits with
-     */
-    public record Exit(int code) {
     }
 
     /**
@@ -64,5 +57,13 @@ public final class StartupCli {
 
     private static StartupOptions options(StartupArgs args) {
         return new StartupOptions(Option.ofOptional(args.path()), Option.ofOptional(args.theme()));
+    }
+
+    /**
+     * jazygit ends right away, after printing the help, the version or what was wrong with the arguments.
+     *
+     * @param code what the process exits with
+     */
+    public record Exit(int code) {
     }
 }

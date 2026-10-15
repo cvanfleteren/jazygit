@@ -1,12 +1,12 @@
 package net.vanfleteren.jazygit.feature.stash;
 
-import io.vavr.control.Option;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.stash.StashCmd.Stash;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
  * Stashing the changes, and unstashing them again.

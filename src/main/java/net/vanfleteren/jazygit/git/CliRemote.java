@@ -1,7 +1,5 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-
 import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
@@ -9,6 +7,7 @@ import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import java.nio.file.Path;
 import java.time.Duration;
@@ -128,7 +127,7 @@ final class CliRemote {
      * {@code core.sshCommand}. Only looked up, so not logged.
      */
     private static Either<GitFailure<ProcessError>, Option<String>> configuredSsh(Path workTree,
-                                                                                Option<String> environment) {
+                                                                                  Option<String> environment) {
         Option<String> set = environment.filter(command -> !command.isBlank());
         // git config --get exits with 1, saying nothing, when the key is not set.
         return set.isDefined()

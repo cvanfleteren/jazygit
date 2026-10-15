@@ -1,14 +1,13 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import java.nio.file.Path;
 
@@ -32,8 +31,8 @@ final class CliFetch {
      * @param credentials environment variables that tell the credential helper which account to use
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(Path workTree, String remote,
-                                                                     Option<String> environment,
-                                                                     Map<String, String> credentials) {
+                                                                         Option<String> environment,
+                                                                         Map<String, String> credentials) {
         return CliRemote.toRemote(workTree, git("fetch", "--quiet", "--prune", remote), environment, credentials)
                 .flatMap(fetch -> GitProcess.log(workTree, fetch));
     }

@@ -1,13 +1,13 @@
 package net.vanfleteren.jazygit.feature.stash;
 
-import net.vanfleteren.jazygit.process.ExecutedCommand;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
-import net.vanfleteren.jazygit.state.Operation;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.GitOperationCmd;
+import net.vanfleteren.jazygit.state.Operation;
 
 /**
  * Commands that create, apply and delete stashes.

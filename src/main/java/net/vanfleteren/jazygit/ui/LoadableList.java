@@ -1,12 +1,10 @@
 package net.vanfleteren.jazygit.ui;
 
-import static dev.tamboui.toolkit.Toolkit.*;
-
+import dev.tamboui.text.Line;
+import dev.tamboui.toolkit.Toolkit;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.elements.Panel;
-import dev.tamboui.text.Line;
-import dev.tamboui.toolkit.Toolkit;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.widgets.common.ScrollBarPolicy;
 import io.vavr.collection.List;
@@ -16,6 +14,8 @@ import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
 
 import java.util.function.Function;
+
+import static dev.tamboui.toolkit.Toolkit.*;
 
 /**
  * A focusable list showing a {@link Loadable} value. The list widget keeps its own selection, so
@@ -37,87 +37,6 @@ final class LoadableList<T> {
     private Option<Integer> count = Option.none();
     private Option<String> empty = Option.none();
     private boolean focused;
-
-    /**
-     * A piece of a row, in a colour of its own when it has one.
-     */
-    record Seg(String text, Option<String> cssClass) {
-
-        static Seg of(String text) {
-            return new Seg(text, Option.none());
-        }
-
-        static Seg styled(String text, String cssClass) {
-            return new Seg(text, Option.of(cssClass));
-        }
-    }
-
-    /**
-     * A row of the list: consecutive pieces, each with its own colour.
-     */
-    record Row(List<Seg> segs, Option<String> detail) {
-
-        Row(List<Seg> segs) {
-            this(segs, Option.none());
-        }
-
-        static Row of(String text) {
-            return new Row(List.of(Seg.of(text)));
-        }
-
-        static Row of(Seg... segs) {
-            return new Row(List.of(segs));
-        }
-
-        /**
-         * This row with a dimmed line below it, still one item of the list.
-         */
-        Row withDetail(String line) {
-            return new Row(segs, Option.of(line));
-        }
-
-        String text() {
-            return segs.map(Seg::text).mkString();
-        }
-
-        StyledElement<?> element() {
-            StyledElement<?> first = firstLine();
-            return detail.<StyledElement<?>>map(line -> column(first, Toolkit.text(line).addClass(Theme.Classes.DIM)))
-                    .getOrElse(first);
-        }
-
-        private StyledElement<?> firstLine() {
-            List<StyledElement<?>> pieces = segs.map(seg -> seg.cssClass()
-                    .<StyledElement<?>>map(cssClass -> Toolkit.text(seg.text()).addClass(cssClass))
-                    .getOrElse(() -> Toolkit.text(seg.text())));
-            return pieces.size() == 1 ? pieces.head() : row(pieces.toJavaArray(StyledElement[]::new));
-        }
-    }
-
-    /**
-     * Where the selection goes when the loaded value changes.
-     */
-    @FunctionalInterface
-    interface Reselect<T> {
-
-        /**
-         * @param selected the index selected in {@code previous}
-         * @return the index to select in {@code next}
-         */
-        int apply(T previous, T next, int selected);
-
-        /**
-         * The selection follows its item, as {@code key} identifies it, when items are added or removed before
-         * it; when it is gone, the selection stays where it was.
-         */
-        static <E, K> Reselect<List<E>> following(Function<E, K> key) {
-            return (previous, next, selected) -> previous.lift().apply(selected)
-                    .map(key)
-                    .map(item -> next.indexWhere(candidate -> key.apply(candidate).equals(item)))
-                    .filter(index -> index >= 0)
-                    .getOrElse(selected);
-        }
-    }
 
     LoadableList(String title, String id, Function<T, List<Row>> items, Theme.Highlights highlights) {
         this(title, id, items, (previous, next, selected) -> selected, highlights);
@@ -227,5 +146,86 @@ final class LoadableList<T> {
      */
     void onKey(Function<KeyEvent, Option<Runnable>> action) {
         list.onKeyEvent(PaneKeys.whileFocused(this::focused, action));
+    }
+
+    /**
+     * Where the selection goes when the loaded value changes.
+     */
+    @FunctionalInterface
+    interface Reselect<T> {
+
+        /**
+         * The selection follows its item, as {@code key} identifies it, when items are added or removed before
+         * it; when it is gone, the selection stays where it was.
+         */
+        static <E, K> Reselect<List<E>> following(Function<E, K> key) {
+            return (previous, next, selected) -> previous.lift().apply(selected)
+                    .map(key)
+                    .map(item -> next.indexWhere(candidate -> key.apply(candidate).equals(item)))
+                    .filter(index -> index >= 0)
+                    .getOrElse(selected);
+        }
+
+        /**
+         * @param selected the index selected in {@code previous}
+         * @return the index to select in {@code next}
+         */
+        int apply(T previous, T next, int selected);
+    }
+
+    /**
+     * A piece of a row, in a colour of its own when it has one.
+     */
+    record Seg(String text, Option<String> cssClass) {
+
+        static Seg of(String text) {
+            return new Seg(text, Option.none());
+        }
+
+        static Seg styled(String text, String cssClass) {
+            return new Seg(text, Option.of(cssClass));
+        }
+    }
+
+    /**
+     * A row of the list: consecutive pieces, each with its own colour.
+     */
+    record Row(List<Seg> segs, Option<String> detail) {
+
+        Row(List<Seg> segs) {
+            this(segs, Option.none());
+        }
+
+        static Row of(String text) {
+            return new Row(List.of(Seg.of(text)));
+        }
+
+        static Row of(Seg... segs) {
+            return new Row(List.of(segs));
+        }
+
+        /**
+         * This row with a dimmed line below it, still one item of the list.
+         */
+        Row withDetail(String line) {
+            return new Row(segs, Option.of(line));
+        }
+
+        String text() {
+            return segs.map(Seg::text).mkString();
+        }
+
+        StyledElement<?> element() {
+            StyledElement<?> first = firstLine();
+            return detail.<StyledElement<?>>map(line -> column(first, Toolkit.text(line).addClass(Theme.Classes.DIM)))
+                    .getOrElse(first);
+        }
+
+        private StyledElement<?> firstLine() {
+            List<StyledElement<?>> pieces = segs.map(seg -> seg.cssClass()
+                    .<StyledElement<?>>map(cssClass -> Toolkit.text(seg.text()).addClass(cssClass))
+                    .getOrElse(() -> Toolkit.text(seg.text())));
+            return pieces.size() == 1 ? pieces.head() : row(pieces.toJavaArray(StyledElement[]::new));
+        }
     }
 }

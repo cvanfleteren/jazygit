@@ -1,7 +1,5 @@
 package net.vanfleteren.jazygit.ui.widgets;
 
-import static dev.tamboui.toolkit.Toolkit.*;
-
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.event.EventResult;
@@ -21,6 +19,9 @@ import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import static dev.tamboui.toolkit.Toolkit.list;
+import static dev.tamboui.toolkit.Toolkit.text;
+
 /**
  * A selectable list of options that ends in a cancel option, for inside a popup. An option is chosen with its
  * letter, or with the arrow keys and Enter; Escape cancels. An option that does not apply is struck through
@@ -32,31 +33,6 @@ import java.util.function.Supplier;
 public final class ChoiceList<P extends Popup> {
 
     private static final char CANCEL_KEY = 'c';
-
-    /**
-     * An option as it is shown: its text, and whether it applies.
-     */
-    private record Row(String label, boolean enabled) {
-    }
-
-    /**
-     * A line of the list: an option, or the heading of a group of them, or the blank line before one.
-     */
-    private sealed interface Line {
-    }
-
-    /**
-     * @param index the index of the option among the choices
-     */
-    private record OptionLine(int index) implements Line {
-    }
-
-    private record Heading(String text) implements Line {
-    }
-
-    private record Blank() implements Line {
-    }
-
     private final List<Choice<P>> choices;
     private final List<Line> lines;
     private final Consumer<Msg> dispatch;
@@ -221,5 +197,29 @@ public final class ChoiceList<P extends Popup> {
             list.selected(firstOption());
             dispatch.accept(choice.msg().get());
         }
+    }
+
+    /**
+     * A line of the list: an option, or the heading of a group of them, or the blank line before one.
+     */
+    private sealed interface Line {
+    }
+
+    /**
+     * An option as it is shown: its text, and whether it applies.
+     */
+    private record Row(String label, boolean enabled) {
+    }
+
+    /**
+     * @param index the index of the option among the choices
+     */
+    private record OptionLine(int index) implements Line {
+    }
+
+    private record Heading(String text) implements Line {
+    }
+
+    private record Blank() implements Line {
     }
 }

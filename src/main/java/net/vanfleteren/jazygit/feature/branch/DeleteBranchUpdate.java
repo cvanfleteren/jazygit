@@ -1,18 +1,18 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.state.Update;
-import net.vanfleteren.jazygit.git.model.DeleteScope;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.DeleteBranch;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.DeleteRemoteBranch;
-import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Chosen;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Requested;
-import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.DeleteScope;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**

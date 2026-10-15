@@ -11,13 +11,17 @@ import java.util.function.Function;
  */
 public final class SettingsPaths {
 
+    /**
+     * Names the directory of the settings file, on every OS.
+     */
+    static final String OVERRIDE = "JAZYGIT_CONFIG_DIR";
+    /**
+     * Names the directory of the state file, on every OS.
+     */
+    static final String STATE_OVERRIDE = "JAZYGIT_STATE_DIR";
     private static final String APP = "jazygit";
     private static final String FILE = "config.toml";
     private static final String STATE_FILE = "state.toml";
-    /** Names the directory of the settings file, on every OS. */
-    static final String OVERRIDE = "JAZYGIT_CONFIG_DIR";
-    /** Names the directory of the state file, on every OS. */
-    static final String STATE_OVERRIDE = "JAZYGIT_STATE_DIR";
 
     private SettingsPaths() {
     }

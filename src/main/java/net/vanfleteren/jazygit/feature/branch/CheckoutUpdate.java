@@ -1,22 +1,17 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.state.Update;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.Checkout;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.CheckoutRemote;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.CheckoutWithStash;
-import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.CheckedOut;
-import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.NeedsStash;
-import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.RemoteRequested;
-import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.Requested;
-import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.StashCancelled;
-import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.StashConfirmed;
+import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.*;
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.OperationUpdate;
+import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**

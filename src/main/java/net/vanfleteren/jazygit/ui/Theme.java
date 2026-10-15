@@ -21,52 +21,7 @@ public final class Theme {
 
     private static final String RESOURCE_DIR = "/net/vanfleteren/jazygit/themes/";
 
-    /** CSS class names referenced from the stylesheets. */
-    public static final class Classes {
-        public static final String FOCUSED = "focused";
-        public static final String BOLD = "bold";
-        public static final String DIM = "dim";
-        public static final String ERROR = "error";
-        public static final String DISABLED = "disabled";
-        public static final String STAGED = "staged";
-        public static final String UNSTAGED = "unstaged";
-        public static final String SPINNER = "spinner";
-        public static final String AHEAD = "ahead";
-        public static final String BEHIND = "behind";
-        public static final String GONE = "gone";
-        public static final String PULL_REQUEST = "pull-request";
-        public static final String CHECKS_PASSED = "checks-passed";
-        public static final String CHECKS_FAILED = "checks-failed";
-        public static final String CHECKS_RUNNING = "checks-running";
-        public static final String REVIEW_APPROVED = "review-approved";
-        public static final String REVIEW_CHANGES = "review-changes";
-        public static final String DIFF_HEADER = "diff-header";
-        public static final String DIFF_ADDED = "diff-added";
-        public static final String DIFF_REMOVED = "diff-removed";
-        public static final String DIFF_HUNK = "diff-hunk";
-        public static final String CURRENT_BRANCH = "current-branch";
-        public static final String SHA = "sha";
-        public static final String TAG = "tag";
-        /** The highlighted row of the left pane that is in use. */
-        public static final String SELECTION = "selection";
-        /** The highlighted row of the other left panes, which the built-in themes hide. */
-        public static final String INACTIVE_SELECTION = "inactive-selection";
-        /** The colour of plain text on a highlighted row, when a theme has one. */
-        public static final String SELECTED_TEXT = "selected-text";
-        /** The colour of plain text behind an open popup. */
-        public static final String BACKDROP = "backdrop";
-
-        private Classes() {
-        }
-    }
-
     private Theme() {
-    }
-
-    /**
-     * A stylesheet of a theme could not be read.
-     */
-    public record LoadFailed(String theme, Throwable cause) {
     }
 
     /**
@@ -78,7 +33,7 @@ public final class Theme {
                 .foldLeft(Either.<LoadFailed, StyleEngine>right(engine), (loaded, name) -> loaded.flatMap(e ->
                         Try.run(() -> e.loadStylesheet(name, RESOURCE_DIR + name + ".tcss"))
                                 .toEither()
-                                .<LoadFailed>mapLeft(cause -> new LoadFailed(name, cause))
+                                .mapLeft(cause -> new LoadFailed(name, cause))
                                 .map(done -> e)))
                 .peek(e -> e.setActiveStylesheet(ThemeName.DARK.id()));
     }
@@ -108,7 +63,7 @@ public final class Theme {
     public static Highlights highlights(StyleEngine engine) {
         return active -> active
                 ? Option.of(ownStyle(engine, Classes.SELECTION)).filter(style -> !style.equals(Style.EMPTY))
-                        .getOrElse(Highlights.DEFAULT.of(true))
+                .getOrElse(Highlights.DEFAULT.of(true))
                 : ownStyle(engine, Classes.INACTIVE_SELECTION);
     }
 
@@ -167,6 +122,75 @@ public final class Theme {
     }
 
     /**
+     * How text is styled that is not an element of its own: the style of a span with a CSS class.
+     */
+    @FunctionalInterface
+    public interface SpanStyles {
+
+        /**
+         * No styling, e.g. before a theme is known.
+         */
+        SpanStyles NONE = cssClass -> Style.EMPTY;
+
+        Style of(String cssClass);
+    }
+
+    /**
+     * CSS class names referenced from the stylesheets.
+     */
+    public static final class Classes {
+        public static final String FOCUSED = "focused";
+        public static final String BOLD = "bold";
+        public static final String DIM = "dim";
+        public static final String ERROR = "error";
+        public static final String DISABLED = "disabled";
+        public static final String STAGED = "staged";
+        public static final String UNSTAGED = "unstaged";
+        public static final String SPINNER = "spinner";
+        public static final String AHEAD = "ahead";
+        public static final String BEHIND = "behind";
+        public static final String GONE = "gone";
+        public static final String PULL_REQUEST = "pull-request";
+        public static final String CHECKS_PASSED = "checks-passed";
+        public static final String CHECKS_FAILED = "checks-failed";
+        public static final String CHECKS_RUNNING = "checks-running";
+        public static final String REVIEW_APPROVED = "review-approved";
+        public static final String REVIEW_CHANGES = "review-changes";
+        public static final String DIFF_HEADER = "diff-header";
+        public static final String DIFF_ADDED = "diff-added";
+        public static final String DIFF_REMOVED = "diff-removed";
+        public static final String DIFF_HUNK = "diff-hunk";
+        public static final String CURRENT_BRANCH = "current-branch";
+        public static final String SHA = "sha";
+        public static final String TAG = "tag";
+        /**
+         * The highlighted row of the left pane that is in use.
+         */
+        public static final String SELECTION = "selection";
+        /**
+         * The highlighted row of the other left panes, which the built-in themes hide.
+         */
+        public static final String INACTIVE_SELECTION = "inactive-selection";
+        /**
+         * The colour of plain text on a highlighted row, when a theme has one.
+         */
+        public static final String SELECTED_TEXT = "selected-text";
+        /**
+         * The colour of plain text behind an open popup.
+         */
+        public static final String BACKDROP = "backdrop";
+
+        private Classes() {
+        }
+    }
+
+    /**
+     * A stylesheet of a theme could not be read.
+     */
+    public record LoadFailed(String theme, Throwable cause) {
+    }
+
+    /**
      * How what is behind an open popup is dimmed: every cell gets the terminal's dim attribute, and plain text
      * gets {@code plain} on top, as terminals do not always dim their default colour.
      *
@@ -214,20 +238,6 @@ public final class Theme {
             boolean isPlain = Option.ofOptional(style.fg()).equals(plainFg);
             return highlighted && isPlain ? fg.map(style::fg).getOrElse(style) : style;
         }
-    }
-
-    /**
-     * How text is styled that is not an element of its own: the style of a span with a CSS class.
-     */
-    @FunctionalInterface
-    public interface SpanStyles {
-
-        /**
-         * No styling, e.g. before a theme is known.
-         */
-        SpanStyles NONE = cssClass -> Style.EMPTY;
-
-        Style of(String cssClass);
     }
 
     private record Node(String styleType, Set<String> cssClasses) implements Styleable {

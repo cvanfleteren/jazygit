@@ -1,10 +1,6 @@
 package net.vanfleteren.jazygit.keys;
 
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.git.model.FileTree;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.git.model.Stash;
+import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.keys.Keymap.Scope;
 
 /**
@@ -12,16 +8,26 @@ import net.vanfleteren.jazygit.keys.Keymap.Scope;
  */
 public final class Scopes {
 
-    /** The selected node of the file tree. */
+    /**
+     * The selected node of the file tree.
+     */
     public static final Scope<FileTree> FILES = new Scope<>("files", "panel.files.title");
-    /** The name of the selected branch. */
+    /**
+     * The name of the selected branch.
+     */
     public static final Scope<Branch.Name> BRANCHES = new Scope<>("branches", "panel.branches.title");
-    /** The selected remote-tracking branch. */
+    /**
+     * The selected remote-tracking branch.
+     */
     public static final Scope<RemoteBranch> REMOTE_BRANCHES = new Scope<>("remoteBranches",
             "panel.remoteBranches.title");
-    /** The selected commit. */
+    /**
+     * The selected commit.
+     */
     public static final Scope<Commit> COMMITS = new Scope<>("commits", "panel.commits.title");
-    /** The selected stash. */
+    /**
+     * The selected stash.
+     */
     public static final Scope<Stash> STASH = new Scope<>("stash", "panel.stash.title");
 
     private Scopes() {

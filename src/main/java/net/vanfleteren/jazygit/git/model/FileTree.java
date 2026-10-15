@@ -1,49 +1,13 @@
 package net.vanfleteren.jazygit.git.model;
 
-import io.vavr.control.Option;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 
 /**
  * Changed files arranged as a directory tree. A directory whose only child is another directory is
  * merged with it, so a chain like {@code src/main/java} shows as a single node.
  */
 public sealed interface FileTree {
-
-    /**
-     * The label of this node: the file name, or the (possibly merged) directory names joined by {@code /}.
-     */
-    String name();
-
-    /**
-     * @param path the full repository-relative path of the directory
-     */
-    record Dir(String name, String path, List<FileTree> children) implements FileTree {
-    }
-
-    record File(String name, FileEntry entry) implements FileTree {
-    }
-
-    /**
-     * All files in this node: the file itself, or every file below a directory.
-     */
-    default List<FileEntry> entries() {
-        return switch (this) {
-            case File file -> List.of(file.entry());
-            case Dir dir -> dir.children().flatMap(FileTree::entries);
-        };
-    }
-
-    /**
-     * The files shown in the diff panel: the file itself, or only the files directly inside a directory,
-     * not those in its subdirectories.
-     */
-    default List<FileEntry> directEntries() {
-        return switch (this) {
-            case File file -> List.of(file.entry());
-            case Dir dir -> dir.children()
-                    .flatMap(child -> child instanceof File file ? List.of(file.entry()) : List.<FileEntry>empty());
-        };
-    }
 
     /**
      * The roots of the tree for the given files: directories first, then files, each sorted by name.
@@ -84,5 +48,41 @@ public sealed interface FileTree {
                 .flatMap(only -> only instanceof Dir child ? Option.of(child) : Option.none())
                 .<FileTree>map(child -> new Dir(dir.name() + "/" + child.name(), child.path(), child.children()))
                 .getOrElse(dir);
+    }
+
+    /**
+     * The label of this node: the file name, or the (possibly merged) directory names joined by {@code /}.
+     */
+    String name();
+
+    /**
+     * All files in this node: the file itself, or every file below a directory.
+     */
+    default List<FileEntry> entries() {
+        return switch (this) {
+            case File file -> List.of(file.entry());
+            case Dir dir -> dir.children().flatMap(FileTree::entries);
+        };
+    }
+
+    /**
+     * The files shown in the diff panel: the file itself, or only the files directly inside a directory,
+     * not those in its subdirectories.
+     */
+    default List<FileEntry> directEntries() {
+        return switch (this) {
+            case File file -> List.of(file.entry());
+            case Dir dir -> dir.children()
+                    .flatMap(child -> child instanceof File file ? List.of(file.entry()) : List.empty());
+        };
+    }
+
+    /**
+     * @param path the full repository-relative path of the directory
+     */
+    record Dir(String name, String path, List<FileTree> children) implements FileTree {
+    }
+
+    record File(String name, FileEntry entry) implements FileTree {
     }
 }

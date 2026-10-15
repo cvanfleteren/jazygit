@@ -8,15 +8,9 @@ import net.vanfleteren.jazygit.git.GitError.LogError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.GitError.UnknownBranch;
-import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.git.model.CommitGraph;
-import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.git.model.Tag;
+import net.vanfleteren.jazygit.git.model.*;
 
 import java.nio.file.Path;
-
-import static net.vanfleteren.jazygit.git.GitCommand.git;
 
 /**
  * Reads commits through {@code git rev-parse} and {@code git log}.
@@ -59,7 +53,7 @@ final class CliLog {
      */
     static Either<LogError, List<Commit>> log(Path workTree, BranchRef branch) {
         return Either.<LogError, Option<Sha>>narrow(resolve(workTree, Refs.of(branch)).mapLeft(GitFailure::error))
-                .flatMap(tip -> tip.<LogError>toEither(() -> new UnknownBranch(branch)))
+                .flatMap(tip -> tip.toEither(() -> new UnknownBranch(branch)))
                 .flatMap(tip -> Either.narrow(log(workTree, tip)));
     }
 

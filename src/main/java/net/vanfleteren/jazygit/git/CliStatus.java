@@ -7,19 +7,12 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.ChangeType;
-import net.vanfleteren.jazygit.git.model.Conflict;
-import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
-import net.vanfleteren.jazygit.git.model.Sha;
 
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.function.Function;
-
-import static net.vanfleteren.jazygit.git.GitCommand.git;
 
 /**
  * Reads the working tree status through the {@code git status} command line tool.
@@ -64,34 +57,6 @@ final class CliStatus {
                 .getOrElse(() -> new Head.OnBranch(new Branch.Name(branch), commit));
     }
 
-    /**
-     * What was parsed so far.
-     *
-     * @param origin for the rename or copy just parsed, its entry given its original path, which is the
-     *               next field
-     */
-    private record Parsed(Option<String> head, Option<String> oid, Map<String, FileEntry> byPath,
-                          Option<Function<String, FileEntry>> origin) {
-
-        static final Parsed NOTHING = new Parsed(Option.none(), Option.none(), TreeMap.empty(), Option.none());
-
-        Parsed with(FileEntry entry) {
-            return new Parsed(head, oid, byPath.put(entry.path(), entry), Option.none());
-        }
-
-        Parsed expectingOrigin(Function<String, FileEntry> entry) {
-            return new Parsed(head, oid, byPath, Option.of(entry));
-        }
-
-        Parsed withHead(String branch) {
-            return new Parsed(Option.of(branch), oid, byPath, origin);
-        }
-
-        Parsed withOid(String commit) {
-            return new Parsed(head, Option.of(commit), byPath, origin);
-        }
-    }
-
     private static Either<UnexpectedOutput, Parsed> next(Parsed parsed, String field) {
         return parsed.origin()
                 .map(entry -> Either.<UnexpectedOutput, Parsed>right(parsed.with(entry.apply(field))))
@@ -127,12 +92,6 @@ final class CliStatus {
                 .getOrElse(parsed);
     }
 
-    /**
-     * The two status letters of an entry: what is staged, and what is not.
-     */
-    private record Xy(char staged, char unstaged) {
-    }
-
     private static Either<UnexpectedOutput, Xy> xy(String field) {
         return field.length() >= 4 && field.charAt(1) == ' '
                 ? Either.right(new Xy(field.charAt(2), field.charAt(3)))
@@ -154,5 +113,39 @@ final class CliStatus {
      */
     private static Either<UnexpectedOutput, String> pathAfter(String field, int fields) {
         return GitOutput.fields(field, " ", fields + 1).map(List::last);
+    }
+
+    /**
+     * What was parsed so far.
+     *
+     * @param origin for the rename or copy just parsed, its entry given its original path, which is the
+     *               next field
+     */
+    private record Parsed(Option<String> head, Option<String> oid, Map<String, FileEntry> byPath,
+                          Option<Function<String, FileEntry>> origin) {
+
+        static final Parsed NOTHING = new Parsed(Option.none(), Option.none(), TreeMap.empty(), Option.none());
+
+        Parsed with(FileEntry entry) {
+            return new Parsed(head, oid, byPath.put(entry.path(), entry), Option.none());
+        }
+
+        Parsed expectingOrigin(Function<String, FileEntry> entry) {
+            return new Parsed(head, oid, byPath, Option.of(entry));
+        }
+
+        Parsed withHead(String branch) {
+            return new Parsed(Option.of(branch), oid, byPath, origin);
+        }
+
+        Parsed withOid(String commit) {
+            return new Parsed(head, Option.of(commit), byPath, origin);
+        }
+    }
+
+    /**
+     * The two status letters of an entry: what is staged, and what is not.
+     */
+    private record Xy(char staged, char unstaged) {
     }
 }

@@ -2,25 +2,12 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.git.model.RemoteRef;
-import net.vanfleteren.jazygit.git.model.RepoStatus;
-import net.vanfleteren.jazygit.git.model.DiffText;
-import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
 import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
-import net.vanfleteren.jazygit.state.LoadMsg.BranchLogLoaded;
-import net.vanfleteren.jazygit.state.LoadMsg.BranchesLoaded;
-import net.vanfleteren.jazygit.state.LoadMsg.CommitDetailLoaded;
-import net.vanfleteren.jazygit.state.LoadMsg.CommitsLoaded;
-import net.vanfleteren.jazygit.state.LoadMsg.FileDiffLoaded;
-import net.vanfleteren.jazygit.state.LoadMsg.RemoteBranchesLoaded;
-import net.vanfleteren.jazygit.state.LoadMsg.StashesLoaded;
-import net.vanfleteren.jazygit.state.LoadMsg.StatusLoaded;
+import net.vanfleteren.jazygit.state.LoadMsg.*;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -39,7 +26,8 @@ public final class LoadUpdate {
         Model done = model.withRefreshing(model.refreshing().remove(msg.cmd()));
         return switch (msg) {
             case StatusLoaded(RepoStatus status) -> statusLoaded(model, done.withStatus(model.status().reload(status)));
-            case BranchesLoaded(var branches) -> branchesLoaded(model, done.withBranches(model.branches().reload(branches)));
+            case BranchesLoaded(var branches) ->
+                    branchesLoaded(model, done.withBranches(model.branches().reload(branches)));
             case RemoteBranchesLoaded(var branches) ->
                     remoteBranchesLoaded(model, done.withRemoteBranches(model.remoteBranches().reload(branches)));
             case StashesLoaded(var stashes) -> Next.of(done.withStashes(model.stashes().reload(stashes)));
@@ -67,14 +55,14 @@ public final class LoadUpdate {
     private static Next branchesLoaded(Model before, Model next) {
         return reloadMovedLog(next, branch -> branch instanceof BranchRef.Local(Branch.Name name)
                 ? Option.of(tip(before.branches(), name, Branch::name, Branch::tipOid)
-                        .equals(tip(next.branches(), name, Branch::name, Branch::tipOid)))
+                .equals(tip(next.branches(), name, Branch::name, Branch::tipOid)))
                 : Option.none());
     }
 
     private static Next remoteBranchesLoaded(Model before, Model next) {
         return reloadMovedLog(next, branch -> branch instanceof BranchRef.Remote(RemoteBranch remote)
                 ? Option.of(tip(before.remoteBranches(), remote, RemoteRef::branch, RemoteRef::tipOid)
-                        .equals(tip(next.remoteBranches(), remote, RemoteRef::branch, RemoteRef::tipOid)))
+                .equals(tip(next.remoteBranches(), remote, RemoteRef::branch, RemoteRef::tipOid)))
                 : Option.none());
     }
 

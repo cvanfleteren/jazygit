@@ -34,6 +34,6 @@ public final class RenameBranchUpdate {
         return unchanged
                 ? Next.of(model.withoutPopup(RenameBranchPopup.class))
                 : Update.confirm(model, RenameBranchPopup.class, popup -> Branch.Name.parse(name)
-                        .map(newName -> new RenameBranch(popup.branch(), newName)));
+                .map(newName -> new RenameBranch(popup.branch(), newName)));
     }
 }

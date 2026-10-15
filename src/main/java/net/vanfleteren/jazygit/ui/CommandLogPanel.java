@@ -1,13 +1,14 @@
 package net.vanfleteren.jazygit.ui;
 
-import static dev.tamboui.toolkit.Toolkit.*;
-
 import dev.tamboui.style.Overflow;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Panel;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
+
+import static dev.tamboui.toolkit.Toolkit.panel;
+import static dev.tamboui.toolkit.Toolkit.text;
 
 /**
  * Right-hand panel under the content panel, logging the mutating git commands that were executed, each

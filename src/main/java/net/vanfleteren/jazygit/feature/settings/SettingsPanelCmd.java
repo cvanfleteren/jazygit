@@ -2,11 +2,7 @@ package net.vanfleteren.jazygit.feature.settings;
 
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.state.Cmd;
-import net.vanfleteren.jazygit.state.Env;
-import net.vanfleteren.jazygit.state.Failure;
-import net.vanfleteren.jazygit.state.GitHubAccount;
-import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.*;
 
 /**
  * The IO of the settings.
@@ -28,10 +24,10 @@ public sealed interface SettingsPanelCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return new SettingsPanelMsg.GitHubRead(new GitHubSetup(
-                    env.gitHub().version(executable).<Failure>mapLeft(Failure.GitHub::new),
+                    env.gitHub().version(executable).mapLeft(Failure.GitHub::new),
                     GitHubAccount.host(env.git()),
                     env.git().localConfig(GitHubAccount.USER_KEY).getOrElse(Option.none()),
-                    env.gitHub().logins().<Failure>mapLeft(Failure.GitHub::new)));
+                    env.gitHub().logins().mapLeft(Failure.GitHub::new)));
         }
 
         @Override
@@ -54,7 +50,7 @@ public sealed interface SettingsPanelCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return new SettingsPanelMsg.GhExecutableChecked(executable,
-                    env.gitHub().version(executable.getOrElse("gh")).<Failure>mapLeft(Failure.GitHub::new));
+                    env.gitHub().version(executable.getOrElse("gh")).mapLeft(Failure.GitHub::new));
         }
 
         @Override
@@ -72,7 +68,7 @@ public sealed interface SettingsPanelCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return env.git().setLocalConfig(GitHubAccount.USER_KEY, user)
-                    .<Msg>map(commands -> env.repositories().switchTo(env.git().workTree())
+                    .map(commands -> env.repositories().switchTo(env.git().workTree())
                             .fold(this::failedWith, reopened -> new SettingsPanelMsg.AccountSet()))
                     .getOrElseGet(this::failedWith);
         }

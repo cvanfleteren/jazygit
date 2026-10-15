@@ -27,28 +27,11 @@ import static dev.tamboui.toolkit.Toolkit.textInput;
 public final class TextInputDialog<P extends Popup> implements PopupView {
 
     private static final int WIDTH = 50;
-
-    /**
-     * What the dialog shows and sends.
-     *
-     * @param id          the id of the input, which takes the focus while the dialog is open
-     * @param popupType   the popup that makes the dialog show
-     * @param title       the title, from the popup
-     * @param placeholder what the input shows while it is empty, if anything
-     * @param initialText the text the input starts out with, from the popup
-     * @param onConfirm   the message for Enter, given the text; it decides whether the popup closes
-     * @param onCancel    the message for Escape
-     */
-    public record Spec<P>(String id, Class<P> popupType, Function<P, String> title, Option<String> placeholder,
-                          Function<P, String> initialText, Function<String, Msg> onConfirm, Supplier<Msg> onCancel) {
-    }
-
     private final Spec<P> spec;
     private final Consumer<Msg> dispatch;
     private final TextInputState input = new TextInputState();
     // The popup the input was filled in for, so the initial text is only filled in when it opens.
     private Option<P> shownFor = Option.none();
-
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
@@ -97,5 +80,20 @@ public final class TextInputDialog<P extends Popup> implements PopupView {
 
     private void cancel() {
         dispatch.accept(spec.onCancel().get());
+    }
+
+    /**
+     * What the dialog shows and sends.
+     *
+     * @param id          the id of the input, which takes the focus while the dialog is open
+     * @param popupType   the popup that makes the dialog show
+     * @param title       the title, from the popup
+     * @param placeholder what the input shows while it is empty, if anything
+     * @param initialText the text the input starts out with, from the popup
+     * @param onConfirm   the message for Enter, given the text; it decides whether the popup closes
+     * @param onCancel    the message for Escape
+     */
+    public record Spec<P>(String id, Class<P> popupType, Function<P, String> title, Option<String> placeholder,
+                          Function<P, String> initialText, Function<String, Msg> onConfirm, Supplier<Msg> onCancel) {
     }
 }

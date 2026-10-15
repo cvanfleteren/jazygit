@@ -1,11 +1,12 @@
 package net.vanfleteren.jazygit.cli;
 
-import java.nio.file.Path;
-import java.util.Optional;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
+
+import java.nio.file.Path;
+import java.util.Optional;
 
 /**
  * The arguments jazygit starts with, as picocli reads them: it answers these methods from the parsed command
@@ -15,7 +16,9 @@ import picocli.CommandLine.Parameters;
         resourceBundle = StartupArgs.BUNDLE, sortOptions = false)
 interface StartupArgs {
 
-    /** The help and error texts of the command line. */
+    /**
+     * The help and error texts of the command line.
+     */
     String BUNDLE = "net.vanfleteren.jazygit.cli";
 
     @Parameters(arity = "0..1", paramLabel = "PATH", descriptionKey = "path")

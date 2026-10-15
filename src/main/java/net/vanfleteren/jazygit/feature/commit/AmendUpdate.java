@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.commit;
 
-import io.vavr.control.Option;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.commit.AmendMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.commit.AmendMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.commit.AmendMsg.Requested;
@@ -9,8 +9,8 @@ import net.vanfleteren.jazygit.feature.commit.CommitCmd.Amend;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
  * Amending the last commit.

@@ -1,9 +1,9 @@
 package net.vanfleteren.jazygit.ui;
 
-import net.vanfleteren.jazygit.git.model.Branch;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.git.GitError;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.settings.SettingsProblem;
@@ -29,7 +29,8 @@ public final class ErrorText {
             case AppError.NoUpstream(Branch.Name branch) -> Messages.get("error.pull.noUpstream", branch.value());
             case AppError.UpstreamGone(Branch.Name branch, String upstream) ->
                     Messages.get("error.pull.upstreamGone", branch.value(), upstream);
-            case AppError.UnpushedCommits(Branch.Name branch) -> Messages.get("error.fastForward.unpushed", branch.value());
+            case AppError.UnpushedCommits(Branch.Name branch) ->
+                    Messages.get("error.fastForward.unpushed", branch.value());
             case AppError.NotPushed(Branch.Name branch) -> Messages.get("error.pullRequest.notPushed", branch.value());
             case AppError.DefaultBranch(String branch) -> Messages.get("error.deleteBranch.default", branch);
             case AppError.NotOnRemote(Branch.Name branch) -> Messages.get("error.browse.notOnRemote", branch.value());
@@ -44,8 +45,7 @@ public final class ErrorText {
                     Messages.get("error.settings.ghUnusable", executable.getOrElse("gh"), of(failure));
             case AppError.GitHubAccountNotSet(Failure failure) ->
                     Messages.get("error.settings.accountNotSet", of(failure));
-            case AppError.SettingsNotApplied(Failure failure) ->
-                    Messages.get("error.settings.notApplied", of(failure));
+            case AppError.SettingsNotApplied(Failure failure) -> Messages.get("error.settings.notApplied", of(failure));
         };
     }
 
@@ -62,9 +62,12 @@ public final class ErrorText {
 
     public static String of(SettingsProblem problem) {
         return switch (problem) {
-            case SettingsProblem.Unreadable(var file, String reason) -> Messages.get("settings.unreadable", file, reason);
-            case SettingsProblem.Invalid(var file, var keys) -> Messages.get("settings.invalid", file, keys.mkString(", "));
-            case SettingsProblem.Unwritable(var file, String reason) -> Messages.get("settings.unwritable", file, reason);
+            case SettingsProblem.Unreadable(var file, String reason) ->
+                    Messages.get("settings.unreadable", file, reason);
+            case SettingsProblem.Invalid(var file, var keys) ->
+                    Messages.get("settings.invalid", file, keys.mkString(", "));
+            case SettingsProblem.Unwritable(var file, String reason) ->
+                    Messages.get("settings.unwritable", file, reason);
         };
     }
 

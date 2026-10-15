@@ -1,20 +1,15 @@
 package net.vanfleteren.jazygit.feature.github;
 
-import net.vanfleteren.jazygit.git.model.Branch;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.state.Cmd;
-import net.vanfleteren.jazygit.state.Env;
-import net.vanfleteren.jazygit.state.Failure;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Operation;
-import net.vanfleteren.jazygit.state.OperationCmd;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.state.*;
 
 /**
  * Commands that talk to GitHub, through gh.
@@ -22,10 +17,37 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 public sealed interface PullRequestCmd extends Cmd {
 
     /**
+     * An operation that ends pull request {@code number} of {@code branch}: its branch is busy meanwhile, and
+     * once it is done the pull request is no longer listed as open.
+     */
+    sealed interface ChangingCmd extends OperationCmd {
+
+        Branch.Name branch();
+
+        int number();
+
+        @Override
+        default Option<String> subject() {
+            return Option.of(branch().value());
+        }
+
+        @Override
+        default Option<BranchRef> busyBranch() {
+            return Option.of(new BranchRef.Local(branch()));
+        }
+
+        @Override
+        default Msg succeeded(List<ExecutedCommand> commands) {
+            return new PullRequestMsg.Ended(this, commands);
+        }
+    }
+
+    /**
      * Creates a pull request from {@code branch}, as it is on its remote under the name {@code head}, into
      * {@code base}.
      */
-    record CreatePullRequest(Branch.Name branch, Branch.Name head, Branch.Name base) implements PullRequestCmd, OperationCmd {
+    record CreatePullRequest(Branch.Name branch, Branch.Name head,
+                             Branch.Name base) implements PullRequestCmd, OperationCmd {
 
         @Override
         public Operation operation() {
@@ -102,32 +124,6 @@ public sealed interface PullRequestCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return env.gitHub().closePullRequest(number).fold(this::failedWith, this::succeeded);
-        }
-    }
-
-    /**
-     * An operation that ends pull request {@code number} of {@code branch}: its branch is busy meanwhile, and
-     * once it is done the pull request is no longer listed as open.
-     */
-    sealed interface ChangingCmd extends OperationCmd {
-
-        Branch.Name branch();
-
-        int number();
-
-        @Override
-        default Option<String> subject() {
-            return Option.of(branch().value());
-        }
-
-        @Override
-        default Option<BranchRef> busyBranch() {
-            return Option.of(new BranchRef.Local(branch()));
-        }
-
-        @Override
-        default Msg succeeded(List<ExecutedCommand> commands) {
-            return new PullRequestMsg.Ended(this, commands);
         }
     }
 

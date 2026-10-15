@@ -1,13 +1,13 @@
 package net.vanfleteren.jazygit.feature.stage;
 
-import net.vanfleteren.jazygit.process.ExecutedCommand;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
-import net.vanfleteren.jazygit.state.Operation;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.GitOperationCmd;
+import net.vanfleteren.jazygit.state.Operation;
 
 /**
  * Commands that change what is staged.
@@ -40,7 +40,7 @@ public sealed interface StageCmd extends GitOperationCmd {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return GitFailure.<ProcessError>sequence(() -> git.unstageNew(added), () -> git.unstage(others));
+            return GitFailure.sequence(() -> git.unstageNew(added), () -> git.unstage(others));
         }
     }
 }

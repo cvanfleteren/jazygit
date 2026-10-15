@@ -1,18 +1,11 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-
 import io.vavr.collection.List;
 import io.vavr.control.Either;
-import net.vanfleteren.jazygit.git.GitError.CheckoutError;
-import net.vanfleteren.jazygit.git.GitError.CommandFailed;
-import net.vanfleteren.jazygit.git.GitError.LocalChanges;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
-import net.vanfleteren.jazygit.git.GitError.StashNotRestored;
-
+import net.vanfleteren.jazygit.git.GitError.*;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import java.nio.file.Path;
 
@@ -37,7 +30,7 @@ final class CliCheckout {
      * Runs {@code git checkout <branch>} in {@code workTree}.
      *
      * @return the command lines that were run, or why git refused, {@link LocalChanges} when stashing
-     *         the uncommitted changes would let the checkout go through
+     * the uncommitted changes would let the checkout go through
      */
     static Either<GitFailure<CheckoutError>, List<ExecutedCommand>> checkout(Path workTree, Branch.Name branch) {
         // A trailing "--" keeps git from treating branch names as paths.
@@ -78,7 +71,7 @@ final class CliCheckout {
      * {@code startPoint} and switches to it.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(Path workTree, Branch.Name name,
-                                                                            String startPoint) {
+                                                                                     String startPoint) {
         return GitProcess.log(workTree, git("checkout", "--quiet", "-b", name.value(), startPoint, "--"));
     }
 
@@ -87,7 +80,7 @@ final class CliCheckout {
      * at the remote-tracking branch of {@code upstream}, following it, and checks it out.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewTrackingBranch(Path workTree, Branch.Name name,
-                                                                                              RemoteBranch upstream) {
+                                                                                             RemoteBranch upstream) {
         return GitProcess.log(workTree, git("checkout", "--quiet", "--track", "-b", name.value(),
                 Refs.remote(upstream.remote(), upstream.branch()), "--"));
     }

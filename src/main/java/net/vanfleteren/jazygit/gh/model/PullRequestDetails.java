@@ -42,16 +42,10 @@ public record PullRequestDetails(int number, String title, String author, State 
     public enum Mergeable {
         MERGEABLE,
         CONFLICTING,
-        /** GitHub has not worked it out yet. */
+        /**
+         * GitHub has not worked it out yet.
+         */
         UNKNOWN
-    }
-
-    /**
-     * Someone who reviewed the pull request, or is asked to.
-     *
-     * @param login their login, or the name of a team
-     */
-    public record Reviewer(String login, ReviewerState state) {
     }
 
     /**
@@ -61,8 +55,18 @@ public record PullRequestDetails(int number, String title, String author, State 
         APPROVED,
         CHANGES_REQUESTED,
         COMMENTED,
-        /** Asked to review, and has not yet. */
+        /**
+         * Asked to review, and has not yet.
+         */
         REQUESTED
+    }
+
+    /**
+     * Someone who reviewed the pull request, or is asked to.
+     *
+     * @param login their login, or the name of a team
+     */
+    public record Reviewer(String login, ReviewerState state) {
     }
 
     /**

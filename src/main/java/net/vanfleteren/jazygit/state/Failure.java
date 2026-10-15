@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.state;
 
-import net.vanfleteren.jazygit.process.ExecutedCommand;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.GhError;
@@ -8,12 +7,21 @@ import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.SettingsProblem;
 
 /**
  * Why a {@link Cmd} failed, as data: git or gh refused, the settings could not be kept, or there is a bug.
  */
 public sealed interface Failure {
+
+    static Failure of(GitFailure<?> failure) {
+        return new Git(failure.error(), failure.commands(), failure.cleanupFailed());
+    }
+
+    static Failure of(GhFailure failure) {
+        return new GitHub(failure.error(), failure.commands());
+    }
 
     /**
      * The command lines that were executed before it failed, the failing one last; they belong in the
@@ -70,13 +78,5 @@ public sealed interface Failure {
         public List<ExecutedCommand> commands() {
             return List.empty();
         }
-    }
-
-    static Failure of(GitFailure<?> failure) {
-        return new Git(failure.error(), failure.commands(), failure.cleanupFailed());
-    }
-
-    static Failure of(GhFailure failure) {
-        return new GitHub(failure.error(), failure.commands());
     }
 }

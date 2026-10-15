@@ -1,9 +1,8 @@
 package net.vanfleteren.jazygit.feature.theme;
 
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Popup;
-
-import io.vavr.control.Option;
 
 /**
  * Asking which theme to use, while {@code current} is in use. The highlighted theme shows in its place until

@@ -3,11 +3,7 @@ package net.vanfleteren.jazygit.gh;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.gh.model.BranchChecks;
-import net.vanfleteren.jazygit.gh.model.GhLogin;
-import net.vanfleteren.jazygit.gh.model.MergeMethod;
-import net.vanfleteren.jazygit.gh.model.PullRequest;
-import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -47,15 +43,6 @@ public interface GitHub {
     Either<GhFailure, Created> createPullRequest(String head, String base);
 
     /**
-     * A pull request that was created.
-     *
-     * @param number   its number, if gh said where it is
-     * @param commands the command log
-     */
-    record Created(Option<Integer> number, List<ExecutedCommand> commands) {
-    }
-
-    /**
      * Opens pull request {@code number} in the browser.
      */
     Either<GhFailure, List<ExecutedCommand>> openPullRequest(int number);
@@ -74,4 +61,13 @@ public interface GitHub {
      * Closes pull request {@code number} without merging it.
      */
     Either<GhFailure, List<ExecutedCommand>> closePullRequest(int number);
+
+    /**
+     * A pull request that was created.
+     *
+     * @param number   its number, if gh said where it is
+     * @param commands the command log
+     */
+    record Created(Option<Integer> number, List<ExecutedCommand> commands) {
+    }
 }

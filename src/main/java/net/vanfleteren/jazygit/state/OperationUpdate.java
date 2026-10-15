@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
-import net.vanfleteren.jazygit.process.ExecutedCommand;
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -16,9 +16,11 @@ public final class OperationUpdate {
 
     public static Next update(Model model, OperationMsg msg) {
         return switch (msg) {
-            case OperationMsg.Succeeded(OperationCmd cmd, List<ExecutedCommand> commands) -> succeeded(model, cmd, commands);
-            case OperationMsg.Failed(OperationCmd cmd, Failure failure) -> Update.refresh(done(model, cmd, failure.commands())
-                    .fail(new AppError.OperationFailed(cmd.operation(), cmd.subject(), failure)));
+            case OperationMsg.Succeeded(OperationCmd cmd, List<ExecutedCommand> commands) ->
+                    succeeded(model, cmd, commands);
+            case OperationMsg.Failed(OperationCmd cmd, Failure failure) ->
+                    Update.refresh(done(model, cmd, failure.commands())
+                            .fail(new AppError.OperationFailed(cmd.operation(), cmd.subject(), failure)));
         };
     }
 

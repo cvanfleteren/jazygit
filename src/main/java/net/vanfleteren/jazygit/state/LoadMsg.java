@@ -1,16 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.git.model.RemoteRef;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.git.model.Diffs;
-import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.git.model.RepoStatus;
-import net.vanfleteren.jazygit.git.model.DiffText;
-import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.git.model.Stash;
+import net.vanfleteren.jazygit.git.model.*;
 
 /**
  * The outcome of reading from the repository.

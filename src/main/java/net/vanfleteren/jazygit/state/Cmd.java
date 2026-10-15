@@ -65,6 +65,17 @@ public interface Cmd {
     }
 
     /**
+     * Reads part of the repository state into the {@link Model}.
+     */
+    sealed interface Load extends Cmd {
+
+        @Override
+        default Msg failed(Failure failure) {
+            return new LoadMsg.Failed(this, failure);
+        }
+    }
+
+    /**
      * Keeps {@code next}, which the user changed from {@code previous}, for the next session.
      */
     record SaveSettings(Settings previous, Settings next) implements Cmd {
@@ -78,17 +89,6 @@ public interface Cmd {
         @Override
         public Msg failed(Failure failure) {
             return new SettingsMsg.NotSaved(failure);
-        }
-    }
-
-    /**
-     * Reads part of the repository state into the {@link Model}.
-     */
-    sealed interface Load extends Cmd {
-
-        @Override
-        default Msg failed(Failure failure) {
-            return new LoadMsg.Failed(this, failure);
         }
     }
 

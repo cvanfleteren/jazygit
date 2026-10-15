@@ -38,9 +38,9 @@ public final class ResetUpdate {
         boolean confirm = mode == ResetMode.HARD && !discarded.contains(0);
         return confirm
                 ? model.popup(ResetPopup.class)
-                        .map(popup -> Update.ask(model.withoutPopup(ResetPopup.class),
-                                new HardResetPopup(popup.target(), discarded)))
-                        .getOrElse(() -> Next.of(model))
+                .map(popup -> Update.ask(model.withoutPopup(ResetPopup.class),
+                        new HardResetPopup(popup.target(), discarded)))
+                .getOrElse(() -> Next.of(model))
                 : Update.confirm(model, ResetPopup.class, popup -> Option.of(new Reset(popup.target().sha(), mode)));
     }
 

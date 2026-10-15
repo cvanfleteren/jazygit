@@ -12,7 +12,9 @@ import java.nio.file.Path;
  */
 public interface RecentRepositories {
 
-    /** The repositories that are kept at most; the ones opened longest ago go first. */
+    /**
+     * The repositories that are kept at most; the ones opened longest ago go first.
+     */
     int MAX = 20;
 
     /**
@@ -36,6 +38,14 @@ public interface RecentRepositories {
     };
 
     /**
+     * {@code recent} after the repository at {@code workTree} was opened: it comes first, once, and the ones
+     * opened longest ago drop off past {@link #MAX}.
+     */
+    static List<Path> opened(List<Path> recent, Path workTree) {
+        return recent.remove(workTree).prepend(workTree).take(MAX);
+    }
+
+    /**
      * The recent repositories, the last one opened first; none when they cannot be read.
      */
     List<Path> load();
@@ -49,12 +59,4 @@ public interface RecentRepositories {
      * Drops {@code workTrees}, which are no repositories anymore, and gives the recent repositories then.
      */
     Try<List<Path>> forget(List<Path> workTrees);
-
-    /**
-     * {@code recent} after the repository at {@code workTree} was opened: it comes first, once, and the ones
-     * opened longest ago drop off past {@link #MAX}.
-     */
-    static List<Path> opened(List<Path> recent, Path workTree) {
-        return recent.remove(workTree).prepend(workTree).take(MAX);
-    }
 }

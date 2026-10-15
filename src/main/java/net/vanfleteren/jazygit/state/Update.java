@@ -6,12 +6,7 @@ import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
-import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
-import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
-import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
-import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
-import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
-import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
+import net.vanfleteren.jazygit.state.Cmd.*;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 
 import java.util.function.Function;
@@ -30,16 +25,6 @@ public final class Update {
             new Cmd.LoadRemoteBranches(), new Cmd.LoadStashes());
 
     private Update() {
-    }
-
-    /**
-     * The next model, and the commands to run for it.
-     */
-    public record Next(Model model, List<Cmd> cmds) {
-
-        public static Next of(Model model, Cmd... cmds) {
-            return new Next(model, List.of(cmds));
-        }
     }
 
     public static Next init(String repositoryName) {
@@ -145,5 +130,15 @@ public final class Update {
 
     public static List<FileEntry> files(Model model) {
         return model.status().toOption().map(RepoStatus::files).getOrElse(List.empty());
+    }
+
+    /**
+     * The next model, and the commands to run for it.
+     */
+    public record Next(Model model, List<Cmd> cmds) {
+
+        public static Next of(Model model, Cmd... cmds) {
+            return new Next(model, List.of(cmds));
+        }
     }
 }

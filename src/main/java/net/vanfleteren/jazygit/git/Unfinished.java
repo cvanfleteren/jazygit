@@ -31,13 +31,6 @@ record Unfinished(boolean merging, boolean rebasing, boolean picking, boolean co
             "CHERRY_PICK_HEAD", "REVERT_HEAD");
 
     /**
-     * Whether anything is unfinished.
-     */
-    boolean any() {
-        return merging || rebasing || picking || conflicted;
-    }
-
-    /**
      * Reads what the repository in {@code workTree} is in the middle of. Only asked, so not logged.
      */
     static Either<ProcessError, Unfinished> read(Path workTree) {
@@ -63,7 +56,7 @@ record Unfinished(boolean merging, boolean rebasing, boolean picking, boolean co
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> runOrUndo(
             Path workTree, GitCommand command, Function<Unfinished, Option<GitCommand>> undo) {
         return read(workTree)
-                .<GitFailure<ProcessError>>mapLeft(error -> new GitFailure<>(error, List.empty()))
+                .mapLeft(error -> new GitFailure<>(error, List.empty()))
                 .flatMap(before -> GitProcess.log(workTree, command)
                         .mapLeft(failure -> before.any() ? failure : uninterrupted(() -> read(workTree).fold(
                                 error -> new GitFailure<>(failure.error(), failure.commands(), Option.of(error)),
@@ -85,5 +78,12 @@ record Unfinished(boolean merging, boolean rebasing, boolean picking, boolean co
                 Thread.currentThread().interrupt();
             }
         }
+    }
+
+    /**
+     * Whether anything is unfinished.
+     */
+    boolean any() {
+        return merging || rebasing || picking || conflicted;
     }
 }

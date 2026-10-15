@@ -7,13 +7,9 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
 import net.vanfleteren.jazygit.gh.GhError.UnexpectedOutput;
-import net.vanfleteren.jazygit.gh.model.BranchChecks;
-import net.vanfleteren.jazygit.gh.model.GhLogin;
-import net.vanfleteren.jazygit.gh.model.MergeMethod;
-import net.vanfleteren.jazygit.gh.model.PullRequest;
+import net.vanfleteren.jazygit.gh.model.*;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
-import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Mergeable;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Reviewer;
@@ -117,11 +113,6 @@ public final class CliGitHub implements GitHub {
         this.unconfigured = new GhProcess(workTree, executable, GhToken.NONE);
     }
 
-    @Override
-    public Either<GhError, String> version(String executable) {
-        return new GhProcess(workTree, executable, GhToken.NONE).read(gh("--version"), CliGitHub::parseVersion);
-    }
-
     /**
      * The version in the first line {@code gh --version} prints, e.g. {@code gh version 2.102.0 (2026-09-30)}.
      */
@@ -131,12 +122,6 @@ public final class CliGitHub implements GitHub {
                 .filter(line -> line.startsWith("gh version "))
                 .map(line -> line.substring("gh version ".length()).split(" ")[0])
                 .toEither(() -> new UnexpectedOutput(raw));
-    }
-
-    @Override
-    public Either<GhError, List<GhLogin>> logins() {
-        // Exits with 0 also when an account's token does not work anymore, which the state says.
-        return unconfigured.read(gh("auth", "status", "--json", "hosts", "--jq", LOGINS_JQ), CliGitHub::parseLogins);
     }
 
     /**
@@ -153,31 +138,6 @@ public final class CliGitHub implements GitHub {
                 .map(List::ofAll);
     }
 
-    @Override
-    public Either<GhError, List<PullRequest>> pullRequests() {
-        return process.read(gh("pr", "list", "--state", "open", "--limit", LIMIT, "--json", FIELDS, "--jq", JQ),
-                CliGitHub::parse);
-    }
-
-    @Override
-    public Either<GhError, BranchChecks> branchChecks() {
-        return process.read(gh("api", "graphql", "--paginate", "-F", "owner={owner}", "-F", "name={repo}",
-                        "-f", "query=" + BRANCHES_QUERY, "--jq", BRANCHES_JQ),
-                CliGitHub::parseBranchChecks);
-    }
-
-    @Override
-    public Either<GhError, PullRequestDetails> pullRequestDetails(int number) {
-        return process.read(gh("pr", "view", String.valueOf(number), "--json", DETAIL_FIELDS, "--jq", DETAILS_JQ),
-                CliGitHub::parseDetails);
-    }
-
-    @Override
-    public Either<GhFailure, Created> createPullRequest(String head, String base) {
-        return process.run(gh("pr", "create", "--head", head, "--base", base, "--fill"))
-                .map(output -> new Created(createdNumber(output.stdout()), output.log()));
-    }
-
     /**
      * The number in the URL of the new pull request, which is the last thing {@code gh pr create} prints.
      */
@@ -186,23 +146,8 @@ public final class CliGitHub implements GitHub {
         return Option.when(url.find(), () -> Integer.parseInt(url.group(1)));
     }
 
-    @Override
-    public Either<GhFailure, List<ExecutedCommand>> openPullRequest(int number) {
-        return process.log(gh("pr", "view", String.valueOf(number), "--web"));
-    }
-
-    @Override
-    public Either<GhFailure, List<ExecutedCommand>> browse(String branch) {
-        return process.log(browseCommand(branch));
-    }
-
     static GhCommand browseCommand(String branch) {
         return gh("browse", "--branch", branch);
-    }
-
-    @Override
-    public Either<GhFailure, List<ExecutedCommand>> mergePullRequest(int number, MergeMethod method) {
-        return process.log(gh("pr", "merge", String.valueOf(number), mergeFlag(method)));
     }
 
     /**
@@ -214,11 +159,6 @@ public final class CliGitHub implements GitHub {
             case SQUASH -> "--squash";
             case REBASE -> "--rebase";
         };
-    }
-
-    @Override
-    public Either<GhFailure, List<ExecutedCommand>> closePullRequest(int number) {
-        return process.log(gh("pr", "close", String.valueOf(number)));
     }
 
     /**
@@ -356,5 +296,61 @@ public final class CliGitHub implements GitHub {
             case "REVIEW_REQUIRED" -> Review.REQUIRED;
             default -> Review.NONE;
         };
+    }
+
+    @Override
+    public Either<GhError, String> version(String executable) {
+        return new GhProcess(workTree, executable, GhToken.NONE).read(gh("--version"), CliGitHub::parseVersion);
+    }
+
+    @Override
+    public Either<GhError, List<GhLogin>> logins() {
+        // Exits with 0 also when an account's token does not work anymore, which the state says.
+        return unconfigured.read(gh("auth", "status", "--json", "hosts", "--jq", LOGINS_JQ), CliGitHub::parseLogins);
+    }
+
+    @Override
+    public Either<GhError, List<PullRequest>> pullRequests() {
+        return process.read(gh("pr", "list", "--state", "open", "--limit", LIMIT, "--json", FIELDS, "--jq", JQ),
+                CliGitHub::parse);
+    }
+
+    @Override
+    public Either<GhError, BranchChecks> branchChecks() {
+        return process.read(gh("api", "graphql", "--paginate", "-F", "owner={owner}", "-F", "name={repo}",
+                        "-f", "query=" + BRANCHES_QUERY, "--jq", BRANCHES_JQ),
+                CliGitHub::parseBranchChecks);
+    }
+
+    @Override
+    public Either<GhError, PullRequestDetails> pullRequestDetails(int number) {
+        return process.read(gh("pr", "view", String.valueOf(number), "--json", DETAIL_FIELDS, "--jq", DETAILS_JQ),
+                CliGitHub::parseDetails);
+    }
+
+    @Override
+    public Either<GhFailure, Created> createPullRequest(String head, String base) {
+        return process.run(gh("pr", "create", "--head", head, "--base", base, "--fill"))
+                .map(output -> new Created(createdNumber(output.stdout()), output.log()));
+    }
+
+    @Override
+    public Either<GhFailure, List<ExecutedCommand>> openPullRequest(int number) {
+        return process.log(gh("pr", "view", String.valueOf(number), "--web"));
+    }
+
+    @Override
+    public Either<GhFailure, List<ExecutedCommand>> browse(String branch) {
+        return process.log(browseCommand(branch));
+    }
+
+    @Override
+    public Either<GhFailure, List<ExecutedCommand>> mergePullRequest(int number, MergeMethod method) {
+        return process.log(gh("pr", "merge", String.valueOf(number), mergeFlag(method)));
+    }
+
+    @Override
+    public Either<GhFailure, List<ExecutedCommand>> closePullRequest(int number) {
+        return process.log(gh("pr", "close", String.valueOf(number)));
     }
 }

@@ -10,19 +10,11 @@ import dev.tamboui.widgets.tree.TreeNode;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.state.SelectionMsg;
-import net.vanfleteren.jazygit.git.model.ChangeType;
-import net.vanfleteren.jazygit.git.model.Conflict;
-import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.git.model.FileTree;
-import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
-import net.vanfleteren.jazygit.state.Failure;
-import net.vanfleteren.jazygit.state.Loadable;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
 
 import java.util.function.Consumer;
@@ -47,17 +39,17 @@ public class FilesPanel {
             .focusable()
             .scrollbar(ScrollBarPolicy.AS_NEEDED)
             .nodeRenderer(FilesPanel::renderNode);
+    private final Keymap keymap = Keymap.standard();
+    private final Theme.Highlights highlights;
     private List<TreeNode<FileTree>> roots = List.of();
     // The status the tree was built for.
     private Option<Loadable<RepoStatus>> shown = Option.none();
     // The tree's key handler also sees keys typed in other panes, so it must know whether it has focus.
     private boolean focused;
-    private final Keymap keymap = Keymap.standard();
-    private final Theme.Highlights highlights;
 
     /**
-     * @param dispatch  receives the messages for the user's actions, on the render thread
-     * @param openDiff  called when Enter is pressed on a file or directory, to move focus to its diff
+     * @param dispatch receives the messages for the user's actions, on the render thread
+     * @param openDiff called when Enter is pressed on a file or directory, to move focus to its diff
      */
     public FilesPanel(Consumer<Msg> dispatch, Runnable openDiff) {
         this(dispatch, openDiff, Theme.Highlights.DEFAULT);
@@ -71,6 +63,87 @@ public class FilesPanel {
         tree.onKeyEvent(PaneKeys.whileFocused(() -> focused, event -> event.code() == KeyCode.ENTER && selected().isDefined()
                 ? Option.of(openDiff)
                 : PaneKeys.sending(keymap.handle(Scopes.FILES, event, selected()), dispatch)));
+    }
+
+    private static TreeNode<FileTree> node(FileTree node, Set<String> collapsed) {
+        return switch (node) {
+            case FileTree.Dir dir -> {
+                TreeNode<FileTree> parent = TreeNode.of(dir.name(), node).expanded(!collapsed.contains(dir.path()));
+                dir.children().forEach(child -> parent.add(node(child, collapsed)));
+                yield parent;
+            }
+            case FileTree.File file -> TreeNode.of(file.entry().type().marker() + " " + name(file), node).leaf();
+        };
+    }
+
+    /**
+     * Files show two status columns like {@code git status --short}: the staged change in green, then
+     * the unstaged change in red. Untracked files show a red {@code ??}. Files in a merge conflict show a
+     * {@code U} for each branch that updated them: green for the current branch, red for the other.
+     */
+    private static StyledElement<?> renderNode(TreeNode<FileTree> node) {
+        if (!(node.data() instanceof FileTree.File file)) {
+            return Toolkit.text(node.label());
+        }
+        FileEntry entry = file.entry();
+        if (entry.type() == ChangeType.UNTRACKED) {
+            return Toolkit.row(Toolkit.text("??").addClass(Theme.Classes.UNSTAGED), Toolkit.text(" " + file.name()));
+        }
+        String staged = entry.conflict().map(conflict -> marker(conflict.ours()))
+                .getOrElse(() -> entry.staged() ? entry.type().marker() : " ");
+        String unstaged = entry.conflict().map(conflict -> marker(conflict.theirs()))
+                .getOrElse(() -> !entry.unstaged() ? " "
+                        : entry.type() == ChangeType.DELETED ? "D"
+                        // A rename only in the working tree, after intent-to-add of the new path.
+                        : entry.type() == ChangeType.RENAMED && !entry.staged() ? "R"
+                        : "M");
+        return Toolkit.row(Toolkit.text(staged).addClass(Theme.Classes.STAGED),
+                Toolkit.text(unstaged).addClass(Theme.Classes.UNSTAGED), Toolkit.text(" " + name(file)));
+    }
+
+    /**
+     * The file name, preceded by where a renamed file came from: just the name when it stayed in the same
+     * directory, the full path otherwise.
+     */
+    private static String name(FileTree.File file) {
+        String path = file.entry().path();
+        String directory = path.substring(0, path.length() - file.name().length());
+        return file.entry().origin()
+                .map(origin -> origin.startsWith(directory) ? origin.substring(directory.length()) : origin)
+                .map(origin -> origin + " -> " + file.name())
+                .getOrElse(file.name());
+    }
+
+    /**
+     * {@code U} for a branch that updated the conflicting file, {@code D} for one that deleted it.
+     */
+    private static String marker(Conflict.Side side) {
+        return side == Conflict.Side.DELETED ? "D" : "U";
+    }
+
+    /**
+     * The path a node stands for.
+     */
+    private static String path(FileTree node) {
+        return switch (node) {
+            case FileTree.Dir dir -> dir.path();
+            case FileTree.File file -> file.entry().path();
+        };
+    }
+
+    /**
+     * All nodes, depth first.
+     */
+    private static List<TreeNode<FileTree>> nodes(List<TreeNode<FileTree>> nodes) {
+        return nodes.flatMap(n -> nodes(List.ofAll(n.children())).prepend(n));
+    }
+
+    /**
+     * The nodes shown on screen, in order: those not inside a collapsed directory.
+     */
+    private static List<TreeNode<FileTree>> visible(List<TreeNode<FileTree>> nodes) {
+        return nodes.flatMap(n -> (n.isExpanded() ? visible(List.ofAll(n.children())) : List.<TreeNode<FileTree>>empty())
+                .prepend(n));
     }
 
     /**
@@ -144,87 +217,5 @@ public class FilesPanel {
         List<Option<String>> visible = visible(roots).map(n -> Option.of(n.data()).map(FilesPanel::path));
         int fallback = Math.min(Math.max(0, tree.selected()), Math.max(0, visible.size() - 1));
         tree.selected(selected.map(path -> visible.indexOf(Option.of(path))).filter(i -> i >= 0).getOrElse(fallback));
-    }
-
-    private static TreeNode<FileTree> node(FileTree node, Set<String> collapsed) {
-        return switch (node) {
-            case FileTree.Dir dir -> {
-                TreeNode<FileTree> parent = TreeNode.of(dir.name(), node).expanded(!collapsed.contains(dir.path()));
-                dir.children().forEach(child -> parent.add(node(child, collapsed)));
-                yield parent;
-            }
-            case FileTree.File file ->
-                    TreeNode.of(file.entry().type().marker() + " " + name(file), node).leaf();
-        };
-    }
-
-    /**
-     * Files show two status columns like {@code git status --short}: the staged change in green, then
-     * the unstaged change in red. Untracked files show a red {@code ??}. Files in a merge conflict show a
-     * {@code U} for each branch that updated them: green for the current branch, red for the other.
-     */
-    private static StyledElement<?> renderNode(TreeNode<FileTree> node) {
-        if (!(node.data() instanceof FileTree.File file)) {
-            return Toolkit.text(node.label());
-        }
-        FileEntry entry = file.entry();
-        if (entry.type() == ChangeType.UNTRACKED) {
-            return Toolkit.row(Toolkit.text("??").addClass(Theme.Classes.UNSTAGED), Toolkit.text(" " + file.name()));
-        }
-        String staged = entry.conflict().map(conflict -> marker(conflict.ours()))
-                .getOrElse(() -> entry.staged() ? entry.type().marker() : " ");
-        String unstaged = entry.conflict().map(conflict -> marker(conflict.theirs()))
-                .getOrElse(() -> !entry.unstaged() ? " "
-                        : entry.type() == ChangeType.DELETED ? "D"
-                        // A rename only in the working tree, after intent-to-add of the new path.
-                        : entry.type() == ChangeType.RENAMED && !entry.staged() ? "R"
-                        : "M");
-        return Toolkit.row(Toolkit.text(staged).addClass(Theme.Classes.STAGED),
-                Toolkit.text(unstaged).addClass(Theme.Classes.UNSTAGED), Toolkit.text(" " + name(file)));
-    }
-
-    /**
-     * The file name, preceded by where a renamed file came from: just the name when it stayed in the same
-     * directory, the full path otherwise.
-     */
-    private static String name(FileTree.File file) {
-        String path = file.entry().path();
-        String directory = path.substring(0, path.length() - file.name().length());
-        return file.entry().origin()
-                .map(origin -> origin.startsWith(directory) ? origin.substring(directory.length()) : origin)
-                .map(origin -> origin + " -> " + file.name())
-                .getOrElse(file.name());
-    }
-
-    /**
-     * {@code U} for a branch that updated the conflicting file, {@code D} for one that deleted it.
-     */
-    private static String marker(Conflict.Side side) {
-        return side == Conflict.Side.DELETED ? "D" : "U";
-    }
-
-    /**
-     * The path a node stands for.
-     */
-    private static String path(FileTree node) {
-        return switch (node) {
-            case FileTree.Dir dir -> dir.path();
-            case FileTree.File file -> file.entry().path();
-        };
-    }
-
-    /**
-     * All nodes, depth first.
-     */
-    private static List<TreeNode<FileTree>> nodes(List<TreeNode<FileTree>> nodes) {
-        return nodes.flatMap(n -> nodes(List.ofAll(n.children())).prepend(n));
-    }
-
-    /**
-     * The nodes shown on screen, in order: those not inside a collapsed directory.
-     */
-    private static List<TreeNode<FileTree>> visible(List<TreeNode<FileTree>> nodes) {
-        return nodes.flatMap(n -> (n.isExpanded() ? visible(List.ofAll(n.children())) : List.<TreeNode<FileTree>>empty())
-                .prepend(n));
     }
 }

@@ -3,8 +3,8 @@ package net.vanfleteren.jazygit.feature.discard;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Scope;
 import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
+import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 
 /**
  * Popup asking what to discard. The option for unstaged changes only applies when there are some.

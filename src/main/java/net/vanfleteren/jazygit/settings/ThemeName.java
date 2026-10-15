@@ -10,9 +10,13 @@ public enum ThemeName {
     DARK("dark"),
     LIGHT("light"),
     DARCULA("darcula"),
-    /** The dark theme with blue and vermillion for red and green, for red/green colour blindness. */
+    /**
+     * The dark theme with blue and vermillion for red and green, for red/green colour blindness.
+     */
     DARK_COLORBLIND("dark-colorblind"),
-    /** Mostly black and white, with muted colours only where they tell things apart. */
+    /**
+     * Mostly black and white, with muted colours only where they tell things apart.
+     */
     MONO("mono");
 
     private final String id;
@@ -22,16 +26,16 @@ public enum ThemeName {
     }
 
     /**
-     * How the theme is named in the settings file, and its stylesheet.
-     */
-    public String id() {
-        return id;
-    }
-
-    /**
      * The theme named {@code id}, if there is one.
      */
     public static Option<ThemeName> of(String id) {
         return List.of(values()).find(theme -> theme.id.equals(id));
+    }
+
+    /**
+     * How the theme is named in the settings file, and its stylesheet.
+     */
+    public String id() {
+        return id;
     }
 }

@@ -23,14 +23,46 @@ import java.util.function.Supplier;
 public final class ChoiceDialog<P extends Popup> implements PopupView {
 
 
+    private final Spec<P> spec;
+    private final ChoiceList<P> list;
+    // The popup the highlight was put in place for, so that is only done when it opens.
+    private Option<P> shownFor = Option.none();
+    /**
+     * @param dispatch receives the messages for the user's actions, on the render thread
+     */
+    public ChoiceDialog(Spec<P> spec, Consumer<Msg> dispatch) {
+        this.spec = spec;
+        this.list = new ChoiceList<>(spec.id(), spec.choices(), spec.onCancel(), dispatch);
+    }
+
+    @Override
+    public List<String> ids() {
+        return List.of(spec.id());
+    }
+
+    /**
+     * The popup, while the model has {@code P} open.
+     */
+    @Override
+    public Option<Element> render(Model model) {
+        Option<P> open = model.popup(spec.popupType());
+        open.filter(popup -> !shownFor.contains(popup)).forEach(popup -> list.highlightKey(spec.opensAt().apply(popup)));
+        shownFor = open;
+        return open.map(popup -> {
+            StyledElement<?> rows = list.render(model, popup);
+            return DialogFrame.withHint(spec.title().apply(popup), Math.max(spec.minWidth(), list.width() + DialogFrame.FRAME),
+                    "dialog.hint.selectCancel", List.of(rows));
+        });
+    }
+
     /**
      * An option of the dialog.
      *
-     * @param key      the letter that chooses it
-     * @param label    its text, given the open popup
-     * @param msg      the message for choosing it
-     * @param enabled  whether it applies, given the model and the open popup
-     * @param heading  the message key of the heading it starts a group of options under, if any
+     * @param key         the letter that chooses it
+     * @param label       its text, given the open popup
+     * @param msg         the message for choosing it
+     * @param enabled     whether it applies, given the model and the open popup
+     * @param heading     the message key of the heading it starts a group of options under, if any
      * @param onHighlight the message for highlighting it with the arrow keys, if it shows what choosing it does
      */
     public record Choice<P>(char key, Function<P, String> label, Supplier<Msg> msg, BiPredicate<Model, P> enabled,
@@ -115,38 +147,5 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
         public Spec<P> openingAt(Function<P, Option<Character>> opensAt) {
             return new Spec<>(id, popupType, title, choices, onCancel, minWidth, opensAt);
         }
-    }
-
-    private final Spec<P> spec;
-    private final ChoiceList<P> list;
-    // The popup the highlight was put in place for, so that is only done when it opens.
-    private Option<P> shownFor = Option.none();
-
-    /**
-     * @param dispatch receives the messages for the user's actions, on the render thread
-     */
-    public ChoiceDialog(Spec<P> spec, Consumer<Msg> dispatch) {
-        this.spec = spec;
-        this.list = new ChoiceList<>(spec.id(), spec.choices(), spec.onCancel(), dispatch);
-    }
-
-    @Override
-    public List<String> ids() {
-        return List.of(spec.id());
-    }
-
-    /**
-     * The popup, while the model has {@code P} open.
-     */
-    @Override
-    public Option<Element> render(Model model) {
-        Option<P> open = model.popup(spec.popupType());
-        open.filter(popup -> !shownFor.contains(popup)).forEach(popup -> list.highlightKey(spec.opensAt().apply(popup)));
-        shownFor = open;
-        return open.map(popup -> {
-            StyledElement<?> rows = list.render(model, popup);
-            return DialogFrame.withHint(spec.title().apply(popup), Math.max(spec.minWidth(), list.width() + DialogFrame.FRAME),
-                    "dialog.hint.selectCancel", List.of(rows));
-        });
     }
 }

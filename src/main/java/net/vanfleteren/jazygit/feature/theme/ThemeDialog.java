@@ -4,8 +4,8 @@ import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.Map;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.settings.ThemeName;
-import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
+import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 
 /**
  * Popup asking which theme to use.

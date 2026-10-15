@@ -53,13 +53,29 @@ public final class Program {
      *
      * @param settings      the settings the session starts with
      * @param themeOverride the theme for this session instead of the saved one, if any
-     * @param bugs     told about every command that threw, which the user is only shown the message of
+     * @param bugs          told about every command that threw, which the user is only shown the message of
      */
     public static Program start(Env env, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, Executor io,
                                 Executor background, Executor ui, Consumer<Throwable> bugs) {
         Program program = new Program(env, io, background, ui, bugs);
         program.apply(Update.init(env.git().repositoryName(), settings, themeOverride));
         return program;
+    }
+
+    static Msg perform(Env env, Cmd cmd) {
+        return perform(env, cmd, bug -> {
+        });
+    }
+
+    static Msg perform(Env env, Cmd cmd, Consumer<Throwable> bugs) {
+        try {
+            return cmd.run(env);
+        } catch (Throwable e) {
+            // A bug rather than a git failure, which commands report as a Msg. Still keep the app going, and
+            // always answer: a command that never does would keep its load running and its branch busy.
+            bugs.accept(e);
+            return cmd.failed(new Failure.Bug(e));
+        }
     }
 
     public Model model() {
@@ -77,21 +93,5 @@ public final class Program {
             Msg result = perform(env, cmd, bugs);
             Try.run(() -> ui.execute(() -> dispatch(result)));
         })));
-    }
-
-    static Msg perform(Env env, Cmd cmd) {
-        return perform(env, cmd, bug -> {
-        });
-    }
-
-    static Msg perform(Env env, Cmd cmd, Consumer<Throwable> bugs) {
-        try {
-            return cmd.run(env);
-        } catch (Throwable e) {
-            // A bug rather than a git failure, which commands report as a Msg. Still keep the app going, and
-            // always answer: a command that never does would keep its load running and its branch busy.
-            bugs.accept(e);
-            return cmd.failed(new Failure.Bug(e));
-        }
     }
 }

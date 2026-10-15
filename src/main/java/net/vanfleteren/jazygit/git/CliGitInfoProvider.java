@@ -1,50 +1,18 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
-import net.vanfleteren.jazygit.git.GitError.CheckoutError;
-import net.vanfleteren.jazygit.git.GitError.CommandFailed;
-import net.vanfleteren.jazygit.git.GitError.DiffError;
-import net.vanfleteren.jazygit.git.GitError.DiscardError;
-import net.vanfleteren.jazygit.git.GitError.LogError;
-import net.vanfleteren.jazygit.git.GitError.NoWorkTree;
-import net.vanfleteren.jazygit.git.GitError.NotARepository;
-import net.vanfleteren.jazygit.git.GitError.OpenError;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.GitError.StashError;
-import net.vanfleteren.jazygit.git.GitError.RewordError;
-import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
-import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
-import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.git.model.CommitMessage;
-import net.vanfleteren.jazygit.git.model.DeleteScope;
-import net.vanfleteren.jazygit.git.model.DiffText;
-import net.vanfleteren.jazygit.git.model.Diffs;
-import net.vanfleteren.jazygit.git.model.DiscardPlan;
-import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.git.model.MergeMode;
-import net.vanfleteren.jazygit.git.model.PushMode;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.git.model.RemoteRef;
-import net.vanfleteren.jazygit.git.model.RepoStatus;
-import net.vanfleteren.jazygit.git.model.ResetMode;
-import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.git.model.SquashMode;
-import net.vanfleteren.jazygit.git.model.Stash;
+import net.vanfleteren.jazygit.git.GitError.*;
+import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Supplier;
-
-import static net.vanfleteren.jazygit.git.GitCommand.git;
 
 /**
  * {@link GitInfoProvider} backed by a real repository, through the {@code git} command line tool only, so
@@ -62,14 +30,6 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     /**
-     * This repository, with git told which account to use by the environment variables of {@code credentials}
-     * whenever it talks to a remote, for a credential helper that reads them, such as gh's.
-     */
-    public CliGitInfoProvider withCredentials(Supplier<Map<String, String>> credentials) {
-        return new CliGitInfoProvider(workTree, credentials);
-    }
-
-    /**
      * Opens the repository containing {@code startDir}, searching parent directories like
      * {@code git} itself does. It fails when {@code startDir} is not inside a git repository, the
      * repository has no working tree, or git cannot be run.
@@ -77,7 +37,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     public static Either<OpenError, CliGitInfoProvider> open(Path startDir) {
         return !Files.isDirectory(startDir)
                 ? Either.left(new NotARepository(startDir))
-                : Either.<OpenError, Boolean>narrow(GitProcess.read(startDir, GitCommand.reading("rev-parse", "--is-bare-repository"),
+                : Either.narrow(GitProcess.read(startDir, GitCommand.reading("rev-parse", "--is-bare-repository"),
                                 raw -> Either.right(raw.strip().equals("true")))
                         .mapLeft(error -> notARepository(error, startDir)))
                 .flatMap(bare -> bare
@@ -95,6 +55,14 @@ public final class CliGitInfoProvider implements GitInfoProvider {
         return error instanceof CommandFailed failed && failed.says("not a git repository")
                 ? new NotARepository(startDir)
                 : error;
+    }
+
+    /**
+     * This repository, with git told which account to use by the environment variables of {@code credentials}
+     * whenever it talks to a remote, for a credential helper that reads them, such as gh's.
+     */
+    public CliGitInfoProvider withCredentials(Supplier<Map<String, String>> credentials) {
+        return new CliGitInfoProvider(workTree, credentials);
     }
 
     @Override
@@ -170,7 +138,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewTrackingBranch(Branch.Name name,
-                                                                                       RemoteBranch upstream) {
+                                                                                             RemoteBranch upstream) {
         return CliCheckout.checkoutNewTrackingBranch(workTree, name, upstream);
     }
 

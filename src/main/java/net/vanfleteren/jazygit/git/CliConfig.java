@@ -38,7 +38,7 @@ final class CliConfig {
      * key that is not set does nothing.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> set(Path workTree, String key,
-                                                                              Option<String> value) {
+                                                                       Option<String> value) {
         return value.fold(
                 () -> {
                     GitCommand unset = git("config", "--local", "--unset-all", key);

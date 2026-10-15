@@ -11,7 +11,9 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
-import static dev.tamboui.toolkit.Toolkit.*;
+
+import static dev.tamboui.toolkit.Toolkit.panel;
+import static dev.tamboui.toolkit.Toolkit.text;
 
 /**
  * Top-left panel showing the repository name and the current branch. It is display-only and does not
@@ -19,7 +21,9 @@ import static dev.tamboui.toolkit.Toolkit.*;
  */
 public final class StatusPanel {
 
-    /** Rows of the panel, borders included. */
+    /**
+     * Rows of the panel, borders included.
+     */
     public static final int HEIGHT = 3;
 
     private StatusPanel() {

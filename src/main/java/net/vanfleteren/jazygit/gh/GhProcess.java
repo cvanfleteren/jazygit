@@ -29,16 +29,11 @@ final class GhProcess {
     }
 
     /**
-     * What a command that succeeded printed on its standard output, and the line it was run as.
+     * Whether gh failed as GitHub did not accept its credentials.
      */
-    record Output(String stdout, ExecutedCommand command) {
-
-        /**
-         * The command log of this one command.
-         */
-        List<ExecutedCommand> log() {
-            return List.of(command);
-        }
+    static boolean rejected(GhError error) {
+        return error instanceof GhError.CommandFailed(var explanation, int exitCode)
+                && explanation.exists(line -> line.contains("HTTP 401") || line.contains("Bad credentials"));
     }
 
     /**
@@ -59,7 +54,7 @@ final class GhProcess {
      * Runs {@code command} to read something, which {@code parse} makes of its output. Reads are not logged.
      */
     <T> Either<GhError, T> read(GhCommand command, Function<String, Either<GhError.UnexpectedOutput, T>> parse) {
-        return execute(command).flatMap(output -> Either.<GhError, T>narrow(parse.apply(output.stdout())));
+        return execute(command).flatMap(output -> Either.narrow(parse.apply(output.stdout())));
     }
 
     /**
@@ -78,14 +73,6 @@ final class GhProcess {
         return token.environment().flatMap(variables -> execute(command, variables));
     }
 
-    /**
-     * Whether gh failed as GitHub did not accept its credentials.
-     */
-    static boolean rejected(GhError error) {
-        return error instanceof GhError.CommandFailed(var explanation, int exitCode)
-                && explanation.exists(line -> line.contains("HTTP 401") || line.contains("Bad credentials"));
-    }
-
     private Either<GhError, Output> execute(GhCommand command, Map<String, String> variables) {
         return Exec.run(workTree, command.commandLine(executable), command.environment().merge(variables),
                         command.timeout())
@@ -97,5 +84,18 @@ final class GhProcess {
                             new GhError.CommandFailed(Exec.explanation(stderr, stdout), exitCode);
                 })
                 .map(stdout -> new Output(stdout, command.executed()));
+    }
+
+    /**
+     * What a command that succeeded printed on its standard output, and the line it was run as.
+     */
+    record Output(String stdout, ExecutedCommand command) {
+
+        /**
+         * The command log of this one command.
+         */
+        List<ExecutedCommand> log() {
+            return List.of(command);
+        }
     }
 }

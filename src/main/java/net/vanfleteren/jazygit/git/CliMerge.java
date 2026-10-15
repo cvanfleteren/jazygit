@@ -1,13 +1,12 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.MergeMode;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import java.nio.file.Path;
 
@@ -51,7 +50,7 @@ final class CliMerge {
      * apart from refusing to start, which leaves nothing to undo; the conflicted files in the index do.
      */
     private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> merge(Path workTree, GitCommand merge,
-                                                                      GitCommand undo) {
+                                                                                 GitCommand undo) {
         return Unfinished.runOrUndo(workTree, merge, left -> Option.when(left.conflicted(), undo));
     }
 

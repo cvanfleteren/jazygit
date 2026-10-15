@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.ui;
 
-import io.vavr.control.Option;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.terminal.Frame;
 import dev.tamboui.toolkit.element.DefaultRenderContext;
@@ -11,6 +10,7 @@ import dev.tamboui.toolkit.elements.TextAreaElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
+import io.vavr.control.Option;
 
 /**
  * A text area where Ctrl+Enter submits instead of inserting a newline. The plain text area turns

@@ -25,6 +25,158 @@ public final class Keymap {
      * The key that shows the keys of the panel that has the focus, and closes that help again.
      */
     public static final String HELP_KEY = "?";
+    private final Map<String, Section> sections;
+    private final List<Global> globals;
+
+    private Keymap(Map<String, Section> sections, List<Global> globals) {
+        this.sections = sections;
+        this.globals = globals;
+    }
+
+    /**
+     * A keymap without keys, for the features to add theirs to.
+     */
+    public static Keymap empty() {
+        return new Keymap(LinkedHashMap.empty(), List.empty());
+    }
+
+    /**
+     * The key {@code event} is, as {@link Binding#key() bindings} name it: the character, prefixed with {@code ctrl+} and
+     * {@code alt+} when those are held. Shift is left out, as it is already in the character.
+     */
+    static String name(KeyEvent event) {
+        return (event.hasCtrl() ? "ctrl+" : "") + (event.hasAlt() ? "alt+" : "") + event.string();
+    }
+
+    /**
+     * The keys of the app, as declared by its features.
+     */
+    public static Keymap standard() {
+        return Standard.KEYMAP;
+    }
+
+    /**
+     * This keymap with {@code bindings} added to the keys of {@code scope}.
+     */
+    @SafeVarargs
+    public final <S> Keymap add(Scope<S> scope, Binding<S>... bindings) {
+        List<Binding<?>> all = bindings(scope.id()).appendAll(List.of(bindings));
+        // A key bound twice would only do what it was bound to first, silently; the help key does nothing else.
+        all.map(Binding::key).append(HELP_KEY).groupBy(key -> key).filterValues(keys -> keys.size() > 1).keySet()
+                .headOption()
+                .forEach(key -> {
+                    throw new IllegalArgumentException("The key \"" + key + "\" is bound twice in " + scope.id());
+                });
+        return new Keymap(sections.put(scope.id(), new Section(scope, all)), globals);
+    }
+
+    /**
+     * This keymap with the key {@code global} added.
+     */
+    public Keymap global(Global global) {
+        return new Keymap(sections, globals.append(global));
+    }
+
+    /**
+     * What the keys of {@code scope} do in the event {@code event}: help for {@code ?}, otherwise the message
+     * of the key, if the scope has it.
+     *
+     * @param selection what is selected in the panel, if anything
+     */
+    public <S> Option<Msg> handle(Scope<S> scope, KeyEvent event, Option<S> selection) {
+        if (HELP_KEY.equals(name(event))) {
+            return Option.of(new HelpMsg.Requested(scope.id(), actions(scope, selection)));
+        }
+        return sections.get(scope.id())
+                .flatMap(section -> section.bindings().find(binding -> binding.matches(event)))
+                .flatMap(binding -> {
+                    @SuppressWarnings("unchecked")
+                    Binding<S> typed = (Binding<S>) binding;
+                    return typed.action().apply(selection);
+                });
+    }
+
+    /**
+     * What each key of {@code scope} would send for {@code selection}, in the order of {@link #bindings}: none
+     * for a key that does nothing then.
+     */
+    public <S> List<Option<Msg>> actions(Scope<S> scope, Option<S> selection) {
+        return bindings(scope.id()).map(binding -> {
+            @SuppressWarnings("unchecked")
+            Binding<S> typed = (Binding<S>) binding;
+            return typed.action().apply(selection);
+        });
+    }
+
+    /**
+     * The message key of the title of the panel {@code scopeId}, if it has keys.
+     */
+    public Option<String> titleKey(String scopeId) {
+        return sections.get(scopeId).map(section -> section.scope().titleKey());
+    }
+
+    /**
+     * The keys of the panel {@code scopeId}, in the order the features declared them.
+     */
+    public List<Binding<?>> bindings(String scopeId) {
+        return sections.get(scopeId).map(Section::bindings).getOrElse(List.of());
+    }
+
+    public List<Global> globals() {
+        return globals;
+    }
+
+    /**
+     * The message of the global key {@code event} is, if it is one.
+     */
+    public Option<Msg> handleGlobal(KeyEvent event) {
+        return globals.iterator().flatMap(global -> global.handle(event)).headOption();
+    }
+
+    /**
+     * A key that works wherever the focus is.
+     */
+    public sealed interface Global {
+
+        /**
+         * How the key is shown to the user.
+         */
+        String label();
+
+        /**
+         * The message key of what the key does.
+         */
+        String descriptionKey();
+
+        /**
+         * The message to send for {@code event}, if it is this key.
+         */
+        Option<Msg> handle(KeyEvent event);
+
+        /**
+         * The message the key sends, as the help runs it.
+         */
+        Msg action();
+
+        /**
+         * A key that sends {@code msg}.
+         *
+         * @param matches whether an event is this key
+         */
+        record Dispatching(String label, String descriptionKey, Predicate<KeyEvent> matches, Supplier<Msg> msg)
+                implements Global {
+
+            @Override
+            public Option<Msg> handle(KeyEvent event) {
+                return matches.test(event) ? Option.of(action()) : Option.none();
+            }
+
+            @Override
+            public Msg action() {
+                return msg.get();
+            }
+        }
+    }
 
     /**
      * A panel that has keys of its own.
@@ -76,159 +228,6 @@ public final class Keymap {
         }
     }
 
-    /**
-     * A key that works wherever the focus is.
-     */
-    public sealed interface Global {
-
-        /**
-         * How the key is shown to the user.
-         */
-        String label();
-
-        /**
-         * The message key of what the key does.
-         */
-        String descriptionKey();
-
-        /**
-         * The message to send for {@code event}, if it is this key.
-         */
-        Option<Msg> handle(KeyEvent event);
-
-        /**
-         * The message the key sends, as the help runs it.
-         */
-        Msg action();
-
-        /**
-         * A key that sends {@code msg}.
-         *
-         * @param matches whether an event is this key
-         */
-        record Dispatching(String label, String descriptionKey, Predicate<KeyEvent> matches, Supplier<Msg> msg)
-                implements Global {
-
-            @Override
-            public Option<Msg> handle(KeyEvent event) {
-                return matches.test(event) ? Option.of(action()) : Option.none();
-            }
-
-            @Override
-            public Msg action() {
-                return msg.get();
-            }
-        }
-    }
-
     private record Section(Scope<?> scope, List<Binding<?>> bindings) {
-    }
-
-    private final Map<String, Section> sections;
-    private final List<Global> globals;
-
-    private Keymap(Map<String, Section> sections, List<Global> globals) {
-        this.sections = sections;
-        this.globals = globals;
-    }
-
-    /**
-     * A keymap without keys, for the features to add theirs to.
-     */
-    public static Keymap empty() {
-        return new Keymap(LinkedHashMap.empty(), List.empty());
-    }
-
-    /**
-     * This keymap with {@code bindings} added to the keys of {@code scope}.
-     */
-    @SafeVarargs
-    public final <S> Keymap add(Scope<S> scope, Binding<S>... bindings) {
-        List<Binding<?>> all = bindings(scope.id()).appendAll(List.of(bindings));
-        // A key bound twice would only do what it was bound to first, silently; the help key does nothing else.
-        all.map(Binding::key).append(HELP_KEY).groupBy(key -> key).filterValues(keys -> keys.size() > 1).keySet()
-                .headOption()
-                .forEach(key -> {
-                    throw new IllegalArgumentException("The key \"" + key + "\" is bound twice in " + scope.id());
-                });
-        return new Keymap(sections.put(scope.id(), new Section(scope, all)), globals);
-    }
-
-    /**
-     * This keymap with the key {@code global} added.
-     */
-    public Keymap global(Global global) {
-        return new Keymap(sections, globals.append(global));
-    }
-
-    /**
-     * What the keys of {@code scope} do in the event {@code event}: help for {@code ?}, otherwise the message
-     * of the key, if the scope has it.
-     *
-     * @param selection what is selected in the panel, if anything
-     */
-    public <S> Option<Msg> handle(Scope<S> scope, KeyEvent event, Option<S> selection) {
-        if (HELP_KEY.equals(name(event))) {
-            return Option.of(new HelpMsg.Requested(scope.id(), actions(scope, selection)));
-        }
-        return sections.get(scope.id())
-                .flatMap(section -> section.bindings().find(binding -> binding.matches(event)))
-                .flatMap(binding -> {
-                    @SuppressWarnings("unchecked")
-                    Binding<S> typed = (Binding<S>) binding;
-                    return typed.action().apply(selection);
-                });
-    }
-
-    /**
-     * The key {@code event} is, as {@link Binding#key() bindings} name it: the character, prefixed with {@code ctrl+} and
-     * {@code alt+} when those are held. Shift is left out, as it is already in the character.
-     */
-    static String name(KeyEvent event) {
-        return (event.hasCtrl() ? "ctrl+" : "") + (event.hasAlt() ? "alt+" : "") + event.string();
-    }
-
-    /**
-     * What each key of {@code scope} would send for {@code selection}, in the order of {@link #bindings}: none
-     * for a key that does nothing then.
-     */
-    public <S> List<Option<Msg>> actions(Scope<S> scope, Option<S> selection) {
-        return bindings(scope.id()).map(binding -> {
-            @SuppressWarnings("unchecked")
-            Binding<S> typed = (Binding<S>) binding;
-            return typed.action().apply(selection);
-        });
-    }
-
-    /**
-     * The message key of the title of the panel {@code scopeId}, if it has keys.
-     */
-    public Option<String> titleKey(String scopeId) {
-        return sections.get(scopeId).map(section -> section.scope().titleKey());
-    }
-
-    /**
-     * The keys of the panel {@code scopeId}, in the order the features declared them.
-     */
-    public List<Binding<?>> bindings(String scopeId) {
-        return sections.get(scopeId).map(Section::bindings).getOrElse(List.of());
-    }
-
-    public List<Global> globals() {
-        return globals;
-    }
-
-    /**
-     * The message of the global key {@code event} is, if it is one.
-     */
-    public Option<Msg> handleGlobal(KeyEvent event) {
-        return globals.iterator().flatMap(global -> global.handle(event)).headOption();
-    }
-
-    /**
-     * The keys of the app, as declared by its features.
-     */
-    public static Keymap standard() {
-        return Standard.KEYMAP;
     }
 }

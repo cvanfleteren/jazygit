@@ -11,23 +11,16 @@ import io.vavr.control.Option;
 public record RepoStatus(Head head, List<FileEntry> files) {
 
     /**
+     * The commit HEAD points to; none in a repository without commits.
+     */
+    public Option<Sha> headCommit() {
+        return head.commit();
+    }
+
+    /**
      * What HEAD points to.
      */
     public sealed interface Head {
-
-        /**
-         * A checked out branch.
-         *
-         * @param tip the commit it points to; none in a repository without commits
-         */
-        record OnBranch(Branch.Name branch, Option<Sha> tip) implements Head {
-        }
-
-        /**
-         * A commit checked out without a branch.
-         */
-        record Detached(Sha at) implements Head {
-        }
 
         static Head onBranch(Branch.Name branch, Sha tip) {
             return new OnBranch(branch, Option.of(tip));
@@ -49,12 +42,19 @@ public record RepoStatus(Head head, List<FileEntry> files) {
         default Option<Branch.Name> branchName() {
             return this instanceof OnBranch(Branch.Name branch, Option<Sha> tip) ? Option.of(branch) : Option.none();
         }
-    }
 
-    /**
-     * The commit HEAD points to; none in a repository without commits.
-     */
-    public Option<Sha> headCommit() {
-        return head.commit();
+        /**
+         * A checked out branch.
+         *
+         * @param tip the commit it points to; none in a repository without commits
+         */
+        record OnBranch(Branch.Name branch, Option<Sha> tip) implements Head {
+        }
+
+        /**
+         * A commit checked out without a branch.
+         */
+        record Detached(Sha at) implements Head {
+        }
     }
 }

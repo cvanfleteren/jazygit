@@ -1,10 +1,9 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import java.time.Duration;
 

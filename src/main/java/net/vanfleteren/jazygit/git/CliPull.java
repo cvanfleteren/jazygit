@@ -1,13 +1,12 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import java.nio.file.Path;
 

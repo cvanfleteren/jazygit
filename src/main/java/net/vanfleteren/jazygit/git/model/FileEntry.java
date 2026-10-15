@@ -21,6 +21,13 @@ public record FileEntry(String path, ChangeType type, boolean staged, boolean un
     }
 
     /**
+     * An entry that is wholly staged when it is {@link ChangeType#ADDED}, and wholly unstaged otherwise.
+     */
+    public FileEntry(String path, ChangeType type) {
+        this(path, type, type == ChangeType.ADDED, type != ChangeType.ADDED);
+    }
+
+    /**
      * A file that is in conflict; it is not staged until the conflict is resolved.
      */
     public static FileEntry conflicted(String path, Conflict conflict) {
@@ -55,12 +62,5 @@ public record FileEntry(String path, ChangeType type, boolean staged, boolean un
      */
     public List<String> paths(boolean stagedSide) {
         return origin.filter(o -> stagedSide == staged).toList().append(path);
-    }
-
-    /**
-     * An entry that is wholly staged when it is {@link ChangeType#ADDED}, and wholly unstaged otherwise.
-     */
-    public FileEntry(String path, ChangeType type) {
-        this(path, type, type == ChangeType.ADDED, type != ChangeType.ADDED);
     }
 }

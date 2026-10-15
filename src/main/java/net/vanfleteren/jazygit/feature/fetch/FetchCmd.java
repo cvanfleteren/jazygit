@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.fetch;
 
-import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Cmd;
+import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
 

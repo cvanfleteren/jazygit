@@ -1,7 +1,5 @@
 package net.vanfleteren.jazygit.feature.help;
 
-import static dev.tamboui.toolkit.Toolkit.*;
-
 import dev.tamboui.layout.Constraint;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
@@ -31,6 +29,9 @@ import net.vanfleteren.jazygit.ui.widgets.WithDetails;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+import static dev.tamboui.toolkit.Toolkit.list;
+import static dev.tamboui.toolkit.Toolkit.text;
+
 /**
  * Popup listing the keys of a panel and what they do, under which the details of the highlighted key show when it
  * has any. A key is run with the arrow keys and Enter, or by pressing it; a key of the panel that does nothing for
@@ -58,50 +59,18 @@ public final class HelpDialog implements PopupView {
                     Tuple.of("#42", "help.branches.legend.pullRequest"),
                     Tuple.of("✓ ✗ ●", "help.branches.legend.checks"),
                     Tuple.of("✔ ✎ ?", "help.branches.legend.review")));
-
-    /**
-     * A line of the list: a key, which can be highlighted, or a text around them.
-     */
-    private sealed interface Row {
-    }
-
-    /**
-     * A key, with the message it sends if it does anything.
-     *
-     * @param matches whether an event is this key
-     */
-    private record Key(String label, String descriptionKey, Predicate<KeyEvent> matches, Option<Msg> action)
-            implements Row {
-    }
-
-    /**
-     * @param style the class it is drawn with, if any
-     */
-    private record Text(String text, Option<String> style) implements Row {
-
-        Text(String text) {
-            this(text, Option.none());
-        }
-
-        static Text heading(String messageKey) {
-            return new Text(Messages.get(messageKey), Option.of(Theme.Classes.BOLD));
-        }
-    }
-
     private final Consumer<Msg> dispatch;
     private final Keymap keymap;
     private final ListElement<?> list;
     // The help the rows show, as of the last render; none while it is closed.
     private Option<HelpPopup> shownPopup = Option.none();
     private List<Row> rows = List.empty();
-
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public HelpDialog(Consumer<Msg> dispatch) {
         this(dispatch, Keymap.standard());
     }
-
     HelpDialog(Consumer<Msg> dispatch, Keymap keymap) {
         this.dispatch = dispatch;
         this.keymap = keymap;
@@ -110,6 +79,39 @@ public final class HelpDialog implements PopupView {
                 .focusable()
                 .highlightSymbol("")
                 .onKeyEvent(this::handleKey);
+    }
+
+    /**
+     * What the symbols of the panel {@code scopeId} mean, under a heading; nothing for a panel without any.
+     */
+    private static List<Row> legend(String scopeId) {
+        return LEGENDS.get(scopeId)
+                .map(symbols -> List.<Row>of(new Text(""), Text.heading("dialog.help.legend"))
+                        .appendAll(symbols.map(symbol -> new Text(line(symbol._1, symbol._2)))))
+                .getOrElse(List.empty());
+    }
+
+    private static StyledElement<?> element(Row row) {
+        StyledElement<?> line = text(line(row));
+        return switch (row) {
+            case Key key -> key.action().isDefined() ? line : line.addClass(Theme.Classes.DISABLED);
+            case Text text -> text.style().<StyledElement<?>>map(line::addClass).getOrElse(line);
+        };
+    }
+
+    private static String line(Row row) {
+        return switch (row) {
+            case Key key -> line(key.label(), key.descriptionKey());
+            case Text text -> text.text();
+        };
+    }
+
+    private static String line(String key, String descriptionKey) {
+        return KEY_FORMAT.formatted(key, Messages.get(descriptionKey));
+    }
+
+    private static Option<String> details(Key key) {
+        return Messages.find(key.descriptionKey() + DETAILS_SUFFIX);
     }
 
     /**
@@ -167,39 +169,6 @@ public final class HelpDialog implements PopupView {
     }
 
     /**
-     * What the symbols of the panel {@code scopeId} mean, under a heading; nothing for a panel without any.
-     */
-    private static List<Row> legend(String scopeId) {
-        return LEGENDS.get(scopeId)
-                .map(symbols -> List.<Row>of(new Text(""), Text.heading("dialog.help.legend"))
-                        .appendAll(symbols.map(symbol -> new Text(line(symbol._1, symbol._2)))))
-                .getOrElse(List.empty());
-    }
-
-    private static StyledElement<?> element(Row row) {
-        StyledElement<?> line = text(line(row));
-        return switch (row) {
-            case Key key -> key.action().isDefined() ? line : line.addClass(Theme.Classes.DISABLED);
-            case Text text -> text.style().<StyledElement<?>>map(line::addClass).getOrElse(line);
-        };
-    }
-
-    private static String line(Row row) {
-        return switch (row) {
-            case Key key -> line(key.label(), key.descriptionKey());
-            case Text text -> text.text();
-        };
-    }
-
-    private static String line(String key, String descriptionKey) {
-        return KEY_FORMAT.formatted(key, Messages.get(descriptionKey));
-    }
-
-    private static Option<String> details(Key key) {
-        return Messages.find(key.descriptionKey() + DETAILS_SUFFIX);
-    }
-
-    /**
      * The highlighted key, if the highlighted row is one.
      */
     private Option<Key> selected() {
@@ -244,5 +213,34 @@ public final class HelpDialog implements PopupView {
     private void run(Key key) {
         // Quitting is up to the app, which only sees the message as is.
         key.action().forEach(msg -> dispatch.accept(msg instanceof Msg.Quit ? msg : new HelpMsg.Chosen(msg)));
+    }
+
+    /**
+     * A line of the list: a key, which can be highlighted, or a text around them.
+     */
+    private sealed interface Row {
+    }
+
+    /**
+     * A key, with the message it sends if it does anything.
+     *
+     * @param matches whether an event is this key
+     */
+    private record Key(String label, String descriptionKey, Predicate<KeyEvent> matches, Option<Msg> action)
+            implements Row {
+    }
+
+    /**
+     * @param style the class it is drawn with, if any
+     */
+    private record Text(String text, Option<String> style) implements Row {
+
+        Text(String text) {
+            this(text, Option.none());
+        }
+
+        static Text heading(String messageKey) {
+            return new Text(Messages.get(messageKey), Option.of(Theme.Classes.BOLD));
+        }
     }
 }

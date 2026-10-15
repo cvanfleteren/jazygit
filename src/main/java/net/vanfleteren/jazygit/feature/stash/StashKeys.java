@@ -2,8 +2,8 @@ package net.vanfleteren.jazygit.feature.stash;
 
 import net.vanfleteren.jazygit.git.model.FileTree;
 import net.vanfleteren.jazygit.git.model.Stash;
-import net.vanfleteren.jazygit.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.keys.Keymap;
+import net.vanfleteren.jazygit.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.keys.Scopes;
 
 /**
@@ -15,9 +15,9 @@ public final class StashKeys {
     }
 
     public static Keymap register(Keymap keys) {
-        return keys.add(Scopes.FILES, Binding.<FileTree>always("s", "help.files.stash", StashMsg.Requested::new))
+        return keys.add(Scopes.FILES, Binding.always("s", "help.files.stash", StashMsg.Requested::new))
                 .add(Scopes.STASH,
-                Binding.<Stash>onSelected("g", "help.stash.pop", StashMsg.PopRequested::new),
-                Binding.<Stash>onSelected("d", "help.stash.drop", StashMsg.DropRequested::new));
+                        Binding.onSelected("g", "help.stash.pop", StashMsg.PopRequested::new),
+                        Binding.onSelected("d", "help.stash.drop", StashMsg.DropRequested::new));
     }
 }

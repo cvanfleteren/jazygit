@@ -24,6 +24,15 @@ public record WithDetails(Element dialog, Option<String> shown, List<String> pos
     // The lines the border of the box takes.
     private static final int BORDER = 2;
 
+    private static int boxHeight(String text, int width) {
+        return DialogFrame.wrappedHeight(text, width, Integer.MAX_VALUE) + BORDER;
+    }
+
+    private static Element box(String text, int width, int height) {
+        return Toolkit.dialog(DialogFrame.wrapped(text, width, Integer.MAX_VALUE)).rounded().width(width).padding(1)
+                .length(height);
+    }
+
     @Override
     public void render(Frame frame, Rect area, RenderContext context) {
         Size size = dialog.preferredSize(area.width(), area.height(), context);
@@ -49,14 +58,5 @@ public record WithDetails(Element dialog, Option<String> shown, List<String> pos
     @Override
     public Size preferredSize(int availableWidth, int availableHeight, RenderContext context) {
         return dialog.preferredSize(availableWidth, availableHeight, context);
-    }
-
-    private static int boxHeight(String text, int width) {
-        return DialogFrame.wrappedHeight(text, width, Integer.MAX_VALUE) + BORDER;
-    }
-
-    private static Element box(String text, int width, int height) {
-        return Toolkit.dialog(DialogFrame.wrapped(text, width, Integer.MAX_VALUE)).rounded().width(width).padding(1)
-                .length(height);
     }
 }

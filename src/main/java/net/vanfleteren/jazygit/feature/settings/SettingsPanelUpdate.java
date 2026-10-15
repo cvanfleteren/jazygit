@@ -38,10 +38,11 @@ public final class SettingsPanelUpdate {
                     .map(panel -> model.openPopup(new GhExecutablePopup(panel.ghExecutable().getOrElse(""))))
                     .getOrElse(model));
             case SettingsPanelMsg.GhExecutableCancelled() -> Next.of(model.withoutPopup(GhExecutablePopup.class));
-            case SettingsPanelMsg.GhExecutableEntered(String executable) -> model.popup(GhExecutablePopup.class).isDefined()
-                    ? Next.of(model.withoutPopup(GhExecutablePopup.class),
-                    new SettingsPanelCmd.CheckGhExecutable(Option.of(executable.strip()).filter(path -> !path.isEmpty())))
-                    : Next.of(model);
+            case SettingsPanelMsg.GhExecutableEntered(String executable) ->
+                    model.popup(GhExecutablePopup.class).isDefined()
+                            ? Next.of(model.withoutPopup(GhExecutablePopup.class),
+                            new SettingsPanelCmd.CheckGhExecutable(Option.of(executable.strip()).filter(path -> !path.isEmpty())))
+                            : Next.of(model);
             case SettingsPanelMsg.GhExecutableChecked(var executable, var version) -> version.fold(
                     failure -> Next.of(model.fail(new AppError.GhExecutableUnusable(executable, failure))),
                     works -> useGhExecutable(model, executable));
@@ -59,8 +60,10 @@ public final class SettingsPanelUpdate {
                     .getOrElse(Next.of(model));
             // The app shows the repository again already, with a model of its own.
             case SettingsPanelMsg.AccountSet(), SettingsPanelMsg.Reopened() -> Next.of(model);
-            case SettingsPanelMsg.AccountNotSet(var failure) -> Next.of(model.fail(new AppError.GitHubAccountNotSet(failure)));
-            case SettingsPanelMsg.NotReopened(var failure) -> Next.of(model.fail(new AppError.SettingsNotApplied(failure)));
+            case SettingsPanelMsg.AccountNotSet(var failure) ->
+                    Next.of(model.fail(new AppError.GitHubAccountNotSet(failure)));
+            case SettingsPanelMsg.NotReopened(var failure) ->
+                    Next.of(model.fail(new AppError.SettingsNotApplied(failure)));
         };
     }
 

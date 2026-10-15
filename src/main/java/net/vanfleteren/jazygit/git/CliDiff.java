@@ -16,7 +16,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
-import static net.vanfleteren.jazygit.git.GitCommand.git;
 import static net.vanfleteren.jazygit.git.GitCommand.reading;
 
 /**
@@ -58,7 +57,7 @@ final class CliDiff {
                 ? Either.narrow(tracked(workTree, UNSTAGED, unstaged, HashMap.empty()))
                 : Either.<DiffError, String>narrow(run(workTree, List.of("rev-parse", "--git-path", "index"), HashMap.empty()))
                 .map(index -> workTree.resolve(index.strip()))
-                .flatMap(index -> TempFiles.<DiffError, String>using("jazygit-index", copy -> copyIndex(index, copy), failed -> failed,
+                .flatMap(index -> TempFiles.using("jazygit-index", copy -> copyIndex(index, copy), failed -> failed,
                         copy -> withUntracked(workTree, unstaged, untracked,
                                 HashMap.of("GIT_INDEX_FILE", copy.toString()))));
     }

@@ -1,10 +1,8 @@
 package net.vanfleteren.jazygit.ui.widgets;
 
-import static dev.tamboui.toolkit.Toolkit.*;
-
+import dev.tamboui.style.Style;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
-import dev.tamboui.style.Style;
 import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
@@ -21,6 +19,9 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import static dev.tamboui.toolkit.Toolkit.list;
+import static dev.tamboui.toolkit.Toolkit.text;
+
 /**
  * The standard popup to pick one of a list of names that comes from the open popup, like the branches. A name is
  * picked with the arrow keys and Enter; Escape cancels. When there are no names, it can say so in a dimmed line,
@@ -33,30 +34,6 @@ public final class PickDialog<P extends Popup> implements PopupView {
 
     // The rows shown at most; the list scrolls through the others.
     private static final int MAX_ROWS = 15;
-
-    /**
-     * What the dialog shows and sends.
-     *
-     * @param id        the id of the list, which takes the focus while the dialog is open
-     * @param popupType the popup that makes the dialog show
-     * @param title     the title, from the popup
-     * @param options   the names to pick from, from the popup
-     * @param onPick    the message for picking a name
-     * @param onCancel  the message for cancelling, by Escape
-     * @param emptyKey  the message key of the line shown when there are no names to pick, if any
-     */
-    public record Spec<P>(String id, Class<P> popupType, Function<P, String> title, Function<P, List<String>> options,
-                          Function<String, Msg> onPick, Supplier<Msg> onCancel, Option<String> emptyKey) {
-
-        /**
-         * A dialog that shows no line when there are no names to pick.
-         */
-        public Spec(String id, Class<P> popupType, Function<P, String> title, Function<P, List<String>> options,
-                    Function<String, Msg> onPick, Supplier<Msg> onCancel) {
-            this(id, popupType, title, options, onPick, onCancel, Option.none());
-        }
-    }
-
     private final Spec<P> spec;
     private final Consumer<Msg> dispatch;
     private final ListElement<?> list;
@@ -65,7 +42,6 @@ public final class PickDialog<P extends Popup> implements PopupView {
     private final Option<ListElement<?>> empty;
     // The names the rows show, as of the last render.
     private List<String> shown = List.empty();
-
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
@@ -125,5 +101,28 @@ public final class PickDialog<P extends Popup> implements PopupView {
         // The next time it opens, it starts at the top again.
         shown = List.empty();
         dispatch.accept(msg);
+    }
+
+    /**
+     * What the dialog shows and sends.
+     *
+     * @param id        the id of the list, which takes the focus while the dialog is open
+     * @param popupType the popup that makes the dialog show
+     * @param title     the title, from the popup
+     * @param options   the names to pick from, from the popup
+     * @param onPick    the message for picking a name
+     * @param onCancel  the message for cancelling, by Escape
+     * @param emptyKey  the message key of the line shown when there are no names to pick, if any
+     */
+    public record Spec<P>(String id, Class<P> popupType, Function<P, String> title, Function<P, List<String>> options,
+                          Function<String, Msg> onPick, Supplier<Msg> onCancel, Option<String> emptyKey) {
+
+        /**
+         * A dialog that shows no line when there are no names to pick.
+         */
+        public Spec(String id, Class<P> popupType, Function<P, String> title, Function<P, List<String>> options,
+                    Function<String, Msg> onPick, Supplier<Msg> onCancel) {
+            this(id, popupType, title, options, onPick, onCancel, Option.none());
+        }
     }
 }

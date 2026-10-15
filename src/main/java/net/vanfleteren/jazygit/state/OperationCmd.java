@@ -1,9 +1,9 @@
 package net.vanfleteren.jazygit.state;
 
-import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.process.ExecutedCommand;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
  * A command that performs an {@link Operation} on the repository. Its outcome is reported as an

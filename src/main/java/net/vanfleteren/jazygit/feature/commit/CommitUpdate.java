@@ -1,23 +1,18 @@
 package net.vanfleteren.jazygit.feature.commit;
 
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-import io.vavr.control.Option;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.commit.CommitCmd.Commit;
 import net.vanfleteren.jazygit.feature.commit.CommitCmd.StageForCommit;
-import net.vanfleteren.jazygit.feature.commit.CommitMsg.Cancelled;
-import net.vanfleteren.jazygit.feature.commit.CommitMsg.Confirmed;
-import net.vanfleteren.jazygit.feature.commit.CommitMsg.Requested;
-import net.vanfleteren.jazygit.feature.commit.CommitMsg.StageAllCancelled;
-import net.vanfleteren.jazygit.feature.commit.CommitMsg.StageAllConfirmed;
-import net.vanfleteren.jazygit.feature.commit.CommitMsg.StagedForCommit;
-import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.feature.commit.CommitMsg.*;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
+import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.AppError;
-import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
  * Committing what is staged.

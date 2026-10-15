@@ -9,15 +9,6 @@ import java.util.function.Function;
  */
 public sealed interface Loadable<T> {
 
-    record Loading<T>() implements Loadable<T> {
-    }
-
-    record Loaded<T>(T value) implements Loadable<T> {
-    }
-
-    record Failed<T>(Failure failure) implements Loadable<T> {
-    }
-
     static <T> Loadable<T> loading() {
         return new Loading<>();
     }
@@ -50,5 +41,14 @@ public sealed interface Loadable<T> {
      */
     default Loadable<T> reload(T value) {
         return toOption().contains(value) ? this : new Loaded<>(value);
+    }
+
+    record Loading<T>() implements Loadable<T> {
+    }
+
+    record Loaded<T>(T value) implements Loadable<T> {
+    }
+
+    record Failed<T>(Failure failure) implements Loadable<T> {
     }
 }

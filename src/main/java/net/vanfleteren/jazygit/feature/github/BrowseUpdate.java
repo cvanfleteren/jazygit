@@ -24,7 +24,8 @@ public final class BrowseUpdate {
                             .map(remote -> Update.start(model.clearError(), new BrowseCmd(remote)))
                             .getOrElse(() -> Next.of(model.fail(new AppError.NotOnRemote(name)))))
                     .getOrElse(() -> Next.of(model));
-            case BrowseMsg.RemoteRequested(RemoteBranch branch) -> Update.start(model.clearError(), new BrowseCmd(branch));
+            case BrowseMsg.RemoteRequested(RemoteBranch branch) ->
+                    Update.start(model.clearError(), new BrowseCmd(branch));
         };
     }
 

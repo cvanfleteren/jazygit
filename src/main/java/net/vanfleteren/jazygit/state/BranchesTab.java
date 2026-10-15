@@ -4,9 +4,13 @@ package net.vanfleteren.jazygit.state;
  * Which branches the branches pane lists.
  */
 public enum BranchesTab {
-    /** The local branches. */
+    /**
+     * The local branches.
+     */
     LOCAL,
-    /** The remote-tracking branches. */
+    /**
+     * The remote-tracking branches.
+     */
     REMOTE;
 
     /**

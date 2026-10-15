@@ -7,8 +7,6 @@ import net.vanfleteren.jazygit.git.model.Sha;
 
 import java.nio.file.Path;
 
-import static net.vanfleteren.jazygit.git.GitCommand.git;
-
 /**
  * Reads what a commit changed through the git command line tool.
  */

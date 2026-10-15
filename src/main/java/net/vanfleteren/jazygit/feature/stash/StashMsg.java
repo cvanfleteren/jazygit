@@ -28,7 +28,6 @@ public sealed interface StashMsg extends Msg {
     }
 
 
-
     /**
      * The user asked to unstash {@code stash}.
      */

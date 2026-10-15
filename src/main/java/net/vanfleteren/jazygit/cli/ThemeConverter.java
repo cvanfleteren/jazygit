@@ -1,10 +1,11 @@
 package net.vanfleteren.jazygit.cli;
 
-import java.text.MessageFormat;
-import java.util.ResourceBundle;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import picocli.CommandLine.ITypeConverter;
 import picocli.CommandLine.TypeConversionException;
+
+import java.text.MessageFormat;
+import java.util.ResourceBundle;
 
 /**
  * Reads a theme by the name it has in the settings file.

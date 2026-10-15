@@ -75,7 +75,8 @@ public sealed interface PullRequestMsg extends Msg {
      *
      * @param pullRequest the new pull request, as far as it is known before it is read from GitHub
      */
-    record Created(PullRequestCmd.CreatePullRequest cmd, Option<PullRequest> pullRequest, List<ExecutedCommand> commands)
+    record Created(PullRequestCmd.CreatePullRequest cmd, Option<PullRequest> pullRequest,
+                   List<ExecutedCommand> commands)
             implements PullRequestMsg {
     }
 }

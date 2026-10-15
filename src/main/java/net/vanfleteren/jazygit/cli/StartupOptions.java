@@ -1,8 +1,9 @@
 package net.vanfleteren.jazygit.cli;
 
 import io.vavr.control.Option;
-import java.nio.file.Path;
 import net.vanfleteren.jazygit.settings.ThemeName;
+
+import java.nio.file.Path;
 
 /**
  * How jazygit was asked to start.

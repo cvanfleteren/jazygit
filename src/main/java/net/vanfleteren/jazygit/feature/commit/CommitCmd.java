@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.commit;
 
-import net.vanfleteren.jazygit.process.ExecutedCommand;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -11,9 +10,10 @@ import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.ResetMode;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.state.GitOperationCmd;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Operation;
-import net.vanfleteren.jazygit.state.GitOperationCmd;
 
 /**
  * Commands that create or rewrite commits.
@@ -66,7 +66,7 @@ public sealed interface CommitCmd extends GitOperationCmd {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return GitFailure.<ProcessError>sequence(() -> git.stage(stage), git::amendLastCommit);
+            return GitFailure.sequence(() -> git.stage(stage), git::amendLastCommit);
         }
     }
 

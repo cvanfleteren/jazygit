@@ -3,15 +3,13 @@ package net.vanfleteren.jazygit.ui.widgets;
 import dev.tamboui.style.Overflow;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
-import dev.tamboui.widgets.paragraph.Paragraph;
 import dev.tamboui.toolkit.elements.DialogElement;
+import dev.tamboui.widgets.paragraph.Paragraph;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.ui.Theme;
 
-import static dev.tamboui.toolkit.Toolkit.dialog;
-import static dev.tamboui.toolkit.Toolkit.text;
-import static dev.tamboui.toolkit.Toolkit.widget;
+import static dev.tamboui.toolkit.Toolkit.*;
 
 /**
  * The frame every popup is drawn in: a rounded border with the title, padding, and optionally a dimmed hint

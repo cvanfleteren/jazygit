@@ -14,13 +14,25 @@ import java.util.function.Function;
  */
 public final class RecentRepositoriesFile implements RecentRepositories {
 
-    /** The key of the recent repositories in the state file. */
+    /**
+     * The key of the recent repositories in the state file.
+     */
     static final String KEY = "recent-repositories";
 
     private final Path file;
 
     public RecentRepositoriesFile(Path file) {
         this.file = file;
+    }
+
+    private static List<Path> paths(CommentedConfig config) {
+        return config.getOptional(KEY)
+                .filter(java.util.List.class::isInstance)
+                .map(found -> List.ofAll((java.util.List<?>) found))
+                .map(values -> values.filter(String.class::isInstance).map(String.class::cast)
+                        .flatMap(value -> Try.of(() -> Path.of(value)).filter(Path::isAbsolute)))
+                .map(paths -> paths.distinct().take(MAX))
+                .orElse(List.empty());
     }
 
     @Override
@@ -47,15 +59,5 @@ public final class RecentRepositoriesFile implements RecentRepositories {
         CommentedConfig config = TomlFile.newConfig();
         config.set(KEY, changed.map(Path::toString).toJavaList());
         return TomlFile.write(file, config).map(written -> changed);
-    }
-
-    private static List<Path> paths(CommentedConfig config) {
-        return config.getOptional(KEY)
-                .filter(java.util.List.class::isInstance)
-                .map(found -> List.ofAll((java.util.List<?>) found))
-                .map(values -> values.filter(String.class::isInstance).map(String.class::cast)
-                        .flatMap(value -> Try.of(() -> Path.of(value)).filter(Path::isAbsolute)))
-                .map(paths -> paths.distinct().take(MAX))
-                .orElse(List.empty());
     }
 }

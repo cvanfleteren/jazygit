@@ -12,26 +12,23 @@ import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.Tuple;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.git.model.CommitGraph;
-import net.vanfleteren.jazygit.git.model.Diffs;
-import net.vanfleteren.jazygit.git.model.DiffText;
-import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Preview;
-import static dev.tamboui.toolkit.Toolkit.*;
 
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
-import java.util.function.Function;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
+
+import static dev.tamboui.toolkit.Toolkit.*;
 
 /**
  * The right-hand content panel: it always mirrors whichever left pane currently has focus,
@@ -41,7 +38,7 @@ public final class ContentPanel {
 
     private static final String COMMIT_AREA_ID = "commit-changes";
     private static final List<String> LEFT_PANES = List.of(FilesPanel.ID, BranchesPanel.ID, CommitsPanel.ID, StashPanel.ID);
-
+    private static final String MESSAGE_INDENT = "    ";
     private final Theme.SpanStyles styles;
     // The scrollable areas for the diffs, the branch log and the commit. They are kept between renders because
     // an area holds its own scroll position; a new element every frame would jump back to the top. Only used
@@ -59,7 +56,8 @@ public final class ContentPanel {
      *                        area had it, and says whether it did
      */
     public ContentPanel(Theme.SpanStyles styles, BooleanSupplier leaveScrollArea) {
-        this(styles, leaveScrollArea, id -> { });
+        this(styles, leaveScrollArea, id -> {
+        });
     }
 
     /**
@@ -76,6 +74,140 @@ public final class ContentPanel {
         logArea = new ScrollArea("branch-log", Option.none(), text -> logText(text, styles), leaveScrollArea,
                 focus);
         focusableAreas = List.of(stagedArea, unstagedArea, commitArea);
+    }
+
+    /**
+     * The text of {@code diff}, with a line saying it is truncated when it was cut off.
+     */
+    static String shown(DiffText diff) {
+        return diff.truncated() ? diff.text() + Messages.get("git.diff.truncated") + "\n" : diff.text();
+    }
+
+    /**
+     * The unified diff as one styled text, so it is a single element to lay out however long the diff is.
+     */
+    static Text diffText(String diff, Theme.SpanStyles styles) {
+        return styledText(lines(diff).map(line -> diffLine(line, styles)));
+    }
+
+    /**
+     * The branch log: the {@code commit <sha>} part of each commit's first line is yellow.
+     */
+    static Text logText(String content, Theme.SpanStyles styles) {
+        return styledText(lines(content).map(line -> line.startsWith("* ")
+                ? Line.from(Span.raw("* "), styled(line.substring(2), Theme.Classes.CURRENT_BRANCH, styles))
+                : Line.from(Span.raw(line))));
+    }
+
+    static Text plainText(String content) {
+        return styledText(lines(content).map(line -> Line.from(Span.raw(line))));
+    }
+
+    /**
+     * A line of a unified diff, colored by what it is: added, removed, a hunk header or a file header.
+     */
+    static Line diffLine(String line, Theme.SpanStyles styles) {
+        return diffClass(line).map(cssClass -> Line.from(styled(line, cssClass, styles)))
+                .getOrElse(() -> Line.from(Span.raw(line)));
+    }
+
+    private static Option<String> diffClass(String line) {
+        return line.startsWith("+++") || line.startsWith("---") || line.startsWith("diff ") || line.startsWith("index ")
+                ? Option.of(Theme.Classes.DIFF_HEADER)
+                : line.startsWith("+") ? Option.of(Theme.Classes.DIFF_ADDED)
+                : line.startsWith("-") ? Option.of(Theme.Classes.DIFF_REMOVED)
+                : line.startsWith("@@") ? Option.of(Theme.Classes.DIFF_HUNK)
+                : Option.none();
+    }
+
+    /**
+     * The commits as a {@code git log}-style listing, with dates in {@code zone}. Like a graph, the first
+     * line of each commit starts with {@code "* "} and its other lines with {@code "| "}. The message is
+     * indented.
+     */
+    static List<String> logLines(List<Commit> commits, ZoneId zone) {
+        DateTimeFormatter dateTime = DateTimeFormatter.ofPattern(Messages.get("content.dateTimePattern"));
+        return CommitGraph.layout(commits).flatMap(node -> {
+            Commit c = node.commit();
+            String rails = "| ".repeat(node.depth());
+            List<String> lines = List.of(Messages.get("content.commitSha", c.shortSha()),
+                            Messages.get("content.author", c.authorName(), c.authorEmail()),
+                            dateTime.format(c.authorTime().atZone(zone)), "")
+                    .appendAll(messageLines(c))
+                    .append("");
+            // Like git's graph: a merge opens a rail with a "\\" line, the last commit of a merged
+            // branch closes it with a "/" in place of its second line.
+            String closing = "| ".repeat(Math.max(0, node.depth() - 1));
+            return c.isMerge()
+                    ? List.of(rails + "*   " + lines.head(),
+                            rails + "|\\  " + Messages.get("content.merge", c.parents().map(Sha::shortSha).mkString(" ")))
+                    .appendAll(lines.tail().map(line -> rails + "| | " + line))
+                    : lines.zipWithIndex((line, i) -> i == 0 ? rails + "* " + line
+                    : node.closesBranch() ? closing + (i == 1 ? "|/  " : "|   ") + line
+                    : rails + "| " + line);
+        });
+    }
+
+    /**
+     * The indented message of {@code commit}: its subject, and its body after a blank line if it has one.
+     */
+    private static List<String> messageLines(Commit commit) {
+        return List.of(MESSAGE_INDENT + commit.message())
+                .appendAll(commit.body().isBlank() ? List.empty() : lines(commit.body())
+                        .map(line -> line.isBlank() ? line : MESSAGE_INDENT + line)
+                        .prepend(""));
+    }
+
+    private static Option<Commit> commit(Model model, Sha sha) {
+        return model.commits().getOrElse(List.empty()).find(c -> c.sha().equals(sha));
+    }
+
+    /**
+     * Like {@code git show}: the commit's header, its indented message, a {@code ---} line and then the changes.
+     */
+    static Text commitText(Commit commit, String changes, Theme.SpanStyles styles) {
+        DateTimeFormatter commitDate = DateTimeFormatter.ofPattern(Messages.get("content.commitDatePattern"), Locale.ENGLISH);
+        List<String> message = messageLines(commit);
+        return styledText(List.of(
+                        styled(Messages.get("content.commitSha", commit.sha().value()), Theme.Classes.SHA, styles),
+                        Span.raw(Messages.get("content.commitAuthor", commit.authorName(), commit.authorEmail())),
+                        Span.raw(Messages.get("content.commitDate", commitDate.format(
+                                commit.authorTime().atZone(ZoneId.systemDefault())))),
+                        Span.raw(""),
+                        styled(message.head(), Theme.Classes.BOLD, styles))
+                .map(Line::from)
+                .appendAll(message.tail().map(line -> Line.from(Span.raw(line))))
+                .append(Line.from(Span.raw("---")))
+                .appendAll(lines(changes).map(line -> diffLine(line, styles))));
+    }
+
+    private static List<String> lines(String text) {
+        return List.ofAll(text.lines()::iterator);
+    }
+
+    private static Text styledText(List<Line> lines) {
+        return Text.from(lines.toJavaList());
+    }
+
+    private static Span styled(String text, String cssClass, Theme.SpanStyles styles) {
+        return Span.styled(text, styles.of(cssClass));
+    }
+
+    private static StyledElement<?> loadingPanel(String title) {
+        return dimPanel(title, Placeholders.loading());
+    }
+
+    private static StyledElement<?> dimPanel(String title, String content) {
+        return panel(title, text(content).addClass(Theme.Classes.DIM));
+    }
+
+    private static <T> StyledElement<?> whenLoaded(String title, Loadable<T> loadable, Function<T, StyledElement<?>> view) {
+        return switch (loadable) {
+            case Loadable.Loaded<T>(T value) -> view.apply(value);
+            case Loadable.Loading<T>() -> loadingPanel(title);
+            case Loadable.Failed<T>(Failure failure) ->
+                    panel(title, text(Placeholders.error(failure)).addClass(Theme.Classes.ERROR));
+        };
     }
 
     /**
@@ -100,7 +232,76 @@ public final class ContentPanel {
                 .headOption();
     }
 
-    private static final String MESSAGE_INDENT = "    ";
+    /**
+     * What goes with the pane that has the focus, {@code focusedId}; while a popup has it, what goes with the
+     * pane the popup was opened from. That holds also in the frame a popup closes in, as it still has the focus
+     * until the focus is given back.
+     */
+    public StyledElement<?> render(Model model, String focusedId) {
+        List.of(stagedArea, unstagedArea, commitArea, logArea).forEach(area -> area.restyle(model.theme()));
+        boolean inContent = focusableAreas.exists(area -> area.id().equals(focusedId));
+        focusableAreas.forEach(area -> area.tabbable(inContent));
+        boolean onPane = inContent || LEFT_PANES.contains(focusedId);
+        String pane = onPane ? focusedId : model.focusedPane().getOrElse(focusedId);
+        if (BranchesPanel.ID.equals(pane)) {
+            return branchLogView(model);
+        }
+        if (CommitsPanel.ID.equals(pane) || COMMIT_AREA_ID.equals(pane)) {
+            return commitDiffView(model);
+        }
+        return fileDiffView(model);
+    }
+
+    /**
+     * One panel for the staged changes and one for the unstaged changes, one above the other when both exist.
+     */
+    private StyledElement<?> fileDiffView(Model model) {
+        String title = Messages.get("panel.diff.title");
+        // With no files there is nothing to highlight, so no diff is ever requested.
+        return model.status().toOption().exists(status -> status.files().isEmpty())
+                ? dimPanel(title, Messages.get("content.noChangedFiles"))
+                : model.fileDiff()
+                .map(Preview::shown)
+                .<StyledElement<?>>map(diff -> whenLoaded(title, diff.value(), diffs -> diffPanels(title, diffs)))
+                .getOrElse(() -> loadingPanel(title));
+    }
+
+    private StyledElement<?> diffPanels(String title, Diffs diffs) {
+        if (diffs.isEmpty()) {
+            return dimPanel(title, Messages.get("content.noChanges"));
+        }
+        List<Element> panels = List.of(
+                        Tuple.of(Messages.get("content.staged"), stagedArea.with(shown(diffs.staged()))),
+                        Tuple.of(Messages.get("content.unstaged"), unstagedArea.with(shown(diffs.unstaged()))))
+                .filter(e -> e._2.hasContent())
+                .map(e -> e._2.show(e._1));
+        return column(panels.toJavaArray(Element[]::new));
+    }
+
+    private StyledElement<?> branchLogView(Model model) {
+        return model.branchLog()
+                .map(Preview::shown)
+                .<StyledElement<?>>map(log -> {
+                    String title = Messages.get("panel.log.titleFor", log.key().name());
+                    return whenLoaded(title, log.value(), commits ->
+                            logArea.with(logLines(commits, ZoneId.systemDefault()).mkString("\n")).show(title));
+                })
+                .getOrElse(() -> loadingPanel(Messages.get("panel.log.title")));
+    }
+
+    private StyledElement<?> commitDiffView(Model model) {
+        String title = Messages.get("panel.commit.title");
+        return model.commitDetail()
+                .map(Preview::shown)
+                .<StyledElement<?>>map(detail -> whenLoaded(title, detail.value(), changes -> commit(model, detail.key())
+                        .<StyledElement<?>>map(commit -> commitArea
+                                .with(new CommitContent(commit, changes), () -> commitText(commit, shown(changes), styles))
+                                .show(Messages.get("panel.commit.titleFor", commit.shortSha())))
+                        .getOrElse(() -> loadingPanel(title))))
+                .getOrElse(() -> model.commits().toOption().exists(List::isEmpty)
+                        ? panel(title, text(Messages.get("content.noCommits")))
+                        : loadingPanel(title));
+    }
 
     private static final class ScrollArea {
         private final String id;
@@ -192,213 +393,8 @@ public final class ContentPanel {
     }
 
     /**
-     * What goes with the pane that has the focus, {@code focusedId}; while a popup has it, what goes with the
-     * pane the popup was opened from. That holds also in the frame a popup closes in, as it still has the focus
-     * until the focus is given back.
-     */
-    public StyledElement<?> render(Model model, String focusedId) {
-        List.of(stagedArea, unstagedArea, commitArea, logArea).forEach(area -> area.restyle(model.theme()));
-        boolean inContent = focusableAreas.exists(area -> area.id().equals(focusedId));
-        focusableAreas.forEach(area -> area.tabbable(inContent));
-        boolean onPane = inContent || LEFT_PANES.contains(focusedId);
-        String pane = onPane ? focusedId : model.focusedPane().getOrElse(focusedId);
-        if (BranchesPanel.ID.equals(pane)) {
-            return branchLogView(model);
-        }
-        if (CommitsPanel.ID.equals(pane) || COMMIT_AREA_ID.equals(pane)) {
-            return commitDiffView(model);
-        }
-        return fileDiffView(model);
-    }
-
-    /**
-     * One panel for the staged changes and one for the unstaged changes, one above the other when both exist.
-     */
-    private StyledElement<?> fileDiffView(Model model) {
-        String title = Messages.get("panel.diff.title");
-        // With no files there is nothing to highlight, so no diff is ever requested.
-        return model.status().toOption().exists(status -> status.files().isEmpty())
-                ? dimPanel(title, Messages.get("content.noChangedFiles"))
-                : model.fileDiff()
-                .map(Preview::shown)
-                .<StyledElement<?>>map(diff -> whenLoaded(title, diff.value(), diffs -> diffPanels(title, diffs)))
-                .getOrElse(() -> loadingPanel(title));
-    }
-
-    private StyledElement<?> diffPanels(String title, Diffs diffs) {
-        if (diffs.isEmpty()) {
-            return dimPanel(title, Messages.get("content.noChanges"));
-        }
-        List<Element> panels = List.of(
-                        Tuple.of(Messages.get("content.staged"), stagedArea.with(shown(diffs.staged()))),
-                        Tuple.of(Messages.get("content.unstaged"), unstagedArea.with(shown(diffs.unstaged()))))
-                .filter(e -> e._2.hasContent())
-                .map(e -> e._2.show(e._1));
-        return column(panels.toJavaArray(Element[]::new));
-    }
-
-    /**
-     * The text of {@code diff}, with a line saying it is truncated when it was cut off.
-     */
-    static String shown(DiffText diff) {
-        return diff.truncated() ? diff.text() + Messages.get("git.diff.truncated") + "\n" : diff.text();
-    }
-
-    /**
-     * The unified diff as one styled text, so it is a single element to lay out however long the diff is.
-     */
-    static Text diffText(String diff, Theme.SpanStyles styles) {
-        return styledText(lines(diff).map(line -> diffLine(line, styles)));
-    }
-
-    /**
-     * The branch log: the {@code commit <sha>} part of each commit's first line is yellow.
-     */
-    static Text logText(String content, Theme.SpanStyles styles) {
-        return styledText(lines(content).map(line -> line.startsWith("* ")
-                ? Line.from(Span.raw("* "), styled(line.substring(2), Theme.Classes.CURRENT_BRANCH, styles))
-                : Line.from(Span.raw(line))));
-    }
-
-    static Text plainText(String content) {
-        return styledText(lines(content).map(line -> Line.from(Span.raw(line))));
-    }
-
-    /**
-     * A line of a unified diff, colored by what it is: added, removed, a hunk header or a file header.
-     */
-    static Line diffLine(String line, Theme.SpanStyles styles) {
-        return diffClass(line).map(cssClass -> Line.from(styled(line, cssClass, styles)))
-                .getOrElse(() -> Line.from(Span.raw(line)));
-    }
-
-    private static Option<String> diffClass(String line) {
-        return line.startsWith("+++") || line.startsWith("---") || line.startsWith("diff ") || line.startsWith("index ")
-                ? Option.of(Theme.Classes.DIFF_HEADER)
-                : line.startsWith("+") ? Option.of(Theme.Classes.DIFF_ADDED)
-                : line.startsWith("-") ? Option.of(Theme.Classes.DIFF_REMOVED)
-                : line.startsWith("@@") ? Option.of(Theme.Classes.DIFF_HUNK)
-                : Option.none();
-    }
-
-    private StyledElement<?> branchLogView(Model model) {
-        return model.branchLog()
-                .map(Preview::shown)
-                .<StyledElement<?>>map(log -> {
-                    String title = Messages.get("panel.log.titleFor", log.key().name());
-                    return whenLoaded(title, log.value(), commits ->
-                            logArea.with(logLines(commits, ZoneId.systemDefault()).mkString("\n")).show(title));
-                })
-                .getOrElse(() -> loadingPanel(Messages.get("panel.log.title")));
-    }
-
-    /**
-     * The commits as a {@code git log}-style listing, with dates in {@code zone}. Like a graph, the first
-     * line of each commit starts with {@code "* "} and its other lines with {@code "| "}. The message is
-     * indented.
-     */
-    static List<String> logLines(List<Commit> commits, ZoneId zone) {
-        DateTimeFormatter dateTime = DateTimeFormatter.ofPattern(Messages.get("content.dateTimePattern"));
-        return CommitGraph.layout(commits).flatMap(node -> {
-            Commit c = node.commit();
-            String rails = "| ".repeat(node.depth());
-            List<String> lines = List.of(Messages.get("content.commitSha", c.shortSha()),
-                            Messages.get("content.author", c.authorName(), c.authorEmail()),
-                            dateTime.format(c.authorTime().atZone(zone)), "")
-                    .appendAll(messageLines(c))
-                    .append("");
-            // Like git's graph: a merge opens a rail with a "\\" line, the last commit of a merged
-            // branch closes it with a "/" in place of its second line.
-            String closing = "| ".repeat(Math.max(0, node.depth() - 1));
-            return c.isMerge()
-                    ? List.of(rails + "*   " + lines.head(),
-                            rails + "|\\  " + Messages.get("content.merge", c.parents().map(Sha::shortSha).mkString(" ")))
-                    .appendAll(lines.tail().map(line -> rails + "| | " + line))
-                    : lines.zipWithIndex((line, i) -> i == 0 ? rails + "* " + line
-                    : node.closesBranch() ? closing + (i == 1 ? "|/  " : "|   ") + line
-                    : rails + "| " + line);
-        });
-    }
-
-    /**
-     * The indented message of {@code commit}: its subject, and its body after a blank line if it has one.
-     */
-    private static List<String> messageLines(Commit commit) {
-        return List.of(MESSAGE_INDENT + commit.message())
-                .appendAll(commit.body().isBlank() ? List.empty() : lines(commit.body())
-                        .map(line -> line.isBlank() ? line : MESSAGE_INDENT + line)
-                        .prepend(""));
-    }
-
-    /**
      * What the commit area shows: the commit, and what it changed.
      */
     private record CommitContent(Commit commit, DiffText changes) {
-    }
-
-    private StyledElement<?> commitDiffView(Model model) {
-        String title = Messages.get("panel.commit.title");
-        return model.commitDetail()
-                .map(Preview::shown)
-                .<StyledElement<?>>map(detail -> whenLoaded(title, detail.value(), changes -> commit(model, detail.key())
-                        .<StyledElement<?>>map(commit -> commitArea
-                                .with(new CommitContent(commit, changes), () -> commitText(commit, shown(changes), styles))
-                                .show(Messages.get("panel.commit.titleFor", commit.shortSha())))
-                        .getOrElse(() -> loadingPanel(title))))
-                .getOrElse(() -> model.commits().toOption().exists(List::isEmpty)
-                        ? panel(title, text(Messages.get("content.noCommits")))
-                        : loadingPanel(title));
-    }
-
-    private static Option<Commit> commit(Model model, Sha sha) {
-        return model.commits().getOrElse(List.empty()).find(c -> c.sha().equals(sha));
-    }
-
-    /**
-     * Like {@code git show}: the commit's header, its indented message, a {@code ---} line and then the changes.
-     */
-    static Text commitText(Commit commit, String changes, Theme.SpanStyles styles) {
-        DateTimeFormatter commitDate = DateTimeFormatter.ofPattern(Messages.get("content.commitDatePattern"), Locale.ENGLISH);
-        List<String> message = messageLines(commit);
-        return styledText(List.of(
-                        styled(Messages.get("content.commitSha", commit.sha().value()), Theme.Classes.SHA, styles),
-                        Span.raw(Messages.get("content.commitAuthor", commit.authorName(), commit.authorEmail())),
-                        Span.raw(Messages.get("content.commitDate", commitDate.format(
-                                commit.authorTime().atZone(ZoneId.systemDefault())))),
-                        Span.raw(""),
-                        styled(message.head(), Theme.Classes.BOLD, styles))
-                .map(Line::from)
-                .appendAll(message.tail().map(line -> Line.from(Span.raw(line))))
-                .append(Line.from(Span.raw("---")))
-                .appendAll(lines(changes).map(line -> diffLine(line, styles))));
-    }
-
-    private static List<String> lines(String text) {
-        return List.ofAll(text.lines()::iterator);
-    }
-
-    private static Text styledText(List<Line> lines) {
-        return Text.from(lines.toJavaList());
-    }
-
-    private static Span styled(String text, String cssClass, Theme.SpanStyles styles) {
-        return Span.styled(text, styles.of(cssClass));
-    }
-
-    private static StyledElement<?> loadingPanel(String title) {
-        return dimPanel(title, Placeholders.loading());
-    }
-
-    private static StyledElement<?> dimPanel(String title, String content) {
-        return panel(title, text(content).addClass(Theme.Classes.DIM));
-    }
-
-    private static <T> StyledElement<?> whenLoaded(String title, Loadable<T> loadable, Function<T, StyledElement<?>> view) {
-        return switch (loadable) {
-            case Loadable.Loaded<T>(T value) -> view.apply(value);
-            case Loadable.Loading<T>() -> loadingPanel(title);
-            case Loadable.Failed<T>(Failure failure) ->
-                    panel(title, text(Placeholders.error(failure)).addClass(Theme.Classes.ERROR));
-        };
     }
 }

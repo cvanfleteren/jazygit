@@ -40,6 +40,13 @@ public final class StashPanel {
     }
 
     /**
+     * The text of a stash row: its position in the stash list, then what it was stashed as.
+     */
+    static String row(int index, Stash stash) {
+        return index + " " + stash.message();
+    }
+
+    /**
      * @param focusedId the id of the currently focused left pane, as reported by
      *                  {@code runner().focusManager().focusedId()}
      */
@@ -59,13 +66,6 @@ public final class StashPanel {
      */
     public Option<Stash> selectedStash() {
         return list.selected(stashes -> stashes);
-    }
-
-    /**
-     * The text of a stash row: its position in the stash list, then what it was stashed as.
-     */
-    static String row(int index, Stash stash) {
-        return index + " " + stash.message();
     }
 
 }

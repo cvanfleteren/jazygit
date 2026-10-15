@@ -1,66 +1,51 @@
 package net.vanfleteren.jazygit.state;
 
-import io.vavr.collection.HashMap;
-import io.vavr.collection.HashSet;
-import io.vavr.collection.List;
-import io.vavr.collection.Map;
-import io.vavr.collection.Set;
+import io.vavr.collection.*;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.git.model.Diffs;
-import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.git.model.RemoteRef;
-import net.vanfleteren.jazygit.git.model.RepoStatus;
-import net.vanfleteren.jazygit.git.model.DiffText;
-import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.git.model.Stash;
-import net.vanfleteren.jazygit.git.model.Upstream;
+import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.ThemeName;
 
 /**
  * The complete, immutable state of the repository as shown by the UI.
  *
- * @param repositoryName the name of the repository
- * @param status         the working tree status and HEAD
- * @param branches       the local branches
- * @param remoteBranches the remote-tracking branches
- * @param branchesTab    which branches the branches pane lists; it stays when the focus leaves the pane
- * @param commits        the commit log of HEAD
- * @param stashes        the stashes, newest first
- * @param branchLog      the log of the branch, local or remote, highlighted in the branches pane, once one is
- *                       highlighted
- * @param commitDetail   what the commit highlighted in the commits pane changed (its files, a summary and its
- *                       diff), once one is highlighted
- * @param fileDiff       the diff of the node highlighted in the files pane, keyed by the changed files under
- *                       it, once one is highlighted
- * @param refreshing     periodic loads that have been started and not finished yet, so a tick does
- *                       not queue them again
- * @param error          why the last operation failed, until the next one is started
- * @param busy           the branches a git operation runs on right now, like a push or a delete, and that
- *                       operation: they show a
- *                       spinner, and take no other operation until it is done
- * @param fetching       the background fetch from the remotes that is running, if any; the next one waits
- * @param pullRequests   the open pull requests on GitHub, by the remote branch they merge from; none until they
- *                       were read once, and the ones read last when reading them again failed
+ * @param repositoryName      the name of the repository
+ * @param status              the working tree status and HEAD
+ * @param branches            the local branches
+ * @param remoteBranches      the remote-tracking branches
+ * @param branchesTab         which branches the branches pane lists; it stays when the focus leaves the pane
+ * @param commits             the commit log of HEAD
+ * @param stashes             the stashes, newest first
+ * @param branchLog           the log of the branch, local or remote, highlighted in the branches pane, once one is
+ *                            highlighted
+ * @param commitDetail        what the commit highlighted in the commits pane changed (its files, a summary and its
+ *                            diff), once one is highlighted
+ * @param fileDiff            the diff of the node highlighted in the files pane, keyed by the changed files under
+ *                            it, once one is highlighted
+ * @param refreshing          periodic loads that have been started and not finished yet, so a tick does
+ *                            not queue them again
+ * @param error               why the last operation failed, until the next one is started
+ * @param busy                the branches a git operation runs on right now, like a push or a delete, and that
+ *                            operation: they show a
+ *                            spinner, and take no other operation until it is done
+ * @param fetching            the background fetch from the remotes that is running, if any; the next one waits
+ * @param pullRequests        the open pull requests on GitHub, by the remote branch they merge from; none until they
+ *                            were read once, and the ones read last when reading them again failed
  * @param pullRequestsFailure why the pull requests could not be read the last time, if they could not
  * @param readingPullRequests how many reads of the pull requests are running; the line at the bottom says so
- * @param branchChecks   how the CI checks are doing on the branches on GitHub; none until they were read once,
- *                       and the ones read last when reading them again failed
+ * @param branchChecks        how the CI checks are doing on the branches on GitHub; none until they were read once,
+ *                            and the ones read last when reading them again failed
  * @param readingBranchChecks how many reads of the checks of the branches are running
- * @param commandLog     the mutating git commands that were executed, oldest first
- * @param popup          the popup that is open, if any; only one can be
- * @param settings       what the user chose to keep from one session to the next, like the theme
- * @param themeOverride  the theme asked for at startup, or highlighted in the theme dialog, for this session only,
- *                       until the user chooses one
- * @param focusedPane    the id of the element outside the popups that had the focus last, which a closing popup
- *                       gives it back to; none before the view reported one
+ * @param commandLog          the mutating git commands that were executed, oldest first
+ * @param popup               the popup that is open, if any; only one can be
+ * @param settings            what the user chose to keep from one session to the next, like the theme
+ * @param themeOverride       the theme asked for at startup, or highlighted in the theme dialog, for this session only,
+ *                            until the user chooses one
+ * @param focusedPane         the id of the element outside the popups that had the focus last, which a closing popup
+ *                            gives it back to; none before the view reported one
  */
 @With
 public record Model(String repositoryName,

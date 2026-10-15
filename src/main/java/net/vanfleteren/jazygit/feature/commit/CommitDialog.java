@@ -14,12 +14,13 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
 import net.vanfleteren.jazygit.ui.SubmittableTextArea;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
-import static dev.tamboui.toolkit.Toolkit.*;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+
+import static dev.tamboui.toolkit.Toolkit.*;
 
 /**
  * Popup asking for a commit message: a summary and a description. Tab switches between them. Enter
@@ -115,17 +116,17 @@ public final class CommitDialog implements PopupView {
             });
         }
         return Option.of(dialog(
-                        textInput(summary)
-                                .id(summaryId)
-                                .title(Messages.get("dialog.commit.summary.title"))
-                                .placeholder(Messages.get("dialog.commit.summary.placeholder"))
-                                .length(INPUT_HEIGHT)
-                                .onSubmit(this::confirm),
-                        new SubmittableTextArea(textArea(description)
-                                .title(Messages.get("dialog.commit.description.title"))
-                                .placeholder(Messages.get("dialog.commit.description.placeholder")),
-                                descriptionId, this::confirm)
-                                .rows(DESCRIPTION_HEIGHT))
+                textInput(summary)
+                        .id(summaryId)
+                        .title(Messages.get("dialog.commit.summary.title"))
+                        .placeholder(Messages.get("dialog.commit.summary.placeholder"))
+                        .length(INPUT_HEIGHT)
+                        .onSubmit(this::confirm),
+                new SubmittableTextArea(textArea(description)
+                        .title(Messages.get("dialog.commit.description.title"))
+                        .placeholder(Messages.get("dialog.commit.description.placeholder")),
+                        descriptionId, this::confirm)
+                        .rows(DESCRIPTION_HEIGHT))
                 .borderType(BorderType.NONE)
                 .width(WIDTH)
                 .onCancel(this::cancel));

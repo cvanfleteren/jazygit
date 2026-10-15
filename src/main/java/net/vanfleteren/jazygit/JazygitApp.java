@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit;
 
-import static dev.tamboui.toolkit.Toolkit.*;
-
+import dev.tamboui.css.engine.StyleEngine;
+import dev.tamboui.style.Style;
 import dev.tamboui.toolkit.app.ToolkitApp;
 import dev.tamboui.toolkit.app.ToolkitRunner;
 import dev.tamboui.toolkit.element.Element;
@@ -14,62 +14,32 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
-import dev.tamboui.css.engine.StyleEngine;
-import dev.tamboui.style.Style;
-import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.cli.StartupCli;
+import net.vanfleteren.jazygit.cli.StartupOptions;
 import net.vanfleteren.jazygit.feature.branch.BranchDialogs;
 import net.vanfleteren.jazygit.feature.branch.BranchesTabMsg;
 import net.vanfleteren.jazygit.feature.commit.CommitDialog;
 import net.vanfleteren.jazygit.feature.commit.CommitDialogs;
 import net.vanfleteren.jazygit.feature.discard.DiscardDialog;
+import net.vanfleteren.jazygit.feature.error.ErrorDialog;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
 import net.vanfleteren.jazygit.feature.github.PullRequestDialog;
 import net.vanfleteren.jazygit.feature.github.PullRequestDialogs;
-import net.vanfleteren.jazygit.state.PullRequestsMsg;
 import net.vanfleteren.jazygit.feature.help.HelpDialog;
-import net.vanfleteren.jazygit.feature.error.ErrorDialog;
+import net.vanfleteren.jazygit.feature.repos.RecentReposDialog;
+import net.vanfleteren.jazygit.feature.settings.SettingsPanelDialogs;
 import net.vanfleteren.jazygit.feature.stash.StashDialogs;
 import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
-import net.vanfleteren.jazygit.feature.repos.RecentReposDialog;
-import net.vanfleteren.jazygit.cli.StartupCli;
-import net.vanfleteren.jazygit.cli.StartupOptions;
-import net.vanfleteren.jazygit.settings.ThemeName;
-import net.vanfleteren.jazygit.state.BranchesTab;
-import net.vanfleteren.jazygit.settings.RecentRepositories;
-import net.vanfleteren.jazygit.settings.RecentRepositoriesFile;
-import net.vanfleteren.jazygit.settings.SettingsFile;
-import net.vanfleteren.jazygit.settings.SettingsPaths;
-import net.vanfleteren.jazygit.settings.SettingsStore;
-import net.vanfleteren.jazygit.state.Env;
-import net.vanfleteren.jazygit.state.Repositories;
-import net.vanfleteren.jazygit.feature.settings.SettingsPanelDialogs;
 import net.vanfleteren.jazygit.gh.CliGitHub;
 import net.vanfleteren.jazygit.gh.GhToken;
-import net.vanfleteren.jazygit.settings.Settings;
-import net.vanfleteren.jazygit.state.GitHubAccount;
 import net.vanfleteren.jazygit.git.CliGitInfoProvider;
 import net.vanfleteren.jazygit.git.GitError;
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Program;
-import net.vanfleteren.jazygit.ui.BranchesPanel;
-import net.vanfleteren.jazygit.ui.CommandLogPanel;
-import net.vanfleteren.jazygit.ui.CommitsPanel;
-import net.vanfleteren.jazygit.ui.ContentPanel;
-import net.vanfleteren.jazygit.ui.FetchLine;
-import net.vanfleteren.jazygit.ui.ErrorText;
-import net.vanfleteren.jazygit.ui.FilesPanel;
-import net.vanfleteren.jazygit.ui.StashPanel;
-import net.vanfleteren.jazygit.ui.StatusPanel;
-import net.vanfleteren.jazygit.ui.Theme;
-import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
-import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
-import net.vanfleteren.jazygit.ui.widgets.PickDialog;
-import net.vanfleteren.jazygit.ui.widgets.Dimmed;
-import net.vanfleteren.jazygit.ui.widgets.SelectedTextColoured;
-import net.vanfleteren.jazygit.ui.widgets.PopupView;
-import net.vanfleteren.jazygit.ui.widgets.TextInputDialog;
+import net.vanfleteren.jazygit.settings.*;
+import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.ui.*;
+import net.vanfleteren.jazygit.ui.widgets.*;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -77,13 +47,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Clock;
-import java.time.Instant;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
+import static dev.tamboui.toolkit.Toolkit.*;
 
 /**
  * Entry point for jazygit, a lazygit-style terminal UI for Git built with TamboUI.
@@ -161,16 +133,6 @@ public class JazygitApp extends ToolkitApp {
     private Option<Runtime> runtime = Option.none();
 
     /**
-     * The program and the threads it runs git on, which exist from the start of the app to its stop, or until
-     * another repository is opened in its place.
-     *
-     * @param io    where git is called
-     * @param fetch where git talks to the remotes
-     */
-    private record Runtime(ThreadPoolExecutor io, ThreadPoolExecutor fetch, Program program) {
-    }
-
-    /**
      * @param env           what the repository the app starts in is read with; it opens other repositories in
      *                      the app
      * @param settings      the settings the session starts with, as {@code env} loaded them
@@ -183,6 +145,80 @@ public class JazygitApp extends ToolkitApp {
         this.styleEngine = styleEngine;
         this.contentPanel = new ContentPanel(Theme.spanStyles(styleEngine), this::leaveScrollArea,
                 id -> runner().focusManager().setFocus(id));
+    }
+
+    /**
+     * What commands run against for the repository {@code git} reads: gh at the executable {@code settings} name,
+     * and both gh and git as the account configured for the repository, if any.
+     */
+    private static Env env(CliGitInfoProvider git, Settings settings, SettingsStore store, RecentRepositories recent,
+                           Repositories repositories) {
+        GhToken token = new GhToken(git.workTree(), settings.gh(), () -> GitHubAccount.configured(git));
+        // Without the token, git still talks to the remotes, as the credential helper's own account.
+        return new Env(git.withCredentials(() -> token.environment().getOrElse(HashMap.empty())),
+                new CliGitHub(git.workTree(), settings.gh(), token), store, recent, repositories);
+    }
+
+    /**
+     * Drops what {@code running} has queued, and stops its fetch half-way; the git command that runs is not
+     * interrupted, which would kill it half-way, say in the middle of a rebase.
+     */
+    private static void stop(Runtime running) {
+        running.io().getQueue().clear();
+        running.io().shutdown();
+        running.fetch().shutdownNow();
+    }
+
+    private static ThreadPoolExecutor singleThread(String name) {
+        return new ThreadPoolExecutor(1, 1, 0, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(),
+                Thread.ofPlatform().name(name).daemon().factory());
+    }
+
+    /**
+     * Writes how a command threw to {@link #BUG_LOG}, as the terminal is the TUI's; failing that, it is lost.
+     */
+    private static void logBug(Throwable bug) {
+        StringWriter trace = new StringWriter();
+        bug.printStackTrace(new PrintWriter(trace));
+        Try.run(() -> Files.writeString(BUG_LOG, Instant.now() + " " + trace + System.lineSeparator(),
+                StandardOpenOption.CREATE, StandardOpenOption.APPEND));
+    }
+
+    /**
+     * Where the focus was outside the popups, which a popup opened from anywhere gives it back to.
+     */
+    private static String focusedPane(Model model) {
+        return model.focusedPane().getOrElse(FilesPanel.ID);
+    }
+
+    /**
+     * @param args as {@link StartupCli} reads them; {@code --help} lists them
+     */
+    static void main(String[] args) {
+        StartupCli.parse(args, new PrintWriter(System.out), new PrintWriter(System.err))
+                .peekLeft(exit -> System.exit(exit.code()))
+                .forEach(JazygitApp::start);
+    }
+
+    private static void start(StartupOptions options) {
+        Path start = options.path().getOrElse(Path.of("")).toAbsolutePath();
+        Either<String, JazygitApp> app = CliGitInfoProvider.open(start)
+                .mapLeft(ErrorText::of)
+                .flatMap(provider -> Theme.createEngine()
+                        .mapLeft(failed -> Messages.get("theme.loadFailed", failed.theme(), ErrorText.reason(failed.cause())))
+                        .map(engine -> {
+                            RecentRepositories recent = new RecentRepositoriesFile(SettingsPaths.stateFile());
+                            recent.opened(provider.workTree()).onFailure(JazygitApp::logBug);
+                            SettingsStore settings = new SettingsFile(SettingsPaths.configFile());
+                            SettingsStore.Loaded loaded = settings.load();
+                            Env env = env(provider, loaded.settings(), settings, recent, Repositories.NONE);
+                            return new JazygitApp(env, loaded, options.theme(), engine);
+                        }));
+        app.flatMap(jazygit -> Try.run(jazygit::run).toEither().mapLeft(ErrorText::reason))
+                .orElseRun(problem -> {
+                    System.err.println(problem);
+                    System.exit(1);
+                });
     }
 
     /**
@@ -285,44 +321,6 @@ public class JazygitApp extends ToolkitApp {
         });
     }
 
-    /**
-     * What commands run against for the repository {@code git} reads: gh at the executable {@code settings} name,
-     * and both gh and git as the account configured for the repository, if any.
-     */
-    private static Env env(CliGitInfoProvider git, Settings settings, SettingsStore store, RecentRepositories recent,
-                           Repositories repositories) {
-        GhToken token = new GhToken(git.workTree(), settings.gh(), () -> GitHubAccount.configured(git));
-        // Without the token, git still talks to the remotes, as the credential helper's own account.
-        return new Env(git.withCredentials(() -> token.environment().getOrElse(HashMap.empty())),
-                new CliGitHub(git.workTree(), settings.gh(), token), store, recent, repositories);
-    }
-
-    /**
-     * Drops what {@code running} has queued, and stops its fetch half-way; the git command that runs is not
-     * interrupted, which would kill it half-way, say in the middle of a rebase.
-     */
-    private static void stop(Runtime running) {
-        running.io().getQueue().clear();
-        running.io().shutdown();
-        running.fetch().shutdownNow();
-    }
-
-    private static ThreadPoolExecutor singleThread(String name) {
-        return new ThreadPoolExecutor(1, 1, 0, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(),
-                Thread.ofPlatform().name(name).daemon().factory());
-    }
-
-    /**
-     * Writes how a command threw to {@link #BUG_LOG}, as the terminal is the TUI's; failing that, it is lost.
-     */
-    private static void logBug(Throwable bug) {
-        StringWriter trace = new StringWriter();
-        bug.printStackTrace(new PrintWriter(trace));
-        Try.run(() -> Files.writeString(BUG_LOG, Instant.now() + " " + trace + System.lineSeparator(),
-                StandardOpenOption.CREATE, StandardOpenOption.APPEND));
-    }
-
-
     @Override
     protected TuiConfig configure() {
         return TuiConfig.builder().mouseCapture(true).build();
@@ -414,10 +412,13 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
-     * Where the focus was outside the popups, which a popup opened from anywhere gives it back to.
+     * The program and the threads it runs git on, which exist from the start of the app to its stop, or until
+     * another repository is opened in its place.
+     *
+     * @param io    where git is called
+     * @param fetch where git talks to the remotes
      */
-    private static String focusedPane(Model model) {
-        return model.focusedPane().getOrElse(FilesPanel.ID);
+    private record Runtime(ThreadPoolExecutor io, ThreadPoolExecutor fetch, Program program) {
     }
 
     /**
@@ -430,35 +431,5 @@ public class JazygitApp extends ToolkitApp {
      * A popup as rendered: its dialog while it is open.
      */
     private record Shown(Option<Element> element, List<String> ids, String returnTo) {
-    }
-
-    /**
-     * @param args as {@link StartupCli} reads them; {@code --help} lists them
-     */
-    public static void main(String[] args) {
-        StartupCli.parse(args, new PrintWriter(System.out), new PrintWriter(System.err))
-                .peekLeft(exit -> System.exit(exit.code()))
-                .forEach(JazygitApp::start);
-    }
-
-    private static void start(StartupOptions options) {
-        Path start = options.path().getOrElse(Path.of("")).toAbsolutePath();
-        Either<String, JazygitApp> app = CliGitInfoProvider.open(start)
-                .mapLeft(ErrorText::of)
-                .flatMap(provider -> Theme.createEngine()
-                        .mapLeft(failed -> Messages.get("theme.loadFailed", failed.theme(), ErrorText.reason(failed.cause())))
-                        .map(engine -> {
-                            RecentRepositories recent = new RecentRepositoriesFile(SettingsPaths.stateFile());
-                            recent.opened(provider.workTree()).onFailure(JazygitApp::logBug);
-                            SettingsStore settings = new SettingsFile(SettingsPaths.configFile());
-                            SettingsStore.Loaded loaded = settings.load();
-                            Env env = env(provider, loaded.settings(), settings, recent, Repositories.NONE);
-                            return new JazygitApp(env, loaded, options.theme(), engine);
-                        }));
-        app.flatMap(jazygit -> Try.run(jazygit::run).toEither().mapLeft(ErrorText::reason))
-                .orElseRun(problem -> {
-                    System.err.println(problem);
-                    System.exit(1);
-                });
     }
 }

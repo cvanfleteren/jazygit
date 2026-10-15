@@ -15,13 +15,21 @@ public record PullRequest(int number, String headBranch, boolean draft, Checks c
      * The combined state of the CI checks of a pull request.
      */
     public enum Checks {
-        /** It has no checks. */
+        /**
+         * It has no checks.
+         */
         NONE,
-        /** Some checks are still running, and none failed. */
+        /**
+         * Some checks are still running, and none failed.
+         */
         PENDING,
-        /** All checks passed. */
+        /**
+         * All checks passed.
+         */
         PASSING,
-        /** At least one check failed. */
+        /**
+         * At least one check failed.
+         */
         FAILING
     }
 
@@ -29,9 +37,13 @@ public record PullRequest(int number, String headBranch, boolean draft, Checks c
      * The review decision of a pull request.
      */
     public enum Review {
-        /** No review is needed. */
+        /**
+         * No review is needed.
+         */
         NONE,
-        /** A review is needed and has not been given yet. */
+        /**
+         * A review is needed and has not been given yet.
+         */
         REQUIRED,
         APPROVED,
         CHANGES_REQUESTED

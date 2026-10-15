@@ -12,13 +12,12 @@ import java.io.File;
  */
 public final class RecentReposDialog {
 
-    private static final String HOME = System.getProperty("user.home");
-
     public static final PickDialog.Spec<RecentReposPopup> SPEC = new PickDialog.Spec<>("recent-repos",
             RecentReposPopup.class, popup -> Messages.get("dialog.recentRepos.title"),
             popup -> popup.directories().map(RecentReposDialog::shown),
             shown -> new RecentReposMsg.Chosen(directory(shown)), RecentReposMsg.Cancelled::new,
             Option.of("dialog.recentRepos.none"));
+    private static final String HOME = System.getProperty("user.home");
 
     private RecentReposDialog() {
     }

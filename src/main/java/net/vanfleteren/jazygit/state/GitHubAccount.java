@@ -10,7 +10,9 @@ import net.vanfleteren.jazygit.git.GitInfoProvider;
  */
 public final class GitHubAccount {
 
-    /** The key of the account's login in the repository's git configuration. */
+    /**
+     * The key of the account's login in the repository's git configuration.
+     */
     public static final String USER_KEY = "jazygit.githubUser";
 
     private GitHubAccount() {

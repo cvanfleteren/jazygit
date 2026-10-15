@@ -14,7 +14,8 @@ import java.util.ResourceBundle;
 public final class Messages {
 
     private static final String BUNDLE = "net.vanfleteren.jazygit.messages";
-
+    // The locale of the user does not change while the app runs.
+    private static final Messages DEFAULT = forDefaultLocale();
     private final ResourceBundle bundle;
     private final Locale locale;
 
@@ -33,9 +34,6 @@ public final class Messages {
     public static Messages forLocale(Locale locale) {
         return new Messages(locale);
     }
-
-    // The locale of the user does not change while the app runs.
-    private static final Messages DEFAULT = forDefaultLocale();
 
     /**
      * Looks up {@code key} in the messages for the locale of the user.

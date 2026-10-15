@@ -1,18 +1,12 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.GitError.CommandFailed;
-import net.vanfleteren.jazygit.git.GitError.GitUnavailable;
-import net.vanfleteren.jazygit.git.GitError.Interrupted;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.GitError.TimedOut;
-import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
+import net.vanfleteren.jazygit.git.GitError.*;
 import net.vanfleteren.jazygit.process.Exec;
 import net.vanfleteren.jazygit.process.ExecFailure;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import java.nio.file.Path;
 import java.util.function.Function;
@@ -24,19 +18,6 @@ import java.util.function.Function;
 final class GitProcess {
 
     private GitProcess() {
-    }
-
-    /**
-     * What a command that succeeded printed on its standard output, and the line it was run as.
-     */
-    record Output(String stdout, ExecutedCommand command) {
-
-        /**
-         * The command log of this one command.
-         */
-        List<ExecutedCommand> log() {
-            return List.of(command);
-        }
     }
 
     /**
@@ -58,7 +39,7 @@ final class GitProcess {
      */
     static <T> Either<ProcessError, T> read(Path workTree, GitCommand command,
                                             Function<String, Either<UnexpectedOutput, T>> parse) {
-        return execute(workTree, command).flatMap(output -> Either.<ProcessError, T>narrow(parse.apply(output.stdout())));
+        return execute(workTree, command).flatMap(output -> Either.narrow(parse.apply(output.stdout())));
     }
 
     /**
@@ -83,5 +64,18 @@ final class GitProcess {
                             new CommandFailed(Exec.explanation(stderr, stdout), exitCode, stderr);
                 })
                 .map(stdout -> new Output(stdout, command.executed()));
+    }
+
+    /**
+     * What a command that succeeded printed on its standard output, and the line it was run as.
+     */
+    record Output(String stdout, ExecutedCommand command) {
+
+        /**
+         * The command log of this one command.
+         */
+        List<ExecutedCommand> log() {
+            return List.of(command);
+        }
     }
 }

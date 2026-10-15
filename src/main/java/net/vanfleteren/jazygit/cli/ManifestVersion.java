@@ -1,9 +1,10 @@
 package net.vanfleteren.jazygit.cli;
 
 import io.vavr.control.Option;
+import picocli.CommandLine.IVersionProvider;
+
 import java.text.MessageFormat;
 import java.util.ResourceBundle;
-import picocli.CommandLine.IVersionProvider;
 
 /**
  * The version the jar was built as; a build that is not a jar has none.

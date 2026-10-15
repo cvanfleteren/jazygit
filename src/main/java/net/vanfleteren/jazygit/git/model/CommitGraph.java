@@ -1,10 +1,6 @@
 package net.vanfleteren.jazygit.git.model;
 
-import io.vavr.collection.HashSet;
-import io.vavr.collection.Iterator;
-import io.vavr.collection.List;
-import io.vavr.collection.Map;
-import io.vavr.collection.Set;
+import io.vavr.collection.*;
 
 /**
  * Lays out a commit log with its merges: the commits a merge brought in follow it, so they can be shown
@@ -13,15 +9,6 @@ import io.vavr.collection.Set;
 public final class CommitGraph {
 
     private CommitGraph() {
-    }
-
-    /**
-     * A commit, and where it stands in the branches of merges.
-     *
-     * @param depth        in how many merged branches the commit is
-     * @param closesBranch whether it is the last commit of the (innermost) branch it is in
-     */
-    public record Node(Commit commit, int depth, boolean closesBranch) {
     }
 
     /**
@@ -36,12 +23,6 @@ public final class CommitGraph {
                         (state, commit) -> place(commit, commits, bySha, state))
                 .latestFirst()
                 .reverse();
-    }
-
-    /**
-     * The shas placed so far, and the commits in the order they were placed, last placed first.
-     */
-    private record Placed(Set<Sha> shas, List<Commit> latestFirst) {
     }
 
     private static Placed place(Commit commit, List<Commit> commits, Map<Sha, Commit> bySha, Placed state) {
@@ -94,6 +75,21 @@ public final class CommitGraph {
                 .find(walk -> walk.todo().isEmpty())
                 .map(Walk::seen)
                 .getOrElse(HashSet.empty());
+    }
+
+    /**
+     * A commit, and where it stands in the branches of merges.
+     *
+     * @param depth        in how many merged branches the commit is
+     * @param closesBranch whether it is the last commit of the (innermost) branch it is in
+     */
+    public record Node(Commit commit, int depth, boolean closesBranch) {
+    }
+
+    /**
+     * The shas placed so far, and the commits in the order they were placed, last placed first.
+     */
+    private record Placed(Set<Sha> shas, List<Commit> latestFirst) {
     }
 
     /**

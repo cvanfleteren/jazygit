@@ -1,7 +1,5 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.DeleteUntrackedError;
@@ -9,6 +7,7 @@ import net.vanfleteren.jazygit.git.GitError.DiscardError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.RefusedPath;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import java.nio.file.Path;
 
@@ -69,7 +68,7 @@ final class CliIndex {
      * Throws changes away as {@code plan} says.
      */
     static Either<GitFailure<DiscardError>, List<ExecutedCommand>> discard(Path workTree, DiscardPlan plan) {
-        return GitFailure.<DiscardError>sequence(
+        return GitFailure.sequence(
                 () -> GitFailure.widen(removeAdded(workTree, plan.added())),
                 () -> GitFailure.widen(checkoutFromHead(workTree, plan.fromHead())),
                 () -> GitFailure.widen(checkoutFromIndex(workTree, plan.fromIndex())),
@@ -82,7 +81,7 @@ final class CliIndex {
      * Paths outside the working tree, and the working tree itself, are refused before git runs.
      */
     static Either<GitFailure<DeleteUntrackedError>, List<ExecutedCommand>> deleteUntracked(Path workTree,
-                                                                                       List<String> paths) {
+                                                                                           List<String> paths) {
         Path root = workTree.toAbsolutePath().normalize();
         return paths.map(path -> inside(root, path)).find(Either::isLeft)
                 .<Either<GitFailure<DeleteUntrackedError>, List<ExecutedCommand>>>map(refused ->
@@ -105,7 +104,7 @@ final class CliIndex {
      * Runs {@code subcommand -- paths}; nothing when there are no paths.
      */
     private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> onPaths(Path workTree, List<String> subcommand,
-                                                                        List<String> paths) {
+                                                                                   List<String> paths) {
         return paths.isEmpty()
                 ? GitFailure.nothing()
                 : GitProcess.log(workTree, git(subcommand.append("--").appendAll(paths)).withLiteralPaths());

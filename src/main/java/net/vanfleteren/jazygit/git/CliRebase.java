@@ -1,10 +1,5 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.process.CommandLine;
-
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-
 import io.vavr.Tuple2;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
@@ -12,9 +7,12 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.RewordError;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
+import net.vanfleteren.jazygit.process.CommandLine;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -49,7 +47,7 @@ final class CliRebase {
         String sequenceEditor = sequenceEditor(sha, List.of(new Tuple2<>("pick", "reword"), new Tuple2<>("merge -C", "merge -c")));
         return TempFiles.using("jazygit-message", file -> Files.writeString(file, message.text()),
                 failed -> new GitFailure<RewordError>(failed, List.empty()),
-                file -> GitFailure.<RewordError, List<ExecutedCommand>>widen(base(workTree, sha.value()).flatMap(base ->
+                file -> GitFailure.widen(base(workTree, sha.value()).flatMap(base ->
                         rebase(workTree, interactive(INTERACTIVE.append(base), sequenceEditor,
                                 CommandLine.format(List.of("cp", file.toString())))
                                 // The message is taken as it was entered: git would strip lines starting with

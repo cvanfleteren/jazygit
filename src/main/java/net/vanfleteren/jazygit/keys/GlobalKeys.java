@@ -25,17 +25,23 @@ final class GlobalKeys {
                 .global(new Keymap.Global.Dispatching("q", "help.global.quit", GlobalKeys::isQuitKey, Msg.Quit::new));
     }
 
-    /** Whether {@code event} is the key that quits. */
+    /**
+     * Whether {@code event} is the key that quits.
+     */
     static boolean isQuitKey(KeyEvent event) {
         return event.isChar('q') && !event.hasCtrl() && !event.hasAlt();
     }
 
-    /** Whether {@code event} is the shortcut that shows the settings. */
+    /**
+     * Whether {@code event} is the shortcut that shows the settings.
+     */
     static boolean isSettingsKey(KeyEvent event) {
         return event.hasCtrl() && event.isCharIgnoreCase('s');
     }
 
-    /** Whether {@code event} is the shortcut that asks which recent repository to switch to. */
+    /**
+     * Whether {@code event} is the shortcut that asks which recent repository to switch to.
+     */
     static boolean isRecentReposKey(KeyEvent event) {
         return event.hasCtrl() && event.isCharIgnoreCase('r');
     }

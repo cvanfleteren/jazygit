@@ -7,31 +7,14 @@ import java.time.Instant;
 /**
  * A git branch, with a flag indicating whether it is the currently checked-out branch.
  *
- * @param tipOid  the commit the branch points to
- * @param tipTime when that commit was made
+ * @param tipOid    the commit the branch points to
+ * @param tipTime   when that commit was made
  * @param hasRemote whether the branch also exists on its remote, according to the remote-tracking refs
  * @param isDefault whether this is the repository's main branch, i.e. the default branch of the remote
  * @param tracking  what it follows on its remote: nothing, a remote-tracking branch, or one that is gone
  */
 public record Branch(Name name, boolean current, Sha tipOid, Instant tipTime, boolean hasRemote,
                      boolean isDefault, Tracking tracking) {
-
-    /**
-     * The name of a local branch, e.g. {@code main} or {@code feature/login}.
-     */
-    public record Name(String value) {
-
-        /**
-         * The name {@code text} spells, ignoring surrounding whitespace; none when it is blank or has whitespace
-         * inside, which no branch name can.
-         */
-        public static Option<Name> parse(String text) {
-            String stripped = text.strip();
-            return stripped.isEmpty() || stripped.chars().anyMatch(Character::isWhitespace)
-                    ? Option.none()
-                    : Option.of(new Name(stripped));
-        }
-    }
 
     /**
      * A branch following {@code upstream}, or nothing.
@@ -45,6 +28,18 @@ public record Branch(Name name, boolean current, Sha tipOid, Instant tipTime, bo
     public Branch(Name name, boolean current, Sha tipOid, Instant tipTime, boolean hasRemote,
                   boolean isDefault) {
         this(name, current, tipOid, tipTime, hasRemote, isDefault, new Tracking.None());
+    }
+
+    public Branch(Name name, boolean current, Sha tipOid, Instant tipTime, boolean hasRemote) {
+        this(name, current, tipOid, tipTime, hasRemote, false);
+    }
+
+    public Branch(Name name, boolean current, Sha tipOid, Instant tipTime) {
+        this(name, current, tipOid, tipTime, false, false);
+    }
+
+    public Branch(Name name, boolean current, Sha tipOid) {
+        this(name, current, tipOid, Instant.EPOCH, false, false);
     }
 
     /**
@@ -94,10 +89,6 @@ public record Branch(Name name, boolean current, Sha tipOid, Instant tipTime, bo
         return upstream().map(Upstream::behind).getOrElse(0);
     }
 
-    public Branch(Name name, boolean current, Sha tipOid, Instant tipTime, boolean hasRemote) {
-        this(name, current, tipOid, tipTime, hasRemote, false);
-    }
-
     /**
      * Whether the branch can be deleted on its remote: it must be there, and it must not be the
      * default branch, which would break every clone.
@@ -106,11 +97,20 @@ public record Branch(Name name, boolean current, Sha tipOid, Instant tipTime, bo
         return hasRemote && !isDefault;
     }
 
-    public Branch(Name name, boolean current, Sha tipOid, Instant tipTime) {
-        this(name, current, tipOid, tipTime, false, false);
-    }
+    /**
+     * The name of a local branch, e.g. {@code main} or {@code feature/login}.
+     */
+    public record Name(String value) {
 
-    public Branch(Name name, boolean current, Sha tipOid) {
-        this(name, current, tipOid, Instant.EPOCH, false, false);
+        /**
+         * The name {@code text} spells, ignoring surrounding whitespace; none when it is blank or has whitespace
+         * inside, which no branch name can.
+         */
+        public static Option<Name> parse(String text) {
+            String stripped = text.strip();
+            return stripped.isEmpty() || stripped.chars().anyMatch(Character::isWhitespace)
+                    ? Option.none()
+                    : Option.of(new Name(stripped));
+        }
     }
 }

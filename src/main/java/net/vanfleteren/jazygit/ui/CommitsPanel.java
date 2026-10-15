@@ -4,7 +4,6 @@ import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.state.SelectionMsg;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -12,6 +11,7 @@ import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.SelectionMsg;
 
 import java.util.function.Consumer;
 
@@ -24,14 +24,6 @@ public class CommitsPanel {
 
     private final LoadableList<List<Commit>> list;
     private final Keymap keymap = Keymap.standard();
-
-    /**
-     * The selection follows its commit when commits come on top, except on the newest one: it stays there, so a
-     * new commit gets highlighted.
-     */
-    private static int reselect(List<Commit> previous, List<Commit> next, int selected) {
-        return selected == 0 ? 0 : LoadableList.Reselect.following(Commit::sha).apply(previous, next, selected);
-    }
 
     /**
      * @param dispatch   receives the messages for the user's actions, on the render thread
@@ -50,6 +42,50 @@ public class CommitsPanel {
         list.onKey(event -> event.code() == KeyCode.ENTER && selectedCommit().isDefined()
                 ? Option.of(openCommit)
                 : PaneKeys.sending(keymap.handle(Scopes.COMMITS, event, selectedCommit()), dispatch));
+    }
+
+    /**
+     * The selection follows its commit when commits come on top, except on the newest one: it stays there, so a
+     * new commit gets highlighted.
+     */
+    private static int reselect(List<Commit> previous, List<Commit> next, int selected) {
+        return selected == 0 ? 0 : LoadableList.Reselect.following(Commit::sha).apply(previous, next, selected);
+    }
+
+    static List<LoadableList.Row> rows(List<CommitGraph.Node> nodes) {
+        // Each commit joins the branch that the commit before it closes.
+        return nodes.zipWith(nodes.map(CommitGraph.Node::closesBranch).prepend(false), CommitsPanel::row);
+    }
+
+    /**
+     * The row of a commit. Commits brought in by a merge are drawn on a rail beside the merge, which opens
+     * it with {@code ◎─╮}; the commit after the branch, where it joins the main line, is {@code ○─╯}.
+     *
+     * @param joins whether the branch before this commit joins the main line at it
+     */
+    static LoadableList.Row row(CommitGraph.Node node, boolean joins) {
+        Commit commit = node.commit();
+        String rails = "│ ".repeat(node.depth());
+        String graph = commit.isMerge() ? rails + "◎─╮ " : joins ? rails + "○─╯ " : rails + "○ ";
+        LoadableList.Seg prefix = LoadableList.Seg.of(commit.shortSha() + " " + initials(commit.authorName()) + " " + graph);
+        List<LoadableList.Seg> tags = commit.tags()
+                .map(tag -> LoadableList.Seg.styled("[" + tag.name() + "] ", Theme.Classes.TAG));
+        return new LoadableList.Row(tags.prepend(prefix).append(LoadableList.Seg.of(commit.message())));
+    }
+
+    /**
+     * The capitalized first letters of the first two words of {@code name}; a name of a single word gives
+     * its first two letters as they are.
+     */
+    static String initials(String name) {
+        List<String> words = List.of(name.strip().split("\\s+")).filter(word -> !word.isEmpty());
+        if (words.size() < 2) {
+            String word = name.strip();
+            return word.substring(0, word.offsetByCodePoints(0, Math.min(2, word.codePointCount(0, word.length()))));
+        }
+        return words.take(2)
+                .map(word -> word.substring(0, word.offsetByCodePoints(0, 1)).toUpperCase())
+                .mkString();
     }
 
     /**
@@ -87,42 +123,6 @@ public class CommitsPanel {
     public Option<Msg> selectionChange(Model model) {
         return PaneKeys.selectionChange(selectedCommit().map(Commit::sha), model.commitDetail(),
                 SelectionMsg.CommitSelected::new);
-    }
-
-    static List<LoadableList.Row> rows(List<CommitGraph.Node> nodes) {
-        // Each commit joins the branch that the commit before it closes.
-        return nodes.zipWith(nodes.map(CommitGraph.Node::closesBranch).prepend(false), CommitsPanel::row);
-    }
-
-    /**
-     * The row of a commit. Commits brought in by a merge are drawn on a rail beside the merge, which opens
-     * it with {@code ◎─╮}; the commit after the branch, where it joins the main line, is {@code ○─╯}.
-     *
-     * @param joins whether the branch before this commit joins the main line at it
-     */
-    static LoadableList.Row row(CommitGraph.Node node, boolean joins) {
-        Commit commit = node.commit();
-        String rails = "│ ".repeat(node.depth());
-        String graph = commit.isMerge() ? rails + "◎─╮ " : joins ? rails + "○─╯ " : rails + "○ ";
-        LoadableList.Seg prefix = LoadableList.Seg.of(commit.shortSha() + " " + initials(commit.authorName()) + " " + graph);
-        List<LoadableList.Seg> tags = commit.tags()
-                .map(tag -> LoadableList.Seg.styled("[" + tag.name() + "] ", Theme.Classes.TAG));
-        return new LoadableList.Row(tags.prepend(prefix).append(LoadableList.Seg.of(commit.message())));
-    }
-
-    /**
-     * The capitalized first letters of the first two words of {@code name}; a name of a single word gives
-     * its first two letters as they are.
-     */
-    static String initials(String name) {
-        List<String> words = List.of(name.strip().split("\\s+")).filter(word -> !word.isEmpty());
-        if (words.size() < 2) {
-            String word = name.strip();
-            return word.substring(0, word.offsetByCodePoints(0, Math.min(2, word.codePointCount(0, word.length()))));
-        }
-        return words.take(2)
-                .map(word -> word.substring(0, word.offsetByCodePoints(0, 1)).toUpperCase())
-                .mkString();
     }
 
 }

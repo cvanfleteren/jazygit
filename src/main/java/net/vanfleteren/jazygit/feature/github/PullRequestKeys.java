@@ -15,6 +15,6 @@ public final class PullRequestKeys {
 
     public static Keymap register(Keymap keys) {
         return keys.add(Scopes.BRANCHES,
-                Binding.<Branch.Name>onSelected("o", "help.branches.pullRequest", PullRequestMsg.Requested::new));
+                Binding.onSelected("o", "help.branches.pullRequest", PullRequestMsg.Requested::new));
     }
 }

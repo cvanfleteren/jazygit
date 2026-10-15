@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.commit;
 
-import net.vanfleteren.jazygit.state.Update;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.commit.CommitCmd.Reword;
 import net.vanfleteren.jazygit.feature.commit.RewordMsg.Cancelled;
@@ -9,6 +8,7 @@ import net.vanfleteren.jazygit.feature.commit.RewordMsg.Requested;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**

@@ -11,20 +11,16 @@ import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.state.SelectionMsg;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
-import net.vanfleteren.jazygit.state.BranchesTab;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Operation;
+import net.vanfleteren.jazygit.state.*;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -64,6 +60,49 @@ public class BranchesPanel {
     // How a branch is doing on GitHub, as of the last render; the rows are built from it on every render.
     private Function<Branch, List<LoadableList.Seg>> gitHub = branch -> List.empty();
     private Function<RemoteBranch, List<LoadableList.Seg>> remoteGitHub = remote -> List.empty();
+
+    /**
+     * @param dispatch   receives the messages for the user's actions, on the render thread
+     * @param tabClicked called when the name of a list in the title is clicked, with that list
+     */
+    public BranchesPanel(Consumer<Msg> dispatch, Consumer<BranchesTab> tabClicked) {
+        this(dispatch, tabClicked, Clock.systemUTC());
+    }
+
+    /**
+     * @param clock tells how long ago the branches were last committed to
+     */
+    public BranchesPanel(Consumer<Msg> dispatch, Consumer<BranchesTab> tabClicked, Clock clock) {
+        this(dispatch, tabClicked, clock, Theme.Highlights.DEFAULT);
+    }
+
+    /**
+     * @param highlights how the highlighted branch is shown, also when the pane is not in use
+     */
+    public BranchesPanel(Consumer<Msg> dispatch, Consumer<BranchesTab> tabClicked, Clock clock,
+                         Theme.Highlights highlights) {
+        this.tabClicked = tabClicked;
+        list = new LoadableList<>(Messages.get("panel.branches.title"), ID,
+                branches -> branches
+                        .map(b -> row(b, Duration.between(b.tipTime(), clock.instant()),
+                                gitHub.apply(b),
+                                busy.get(new BranchRef.Local(b.name())).map(operation -> spinner(operation, clock.instant())))),
+                BranchesPanel::reselect, highlights);
+        // The highlight alone marks the selection; a symbol would indent the rows.
+        list.highlightSymbol("");
+        list.onKey(event -> Option.when(tab == BranchesTab.LOCAL, event)
+                .flatMap(key -> PaneKeys.sending(keymap.handle(Scopes.BRANCHES, key, selectedBranch()), dispatch)));
+        remoteList = new LoadableList<>(Messages.get("panel.remoteBranches.title"), ID,
+                refs -> refs.map(ref -> remoteRow(ref, Duration.between(ref.tipTime(), clock.instant()),
+                        tracked.test(ref.branch()), remoteGitHub.apply(ref.branch()),
+                        busy.get(new BranchRef.Remote(ref.branch())).map(operation -> spinner(operation, clock.instant())))),
+                LoadableList.Reselect.following(RemoteRef::branch), highlights);
+        remoteList.highlightSymbol("");
+        remoteList.whenEmpty(Messages.get("remoteBranches.empty"));
+        remoteList.onKey(event -> Option.when(tab == BranchesTab.REMOTE, event)
+                .flatMap(key -> PaneKeys.sending(keymap.handle(Scopes.REMOTE_BRANCHES, key, selectedRemoteBranch()),
+                        dispatch)));
+    }
 
     /**
      * What a busy branch shows on the left of its spinner: what is being done to it, for the operations that
@@ -187,7 +226,7 @@ public class BranchesPanel {
         Option<Branch.Name> before = current(previous);
         Option<Branch.Name> target = before.equals(current(next))
                 ? Option.of(selected).filter(i -> i < previous.size()).map(i -> previous.get(i).name())
-                        .map(name -> renamed(previous, next, name))
+                .map(name -> renamed(previous, next, name))
                 : current(next);
         return target
                 .map(name -> next.indexWhere(b -> b.name().equals(name)))
@@ -207,49 +246,6 @@ public class BranchesPanel {
 
     private static Option<Branch.Name> current(List<Branch> branches) {
         return branches.find(Branch::current).map(Branch::name);
-    }
-
-    /**
-     * @param dispatch   receives the messages for the user's actions, on the render thread
-     * @param tabClicked called when the name of a list in the title is clicked, with that list
-     */
-    public BranchesPanel(Consumer<Msg> dispatch, Consumer<BranchesTab> tabClicked) {
-        this(dispatch, tabClicked, Clock.systemUTC());
-    }
-
-    /**
-     * @param clock tells how long ago the branches were last committed to
-     */
-    public BranchesPanel(Consumer<Msg> dispatch, Consumer<BranchesTab> tabClicked, Clock clock) {
-        this(dispatch, tabClicked, clock, Theme.Highlights.DEFAULT);
-    }
-
-    /**
-     * @param highlights how the highlighted branch is shown, also when the pane is not in use
-     */
-    public BranchesPanel(Consumer<Msg> dispatch, Consumer<BranchesTab> tabClicked, Clock clock,
-                         Theme.Highlights highlights) {
-        this.tabClicked = tabClicked;
-        list = new LoadableList<>(Messages.get("panel.branches.title"), ID,
-                branches -> branches
-                        .map(b -> row(b, Duration.between(b.tipTime(), clock.instant()),
-                                gitHub.apply(b),
-                                busy.get(new BranchRef.Local(b.name())).map(operation -> spinner(operation, clock.instant())))),
-                BranchesPanel::reselect, highlights);
-        // The highlight alone marks the selection; a symbol would indent the rows.
-        list.highlightSymbol("");
-        list.onKey(event -> Option.when(tab == BranchesTab.LOCAL, event)
-                .flatMap(key -> PaneKeys.sending(keymap.handle(Scopes.BRANCHES, key, selectedBranch()), dispatch)));
-        remoteList = new LoadableList<>(Messages.get("panel.remoteBranches.title"), ID,
-                refs -> refs.map(ref -> remoteRow(ref, Duration.between(ref.tipTime(), clock.instant()),
-                        tracked.test(ref.branch()), remoteGitHub.apply(ref.branch()),
-                        busy.get(new BranchRef.Remote(ref.branch())).map(operation -> spinner(operation, clock.instant())))),
-                LoadableList.Reselect.following(RemoteRef::branch), highlights);
-        remoteList.highlightSymbol("");
-        remoteList.whenEmpty(Messages.get("remoteBranches.empty"));
-        remoteList.onKey(event -> Option.when(tab == BranchesTab.REMOTE, event)
-                .flatMap(key -> PaneKeys.sending(keymap.handle(Scopes.REMOTE_BRANCHES, key, selectedRemoteBranch()),
-                        dispatch)));
     }
 
     /**

@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.feature.settings;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.gh.model.GhLogin;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.ui.ErrorText;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
@@ -15,24 +14,6 @@ import net.vanfleteren.jazygit.ui.widgets.TextInputDialog;
  */
 public final class SettingsPanelDialogs {
 
-    // Wide enough for the usual gh executable and account, so it does not grow once they are read.
-    private static final int WIDTH = 80;
-
-    /**
-     * The settings, one per line under the heading of what they are about, each changed by its key.
-     */
-    public static final ChoiceDialog.Spec<SettingsPanelPopup> PANEL = new ChoiceDialog.Spec<>("settings",
-            SettingsPanelPopup.class, popup -> Messages.get("dialog.settings.title"),
-            List.of(new Choice<SettingsPanelPopup>('t', popup -> Messages.get("dialog.settings.theme",
-                                    Messages.get("dialog.theme." + popup.theme().id())), SettingsPanelMsg.ThemeRequested::new)
-                            .withHeading("dialog.settings.group.appearance"),
-                    new Choice<SettingsPanelPopup>('g', SettingsPanelDialogs::ghExecutable,
-                            SettingsPanelMsg.GhExecutableRequested::new)
-                            .withHeading("dialog.settings.group.github"),
-                    new Choice<>('a', SettingsPanelDialogs::account, SettingsPanelMsg.AccountRequested::new,
-                            (model, popup) -> popup.gitHub().exists(gitHub -> gitHub.logins().isRight()))),
-            SettingsPanelMsg.Closed::new, WIDTH);
-
     /**
      * Asks which gh executable to run; left empty, the one on the PATH runs.
      */
@@ -40,7 +21,6 @@ public final class SettingsPanelDialogs {
             "settings-gh", GhExecutablePopup.class, popup -> Messages.get("dialog.settings.gh.title"),
             Option.of(Messages.get("dialog.settings.gh.placeholder")), GhExecutablePopup::current,
             SettingsPanelMsg.GhExecutableEntered::new, SettingsPanelMsg.GhExecutableCancelled::new);
-
     /**
      * Asks which account the repository uses: gh's active one, or one of the others gh is logged in to on the
      * repository's host.
@@ -49,7 +29,22 @@ public final class SettingsPanelDialogs {
             GitHubAccountPopup.class, popup -> Messages.get("dialog.settings.account.title", popup.gitHub().host()),
             popup -> accounts(popup.gitHub()), shown -> new SettingsPanelMsg.AccountChosen(user(shown)),
             SettingsPanelMsg.AccountCancelled::new);
-
+    // Wide enough for the usual gh executable and account, so it does not grow once they are read.
+    private static final int WIDTH = 80;
+    /**
+     * The settings, one per line under the heading of what they are about, each changed by its key.
+     */
+    public static final ChoiceDialog.Spec<SettingsPanelPopup> PANEL = new ChoiceDialog.Spec<>("settings",
+            SettingsPanelPopup.class, popup -> Messages.get("dialog.settings.title"),
+            List.of(new Choice<SettingsPanelPopup>('t', popup -> Messages.get("dialog.settings.theme",
+                            Messages.get("dialog.theme." + popup.theme().id())), SettingsPanelMsg.ThemeRequested::new)
+                            .withHeading("dialog.settings.group.appearance"),
+                    new Choice<SettingsPanelPopup>('g', SettingsPanelDialogs::ghExecutable,
+                            SettingsPanelMsg.GhExecutableRequested::new)
+                            .withHeading("dialog.settings.group.github"),
+                    new Choice<>('a', SettingsPanelDialogs::account, SettingsPanelMsg.AccountRequested::new,
+                            (model, popup) -> popup.gitHub().exists(gitHub -> gitHub.logins().isRight()))),
+            SettingsPanelMsg.Closed::new, WIDTH);
     // How a warning starts.
     private static final String WARNING = "⚠ ";
 

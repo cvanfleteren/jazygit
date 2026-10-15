@@ -24,7 +24,9 @@ import static net.vanfleteren.jazygit.gh.GhCommand.gh;
  */
 public final class GhToken {
 
-    /** No account configured: gh runs as its active account. */
+    /**
+     * No account configured: gh runs as its active account.
+     */
     public static final GhToken NONE = new GhToken(Path.of(""), "gh", Option::none);
 
     private static final Duration SSH_TIMEOUT = Duration.ofSeconds(5);
@@ -43,6 +45,27 @@ public final class GhToken {
         this.workTree = workTree;
         this.executable = executable;
         this.account = account;
+    }
+
+    /**
+     * The {@code hostname} that {@code ssh -G} prints.
+     */
+    static Option<String> sshHostName(String raw) {
+        return List.of(raw.split("\\R"))
+                .map(String::strip)
+                .find(line -> line.startsWith("hostname "))
+                .map(line -> line.substring("hostname ".length()).strip())
+                .filter(name -> !name.isEmpty());
+    }
+
+    /**
+     * The variables that make gh use {@code token} for {@code host}: {@code GH_TOKEN} for GitHub itself, and
+     * {@code GH_ENTERPRISE_TOKEN} with the host for a GitHub Enterprise Server.
+     */
+    static Map<String, String> variables(String host, String token) {
+        return GhAccount.isGitHubCom(host)
+                ? HashMap.of("GH_TOKEN", token)
+                : HashMap.of("GH_ENTERPRISE_TOKEN", token, "GH_HOST", host);
     }
 
     /**
@@ -84,26 +107,5 @@ public final class GhToken {
                 : Exec.run(workTree, List.of("ssh", "-G", host), HashMap.empty(), SSH_TIMEOUT).toOption()
                 .flatMap(GhToken::sshHostName)
                 .getOrElse(host);
-    }
-
-    /**
-     * The {@code hostname} that {@code ssh -G} prints.
-     */
-    static Option<String> sshHostName(String raw) {
-        return List.of(raw.split("\\R"))
-                .map(String::strip)
-                .find(line -> line.startsWith("hostname "))
-                .map(line -> line.substring("hostname ".length()).strip())
-                .filter(name -> !name.isEmpty());
-    }
-
-    /**
-     * The variables that make gh use {@code token} for {@code host}: {@code GH_TOKEN} for GitHub itself, and
-     * {@code GH_ENTERPRISE_TOKEN} with the host for a GitHub Enterprise Server.
-     */
-    static Map<String, String> variables(String host, String token) {
-        return GhAccount.isGitHubCom(host)
-                ? HashMap.of("GH_TOKEN", token)
-                : HashMap.of("GH_ENTERPRISE_TOKEN", token, "GH_HOST", host);
     }
 }

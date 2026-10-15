@@ -1,7 +1,5 @@
 package net.vanfleteren.jazygit.feature.github;
 
-import static dev.tamboui.toolkit.Toolkit.*;
-
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import io.vavr.collection.List;
@@ -15,11 +13,11 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.ui.TimeText;
 import net.vanfleteren.jazygit.ui.ErrorText;
 import net.vanfleteren.jazygit.ui.PullRequestSymbols;
 import net.vanfleteren.jazygit.ui.PullRequestSymbols.Symbol;
 import net.vanfleteren.jazygit.ui.Theme;
+import net.vanfleteren.jazygit.ui.TimeText;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceList;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
@@ -29,6 +27,9 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.function.Consumer;
+
+import static dev.tamboui.toolkit.Toolkit.row;
+import static dev.tamboui.toolkit.Toolkit.text;
 
 /**
  * Popup showing the pull request of a branch: its title, state, branches, review and checks, as labelled
@@ -81,27 +82,6 @@ public final class PullRequestDialog implements PopupView {
                 PullRequestMsg.InfoClosed::new, dispatch);
     }
 
-    @Override
-    public List<String> ids() {
-        return List.of(ID);
-    }
-
-    @Override
-    public Option<Element> render(Model model) {
-        return model.popup(PullRequestPopup.class).map(popup -> {
-            List<Line> lines = popup.details()
-                    .map(read -> read.fold(PullRequestDialog::failed, this::details))
-                    .getOrElse(() -> loading(popup));
-            int blanks = CONTENT_HEIGHT - lines.map(Line::height).sum().intValue();
-            return DialogFrame.withHint(Messages.get("dialog.pullRequest.title", String.valueOf(popup.pullRequest().number())),
-                            WIDTH, "dialog.hint.selectCancel",
-                            lines.appendAll(List.fill(Math.max(0, blanks), Line::blank)).append(Line.blank())
-                                    .map(Line::element).append(actions.render(model, popup)))
-                    // The lines, a blank line, the actions, the blank line and the hint, plus the border.
-                    .length(CONTENT_HEIGHT + 1 + actions.height() + 2 + 2);
-        });
-    }
-
     /**
      * Merging as {@code method} says; only for a pull request that can be merged, as far as is known.
      */
@@ -110,74 +90,9 @@ public final class PullRequestDialog implements PopupView {
                 (model, popup) -> popup.mergeable());
     }
 
-    /**
-     * A part of the dialog, and how many lines it takes.
-     */
-    private record Line(Element element, int height) {
-
-        static Line of(StyledElement<?> element) {
-            return new Line(element, 1);
-        }
-
-        static Line blank() {
-            return of(text(""));
-        }
-
-        /**
-         * {@code text}, wrapped at the width of the dialog, and cut after {@code maxLines}.
-         */
-        static Line wrapped(String text, String cssClass, int maxLines) {
-            return new Line(DialogFrame.wrapped(text, WIDTH, maxLines).addClass(cssClass),
-                    DialogFrame.wrappedHeight(text, WIDTH, maxLines));
-        }
-
-        /**
-         * A row with {@code label} in the label column and {@code value} next to it.
-         */
-        static Line labelled(String labelKey, StyledElement<?>... value) {
-            return pieces(List.<StyledElement<?>>of(label(labelKey)).appendAll(List.of(value)));
-        }
-
-        static Line pieces(List<StyledElement<?>> pieces) {
-            return of(pieces.size() == 1 ? pieces.head() : row(pieces.toJavaArray(StyledElement[]::new)));
-        }
-    }
-
-    private List<Line> loading(PullRequestPopup popup) {
-        return List.of(
-                Line.labelled("dialog.pullRequest.branch", text(popup.pullRequest().headBranch())),
-                Line.blank(),
-                Line.pieces(List.of(text(Messages.get("dialog.pullRequest.loading") + " ").addClass(Theme.Classes.DIM),
-                        text(TimeText.spinnerFrame(clock.instant())).addClass(Theme.Classes.SPINNER))));
-    }
-
     private static List<Line> failed(Failure failure) {
         return List.of(Line.wrapped(Messages.get("dialog.pullRequest.failed", ErrorText.of(failure)), Theme.Classes.ERROR,
                 CONTENT_HEIGHT));
-    }
-
-    private List<Line> details(PullRequestDetails pr) {
-        return List.of(Line.wrapped(pr.title(), Theme.Classes.BOLD, TITLE_LINES), Line.blank(),
-                        Line.labelled("dialog.pullRequest.state", text(state(pr))))
-                .appendAll(Option.when(!pr.author().isEmpty(),
-                        () -> Line.labelled("dialog.pullRequest.author", text("@" + pr.author()))))
-                .appendAll(List.of(
-                        Line.labelled("dialog.pullRequest.branch", text(pr.headBranch() + " → " + pr.baseBranch())),
-                        Line.labelled("dialog.pullRequest.created", text(created(pr))),
-                        Line.labelled("dialog.pullRequest.changes",
-                                text("+" + pr.additions()).addClass(Theme.Classes.DIFF_ADDED),
-                                text(" −" + pr.deletions()).addClass(Theme.Classes.DIFF_REMOVED),
-                                text(" " + Messages.get("dialog.pullRequest.changes.files", String.valueOf(pr.changedFiles())))),
-                        Line.labelled("dialog.pullRequest.mergeable", mergeable(pr.mergeable())),
-                        Line.blank(),
-                        Line.pieces(List.<StyledElement<?>>of(label("dialog.pullRequest.review")).appendAll(review(pr.review())))))
-                .appendAll(Option.when(!pr.reviewers().isEmpty(), () -> Line.pieces(
-                        List.<StyledElement<?>>of(label("dialog.pullRequest.reviewers")).appendAll(reviewers(pr)))))
-                .append(Line.labelled("dialog.pullRequest.comments", text(String.valueOf(pr.comments()))))
-                .appendAll(Option.when(!pr.labels().isEmpty(),
-                        () -> Line.labelled("dialog.pullRequest.labels", text(pr.labels().mkString(", ")))))
-                .append(Line.blank())
-                .appendAll(checks(pr.checks()));
     }
 
     private static StyledElement<?> label(String labelKey) {
@@ -193,16 +108,11 @@ public final class PullRequestDialog implements PopupView {
         return pr.draft() ? state + " · " + Messages.get("dialog.pullRequest.draft") : state;
     }
 
-    private String created(PullRequestDetails pr) {
-        return Messages.get("dialog.pullRequest.created.value",
-                LocalDate.ofInstant(pr.createdAt(), clock.getZone()).toString(),
-                TimeText.age(Duration.between(pr.createdAt(), clock.instant())));
-    }
-
     private static StyledElement<?> mergeable(PullRequestDetails.Mergeable mergeable) {
         return switch (mergeable) {
             case MERGEABLE -> text(Messages.get("dialog.pullRequest.mergeable.yes"));
-            case CONFLICTING -> text(Messages.get("dialog.pullRequest.mergeable.conflicting")).addClass(Theme.Classes.CHECKS_FAILED);
+            case CONFLICTING ->
+                    text(Messages.get("dialog.pullRequest.mergeable.conflicting")).addClass(Theme.Classes.CHECKS_FAILED);
             case UNKNOWN -> text(Messages.get("dialog.pullRequest.mergeable.unknown")).addClass(Theme.Classes.DIM);
         };
     }
@@ -215,7 +125,7 @@ public final class PullRequestDialog implements PopupView {
             case CHANGES_REQUESTED -> "dialog.pullRequest.review.changes";
         });
         return PullRequestSymbols.review(review)
-                .map(symbol -> List.<StyledElement<?>>of(symbol(symbol), text(" " + text)))
+                .map(symbol -> List.of(symbol(symbol), text(" " + text)))
                 .getOrElse(() -> List.of(text(text).addClass(Theme.Classes.DIM)));
     }
 
@@ -268,5 +178,97 @@ public final class PullRequestDialog implements PopupView {
 
     private static StyledElement<?> symbol(Symbol symbol) {
         return text(symbol.text()).addClass(symbol.cssClass());
+    }
+
+    @Override
+    public List<String> ids() {
+        return List.of(ID);
+    }
+
+    @Override
+    public Option<Element> render(Model model) {
+        return model.popup(PullRequestPopup.class).map(popup -> {
+            List<Line> lines = popup.details()
+                    .map(read -> read.fold(PullRequestDialog::failed, this::details))
+                    .getOrElse(() -> loading(popup));
+            int blanks = CONTENT_HEIGHT - lines.map(Line::height).sum().intValue();
+            return DialogFrame.withHint(Messages.get("dialog.pullRequest.title", String.valueOf(popup.pullRequest().number())),
+                            WIDTH, "dialog.hint.selectCancel",
+                            lines.appendAll(List.fill(Math.max(0, blanks), Line::blank)).append(Line.blank())
+                                    .map(Line::element).append(actions.render(model, popup)))
+                    // The lines, a blank line, the actions, the blank line and the hint, plus the border.
+                    .length(CONTENT_HEIGHT + 1 + actions.height() + 2 + 2);
+        });
+    }
+
+    private List<Line> loading(PullRequestPopup popup) {
+        return List.of(
+                Line.labelled("dialog.pullRequest.branch", text(popup.pullRequest().headBranch())),
+                Line.blank(),
+                Line.pieces(List.of(text(Messages.get("dialog.pullRequest.loading") + " ").addClass(Theme.Classes.DIM),
+                        text(TimeText.spinnerFrame(clock.instant())).addClass(Theme.Classes.SPINNER))));
+    }
+
+    private List<Line> details(PullRequestDetails pr) {
+        return List.of(Line.wrapped(pr.title(), Theme.Classes.BOLD, TITLE_LINES), Line.blank(),
+                        Line.labelled("dialog.pullRequest.state", text(state(pr))))
+                .appendAll(Option.when(!pr.author().isEmpty(),
+                        () -> Line.labelled("dialog.pullRequest.author", text("@" + pr.author()))))
+                .appendAll(List.of(
+                        Line.labelled("dialog.pullRequest.branch", text(pr.headBranch() + " → " + pr.baseBranch())),
+                        Line.labelled("dialog.pullRequest.created", text(created(pr))),
+                        Line.labelled("dialog.pullRequest.changes",
+                                text("+" + pr.additions()).addClass(Theme.Classes.DIFF_ADDED),
+                                text(" −" + pr.deletions()).addClass(Theme.Classes.DIFF_REMOVED),
+                                text(" " + Messages.get("dialog.pullRequest.changes.files", String.valueOf(pr.changedFiles())))),
+                        Line.labelled("dialog.pullRequest.mergeable", mergeable(pr.mergeable())),
+                        Line.blank(),
+                        Line.pieces(List.<StyledElement<?>>of(label("dialog.pullRequest.review")).appendAll(review(pr.review())))))
+                .appendAll(Option.when(!pr.reviewers().isEmpty(), () -> Line.pieces(
+                        List.<StyledElement<?>>of(label("dialog.pullRequest.reviewers")).appendAll(reviewers(pr)))))
+                .append(Line.labelled("dialog.pullRequest.comments", text(String.valueOf(pr.comments()))))
+                .appendAll(Option.when(!pr.labels().isEmpty(),
+                        () -> Line.labelled("dialog.pullRequest.labels", text(pr.labels().mkString(", ")))))
+                .append(Line.blank())
+                .appendAll(checks(pr.checks()));
+    }
+
+    private String created(PullRequestDetails pr) {
+        return Messages.get("dialog.pullRequest.created.value",
+                LocalDate.ofInstant(pr.createdAt(), clock.getZone()).toString(),
+                TimeText.age(Duration.between(pr.createdAt(), clock.instant())));
+    }
+
+    /**
+     * A part of the dialog, and how many lines it takes.
+     */
+    private record Line(Element element, int height) {
+
+        static Line of(StyledElement<?> element) {
+            return new Line(element, 1);
+        }
+
+        static Line blank() {
+            return of(text(""));
+        }
+
+        /**
+         * {@code text}, wrapped at the width of the dialog, and cut after {@code maxLines}.
+         */
+        static Line wrapped(String text, String cssClass, int maxLines) {
+            return new Line(DialogFrame.wrapped(text, WIDTH, maxLines).addClass(cssClass),
+                    DialogFrame.wrappedHeight(text, WIDTH, maxLines));
+        }
+
+        /**
+         * A row with {@code label} in the label column and {@code value} next to it.
+         */
+        static Line labelled(String labelKey, StyledElement<?>... value) {
+            return pieces(List.<StyledElement<?>>of(label(labelKey)).appendAll(List.of(value)));
+        }
+
+        static Line pieces(List<StyledElement<?>> pieces) {
+            return of(pieces.size() == 1 ? pieces.head() : row(pieces.toJavaArray(StyledElement[]::new)));
+        }
     }
 }

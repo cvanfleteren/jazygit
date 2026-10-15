@@ -7,13 +7,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.DeleteScope;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.git.model.RemoteRef;
-import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.git.model.Tracking;
-import net.vanfleteren.jazygit.git.model.Upstream;
+import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import java.nio.file.Path;
@@ -121,6 +115,50 @@ final class CliBranch {
                                 new Branch.Name(name.substring(name.indexOf('/') + 1))), tip, time)))));
     }
 
+    static Either<UnexpectedOutput, List<Branch>> parse(String raw) {
+        return Either.sequenceRight(GitOutput.nonBlankLines(raw).map(Ref::parse)).map(refs -> branches(refs.toList()));
+    }
+
+    private static List<Branch> branches(List<Ref> refs) {
+        Set<String> remote = refs.map(Ref::name).filter(name -> name.startsWith(REMOTES)).toSet();
+        List<Branch.Name> local = refs.flatMap(Ref::localName);
+        Option<Branch.Name> defaultBranch = defaultBranch(refs, local);
+        return refs
+                .flatMap(ref -> ref.localName().map(name -> new Branch(name, ref.head(), ref.tip(), ref.time(),
+                        remote.contains(ref.pushedTo(name)),
+                        defaultBranch.contains(name),
+                        tracking(ref))))
+                .sorted(ORDER);
+    }
+
+    /**
+     * The main branch: the one {@code origin/HEAD} points to, as set by a clone. Without it, the
+     * first of {@code main} and {@code master} that is among {@code branches}.
+     */
+    private static Option<Branch.Name> defaultBranch(List<Ref> refs, List<Branch.Name> branches) {
+        return refs.find(ref -> ref.name().equals(ORIGIN + "HEAD"))
+                .flatMap(Ref::symref)
+                .flatMap(target -> GitOutput.after(target, ORIGIN))
+                .map(Branch.Name::new)
+                .orElse(() -> List.of("main", "master").map(Branch.Name::new).find(branches::contains));
+    }
+
+    private static Tracking tracking(Ref ref) {
+        String track = ref.track().getOrElse("");
+        return ref.upstream()
+                .<Tracking>map(branch -> track.equals("[gone]")
+                        ? new Tracking.Gone(branch)
+                        : new Tracking.Tracks(new Upstream(branch, count(AHEAD, track), count(BEHIND, track))))
+                .getOrElse(new Tracking.None());
+    }
+
+    private static int count(Pattern pattern, String track) {
+        // At most 9 digits, so the count fits an int.
+        return Option.ofOptional(pattern.matcher(track).results().findFirst())
+                .map(match -> Integer.parseInt(match.group(1)))
+                .getOrElse(0);
+    }
+
     /**
      * One line of {@code for-each-ref} output.
      *
@@ -168,49 +206,5 @@ final class CliBranch {
         String pushedTo(Branch.Name branch) {
             return upstreamRef.getOrElse(() -> ORIGIN + branch.value());
         }
-    }
-
-    static Either<UnexpectedOutput, List<Branch>> parse(String raw) {
-        return Either.sequenceRight(GitOutput.nonBlankLines(raw).map(Ref::parse)).map(refs -> branches(refs.toList()));
-    }
-
-    private static List<Branch> branches(List<Ref> refs) {
-        Set<String> remote = refs.map(Ref::name).filter(name -> name.startsWith(REMOTES)).toSet();
-        List<Branch.Name> local = refs.flatMap(Ref::localName);
-        Option<Branch.Name> defaultBranch = defaultBranch(refs, local);
-        return refs
-                .flatMap(ref -> ref.localName().map(name -> new Branch(name, ref.head(), ref.tip(), ref.time(),
-                        remote.contains(ref.pushedTo(name)),
-                        defaultBranch.contains(name),
-                        tracking(ref))))
-                .sorted(ORDER);
-    }
-
-    /**
-     * The main branch: the one {@code origin/HEAD} points to, as set by a clone. Without it, the
-     * first of {@code main} and {@code master} that is among {@code branches}.
-     */
-    private static Option<Branch.Name> defaultBranch(List<Ref> refs, List<Branch.Name> branches) {
-        return refs.find(ref -> ref.name().equals(ORIGIN + "HEAD"))
-                .flatMap(Ref::symref)
-                .flatMap(target -> GitOutput.after(target, ORIGIN))
-                .map(Branch.Name::new)
-                .orElse(() -> List.of("main", "master").map(Branch.Name::new).find(branches::contains));
-    }
-
-    private static Tracking tracking(Ref ref) {
-        String track = ref.track().getOrElse("");
-        return ref.upstream()
-                .<Tracking>map(branch -> track.equals("[gone]")
-                        ? new Tracking.Gone(branch)
-                        : new Tracking.Tracks(new Upstream(branch, count(AHEAD, track), count(BEHIND, track))))
-                .getOrElse(new Tracking.None());
-    }
-
-    private static int count(Pattern pattern, String track) {
-        // At most 9 digits, so the count fits an int.
-        return Option.ofOptional(pattern.matcher(track).results().findFirst())
-                .map(match -> Integer.parseInt(match.group(1)))
-                .getOrElse(0);
     }
 }

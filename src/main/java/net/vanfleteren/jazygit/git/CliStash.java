@@ -1,18 +1,13 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-
 import io.vavr.collection.List;
 import io.vavr.collection.Seq;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.GitError.CommandFailed;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.GitError.StashError;
-import net.vanfleteren.jazygit.git.GitError.StashGone;
-import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
+import net.vanfleteren.jazygit.git.GitError.*;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import java.nio.file.Path;
 import java.util.function.Function;
@@ -93,12 +88,6 @@ final class CliStash {
     }
 
     /**
-     * Whether {@code git stash push} stashed anything, and the commands that found out.
-     */
-    record Stashed(boolean any, List<ExecutedCommand> commands) {
-    }
-
-    /**
      * Runs {@code git stash push --quiet}: stashes the changes to tracked files, to take them elsewhere.
      */
     static Either<GitFailure<ProcessError>, Stashed> pushQuietly(Path workTree) {
@@ -129,5 +118,11 @@ final class CliStash {
      */
     private static Either<GitFailure<ProcessError>, Integer> count(Path workTree) {
         return list(workTree).map(List::size).mapLeft(error -> new GitFailure<>(error, List.empty()));
+    }
+
+    /**
+     * Whether {@code git stash push} stashed anything, and the commands that found out.
+     */
+    record Stashed(boolean any, List<ExecutedCommand> commands) {
     }
 }

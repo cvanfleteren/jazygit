@@ -6,7 +6,7 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Fetching;
 import net.vanfleteren.jazygit.state.Model;
 
-import static dev.tamboui.toolkit.Toolkit.*;
+import static dev.tamboui.toolkit.Toolkit.text;
 
 /**
  * The line under everything else saying what is being read in the background: the remote being fetched from,
@@ -15,7 +15,9 @@ import static dev.tamboui.toolkit.Toolkit.*;
  */
 public final class FetchLine {
 
-    /** Rows of the line. */
+    /**
+     * Rows of the line.
+     */
     public static final int HEIGHT = 1;
 
     private FetchLine() {

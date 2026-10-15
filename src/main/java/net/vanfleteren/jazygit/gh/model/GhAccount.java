@@ -17,7 +17,9 @@ import java.util.regex.Pattern;
  */
 public record GhAccount(String host, String user) {
 
-    /** The host of github.com, where a repository is when its remotes do not say. */
+    /**
+     * The host of github.com, where a repository is when its remotes do not say.
+     */
     public static final String GITHUB = "github.com";
 
     private static final String ORIGIN = "origin";

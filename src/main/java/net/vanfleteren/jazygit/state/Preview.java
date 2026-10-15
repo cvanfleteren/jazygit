@@ -30,6 +30,14 @@ public record Preview<K, V>(K key, Loadable<V> value, Option<Preview<K, V>> prev
     }
 
     /**
+     * Applies {@code f} to {@code preview} if it is the preview of {@code key}.
+     */
+    public static <K, V> Option<Preview<K, V>> updated(Option<Preview<K, V>> preview, K key,
+                                                       UnaryOperator<Preview<K, V>> f) {
+        return preview.map(shown -> shown.key().equals(key) ? f.apply(shown) : shown);
+    }
+
+    /**
      * Like {@link Loadable#reload}, returns this instance when the value is unchanged.
      */
     public Preview<K, V> reload(V loaded) {
@@ -49,13 +57,5 @@ public record Preview<K, V>(K key, Loadable<V> value, Option<Preview<K, V>> prev
      */
     public Preview<K, V> shown() {
         return value instanceof Loadable.Loading<V> ? previous.getOrElse(this) : this;
-    }
-
-    /**
-     * Applies {@code f} to {@code preview} if it is the preview of {@code key}.
-     */
-    public static <K, V> Option<Preview<K, V>> updated(Option<Preview<K, V>> preview, K key,
-                                                       UnaryOperator<Preview<K, V>> f) {
-        return preview.map(shown -> shown.key().equals(key) ? f.apply(shown) : shown);
     }
 }
