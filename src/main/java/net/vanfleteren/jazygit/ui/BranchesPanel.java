@@ -35,7 +35,8 @@ import java.util.function.Predicate;
 
 /**
  * Left-side panel listing the local branches, with the current branch marked. Space checks out
- * the highlighted branch, P pushes it, d asks where to delete it, n asks for the name of a new branch starting at it.
+ * the highlighted branch, P pushes it, R asks for a new name for it, d asks where to delete it, n asks for the
+ * name of a new branch starting at it.
  * A branch with a pull request shows its number, its CI checks and its review; one without shows the CI checks
  * of the branch it follows on GitHub.
  * <p>
@@ -179,18 +180,29 @@ public class BranchesPanel {
     }
 
     /**
-     * The selection follows its branch when the list is reordered. After a checkout it goes to the new
-     * current branch, which is listed first.
+     * The selection follows its branch when the list is reordered, also when it was renamed: when it is gone and
+     * one branch came in its place. After a checkout it goes to the new current branch, which is listed first.
      */
     private static int reselect(List<Branch> previous, List<Branch> next, int selected) {
         Option<Branch.Name> before = current(previous);
         Option<Branch.Name> target = before.equals(current(next))
                 ? Option.of(selected).filter(i -> i < previous.size()).map(i -> previous.get(i).name())
+                        .map(name -> renamed(previous, next, name))
                 : current(next);
         return target
                 .map(name -> next.indexWhere(b -> b.name().equals(name)))
                 .filter(i -> i >= 0)
                 .getOrElse(selected);
+    }
+
+    /**
+     * The name {@code name} has in {@code next}: its own while it is there, else the only one that is new there.
+     */
+    private static Branch.Name renamed(List<Branch> previous, List<Branch> next, Branch.Name name) {
+        List<Branch.Name> before = previous.map(Branch::name);
+        List<Branch.Name> after = next.map(Branch::name);
+        List<Branch.Name> added = after.removeAll(before);
+        return after.contains(name) || added.size() != 1 ? name : added.head();
     }
 
     private static Option<Branch.Name> current(List<Branch> branches) {

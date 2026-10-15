@@ -27,6 +27,15 @@ public final class BranchDialogs {
             NewBranchPopup::name, NewBranchMsg.Confirmed::new, NewBranchMsg.Cancelled::new);
 
     /**
+     * Asks for the new name of a branch, starting out with the one it has. A blank name keeps it open.
+     */
+    public static final TextInputDialog.Spec<RenameBranchPopup> RENAME_BRANCH = new TextInputDialog.Spec<>(
+            "rename-branch", RenameBranchPopup.class,
+            popup -> Messages.get("dialog.renameBranch.title", popup.branch().value()),
+            Option.of(Messages.get("dialog.renameBranch.placeholder")),
+            popup -> popup.branch().value(), RenameBranchMsg.Confirmed::new, RenameBranchMsg.Cancelled::new);
+
+    /**
      * Asks where to push a branch without an upstream, as {@code <remote> <branch>}; it starts out with the
      * branch of the same name on {@code origin}. What cannot be read that way keeps it open.
      */

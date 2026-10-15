@@ -11,7 +11,7 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
 
 /**
- * Listing and deleting branches, as {@code git branch} does.
+ * Listing, renaming and deleting branches, as {@code git branch} does.
  */
 public interface GitBranch {
 
@@ -32,6 +32,13 @@ public interface GitBranch {
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(Branch.Name name, RemoteBranch remote,
                                                                          DeleteScope scope);
+
+    /**
+     * Renames the local branch {@code name} to {@code newName}; it keeps following the same upstream. Fails when
+     * a branch is called {@code newName} already. Returns the command lines it ran, or why it failed together
+     * with the command lines run up to then.
+     */
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> renameBranch(Branch.Name name, Branch.Name newName);
 
     /**
      * Deletes {@code remote} on its remote. Returns the command lines it ran, or why it failed together with the

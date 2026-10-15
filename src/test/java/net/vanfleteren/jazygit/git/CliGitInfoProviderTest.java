@@ -924,6 +924,33 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void renameBranchKeepsItsUpstream() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        git("branch", "feature");
+        git("push", "-q", "--set-upstream", "origin", "feature");
+
+        assertEquals(List.of("git branch --move feature topic"),
+                provider.renameBranch(new Branch.Name("feature"), new Branch.Name("topic")).get()
+                        .map(command -> command.line()));
+
+        Branch topic = provider.branches().get().find(b -> b.name().equals(new Branch.Name("topic"))).get();
+        assertEquals(Option.of(new RemoteBranch("origin", new Branch.Name("feature"))),
+                topic.upstream().map(upstream -> upstream.branch()));
+        assertTrue(provider.branches().get().find(b -> b.name().equals(new Branch.Name("feature"))).isEmpty());
+    }
+
+    @Test
+    void renameBranchFailsWhenTheNameIsTaken() throws Exception {
+        git("branch", "feature");
+        git("branch", "topic");
+
+        assertTrue(provider.renameBranch(new Branch.Name("feature"), new Branch.Name("topic")).isLeft());
+        assertTrue(provider.branches().get().exists(b -> b.name().equals(new Branch.Name("feature"))));
+    }
+
+    @Test
     void checkoutNewBranchFailsWhenTheNameIsTaken() throws Exception {
         git("branch", "topic");
 

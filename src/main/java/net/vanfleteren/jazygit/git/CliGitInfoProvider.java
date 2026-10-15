@@ -235,6 +235,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> renameBranch(Branch.Name name, Branch.Name newName) {
+        return CliBranch.rename(workTree, name, newName);
+    }
+
+    @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemoteBranch(RemoteBranch remote) {
         return CliBranch.deleteRemote(workTree, remote, credentials.get());
     }

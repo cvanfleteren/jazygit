@@ -26,7 +26,7 @@ import static net.vanfleteren.jazygit.git.Refs.HEADS;
 import static net.vanfleteren.jazygit.git.Refs.REMOTES;
 
 /**
- * Lists and deletes branches through the {@code git} command line tool. The branches are read through
+ * Lists, renames and deletes branches through the {@code git} command line tool. The branches are read through
  * {@code git for-each-ref}, in one call for all of them.
  */
 public final class CliBranch {
@@ -79,6 +79,14 @@ public final class CliBranch {
         return GitFailure.sequence(
                 () -> scope.remote() ? deleteRemote(workTree, remote, credentials) : GitFailure.nothing(),
                 () -> scope.local() ? deleteLocal(workTree, name) : GitFailure.nothing());
+    }
+
+    /**
+     * Runs {@code git branch -m <name> <newName>} in {@code workTree}, which refuses to overwrite a branch.
+     */
+    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> rename(Path workTree, Branch.Name name,
+                                                                          Branch.Name newName) {
+        return GitProcess.log(workTree, git("branch", "--move", name.value(), newName.value()));
     }
 
     /**

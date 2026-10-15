@@ -198,7 +198,7 @@ class HelpDialogTest {
     private String screen(String topic) throws Exception {
         Model open = open(topic);
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(open))) {
-            return RenderedText.ofLarge(runner, () -> view(open));
+            return RenderedText.ofTall(runner, () -> view(open));
         }
     }
 

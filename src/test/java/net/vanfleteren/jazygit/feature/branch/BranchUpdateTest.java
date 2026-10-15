@@ -357,6 +357,61 @@ class BranchUpdateTest {
     }
 
     @Test
+    void renameRequestOpensTheDialogAndCancelClosesIt() {
+        Model open = Update.update(loaded(), new RenameBranchMsg.Requested(new Branch.Name("feature"))).model();
+        assertEquals(Option.of(new RenameBranchPopup(new Branch.Name("feature"))), open.popup());
+
+        Next cancelled = Update.update(open, new RenameBranchMsg.Cancelled());
+        assertEquals(Option.none(), cancelled.model().popup());
+        assertEquals(List.of(), cancelled.cmds());
+    }
+
+    @Test
+    void theCheckedOutBranchCanBeRenamedButNotABusyOrUnknownOne() {
+        Model pushing = loaded().withBusyBranch(new BranchRef.Local(new Branch.Name("feature")),
+                net.vanfleteren.jazygit.state.Operation.PUSH);
+
+        assertEquals(Option.of(new RenameBranchPopup(new Branch.Name("main"))),
+                Update.update(pushing, new RenameBranchMsg.Requested(new Branch.Name("main"))).model().popup());
+        assertEquals(Option.none(),
+                Update.update(pushing, new RenameBranchMsg.Requested(new Branch.Name("feature"))).model().popup());
+        assertEquals(Option.none(),
+                Update.update(pushing, new RenameBranchMsg.Requested(new Branch.Name("nope"))).model().popup());
+    }
+
+    @Test
+    void confirmedRenameRenamesTheBranch() {
+        Model open = Update.update(loaded(), new RenameBranchMsg.Requested(new Branch.Name("feature"))).model();
+
+        Next next = Update.update(open, new RenameBranchMsg.Confirmed(" topic "));
+
+        assertEquals(List.of(new BranchCmd.RenameBranch(new Branch.Name("feature"), new Branch.Name("topic"))),
+                next.cmds());
+        assertEquals(Option.none(), next.model().popup());
+    }
+
+    @Test
+    void blankRenameKeepsTheDialogOpenAndTheSameNameClosesIt() {
+        Model open = Update.update(loaded(), new RenameBranchMsg.Requested(new Branch.Name("feature"))).model();
+
+        Next blank = Update.update(open, new RenameBranchMsg.Confirmed("  "));
+        assertEquals(List.of(), blank.cmds());
+        assertEquals(Option.of(new RenameBranchPopup(new Branch.Name("feature"))), blank.model().popup());
+
+        Next same = Update.update(open, new RenameBranchMsg.Confirmed("feature "));
+        assertEquals(List.of(), same.cmds());
+        assertEquals(Option.none(), same.model().popup());
+    }
+
+    @Test
+    void failedRenameIsStored() {
+        Model model = Update.update(loaded(), failed(new BranchCmd.RenameBranch(new Branch.Name("feature"),
+                new Branch.Name("main")), "boom")).model();
+
+        assertEquals(Option.of("Renaming branch feature failed: boom"), errorText(model));
+    }
+
+    @Test
     void deleteRequestOpensThePopupOnlyForAnotherKnownBranch() {
         Model model = loaded();
 

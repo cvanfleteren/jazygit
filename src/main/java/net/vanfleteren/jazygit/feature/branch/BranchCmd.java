@@ -104,6 +104,22 @@ public sealed interface BranchCmd extends GitOperationCmd {
     }
 
     /**
+     * Renames {@code branch} to {@code newName}.
+     */
+    record RenameBranch(Branch.Name branch, Branch.Name newName) implements BranchCmd {
+
+        @Override
+        public Operation operation() {
+            return Operation.RENAME_BRANCH;
+        }
+
+        @Override
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+            return git.renameBranch(branch, newName);
+        }
+    }
+
+    /**
      * Deletes {@code branch} where {@code scope} says; on its remote, that is {@code remote}.
      */
     record DeleteBranch(Branch.Name branch, RemoteBranch remote, DeleteScope scope) implements KeepsBranchBusy {

@@ -165,6 +165,30 @@ class BranchesPanelTest {
     }
 
     @Test
+    void aRenamedBranchStaysHighlightedUnderItsNewName() throws Exception {
+        Model after = with(before, List.of(MAIN, OLD, new Branch(new Branch.Name("topic"), false, new Sha("2"))));
+
+        assertEquals("topic", highlightedAfterMovingTo(1, after));
+    }
+
+    @Test
+    void shiftRAsksForANewNameForTheHighlightedBranch() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> { });
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
+            testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
+            RenderedText.of(testRunner, () -> panel.render(before, BranchesPanel.ID));
+            testRunner.pilot().press(KeyCode.DOWN);
+            testRunner.pilot().press('R');
+            testRunner.pilot().pause();
+            testRunner.pilot().quit();
+        }
+
+        assertEquals(java.util.List.of(new net.vanfleteren.jazygit.feature.branch.RenameBranchMsg.Requested(
+                new Branch.Name("feature"))), dispatched);
+    }
+
+    @Test
     void nAsksForANewBranchStartingAtTheHighlightedBranch() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> { });

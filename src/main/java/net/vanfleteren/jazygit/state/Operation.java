@@ -20,6 +20,7 @@ public enum Operation {
     DISCARD("log.title.discard", "error.discard.failed"),
     CHECKOUT("log.title.checkout", "error.checkout.failed"),
     NEW_BRANCH("log.title.newBranch", "error.newBranch.failed"),
+    RENAME_BRANCH("log.title.renameBranch", "error.renameBranch.failed"),
     DELETE_BRANCH("log.title.deleteBranch", "error.deleteBranch.failed"),
     PUSH("log.title.push", "error.push.failed"),
     PULL("log.title.pull", "error.pull.failed"),

@@ -24,6 +24,7 @@ public final class BranchKeys {
                         Binding.<Branch.Name>onSelected("n", "help.branches.new", NewBranchMsg.Requested::new),
                         Binding.<Branch.Name>onSelected("m", "help.branches.merge", MergeMsg.Requested::new),
                         Binding.<Branch.Name>onSelected("r", "help.branches.rebase", RebaseMsg.Requested::new),
+                        Binding.<Branch.Name>onSelected("R", "help.branches.rename", RenameBranchMsg.Requested::new),
                         Binding.<Branch.Name>onSelected("d", "help.branches.delete", DeleteBranchMsg.Requested::new),
                         Binding.always("[", "help.branches.previousTab", BranchesTabMsg.Switched::new),
                         Binding.always("]", "help.branches.nextTab", BranchesTabMsg.Switched::new))
