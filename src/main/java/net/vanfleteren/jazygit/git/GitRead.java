@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.git;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.DiffError;
 import net.vanfleteren.jazygit.git.GitError.LogError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
@@ -26,6 +27,11 @@ public interface GitRead {
      * The name of the repository, i.e. the name of its working tree directory.
      */
     String repositoryName();
+
+    /**
+     * The root of the working tree of the repository.
+     */
+    Path workTree();
 
     Either<ProcessError, RepoStatus> status();
 

@@ -19,7 +19,7 @@ graph TD
     App["JazygitApp<br/><i>entry point, layout, popups, focus</i>"]
     UI["ui<br/><i>panels and widgets: render a Model</i>"]
     Keys["keys<br/><i>Keymap: every shortcut, declared once</i>"]
-    Feature["feature.*<br/><i>branch, commit, stage, stash, discard,<br/>github, fetch, error, help, theme</i>"]
+    Feature["feature.*<br/><i>branch, commit, stage, stash, discard,<br/>github, fetch, error, help, theme, repos</i>"]
     State["state<br/><i>Model, Msg, Update, Cmd, Program</i>"]
     Git["git<br/><i>GitInfoProvider, CliGitInfoProvider, Cli*, GitProcess, GitError</i>"]
     GitModel["git.model<br/><i>Branch, Commit, RepoStatus, Sha, ...</i>"]
@@ -27,7 +27,7 @@ graph TD
     GhModel["gh.model<br/><i>PullRequest, PullRequestDetails, ...</i>"]
     Process["process<br/><i>Exec, ExecutedCommand, CommandLine</i>"]
     I18n["i18n<br/><i>Messages</i>"]
-    Settings["settings<br/><i>Settings, SettingsFile, SettingsPaths</i>"]
+    Settings["settings<br/><i>Settings, SettingsFile, SettingsPaths,<br/>RecentRepositoriesFile</i>"]
 
     App --> UI
     App --> State
@@ -85,7 +85,7 @@ The arrows are the dependencies `ArchitectureTest` allows; it fails on any other
 | `gh.model` | Immutable value types describing GitHub: `PullRequest`, `PullRequestDetails`, `MergeMethod`. |
 | `process` | `Exec`, the only place that starts a program, for `git` and `gh` alike, and its `ExecFailure`; `ExecutedCommand`, a command as it ran; `CommandLine`, how a command line is written. |
 | `i18n` | `Messages`: the user-facing texts, from `messages.properties`. |
-| `settings` | What the user keeps from one session to the next (`Settings`, `ThemeName`), where it is kept (`SettingsPaths`) and the TOML file it is kept in (`SettingsFile`, behind `SettingsStore`). |
+| `settings` | What the user keeps from one session to the next (`Settings`, `ThemeName`), where it is kept (`SettingsPaths`) and the TOML file it is kept in (`SettingsFile`, behind `SettingsStore`); the state jazygit keeps by itself, the recent repositories (`RecentRepositoriesFile`, behind `RecentRepositories`). |
 
 ## Settings
 
@@ -108,6 +108,28 @@ settings before and after. It writes only the settings that changed, so a hand e
 stays. Saving keeps the other keys, their order and their comments. It writes a temporary file and moves it
 over the old one, and leaves a file that is not valid TOML alone. When saving fails, the error is shown, and
 the setting still holds until jazygit stops.
+
+## Recent repositories
+
+The repositories opened last are state, not settings: jazygit writes them by itself, and they are not meant
+to be edited. They live in `state.toml`, as `recent-repositories`: the roots of their working trees, the
+last one opened first, at most 20.
+
+- **Linux:** `$XDG_STATE_HOME/jazygit` if that is set to an absolute path, else `~/.local/state/jazygit`.
+- **macOS:** `$XDG_STATE_HOME/jazygit` if that is set, else `~/Library/Application Support/jazygit`.
+- **Windows:** `%LOCALAPPDATA%\jazygit`.
+- **`$JAZYGIT_STATE_DIR`** overrides the directory on all of them.
+
+`main` records the repository it opens. Every change reads the file again first, so what another jazygit
+recorded meanwhile stays. A file that cannot be read gives none, and is written anew; failing to write is not
+shown, as the list is only a convenience.
+
+Ctrl+R lists the others, leaving out the ones whose directory is gone, which are forgotten too. Choosing one
+runs `RecentReposCmd.SwitchTo`, which asks `Env.repositories()` to open it. `JazygitApp` does that: it opens
+the repository on the thread of the command and then, on the render thread, stops the runtime of the old one
+without waiting for the git command that runs, and starts a new `Program` for the new one from scratch. The
+theme and the settings of the session stay. A repository that cannot be opened is forgotten, and the error is
+shown in the one still open.
 
 ## The runtime loop
 

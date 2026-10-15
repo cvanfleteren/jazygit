@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.CheckoutError;
 import net.vanfleteren.jazygit.git.GitError.DiffError;
 import net.vanfleteren.jazygit.git.GitError.DiscardError;
@@ -63,6 +64,11 @@ public interface StubGitProvider extends GitInfoProvider {
     @Override
     default String repositoryName() {
         return "repo";
+    }
+
+    @Override
+    default Path workTree() {
+        return Path.of("/repos/repo");
     }
 
     @Override

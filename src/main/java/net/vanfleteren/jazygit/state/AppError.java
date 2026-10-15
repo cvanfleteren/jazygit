@@ -93,4 +93,12 @@ public sealed interface AppError {
      */
     record SettingsNotSaved(Failure failure) implements AppError {
     }
+
+    /**
+     * A recent repository was chosen, but could not be opened; it is not offered anymore.
+     *
+     * @param directory where it was
+     */
+    record RepositoryNotOpened(String directory, Failure failure) implements AppError {
+    }
 }

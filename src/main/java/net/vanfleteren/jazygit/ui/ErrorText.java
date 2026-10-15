@@ -36,6 +36,8 @@ public final class ErrorText {
                     Messages.get("error.pullRequest.unavailable", of(failure));
             case AppError.SettingsNotLoaded(SettingsProblem problem) -> of(problem);
             case AppError.SettingsNotSaved(Failure failure) -> Messages.get("error.settings.notSaved", of(failure));
+            case AppError.RepositoryNotOpened(String directory, Failure failure) ->
+                    Messages.get("error.recentRepos.notOpened", directory, of(failure));
         };
     }
 

@@ -4,6 +4,7 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
@@ -13,6 +14,7 @@ import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.function.Supplier;
 
 import static dev.tamboui.toolkit.Toolkit.stack;
 import static dev.tamboui.toolkit.Toolkit.text;
@@ -67,6 +69,27 @@ class PickDialogTest {
         }
 
         assertEquals(java.util.List.of(new Picked("main"), new Picked("release"), new Picked("cancel")), dispatched);
+    }
+
+    @Test
+    void withoutNamesItSaysSoAndOnlyCancels() throws Exception {
+        PickDialog<BranchPopup> empty = new PickDialog<>(new PickDialog.Spec<>("pick", BranchPopup.class,
+                popup -> "Merge into", BranchPopup::branches, Picked::new, () -> new Picked("cancel"),
+                Option.of("dialog.recentRepos.none")), dispatched::add);
+        Supplier<Element> view = () -> stack(text("background"),
+                empty.render(TestModels.loaded().openPopup(new BranchPopup(List.empty()))).get());
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
+            runner.runner().focusManager().setFocus("pick");
+            String screen = RenderedText.ofLarge(runner, view);
+            assertTrue(screen.contains("No other recent repositories"), screen);
+            runner.pilot().press(KeyCode.ENTER);
+            runner.pilot().pause();
+            runner.pilot().press(KeyCode.ESCAPE);
+            runner.pilot().pause();
+        }
+
+        assertEquals(java.util.List.of(new Picked("cancel")), dispatched);
     }
 
     private ToolkitTestRunner start() throws Exception {

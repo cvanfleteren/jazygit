@@ -29,16 +29,21 @@ import net.vanfleteren.jazygit.feature.help.HelpDialog;
 import net.vanfleteren.jazygit.feature.error.ErrorDialog;
 import net.vanfleteren.jazygit.feature.stash.StashDialogs;
 import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
+import net.vanfleteren.jazygit.feature.repos.RecentReposDialog;
 import net.vanfleteren.jazygit.cli.StartupCli;
 import net.vanfleteren.jazygit.cli.StartupOptions;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.BranchesTab;
+import net.vanfleteren.jazygit.settings.RecentRepositories;
+import net.vanfleteren.jazygit.settings.RecentRepositoriesFile;
 import net.vanfleteren.jazygit.settings.SettingsFile;
 import net.vanfleteren.jazygit.settings.SettingsPaths;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.Env;
+import net.vanfleteren.jazygit.state.Repositories;
 import net.vanfleteren.jazygit.gh.CliGitHub;
 import net.vanfleteren.jazygit.git.CliGitInfoProvider;
+import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -111,6 +116,7 @@ public class JazygitApp extends ToolkitApp {
             new PopupSlot(new TextInputDialog<>(BranchDialogs.NEW_BRANCH, dispatch), JazygitApp::focusedPane),
             new PopupSlot(new ChoiceDialog<>(DiscardDialog.SPEC, dispatch), model -> FilesPanel.ID),
             new PopupSlot(new ChoiceDialog<>(ThemeDialog.SPEC, dispatch), JazygitApp::focusedPane),
+            new PopupSlot(new PickDialog<>(RecentReposDialog.SPEC, dispatch), JazygitApp::focusedPane),
             new PopupSlot(new ChoiceDialog<>(BranchDialogs.REBASE, dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new ChoiceDialog<>(BranchDialogs.MERGE, dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new ChoiceDialog<>(BranchDialogs.DELETE_BRANCH, dispatch), model -> BranchesPanel.ID),
@@ -137,7 +143,8 @@ public class JazygitApp extends ToolkitApp {
     private Option<Runtime> runtime = Option.none();
 
     /**
-     * The program and the threads it runs git on, which exist from the start of the app to its stop.
+     * The program and the threads it runs git on, which exist from the start of the app to its stop, or until
+     * another repository is opened in its place.
      *
      * @param io    where git is called
      * @param fetch where git talks to the remotes
@@ -146,11 +153,13 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
+     * @param env           what the repository the app starts in is read with; it opens other repositories in
+     *                      the app
      * @param settings      the settings the session starts with, as {@code env} loaded them
      * @param themeOverride the theme for this session instead of the saved one, if any
      */
     public JazygitApp(Env env, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, StyleEngine styleEngine) {
-        this.env = env;
+        this.env = new Env(env.git(), env.gitHub(), env.settings(), env.recent(), this::switchTo);
         this.settings = settings;
         this.themeOverride = themeOverride;
         this.styleEngine = styleEngine;
@@ -213,16 +222,59 @@ public class JazygitApp extends ToolkitApp {
                     return EventResult.HANDLED;
                 })
                 .getOrElse(EventResult.UNHANDLED));
-        runner.focusManager().setFocus(FilesPanel.ID);
-        ThreadPoolExecutor io = singleThread("git-io");
-        ThreadPoolExecutor fetch = singleThread("git-fetch");
-        runtime = Option.of(new Runtime(io, fetch, Program.start(env, settings, themeOverride, io, fetch, runner::runOnRenderThread, JazygitApp::logBug)));
+        startRuntime(env, settings, themeOverride);
         runner.scheduleRepeating(() -> runner.runOnRenderThread(() -> dispatch.accept(new Msg.Tick())),
                 REFRESH_INTERVAL);
         runner.scheduleRepeating(() -> runner.runOnRenderThread(() -> dispatch.accept(new FetchMsg.Tick())),
                 FETCH_INTERVAL);
+    }
+
+    /**
+     * Starts showing the repository {@code env} reads, from scratch.
+     */
+    private void startRuntime(Env env, SettingsStore.Loaded settings, Option<ThemeName> themeOverride) {
+        ToolkitRunner runner = runner();
+        runner.focusManager().setFocus(FilesPanel.ID);
+        ThreadPoolExecutor io = singleThread("git-io");
+        ThreadPoolExecutor fetch = singleThread("git-fetch");
+        runtime = Option.of(new Runtime(io, fetch, Program.start(env, settings, themeOverride, io, fetch, runner::runOnRenderThread, JazygitApp::logBug)));
         // The first fetch is a while off; the pull requests show from the start.
         dispatch.accept(new PullRequestsMsg.Refresh());
+    }
+
+    /**
+     * Opens the repository containing {@code directory} in place of the one shown, as {@link Repositories} asks;
+     * called on the thread of a command.
+     */
+    private Either<GitError.OpenError, Path> switchTo(Path directory) {
+        return CliGitInfoProvider.open(directory)
+                .peek(provider -> runner().runOnRenderThread(() -> show(provider)))
+                .map(CliGitInfoProvider::workTree);
+    }
+
+    /**
+     * Shows the repository {@code git} reads instead of the one shown, as if the app had been started there; the
+     * theme and the settings stay as they are in this session.
+     */
+    private void show(CliGitInfoProvider git) {
+        runtime.forEach(running -> {
+            Model last = running.program().model();
+            // Not waiting for the command that runs keeps the UI going. It finishes by itself, in the other
+            // repository, and its outcome goes to the old program, which nobody looks at anymore.
+            stop(running);
+            startRuntime(new Env(git, new CliGitHub(git.workTree()), env.settings(), env.recent(), env.repositories()),
+                    new SettingsStore.Loaded(last.settings(), Option.none()), last.themeOverride());
+        });
+    }
+
+    /**
+     * Drops what {@code running} has queued, and stops its fetch half-way; the git command that runs is not
+     * interrupted, which would kill it half-way, say in the middle of a rebase.
+     */
+    private static void stop(Runtime running) {
+        running.io().getQueue().clear();
+        running.io().shutdown();
+        running.fetch().shutdownNow();
     }
 
     private static ThreadPoolExecutor singleThread(String name) {
@@ -249,12 +301,9 @@ public class JazygitApp extends ToolkitApp {
     @Override
     protected void onStop() {
         runtime.forEach(running -> {
-            // What is queued is not started anymore. The git command that runs is not interrupted, which would
-            // kill it half-way, say in the middle of a rebase: it is given a moment to finish, and else finishes
-            // by itself once the app is gone. A fetch can stop half-way, and is not waited for.
-            running.io().getQueue().clear();
-            running.io().shutdown();
-            running.fetch().shutdownNow();
+            // The git command that runs is given a moment to finish, and else finishes by itself once the app is
+            // gone.
+            stop(running);
             Try.of(() -> running.io().awaitTermination(2, TimeUnit.SECONDS))
                     .onFailure(InterruptedException.class, e -> Thread.currentThread().interrupt());
         });
@@ -366,8 +415,10 @@ public class JazygitApp extends ToolkitApp {
                 .flatMap(provider -> Theme.createEngine()
                         .mapLeft(failed -> Messages.get("theme.loadFailed", failed.theme(), ErrorText.reason(failed.cause())))
                         .map(engine -> {
+                            RecentRepositories recent = new RecentRepositoriesFile(SettingsPaths.stateFile());
+                            recent.opened(provider.workTree()).onFailure(JazygitApp::logBug);
                             Env env = new Env(provider, new CliGitHub(provider.workTree()),
-                                    new SettingsFile(SettingsPaths.configFile()));
+                                    new SettingsFile(SettingsPaths.configFile()), recent, Repositories.NONE);
                             return new JazygitApp(env, env.settings().load(), options.theme(), engine);
                         }));
         app.flatMap(jazygit -> Try.run(jazygit::run).toEither().mapLeft(ErrorText::reason))

@@ -83,9 +83,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
                 : error;
     }
 
-    /**
-     * The root of the working tree of the repository.
-     */
+    @Override
     public Path workTree() {
         return workTree;
     }

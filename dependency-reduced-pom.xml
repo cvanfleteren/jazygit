@@ -44,6 +44,7 @@
           <archive>
             <manifest>
               <mainClass>${main.class}</mainClass>
+              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
             </manifest>
           </archive>
         </configuration>
@@ -181,6 +182,7 @@
     <zt-exec.version>1.13.0</zt-exec.version>
     <main.class>net.vanfleteren.jazygit.JazygitApp</main.class>
     <slf4j.version>2.0.17</slf4j.version>
+    <picocli.version>4.7.7</picocli.version>
     <night-config.version>3.9.0</night-config.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <archunit.version>1.4.1</archunit.version>

@@ -69,4 +69,45 @@ class SettingsPathsTest {
         assertEquals(Path.of("/mine/config.toml"), configFile("Mac OS X", env));
         assertEquals(Path.of("/mine/config.toml"), configFile("Windows 11", env));
     }
+
+    private static Path stateFile(String osName, Map<String, String> env) {
+        return SettingsPaths.stateFile(osName, env::get, HOME);
+    }
+
+    @Test
+    void theStateIsInTheXdgStateHomeOnLinux() {
+        assertEquals(Path.of("/xdg-state/jazygit/state.toml"),
+                stateFile("Linux", HashMap.of("XDG_STATE_HOME", "/xdg-state", "XDG_CONFIG_HOME", "/xdg")));
+    }
+
+    @Test
+    void theStateFallsBackToDotLocalStateOnLinux() {
+        Path fallback = Path.of("/home/ada/.local/state/jazygit/state.toml");
+
+        assertEquals(fallback, stateFile("Linux", HashMap.empty()));
+        assertEquals(fallback, stateFile("Linux", HashMap.of("XDG_STATE_HOME", "relative/dir")));
+    }
+
+    @Test
+    void theStateIsInApplicationSupportOnMacOs() {
+        assertEquals(Path.of("/home/ada/Library/Application Support/jazygit/state.toml"),
+                stateFile("Mac OS X", HashMap.empty()));
+    }
+
+    @Test
+    void theStateIsInTheLocalAppDataOnWindows() {
+        assertEquals(Path.of("C:\\Users\\ada\\AppData\\Local", "jazygit", "state.toml"),
+                stateFile("Windows 11", HashMap.of("LOCALAPPDATA", "C:\\Users\\ada\\AppData\\Local")));
+        assertEquals(Path.of("/home/ada/AppData/Local/jazygit/state.toml"), stateFile("Windows 11", HashMap.empty()));
+    }
+
+    @Test
+    void theStateOverrideWinsEverywhere() {
+        Map<String, String> env = HashMap.of("JAZYGIT_STATE_DIR", "/mine", "XDG_STATE_HOME", "/xdg",
+                "LOCALAPPDATA", "C:\\AppData");
+
+        assertEquals(Path.of("/mine/state.toml"), stateFile("Linux", env));
+        assertEquals(Path.of("/mine/state.toml"), stateFile("Mac OS X", env));
+        assertEquals(Path.of("/mine/state.toml"), stateFile("Windows 11", env));
+    }
 }
