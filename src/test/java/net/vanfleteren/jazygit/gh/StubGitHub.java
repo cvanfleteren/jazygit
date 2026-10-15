@@ -5,6 +5,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.BranchChecks;
+import net.vanfleteren.jazygit.gh.model.GhLogin;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
@@ -24,6 +25,19 @@ public interface StubGitHub extends GitHub {
     static StubGitHub empty() {
         return new StubGitHub() {
         };
+    }
+
+    @Override
+    default Either<GhError, String> version(String executable) {
+        return Either.right("2.102.0");
+    }
+
+    /**
+     * Logged in to no account.
+     */
+    @Override
+    default Either<GhError, List<GhLogin>> logins() {
+        return Either.right(List.empty());
     }
 
     @Override

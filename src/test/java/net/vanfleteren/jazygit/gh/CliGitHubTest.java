@@ -5,6 +5,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.BranchChecks;
+import net.vanfleteren.jazygit.gh.model.GhLogin;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -75,6 +76,27 @@ class CliGitHubTest {
     void browsingOpensTheBranchByItsNameOnTheRemote() {
         assertEquals(List.of("gh", "browse", "--branch", "feature/login"),
                 CliGitHub.browseCommand("feature/login").commandLine("gh"));
+    }
+
+    @Test
+    void theVersionIsInTheFirstLine() {
+        assertEquals(Either.right("2.102.0"), CliGitHub.parseVersion("""
+                gh version 2.102.0 (2026-09-30)
+                https://github.com/cli/cli/releases/tag/v2.102.0
+                """));
+        assertTrue(CliGitHub.parseVersion("Usage: something else").isLeft());
+    }
+
+    @Test
+    void theLoginsOnEachHost() {
+        assertEquals(Either.right(List.of(new GhLogin("github.com", "alice", true, true),
+                        new GhLogin("github.com", "alice-work", false, false),
+                        new GhLogin("ghe.corp", "alice", true, true))),
+                CliGitHub.parseLogins("""
+                        github.com\talice\ttrue\tsuccess
+                        github.com\talice-work\tfalse\terror
+                        ghe.corp\talice\ttrue\tsuccess
+                        """));
     }
 
     @Test

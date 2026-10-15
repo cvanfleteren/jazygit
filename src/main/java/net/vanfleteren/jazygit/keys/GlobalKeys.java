@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.keys;
 import dev.tamboui.tui.event.KeyEvent;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.feature.repos.RecentReposMsg;
+import net.vanfleteren.jazygit.feature.settings.SettingsPanelMsg;
 import net.vanfleteren.jazygit.feature.theme.ThemeMsg;
 import net.vanfleteren.jazygit.state.Msg;
 
@@ -22,6 +23,8 @@ final class GlobalKeys {
                         ThemeMsg.Requested::new))
                 .global(new Keymap.Global.Dispatching("ctrl+r", "help.global.recentRepos",
                         GlobalKeys::isRecentReposKey, RecentReposMsg.Requested::new))
+                .global(new Keymap.Global.Dispatching("ctrl+s", "help.global.settings",
+                        GlobalKeys::isSettingsKey, SettingsPanelMsg.Requested::new))
                 .global(new Keymap.Global.Dispatching("q", "help.global.quit", GlobalKeys::isQuitKey, Msg.Quit::new));
     }
 
@@ -33,6 +36,11 @@ final class GlobalKeys {
     /** Whether {@code event} is the shortcut that asks which theme to use. */
     static boolean isThemeKey(KeyEvent event) {
         return event.hasCtrl() && event.isCharIgnoreCase('t');
+    }
+
+    /** Whether {@code event} is the shortcut that shows the settings. */
+    static boolean isSettingsKey(KeyEvent event) {
+        return event.hasCtrl() && event.isCharIgnoreCase('s');
     }
 
     /** Whether {@code event} is the shortcut that asks which recent repository to switch to. */

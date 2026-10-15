@@ -42,6 +42,7 @@ import net.vanfleteren.jazygit.settings.SettingsPaths;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Repositories;
+import net.vanfleteren.jazygit.feature.settings.SettingsPanelDialogs;
 import net.vanfleteren.jazygit.gh.CliGitHub;
 import net.vanfleteren.jazygit.gh.GhToken;
 import net.vanfleteren.jazygit.settings.Settings;
@@ -128,6 +129,9 @@ public class JazygitApp extends ToolkitApp {
             new PopupSlot(new ChoiceDialog<>(DiscardDialog.SPEC, dispatch), model -> FilesPanel.ID),
             new PopupSlot(new ChoiceDialog<>(ThemeDialog.SPEC, dispatch), JazygitApp::focusedPane),
             new PopupSlot(new PickDialog<>(RecentReposDialog.SPEC, dispatch), JazygitApp::focusedPane),
+            new PopupSlot(new ChoiceDialog<>(SettingsPanelDialogs.PANEL, dispatch), JazygitApp::focusedPane),
+            new PopupSlot(new TextInputDialog<>(SettingsPanelDialogs.GH_EXECUTABLE, dispatch), JazygitApp::focusedPane),
+            new PopupSlot(new PickDialog<>(SettingsPanelDialogs.ACCOUNT, dispatch), JazygitApp::focusedPane),
             new PopupSlot(new ChoiceDialog<>(BranchDialogs.REBASE, dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new ChoiceDialog<>(BranchDialogs.MERGE, dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new ChoiceDialog<>(BranchDialogs.DELETE_BRANCH, dispatch), model -> BranchesPanel.ID),

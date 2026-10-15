@@ -8,6 +8,7 @@ import io.vavr.control.Option;
 import io.vavr.control.Try;
 import net.vanfleteren.jazygit.gh.GhError.UnexpectedOutput;
 import net.vanfleteren.jazygit.gh.model.BranchChecks;
+import net.vanfleteren.jazygit.gh.model.GhLogin;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -96,14 +97,60 @@ public final class CliGitHub implements GitHub {
 
     private static final Pattern CREATED_URL = Pattern.compile("/pull/(\\d{1,9})$");
 
+    // The accounts gh is logged in to, by host, login, whether it is the active one and whether its token works.
+    private static final String LOGINS_JQ = """
+            .hosts | to_entries[] | .key as $host | .value[] \
+            | [$host, .login, (.active | tostring), .state] | @tsv""";
+
+    private final Path workTree;
     private final GhProcess process;
+    // As gh's own active accounts: with a token in the environment, gh only knows of that one.
+    private final GhProcess unconfigured;
 
     /**
      * GitHub for the repository in {@code workTree}, through the gh at {@code executable}, as the account of
      * {@code token}.
      */
     public CliGitHub(Path workTree, String executable, GhToken token) {
+        this.workTree = workTree;
         this.process = new GhProcess(workTree, executable, token);
+        this.unconfigured = new GhProcess(workTree, executable, GhToken.NONE);
+    }
+
+    @Override
+    public Either<GhError, String> version(String executable) {
+        return new GhProcess(workTree, executable, GhToken.NONE).read(gh("--version"), CliGitHub::parseVersion);
+    }
+
+    /**
+     * The version in the first line {@code gh --version} prints, e.g. {@code gh version 2.102.0 (2026-09-30)}.
+     */
+    static Either<UnexpectedOutput, String> parseVersion(String raw) {
+        return List.of(raw.split("\\R")).headOption()
+                .map(String::strip)
+                .filter(line -> line.startsWith("gh version "))
+                .map(line -> line.substring("gh version ".length()).split(" ")[0])
+                .toEither(() -> new UnexpectedOutput(raw));
+    }
+
+    @Override
+    public Either<GhError, List<GhLogin>> logins() {
+        // Exits with 0 also when an account's token does not work anymore, which the state says.
+        return unconfigured.read(gh("auth", "status", "--json", "hosts", "--jq", LOGINS_JQ), CliGitHub::parseLogins);
+    }
+
+    /**
+     * Parses the lines {@link #LOGINS_JQ} prints.
+     */
+    static Either<UnexpectedOutput, List<GhLogin>> parseLogins(String raw) {
+        return List.of(raw.split("\\R"))
+                .filter(line -> !line.isBlank())
+                .map(line -> List.of(line.split("\t", -1)).map(CliGitHub::unescape))
+                .map(fields -> Option.when(fields.size() == 4, fields)
+                        .map(f -> new GhLogin(f.get(0), f.get(1), f.get(2).equals("true"), f.get(3).equals("success")))
+                        .toEither(() -> new UnexpectedOutput(fields.mkString("\t"))))
+                .transform(Either::sequenceRight)
+                .map(List::ofAll);
     }
 
     @Override

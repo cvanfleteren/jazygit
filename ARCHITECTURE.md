@@ -19,7 +19,7 @@ graph TD
     App["JazygitApp<br/><i>entry point, layout, popups, focus</i>"]
     UI["ui<br/><i>panels and widgets: render a Model</i>"]
     Keys["keys<br/><i>Keymap: every shortcut, declared once</i>"]
-    Feature["feature.*<br/><i>branch, commit, stage, stash, discard,<br/>github, fetch, error, help, theme, repos</i>"]
+    Feature["feature.*<br/><i>branch, commit, stage, stash, discard,<br/>github, fetch, error, help, theme, repos,<br/>settings</i>"]
     State["state<br/><i>Model, Msg, Update, Cmd, Program</i>"]
     Git["git<br/><i>GitInfoProvider, CliGitInfoProvider, Cli*, GitProcess, GitError</i>"]
     GitModel["git.model<br/><i>Branch, Commit, RepoStatus, Sha, ...</i>"]
@@ -82,7 +82,7 @@ The arrows are the dependencies `ArchitectureTest` allows; it fails on any other
 | `git` | Everything that touches the repository, all through the `git` command line. All results are `Either` values. |
 | `git.model` | Immutable value types describing the repository. |
 | `gh` | Everything that talks to GitHub, all through the `gh` command line. It knows nothing of `git`, and `git` knows nothing of it; the features combine them. |
-| `gh.model` | Immutable value types describing GitHub: `PullRequest`, `PullRequestDetails`, `MergeMethod`. |
+| `gh.model` | Immutable value types describing GitHub: `PullRequest`, `PullRequestDetails`, `MergeMethod`, `GhAccount`, `GhLogin`. |
 | `process` | `Exec`, the only place that starts a program, for `git` and `gh` alike, and its `ExecFailure`; `ExecutedCommand`, a command as it ran; `CommandLine`, how a command line is written. |
 | `i18n` | `Messages`: the user-facing texts, from `messages.properties`. |
 | `settings` | What the user keeps from one session to the next (`Settings`, `ThemeName`), where it is kept (`SettingsPaths`) and the TOML file it is kept in (`SettingsFile`, behind `SettingsStore`); the state jazygit keeps by itself, the recent repositories (`RecentRepositoriesFile`, behind `RecentRepositories`). |
@@ -108,6 +108,12 @@ settings before and after. It writes only the settings that changed, so a hand e
 stays. Saving keeps the other keys, their order and their comments. It writes a temporary file and moves it
 over the old one, and leaves a file that is not valid TOML alone. When saving fails, the error is shown, and
 the setting still holds until jazygit stops.
+
+Ctrl+S shows the settings (`feature.settings`): the gh executable, the theme, and the GitHub account of the
+repository. The keys in `config.toml` are `ui.theme` and `github.executable`, the gh to run when it is not the
+one on the PATH; a new one is only kept once `<executable> --version` runs. Changing the gh executable or the
+account shows the repository again through `Env.repositories()`, as switching to a recent repository does, so a
+new `Env` runs gh as the settings say now.
 
 ## Recent repositories
 
@@ -431,6 +437,21 @@ the GitHub repository from the git remotes itself. It mirrors the git layer with
 - **Merging and closing:** `gh pr merge <n> --merge|--squash|--rebase` and `gh pr close <n>`, chosen in the
   pull request dialog. The branch is kept. Once done, the pull request is dropped from the open ones and they
   are read again.
+
+### The account of a repository
+
+gh can be logged in to several accounts, but which one it uses is global. A repository can be configured to use
+another one, without changing that: the key `jazygit.githubUser` in its own git configuration names the login,
+on the GitHub host of its remotes (`origin`'s, else the first one named like GitHub; an ssh host alias is
+resolved with `ssh -G`). The settings list the accounts with `gh auth status --json hosts`.
+
+`GhToken` asks `gh auth token --user <login> --hostname <host>` once, the first time it is needed, and keeps
+the token in memory only. `GhProcess` sets it as `GH_TOKEN` (`GH_ENTERPRISE_TOKEN` and `GH_HOST` for a
+GitHub Enterprise Server) for every gh command, and `CliGitInfoProvider.withCredentials` sets it for git's
+commands that talk to a remote, for gh's credential helper. A token GitHub rejects is asked again once. A
+token gh does not have is kept as `GhError.TokenUnavailable`: gh does not run as another account, the error
+is shown once, and git still talks to the remotes without it. Without a configured account, nothing is set,
+and gh uses its active one.
 
 ### Errors as values
 

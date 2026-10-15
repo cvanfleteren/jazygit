@@ -1,0 +1,102 @@
+package net.vanfleteren.jazygit.feature.settings;
+
+import io.vavr.control.Either;
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.state.Cmd;
+import net.vanfleteren.jazygit.state.Env;
+import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.GitHubAccount;
+import net.vanfleteren.jazygit.state.Msg;
+
+/**
+ * The IO of the settings.
+ */
+public sealed interface SettingsPanelCmd extends Cmd {
+
+    /**
+     * Reads how gh is set up for the repository: the version of the gh at {@code executable}, the account the
+     * repository is configured to use, and the accounts gh is logged in to. In the background, as gh talks to
+     * GitHub to check the accounts.
+     */
+    record ReadGitHub(String executable) implements SettingsPanelCmd {
+
+        @Override
+        public boolean background() {
+            return true;
+        }
+
+        @Override
+        public Msg run(Env env) {
+            return new SettingsPanelMsg.GitHubRead(new GitHubSetup(
+                    env.gitHub().version(executable).<Failure>mapLeft(Failure.GitHub::new),
+                    GitHubAccount.host(env.git()),
+                    env.git().localConfig(GitHubAccount.USER_KEY).getOrElse(Option.none()),
+                    env.gitHub().logins().<Failure>mapLeft(Failure.GitHub::new)));
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return new SettingsPanelMsg.GitHubRead(new GitHubSetup(Either.left(failure), "", Option.none(),
+                    Either.left(failure)));
+        }
+    }
+
+    /**
+     * Checks that {@code executable}, none for the one on the PATH, is a gh that runs.
+     */
+    record CheckGhExecutable(Option<String> executable) implements SettingsPanelCmd {
+
+        @Override
+        public boolean background() {
+            return true;
+        }
+
+        @Override
+        public Msg run(Env env) {
+            return new SettingsPanelMsg.GhExecutableChecked(executable,
+                    env.gitHub().version(executable.getOrElse("gh")).<Failure>mapLeft(Failure.GitHub::new));
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return new SettingsPanelMsg.GhExecutableChecked(executable, Either.left(failure));
+        }
+    }
+
+    /**
+     * Configures the repository to use the account {@code user}, none for gh's active one, and shows it again,
+     * so gh and git run as that account from now on.
+     */
+    record SetAccount(Option<String> user) implements SettingsPanelCmd {
+
+        @Override
+        public Msg run(Env env) {
+            return env.git().setLocalConfig(GitHubAccount.USER_KEY, user)
+                    .<Msg>map(commands -> env.repositories().switchTo(env.git().workTree())
+                            .fold(this::failedWith, reopened -> new SettingsPanelMsg.AccountSet()))
+                    .getOrElseGet(this::failedWith);
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return new SettingsPanelMsg.AccountNotSet(failure);
+        }
+    }
+
+    /**
+     * Shows the repository again, so gh runs as the settings say now.
+     */
+    record Reopen() implements SettingsPanelCmd {
+
+        @Override
+        public Msg run(Env env) {
+            return env.repositories().switchTo(env.git().workTree())
+                    .fold(this::failedWith, reopened -> new SettingsPanelMsg.Reopened());
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return new SettingsPanelMsg.NotReopened(failure);
+        }
+    }
+}

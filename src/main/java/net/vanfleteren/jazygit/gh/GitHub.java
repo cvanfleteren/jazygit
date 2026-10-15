@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.BranchChecks;
+import net.vanfleteren.jazygit.gh.model.GhLogin;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
@@ -13,6 +14,16 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
  * What the TUI does with GitHub, through the {@code gh} command line tool.
  */
 public interface GitHub {
+
+    /**
+     * The version of the gh at {@code executable}, as {@code gh --version} prints it first.
+     */
+    Either<GhError, String> version(String executable);
+
+    /**
+     * The accounts gh is logged in to, on every host, whatever account the repository is configured to use.
+     */
+    Either<GhError, List<GhLogin>> logins();
 
     /**
      * The open pull requests of the repository, from branches of the repository itself (not from forks).

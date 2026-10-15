@@ -115,4 +115,24 @@ public sealed interface AppError {
      */
     record RepositoryNotOpened(String directory, Failure failure) implements AppError {
     }
+
+    /**
+     * The gh executable chosen does not run, so it is not used.
+     *
+     * @param executable the one chosen; none for the one on the PATH
+     */
+    record GhExecutableUnusable(Option<String> executable, Failure failure) implements AppError {
+    }
+
+    /**
+     * The account chosen for the repository could not be configured.
+     */
+    record GitHubAccountNotSet(Failure failure) implements AppError {
+    }
+
+    /**
+     * The repository could not be shown again with the settings changed; they hold from the next start.
+     */
+    record SettingsNotApplied(Failure failure) implements AppError {
+    }
 }

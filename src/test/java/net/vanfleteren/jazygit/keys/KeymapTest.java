@@ -14,11 +14,20 @@ import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.feature.settings.SettingsPanelMsg;
 import org.junit.jupiter.api.Test;
 
 class KeymapTest {
 
     private final Keymap keymap = Keymap.standard();
+
+    @Test
+    void ctrlSShowsTheSettings() {
+        assertTrue(GlobalKeys.isSettingsKey(KeyEvent.ofChar('s', dev.tamboui.tui.event.KeyModifiers.CTRL)));
+        assertFalse(GlobalKeys.isSettingsKey(KeyEvent.ofChar('s')));
+        assertEquals(Option.of(new SettingsPanelMsg.Requested()),
+                keymap.handleGlobal(KeyEvent.ofChar('s', dev.tamboui.tui.event.KeyModifiers.CTRL)));
+    }
 
     @Test
     void ctrlTAsksForTheTheme() {

@@ -40,6 +40,12 @@ public final class ErrorText {
             case AppError.SettingsNotSaved(Failure failure) -> Messages.get("error.settings.notSaved", of(failure));
             case AppError.RepositoryNotOpened(String directory, Failure failure) ->
                     Messages.get("error.recentRepos.notOpened", directory, of(failure));
+            case AppError.GhExecutableUnusable(Option<String> executable, Failure failure) ->
+                    Messages.get("error.settings.ghUnusable", executable.getOrElse("gh"), of(failure));
+            case AppError.GitHubAccountNotSet(Failure failure) ->
+                    Messages.get("error.settings.accountNotSet", of(failure));
+            case AppError.SettingsNotApplied(Failure failure) ->
+                    Messages.get("error.settings.notApplied", of(failure));
         };
     }
 
