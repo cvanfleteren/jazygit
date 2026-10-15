@@ -40,6 +40,7 @@ import java.util.function.Supplier;
 public final class ContentPanel {
 
     private static final String COMMIT_AREA_ID = "commit-changes";
+    private static final List<String> LEFT_PANES = List.of(FilesPanel.ID, BranchesPanel.ID, CommitsPanel.ID, StashPanel.ID);
 
     private final Theme.SpanStyles styles;
     // The scrollable areas for the diffs, the branch log and the commit. They are kept between renders because
@@ -192,13 +193,15 @@ public final class ContentPanel {
 
     /**
      * What goes with the pane that has the focus, {@code focusedId}; while a popup has it, what goes with the
-     * pane the popup was opened from.
+     * pane the popup was opened from. That holds also in the frame a popup closes in, as it still has the focus
+     * until the focus is given back.
      */
     public StyledElement<?> render(Model model, String focusedId) {
         List.of(stagedArea, unstagedArea, commitArea, logArea).forEach(area -> area.restyle(model.settings().theme()));
         boolean inContent = focusableAreas.exists(area -> area.id().equals(focusedId));
         focusableAreas.forEach(area -> area.tabbable(inContent));
-        String pane = model.popup().isDefined() ? model.focusedPane().getOrElse(focusedId) : focusedId;
+        boolean onPane = inContent || LEFT_PANES.contains(focusedId);
+        String pane = onPane ? focusedId : model.focusedPane().getOrElse(focusedId);
         if (BranchesPanel.ID.equals(pane)) {
             return branchLogView(model);
         }

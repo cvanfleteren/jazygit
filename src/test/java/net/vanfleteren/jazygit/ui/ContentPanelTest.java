@@ -74,6 +74,16 @@ class ContentPanelTest {
     }
 
     @Test
+    void aPopupThatJustClosedKeepsShowingTheBranchLogUntilTheFocusIsBack() throws Exception {
+        // The popup is gone from the model, but has the focus until the render gives it back.
+        Model closed = model.withFocusedPane(io.vavr.control.Option.of(BranchesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(closed, "new-branch"))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> content.render(closed, "new-branch"));
+            assertTrue(screen.contains("Log: feature/initial-layout"), screen);
+        }
+    }
+
+    @Test
     void aPopupOpenedFromTheBranchesKeepsShowingTheBranchLog() throws Exception {
         Model withPopup = model.withFocusedPane(io.vavr.control.Option.of(BranchesPanel.ID))
                 .openPopup(new net.vanfleteren.jazygit.feature.help.HelpPopup(BranchesPanel.ID));
