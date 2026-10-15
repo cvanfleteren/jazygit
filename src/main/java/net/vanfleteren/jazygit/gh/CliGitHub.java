@@ -7,6 +7,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
 import net.vanfleteren.jazygit.gh.GhError.UnexpectedOutput;
+import net.vanfleteren.jazygit.gh.model.BranchChecks;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -71,6 +72,24 @@ public final class CliGitHub implements GitHub {
             %s] | @tsv))""".formatted(CHECK_STATE);
     private static final int DETAIL_FIELD_COUNT = 15;
 
+    /*
+     * The branches of the repository with the combined state of the checks on their tip, all pages of them. gh
+     * fills in the repository of the working tree for {owner} and {repo}.
+     */
+    private static final String BRANCHES_QUERY = """
+            query($owner: String!, $name: String!, $endCursor: String) { \
+            repository(owner: $owner, name: $name) { nameWithOwner \
+            refs(refPrefix: "refs/heads/", first: 100, after: $endCursor) { pageInfo { hasNextPage endCursor } \
+            nodes { name target { ... on Commit { statusCheckRollup { state } } } } } } }""";
+    /*
+     * Tab separated lines, each starting with what it is: a "repo" line with the repository as owner/name per
+     * page, and a "branch" line per branch with its name and the state of the checks on its tip, empty without
+     * checks.
+     */
+    private static final String BRANCHES_JQ = """
+            .data.repository | (["repo", .nameWithOwner] | @tsv), \
+            (.refs.nodes[] | ["branch", .name, (.target.statusCheckRollup.state // "")] | @tsv)""";
+
     private static final Set<String> FAILED = HashSet.of(
             "FAILURE", "ERROR", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED", "STARTUP_FAILURE");
     private static final Set<String> RUNNING = HashSet.of("PENDING", "EXPECTED", "QUEUED", "IN_PROGRESS", "WAITING");
@@ -88,6 +107,14 @@ public final class CliGitHub implements GitHub {
         return GhProcess.read(workTree,
                 gh("pr", "list", "--state", "open", "--limit", LIMIT, "--json", FIELDS, "--jq", JQ),
                 CliGitHub::parse);
+    }
+
+    @Override
+    public Either<GhError, BranchChecks> branchChecks() {
+        return GhProcess.read(workTree,
+                gh("api", "graphql", "--paginate", "-F", "owner={owner}", "-F", "name={repo}",
+                        "-f", "query=" + BRANCHES_QUERY, "--jq", BRANCHES_JQ),
+                CliGitHub::parseBranchChecks);
     }
 
     @Override
@@ -164,6 +191,24 @@ public final class CliGitHub implements GitHub {
                         .map(number -> new PullRequest(number, f.get(1), f.get(2).equals("true"),
                                 checks(List.of(f.get(4).split(",")).filter(state -> !state.isEmpty())),
                                 review(f.get(3)))));
+    }
+
+    /**
+     * Parses the lines the jq filter of {@link #branchChecks()} prints.
+     */
+    static Either<UnexpectedOutput, BranchChecks> parseBranchChecks(String raw) {
+        List<List<String>> lines = List.of(raw.split("\\R"))
+                .filter(line -> !line.isBlank())
+                .map(line -> List.of(line.split("\t", -1)).map(CliGitHub::unescape));
+        Option<List<String>> unknown = lines.find(fields -> !(fields.size() == 2 && fields.head().equals("repo")
+                || fields.size() == 3 && fields.head().equals("branch")));
+        if (unknown.isDefined()) {
+            return Either.left(new UnexpectedOutput(unknown.get().mkString("\t")));
+        }
+        return lines.find(f -> f.head().equals("repo"))
+                .map(repo -> new BranchChecks(repo.get(1), lines.filter(f -> f.head().equals("branch"))
+                        .toMap(f -> f.get(1), f -> checks(List.of(f.get(2)).filter(state -> !state.isEmpty())))))
+                .toEither(() -> new UnexpectedOutput(raw));
     }
 
     /**

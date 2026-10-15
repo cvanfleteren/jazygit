@@ -69,7 +69,7 @@ class PullRequestsUpdateTest {
 
     @Test
     void refreshingReadsThePullRequests() {
-        assertEquals(List.of(new LoadPullRequests()), Update.update(loaded(), new PullRequestsMsg.Refresh()).cmds());
+        assertEquals(List.of(new LoadPullRequests(), new LoadBranchChecks()), Update.update(loaded(), new PullRequestsMsg.Refresh()).cmds());
         assertInstanceOf(PullRequestsMsg.Loaded.class,
                 new LoadPullRequests().run(new Env(new StubGitProvider() {
                 }, StubGitHub.empty())));
@@ -81,7 +81,8 @@ class PullRequestsUpdateTest {
 
         Next again = PullRequestsUpdate.loadAnyway(Next.of(reading.model()));
 
-        assertEquals(List.of(new LoadPullRequests()), again.cmds());
+        assertEquals(List.of(new LoadPullRequests(), new LoadBranchChecks()), again.cmds());
         assertEquals(2, again.model().readingPullRequests());
+        assertEquals(2, again.model().readingBranchChecks());
     }
 }

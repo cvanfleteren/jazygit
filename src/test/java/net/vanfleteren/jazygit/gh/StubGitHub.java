@@ -1,8 +1,10 @@
 package net.vanfleteren.jazygit.gh;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.BranchChecks;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
@@ -11,7 +13,7 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import java.time.Instant;
 
 /**
- * A {@link GitHub} for tests: a repository without pull requests, whose operations all succeed without running
+ * A {@link GitHub} for tests: a repository without pull requests or branches, whose operations all succeed without running
  * anything. Fakes override what they need.
  */
 public interface StubGitHub extends GitHub {
@@ -27,6 +29,14 @@ public interface StubGitHub extends GitHub {
     @Override
     default Either<GhError, List<PullRequest>> pullRequests() {
         return Either.right(List.empty());
+    }
+
+    /**
+     * A repository {@code owner/repo} without branches.
+     */
+    @Override
+    default Either<GhError, BranchChecks> branchChecks() {
+        return Either.right(new BranchChecks("owner/repo", HashMap.empty()));
     }
 
     /**

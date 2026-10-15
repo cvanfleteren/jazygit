@@ -8,8 +8,9 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
- * Reading the open pull requests from GitHub, which the branches show. It runs next to the other periodic
- * reads, after each fetch and after each change made on GitHub.
+ * Reading the open pull requests from GitHub, which the branches show, along with how the checks are doing on
+ * the branches without one. It runs next to the other periodic reads, after each fetch, after each push and
+ * after each change made on GitHub.
  */
 public final class PullRequestsUpdate {
 
@@ -28,18 +29,23 @@ public final class PullRequestsUpdate {
     }
 
     /**
-     * {@code next}, also reading the pull requests again; unless a read is still running, which gets the
-     * latest state already.
+     * {@code next}, also reading the pull requests and the checks of the branches again; unless a read is still
+     * running, which gets the latest state already.
      */
     public static Next load(Next next) {
-        return next.model().readingPullRequests() > 0 ? next : loadAnyway(next);
+        return BranchChecksUpdate.load(next.model().readingPullRequests() > 0 ? next : loadPullRequests(next));
     }
 
     /**
-     * {@code next}, also reading the pull requests again, even when a read is still running: one that may have
+     * {@code next}, also reading the pull requests and the checks of the branches again, even when a read is
+     * still running: one that may have
      * missed a change just made.
      */
     public static Next loadAnyway(Next next) {
+        return BranchChecksUpdate.loadAnyway(loadPullRequests(next));
+    }
+
+    private static Next loadPullRequests(Next next) {
         return new Next(reading(next.model()), next.cmds().append(new LoadPullRequests()));
     }
 

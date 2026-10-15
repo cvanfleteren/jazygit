@@ -42,6 +42,16 @@ class OperationUpdateTest {
         assertEquals(List.of(new LogEntry(Operation.PUSH, executed("git push origin feature"))), next.model().commandLog());
         assertEquals(HashSet.empty(), next.model().busy().keySet());
         assertEquals(Option.none(), next.model().error());
+        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(), new LoadStashes(),
+                new LoadPullRequests(), new LoadBranchChecks()), next.cmds());
+    }
+
+    @Test
+    void onlyAnOperationThatChangesGitHubReadsItAgain() {
+        BranchCmd.Pull pull = new BranchCmd.Pull(new Branch.Name("feature"));
+
+        Next next = Update.update(loaded(), succeeded(pull, "git pull"));
+
         assertEquals(List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(), new LoadStashes()), next.cmds());
     }
 

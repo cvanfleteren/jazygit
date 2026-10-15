@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.gh;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.BranchChecks;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
@@ -17,6 +18,11 @@ public interface GitHub {
      * The open pull requests of the repository, from branches of the repository itself (not from forks).
      */
     Either<GhError, List<PullRequest>> pullRequests();
+
+    /**
+     * How the CI checks are doing on the tip of each branch of the repository.
+     */
+    Either<GhError, BranchChecks> branchChecks();
 
     /**
      * What there is to know about pull request {@code number}.

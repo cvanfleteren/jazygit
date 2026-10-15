@@ -30,6 +30,14 @@ public interface OperationCmd extends Cmd {
     }
 
     /**
+     * Whether the operation changes what GitHub knows, like a push, after which the pull requests and the checks
+     * of the branches are read again.
+     */
+    default boolean changesGitHub() {
+        return false;
+    }
+
+    /**
      * The {@link Msg} that reports this operation running {@code commands} successfully.
      */
     default Msg succeeded(List<ExecutedCommand> commands) {
