@@ -197,7 +197,7 @@ public final class ContentPanel {
      * until the focus is given back.
      */
     public StyledElement<?> render(Model model, String focusedId) {
-        List.of(stagedArea, unstagedArea, commitArea, logArea).forEach(area -> area.restyle(model.settings().theme()));
+        List.of(stagedArea, unstagedArea, commitArea, logArea).forEach(area -> area.restyle(model.theme()));
         boolean inContent = focusableAreas.exists(area -> area.id().equals(focusedId));
         focusableAreas.forEach(area -> area.tabbable(inContent));
         boolean onPane = inContent || LEFT_PANES.contains(focusedId);

@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.settings.SettingsStore;
+import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
@@ -49,8 +50,16 @@ public final class Update {
      * The start of a session with {@code settings}; what was wrong with them shows in the command log.
      */
     public static Next init(String repositoryName, SettingsStore.Loaded settings) {
+        return init(repositoryName, settings, Option.none());
+    }
+
+    /**
+     * The start of a session with {@code settings}, drawn in {@code themeOverride} instead of the saved theme
+     * if there is one.
+     */
+    public static Next init(String repositoryName, SettingsStore.Loaded settings, Option<ThemeName> themeOverride) {
         // Commits are loaded once the first status tells us where HEAD is.
-        return refresh(Model.initial(repositoryName).withSettings(settings.settings())
+        return refresh(Model.initial(repositoryName).withSettings(settings.settings()).withThemeOverride(themeOverride)
                 .withError(settings.problem().map(AppError.SettingsNotLoaded::new)));
     }
 

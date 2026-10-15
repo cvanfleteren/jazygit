@@ -87,6 +87,24 @@ class ArchitectureTest {
             .should().dependOnClassesThat().resideInAPackage("com.electronwill.nightconfig..");
 
     /**
+     * The command line stands on its own: it reads how jazygit is asked to start, and knows nothing of what is
+     * started.
+     */
+    @ArchTest
+    static final ArchRule cliKnowsNothingOfTheApplication = classes()
+            .that().resideInAPackage("..jazygit.cli..")
+            .should().onlyDependOnClassesThat()
+            .resideInAnyPackage("java..", "io.vavr..", "picocli..", "..jazygit.cli..", "..jazygit.settings..");
+
+    /**
+     * How the command line is read stays inside the cli package.
+     */
+    @ArchTest
+    static final ArchRule onlyTheCliUsesPicocli = noClasses()
+            .that().resideOutsideOfPackage("..jazygit.cli..")
+            .should().dependOnClassesThat().resideInAPackage("picocli..");
+
+    /**
      * {@code Exec} is the only place that starts a program.
      */
     @ArchTest
@@ -177,7 +195,8 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule fieldsAreFinal = fields()
             .that().areDeclaredInClassesThat().resideInAnyPackage("..jazygit.state..", "..jazygit.git.model..",
-                    "..jazygit.gh.model..", "..jazygit.feature..", "..jazygit.settings..")
+                    "..jazygit.gh.model..", "..jazygit.feature..", "..jazygit.settings..",
+                    "..jazygit.cli..")
             .and().areNotDeclaredIn(Program.class)
             .and().areDeclaredInClassesThat().haveNameNotMatching(DIALOGS)
             .should().beFinal();

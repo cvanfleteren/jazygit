@@ -22,6 +22,7 @@
         <zt-exec.version>1.13.0</zt-exec.version>
         <archunit.version>1.4.1</archunit.version>
         <night-config.version>3.9.0</night-config.version>
+        <picocli.version>4.7.7</picocli.version>
         <main.class>net.vanfleteren.jazygit.JazygitApp</main.class>
     </properties>
 
@@ -75,6 +76,11 @@
             <groupId>com.electronwill.night-config</groupId>
             <artifactId>toml</artifactId>
             <version>${night-config.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>info.picocli</groupId>
+            <artifactId>picocli</artifactId>
+            <version>${picocli.version}</version>
         </dependency>
         <dependency>
             <groupId>org.zeroturnaround</groupId>
@@ -174,6 +180,8 @@
                     <archive>
                         <manifest>
                             <mainClass>${main.class}</mainClass>
+                            <!-- Implementation-Version is the version jazygit prints. -->
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                         </manifest>
                     </archive>
                 </configuration>

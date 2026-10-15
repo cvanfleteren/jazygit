@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.settings.Settings;
+import net.vanfleteren.jazygit.settings.ThemeName;
 
 /**
  * The complete, immutable state of the repository as shown by the UI.
@@ -51,6 +52,7 @@ import net.vanfleteren.jazygit.settings.Settings;
  * @param commandLog     the mutating git commands that were executed, oldest first
  * @param popup          the popup that is open, if any; only one can be
  * @param settings       what the user chose to keep from one session to the next, like the theme
+ * @param themeOverride  the theme asked for at startup, for this session only, until the user chooses one
  * @param focusedPane    the id of the element outside the popups that had the focus last, which a closing popup
  *                       gives it back to; none before the view reported one
  */
@@ -75,13 +77,21 @@ public record Model(String repositoryName,
                     List<LogEntry> commandLog,
                     Option<Popup> popup,
                     Settings settings,
+                    Option<ThemeName> themeOverride,
                     Option<String> focusedPane) {
 
     public static Model initial(String repositoryName) {
         return new Model(repositoryName, Loadable.loading(), Loadable.loading(), Loadable.loading(),
                 BranchesTab.LOCAL, Loadable.loading(), Loadable.loading(), Option.none(),
                 Option.none(), Option.none(), HashSet.empty(), Option.none(), HashMap.empty(), Option.none(), Option.none(), Option.none(), 0, List.empty(),
-                Option.none(), Settings.DEFAULT, Option.none());
+                Option.none(), Settings.DEFAULT, Option.none(), Option.none());
+    }
+
+    /**
+     * The theme the UI is drawn in: the one asked for at startup, else the saved one.
+     */
+    public ThemeName theme() {
+        return themeOverride.getOrElse(settings.theme());
     }
 
     /**

@@ -3,8 +3,10 @@
 # Convenience launcher for jazygit.
 #
 # Usage:
-#   ./run.sh            # build (if needed) and run the app normally
-#   ./run.sh --debug    # run the app suspended, waiting for a debugger to attach on port 5005
+#   ./run.sh [args]          # build (if needed) and run the app normally
+#   ./run.sh --debug [args]  # run the app, accepting a debugger on port 5005
+#
+# Any other arguments go to jazygit itself; ./run.sh --help lists them.
 #
 # Must be run from a real terminal (e.g. IntelliJ's Terminal tool window),
 # since jazygit is a TUI app that needs a real PTY attached to stdin/stdout.
@@ -31,8 +33,9 @@ if [[ -z "$JAR" ]] || [[ -n "$(find src pom.xml -newer "$JAR" -print -quit)" ]];
 fi
 
 if [[ "${1:-}" == "--debug" ]]; then
+    shift
     echo "Waiting for debugger to attach on port ${DEBUG_PORT}..."
-    exec java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${DEBUG_PORT} -jar "$JAR"
+    exec java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${DEBUG_PORT} -jar "$JAR" "$@"
 else
-    exec java -jar "$JAR"
+    exec java -jar "$JAR" "$@"
 fi

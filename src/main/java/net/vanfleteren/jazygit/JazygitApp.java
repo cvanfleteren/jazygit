@@ -29,6 +29,9 @@ import net.vanfleteren.jazygit.feature.help.HelpDialog;
 import net.vanfleteren.jazygit.feature.error.ErrorDialog;
 import net.vanfleteren.jazygit.feature.stash.StashDialogs;
 import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
+import net.vanfleteren.jazygit.cli.StartupCli;
+import net.vanfleteren.jazygit.cli.StartupOptions;
+import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.settings.SettingsFile;
 import net.vanfleteren.jazygit.settings.SettingsPaths;
@@ -93,6 +96,7 @@ public class JazygitApp extends ToolkitApp {
 
     private final Env env;
     private final SettingsStore.Loaded settings;
+    private final Option<ThemeName> themeOverride;
     private final StyleEngine styleEngine;
     private final Consumer<Msg> dispatch = msg -> this.runtime.forEach(running -> running.program().dispatch(msg));
     private final ContentPanel contentPanel;
@@ -142,11 +146,13 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
-     * @param settings the settings the session starts with, as {@code env} loaded them
+     * @param settings      the settings the session starts with, as {@code env} loaded them
+     * @param themeOverride the theme for this session instead of the saved one, if any
      */
-    public JazygitApp(Env env, SettingsStore.Loaded settings, StyleEngine styleEngine) {
+    public JazygitApp(Env env, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, StyleEngine styleEngine) {
         this.env = env;
         this.settings = settings;
+        this.themeOverride = themeOverride;
         this.styleEngine = styleEngine;
         this.contentPanel = new ContentPanel(Theme.spanStyles(styleEngine), this::leaveScrollArea,
                 id -> runner().focusManager().setFocus(id));
@@ -210,7 +216,7 @@ public class JazygitApp extends ToolkitApp {
         runner.focusManager().setFocus(FilesPanel.ID);
         ThreadPoolExecutor io = singleThread("git-io");
         ThreadPoolExecutor fetch = singleThread("git-fetch");
-        runtime = Option.of(new Runtime(io, fetch, Program.start(env, settings, io, fetch, runner::runOnRenderThread, JazygitApp::logBug)));
+        runtime = Option.of(new Runtime(io, fetch, Program.start(env, settings, themeOverride, io, fetch, runner::runOnRenderThread, JazygitApp::logBug)));
         runner.scheduleRepeating(() -> runner.runOnRenderThread(() -> dispatch.accept(new Msg.Tick())),
                 REFRESH_INTERVAL);
         runner.scheduleRepeating(() -> runner.runOnRenderThread(() -> dispatch.accept(new FetchMsg.Tick())),
@@ -259,7 +265,7 @@ public class JazygitApp extends ToolkitApp {
     protected Element render() {
         Model model = runtime.map(running -> running.program().model())
                 .getOrElse(() -> Model.initial(env.git().repositoryName()));
-        Theme.activate(styleEngine, model.settings().theme());
+        Theme.activate(styleEngine, model.theme());
         String focusedId = runner().focusManager().focusedId();
         String activeId = activePane(model, focusedId);
         Panel branches = branchesPanel.render(model, focusedId, activeId);
@@ -345,10 +351,16 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
-     * @param args optional path inside the repository to open; defaults to the current directory
+     * @param args as {@link StartupCli} reads them; {@code --help} lists them
      */
     public static void main(String[] args) {
-        Path start = List.of(args).headOption().map(Path::of).getOrElse(Path.of("")).toAbsolutePath();
+        StartupCli.parse(args, new PrintWriter(System.out), new PrintWriter(System.err))
+                .peekLeft(exit -> System.exit(exit.code()))
+                .forEach(JazygitApp::start);
+    }
+
+    private static void start(StartupOptions options) {
+        Path start = options.path().getOrElse(Path.of("")).toAbsolutePath();
         Either<String, JazygitApp> app = CliGitInfoProvider.open(start)
                 .mapLeft(ErrorText::of)
                 .flatMap(provider -> Theme.createEngine()
@@ -356,7 +368,7 @@ public class JazygitApp extends ToolkitApp {
                         .map(engine -> {
                             Env env = new Env(provider, new CliGitHub(provider.workTree()),
                                     new SettingsFile(SettingsPaths.configFile()));
-                            return new JazygitApp(env, env.settings().load(), engine);
+                            return new JazygitApp(env, env.settings().load(), options.theme(), engine);
                         }));
         app.flatMap(jazygit -> Try.run(jazygit::run).toEither().mapLeft(ErrorText::reason))
                 .orElseRun(problem -> {

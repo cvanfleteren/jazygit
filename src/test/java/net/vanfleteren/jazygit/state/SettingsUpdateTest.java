@@ -49,6 +49,22 @@ class SettingsUpdateTest {
     }
 
     @Test
+    void aThemeAskedForAtStartupIsDrawnInsteadOfTheSavedOne() {
+        Model model = Update.init("repo", new SettingsStore.Loaded(DARCULA, Option.none()), Option.of(ThemeName.LIGHT))
+                .model();
+
+        assertEquals(ThemeName.LIGHT, model.theme());
+        assertEquals(DARCULA, model.settings());
+    }
+
+    @Test
+    void withoutAThemeAskedForAtStartupTheSavedOneIsDrawn() {
+        Model model = Update.init("repo", new SettingsStore.Loaded(DARCULA, Option.none()), Option.none()).model();
+
+        assertEquals(ThemeName.DARCULA, model.theme());
+    }
+
+    @Test
     void aProblemLoadingTheSettingsIsShownInTheCommandLogOnly() {
         SettingsProblem invalid = new SettingsProblem.Invalid(FILE, List.of("ui.theme"));
 
