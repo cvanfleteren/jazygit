@@ -10,7 +10,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import net.vanfleteren.jazygit.git.GitError.DiffError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.DiffText;
@@ -32,14 +31,14 @@ final class CliDiff {
      * The staged changes of the files (index against HEAD), and their unstaged changes (working tree
      * against the index). Untracked files are shown as entirely added. Long diffs are cut off.
      */
-    static Either<DiffError, Diffs> diff(Path workTree, List<FileEntry> files) {
+    static Either<GitError, Diffs> diff(Path workTree, List<FileEntry> files) {
         // A rename only shows as one when both of its paths are diffed.
         List<String> staged = files.filter(f -> f.staged() && f.type() != ChangeType.UNTRACKED)
                 .flatMap(f -> f.paths(true));
         List<String> unstaged = files.filter(f -> f.unstaged() && f.type() != ChangeType.UNTRACKED)
                 .flatMap(f -> f.paths(false));
         List<String> untracked = FileEntry.paths(files, f -> f.type() == ChangeType.UNTRACKED);
-        return Either.<DiffError, String>narrow(tracked(workTree, STAGED, staged, HashMap.empty()))
+        return Either.<GitError, String>narrow(tracked(workTree, STAGED, staged, HashMap.empty()))
                 .flatMap(stagedDiff -> unstagedAndUntracked(workTree, unstaged, untracked)
                         .map(unstagedDiff -> new Diffs(truncated(stagedDiff), truncated(unstagedDiff))));
     }
@@ -48,11 +47,11 @@ final class CliDiff {
      * Untracked files are marked intent-to-add in a temporary copy of the index, so one {@code git diff}
      * shows them as entirely added next to the unstaged changes. The real index is left untouched.
      */
-    private static Either<DiffError, String> unstagedAndUntracked(
+    private static Either<GitError, String> unstagedAndUntracked(
             Path workTree, List<String> unstaged, List<String> untracked) {
         return untracked.isEmpty()
                 ? Either.narrow(tracked(workTree, UNSTAGED, unstaged, HashMap.empty()))
-                : Either.<DiffError, String>narrow(
+                : Either.<GitError, String>narrow(
                                 run(workTree, List.of("rev-parse", "--git-path", "index"), HashMap.empty()))
                         .map(index -> workTree.resolve(index.strip()))
                         .flatMap(index -> TempFiles.using(

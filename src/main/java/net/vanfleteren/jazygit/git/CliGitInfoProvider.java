@@ -33,7 +33,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
      * {@code git} itself does. It fails when {@code startDir} is not inside a git repository, the
      * repository has no working tree, or git cannot be run.
      */
-    public static Either<OpenError, CliGitInfoProvider> open(Path startDir) {
+    public static Either<GitError, CliGitInfoProvider> open(Path startDir) {
         return !Files.isDirectory(startDir)
                 ? Either.left(new NotARepository(startDir))
                 : Either.narrow(GitProcess.read(
@@ -54,7 +54,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
         return Try.of(() -> Path.of(raw.strip())).toEither().mapLeft(e -> new UnexpectedOutput(raw));
     }
 
-    private static OpenError notARepository(ProcessError error, Path startDir) {
+    private static GitError notARepository(ProcessError error, Path startDir) {
         return error instanceof CommandFailed failed && failed.says("not a git repository")
                 ? new NotARepository(startDir)
                 : error;
@@ -95,12 +95,12 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<StashError>, List<ExecutedCommand>> drop(Stash stash) {
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Stash stash) {
         return CliStash.drop(workTree, stash);
     }
 
     @Override
-    public Either<GitFailure<StashError>, List<ExecutedCommand>> pop(Stash stash) {
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> pop(Stash stash) {
         return CliStash.pop(workTree, stash);
     }
 
@@ -120,17 +120,17 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<LogError, List<Commit>> log(BranchRef branch) {
+    public Either<GitError, List<Commit>> log(BranchRef branch) {
         return CliLog.log(workTree, branch);
     }
 
     @Override
-    public Either<GitFailure<CheckoutError>, List<ExecutedCommand>> checkout(Branch.Name branch) {
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> checkout(Branch.Name branch) {
         return CliCheckout.checkout(workTree, branch);
     }
 
     @Override
-    public Either<GitFailure<StashCheckoutError>, List<ExecutedCommand>> checkoutWithStash(Branch.Name branch) {
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> checkoutWithStash(Branch.Name branch) {
         return CliCheckout.checkoutWithStash(workTree, branch);
     }
 
@@ -246,7 +246,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<RewordError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message) {
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message) {
         return CliCommit.reword(workTree, sha, message);
     }
 
@@ -261,7 +261,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<DiscardError>, List<ExecutedCommand>> discard(DiscardPlan plan) {
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> discard(DiscardPlan plan) {
         return CliIndex.discard(workTree, plan);
     }
 
@@ -271,7 +271,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<DiffError, Diffs> diff(List<FileEntry> files) {
+    public Either<GitError, Diffs> diff(List<FileEntry> files) {
         return CliDiff.diff(workTree, files);
     }
 }

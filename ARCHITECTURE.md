@@ -325,15 +325,15 @@ classDiagram
     class GitInfoProvider {
         <<interface>>
         status() Either of ProcessError or RepoStatus
-        log(branch) Either of LogError or commits
-        diff(files) Either of DiffError or Diffs
-        checkout(branch) Either of GitFailure of CheckoutError or commands
-        reword(Sha, CommitMessage) Either of GitFailure of RewordError or commands
-        pop(Stash) Either of GitFailure of StashError or commands
+        log(branch) Either of GitError or commits
+        diff(files) Either of GitError or Diffs
+        checkout(branch) Either of GitFailure of GitError or commands
+        reword(Sha, CommitMessage) Either of GitFailure of GitError or commands
+        pop(Stash) Either of GitFailure of GitError or commands
         ...
     }
     class CliGitInfoProvider {
-        +open(Path) Either of OpenError or provider
+        +open(Path) Either of GitError or provider
     }
     CliGitInfoProvider ..|> GitInfoProvider
     CliGitInfoProvider ..> CliStatus
@@ -433,8 +433,8 @@ An `ExecutedCommand` holds the program and its arguments as they were run; `line
 type it in a shell, which is how the command log shows it. The environment is left out, so a command that
 runs with, say, `GIT_SEQUENCE_EDITOR` set does not quite do the same when typed again.
 
-`E` is the narrowest error type the operation can produce, so its signature lists every way it can
-fail.
+`E` is `ProcessError` when the operation only runs git commands, and `GitError` when it can also fail
+in a way of its own; which ones is documented on the operation.
 
 ```mermaid
 classDiagram
@@ -445,73 +445,29 @@ classDiagram
     class ProcessError {
         <<sealed>>
     }
-    class CheckoutError {
-        <<sealed>>
-    }
-    class StashCheckoutError {
-        <<sealed>>
-    }
-    class RewordError {
-        <<sealed>>
-    }
-    class DiscardError {
-        <<sealed>>
-    }
-    class DiffError {
-        <<sealed>>
-    }
-    class LogError {
-        <<sealed>>
-    }
-    class OpenError {
-        <<sealed>>
-    }
-    class StashError {
-        <<sealed>>
-    }
-    class DeleteUntrackedError {
-        <<sealed>>
-    }
 
-    StashCheckoutError --|> GitError
-    CheckoutError --|> StashCheckoutError
-    RewordError --|> GitError
-    DiscardError --|> GitError
-    DiffError --|> GitError
-    LogError --|> GitError
-    OpenError --|> GitError
-    StashError --|> GitError
-    DeleteUntrackedError --|> DiscardError
-    ProcessError --|> CheckoutError
-    ProcessError --|> RewordError
-    ProcessError --|> DeleteUntrackedError
-    ProcessError --|> DiffError
-    ProcessError --|> LogError
-    ProcessError --|> OpenError
-    ProcessError --|> StashError
+    ProcessError --|> GitError
 
     GitUnavailable --|> ProcessError
     TimedOut --|> ProcessError
     Interrupted --|> ProcessError
     CommandFailed --|> ProcessError
     UnexpectedOutput --|> ProcessError
-    LocalChanges --|> CheckoutError
-    StashNotRestored --|> StashCheckoutError
-    TempFileFailed --|> RewordError
-    TempFileFailed --|> DiffError
-    UnknownBranch --|> LogError
-    RefusedPath --|> DeleteUntrackedError
-    StashGone --|> StashError
-    NotARepository --|> OpenError
-    NoWorkTree --|> OpenError
+    LocalChanges --|> GitError
+    StashNotRestored --|> GitError
+    TempFileFailed --|> GitError
+    UnknownBranch --|> GitError
+    RefusedPath --|> GitError
+    StashGone --|> GitError
+    NotARepository --|> GitError
+    NoWorkTree --|> GitError
 ```
 
 Some helpers combine these results:
 
 - `GitFailure.sequence(...)` runs steps in order and stops at the first failure. That failure also
   carries the commands of the steps before it.
-- `GitFailure.widen(...)` views a failure as a wider error type, for example a `ProcessError` as a
-  `RewordError`.
+- `GitFailure.widen(...)` views a `ProcessError` failure as a `GitError` one.
 - `GitFailure.followedBy(cleanup)` adds the commands of a cleanup, like `git rebase --abort`, and records in
   `cleanupFailed` why it failed, if it did.
 - `GitProcess.log`, `read` and `ask` run a command for its effect, to read something, or to ask a question
@@ -606,9 +562,9 @@ sequenceDiagram
 
 6. **The git work**, in `CliRebase.rewordAny`.
    - `CliLog.resolve(workTree, "HEAD")` runs `git rev-parse --verify --quiet HEAD^{commit}` to find out
-     whether the commit is `HEAD`. If that fails, it's a `ProcessError`, which is a `RewordError`.
+     whether the commit is `HEAD`. If that fails, it's a `ProcessError`.
    - **The commit is `HEAD`:** `CliIndex.reword` runs `git commit --allow-empty --amend --only -m … [-m …]`.
-     Its `ProcessError` is widened to a `RewordError`.
+     Its `ProcessError` is widened to a `GitError`.
    - **An older commit:** `CliRebase.reword` does the following.
      1. `TempFiles.using` writes the new message to a temporary file. If that fails, it's a
         `TempFileFailed`.

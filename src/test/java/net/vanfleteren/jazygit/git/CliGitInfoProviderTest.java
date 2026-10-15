@@ -615,7 +615,7 @@ class CliGitInfoProviderTest {
 
     @Test
     void aFailingRebaseIsAbortedAndReported() throws Exception {
-        GitFailure<GitError.RewordError> failure = provider.reword(
+        GitFailure<GitError> failure = provider.reword(
                         new Sha("0123456789012345678901234567890123456789"), new CommitMessage("x", ""))
                 .getLeft();
 
@@ -688,7 +688,7 @@ class CliGitInfoProviderTest {
         Stash work = provider.stashes().get().head();
         provider.drop(work).get();
 
-        GitFailure<GitError.StashError> failure = provider.pop(work).getLeft();
+        GitFailure<GitError> failure = provider.pop(work).getLeft();
 
         assertEquals(new GitError.StashGone("work"), failure.error());
         assertEquals(List.of(), failure.commands());
@@ -746,8 +746,7 @@ class CliGitInfoProviderTest {
         git("checkout", "-q", "main");
         Files.writeString(repo.resolve("README.md"), "local change\n");
 
-        GitError.CheckoutError error =
-                provider.checkout(new Branch.Name("feature")).getLeft().error();
+        GitError error = provider.checkout(new Branch.Name("feature")).getLeft().error();
 
         assertTrue(
                 error instanceof GitError.LocalChanges(String explanation)

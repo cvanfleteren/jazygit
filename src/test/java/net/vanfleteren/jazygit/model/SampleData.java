@@ -4,8 +4,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import java.time.Instant;
 import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.git.GitError.DiffError;
-import net.vanfleteren.jazygit.git.GitError.LogError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
@@ -68,7 +66,7 @@ public final class SampleData implements StubGitProvider {
     }
 
     @Override
-    public Either<LogError, List<Commit>> log(BranchRef branch) {
+    public Either<GitError, List<Commit>> log(BranchRef branch) {
         return switch (branch.name()) {
             case "main" -> Either.right(MAIN);
             case "feature/initial-layout" ->
@@ -140,7 +138,7 @@ public final class SampleData implements StubGitProvider {
     }
 
     @Override
-    public Either<DiffError, Diffs> diff(List<FileEntry> files) {
+    public Either<GitError, Diffs> diff(List<FileEntry> files) {
         return Either.right(new Diffs(sample(files, FileEntry::staged), sample(files, FileEntry::unstaged)));
     }
 

@@ -7,7 +7,6 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.GitError.RewordError;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
@@ -40,9 +39,8 @@ final class CliCommit {
      *
      * @return the command lines that were run
      */
-    static Either<GitFailure<RewordError>, List<ExecutedCommand>> reword(
-            Path workTree, Sha sha, CommitMessage message) {
-        return GitFailure.<RewordError, Option<Sha>>widen(CliLog.resolve(workTree, "HEAD"))
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> reword(Path workTree, Sha sha, CommitMessage message) {
+        return GitFailure.<GitError, Option<Sha>>widen(CliLog.resolve(workTree, "HEAD"))
                 .flatMap(head -> head.contains(sha)
                         ? GitFailure.widen(rewordHead(workTree, message))
                         : CliRebase.reword(workTree, sha, message));

@@ -65,7 +65,7 @@ public interface GitInfoProvider {
      * Checks out the local branch {@code branch}. Fails with {@link GitError.LocalChanges} when
      * uncommitted changes would be overwritten.
      */
-    Either<GitFailure<CheckoutError>, List<ExecutedCommand>> checkout(Branch.Name branch);
+    Either<GitFailure<GitError>, List<ExecutedCommand>> checkout(Branch.Name branch);
 
     /**
      * Checks out the local branch {@code branch}, taking the uncommitted changes along: they are stashed
@@ -73,7 +73,7 @@ public interface GitInfoProvider {
      * where they were; when popping them on {@code branch} fails, they stay in the stash, which is a
      * {@link GitError.StashNotRestored}.
      */
-    Either<GitFailure<StashCheckoutError>, List<ExecutedCommand>> checkoutWithStash(Branch.Name branch);
+    Either<GitFailure<GitError>, List<ExecutedCommand>> checkoutWithStash(Branch.Name branch);
 
     /**
      * Creates the local branch {@code name} at {@code startPoint} and checks it out.
@@ -174,7 +174,7 @@ public interface GitInfoProvider {
     /**
      * The log of the branch {@code branch}, local or remote-tracking, newest first.
      */
-    Either<LogError, List<Commit>> log(BranchRef branch);
+    Either<GitError, List<Commit>> log(BranchRef branch);
 
     // A single commit, as git show shows it.
 
@@ -189,7 +189,7 @@ public interface GitInfoProvider {
     /**
      * The staged and the unstaged diff of {@code files}.
      */
-    Either<DiffError, Diffs> diff(List<FileEntry> files);
+    Either<GitError, Diffs> diff(List<FileEntry> files);
 
     // Listing and changing stashes, as git stash does.
 
@@ -206,12 +206,12 @@ public interface GitInfoProvider {
     /**
      * Applies {@code stash} to the working tree and drops it. When that conflicts, the stash is kept.
      */
-    Either<GitFailure<StashError>, List<ExecutedCommand>> pop(Stash stash);
+    Either<GitFailure<GitError>, List<ExecutedCommand>> pop(Stash stash);
 
     /**
      * Deletes {@code stash} without applying it.
      */
-    Either<GitFailure<StashError>, List<ExecutedCommand>> drop(Stash stash);
+    Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Stash stash);
 
     // Creating and rewriting commits, as git commit does, and through an interactive rebase for older commits.
 
@@ -232,7 +232,7 @@ public interface GitInfoProvider {
      *
      * @param sha the full object id of the commit
      */
-    Either<GitFailure<RewordError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message);
+    Either<GitFailure<GitError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message);
 
     /**
      * Folds the commit {@code sha} into its parent, keeping the messages {@code mode} says. This rebases the
@@ -266,7 +266,7 @@ public interface GitInfoProvider {
     /**
      * Throws changes away as described by {@code plan}. This cannot be undone.
      */
-    Either<GitFailure<DiscardError>, List<ExecutedCommand>> discard(DiscardPlan plan);
+    Either<GitFailure<GitError>, List<ExecutedCommand>> discard(DiscardPlan plan);
 
     /**
      * Resets the index entries of {@code paths} to HEAD.

@@ -57,14 +57,14 @@ final class CliStash {
      * Runs {@code git stash pop <ref>} for {@code stash}, under the name it has now. Git refuses e.g. when local
      * changes would be overwritten, or when the stash conflicts, which keeps it.
      */
-    static Either<GitFailure<StashError>, List<ExecutedCommand>> pop(Path workTree, Stash stash) {
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> pop(Path workTree, Stash stash) {
         return onStash(workTree, stash, ref -> git("stash", "pop", ref));
     }
 
     /**
      * Runs {@code git stash drop <ref>} for {@code stash}, under the name it has now.
      */
-    static Either<GitFailure<StashError>, List<ExecutedCommand>> drop(Path workTree, Stash stash) {
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Path workTree, Stash stash) {
         return onStash(workTree, stash, ref -> git("stash", "drop", ref));
     }
 
@@ -72,12 +72,12 @@ final class CliStash {
      * Runs the {@code command} of the name {@code stash} has now: a stash added or removed since it was listed
      * renamed it, and its old name is another stash now. A stash that is gone is a {@link StashGone}.
      */
-    private static Either<GitFailure<StashError>, List<ExecutedCommand>> onStash(
+    private static Either<GitFailure<GitError>, List<ExecutedCommand>> onStash(
             Path workTree, Stash stash, Function<String, GitCommand> command) {
         return list(workTree)
-                .<GitFailure<StashError>>mapLeft(error -> new GitFailure<>(error, List.empty()))
+                .<GitFailure<GitError>>mapLeft(error -> new GitFailure<>(error, List.empty()))
                 .flatMap(stashes -> stashes.find(listed -> listed.sha().equals(stash.sha()))
-                        .map(current -> GitFailure.<StashError, List<ExecutedCommand>>widen(
+                        .map(current -> GitFailure.<GitError, List<ExecutedCommand>>widen(
                                 GitProcess.log(workTree, command.apply(current.ref()))))
                         .getOrElse(() -> Either.left(new GitFailure<>(new StashGone(stash.message()), List.empty()))));
     }

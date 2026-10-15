@@ -30,13 +30,13 @@ final class CliCheckout {
      * @return the command lines that were run, or why git refused, {@link LocalChanges} when stashing
      * the uncommitted changes would let the checkout go through
      */
-    static Either<GitFailure<CheckoutError>, List<ExecutedCommand>> checkout(Path workTree, Branch.Name branch) {
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> checkout(Path workTree, Branch.Name branch) {
         // A trailing "--" keeps git from treating branch names as paths.
         return GitProcess.log(workTree, git("checkout", "--quiet", branch.value(), "--"))
                 .mapLeft(failure -> failure.map(CliCheckout::classify));
     }
 
-    static CheckoutError classify(ProcessError error) {
+    static GitError classify(ProcessError error) {
         return error instanceof CommandFailed failed && failed.says(LOCAL_CHANGES)
                 ? new LocalChanges(failed.explanation().getOrElse(""))
                 : error;
@@ -48,12 +48,11 @@ final class CliCheckout {
      * this method itself; only a conflict while popping on the new branch leaves them in the stash,
      * which is a {@link StashNotRestored}.
      */
-    static Either<GitFailure<StashCheckoutError>, List<ExecutedCommand>> checkoutWithStash(
-            Path workTree, Branch.Name branch) {
-        return GitFailure.<StashCheckoutError, CliStash.Stashed>widen(CliStash.pushQuietly(workTree))
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> checkoutWithStash(Path workTree, Branch.Name branch) {
+        return GitFailure.<GitError, CliStash.Stashed>widen(CliStash.pushQuietly(workTree))
                 .flatMap(stashed -> GitFailure.sequence(
                         () -> Either.right(stashed.commands()),
-                        () -> GitFailure.<StashCheckoutError, List<ExecutedCommand>>widen(checkout(workTree, branch))
+                        () -> GitFailure.<GitError, List<ExecutedCommand>>widen(checkout(workTree, branch))
                                 .mapLeft(failure ->
                                         stashed.any() ? failure.followedBy(CliStash.popQuietly(workTree)) : failure),
                         () -> stashed.any() ? restore(workTree) : GitFailure.nothing()));
@@ -62,7 +61,7 @@ final class CliCheckout {
     /**
      * Pops the changes that were stashed for the checkout.
      */
-    private static Either<GitFailure<StashCheckoutError>, List<ExecutedCommand>> restore(Path workTree) {
+    private static Either<GitFailure<GitError>, List<ExecutedCommand>> restore(Path workTree) {
         return CliStash.popQuietly(workTree).mapLeft(failure -> failure.map(StashNotRestored::new));
     }
 

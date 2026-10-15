@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.control.Either;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.git.GitError.OpenError;
 
 /**
  * Where the app opens another repository in place of the one it shows, as if it had been started there. The app
@@ -20,5 +19,5 @@ public interface Repositories {
      * Opens the repository containing {@code directory} in place of the one shown, and gives the root of its
      * working tree. When there is none, the app stays as it is.
      */
-    Either<OpenError, Path> switchTo(Path directory);
+    Either<GitError, Path> switchTo(Path directory);
 }

@@ -5,7 +5,6 @@ import io.vavr.collection.Seq;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.git.GitError.LogError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.GitError.UnknownBranch;
@@ -50,8 +49,8 @@ final class CliLog {
     /**
      * The log of the branch {@code branch}, local or remote-tracking, newest first.
      */
-    static Either<LogError, List<Commit>> log(Path workTree, BranchRef branch) {
-        return Either.<LogError, Option<Sha>>narrow(
+    static Either<GitError, List<Commit>> log(Path workTree, BranchRef branch) {
+        return Either.<GitError, Option<Sha>>narrow(
                         resolve(workTree, Refs.of(branch)).mapLeft(GitFailure::error))
                 .flatMap(tip -> tip.toEither(() -> new UnknownBranch(branch)))
                 .flatMap(tip -> Either.narrow(log(workTree, tip)));

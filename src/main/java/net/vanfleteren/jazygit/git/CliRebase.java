@@ -10,7 +10,6 @@ import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.GitError.RewordError;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -40,15 +39,14 @@ final class CliRebase {
      *
      * @return the command lines that were run
      */
-    static Either<GitFailure<RewordError>, List<ExecutedCommand>> reword(
-            Path workTree, Sha sha, CommitMessage message) {
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> reword(Path workTree, Sha sha, CommitMessage message) {
         // A merge in the todo list is "merge -C <commit>", which has to become "-c" for git to ask for a message.
         String sequenceEditor =
                 sequenceEditor(sha, List.of(new Tuple2<>("pick", "reword"), new Tuple2<>("merge -C", "merge -c")));
         return TempFiles.using(
                 "jazygit-message",
                 file -> Files.writeString(file, message.text()),
-                failed -> new GitFailure<RewordError>(failed, List.empty()),
+                failed -> new GitFailure<GitError>(failed, List.empty()),
                 file -> GitFailure.widen(base(workTree, sha.value())
                         .flatMap(base -> rebase(
                                 workTree,

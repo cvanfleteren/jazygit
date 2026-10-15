@@ -11,7 +11,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import java.time.Instant;
 import java.util.function.Supplier;
-import net.vanfleteren.jazygit.git.GitError.LogError;
+import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -50,7 +50,7 @@ class PanePositionTest {
         }
 
         @Override
-        public Either<LogError, List<Commit>> log(BranchRef branch) {
+        public Either<GitError, List<Commit>> log(BranchRef branch) {
             return Either.right(commitList);
         }
     }

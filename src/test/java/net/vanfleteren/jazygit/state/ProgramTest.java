@@ -23,14 +23,7 @@ import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
 import net.vanfleteren.jazygit.feature.stage.StageMsg;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.git.GitError.CheckoutError;
-import net.vanfleteren.jazygit.git.GitError.DiffError;
-import net.vanfleteren.jazygit.git.GitError.DiscardError;
-import net.vanfleteren.jazygit.git.GitError.LogError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.GitError.RewordError;
-import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
-import net.vanfleteren.jazygit.git.GitError.StashError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -83,12 +76,12 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<StashError>, List<ExecutedCommand>> drop(Stash stash) {
+        public Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Stash stash) {
             return StubGitProvider.ran("git stash drop " + stash.ref());
         }
 
         @Override
-        public Either<GitFailure<StashError>, List<ExecutedCommand>> pop(Stash stash) {
+        public Either<GitFailure<GitError>, List<ExecutedCommand>> pop(Stash stash) {
             return StubGitProvider.ran("git stash pop " + stash.ref());
         }
 
@@ -119,19 +112,19 @@ class ProgramTest {
         }
 
         @Override
-        public Either<LogError, List<Commit>> log(BranchRef ref) {
+        public Either<GitError, List<Commit>> log(BranchRef ref) {
             String branch = ref.name();
             logLoads.add(branch);
             return Either.right(List.of(commit(branch + "-tip")));
         }
 
         @Override
-        public Either<GitFailure<CheckoutError>, List<ExecutedCommand>> checkout(Branch.Name branch) {
+        public Either<GitFailure<GitError>, List<ExecutedCommand>> checkout(Branch.Name branch) {
             return GitFailure.widen(switchTo(branch, "git checkout"));
         }
 
         @Override
-        public Either<GitFailure<StashCheckoutError>, List<ExecutedCommand>> checkoutWithStash(Branch.Name branch) {
+        public Either<GitFailure<GitError>, List<ExecutedCommand>> checkoutWithStash(Branch.Name branch) {
             return GitFailure.widen(switchTo(branch, "git checkoutWithStash"));
         }
 
@@ -195,7 +188,7 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<RewordError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message) {
+        public Either<GitFailure<GitError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message) {
             commits.add("reword " + message.summary() + "|" + message.description());
             return StubGitProvider.ran("git reword");
         }
@@ -219,7 +212,7 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<DiscardError>, List<ExecutedCommand>> discard(DiscardPlan plan) {
+        public Either<GitFailure<GitError>, List<ExecutedCommand>> discard(DiscardPlan plan) {
             discarded.add(plan);
             return StubGitProvider.ran("git discard");
         }
@@ -235,7 +228,7 @@ class ProgramTest {
         }
 
         @Override
-        public Either<DiffError, Diffs> diff(List<FileEntry> files) {
+        public Either<GitError, Diffs> diff(List<FileEntry> files) {
             return Either.right(new Diffs("", "diff of " + files.size()));
         }
 

@@ -6,14 +6,7 @@ import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.git.GitError.CheckoutError;
-import net.vanfleteren.jazygit.git.GitError.DiffError;
-import net.vanfleteren.jazygit.git.GitError.DiscardError;
-import net.vanfleteren.jazygit.git.GitError.LogError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.GitError.RewordError;
-import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
-import net.vanfleteren.jazygit.git.GitError.StashError;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
@@ -98,7 +91,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<LogError, List<Commit>> log(BranchRef branch) {
+    default Either<GitError, List<Commit>> log(BranchRef branch) {
         return Either.right(List.empty());
     }
 
@@ -108,17 +101,17 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<DiffError, Diffs> diff(List<FileEntry> files) {
+    default Either<GitError, Diffs> diff(List<FileEntry> files) {
         return Either.right(new Diffs("", ""));
     }
 
     @Override
-    default Either<GitFailure<CheckoutError>, List<ExecutedCommand>> checkout(Branch.Name branch) {
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> checkout(Branch.Name branch) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<StashCheckoutError>, List<ExecutedCommand>> checkoutWithStash(Branch.Name branch) {
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> checkoutWithStash(Branch.Name branch) {
         return ran();
     }
 
@@ -220,7 +213,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<DiscardError>, List<ExecutedCommand>> discard(DiscardPlan plan) {
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> discard(DiscardPlan plan) {
         return ran();
     }
 
@@ -240,7 +233,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<RewordError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message) {
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message) {
         return ran();
     }
 
@@ -260,12 +253,12 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<StashError>, List<ExecutedCommand>> pop(Stash stash) {
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> pop(Stash stash) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<StashError>, List<ExecutedCommand>> drop(Stash stash) {
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Stash stash) {
         return ran();
     }
 }

@@ -8,62 +8,14 @@ import net.vanfleteren.jazygit.git.model.BranchRef;
 /**
  * Why a git operation failed, as data. Turning it into text is up to the caller.
  *
- * <p>The marker interfaces name the failures one operation can have, so its signature tells them
- * all. They nest: every {@link ProcessError} is a {@link CheckoutError}, as a checkout runs a git
- * command, and every {@link CheckoutError} is a {@link StashCheckoutError}, as that runs a checkout.
+ * <p>Which failures an operation can have is documented on the operation itself.
  */
 public sealed interface GitError {
 
     /**
-     * The failures of checking out a branch.
-     */
-    sealed interface CheckoutError extends StashCheckoutError {}
-
-    /**
-     * The failures of checking out a branch while taking the uncommitted changes along.
-     */
-    sealed interface StashCheckoutError extends GitError {}
-
-    /**
-     * The failures of rewording a commit before the last one.
-     */
-    sealed interface RewordError extends GitError {}
-
-    /**
-     * The failures of throwing changes away.
-     */
-    sealed interface DiscardError extends GitError {}
-
-    /**
-     * The failures of reading the diff of changed files.
-     */
-    sealed interface DiffError extends GitError {}
-
-    /**
-     * The failures of reading the log of a branch.
-     */
-    sealed interface LogError extends GitError {}
-
-    /**
-     * The failures of opening a repository.
-     */
-    sealed interface OpenError extends GitError {}
-
-    /**
-     * The failures of applying or deleting a stash.
-     */
-    sealed interface StashError extends GitError {}
-
-    /**
-     * The failures of deleting untracked files.
-     */
-    sealed interface DeleteUntrackedError extends DiscardError {}
-
-    /**
      * A failure that running any git command can have.
      */
-    sealed interface ProcessError
-            extends CheckoutError, RewordError, DeleteUntrackedError, DiffError, LogError, OpenError, StashError {}
+    sealed interface ProcessError extends GitError {}
 
     /**
      * The {@code git} executable could not be started.
@@ -121,19 +73,19 @@ public sealed interface GitError {
     /**
      * No git repository contains the directory.
      */
-    record NotARepository(Path directory) implements OpenError {}
+    record NotARepository(Path directory) implements GitError {}
 
     /**
      * The repository is bare: there are no files to show.
      *
      * @param directory the directory the repository was looked for from
      */
-    record NoWorkTree(Path directory) implements OpenError {}
+    record NoWorkTree(Path directory) implements GitError {}
 
     /**
      * There is no such branch, local or remote-tracking.
      */
-    record UnknownBranch(BranchRef branch) implements LogError {}
+    record UnknownBranch(BranchRef branch) implements GitError {}
 
     /**
      * Git refused a checkout because uncommitted changes would be overwritten. Stashing them first lets
@@ -141,28 +93,28 @@ public sealed interface GitError {
      *
      * @param explanation git's explanation
      */
-    record LocalChanges(String explanation) implements CheckoutError {}
+    record LocalChanges(String explanation) implements GitError {}
 
     /**
      * The branch was checked out, but the stashed changes could not be applied on it, so they stay in
      * the stash.
      */
-    record StashNotRestored(ProcessError cause) implements StashCheckoutError {}
+    record StashNotRestored(ProcessError cause) implements GitError {}
 
     /**
      * The stash is not there anymore: it was popped or dropped since it was listed.
      *
      * @param message what it was stashed as
      */
-    record StashGone(String message) implements StashError {}
+    record StashGone(String message) implements GitError {}
 
     /**
      * A temporary file git needed could not be written.
      */
-    record TempFileFailed(Throwable cause) implements RewordError, DiffError {}
+    record TempFileFailed(Throwable cause) implements GitError {}
 
     /**
      * An untracked path that was not deleted because it is not inside the working tree.
      */
-    record RefusedPath(String path) implements DeleteUntrackedError {}
+    record RefusedPath(String path) implements GitError {}
 }

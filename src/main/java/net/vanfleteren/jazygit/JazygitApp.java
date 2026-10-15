@@ -323,7 +323,7 @@ public class JazygitApp extends ToolkitApp {
      * Opens the repository containing {@code directory} in place of the one shown, as {@link Repositories} asks;
      * called on the thread of a command.
      */
-    private Either<GitError.OpenError, Path> switchTo(Path directory) {
+    private Either<GitError, Path> switchTo(Path directory) {
         return CliGitInfoProvider.open(directory)
                 .peek(provider -> runner().runOnRenderThread(() -> show(provider)))
                 .map(CliGitInfoProvider::workTree);

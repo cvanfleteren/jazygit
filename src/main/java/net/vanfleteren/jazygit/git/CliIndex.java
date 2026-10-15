@@ -5,8 +5,6 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.git.GitError.DeleteUntrackedError;
-import net.vanfleteren.jazygit.git.GitError.DiscardError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.RefusedPath;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
@@ -66,7 +64,7 @@ final class CliIndex {
     /**
      * Throws changes away as {@code plan} says.
      */
-    static Either<GitFailure<DiscardError>, List<ExecutedCommand>> discard(Path workTree, DiscardPlan plan) {
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> discard(Path workTree, DiscardPlan plan) {
         return GitFailure.sequence(
                 () -> GitFailure.widen(removeAdded(workTree, plan.added())),
                 () -> GitFailure.widen(checkoutFromHead(workTree, plan.fromHead())),
@@ -79,12 +77,11 @@ final class CliIndex {
      * what is untracked in them. Git leaves ignored files alone, and a repository nested in the working tree.
      * Paths outside the working tree, and the working tree itself, are refused before git runs.
      */
-    static Either<GitFailure<DeleteUntrackedError>, List<ExecutedCommand>> deleteUntracked(
-            Path workTree, List<String> paths) {
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> deleteUntracked(Path workTree, List<String> paths) {
         Path root = workTree.toAbsolutePath().normalize();
         return paths.map(path -> inside(root, path))
                 .find(Either::isLeft)
-                .<Either<GitFailure<DeleteUntrackedError>, List<ExecutedCommand>>>map(
+                .<Either<GitFailure<GitError>, List<ExecutedCommand>>>map(
                         refused -> Either.left(new GitFailure<>(refused.getLeft(), List.empty())))
                 .getOrElse(
                         () -> GitFailure.widen(onPaths(workTree, List.of("clean", "--force", "-d", "--quiet"), paths)));
