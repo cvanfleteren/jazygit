@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.css.Styleable;
 import dev.tamboui.css.engine.StyleEngine;
+import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
 import io.vavr.collection.List;
 
@@ -50,6 +51,8 @@ public final class Theme {
         public static final String SELECTION = "selection";
         /** The highlighted row of the other left panes, which the built-in themes hide. */
         public static final String INACTIVE_SELECTION = "inactive-selection";
+        /** The colour of plain text behind an open popup. */
+        public static final String BACKDROP = "backdrop";
 
         private Classes() {
         }
@@ -108,11 +111,23 @@ public final class Theme {
     }
 
     /**
+     * How {@code engine} dims what is behind an open popup: plain text, in the colour of {@code *} or the
+     * terminal's own, takes the colour of the {@link Classes#BACKDROP} rule.
+     */
+    public static Backdrop backdrop(StyleEngine engine) {
+        return new Backdrop(Option.ofOptional(baseStyle(engine).fg()), ownStyle(engine, Classes.BACKDROP));
+    }
+
+    private static Style baseStyle(StyleEngine engine) {
+        return engine.resolve(new Node("Highlight", Set.of())).toStyle();
+    }
+
+    /**
      * What the rules for {@code cssClass} declare themselves, without what every element gets, like the colours
      * of {@code *}: patched over a row, those would hide the colours of its pieces.
      */
     private static Style ownStyle(StyleEngine engine, String cssClass) {
-        Style base = engine.resolve(new Node("Highlight", Set.of())).toStyle();
+        Style base = baseStyle(engine);
         Style styled = engine.resolve(new Node("Highlight", Set.of(cssClass))).toStyle();
         Style withFg = Option.ofOptional(styled.fg())
                 .filter(fg -> !base.fg().equals(java.util.Optional.of(fg)))
@@ -138,6 +153,30 @@ public final class Theme {
         Highlights DEFAULT = active -> active ? Style.EMPTY.reversed() : Style.EMPTY;
 
         Style of(boolean active);
+    }
+
+    /**
+     * How what is behind an open popup is dimmed: every cell gets the terminal's dim attribute, and plain text
+     * gets {@code plain} on top, as terminals do not always dim their default colour.
+     *
+     * @param plainFg the colour of plain text, none when it is the terminal's default
+     */
+    public record Backdrop(Option<Color> plainFg, Style plain) {
+
+        /**
+         * The terminal's dim attribute alone, e.g. before a theme is known.
+         */
+        public static final Backdrop DIM_ONLY = new Backdrop(Option.none(), Style.EMPTY);
+
+        private static final Style DIM = Style.EMPTY.dim();
+
+        /**
+         * {@code style} dimmed.
+         */
+        public Style dim(Style style) {
+            boolean isPlain = Option.ofOptional(style.fg()).equals(plainFg);
+            return (isPlain ? style.patch(plain) : style).patch(DIM);
+        }
     }
 
     /**

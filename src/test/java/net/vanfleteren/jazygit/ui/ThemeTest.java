@@ -83,6 +83,18 @@ class ThemeTest {
     }
 
     @Test
+    void everyThemeGivesPlainTextBehindAPopupAColourOfItsOwn() {
+        for (ThemeName name : ThemeName.values()) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
+            Theme.Backdrop backdrop = Theme.backdrop(engine);
+
+            assertTrue(backdrop.plain().fg().isPresent(), name.id());
+            assertFalse(backdrop.plainFg().contains(backdrop.plain().fg().get()), name.id());
+        }
+    }
+
+    @Test
     void aThemeWithoutHighlightRulesReversesTheSelectionOfThePaneInUse() {
         var engine = dev.tamboui.css.engine.StyleEngine.create();
         engine.addStylesheet("bare", "* { color: white; }");

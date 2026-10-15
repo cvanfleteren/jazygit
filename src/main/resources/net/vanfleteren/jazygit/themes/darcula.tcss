@@ -36,6 +36,12 @@ ListElement-item:selected, TreeElement-node:selected, .selection {
 .inactive-selection {
 }
 
+/*
+ * Behind an open popup, text in the plain colour takes this one; the rest is dimmed by the terminal, which
+ * not every terminal does for its default colour.
+ */
+.backdrop { color: $muted; }
+
 .bold { text-style: bold; }
 .dim { color: $muted; }
 .error { color: $removed; }

@@ -53,6 +53,7 @@ import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
 import net.vanfleteren.jazygit.ui.widgets.PickDialog;
+import net.vanfleteren.jazygit.ui.widgets.Dimmed;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 import net.vanfleteren.jazygit.ui.widgets.TextInputDialog;
 
@@ -305,7 +306,8 @@ public class JazygitApp extends ToolkitApp {
                         // A popup that just opened takes the focus.
                         p -> focus.exists(p.ids()::contains) ? Option.<String>none() : p.ids().headOption())
                 .forEach(runner().focusManager()::setFocus);
-        return open.flatMap(Shown::element).<Element>map(d -> stack(layout, d)).getOrElse(layout);
+        // What is behind an open popup is dimmed, so the popup stands out.
+        return open.flatMap(Shown::element).<Element>map(d -> stack(new Dimmed(layout, Theme.backdrop(styleEngine)), d)).getOrElse(layout);
     }
 
     /**
