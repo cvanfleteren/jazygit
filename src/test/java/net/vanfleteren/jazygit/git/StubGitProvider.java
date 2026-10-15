@@ -5,7 +5,9 @@ import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
@@ -150,6 +152,11 @@ public interface StubGitProvider extends GitInfoProvider {
     @Override
     default Either<ProcessError, List<String>> remotes() {
         return Either.right(List.empty());
+    }
+
+    @Override
+    default Either<ProcessError, Map<String, String>> remoteUrls() {
+        return Either.right(HashMap.empty());
     }
 
     @Override

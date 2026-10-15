@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.state.SelectionMsg;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
+import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -35,11 +36,13 @@ import java.util.function.Predicate;
 /**
  * Left-side panel listing the local branches, with the current branch marked. Space checks out
  * the highlighted branch, P pushes it, d asks where to delete it, n asks for the name of a new branch starting at it.
- * A branch with a pull request shows its number, its CI checks and its review.
+ * A branch with a pull request shows its number, its CI checks and its review; one without shows the CI checks
+ * of the branch it follows on GitHub.
  * <p>
  * {@code [} and {@code ]} switch to the remote-tracking branches and back, in the same pane, so the focus moves
  * through it as one. Space checks out the highlighted remote branch, n starts a new branch at it. A remote branch
- * that a local branch follows is dimmed. Clicking the name of a list in the title shows that list.
+ * that a local branch follows is dimmed. A remote branch on GitHub shows its pull request or its CI checks, like a
+ * local branch. Clicking the name of a list in the title shows that list.
  */
 public class BranchesPanel {
 
@@ -57,8 +60,9 @@ public class BranchesPanel {
     private Predicate<RemoteBranch> tracked = remote -> false;
     // The branches an operation runs on, shown with a spinner; the rows are built from it on every render.
     private Map<BranchRef, Operation> busy = HashMap.empty();
-    // The pull request of a branch, as of the last render; the rows are built from it on every render.
-    private Function<Branch, Option<PullRequest>> pullRequests = branch -> Option.none();
+    // How a branch is doing on GitHub, as of the last render; the rows are built from it on every render.
+    private Function<Branch, List<LoadableList.Seg>> gitHub = branch -> List.empty();
+    private Function<RemoteBranch, List<LoadableList.Seg>> remoteGitHub = remote -> List.empty();
 
     /**
      * What a busy branch shows on the left of its spinner: what is being done to it, for the operations that
@@ -78,19 +82,21 @@ public class BranchesPanel {
     /**
      * @param spinner the label and the spinner frame of a busy branch, as one text
      */
-    private static LoadableList.Row row(Branch b, Duration since, Option<PullRequest> pullRequest,
+    private static LoadableList.Row row(Branch b, Duration since, List<LoadableList.Seg> gitHub,
                                         Option<String> spinner) {
         return new LoadableList.Row(
                 List.of(LoadableList.Seg.of("%4s ".formatted(TimeText.age(since)) + (b.current() ? "* " : "  ") + b.name().value()))
                         .appendAll(sync(b))
-                        .appendAll(pullRequest(pullRequest))
+                        .appendAll(gitHub)
                         .appendAll(spinner.map(text -> LoadableList.Seg.styled(" " + text, Theme.Classes.SPINNER))));
     }
 
-    private static LoadableList.Row remoteRow(RemoteRef ref, Duration since, boolean tracked, Option<String> spinner) {
+    private static LoadableList.Row remoteRow(RemoteRef ref, Duration since, boolean tracked,
+                                              List<LoadableList.Seg> gitHub, Option<String> spinner) {
         String text = "%4s   ".formatted(TimeText.age(since)) + ref.branch().shortName();
         return new LoadableList.Row(
                 List.of(tracked ? LoadableList.Seg.styled(text, Theme.Classes.DIM) : LoadableList.Seg.of(text))
+                        .appendAll(gitHub)
                         .appendAll(spinner.map(frame -> LoadableList.Seg.styled(" " + frame, Theme.Classes.SPINNER))));
     }
 
@@ -158,6 +164,16 @@ public class BranchesPanel {
                 .flatMap(o -> o));
     }
 
+    /**
+     * How a branch is doing on GitHub, with a leading space: its pull request, if it has one, else how the CI
+     * checks on its tip are doing; nothing for a branch with neither.
+     */
+    static List<LoadableList.Seg> gitHub(Option<PullRequest> pullRequest, Option<Checks> checks) {
+        return pullRequest.isDefined()
+                ? pullRequest(pullRequest)
+                : checks.flatMap(PullRequestSymbols::checks).map(BranchesPanel::symbol).toList();
+    }
+
     private static LoadableList.Seg symbol(PullRequestSymbols.Symbol symbol) {
         return LoadableList.Seg.styled(" " + symbol.text(), symbol.cssClass());
     }
@@ -205,7 +221,7 @@ public class BranchesPanel {
         list = new LoadableList<>(Messages.get("panel.branches.title"), ID,
                 branches -> branches
                         .map(b -> row(b, Duration.between(b.tipTime(), clock.instant()),
-                                pullRequests.apply(b),
+                                gitHub.apply(b),
                                 busy.get(new BranchRef.Local(b.name())).map(operation -> spinner(operation, clock.instant())))),
                 BranchesPanel::reselect, highlights);
         // The highlight alone marks the selection; a symbol would indent the rows.
@@ -214,7 +230,7 @@ public class BranchesPanel {
                 .flatMap(key -> PaneKeys.sending(keymap.handle(Scopes.BRANCHES, key, selectedBranch()), dispatch)));
         remoteList = new LoadableList<>(Messages.get("panel.remoteBranches.title"), ID,
                 refs -> refs.map(ref -> remoteRow(ref, Duration.between(ref.tipTime(), clock.instant()),
-                        tracked.test(ref.branch()),
+                        tracked.test(ref.branch()), remoteGitHub.apply(ref.branch()),
                         busy.get(new BranchRef.Remote(ref.branch())).map(operation -> spinner(operation, clock.instant())))),
                 LoadableList.Reselect.following(RemoteRef::branch), highlights);
         remoteList.highlightSymbol("");
@@ -237,7 +253,8 @@ public class BranchesPanel {
      */
     public Panel render(Model model, String focusedId, String activeId) {
         busy = model.busy();
-        pullRequests = model::pullRequest;
+        gitHub = branch -> gitHub(model.pullRequest(branch), model.checks(branch));
+        remoteGitHub = remote -> gitHub(model.pullRequest(remote), model.checks(remote));
         tab = model.branchesTab();
         tracked = remote -> model.trackingBranch(remote).isDefined();
         boolean focused = ID.equals(focusedId);

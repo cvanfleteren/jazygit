@@ -81,6 +81,18 @@ class BranchesPanelTest {
     }
 
     @Test
+    void aBranchShowsItsPullRequestElseTheChecksOnItsTip() {
+        PullRequest pr = new PullRequest(42, "b", false, Checks.NONE, Review.NONE);
+
+        assertEquals(List.of(LoadableList.Seg.styled(" #42", Theme.Classes.PULL_REQUEST)),
+                BranchesPanel.gitHub(Option.of(pr), Option.of(Checks.FAILING)));
+        assertEquals(List.of(LoadableList.Seg.styled(" ✗", Theme.Classes.CHECKS_FAILED)),
+                BranchesPanel.gitHub(Option.none(), Option.of(Checks.FAILING)));
+        assertEquals(List.of(), BranchesPanel.gitHub(Option.none(), Option.of(Checks.NONE)));
+        assertEquals(List.of(), BranchesPanel.gitHub(Option.none(), Option.none()));
+    }
+
+    @Test
     void aBranchWhoseUpstreamIsGoneSaysSo() {
         assertEquals(List.of(LoadableList.Seg.styled(" gone", Theme.Classes.GONE)),
                 BranchesPanel.sync(new Branch(new Branch.Name("b"), false, new Sha("1"), java.time.Instant.EPOCH, false, false,

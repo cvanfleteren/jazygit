@@ -8,6 +8,7 @@ import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
+import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
@@ -19,6 +20,7 @@ import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
+import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.ThemeName;
 
@@ -49,6 +51,9 @@ import net.vanfleteren.jazygit.settings.ThemeName;
  *                       were read once, and the ones read last when reading them again failed
  * @param pullRequestsFailure why the pull requests could not be read the last time, if they could not
  * @param readingPullRequests how many reads of the pull requests are running; the line at the bottom says so
+ * @param branchChecks   how the CI checks are doing on the branches on GitHub; none until they were read once,
+ *                       and the ones read last when reading them again failed
+ * @param readingBranchChecks how many reads of the checks of the branches are running
  * @param commandLog     the mutating git commands that were executed, oldest first
  * @param popup          the popup that is open, if any; only one can be
  * @param settings       what the user chose to keep from one session to the next, like the theme
@@ -74,6 +79,8 @@ public record Model(String repositoryName,
                     Option<Map<Branch.Name, PullRequest>> pullRequests,
                     Option<Failure> pullRequestsFailure,
                     int readingPullRequests,
+                    Option<GitHubChecks> branchChecks,
+                    int readingBranchChecks,
                     List<LogEntry> commandLog,
                     Option<Popup> popup,
                     Settings settings,
@@ -83,7 +90,7 @@ public record Model(String repositoryName,
     public static Model initial(String repositoryName) {
         return new Model(repositoryName, Loadable.loading(), Loadable.loading(), Loadable.loading(),
                 BranchesTab.LOCAL, Loadable.loading(), Loadable.loading(), Option.none(),
-                Option.none(), Option.none(), HashSet.empty(), Option.none(), HashMap.empty(), Option.none(), Option.none(), Option.none(), 0, List.empty(),
+                Option.none(), Option.none(), HashSet.empty(), Option.none(), HashMap.empty(), Option.none(), Option.none(), Option.none(), 0, Option.none(), 0, List.empty(),
                 Option.none(), Settings.DEFAULT, Option.none(), Option.none());
     }
 
@@ -147,13 +154,48 @@ public record Model(String repositoryName,
 
     /**
      * The open pull request from {@code branch}: the one from the branch it follows on the remote, else from
-     * the branch of the same name.
+     * the branch of the same name; none when it follows a branch on a remote other than GitHub.
      */
     public Option<PullRequest> pullRequest(Branch branch) {
-        return pullRequests.flatMap(open -> branch.remoteUpstream()
-                .map(upstream -> upstream.branch().branch())
+        Option<RemoteBranch> upstream = branch.remoteUpstream().map(Upstream::branch);
+        return upstream.exists(followed -> !mayBeOnGitHub(followed))
+                ? Option.none()
+                : pullRequests.flatMap(open -> upstream.map(RemoteBranch::branch)
                 .flatMap(open::get)
                 .orElse(() -> open.get(branch.name())));
+    }
+
+    /**
+     * The open pull request from {@code remote}, if it is a branch on GitHub.
+     */
+    public Option<PullRequest> pullRequest(RemoteBranch remote) {
+        return onGitHub(remote) ? pullRequests.flatMap(open -> open.get(remote.branch())) : Option.none();
+    }
+
+    /**
+     * How the CI checks are doing on the branch {@code branch} follows on GitHub, if it follows one.
+     */
+    public Option<Checks> checks(Branch branch) {
+        return branch.remoteUpstream().flatMap(upstream -> checks(upstream.branch()));
+    }
+
+    /**
+     * How the CI checks are doing on {@code remote}, if it is a branch on GitHub.
+     */
+    public Option<Checks> checks(RemoteBranch remote) {
+        return branchChecks.filter(checks -> checks.remotes().contains(remote.remote()))
+                .flatMap(checks -> checks.byBranch().get(remote.branch()));
+    }
+
+    private boolean onGitHub(RemoteBranch remote) {
+        return branchChecks.exists(checks -> checks.remotes().contains(remote.remote()));
+    }
+
+    /**
+     * Whether {@code remote} is on GitHub, or could be, as which remotes are is not known yet.
+     */
+    private boolean mayBeOnGitHub(RemoteBranch remote) {
+        return branchChecks.isEmpty() || onGitHub(remote);
     }
 
     /**

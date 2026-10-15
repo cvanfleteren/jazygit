@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
@@ -188,6 +189,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     @Override
     public Either<ProcessError, List<String>> remotes() {
         return CliRemote.remotes(workTree);
+    }
+
+    @Override
+    public Either<ProcessError, Map<String, String>> remoteUrls() {
+        return CliRemote.remoteUrls(workTree);
     }
 
     @Override

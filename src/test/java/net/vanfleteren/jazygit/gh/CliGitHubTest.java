@@ -1,8 +1,10 @@
 package net.vanfleteren.jazygit.gh;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.BranchChecks;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -17,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CliGitHubTest {
@@ -32,6 +35,40 @@ class CliGitHubTest {
                         new PullRequest(7, "wip", true, Checks.NONE, Review.NONE),
                         new PullRequest(5, "fix/npe", false, Checks.PENDING, Review.CHANGES_REQUESTED))),
                 CliGitHub.parse(raw));
+    }
+
+    @Test
+    void parsesTheRepositoryAndTheChecksOfEachBranchOverAllPages() {
+        String raw = "repo\towner/repo\n"
+                + "branch\tfeature/login\tSUCCESS\n"
+                + "branch\twip\t\n"
+                + "repo\towner/repo\n"
+                + "branch\tmain\tFAILURE\n"
+                + "branch\tfix\tEXPECTED\n";
+
+        assertEquals(Either.right(new BranchChecks("owner/repo", HashMap.of(
+                        "feature/login", Checks.PASSING, "wip", Checks.NONE, "main", Checks.FAILING, "fix", Checks.PENDING))),
+                CliGitHub.parseBranchChecks(raw));
+    }
+
+    @Test
+    void branchChecksWithoutTheRepositoryAreUnexpected() {
+        assertTrue(CliGitHub.parseBranchChecks("branch\tmain\tSUCCESS\n").isLeft());
+        assertTrue(CliGitHub.parseBranchChecks("repo\towner/repo\nsomething\telse\n").isLeft());
+    }
+
+    @Test
+    void aRemotePointsAtTheRepositoryOverSshOrHttps() {
+        BranchChecks checks = new BranchChecks("Owner/repo", HashMap.empty());
+
+        assertTrue(checks.isAt("git@github.com:owner/repo.git"));
+        assertTrue(checks.isAt("https://github.com/Owner/repo"));
+        assertTrue(checks.isAt("https://github.com/owner/repo.git/"));
+        assertTrue(checks.isAt("ssh://git@github.com/owner/repo.git"));
+        assertTrue(checks.isAt("github-work:owner/repo.git"));
+        assertFalse(checks.isAt("git@github.com:fork/repo.git"));
+        assertFalse(checks.isAt("git@github.com:owner/repository.git"));
+        assertFalse(checks.isAt("git@github.com:other-owner/repo.git"));
     }
 
     @Test

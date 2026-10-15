@@ -221,6 +221,11 @@ public sealed interface BranchCmd extends GitOperationCmd {
     record PushSettingUpstream(Branch.Name branch, RemoteBranch upstream) implements KeepsBranchBusy {
 
         @Override
+        public boolean changesGitHub() {
+            return true;
+        }
+
+        @Override
         public Operation operation() {
             return Operation.PUSH;
         }
@@ -235,6 +240,11 @@ public sealed interface BranchCmd extends GitOperationCmd {
      * Pushes {@code branch} to {@code upstream}, the branch it tracks.
      */
     record Push(Branch.Name branch, RemoteBranch upstream, PushMode mode) implements KeepsBranchBusy {
+
+        @Override
+        public boolean changesGitHub() {
+            return true;
+        }
 
         @Override
         public Operation operation() {

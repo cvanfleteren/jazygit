@@ -2,8 +2,10 @@ package net.vanfleteren.jazygit.git;
 
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
+import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
@@ -22,6 +24,7 @@ public final class CliRemote {
     private static final Duration TIMEOUT = Duration.ofMinutes(2);
     private static final String REMOTE_KEY = "remote.";
     private static final String SKIP_FETCH_ALL_KEY = ".skipfetchall";
+    private static final String URL_KEY = ".url";
 
     private CliRemote() {
     }
@@ -58,6 +61,32 @@ public final class CliRemote {
                 .filter(rest -> rest.endsWith(SKIP_FETCH_ALL_KEY))
                 .map(rest -> rest.substring(0, rest.length() - SKIP_FETCH_ALL_KEY.length()))
                 .filter(name -> !name.isEmpty());
+    }
+
+    /**
+     * The URL of each remote, by its name. Only looked up, so not logged.
+     */
+    public static Either<ProcessError, Map<String, String>> remoteUrls(Path workTree) {
+        // git config --get-regexp exits with 1, saying nothing, when no key matches.
+        return GitProcess.ask(workTree, GitCommand.reading("config", "--get-regexp", "^remote\\..*\\.url$"))
+                .map(answer -> answer.map(output -> urls(output.stdout())).getOrElse(HashMap.empty()))
+                .mapLeft(GitFailure::error);
+    }
+
+    /**
+     * Parses {@code remote.<name>.url <url>} lines into the URL of each remote; the first, for a remote with
+     * several.
+     */
+    static Map<String, String> urls(String raw) {
+        return GitOutput.nonBlankLines(raw)
+                .flatMap(line -> GitOutput.fields(line, " ", 2).toOption())
+                .flatMap(fields -> GitOutput.after(fields.head(), REMOTE_KEY)
+                        .filter(rest -> rest.endsWith(URL_KEY))
+                        .map(rest -> rest.substring(0, rest.length() - URL_KEY.length()))
+                        .filter(name -> !name.isEmpty())
+                        .map(name -> Tuple.of(name, fields.last().strip())))
+                .reverse()
+                .toMap(url -> url);
     }
 
     /**

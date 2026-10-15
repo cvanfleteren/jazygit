@@ -6,7 +6,8 @@ import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
  * What happens when an operation on the repository is done, whichever it was: its commands are logged, its
- * branch is no longer busy, a failure is shown, and the repository is read again to show what changed.
+ * branch is no longer busy, a failure is shown, and the repository is read again to show what changed; and what
+ * GitHub knows, after one that changed that.
  */
 public final class OperationUpdate {
 
@@ -26,7 +27,8 @@ public final class OperationUpdate {
      * success with a message of its own: what any success does, which that message then adds to.
      */
     public static Next succeeded(Model model, OperationCmd cmd, List<ExecutedCommand> commands) {
-        return Update.refresh(done(model, cmd, commands).clearError());
+        Next refreshed = Update.refresh(done(model, cmd, commands).clearError());
+        return cmd.changesGitHub() ? PullRequestsUpdate.loadAnyway(refreshed) : refreshed;
     }
 
     /**
