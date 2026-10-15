@@ -4,6 +4,7 @@ import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.util.function.Consumer;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -12,8 +13,6 @@ import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.SelectionMsg;
-
-import java.util.function.Consumer;
 
 /**
  * Left-side panel listing the commit log.
@@ -37,8 +36,12 @@ public class CommitsPanel {
      * @param highlights how the highlighted commit is shown, also when the pane is not in use
      */
     public CommitsPanel(Consumer<Msg> dispatch, Runnable openCommit, Theme.Highlights highlights) {
-        list = new LoadableList<>(Messages.get("panel.commits.title"), ID,
-                commits -> rows(CommitGraph.layout(commits)), CommitsPanel::reselect, highlights);
+        list = new LoadableList<>(
+                Messages.get("panel.commits.title"),
+                ID,
+                commits -> rows(CommitGraph.layout(commits)),
+                CommitsPanel::reselect,
+                highlights);
         list.onKey(event -> event.code() == KeyCode.ENTER && selectedCommit().isDefined()
                 ? Option.of(openCommit)
                 : PaneKeys.sending(keymap.handle(Scopes.COMMITS, event, selectedCommit()), dispatch));
@@ -67,9 +70,10 @@ public class CommitsPanel {
         Commit commit = node.commit();
         String rails = "│ ".repeat(node.depth());
         String graph = commit.isMerge() ? rails + "◎─╮ " : joins ? rails + "○─╯ " : rails + "○ ";
-        LoadableList.Seg prefix = LoadableList.Seg.of(commit.shortSha() + " " + initials(commit.authorName()) + " " + graph);
-        List<LoadableList.Seg> tags = commit.tags()
-                .map(tag -> LoadableList.Seg.styled("[" + tag.name() + "] ", Theme.Classes.TAG));
+        LoadableList.Seg prefix =
+                LoadableList.Seg.of(commit.shortSha() + " " + initials(commit.authorName()) + " " + graph);
+        List<LoadableList.Seg> tags =
+                commit.tags().map(tag -> LoadableList.Seg.styled("[" + tag.name() + "] ", Theme.Classes.TAG));
         return new LoadableList.Row(tags.prepend(prefix).append(LoadableList.Seg.of(commit.message())));
     }
 
@@ -121,8 +125,7 @@ public class CommitsPanel {
      * The message to send when the highlighted commit is not the one whose changes {@code model} holds.
      */
     public Option<Msg> selectionChange(Model model) {
-        return PaneKeys.selectionChange(selectedCommit().map(Commit::sha), model.commitDetail(),
-                SelectionMsg.CommitSelected::new);
+        return PaneKeys.selectionChange(
+                selectedCommit().map(Commit::sha), model.commitDetail(), SelectionMsg.CommitSelected::new);
     }
-
 }

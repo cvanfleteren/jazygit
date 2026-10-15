@@ -30,12 +30,9 @@ public sealed interface DiscardMsg extends Msg {
     /**
      * The user asked to discard the changes of the given files; what exactly is still to be chosen.
      */
-    record Requested(List<FileEntry> files) implements DiscardMsg {
-    }
+    record Requested(List<FileEntry> files) implements DiscardMsg {}
 
-    record Cancelled() implements DiscardMsg {
-    }
+    record Cancelled() implements DiscardMsg {}
 
-    record Chosen(Scope scope) implements DiscardMsg {
-    }
+    record Chosen(Scope scope) implements DiscardMsg {}
 }

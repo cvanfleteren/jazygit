@@ -10,14 +10,13 @@ import dev.tamboui.widgets.tree.TreeNode;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
+import java.util.function.Consumer;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
-
-import java.util.function.Consumer;
 
 /**
  * Left-side panel showing the changed files, as in {@code git status}, as a directory tree. The tree
@@ -32,7 +31,6 @@ public class FilesPanel {
     private static final String ROOT_NAME = "/";
     // TamboUI's default, which indents every node.
     private static final String HIGHLIGHT_SYMBOL = "> ";
-
 
     private final TreeElement<FileTree> tree = Toolkit.<FileTree>tree()
             .id(ID)
@@ -60,9 +58,11 @@ public class FilesPanel {
      */
     public FilesPanel(Consumer<Msg> dispatch, Runnable openDiff, Theme.Highlights highlights) {
         this.highlights = highlights;
-        tree.onKeyEvent(PaneKeys.whileFocused(() -> focused, event -> event.code() == KeyCode.ENTER && selected().isDefined()
-                ? Option.of(openDiff)
-                : PaneKeys.sending(keymap.handle(Scopes.FILES, event, selected()), dispatch)));
+        tree.onKeyEvent(PaneKeys.whileFocused(
+                () -> focused,
+                event -> event.code() == KeyCode.ENTER && selected().isDefined()
+                        ? Option.of(openDiff)
+                        : PaneKeys.sending(keymap.handle(Scopes.FILES, event, selected()), dispatch)));
     }
 
     private static TreeNode<FileTree> node(FileTree node, Set<String> collapsed) {
@@ -72,7 +72,9 @@ public class FilesPanel {
                 dir.children().forEach(child -> parent.add(node(child, collapsed)));
                 yield parent;
             }
-            case FileTree.File file -> TreeNode.of(file.entry().type().marker() + " " + name(file), node).leaf();
+            case FileTree.File file ->
+                TreeNode.of(file.entry().type().marker() + " " + name(file), node)
+                        .leaf();
         };
     }
 
@@ -89,16 +91,21 @@ public class FilesPanel {
         if (entry.type() == ChangeType.UNTRACKED) {
             return Toolkit.row(Toolkit.text("??").addClass(Theme.Classes.UNSTAGED), Toolkit.text(" " + file.name()));
         }
-        String staged = entry.conflict().map(conflict -> marker(conflict.ours()))
+        String staged = entry.conflict()
+                .map(conflict -> marker(conflict.ours()))
                 .getOrElse(() -> entry.staged() ? entry.type().marker() : " ");
-        String unstaged = entry.conflict().map(conflict -> marker(conflict.theirs()))
-                .getOrElse(() -> !entry.unstaged() ? " "
-                        : entry.type() == ChangeType.DELETED ? "D"
-                        // A rename only in the working tree, after intent-to-add of the new path.
-                        : entry.type() == ChangeType.RENAMED && !entry.staged() ? "R"
-                        : "M");
-        return Toolkit.row(Toolkit.text(staged).addClass(Theme.Classes.STAGED),
-                Toolkit.text(unstaged).addClass(Theme.Classes.UNSTAGED), Toolkit.text(" " + name(file)));
+        String unstaged = entry.conflict()
+                .map(conflict -> marker(conflict.theirs()))
+                .getOrElse(() -> !entry.unstaged()
+                        ? " "
+                        : entry.type() == ChangeType.DELETED
+                                ? "D"
+                                // A rename only in the working tree, after intent-to-add of the new path.
+                                : entry.type() == ChangeType.RENAMED && !entry.staged() ? "R" : "M");
+        return Toolkit.row(
+                Toolkit.text(staged).addClass(Theme.Classes.STAGED),
+                Toolkit.text(unstaged).addClass(Theme.Classes.UNSTAGED),
+                Toolkit.text(" " + name(file)));
     }
 
     /**
@@ -108,7 +115,8 @@ public class FilesPanel {
     private static String name(FileTree.File file) {
         String path = file.entry().path();
         String directory = path.substring(0, path.length() - file.name().length());
-        return file.entry().origin()
+        return file.entry()
+                .origin()
                 .map(origin -> origin.startsWith(directory) ? origin.substring(directory.length()) : origin)
                 .map(origin -> origin + " -> " + file.name())
                 .getOrElse(file.name());
@@ -142,8 +150,8 @@ public class FilesPanel {
      * The nodes shown on screen, in order: those not inside a collapsed directory.
      */
     private static List<TreeNode<FileTree>> visible(List<TreeNode<FileTree>> nodes) {
-        return nodes.flatMap(n -> (n.isExpanded() ? visible(List.ofAll(n.children())) : List.<TreeNode<FileTree>>empty())
-                .prepend(n));
+        return nodes.flatMap(n ->
+                (n.isExpanded() ? visible(List.ofAll(n.children())) : List.<TreeNode<FileTree>>empty()).prepend(n));
     }
 
     /**
@@ -157,8 +165,8 @@ public class FilesPanel {
      * The message to send when the highlighted node is not the one whose diff {@code model} holds.
      */
     public Option<Msg> selectionChange(Model model) {
-        return PaneKeys.selectionChange(selected().map(FileTree::directEntries), model.fileDiff(),
-                SelectionMsg.FilesSelected::new);
+        return PaneKeys.selectionChange(
+                selected().map(FileTree::directEntries), model.fileDiff(), SelectionMsg.FilesSelected::new);
     }
 
     /**
@@ -184,7 +192,8 @@ public class FilesPanel {
         }
         // Counted on every render: expanding or collapsing a directory changes the visible rows
         // without a rebuild.
-        Option<Integer> count = model.status().toOption().map(status -> visible(roots).size());
+        Option<Integer> count =
+                model.status().toOption().map(status -> visible(roots).size());
         return Pane.bordered(Messages.get("panel.files.title"), tree, focused, Math.max(0, tree.selected()), count);
     }
 
@@ -204,18 +213,23 @@ public class FilesPanel {
         Option<String> selected = selected().map(FilesPanel::path);
 
         roots = switch (status) {
-            case Loadable.Loading<RepoStatus>() -> List.of(TreeNode.<FileTree>of(Placeholders.loading()).leaf());
+            case Loadable.Loading<RepoStatus>() ->
+                List.of(TreeNode.<FileTree>of(Placeholders.loading()).leaf());
             case Loadable.Failed<RepoStatus>(Failure failure) ->
-                    List.of(TreeNode.<FileTree>of(Placeholders.error(failure)).leaf());
-            case Loadable.Loaded<RepoStatus>(RepoStatus value) when value.files().isEmpty() -> List.of();
-            case Loadable.Loaded<RepoStatus>(RepoStatus value) -> List.of(node(
-                    new FileTree.Dir(ROOT_NAME, "", FileTree.of(value.files())), collapsed));
+                List.of(TreeNode.<FileTree>of(Placeholders.error(failure)).leaf());
+            case Loadable.Loaded<RepoStatus>(RepoStatus value)
+            when value.files().isEmpty() -> List.of();
+            case Loadable.Loaded<RepoStatus>(RepoStatus value) ->
+                List.of(node(new FileTree.Dir(ROOT_NAME, "", FileTree.of(value.files())), collapsed));
         };
         tree.roots(roots.toJavaArray(TreeNode[]::new));
 
         // Placeholders have no path.
-        List<Option<String>> visible = visible(roots).map(n -> Option.of(n.data()).map(FilesPanel::path));
+        List<Option<String>> visible =
+                visible(roots).map(n -> Option.of(n.data()).map(FilesPanel::path));
         int fallback = Math.min(Math.max(0, tree.selected()), Math.max(0, visible.size() - 1));
-        tree.selected(selected.map(path -> visible.indexOf(Option.of(path))).filter(i -> i >= 0).getOrElse(fallback));
+        tree.selected(selected.map(path -> visible.indexOf(Option.of(path)))
+                .filter(i -> i >= 0)
+                .getOrElse(fallback));
     }
 }

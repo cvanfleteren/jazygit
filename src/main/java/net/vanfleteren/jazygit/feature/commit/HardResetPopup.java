@@ -9,5 +9,4 @@ import net.vanfleteren.jazygit.state.Popup;
  *
  * @param files how many files have changes that are discarded; none when the status is not known
  */
-public record HardResetPopup(Commit target, Option<Integer> files) implements Popup {
-}
+public record HardResetPopup(Commit target, Option<Integer> files) implements Popup {}

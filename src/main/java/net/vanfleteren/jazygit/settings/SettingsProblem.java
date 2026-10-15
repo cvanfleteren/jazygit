@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.settings;
 
 import io.vavr.collection.List;
-
 import java.nio.file.Path;
 
 /**
@@ -17,18 +16,15 @@ public sealed interface SettingsProblem {
     /**
      * The file could not be read, or is not TOML; the defaults are used instead.
      */
-    record Unreadable(Path file, String reason) implements SettingsProblem {
-    }
+    record Unreadable(Path file, String reason) implements SettingsProblem {}
 
     /**
      * The file has values that are not valid for {@code keys}; the defaults are used for those.
      */
-    record Invalid(Path file, List<String> keys) implements SettingsProblem {
-    }
+    record Invalid(Path file, List<String> keys) implements SettingsProblem {}
 
     /**
      * The file could not be written.
      */
-    record Unwritable(Path file, String reason) implements SettingsProblem {
-    }
+    record Unwritable(Path file, String reason) implements SettingsProblem {}
 }

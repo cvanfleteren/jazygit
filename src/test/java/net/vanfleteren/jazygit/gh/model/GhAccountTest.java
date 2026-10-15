@@ -1,12 +1,12 @@
 package net.vanfleteren.jazygit.gh.model;
 
-import io.vavr.collection.HashMap;
-import io.vavr.control.Option;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import io.vavr.collection.HashMap;
+import io.vavr.control.Option;
+import org.junit.jupiter.api.Test;
 
 /**
  * Which GitHub host a repository is on, by its remotes.
@@ -16,7 +16,8 @@ class GhAccountTest {
     @Test
     void theHostOfAnHttpsUrl() {
         assertEquals(Option.of("github.com"), GhAccount.hostOf("https://github.com/owner/repo.git"));
-        assertEquals(Option.of("github.example.com"), GhAccount.hostOf("https://me@github.example.com:8443/owner/repo"));
+        assertEquals(
+                Option.of("github.example.com"), GhAccount.hostOf("https://me@github.example.com:8443/owner/repo"));
     }
 
     @Test
@@ -35,16 +36,20 @@ class GhAccountTest {
 
     @Test
     void originsHostComesFirst() {
-        assertEquals(Option.of("git.corp.example"), GhAccount.remoteHost(HashMap.of(
-                "origin", "git@git.corp.example:team/repo.git",
-                "github", "git@github.com:team/repo.git")));
+        assertEquals(
+                Option.of("git.corp.example"),
+                GhAccount.remoteHost(HashMap.of(
+                        "origin", "git@git.corp.example:team/repo.git",
+                        "github", "git@github.com:team/repo.git")));
     }
 
     @Test
     void withoutOriginTheFirstRemoteOnAGitHubHost() {
-        assertEquals(Option.of("github.com"), GhAccount.remoteHost(HashMap.of(
-                "upstream", "git@github.com:team/repo.git",
-                "mirror", "https://gitlab.com/team/repo.git")));
+        assertEquals(
+                Option.of("github.com"),
+                GhAccount.remoteHost(HashMap.of(
+                        "upstream", "git@github.com:team/repo.git",
+                        "mirror", "https://gitlab.com/team/repo.git")));
         assertEquals(Option.none(), GhAccount.remoteHost(HashMap.of("mirror", "https://gitlab.com/team/repo.git")));
     }
 

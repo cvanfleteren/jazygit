@@ -3,9 +3,8 @@ package net.vanfleteren.jazygit.git;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-
 import java.time.Duration;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
  * A git invocation, as data; {@link GitProcess} runs it.
@@ -68,7 +67,8 @@ record GitCommand(List<String> args, Map<String, String> environment, Duration t
      */
     GitCommand withConfig(String key, String value) {
         // After the ones set before, so they are listed in the order they were set.
-        int configured = args.grouped(2).takeWhile(pair -> pair.head().equals("-c")).size() * 2;
+        int configured =
+                args.grouped(2).takeWhile(pair -> pair.head().equals("-c")).size() * 2;
         return new GitCommand(args.insertAll(configured, List.of("-c", key + "=" + value)), environment, timeout);
     }
 

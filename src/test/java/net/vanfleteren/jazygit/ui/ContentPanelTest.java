@@ -1,32 +1,31 @@
 package net.vanfleteren.jazygit.ui;
 
-import dev.tamboui.text.Span;
-import dev.tamboui.toolkit.app.ToolkitTestRunner;
-import dev.tamboui.toolkit.element.StyledElement;
-import io.vavr.collection.List;
-import net.vanfleteren.jazygit.state.SelectionMsg;
-import net.vanfleteren.jazygit.git.model.ChangeType;
-import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.git.model.DiffText;
-import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.model.SampleData;
-import net.vanfleteren.jazygit.state.LoadMsg;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.TestModels;
-import net.vanfleteren.jazygit.state.Update;
-import org.junit.jupiter.api.Test;
-
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.util.stream.Collectors;
-
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import dev.tamboui.text.Span;
+import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import dev.tamboui.toolkit.element.StyledElement;
+import io.vavr.collection.List;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.util.stream.Collectors;
+import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.DiffText;
+import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.model.SampleData;
+import net.vanfleteren.jazygit.state.LoadMsg;
+import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.SelectionMsg;
+import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.Update;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests on {@link ContentPanel}, exercising its three view branches (file status,
@@ -86,8 +85,8 @@ class ContentPanelTest {
     @Test
     void aPopupOpenedFromTheBranchesKeepsShowingTheBranchLog() throws Exception {
         Model withPopup = model.withFocusedPane(io.vavr.control.Option.of(BranchesPanel.ID))
-                .openPopup(new net.vanfleteren.jazygit.feature.help.HelpPopup(BranchesPanel.ID,
-                        io.vavr.collection.List.empty()));
+                .openPopup(new net.vanfleteren.jazygit.feature.help.HelpPopup(
+                        BranchesPanel.ID, io.vavr.collection.List.empty()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(withPopup, "help"))) {
             String screen = RenderedText.ofLarge(testRunner, () -> content.render(withPopup, "help"));
             assertTrue(screen.contains("Log: feature/initial-layout"), screen);
@@ -97,7 +96,8 @@ class ContentPanelTest {
     @Test
     void branchesFocusedShowsLoadingBeforeABranchIsSelected() throws Exception {
         Model unselected = TestModels.loaded(new SampleData());
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(unselected, BranchesPanel.ID))) {
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> content.render(unselected, BranchesPanel.ID))) {
             String screen = RenderedText.of(testRunner, () -> content.render(unselected, BranchesPanel.ID));
             assertTrue(screen.contains(Placeholders.loading()), screen);
         }
@@ -106,7 +106,8 @@ class ContentPanelTest {
     @Test
     void branchesFocusedKeepsShowingThePreviousLogWhileTheNewOneLoads() throws Exception {
         Model switching = TestModels.switchingBranch(model, "other");
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(switching, BranchesPanel.ID))) {
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> content.render(switching, BranchesPanel.ID))) {
             String screen = RenderedText.of(testRunner, () -> content.render(switching, BranchesPanel.ID));
             assertTrue(screen.contains("Log: feature/initial-layout"), screen);
             assertTrue(screen.contains("commit 0a1b2c3"), screen);
@@ -137,8 +138,10 @@ class ContentPanelTest {
     @Test
     void theCommitAreaCanBeFocusedOnceItShowsTheHighlightedCommitAndReturnsToTheCommitsPane() {
         Model selected = Update.update(
-                Update.update(TestModels.loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa"))).model(),
-                new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffText.of("changes"))).model();
+                        Update.update(TestModels.loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa")))
+                                .model(),
+                        new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffText.of("changes")))
+                .model();
 
         // Rendering gives the area its content; the commits pane has the focus while doing so.
         content.render(selected, CommitsPanel.ID);
@@ -157,17 +160,36 @@ class ContentPanelTest {
 
     @Test
     void commitTextShowsTheHeaderTheMessageADividerAndTheChanges() {
-        Commit commit = new Commit(new Sha("a1b2c3d4e5f6"), "Ada Lovelace", "ada@example.com",
-                Instant.parse("2026-10-09T12:30:00Z"), "Subject", "More\ntext");
+        Commit commit = new Commit(
+                new Sha("a1b2c3d4e5f6"),
+                "Ada Lovelace",
+                "ada@example.com",
+                Instant.parse("2026-10-09T12:30:00Z"),
+                "Subject",
+                "More\ntext");
 
-        List<String> lines = ContentPanel.commitText(commit, " a.txt | 1 +\n 1 file changed\n\n+added\n", Theme.SpanStyles.NONE).lines().stream()
-                .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
-                .collect(List.collector());
+        List<String> lines =
+                ContentPanel.commitText(commit, " a.txt | 1 +\n 1 file changed\n\n+added\n", Theme.SpanStyles.NONE)
+                        .lines()
+                        .stream()
+                        .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
+                        .collect(List.collector());
 
         assertEquals("commit a1b2c3d4e5f6", lines.get(0));
         assertEquals("Author: Ada Lovelace <ada@example.com>", lines.get(1));
         assertTrue(lines.get(2).startsWith("Date: "), lines.get(2));
-        assertEquals(List.of("", "    Subject", "", "    More", "    text", "---", " a.txt | 1 +", " 1 file changed", "", "+added"),
+        assertEquals(
+                List.of(
+                        "",
+                        "    Subject",
+                        "",
+                        "    More",
+                        "    text",
+                        "---",
+                        " a.txt | 1 +",
+                        " 1 file changed",
+                        "",
+                        "+added"),
                 lines.drop(3));
     }
 
@@ -196,25 +218,32 @@ class ContentPanelTest {
 
     @Test
     void logLinesShowTheExtendedMessageFollowedByABlankLine() {
-        Commit commit = new Commit(new Sha("a1b2c3d"), "Ada Lovelace", "ada@example.com",
-                Instant.parse("2026-10-09T12:30:05Z"), "Add layout", "First detail\nSecond detail");
+        Commit commit = new Commit(
+                new Sha("a1b2c3d"),
+                "Ada Lovelace",
+                "ada@example.com",
+                Instant.parse("2026-10-09T12:30:05Z"),
+                "Add layout",
+                "First detail\nSecond detail");
 
-        assertEquals(List.of(
-                "* commit a1b2c3d",
-                "| Ada Lovelace <ada@example.com>",
-                "| 2026-10-09 14:30:05",
-                "| ",
-                "|     Add layout",
-                "| ",
-                "|     First detail",
-                "|     Second detail",
-                "| "), ContentPanel.logLines(List.of(commit), ZoneId.of("Europe/Brussels")));
+        assertEquals(
+                List.of(
+                        "* commit a1b2c3d",
+                        "| Ada Lovelace <ada@example.com>",
+                        "| 2026-10-09 14:30:05",
+                        "| ",
+                        "|     Add layout",
+                        "| ",
+                        "|     First detail",
+                        "|     Second detail",
+                        "| "),
+                ContentPanel.logLines(List.of(commit), ZoneId.of("Europe/Brussels")));
     }
 
     @Test
     void logLinesDrawMergedBranchesWithRails() {
-        List<Commit> log = net.vanfleteren.jazygit.git.model.CommitGraph.arrange(List.of(
-                merge("m", "b", "f"), plain("f", "a"), plain("b", "a"), plain("a")));
+        List<Commit> log = net.vanfleteren.jazygit.git.model.CommitGraph.arrange(
+                List.of(merge("m", "b", "f"), plain("f", "a"), plain("b", "a"), plain("a")));
 
         List<String> lines = ContentPanel.logLines(log, ZoneOffset.UTC);
 
@@ -225,7 +254,14 @@ class ContentPanelTest {
     }
 
     private static Commit plain(String sha, String... parents) {
-        return new Commit(new Sha(sha), "Ada", "a@e.com", Instant.EPOCH, sha, "", List.of(parents).map(Sha::new));
+        return new Commit(
+                new Sha(sha),
+                "Ada",
+                "a@e.com",
+                Instant.EPOCH,
+                sha,
+                "",
+                List.of(parents).map(Sha::new));
     }
 
     private static Commit merge(String sha, String... parents) {
@@ -235,21 +271,46 @@ class ContentPanelTest {
     @Test
     void logLinesWithoutExtendedMessageEndAfterTheSubject() {
         List<Commit> commits = List.of(
-                new Commit(new Sha("a1b2c3d"), "Ada", "ada@example.com", Instant.parse("2026-10-09T12:30:00Z"), "Second", ""),
-                new Commit(new Sha("b2c3d4e"), "Ada", "ada@example.com", Instant.parse("2026-10-08T12:30:00Z"), "First", ""));
+                new Commit(
+                        new Sha("a1b2c3d"),
+                        "Ada",
+                        "ada@example.com",
+                        Instant.parse("2026-10-09T12:30:00Z"),
+                        "Second",
+                        ""),
+                new Commit(
+                        new Sha("b2c3d4e"),
+                        "Ada",
+                        "ada@example.com",
+                        Instant.parse("2026-10-08T12:30:00Z"),
+                        "First",
+                        ""));
 
-        assertEquals(List.of(
-                "* commit a1b2c3d", "| Ada <ada@example.com>", "| 2026-10-09 12:30:00", "| ", "|     Second", "| ",
-                "* commit b2c3d4e", "| Ada <ada@example.com>", "| 2026-10-08 12:30:00", "| ", "|     First", "| "),
+        assertEquals(
+                List.of(
+                        "* commit a1b2c3d",
+                        "| Ada <ada@example.com>",
+                        "| 2026-10-09 12:30:00",
+                        "| ",
+                        "|     Second",
+                        "| ",
+                        "* commit b2c3d4e",
+                        "| Ada <ada@example.com>",
+                        "| 2026-10-08 12:30:00",
+                        "| ",
+                        "|     First",
+                        "| "),
                 ContentPanel.logLines(commits, ZoneOffset.UTC));
     }
 
     @Test
     void filesFocusedShowsStagedAndUnstagedChangesInSeparatePanels() throws Exception {
         SampleData data = new SampleData();
-        Model selected = TestModels.withFilesSelected(data, List.of(
-                new FileEntry("a.txt", ChangeType.MODIFIED, true, false),
-                new FileEntry("b.txt", ChangeType.MODIFIED, false, true)));
+        Model selected = TestModels.withFilesSelected(
+                data,
+                List.of(
+                        new FileEntry("a.txt", ChangeType.MODIFIED, true, false),
+                        new FileEntry("b.txt", ChangeType.MODIFIED, false, true)));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(selected, FilesPanel.ID))) {
             String screen = RenderedText.of(testRunner, () -> content.render(selected, FilesPanel.ID));

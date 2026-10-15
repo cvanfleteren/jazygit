@@ -4,7 +4,6 @@ import com.electronwill.nightconfig.core.CommentedConfig;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -30,23 +29,31 @@ public final class SettingsFile implements SettingsStore {
         }
         return TomlFile.read(file)
                 .map(config -> Settings.read(key -> Option.ofOptional(config.getOptional(key))))
-                .fold(cause -> new Loaded(Settings.DEFAULT, Option.of(new SettingsProblem.Unreadable(file, TomlFile.reason(cause)))),
-                        read -> new Loaded(read.settings(), Option.when(read.invalid().nonEmpty(),
-                                () -> new SettingsProblem.Invalid(file, read.invalid()))));
+                .fold(
+                        cause -> new Loaded(
+                                Settings.DEFAULT,
+                                Option.of(new SettingsProblem.Unreadable(file, TomlFile.reason(cause)))),
+                        read -> new Loaded(
+                                read.settings(),
+                                Option.when(
+                                        read.invalid().nonEmpty(),
+                                        () -> new SettingsProblem.Invalid(file, read.invalid()))));
     }
 
     @Override
     public Either<SettingsProblem, Settings> save(Settings previous, Settings next) {
         // A file that cannot be read is left alone, rather than replaced by one with only these settings.
         Try<CommentedConfig> current = Files.exists(file) ? TomlFile.read(file) : Try.success(TomlFile.newConfig());
-        return current
-                .map(config -> next.entries().filter(entry -> !previous.entries().contains(entry))
+        return current.map(config -> next.entries()
+                        .filter(entry -> !previous.entries().contains(entry))
                         .foldLeft(config, (changed, entry) -> {
                             changed.set(entry._1, entry._2);
                             return changed;
                         }))
                 // A setting back at its default has no entry anymore.
-                .map(config -> previous.entries().keySet().removeAll(next.entries().keySet())
+                .map(config -> previous.entries()
+                        .keySet()
+                        .removeAll(next.entries().keySet())
                         .foldLeft(config, (changed, key) -> {
                             changed.remove(key);
                             return changed;

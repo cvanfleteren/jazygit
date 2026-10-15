@@ -1,13 +1,12 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.process.ExecutedCommand;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class GitFailureTest {
 
@@ -16,15 +15,18 @@ class GitFailureTest {
 
     @Test
     void aCleanupThatSucceedsOnlyAddsItsCommands() {
-        GitFailure<GitError.ProcessError> failure = new GitFailure<>(REFUSED, StubGitProvider.executed("git rebase main"));
+        GitFailure<GitError.ProcessError> failure =
+                new GitFailure<>(REFUSED, StubGitProvider.executed("git rebase main"));
 
-        assertEquals(new GitFailure<>(REFUSED, StubGitProvider.executed("git rebase main", "git rebase --abort")),
+        assertEquals(
+                new GitFailure<>(REFUSED, StubGitProvider.executed("git rebase main", "git rebase --abort")),
                 failure.followedBy(Either.right(StubGitProvider.executed("git rebase --abort"))));
     }
 
     @Test
     void aCleanupThatFailsIsReportedNextToTheFailure() {
-        GitFailure<GitError.ProcessError> failure = new GitFailure<>(REFUSED, StubGitProvider.executed("git rebase main"));
+        GitFailure<GitError.ProcessError> failure =
+                new GitFailure<>(REFUSED, StubGitProvider.executed("git rebase main"));
 
         GitFailure<GitError.ProcessError> cleanedUp = failure.followedBy(
                 Either.left(new GitFailure<>(ABORT_FAILED, StubGitProvider.executed("git rebase --abort"))));

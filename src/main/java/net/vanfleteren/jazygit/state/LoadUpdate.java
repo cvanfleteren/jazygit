@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.util.function.Function;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
@@ -11,41 +12,45 @@ import net.vanfleteren.jazygit.state.LoadMsg.*;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Update.Next;
 
-import java.util.function.Function;
-
 /**
  * What happens when something was read from the repository. The load is no longer running, whatever came of
  * it.
  */
 public final class LoadUpdate {
 
-    private LoadUpdate() {
-    }
+    private LoadUpdate() {}
 
     public static Next update(Model model, LoadMsg msg) {
         Model done = model.withRefreshing(model.refreshing().remove(msg.cmd()));
         return switch (msg) {
-            case StatusLoaded(RepoStatus status) -> statusLoaded(model, done.withStatus(model.status().reload(status)));
+            case StatusLoaded(RepoStatus status) ->
+                statusLoaded(model, done.withStatus(model.status().reload(status)));
             case BranchesLoaded(var branches) ->
-                    branchesLoaded(model, done.withBranches(model.branches().reload(branches)));
+                branchesLoaded(model, done.withBranches(model.branches().reload(branches)));
             case RemoteBranchesLoaded(var branches) ->
-                    remoteBranchesLoaded(model, done.withRemoteBranches(model.remoteBranches().reload(branches)));
-            case StashesLoaded(var stashes) -> Next.of(done.withStashes(model.stashes().reload(stashes)));
-            case CommitsLoaded(var commits) -> Next.of(done.withCommits(model.commits().reload(commits)));
+                remoteBranchesLoaded(
+                        model, done.withRemoteBranches(model.remoteBranches().reload(branches)));
+            case StashesLoaded(var stashes) ->
+                Next.of(done.withStashes(model.stashes().reload(stashes)));
+            case CommitsLoaded(var commits) ->
+                Next.of(done.withCommits(model.commits().reload(commits)));
             // What arrives after another item was highlighted is dropped.
             case BranchLogLoaded(var branch, var commits) ->
-                    Next.of(done.withBranchLog(Preview.updated(done.branchLog(), branch, log -> log.reload(commits))));
+                Next.of(done.withBranchLog(Preview.updated(done.branchLog(), branch, log -> log.reload(commits))));
             case CommitDetailLoaded(Sha sha, DiffText changes) ->
-                    Next.of(done.withCommitDetail(Preview.updated(done.commitDetail(), sha, d -> d.reload(changes))));
+                Next.of(done.withCommitDetail(Preview.updated(done.commitDetail(), sha, d -> d.reload(changes))));
             case FileDiffLoaded(var files, var diff) ->
-                    Next.of(done.withFileDiff(Preview.updated(done.fileDiff(), files, d -> d.reload(diff))));
+                Next.of(done.withFileDiff(Preview.updated(done.fileDiff(), files, d -> d.reload(diff))));
             case LoadMsg.Failed(Cmd.Load cmd, Failure failure) -> Next.of(failed(done, cmd, failure));
         };
     }
 
     private static Next statusLoaded(Model before, Model next) {
-        boolean headMoved = !before.status().toOption()
-                .exists(previous -> next.status().toOption().exists(status -> previous.headCommit().equals(status.headCommit())));
+        boolean headMoved = !before.status()
+                .toOption()
+                .exists(previous -> next.status()
+                        .toOption()
+                        .exists(status -> previous.headCommit().equals(status.headCommit())));
         // Commit loads are not deduplicated: one queued after HEAD moved must still run, even if
         // an earlier one is in progress.
         List<Cmd> cmds = headMoved ? List.of(new LoadCommits()) : List.empty();
@@ -53,17 +58,21 @@ public final class LoadUpdate {
     }
 
     private static Next branchesLoaded(Model before, Model next) {
-        return reloadMovedLog(next, branch -> branch instanceof BranchRef.Local(Branch.Name name)
-                ? Option.of(tip(before.branches(), name, Branch::name, Branch::tipOid)
-                .equals(tip(next.branches(), name, Branch::name, Branch::tipOid)))
-                : Option.none());
+        return reloadMovedLog(
+                next,
+                branch -> branch instanceof BranchRef.Local(Branch.Name name)
+                        ? Option.of(tip(before.branches(), name, Branch::name, Branch::tipOid)
+                                .equals(tip(next.branches(), name, Branch::name, Branch::tipOid)))
+                        : Option.none());
     }
 
     private static Next remoteBranchesLoaded(Model before, Model next) {
-        return reloadMovedLog(next, branch -> branch instanceof BranchRef.Remote(RemoteBranch remote)
-                ? Option.of(tip(before.remoteBranches(), remote, RemoteRef::branch, RemoteRef::tipOid)
-                .equals(tip(next.remoteBranches(), remote, RemoteRef::branch, RemoteRef::tipOid)))
-                : Option.none());
+        return reloadMovedLog(
+                next,
+                branch -> branch instanceof BranchRef.Remote(RemoteBranch remote)
+                        ? Option.of(tip(before.remoteBranches(), remote, RemoteRef::branch, RemoteRef::tipOid)
+                                .equals(tip(next.remoteBranches(), remote, RemoteRef::branch, RemoteRef::tipOid)))
+                        : Option.none());
     }
 
     /**
@@ -80,9 +89,11 @@ public final class LoadUpdate {
                 .getOrElse(() -> Next.of(next));
     }
 
-    private static <B, K> Option<Sha> tip(Loadable<List<B>> branches, K key, Function<B, K> keyOf,
-                                          Function<B, Sha> tipOf) {
-        return branches.getOrElse(List.empty()).find(b -> keyOf.apply(b).equals(key)).map(tipOf);
+    private static <B, K> Option<Sha> tip(
+            Loadable<List<B>> branches, K key, Function<B, K> keyOf, Function<B, Sha> tipOf) {
+        return branches.getOrElse(List.empty())
+                .find(b -> keyOf.apply(b).equals(key))
+                .map(tipOf);
     }
 
     private static Model failed(Model model, Cmd.Load cmd, Failure failure) {
@@ -93,11 +104,11 @@ public final class LoadUpdate {
             case Cmd.LoadStashes() -> model.withStashes(new Failed<>(failure));
             case LoadCommits() -> model.withCommits(new Failed<>(failure));
             case LoadCommitDetail(Sha sha) ->
-                    model.withCommitDetail(Preview.updated(model.commitDetail(), sha, d -> d.failed(failure)));
+                model.withCommitDetail(Preview.updated(model.commitDetail(), sha, d -> d.failed(failure)));
             case LoadFileDiff(var files) ->
-                    model.withFileDiff(Preview.updated(model.fileDiff(), files, d -> d.failed(failure)));
+                model.withFileDiff(Preview.updated(model.fileDiff(), files, d -> d.failed(failure)));
             case LoadBranchLog(var branch) ->
-                    model.withBranchLog(Preview.updated(model.branchLog(), branch, log -> log.failed(failure)));
+                model.withBranchLog(Preview.updated(model.branchLog(), branch, log -> log.failed(failure)));
         };
     }
 }

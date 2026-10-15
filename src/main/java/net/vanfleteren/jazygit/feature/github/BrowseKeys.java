@@ -1,7 +1,5 @@
 package net.vanfleteren.jazygit.feature.github;
 
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.keys.Scopes;
@@ -11,14 +9,12 @@ import net.vanfleteren.jazygit.keys.Scopes;
  */
 public final class BrowseKeys {
 
-    private BrowseKeys() {
-    }
+    private BrowseKeys() {}
 
     public static Keymap register(Keymap keys) {
-        return keys
-                .add(Scopes.BRANCHES,
-                        Binding.onSelected("O", "help.branches.browse", BrowseMsg.Requested::new))
-                .add(Scopes.REMOTE_BRANCHES,
+        return keys.add(Scopes.BRANCHES, Binding.onSelected("O", "help.branches.browse", BrowseMsg.Requested::new))
+                .add(
+                        Scopes.REMOTE_BRANCHES,
                         Binding.onSelected("O", "help.branches.browse", BrowseMsg.RemoteRequested::new));
     }
 }

@@ -4,9 +4,6 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import org.zeroturnaround.exec.ProcessExecutor;
-import org.zeroturnaround.exec.ProcessResult;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -14,6 +11,8 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import org.zeroturnaround.exec.ProcessExecutor;
+import org.zeroturnaround.exec.ProcessResult;
 
 /**
  * Runs a command line program and waits for it. The only place that starts processes.
@@ -23,16 +22,15 @@ public final class Exec {
     // How git starts the lines that say what went wrong.
     private static final List<String> ERROR_PREFIXES = List.of("fatal:", "error:", "CONFLICT");
 
-    private Exec() {
-    }
+    private Exec() {}
 
     /**
      * Runs {@code commandLine} in {@code directory}, with {@code environment} set on top of the inherited one.
      *
      * @return what it printed on its standard output, when it exited with 0
      */
-    public static Either<ExecFailure, String> run(Path directory, List<String> commandLine,
-                                                  Map<String, String> environment, Duration timeout) {
+    public static Either<ExecFailure, String> run(
+            Path directory, List<String> commandLine, Map<String, String> environment, Duration timeout) {
         ByteArrayOutputStream stderr = new ByteArrayOutputStream();
         try {
             ProcessResult result = new ProcessExecutor()
@@ -46,8 +44,8 @@ public final class Exec {
                     .execute();
             return result.getExitValue() == 0
                     ? Either.right(result.outputUTF8())
-                    : Either.left(new ExecFailure.NonZero(result.getExitValue(),
-                    stderr.toString(StandardCharsets.UTF_8), result.outputUTF8()));
+                    : Either.left(new ExecFailure.NonZero(
+                            result.getExitValue(), stderr.toString(StandardCharsets.UTF_8), result.outputUTF8()));
         } catch (IOException e) {
             return Either.left(new ExecFailure.NotStarted(e));
         } catch (TimeoutException e) {

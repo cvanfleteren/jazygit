@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.settings;
 import com.electronwill.nightconfig.core.CommentedConfig;
 import io.vavr.collection.List;
 import io.vavr.control.Try;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Function;
@@ -29,7 +28,8 @@ public final class RecentRepositoriesFile implements RecentRepositories {
         return config.getOptional(KEY)
                 .filter(java.util.List.class::isInstance)
                 .map(found -> List.ofAll((java.util.List<?>) found))
-                .map(values -> values.filter(String.class::isInstance).map(String.class::cast)
+                .map(values -> values.filter(String.class::isInstance)
+                        .map(String.class::cast)
                         .flatMap(value -> Try.of(() -> Path.of(value)).filter(Path::isAbsolute)))
                 .map(paths -> paths.distinct().take(MAX))
                 .orElse(List.empty());
@@ -37,7 +37,9 @@ public final class RecentRepositoriesFile implements RecentRepositories {
 
     @Override
     public List<Path> load() {
-        return !Files.exists(file) ? List.empty() : TomlFile.read(file).map(RecentRepositoriesFile::paths).getOrElse(List.empty());
+        return !Files.exists(file)
+                ? List.empty()
+                : TomlFile.read(file).map(RecentRepositoriesFile::paths).getOrElse(List.empty());
     }
 
     @Override

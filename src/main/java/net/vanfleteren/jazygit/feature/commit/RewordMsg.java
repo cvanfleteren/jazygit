@@ -16,12 +16,9 @@ public sealed interface RewordMsg extends Msg {
     /**
      * The user asked to reword the commit {@code sha}; any commit can be.
      */
-    record Requested(Sha sha) implements RewordMsg {
-    }
+    record Requested(Sha sha) implements RewordMsg {}
 
-    record Cancelled() implements RewordMsg {
-    }
+    record Cancelled() implements RewordMsg {}
 
-    record Confirmed(CommitMessage message) implements RewordMsg {
-    }
+    record Confirmed(CommitMessage message) implements RewordMsg {}
 }

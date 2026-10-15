@@ -1,5 +1,9 @@
 package net.vanfleteren.jazygit;
 
+import static dev.tamboui.toolkit.Toolkit.column;
+import static dev.tamboui.toolkit.Toolkit.row;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Panel;
@@ -8,26 +12,30 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyModifiers;
 import dev.tamboui.tui.pilot.Pilot;
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.git.model.RemoteRef;
-import net.vanfleteren.jazygit.git.model.Diffs;
-import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.state.LoadMsg;
-import net.vanfleteren.jazygit.state.Update;
-import net.vanfleteren.jazygit.state.BranchesTab;
-import net.vanfleteren.jazygit.state.Loadable;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.commit.CommitMsg;
 import net.vanfleteren.jazygit.feature.commit.RewordMsg;
-import net.vanfleteren.jazygit.state.SelectionMsg;
 import net.vanfleteren.jazygit.feature.stage.StageMsg;
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.Diffs;
+import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.RemoteRef;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.model.SampleData;
+import net.vanfleteren.jazygit.state.BranchesTab;
+import net.vanfleteren.jazygit.state.LoadMsg;
+import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.SelectionMsg;
 import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.BranchesPanel;
 import net.vanfleteren.jazygit.ui.CommitsPanel;
 import net.vanfleteren.jazygit.ui.ContentPanel;
@@ -36,15 +44,6 @@ import net.vanfleteren.jazygit.ui.StashPanel;
 import net.vanfleteren.jazygit.ui.StatusPanel;
 import net.vanfleteren.jazygit.ui.Theme;
 import org.junit.jupiter.api.Test;
-
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Supplier;
-
-import static dev.tamboui.toolkit.Toolkit.column;
-import static dev.tamboui.toolkit.Toolkit.row;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Pilot-driven integration tests exercising the same layout/composition as
@@ -60,17 +59,32 @@ class JazygitAppPilotTest {
 
     private static final ContentPanel CONTENT = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
 
-    private record Fixture(SampleData data, Model model, java.util.List<Msg> dispatched, java.util.List<Msg> selections, FilesPanel files,
-                            BranchesPanel branches, CommitsPanel commits, StashPanel stash,
-                            AtomicReference<FocusManager> focusManagerRef) {
+    private record Fixture(
+            SampleData data,
+            Model model,
+            java.util.List<Msg> dispatched,
+            java.util.List<Msg> selections,
+            FilesPanel files,
+            BranchesPanel branches,
+            CommitsPanel commits,
+            StashPanel stash,
+            AtomicReference<FocusManager> focusManagerRef) {
 
         private Fixture() {
             this(new SampleData(), new ArrayList<>());
         }
 
         private Fixture(SampleData data, java.util.List<Msg> dispatched) {
-            this(data, TestModels.loaded(data), dispatched, new ArrayList<>(), new FilesPanel(dispatched::add, () -> { }), new BranchesPanel(dispatched::add, tab -> { }),
-                    new CommitsPanel(dispatched::add, () -> { }), new StashPanel(dispatched::add), new AtomicReference<>());
+            this(
+                    data,
+                    TestModels.loaded(data),
+                    dispatched,
+                    new ArrayList<>(),
+                    new FilesPanel(dispatched::add, () -> {}),
+                    new BranchesPanel(dispatched::add, tab -> {}),
+                    new CommitsPanel(dispatched::add, () -> {}),
+                    new StashPanel(dispatched::add),
+                    new AtomicReference<>());
         }
 
         Supplier<Element> renderer() {
@@ -80,12 +94,14 @@ class JazygitAppPilotTest {
                 Panel branchesPane = branches.render(model, focusedId);
                 branches.selectionChange(model).forEach(selections::add);
                 return row(
-                        column(StatusPanel.render(model), files.render(model, focusedId).percent(25),
-                                branchesPane.percent(20), commits.render(model, focusedId).percent(30),
-                                stash.render(model, focusedId).fill())
+                        column(
+                                        StatusPanel.render(model),
+                                        files.render(model, focusedId).percent(25),
+                                        branchesPane.percent(20),
+                                        commits.render(model, focusedId).percent(30),
+                                        stash.render(model, focusedId).fill())
                                 .percent(30),
-                        CONTENT.render(model, focusedId)
-                                .fill());
+                        CONTENT.render(model, focusedId).fill());
             };
         }
     }
@@ -135,13 +151,24 @@ class JazygitAppPilotTest {
     void theDiffAreasAreOnlyPartOfTheTabCycleOnceTheyHaveTheFocus() throws Exception {
         SampleData data = new SampleData();
         Model loaded = TestModels.loaded(data);
-        io.vavr.collection.List<FileEntry> files = loaded.status().toOption().get().files();
-        Model model = Update.update(Update.update(loaded, new SelectionMsg.FilesSelected(files)).model(),
-                new LoadMsg.FileDiffLoaded(files, new Diffs("+staged\n", "+unstaged\n"))).model();
+        io.vavr.collection.List<FileEntry> files =
+                loaded.status().toOption().get().files();
+        Model model = Update.update(
+                        Update.update(loaded, new SelectionMsg.FilesSelected(files))
+                                .model(),
+                        new LoadMsg.FileDiffLoaded(files, new Diffs("+staged\n", "+unstaged\n")))
+                .model();
         java.util.List<Msg> dispatched = new ArrayList<>();
-        Fixture fixture = new Fixture(data, model, dispatched, new ArrayList<>(),
-                new FilesPanel(dispatched::add, () -> { }), new BranchesPanel(dispatched::add, tab -> { }),
-                new CommitsPanel(dispatched::add, () -> { }), new StashPanel(dispatched::add), new AtomicReference<>());
+        Fixture fixture = new Fixture(
+                data,
+                model,
+                dispatched,
+                new ArrayList<>(),
+                new FilesPanel(dispatched::add, () -> {}),
+                new BranchesPanel(dispatched::add, tab -> {}),
+                new CommitsPanel(dispatched::add, () -> {}),
+                new StashPanel(dispatched::add),
+                new AtomicReference<>());
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
             FocusManager focusManager = testRunner.runner().focusManager();
@@ -171,12 +198,20 @@ class JazygitAppPilotTest {
         SampleData data = new SampleData();
         java.util.List<Msg> dispatched = new ArrayList<>();
         RemoteBranch feature = new RemoteBranch("origin", new Branch.Name("feature"));
-        Model remote = TestModels.loaded(data).withBranchesTab(BranchesTab.REMOTE)
+        Model remote = TestModels.loaded(data)
+                .withBranchesTab(BranchesTab.REMOTE)
                 .withRemoteBranches(new Loadable.Loaded<>(List.of(
                         new RemoteRef(feature, new Sha("0a1b2c3d4e5f60718293a4b5c6d7e8f901234567"), Instant.EPOCH))));
-        Fixture fixture = new Fixture(data, remote, dispatched, new ArrayList<>(), new FilesPanel(dispatched::add, () -> { }),
-                new BranchesPanel(dispatched::add, tab -> { }), new CommitsPanel(dispatched::add, () -> { }),
-                new StashPanel(dispatched::add), new AtomicReference<>());
+        Fixture fixture = new Fixture(
+                data,
+                remote,
+                dispatched,
+                new ArrayList<>(),
+                new FilesPanel(dispatched::add, () -> {}),
+                new BranchesPanel(dispatched::add, tab -> {}),
+                new CommitsPanel(dispatched::add, () -> {}),
+                new StashPanel(dispatched::add),
+                new AtomicReference<>());
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
             FocusManager focusManager = testRunner.runner().focusManager();
@@ -187,7 +222,9 @@ class JazygitAppPilotTest {
             pilot.press(KeyCode.TAB);
             pilot.pause();
             assertEquals(BranchesPanel.ID, focusManager.focusedId());
-            assertEquals(new SelectionMsg.BranchSelected(new BranchRef.Remote(feature)), fixture.selections().getLast());
+            assertEquals(
+                    new SelectionMsg.BranchSelected(new BranchRef.Remote(feature)),
+                    fixture.selections().getLast());
 
             pilot.press(' ');
             pilot.press(KeyCode.TAB);
@@ -225,7 +262,8 @@ class JazygitAppPilotTest {
                 pilot.press(KeyCode.DOWN);
             }
             pilot.pause();
-            assertEquals(branchCount - 1, fixture.branches().selectedIndex(), "selection should clamp at the last item");
+            assertEquals(
+                    branchCount - 1, fixture.branches().selectedIndex(), "selection should clamp at the last item");
 
             assertEquals(0, fixture.commits().selectedIndex(), "an unfocused pane's selection should be unaffected");
 
@@ -244,11 +282,15 @@ class JazygitAppPilotTest {
 
             Pilot pilot = testRunner.pilot();
             pilot.pause();
-            assertEquals(new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("main"))), fixture.selections().getLast());
+            assertEquals(
+                    new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("main"))),
+                    fixture.selections().getLast());
 
             pilot.press(KeyCode.DOWN);
             pilot.pause();
-            assertEquals(new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("feature/initial-layout"))), fixture.selections().getLast());
+            assertEquals(
+                    new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("feature/initial-layout"))),
+                    fixture.selections().getLast());
 
             pilot.quit();
         }
@@ -268,7 +310,9 @@ class JazygitAppPilotTest {
             pilot.press(KeyCode.DOWN);
             pilot.press(' ');
             pilot.pause();
-            assertEquals(java.util.List.of(new CheckoutMsg.Requested(new Branch.Name("feature/initial-layout"))), fixture.dispatched());
+            assertEquals(
+                    java.util.List.of(new CheckoutMsg.Requested(new Branch.Name("feature/initial-layout"))),
+                    fixture.dispatched());
 
             focusManager.setFocus(CommitsPanel.ID);
             pilot.pause();
@@ -298,7 +342,11 @@ class JazygitAppPilotTest {
             pilot.press('r');
             pilot.pause();
 
-            assertEquals(true, fixture.dispatched().contains(new RewordMsg.Requested(fixture.data().commits().get().head().sha())));
+            assertEquals(
+                    true,
+                    fixture.dispatched()
+                            .contains(new RewordMsg.Requested(
+                                    fixture.data().commits().get().head().sha())));
 
             pilot.quit();
         }
@@ -349,16 +397,19 @@ class JazygitAppPilotTest {
             assertEquals(1, fixture.dispatched().size());
             StageMsg.Requested all = (StageMsg.Requested) fixture.dispatched().get(0);
             // The virtual root is selected first, so every changed file is requested.
-            assertEquals(fixture.data().status().get().files().toSet(), all.files().toSet());
+            assertEquals(
+                    fixture.data().status().get().files().toSet(), all.files().toSet());
 
             pilot.press(KeyCode.DOWN);
             pilot.press(KeyCode.DOWN);
             pilot.press(' ');
             pilot.pause();
 
-            StageMsg.Requested requested = (StageMsg.Requested) fixture.dispatched().get(1);
+            StageMsg.Requested requested =
+                    (StageMsg.Requested) fixture.dispatched().get(1);
             // DOWN highlights the "model" directory, so only its file is requested.
-            assertEquals(List.of("src/main/java/net/vanfleteren/jazygit/model/SampleData.java"),
+            assertEquals(
+                    List.of("src/main/java/net/vanfleteren/jazygit/model/SampleData.java"),
                     requested.files().map(f -> f.path()).toList());
 
             pilot.quit();

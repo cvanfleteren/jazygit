@@ -3,19 +3,17 @@ package net.vanfleteren.jazygit.cli;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
+import java.io.PrintWriter;
 import picocli.CommandLine;
 import picocli.CommandLine.ParameterException;
 import picocli.CommandLine.UnmatchedArgumentException;
-
-import java.io.PrintWriter;
 
 /**
  * The command line jazygit is started with.
  */
 public final class StartupCli {
 
-    private StartupCli() {
-    }
+    private StartupCli() {}
 
     /**
      * How {@code args} ask jazygit to start, or the exit when they ask for the help or the version, which go to
@@ -26,9 +24,11 @@ public final class StartupCli {
         return Try.of(() -> cli.parseArgs(args))
                 .toEither()
                 .mapLeft(problem -> rejected(cli, problem, err))
-                .flatMap(parsed -> cli.isUsageHelpRequested() ? Either.left(help(cli, out))
-                        : cli.isVersionHelpRequested() ? Either.left(version(cli, out))
-                        : Either.right(options(cli.getCommand())));
+                .flatMap(parsed -> cli.isUsageHelpRequested()
+                        ? Either.left(help(cli, out))
+                        : cli.isVersionHelpRequested()
+                                ? Either.left(version(cli, out))
+                                : Either.right(options(cli.getCommand())));
     }
 
     private static Exit rejected(CommandLine cli, Throwable problem, PrintWriter err) {
@@ -64,6 +64,5 @@ public final class StartupCli {
      *
      * @param code what the process exits with
      */
-    public record Exit(int code) {
-    }
+    public record Exit(int code) {}
 }

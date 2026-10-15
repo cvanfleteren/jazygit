@@ -28,5 +28,4 @@ public sealed interface StageMsg extends Msg {
             this(files, Option.none());
         }
     }
-
 }

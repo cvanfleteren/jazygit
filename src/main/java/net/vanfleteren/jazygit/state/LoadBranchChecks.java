@@ -13,11 +13,15 @@ public record LoadBranchChecks() implements Cmd {
 
     @Override
     public Msg run(Env env) {
-        return env.gitHub().branchChecks().fold(
-                this::failedWith,
-                checks -> env.git().remoteUrls().fold(
+        return env.gitHub()
+                .branchChecks()
+                .fold(
                         this::failedWith,
-                        urls -> new BranchChecksMsg.Loaded(GitHubChecks.of(checks, urls))));
+                        checks -> env.git()
+                                .remoteUrls()
+                                .fold(
+                                        this::failedWith,
+                                        urls -> new BranchChecksMsg.Loaded(GitHubChecks.of(checks, urls))));
     }
 
     @Override

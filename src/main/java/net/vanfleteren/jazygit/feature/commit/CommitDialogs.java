@@ -17,37 +17,49 @@ public final class CommitDialogs {
      * Asks to amend the last commit.
      */
     public static final ConfirmDialog.Spec<AmendPopup> AMEND = new ConfirmDialog.Spec<>(
-            "amend-commit", AmendPopup.class,
+            "amend-commit",
+            AmendPopup.class,
             popup -> Messages.get("dialog.amend.title"),
             popup -> Messages.get("dialog.amend.message"),
-            AmendMsg.Confirmed::new, AmendMsg.Cancelled::new);
+            AmendMsg.Confirmed::new,
+            AmendMsg.Cancelled::new);
 
     /**
      * Asks to squash a commit into the one below it.
      */
     public static final ConfirmDialog.Spec<SquashPopup> SQUASH = new ConfirmDialog.Spec<>(
-            "squash-commit", SquashPopup.class,
+            "squash-commit",
+            SquashPopup.class,
             popup -> Messages.get("dialog.squash.title"),
             popup -> Messages.get("dialog.squash.message"),
-            SquashMsg.Confirmed::new, SquashMsg.Cancelled::new);
+            SquashMsg.Confirmed::new,
+            SquashMsg.Cancelled::new);
 
     /**
      * Asks which message to keep when fixing up a commit into the one below it.
      */
     public static final ChoiceDialog.Spec<FixupPopup> FIXUP = new ChoiceDialog.Spec<>(
-            "fixup-commit", FixupPopup.class,
-            popup -> Messages.get("dialog.fixup.title", popup.commit().sha().shortSha(), popup.into().sha().shortSha()),
-            List.of(new Choice<>('f', "dialog.fixup.fixup", () -> new FixupMsg.Chosen(SquashMode.FIXUP)),
-                    new Choice<>('C', "dialog.fixup.keepMessage", () -> new FixupMsg.Chosen(SquashMode.FIXUP_KEEP_MESSAGE))),
+            "fixup-commit",
+            FixupPopup.class,
+            popup -> Messages.get(
+                    "dialog.fixup.title",
+                    popup.commit().sha().shortSha(),
+                    popup.into().sha().shortSha()),
+            List.of(
+                    new Choice<>('f', "dialog.fixup.fixup", () -> new FixupMsg.Chosen(SquashMode.FIXUP)),
+                    new Choice<>(
+                            'C', "dialog.fixup.keepMessage", () -> new FixupMsg.Chosen(SquashMode.FIXUP_KEEP_MESSAGE))),
             FixupMsg.Cancelled::new);
 
     /**
      * Asks how to reset the checked out branch to a commit.
      */
     public static final ChoiceDialog.Spec<ResetPopup> RESET = new ChoiceDialog.Spec<>(
-            "reset-commit", ResetPopup.class,
+            "reset-commit",
+            ResetPopup.class,
             popup -> Messages.get("dialog.reset.title", popup.target().sha().shortSha()),
-            List.of(new Choice<>('m', "dialog.reset.mixed", () -> new ResetMsg.Chosen(ResetMode.MIXED)),
+            List.of(
+                    new Choice<>('m', "dialog.reset.mixed", () -> new ResetMsg.Chosen(ResetMode.MIXED)),
                     new Choice<>('s', "dialog.reset.soft", () -> new ResetMsg.Chosen(ResetMode.SOFT)),
                     new Choice<>('h', "dialog.reset.hard", () -> new ResetMsg.Chosen(ResetMode.HARD))),
             ResetMsg.Cancelled::new);
@@ -56,22 +68,25 @@ public final class CommitDialogs {
      * Asks to confirm a hard reset, which discards the uncommitted changes.
      */
     public static final ConfirmDialog.Spec<HardResetPopup> HARD_RESET = new ConfirmDialog.Spec<>(
-            "hard-reset", HardResetPopup.class,
+            "hard-reset",
+            HardResetPopup.class,
             popup -> Messages.get("dialog.hardReset.title", popup.target().sha().shortSha()),
             popup -> popup.files()
                     .map(files -> Messages.get("dialog.hardReset.message", files))
                     .getOrElse(() -> Messages.get("dialog.hardReset.messageUnknown")),
-            ResetMsg.HardConfirmed::new, ResetMsg.HardCancelled::new);
+            ResetMsg.HardConfirmed::new,
+            ResetMsg.HardCancelled::new);
 
     /**
      * Asks whether to stage all files, because a commit needs something staged.
      */
     public static final ConfirmDialog.Spec<StageAllPopup> STAGE_ALL = new ConfirmDialog.Spec<>(
-            "stage-all", StageAllPopup.class,
+            "stage-all",
+            StageAllPopup.class,
             popup -> Messages.get("dialog.stageAll.title"),
             popup -> Messages.get("dialog.stageAll.message"),
-            CommitMsg.StageAllConfirmed::new, CommitMsg.StageAllCancelled::new);
+            CommitMsg.StageAllConfirmed::new,
+            CommitMsg.StageAllCancelled::new);
 
-    private CommitDialogs() {
-    }
+    private CommitDialogs() {}
 }

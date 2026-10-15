@@ -32,8 +32,8 @@ public sealed interface SettingsPanelCmd extends Cmd {
 
         @Override
         public Msg failed(Failure failure) {
-            return new SettingsPanelMsg.GitHubRead(new GitHubSetup(Either.left(failure), "", Option.none(),
-                    Either.left(failure)));
+            return new SettingsPanelMsg.GitHubRead(
+                    new GitHubSetup(Either.left(failure), "", Option.none(), Either.left(failure)));
         }
     }
 
@@ -49,8 +49,8 @@ public sealed interface SettingsPanelCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return new SettingsPanelMsg.GhExecutableChecked(executable,
-                    env.gitHub().version(executable.getOrElse("gh")).mapLeft(Failure.GitHub::new));
+            return new SettingsPanelMsg.GhExecutableChecked(
+                    executable, env.gitHub().version(executable.getOrElse("gh")).mapLeft(Failure.GitHub::new));
         }
 
         @Override
@@ -67,8 +67,10 @@ public sealed interface SettingsPanelCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.git().setLocalConfig(GitHubAccount.USER_KEY, user)
-                    .map(commands -> env.repositories().switchTo(env.git().workTree())
+            return env.git()
+                    .setLocalConfig(GitHubAccount.USER_KEY, user)
+                    .map(commands -> env.repositories()
+                            .switchTo(env.git().workTree())
                             .fold(this::failedWith, reopened -> new SettingsPanelMsg.AccountSet()))
                     .getOrElseGet(this::failedWith);
         }
@@ -86,7 +88,8 @@ public sealed interface SettingsPanelCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.repositories().switchTo(env.git().workTree())
+            return env.repositories()
+                    .switchTo(env.git().workTree())
                     .fold(this::failedWith, reopened -> new SettingsPanelMsg.Reopened());
         }
 

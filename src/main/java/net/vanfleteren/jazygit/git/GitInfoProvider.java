@@ -4,11 +4,10 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.*;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-
-import java.nio.file.Path;
 
 /**
  * Everything the TUI does with git: the information it shows and the operations it performs, grouped by the
@@ -46,8 +45,8 @@ public interface GitInfoProvider {
      * Deletes the branch {@code name}, locally and/or {@code remote}, the branch it is pushed to. With both, the
      * remote one goes first, so a failure leaves the local branch in place.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(Branch.Name name, RemoteBranch remote,
-                                                                         DeleteScope scope);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(
+            Branch.Name name, RemoteBranch remote, DeleteScope scope);
 
     /**
      * Renames the local branch {@code name} to {@code newName}; it keeps following the same upstream. Fails when a
@@ -85,7 +84,8 @@ public interface GitInfoProvider {
      * Creates the local branch {@code name} at the remote-tracking branch of {@code upstream}, following it, and
      * checks it out.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewTrackingBranch(Branch.Name name, RemoteBranch upstream);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewTrackingBranch(
+            Branch.Name name, RemoteBranch upstream);
 
     // Merging branches, as git merge does.
 
@@ -108,13 +108,15 @@ public interface GitInfoProvider {
     /**
      * Pushes the local branch {@code branch} to {@code upstream}, the branch it tracks.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Branch.Name branch, RemoteBranch upstream, PushMode mode);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(
+            Branch.Name branch, RemoteBranch upstream, PushMode mode);
 
     /**
      * Pushes the local branch {@code branch} to {@code upstream}, which becomes its upstream once the push
      * succeeded.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(Branch.Name branch, RemoteBranch upstream);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(
+            Branch.Name branch, RemoteBranch upstream);
 
     // Pulling the checked out branch, as git pull does.
 

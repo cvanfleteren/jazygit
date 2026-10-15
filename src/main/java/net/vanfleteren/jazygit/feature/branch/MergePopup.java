@@ -6,5 +6,4 @@ import net.vanfleteren.jazygit.state.Popup;
 /**
  * Asking how to merge {@code branch} into the checked out branch {@code into}.
  */
-public record MergePopup(Branch.Name into, Branch.Name branch) implements Popup {
-}
+public record MergePopup(Branch.Name into, Branch.Name branch) implements Popup {}

@@ -6,7 +6,6 @@ import dev.tamboui.terminal.Frame;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.RenderContext;
-
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -20,14 +19,24 @@ public final class RenderedText {
     private static final Rect LARGE = new Rect(0, 0, 100, 30);
     private static final Rect TALL = new Rect(0, 0, 100, 40);
 
-    private RenderedText() {
-    }
+    private RenderedText() {}
 
     /**
      * Renders the element into a fresh buffer on the render thread, which TamboUI requires.
      */
     public static String of(ToolkitTestRunner testRunner, Supplier<? extends Element> element) throws Exception {
         return of(testRunner, element, AREA);
+    }
+
+    private static String of(ToolkitTestRunner testRunner, Supplier<? extends Element> element, Rect area)
+            throws Exception {
+        CompletableFuture<String> screen = new CompletableFuture<>();
+        testRunner.runner().runOnRenderThread(() -> {
+            Buffer buffer = Buffer.empty(area);
+            element.get().render(Frame.forTesting(buffer), area, RenderContext.empty());
+            screen.complete(text(buffer, area));
+        });
+        return screen.get(5, TimeUnit.SECONDS);
     }
 
     /**
@@ -42,17 +51,6 @@ public final class RenderedText {
      */
     public static String ofTall(ToolkitTestRunner testRunner, Supplier<? extends Element> element) throws Exception {
         return of(testRunner, element, TALL);
-    }
-
-    private static String of(ToolkitTestRunner testRunner, Supplier<? extends Element> element, Rect area)
-            throws Exception {
-        CompletableFuture<String> screen = new CompletableFuture<>();
-        testRunner.runner().runOnRenderThread(() -> {
-            Buffer buffer = Buffer.empty(area);
-            element.get().render(Frame.forTesting(buffer), area, RenderContext.empty());
-            screen.complete(text(buffer, area));
-        });
-        return screen.get(5, TimeUnit.SECONDS);
     }
 
     private static String text(Buffer buffer, Rect area) {

@@ -2,8 +2,11 @@ package net.vanfleteren.jazygit.feature.commit;
 
 import static net.vanfleteren.jazygit.state.TestModels.errorText;
 import static net.vanfleteren.jazygit.state.TestModels.failed;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
@@ -11,12 +14,9 @@ import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.TestModels;
-import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import java.time.Instant;
 
 /**
  * Fixing up a commit into the one below it.
@@ -29,15 +29,24 @@ class FixupUpdateTest {
     private static final Commit MERGE = commit("c4", List.of("c3", "x"));
 
     private static Commit commit(String sha, List<String> parents) {
-        return new Commit(new Sha(sha), "Ada", "ada@example.com", Instant.EPOCH, "Commit " + sha, "", parents.map(Sha::new).toList());
+        return new Commit(
+                new Sha(sha),
+                "Ada",
+                "ada@example.com",
+                Instant.EPOCH,
+                "Commit " + sha,
+                "",
+                parents.map(Sha::new).toList());
     }
 
     private static Model withCommits(Commit... commits) {
-        return Update.update(TestModels.loaded(), new LoadMsg.CommitsLoaded(List.of(commits))).model();
+        return Update.update(TestModels.loaded(), new LoadMsg.CommitsLoaded(List.of(commits)))
+                .model();
     }
 
     private static Model opened() {
-        return Update.update(withCommits(TIP, MIDDLE, ROOT), new FixupMsg.Requested(TIP.sha())).model();
+        return Update.update(withCommits(TIP, MIDDLE, ROOT), new FixupMsg.Requested(TIP.sha()))
+                .model();
     }
 
     @Test
@@ -52,21 +61,31 @@ class FixupUpdateTest {
     void theFirstCommitHasNothingToFixUpInto() {
         Model model = withCommits(MIDDLE, ROOT);
 
-        assertEquals(Option.none(), Update.update(model, new FixupMsg.Requested(ROOT.sha())).model().popup(FixupPopup.class));
+        assertEquals(
+                Option.none(),
+                Update.update(model, new FixupMsg.Requested(ROOT.sha())).model().popup(FixupPopup.class));
     }
 
     @Test
     void aMergeCannotBeFixedUp() {
         Model model = withCommits(MERGE, TIP, MIDDLE, ROOT);
 
-        assertEquals(Option.none(), Update.update(model, new FixupMsg.Requested(MERGE.sha())).model().popup(FixupPopup.class));
+        assertEquals(
+                Option.none(),
+                Update.update(model, new FixupMsg.Requested(MERGE.sha()))
+                        .model()
+                        .popup(FixupPopup.class));
     }
 
     @Test
     void anUnknownCommitDoesNothing() {
         Model model = withCommits(TIP, MIDDLE, ROOT);
 
-        assertEquals(Option.none(), Update.update(model, new FixupMsg.Requested(new Sha("elsewhere"))).model().popup(FixupPopup.class));
+        assertEquals(
+                Option.none(),
+                Update.update(model, new FixupMsg.Requested(new Sha("elsewhere")))
+                        .model()
+                        .popup(FixupPopup.class));
     }
 
     @Test
@@ -92,7 +111,8 @@ class FixupUpdateTest {
         assertEquals(Operation.FIXUP, new CommitCmd.Squash(new Sha("aaaa"), SquashMode.FIXUP).operation());
         assertEquals(Operation.FIXUP, new CommitCmd.Squash(new Sha("aaaa"), SquashMode.FIXUP_KEEP_MESSAGE).operation());
 
-        Next next = Update.update(TestModels.loaded(), failed(new CommitCmd.Squash(new Sha("aaaa"), SquashMode.FIXUP), "conflict"));
+        Next next = Update.update(
+                TestModels.loaded(), failed(new CommitCmd.Squash(new Sha("aaaa"), SquashMode.FIXUP), "conflict"));
 
         assertEquals(Option.of("Fixup failed: conflict"), errorText(next.model()));
     }

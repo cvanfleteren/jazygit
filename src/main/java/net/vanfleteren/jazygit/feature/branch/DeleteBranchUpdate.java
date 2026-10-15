@@ -20,8 +20,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
  */
 public final class DeleteBranchUpdate {
 
-    private DeleteBranchUpdate() {
-    }
+    private DeleteBranchUpdate() {}
 
     public static Next update(Model model, DeleteBranchMsg msg) {
         return switch (msg) {
@@ -30,8 +29,12 @@ public final class DeleteBranchUpdate {
             case Chosen(DeleteScope scope) -> chosen(model, scope);
             case DeleteBranchMsg.RemoteRequested(RemoteBranch branch) -> remoteRequested(model, branch);
             case DeleteBranchMsg.RemoteCancelled() -> Next.of(model.withoutPopup(DeleteRemoteBranchPopup.class));
-            case DeleteBranchMsg.RemoteConfirmed() -> Update.confirm(model, DeleteRemoteBranchPopup.class,
-                    popup -> Option.when(remoteDeletable(model, popup.branch()), () -> new DeleteRemoteBranch(popup.branch())));
+            case DeleteBranchMsg.RemoteConfirmed() ->
+                Update.confirm(
+                        model,
+                        DeleteRemoteBranchPopup.class,
+                        popup -> Option.when(
+                                remoteDeletable(model, popup.branch()), () -> new DeleteRemoteBranch(popup.branch())));
         };
     }
 
@@ -39,14 +42,18 @@ public final class DeleteBranchUpdate {
      * Only a known branch that is not checked out can be deleted, and not while it is being pushed or deleted.
      */
     private static Next requested(Model model, Branch.Name branch) {
-        return Update.ask(model, Option.when(Branches.isOtherIdleBranch(model, branch), () -> new DeleteBranchPopup(branch)));
+        return Update.ask(
+                model, Option.when(Branches.isOtherIdleBranch(model, branch), () -> new DeleteBranchPopup(branch)));
     }
 
     private static Next chosen(Model model, DeleteScope scope) {
         // Deleting on the remote is not possible for a local-only branch, nor for the default one.
-        return Update.confirm(model, DeleteBranchPopup.class, popup -> model.branch(popup.branch())
-                .filter(branch -> scope == DeleteScope.LOCAL || branch.remoteDeletable())
-                .map(branch -> new DeleteBranch(branch.name(), branch.pushTarget(), scope)));
+        return Update.confirm(
+                model,
+                DeleteBranchPopup.class,
+                popup -> model.branch(popup.branch())
+                        .filter(branch -> scope == DeleteScope.LOCAL || branch.remoteDeletable())
+                        .map(branch -> new DeleteBranch(branch.name(), branch.pushTarget(), scope)));
     }
 
     /**
@@ -56,12 +63,18 @@ public final class DeleteBranchUpdate {
     private static Next remoteRequested(Model model, RemoteBranch branch) {
         return isDefault(model, branch)
                 ? Next.of(model.fail(new AppError.DefaultBranch(branch.shortName())))
-                : Update.ask(model, Option.when(remoteDeletable(model, branch), () -> new DeleteRemoteBranchPopup(branch)));
+                : Update.ask(
+                        model, Option.when(remoteDeletable(model, branch), () -> new DeleteRemoteBranchPopup(branch)));
     }
 
     private static boolean remoteDeletable(Model model, RemoteBranch branch) {
-        return model.remoteBranch(branch).isDefined() && !model.busy().containsKey(new BranchRef.Remote(branch))
+        return model.remoteBranch(branch).isDefined()
+                && !model.busy().containsKey(new BranchRef.Remote(branch))
                 && !isDefault(model, branch);
+    }
+
+    static boolean remoteDeletable(Model model, Branch.Name branch) {
+        return model.branch(branch).exists(Branch::remoteDeletable);
     }
 
     /**
@@ -70,9 +83,5 @@ public final class DeleteBranchUpdate {
     private static boolean isDefault(Model model, RemoteBranch branch) {
         return branch.remote().equals(RemoteBranch.DEFAULT_REMOTE)
                 && model.branch(branch.branch()).exists(Branch::isDefault);
-    }
-
-    static boolean remoteDeletable(Model model, Branch.Name branch) {
-        return model.branch(branch).exists(Branch::remoteDeletable);
     }
 }

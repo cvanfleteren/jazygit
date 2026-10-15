@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.gh.model;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
-
 import java.net.URI;
 import java.util.Locale;
 import java.util.regex.Matcher;
@@ -40,8 +39,10 @@ public record GhAccount(String host, String user) {
      * that of the first remote on a host named like GitHub; none when there is neither.
      */
     public static Option<String> remoteHost(Map<String, String> urls) {
-        return urls.get(ORIGIN).flatMap(GhAccount::hostOf)
-                .orElse(() -> urls.toList().sortBy(remote -> remote._1)
+        return urls.get(ORIGIN)
+                .flatMap(GhAccount::hostOf)
+                .orElse(() -> urls.toList()
+                        .sortBy(remote -> remote._1)
                         .flatMap(remote -> hostOf(remote._2))
                         .find(host -> host.toLowerCase(Locale.ROOT).contains("github")
                                 || host.toLowerCase(Locale.ROOT).endsWith(".ghe.com")));
@@ -54,7 +55,8 @@ public record GhAccount(String host, String user) {
     public static Option<String> hostOf(String url) {
         String stripped = url.strip();
         if (stripped.contains("://")) {
-            return Try.of(() -> URI.create(stripped).getHost()).toOption()
+            return Try.of(() -> URI.create(stripped).getHost())
+                    .toOption()
                     .filter(host -> host != null && !host.isEmpty());
         }
         Matcher scp = SCP_LIKE.matcher(stripped);

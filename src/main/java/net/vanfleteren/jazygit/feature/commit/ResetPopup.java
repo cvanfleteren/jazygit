@@ -6,5 +6,4 @@ import net.vanfleteren.jazygit.state.Popup;
 /**
  * Asking how to reset the checked out branch to {@code target}.
  */
-public record ResetPopup(Commit target) implements Popup {
-}
+public record ResetPopup(Commit target) implements Popup {}

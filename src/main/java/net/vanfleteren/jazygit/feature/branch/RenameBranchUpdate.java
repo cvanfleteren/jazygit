@@ -14,13 +14,12 @@ import net.vanfleteren.jazygit.state.Update.Next;
  */
 public final class RenameBranchUpdate {
 
-    private RenameBranchUpdate() {
-    }
+    private RenameBranchUpdate() {}
 
     public static Next update(Model model, RenameBranchMsg msg) {
         return switch (msg) {
-            case Requested(Branch.Name branch) -> Update.ask(model, model.idleBranch(branch)
-                    .map(known -> new RenameBranchPopup(branch)));
+            case Requested(Branch.Name branch) ->
+                Update.ask(model, model.idleBranch(branch).map(known -> new RenameBranchPopup(branch)));
             case Cancelled() -> Next.of(model.withoutPopup(RenameBranchPopup.class));
             case Confirmed(String name) -> confirmed(model, name);
         };
@@ -33,7 +32,9 @@ public final class RenameBranchUpdate {
         // A name that is no branch name, like a blank one, keeps the dialog open.
         return unchanged
                 ? Next.of(model.withoutPopup(RenameBranchPopup.class))
-                : Update.confirm(model, RenameBranchPopup.class, popup -> Branch.Name.parse(name)
-                .map(newName -> new RenameBranch(popup.branch(), newName)));
+                : Update.confirm(
+                        model,
+                        RenameBranchPopup.class,
+                        popup -> Branch.Name.parse(name).map(newName -> new RenameBranch(popup.branch(), newName)));
     }
 }

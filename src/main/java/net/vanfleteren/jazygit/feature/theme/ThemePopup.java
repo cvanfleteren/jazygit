@@ -10,5 +10,4 @@ import net.vanfleteren.jazygit.state.Popup;
  *
  * @param overridden the theme asked for at startup when the popup opened, which cancelling brings back
  */
-public record ThemePopup(ThemeName current, Option<ThemeName> overridden) implements Popup {
-}
+public record ThemePopup(ThemeName current, Option<ThemeName> overridden) implements Popup {}

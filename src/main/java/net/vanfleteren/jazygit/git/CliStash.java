@@ -1,19 +1,18 @@
 package net.vanfleteren.jazygit.git;
 
+import static net.vanfleteren.jazygit.git.GitCommand.git;
+
 import io.vavr.collection.List;
 import io.vavr.collection.Seq;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.nio.file.Path;
+import java.util.function.Function;
+import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.git.GitError.*;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-
-import java.nio.file.Path;
-import java.util.function.Function;
-import java.util.regex.Pattern;
-
-import static net.vanfleteren.jazygit.git.GitCommand.git;
 
 /**
  * Lists and creates stashes through the {@code git stash} command line tool.
@@ -25,26 +24,32 @@ final class CliStash {
     private static final String WITHOUT_INDEX = "Try without --index";
     private static final Pattern BRANCH_PREFIX = Pattern.compile("^On [^:]+: ");
 
-    private CliStash() {
-    }
+    private CliStash() {}
 
     /**
      * Runs {@code git stash list}, newest stash first.
      */
     static Either<ProcessError, List<Stash>> list(Path workTree) {
-        return GitProcess.read(workTree,
-                GitCommand.reading("stash", "list", "--format=%gd" + GitOutput.PRETTY_FIELD_SEPARATOR + "%H"
-                        + GitOutput.PRETTY_FIELD_SEPARATOR + "%gs"),
+        return GitProcess.read(
+                workTree,
+                GitCommand.reading(
+                        "stash",
+                        "list",
+                        "--format=%gd" + GitOutput.PRETTY_FIELD_SEPARATOR + "%H" + GitOutput.PRETTY_FIELD_SEPARATOR
+                                + "%gs"),
                 CliStash::parse);
     }
 
     static Either<UnexpectedOutput, List<Stash>> parse(String raw) {
-        return Either.sequenceRight(GitOutput.nonBlankLines(raw).map(CliStash::stash)).map(Seq::toList);
+        return Either.sequenceRight(GitOutput.nonBlankLines(raw).map(CliStash::stash))
+                .map(Seq::toList);
     }
 
     private static Either<UnexpectedOutput, Stash> stash(String line) {
         return GitOutput.fields(line, 3)
-                .map(fields -> new Stash(fields.get(0), new Sha(fields.get(1)),
+                .map(fields -> new Stash(
+                        fields.get(0),
+                        new Sha(fields.get(1)),
                         BRANCH_PREFIX.matcher(fields.get(2)).replaceFirst("")));
     }
 
@@ -67,8 +72,8 @@ final class CliStash {
      * Runs the {@code command} of the name {@code stash} has now: a stash added or removed since it was listed
      * renamed it, and its old name is another stash now. A stash that is gone is a {@link StashGone}.
      */
-    private static Either<GitFailure<StashError>, List<ExecutedCommand>> onStash(Path workTree, Stash stash,
-                                                                                 Function<String, GitCommand> command) {
+    private static Either<GitFailure<StashError>, List<ExecutedCommand>> onStash(
+            Path workTree, Stash stash, Function<String, GitCommand> command) {
         return list(workTree)
                 .<GitFailure<StashError>>mapLeft(error -> new GitFailure<>(error, List.empty()))
                 .flatMap(stashes -> stashes.find(listed -> listed.sha().equals(stash.sha()))
@@ -83,8 +88,10 @@ final class CliStash {
      * commit, e.g. {@code WIP on main: abc1234 Add widget}.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Path workTree, Option<String> message) {
-        return GitProcess.log(workTree, git(List.of("stash", "push", "--include-untracked")
-                .appendAll(message.toList().flatMap(text -> List.of("--message", text)))));
+        return GitProcess.log(
+                workTree,
+                git(List.of("stash", "push", "--include-untracked")
+                        .appendAll(message.toList().flatMap(text -> List.of("--message", text)))));
     }
 
     /**
@@ -93,9 +100,9 @@ final class CliStash {
     static Either<GitFailure<ProcessError>, Stashed> pushQuietly(Path workTree) {
         // Git succeeds without stashing when there is nothing to stash; then there is nothing to pop
         // either, and popping would apply an older, unrelated stash. Only the push is logged.
-        return count(workTree).flatMap(before ->
-                GitProcess.log(workTree, git("stash", "push", "--quiet")).flatMap(pushed ->
-                        count(workTree).map(after -> new Stashed(after > before, pushed))));
+        return count(workTree)
+                .flatMap(before -> GitProcess.log(workTree, git("stash", "push", "--quiet"))
+                        .flatMap(pushed -> count(workTree).map(after -> new Stashed(after > before, pushed))));
     }
 
     /**
@@ -105,10 +112,11 @@ final class CliStash {
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> popQuietly(Path workTree) {
         return GitProcess.log(workTree, git("stash", "pop", "--index", "--quiet"))
-                .fold(failure -> failure.error() instanceof CommandFailed failed && failed.says(WITHOUT_INDEX)
+                .fold(
+                        failure -> failure.error() instanceof CommandFailed failed && failed.says(WITHOUT_INDEX)
                                 ? GitProcess.log(workTree, git("stash", "pop", "--quiet"))
-                                .map(failure.commands()::appendAll)
-                                .mapLeft(again -> again.after(failure.commands()))
+                                        .map(failure.commands()::appendAll)
+                                        .mapLeft(again -> again.after(failure.commands()))
                                 : Either.left(failure),
                         Either::right);
     }
@@ -123,6 +131,5 @@ final class CliStash {
     /**
      * Whether {@code git stash push} stashed anything, and the commands that found out.
      */
-    record Stashed(boolean any, List<ExecutedCommand> commands) {
-    }
+    record Stashed(boolean any, List<ExecutedCommand> commands) {}
 }

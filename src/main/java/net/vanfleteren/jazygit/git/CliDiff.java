@@ -1,22 +1,21 @@
 package net.vanfleteren.jazygit.git;
 
+import static net.vanfleteren.jazygit.git.GitCommand.reading;
+
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import net.vanfleteren.jazygit.git.GitError.DiffError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-
-import static net.vanfleteren.jazygit.git.GitCommand.reading;
 
 /**
  * Reads the diff of changed files through the git command line tool.
@@ -27,8 +26,7 @@ final class CliDiff {
     private static final List<String> STAGED = List.of("diff", "--cached", "--no-color", "--no-ext-diff", "--");
     private static final List<String> UNSTAGED = List.of("diff", "--no-color", "--no-ext-diff", "--");
 
-    private CliDiff() {
-    }
+    private CliDiff() {}
 
     /**
      * The staged changes of the files (index against HEAD), and their unstaged changes (working tree
@@ -46,20 +44,23 @@ final class CliDiff {
                         .map(unstagedDiff -> new Diffs(truncated(stagedDiff), truncated(unstagedDiff))));
     }
 
-
     /**
      * Untracked files are marked intent-to-add in a temporary copy of the index, so one {@code git diff}
      * shows them as entirely added next to the unstaged changes. The real index is left untouched.
      */
-    private static Either<DiffError, String> unstagedAndUntracked(Path workTree, List<String> unstaged,
-                                                                  List<String> untracked) {
+    private static Either<DiffError, String> unstagedAndUntracked(
+            Path workTree, List<String> unstaged, List<String> untracked) {
         return untracked.isEmpty()
                 ? Either.narrow(tracked(workTree, UNSTAGED, unstaged, HashMap.empty()))
-                : Either.<DiffError, String>narrow(run(workTree, List.of("rev-parse", "--git-path", "index"), HashMap.empty()))
-                .map(index -> workTree.resolve(index.strip()))
-                .flatMap(index -> TempFiles.using("jazygit-index", copy -> copyIndex(index, copy), failed -> failed,
-                        copy -> withUntracked(workTree, unstaged, untracked,
-                                HashMap.of("GIT_INDEX_FILE", copy.toString()))));
+                : Either.<DiffError, String>narrow(
+                                run(workTree, List.of("rev-parse", "--git-path", "index"), HashMap.empty()))
+                        .map(index -> workTree.resolve(index.strip()))
+                        .flatMap(index -> TempFiles.using(
+                                "jazygit-index",
+                                copy -> copyIndex(index, copy),
+                                failed -> failed,
+                                copy -> withUntracked(
+                                        workTree, unstaged, untracked, HashMap.of("GIT_INDEX_FILE", copy.toString()))));
     }
 
     /**
@@ -75,14 +76,14 @@ final class CliDiff {
         }
     }
 
-    private static Either<ProcessError, String> withUntracked(Path workTree, List<String> unstaged,
-                                                              List<String> untracked, Map<String, String> env) {
+    private static Either<ProcessError, String> withUntracked(
+            Path workTree, List<String> unstaged, List<String> untracked, Map<String, String> env) {
         return run(workTree, List.of("add", "--intent-to-add", "--").appendAll(untracked), env)
                 .flatMap(added -> tracked(workTree, UNSTAGED, unstaged.appendAll(untracked), env));
     }
 
-    private static Either<ProcessError, String> tracked(Path workTree, List<String> subcommand, List<String> paths,
-                                                        Map<String, String> env) {
+    private static Either<ProcessError, String> tracked(
+            Path workTree, List<String> subcommand, List<String> paths, Map<String, String> env) {
         return paths.isEmpty() ? Either.right("") : run(workTree, subcommand.appendAll(paths), env);
     }
 

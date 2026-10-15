@@ -20,7 +20,7 @@ public record GitHubChecks(Set<String> remotes, Map<Branch.Name, Checks> byBranc
      * point at its repository.
      */
     public static GitHubChecks of(BranchChecks checks, Map<String, String> urls) {
-        return new GitHubChecks(urls.filterValues(checks::isAt).keySet(),
-                checks.checks().mapKeys(Branch.Name::new));
+        return new GitHubChecks(
+                urls.filterValues(checks::isAt).keySet(), checks.checks().mapKeys(Branch.Name::new));
     }
 }

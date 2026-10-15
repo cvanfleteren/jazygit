@@ -9,5 +9,4 @@ import net.vanfleteren.jazygit.state.Popup;
  *
  * @param bases the branches to choose from, the default branch first
  */
-public record BasePopup(Branch.Name branch, List<Branch.Name> bases) implements Popup {
-}
+public record BasePopup(Branch.Name branch, List<Branch.Name> bases) implements Popup {}

@@ -16,16 +16,19 @@ import net.vanfleteren.jazygit.state.Update.Next;
  */
 public final class ResetUpdate {
 
-    private ResetUpdate() {
-    }
+    private ResetUpdate() {}
 
     public static Next update(Model model, ResetMsg msg) {
         return switch (msg) {
-            case ResetMsg.Requested(Sha sha) -> Update.ask(model, model.commit(sha).map(ResetPopup::new));
+            case ResetMsg.Requested(Sha sha) ->
+                Update.ask(model, model.commit(sha).map(ResetPopup::new));
             case ResetMsg.Cancelled() -> Next.of(model.withoutPopup(ResetPopup.class));
             case ResetMsg.Chosen(ResetMode mode) -> chosen(model, mode);
-            case ResetMsg.HardConfirmed() -> Update.confirm(model, HardResetPopup.class,
-                    popup -> Option.of(new Reset(popup.target().sha(), ResetMode.HARD)));
+            case ResetMsg.HardConfirmed() ->
+                Update.confirm(
+                        model,
+                        HardResetPopup.class,
+                        popup -> Option.of(new Reset(popup.target().sha(), ResetMode.HARD)));
             case ResetMsg.HardCancelled() -> Next.of(model.withoutPopup(HardResetPopup.class));
         };
     }
@@ -38,10 +41,13 @@ public final class ResetUpdate {
         boolean confirm = mode == ResetMode.HARD && !discarded.contains(0);
         return confirm
                 ? model.popup(ResetPopup.class)
-                .map(popup -> Update.ask(model.withoutPopup(ResetPopup.class),
-                        new HardResetPopup(popup.target(), discarded)))
-                .getOrElse(() -> Next.of(model))
-                : Update.confirm(model, ResetPopup.class, popup -> Option.of(new Reset(popup.target().sha(), mode)));
+                        .map(popup -> Update.ask(
+                                model.withoutPopup(ResetPopup.class), new HardResetPopup(popup.target(), discarded)))
+                        .getOrElse(() -> Next.of(model))
+                : Update.confirm(
+                        model,
+                        ResetPopup.class,
+                        popup -> Option.of(new Reset(popup.target().sha(), mode)));
     }
 
     /**
@@ -49,7 +55,9 @@ public final class ResetUpdate {
      * when the status is not known.
      */
     private static Option<Integer> discarded(Model model) {
-        return model.status().toOption().map(RepoStatus::files)
+        return model.status()
+                .toOption()
+                .map(RepoStatus::files)
                 .map(files -> files.count(file -> file.type() != ChangeType.UNTRACKED));
     }
 }

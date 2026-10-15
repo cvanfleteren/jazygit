@@ -1,14 +1,19 @@
 package net.vanfleteren.jazygit.ui;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.keys.Keymap;
+import java.util.ArrayList;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.feature.stash.StashMsg;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
+import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
@@ -17,23 +22,19 @@ import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 class StashPanelTest {
 
     private static Model withStashes(List<Stash> stashes) {
-        return Update.update(TestModels.loaded(), new LoadMsg.StashesLoaded(stashes)).model();
+        return Update.update(TestModels.loaded(), new LoadMsg.StashesLoaded(stashes))
+                .model();
     }
 
     @Test
     void listsTheStashes() throws Exception {
-        Model model = withStashes(List.of(new Stash("stash@{0}", new Sha("s0"), "WIP on main abc1234 Add widget"),
+        Model model = withStashes(List.of(
+                new Stash("stash@{0}", new Sha("s0"), "WIP on main abc1234 Add widget"),
                 new Stash("stash@{1}", new Sha("s1"), "older")));
-        StashPanel panel = new StashPanel(msg -> { });
+        StashPanel panel = new StashPanel(msg -> {});
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, null))) {
             String screen = RenderedText.ofLarge(testRunner, () -> panel.render(model, null));
@@ -62,9 +63,13 @@ class StashPanelTest {
             testRunner.pilot().press('?');
             testRunner.pilot().pause();
 
-            assertEquals(java.util.List.of(new StashMsg.PopRequested(older), new StashMsg.DropRequested(older),
-                    new HelpMsg.Requested(Scopes.STASH.id(),
-                            Keymap.standard().actions(Scopes.STASH, Option.of(older)))), dispatched);
+            assertEquals(
+                    java.util.List.of(
+                            new StashMsg.PopRequested(older),
+                            new StashMsg.DropRequested(older),
+                            new HelpMsg.Requested(
+                                    Scopes.STASH.id(), Keymap.standard().actions(Scopes.STASH, Option.of(older)))),
+                    dispatched);
             testRunner.pilot().quit();
         }
     }
@@ -89,8 +94,9 @@ class StashPanelTest {
 
     @Test
     void theListScrollsAlongWithTheSelection() throws Exception {
-        Model model = withStashes(List.range(0, 80).map(i -> new Stash("stash@{" + i + "}", new Sha("s" + i), "work " + i)));
-        StashPanel panel = new StashPanel(msg -> { });
+        Model model =
+                withStashes(List.range(0, 80).map(i -> new Stash("stash@{" + i + "}", new Sha("s" + i), "work " + i)));
+        StashPanel panel = new StashPanel(msg -> {});
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, StashPanel.ID))) {
             testRunner.runner().focusManager().setFocus(StashPanel.ID);
@@ -110,9 +116,9 @@ class StashPanelTest {
 
     @Test
     void theHighlightOnlyShowsWhileThePaneIsInUseAndComesBackWhereItWas() throws Exception {
-        Model model = withStashes(List.of(new Stash("stash@{0}", new Sha("s0"), "newest"),
-                new Stash("stash@{1}", new Sha("s1"), "older")));
-        StashPanel panel = new StashPanel(msg -> { });
+        Model model = withStashes(List.of(
+                new Stash("stash@{0}", new Sha("s0"), "newest"), new Stash("stash@{1}", new Sha("s1"), "older")));
+        StashPanel panel = new StashPanel(msg -> {});
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, StashPanel.ID))) {
             testRunner.runner().focusManager().setFocus(StashPanel.ID);
@@ -120,8 +126,8 @@ class StashPanelTest {
             testRunner.pilot().press(KeyCode.DOWN);
             testRunner.pilot().pause();
 
-            String inactive = RenderedText.ofLarge(testRunner,
-                    () -> panel.render(model, CommitsPanel.ID, CommitsPanel.ID));
+            String inactive =
+                    RenderedText.ofLarge(testRunner, () -> panel.render(model, CommitsPanel.ID, CommitsPanel.ID));
             assertTrue(inactive.contains("  0 newest"), inactive);
             assertTrue(inactive.contains("  1 older"), inactive);
             assertFalse(inactive.contains(">"), inactive);

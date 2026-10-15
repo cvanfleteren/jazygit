@@ -2,8 +2,11 @@ package net.vanfleteren.jazygit.feature.commit;
 
 import static net.vanfleteren.jazygit.state.TestModels.errorText;
 import static net.vanfleteren.jazygit.state.TestModels.failed;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Commit;
@@ -16,12 +19,9 @@ import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.TestModels;
-import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import java.time.Instant;
 
 /**
  * Resetting the checked out branch to a commit.
@@ -35,11 +35,19 @@ class ResetUpdateTest {
     private static final FileEntry UNTRACKED = new FileEntry("c.txt", ChangeType.UNTRACKED, false, true);
 
     private static Commit commit(String sha, List<String> parents) {
-        return new Commit(new Sha(sha), "Ada", "ada@example.com", Instant.EPOCH, "Commit " + sha, "", parents.map(Sha::new).toList());
+        return new Commit(
+                new Sha(sha),
+                "Ada",
+                "ada@example.com",
+                Instant.EPOCH,
+                "Commit " + sha,
+                "",
+                parents.map(Sha::new).toList());
     }
 
     private static Model withFiles(FileEntry... files) {
-        Model model = Update.update(TestModels.loaded(), new LoadMsg.CommitsLoaded(List.of(TIP, ROOT))).model();
+        Model model = Update.update(TestModels.loaded(), new LoadMsg.CommitsLoaded(List.of(TIP, ROOT)))
+                .model();
         RepoStatus status = new RepoStatus(Head.onBranch(new Branch.Name("main"), TIP.sha()), List.of(files));
         return Update.update(model, new LoadMsg.StatusLoaded(status)).model();
     }
@@ -101,22 +109,26 @@ class ResetUpdateTest {
 
         assertEquals(List.of(), next.cmds());
         assertEquals(Option.none(), next.model().popup(ResetPopup.class));
-        assertEquals(Option.of(new HardResetPopup(ROOT, Option.of(2))), next.model().popup(HardResetPopup.class));
+        assertEquals(
+                Option.of(new HardResetPopup(ROOT, Option.of(2))), next.model().popup(HardResetPopup.class));
     }
 
     @Test
     void aHardResetAsksWhenTheStatusIsNotKnown() {
-        Model model = Update.update(Update.init("repo").model(), new LoadMsg.CommitsLoaded(List.of(TIP, ROOT))).model();
+        Model model = Update.update(Update.init("repo").model(), new LoadMsg.CommitsLoaded(List.of(TIP, ROOT)))
+                .model();
 
         Next next = Update.update(opened(model), new ResetMsg.Chosen(ResetMode.HARD));
 
         assertEquals(List.of(), next.cmds());
-        assertEquals(Option.of(new HardResetPopup(ROOT, Option.none())), next.model().popup(HardResetPopup.class));
+        assertEquals(
+                Option.of(new HardResetPopup(ROOT, Option.none())), next.model().popup(HardResetPopup.class));
     }
 
     @Test
     void confirmingTheHardResetResets() {
-        Model asking = Update.update(opened(withFiles(MODIFIED)), new ResetMsg.Chosen(ResetMode.HARD)).model();
+        Model asking = Update.update(opened(withFiles(MODIFIED)), new ResetMsg.Chosen(ResetMode.HARD))
+                .model();
 
         Next next = Update.update(asking, new ResetMsg.HardConfirmed());
 
@@ -126,7 +138,8 @@ class ResetUpdateTest {
 
     @Test
     void cancellingTheHardResetClosesEverything() {
-        Model asking = Update.update(opened(withFiles(MODIFIED)), new ResetMsg.Chosen(ResetMode.HARD)).model();
+        Model asking = Update.update(opened(withFiles(MODIFIED)), new ResetMsg.Chosen(ResetMode.HARD))
+                .model();
 
         Next next = Update.update(asking, new ResetMsg.HardCancelled());
 
@@ -149,6 +162,8 @@ class ResetUpdateTest {
 
         Next next = Update.update(TestModels.loaded(), failed(reset, "locked"));
 
-        assertEquals(Option.of("Reset to " + new Sha("abcdef0123456789").shortSha() + " failed: locked"), errorText(next.model()));
+        assertEquals(
+                Option.of("Reset to " + new Sha("abcdef0123456789").shortSha() + " failed: locked"),
+                errorText(next.model()));
     }
 }

@@ -1,15 +1,19 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import static dev.tamboui.toolkit.Toolkit.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
-import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.git.model.Upstream;
-import net.vanfleteren.jazygit.git.model.Sha;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
+import java.time.Instant;
+import java.util.ArrayList;
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -17,12 +21,6 @@ import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
-import static dev.tamboui.toolkit.Toolkit.*;
-
-import java.time.Instant;
-import java.util.ArrayList;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * The popup asking to confirm a force push: Enter confirms, Escape cancels.
@@ -30,13 +28,24 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class ForcePushDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<ForcePushPopup> dialog = new net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<>(BranchDialogs.FORCE_PUSH, dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<ForcePushPopup> dialog =
+            new net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<>(BranchDialogs.FORCE_PUSH, dispatched::add);
     private final Model open = openModel();
 
     private static Model openModel() {
-        Model diverged = Update.update(TestModels.loaded(), new LoadMsg.BranchesLoaded(List.of(
-                new Branch(new Branch.Name("main"), true, new Sha("aaaa"), Instant.EPOCH, true, false, Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("main")), 1, 2)))))).model();
-        return Update.update(diverged, new PushMsg.Requested(new Branch.Name("main"))).model();
+        Model diverged = Update.update(
+                        TestModels.loaded(),
+                        new LoadMsg.BranchesLoaded(List.of(new Branch(
+                                new Branch.Name("main"),
+                                true,
+                                new Sha("aaaa"),
+                                Instant.EPOCH,
+                                true,
+                                false,
+                                Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("main")), 1, 2))))))
+                .model();
+        return Update.update(diverged, new PushMsg.Requested(new Branch.Name("main")))
+                .model();
     }
 
     @Test
@@ -64,7 +73,8 @@ class ForcePushDialogTest {
         try (ToolkitTestRunner runner = start()) {
             String screen = RenderedText.ofLarge(runner, this::view);
             org.junit.jupiter.api.Assertions.assertTrue(screen.contains("Force push main"), screen);
-            org.junit.jupiter.api.Assertions.assertTrue(screen.contains("Your branch has diverged from the remote branch."), screen);
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    screen.contains("Your branch has diverged from the remote branch."), screen);
             org.junit.jupiter.api.Assertions.assertTrue(screen.contains("(enter) confirm   (esc) cancel"), screen);
         }
     }

@@ -4,9 +4,8 @@ import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
-import lombok.With;
-
 import java.util.function.Function;
+import lombok.With;
 
 /**
  * What the user chose to keep from one session to the next.
@@ -37,12 +36,15 @@ public record Settings(ThemeName theme, Option<String> ghExecutable) {
      */
     static Read read(Function<String, Option<Object>> value) {
         Option<Object> theme = value.apply(THEME);
-        Option<ThemeName> validTheme = theme.flatMap(found -> found instanceof String id ? ThemeName.of(id) : Option.none());
+        Option<ThemeName> validTheme =
+                theme.flatMap(found -> found instanceof String id ? ThemeName.of(id) : Option.none());
         Option<Object> gh = value.apply(GH_EXECUTABLE);
-        Option<String> validGh = gh.flatMap(found -> found instanceof String path && !path.isBlank()
-                ? Option.of(path) : Option.none());
-        return new Read(new Settings(validTheme.getOrElse(DEFAULT.theme), validGh),
-                Option.when(theme.isDefined() && validTheme.isEmpty(), THEME).toList()
+        Option<String> validGh =
+                gh.flatMap(found -> found instanceof String path && !path.isBlank() ? Option.of(path) : Option.none());
+        return new Read(
+                new Settings(validTheme.getOrElse(DEFAULT.theme), validGh),
+                Option.when(theme.isDefined() && validTheme.isEmpty(), THEME)
+                        .toList()
                         .appendAll(Option.when(gh.isDefined() && validGh.isEmpty(), GH_EXECUTABLE)));
     }
 
@@ -59,13 +61,13 @@ public record Settings(ThemeName theme, Option<String> ghExecutable) {
      */
     Map<String, Object> entries() {
         return LinkedHashMap.<String, Object>of(THEME, theme.id())
-                .merge(ghExecutable.map(path -> LinkedHashMap.<String, Object>of(GH_EXECUTABLE, path))
+                .merge(ghExecutable
+                        .map(path -> LinkedHashMap.<String, Object>of(GH_EXECUTABLE, path))
                         .getOrElse(LinkedHashMap.empty()));
     }
 
     /**
      * Settings as read, with the keys that had an invalid value.
      */
-    record Read(Settings settings, List<String> invalid) {
-    }
+    record Read(Settings settings, List<String> invalid) {}
 }

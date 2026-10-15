@@ -1,11 +1,14 @@
 package net.vanfleteren.jazygit.feature.discard;
 
 import static dev.tamboui.toolkit.Toolkit.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
+import java.util.ArrayList;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Scope;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -16,11 +19,6 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 /**
  * The popup asking what to discard.
  */
@@ -30,24 +28,33 @@ class DiscardDialogTest {
     private static final FileEntry STAGED = new FileEntry("b.txt", ChangeType.ADDED);
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<DiscardPopup> dialog = new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(DiscardDialog.SPEC, dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<DiscardPopup> dialog =
+            new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(DiscardDialog.SPEC, dispatched::add);
 
     private static Model open(FileEntry... files) {
-        return Update.update(TestModels.loaded(), new DiscardMsg.Requested(List.of(files))).model();
+        return Update.update(TestModels.loaded(), new DiscardMsg.Requested(List.of(files)))
+                .model();
     }
 
     @Test
     void lettersChooseAnOption() throws Exception {
-        assertEquals(List.of(new DiscardMsg.Chosen(Scope.ALL)), pressing(open(MODIFIED), r -> r.pilot().press('x')));
+        assertEquals(
+                List.of(new DiscardMsg.Chosen(Scope.ALL)),
+                pressing(open(MODIFIED), r -> r.pilot().press('x')));
         dispatched.clear();
-        assertEquals(List.of(new DiscardMsg.Chosen(Scope.UNSTAGED)), pressing(open(MODIFIED), r -> r.pilot().press('u')));
+        assertEquals(
+                List.of(new DiscardMsg.Chosen(Scope.UNSTAGED)),
+                pressing(open(MODIFIED), r -> r.pilot().press('u')));
         dispatched.clear();
-        assertEquals(List.of(new DiscardMsg.Cancelled()), pressing(open(MODIFIED), r -> r.pilot().press('c')));
+        assertEquals(
+                List.of(new DiscardMsg.Cancelled()),
+                pressing(open(MODIFIED), r -> r.pilot().press('c')));
     }
 
     @Test
     void arrowsAndEnterChooseTheSelectedLine() throws Exception {
-        assertEquals(List.of(new DiscardMsg.Chosen(Scope.ALL)),
+        assertEquals(
+                List.of(new DiscardMsg.Chosen(Scope.ALL)),
                 pressing(open(MODIFIED), r -> r.pilot().press(KeyCode.ENTER)));
         dispatched.clear();
         assertEquals(List.of(new DiscardMsg.Chosen(Scope.UNSTAGED)), pressing(open(MODIFIED), r -> {
@@ -64,7 +71,9 @@ class DiscardDialogTest {
 
     @Test
     void escapeCancels() throws Exception {
-        assertEquals(List.of(new DiscardMsg.Cancelled()), pressing(open(MODIFIED), r -> r.pilot().press(KeyCode.ESCAPE)));
+        assertEquals(
+                List.of(new DiscardMsg.Cancelled()),
+                pressing(open(MODIFIED), r -> r.pilot().press(KeyCode.ESCAPE)));
     }
 
     @Test
@@ -75,7 +84,9 @@ class DiscardDialogTest {
             r.pilot().press(KeyCode.ENTER);
         }));
         dispatched.clear();
-        assertEquals(List.of(new DiscardMsg.Chosen(Scope.ALL)), pressing(open(STAGED), r -> r.pilot().press('x')));
+        assertEquals(
+                List.of(new DiscardMsg.Chosen(Scope.ALL)),
+                pressing(open(STAGED), r -> r.pilot().press('x')));
     }
 
     @Test

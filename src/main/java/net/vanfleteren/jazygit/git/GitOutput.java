@@ -4,11 +4,10 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
-import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
-import net.vanfleteren.jazygit.git.model.Sha;
-
 import java.time.Instant;
 import java.util.regex.Pattern;
+import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
+import net.vanfleteren.jazygit.git.model.Sha;
 
 /**
  * Splitting and reading what git prints. Whatever does not have the expected shape is an
@@ -32,8 +31,7 @@ final class GitOutput {
      */
     static final String REF_FIELD_SEPARATOR = "%1f";
 
-    private GitOutput() {
-    }
+    private GitOutput() {}
 
     /**
      * The lines of {@code raw}.

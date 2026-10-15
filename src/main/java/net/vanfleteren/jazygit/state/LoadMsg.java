@@ -82,6 +82,5 @@ public sealed interface LoadMsg extends Msg {
         }
     }
 
-    record Failed(Cmd.Load cmd, Failure failure) implements LoadMsg {
-    }
+    record Failed(Cmd.Load cmd, Failure failure) implements LoadMsg {}
 }

@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.discard;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.util.function.Predicate;
 import net.vanfleteren.jazygit.feature.discard.DiscardCmd.Discard;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Chosen;
@@ -14,15 +15,12 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
-import java.util.function.Predicate;
-
 /**
  * Discarding changes.
  */
 public final class DiscardUpdate {
 
-    private DiscardUpdate() {
-    }
+    private DiscardUpdate() {}
 
     public static Next update(Model model, DiscardMsg msg) {
         return switch (msg) {
@@ -38,9 +36,12 @@ public final class DiscardUpdate {
 
     private static Next chosen(Model model, Scope scope) {
         // Without unstaged changes there is nothing to discard of that kind.
-        return Update.confirm(model, DiscardPopup.class, popup -> Option.of(popup)
-                .filter(open -> scope == Scope.ALL || open.hasUnstaged())
-                .map(open -> new Discard(plan(open.files(), scope))));
+        return Update.confirm(
+                model,
+                DiscardPopup.class,
+                popup -> Option.of(popup)
+                        .filter(open -> scope == Scope.ALL || open.hasUnstaged())
+                        .map(open -> new Discard(plan(open.files(), scope))));
     }
 
     /**
@@ -53,11 +54,14 @@ public final class DiscardUpdate {
         List<FileEntry> picked = files.filter(affected);
         List<String> untracked = FileEntry.paths(picked, f -> f.type() == ChangeType.UNTRACKED);
         List<FileEntry> tracked = picked.filter(f -> f.type() != ChangeType.UNTRACKED);
-        Predicate<FileEntry> removed = f -> f.type() == ChangeType.RENAMED || f.type() == ChangeType.ADDED && f.staged();
+        Predicate<FileEntry> removed =
+                f -> f.type() == ChangeType.RENAMED || f.type() == ChangeType.ADDED && f.staged();
         return scope == Scope.UNSTAGED
                 ? new DiscardPlan(untracked, FileEntry.paths(tracked, f -> true), List.empty(), List.empty())
-                : new DiscardPlan(untracked, List.empty(),
-                FileEntry.paths(tracked, removed.negate()).appendAll(tracked.flatMap(FileEntry::origin)),
-                FileEntry.paths(tracked, removed));
+                : new DiscardPlan(
+                        untracked,
+                        List.empty(),
+                        FileEntry.paths(tracked, removed.negate()).appendAll(tracked.flatMap(FileEntry::origin)),
+                        FileEntry.paths(tracked, removed));
     }
 }

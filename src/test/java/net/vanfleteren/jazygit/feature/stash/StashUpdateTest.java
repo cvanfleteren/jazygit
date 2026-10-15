@@ -1,25 +1,24 @@
 package net.vanfleteren.jazygit.feature.stash;
 
 import static net.vanfleteren.jazygit.git.StubGitProvider.executed;
-import net.vanfleteren.jazygit.state.Operation;
+import static net.vanfleteren.jazygit.state.TestModels.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.feature.stash.StashCmd.Stash;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.LogEntry;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
-
-import static net.vanfleteren.jazygit.state.TestModels.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class StashUpdateTest {
 
@@ -31,14 +30,20 @@ class StashUpdateTest {
 
     private static Model withChanges() {
         Model model = loaded();
-        Head head = ((net.vanfleteren.jazygit.state.Loadable.Loaded<RepoStatus>) model.status()).value().head();
-        return Update.update(model, new LoadMsg.StatusLoaded(
-                new RepoStatus(head, List.of(new FileEntry("a.txt", ChangeType.MODIFIED))))).model();
+        Head head = ((net.vanfleteren.jazygit.state.Loadable.Loaded<RepoStatus>) model.status())
+                .value()
+                .head();
+        return Update.update(
+                        model,
+                        new LoadMsg.StatusLoaded(
+                                new RepoStatus(head, List.of(new FileEntry("a.txt", ChangeType.MODIFIED)))))
+                .model();
     }
 
     @Test
     void requestingOpensTheDialogWhenThereAreChanges() {
-        assertEquals(Option.of(new StashPopup()),
+        assertEquals(
+                Option.of(new StashPopup()),
                 Update.update(withChanges(), new StashMsg.Requested()).model().popup());
     }
 
@@ -81,8 +86,11 @@ class StashUpdateTest {
 
     @Test
     void doneLogsTheCommandsAndFailureIsReported() {
-        Next done = Update.update(loaded(), succeeded(new StashCmd.Stash(Option.of("x")), "git stash push --message x"));
-        assertEquals(List.of(new LogEntry(Operation.STASH, executed("git stash push --message x"))), done.model().commandLog());
+        Next done =
+                Update.update(loaded(), succeeded(new StashCmd.Stash(Option.of("x")), "git stash push --message x"));
+        assertEquals(
+                List.of(new LogEntry(Operation.STASH, executed("git stash push --message x"))),
+                done.model().commandLog());
 
         Next failed = Update.update(loaded(), failed(new StashCmd.Stash(Option.of("x")), "boom"));
         assertEquals(Option.of("Stash failed: boom"), errorText(failed.model()));
@@ -90,18 +98,21 @@ class StashUpdateTest {
 
     @Test
     void poppingAListedStashRunsGit() {
-        Model model = Update.update(loaded(), new LoadMsg.StashesLoaded(
-                List.of(STASH))).model();
+        Model model = Update.update(loaded(), new LoadMsg.StashesLoaded(List.of(STASH)))
+                .model();
 
-        assertEquals(List.of(new StashCmd.Pop(STASH)),
+        assertEquals(
+                List.of(new StashCmd.Pop(STASH)),
                 Update.update(model, new StashMsg.PopRequested(STASH)).cmds());
-        assertEquals(List.of(), Update.update(model, new StashMsg.PopRequested(UNLISTED)).cmds());
+        assertEquals(
+                List.of(),
+                Update.update(model, new StashMsg.PopRequested(UNLISTED)).cmds());
     }
 
     @Test
     void droppingAListedStashAsksForConfirmationFirst() {
-        Model model = Update.update(loaded(), new LoadMsg.StashesLoaded(
-                List.of(STASH))).model();
+        Model model = Update.update(loaded(), new LoadMsg.StashesLoaded(List.of(STASH)))
+                .model();
 
         Next asked = Update.update(model, new StashMsg.DropRequested(STASH));
         assertEquals(List.of(), asked.cmds());
@@ -111,26 +122,32 @@ class StashUpdateTest {
         assertEquals(List.of(new StashCmd.Drop(STASH)), confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());
 
-        assertEquals(Option.none(), Update.update(model, new StashMsg.DropRequested(UNLISTED)).model().popup());
+        assertEquals(
+                Option.none(),
+                Update.update(model, new StashMsg.DropRequested(UNLISTED))
+                        .model()
+                        .popup());
     }
 
     @Test
     void cancellingTheDropClosesTheDialogWithoutDropping() {
-        Model model = Update.update(loaded(), new LoadMsg.StashesLoaded(
-                List.of(STASH))).model();
+        Model model = Update.update(loaded(), new LoadMsg.StashesLoaded(List.of(STASH)))
+                .model();
         Model asked = Update.update(model, new StashMsg.DropRequested(STASH)).model();
 
         Next cancelled = Update.update(asked, new StashMsg.DropCancelled());
 
         assertEquals(Option.none(), cancelled.model().popup());
         assertEquals(List.of(), cancelled.cmds());
-        assertEquals(List.of(), Update.update(model, new StashMsg.DropConfirmed()).cmds());
+        assertEquals(
+                List.of(), Update.update(model, new StashMsg.DropConfirmed()).cmds());
     }
 
     @Test
     void droppedLogsTheCommandsAndFailureIsReported() {
         Next dropped = Update.update(loaded(), succeeded(new StashCmd.Drop(STASH), "git stash drop stash@{0}"));
-        assertEquals(List.of(new LogEntry(Operation.STASH_DROP, executed("git stash drop stash@{0}"))),
+        assertEquals(
+                List.of(new LogEntry(Operation.STASH_DROP, executed("git stash drop stash@{0}"))),
                 dropped.model().commandLog());
 
         Next failed = Update.update(loaded(), failed(new StashCmd.Drop(STASH), "no such stash"));
@@ -140,7 +157,8 @@ class StashUpdateTest {
     @Test
     void poppedLogsTheCommandsAndFailureIsReported() {
         Next popped = Update.update(loaded(), succeeded(new StashCmd.Pop(STASH), "git stash pop stash@{0}"));
-        assertEquals(List.of(new LogEntry(Operation.STASH_POP, executed("git stash pop stash@{0}"))),
+        assertEquals(
+                List.of(new LogEntry(Operation.STASH_POP, executed("git stash pop stash@{0}"))),
                 popped.model().commandLog());
 
         Next failed = Update.update(loaded(), failed(new StashCmd.Pop(STASH), "conflict"));

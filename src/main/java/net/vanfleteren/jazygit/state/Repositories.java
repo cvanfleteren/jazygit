@@ -1,10 +1,9 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.control.Either;
+import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.OpenError;
-
-import java.nio.file.Path;
 
 /**
  * Where the app opens another repository in place of the one it shows, as if it had been started there. The app

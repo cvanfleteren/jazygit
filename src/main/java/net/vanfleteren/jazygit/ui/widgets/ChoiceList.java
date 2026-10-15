@@ -1,5 +1,8 @@
 package net.vanfleteren.jazygit.ui.widgets;
 
+import static dev.tamboui.toolkit.Toolkit.list;
+import static dev.tamboui.toolkit.Toolkit.text;
+
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.event.EventResult;
@@ -9,18 +12,14 @@ import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
-
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
-import static dev.tamboui.toolkit.Toolkit.list;
-import static dev.tamboui.toolkit.Toolkit.text;
 
 /**
  * A selectable list of options that ends in a cancel option, for inside a popup. An option is chosen with its
@@ -50,11 +49,7 @@ public final class ChoiceList<P extends Popup> {
         this.choices = choices.append(new Choice<P>(CANCEL_KEY, "dialog.choice.cancel", onCancel));
         this.lines = lines(this.choices);
         this.dispatch = dispatch;
-        this.list = list()
-                .id(id)
-                .focusable()
-                .highlightSymbol("")
-                .onKeyEvent(this::handleKey);
+        this.list = list().id(id).focusable().highlightSymbol("").onKeyEvent(this::handleKey);
         list.selected(firstOption());
     }
 
@@ -71,8 +66,10 @@ public final class ChoiceList<P extends Popup> {
             List<Line> before = choice.heading()
                     .map(key -> List.<Line>of(new Heading(Messages.get(key))))
                     .getOrElse(List.empty())
-                    .prependAll(index > 0 && (choice.heading().isDefined() || grouped && last)
-                            ? List.of(new Blank()) : List.empty());
+                    .prependAll(
+                            index > 0 && (choice.heading().isDefined() || grouped && last)
+                                    ? List.of(new Blank())
+                                    : List.empty());
             return before.append(new OptionLine(index));
         });
     }
@@ -81,7 +78,8 @@ public final class ChoiceList<P extends Popup> {
      * The list for {@code popup}, one line per option and per heading.
      */
     public StyledElement<?> render(Model model, P popup) {
-        show(choices.map(choice -> new Row(choice.label().apply(popup), choice.enabled().test(model, popup))));
+        show(choices.map(
+                choice -> new Row(choice.label().apply(popup), choice.enabled().test(model, popup))));
         return list.length(height());
     }
 
@@ -108,9 +106,10 @@ public final class ChoiceList<P extends Popup> {
 
     private StyledElement<?> element(Line line) {
         return switch (line) {
-            case OptionLine(int index) -> shown.get(index).enabled()
-                    ? text(lineText(line))
-                    : text(lineText(line)).addClass(Theme.Classes.DISABLED);
+            case OptionLine(int index) ->
+                shown.get(index).enabled()
+                        ? text(lineText(line))
+                        : text(lineText(line)).addClass(Theme.Classes.DISABLED);
             case Heading(String heading) -> text(heading).addClass(Theme.Classes.BOLD);
             case Blank() -> text("");
         };
@@ -118,9 +117,14 @@ public final class ChoiceList<P extends Popup> {
 
     private String lineText(Line line) {
         return switch (line) {
-            case OptionLine(int index) -> shown.lift().apply(index)
-                    .map(row -> Messages.get("dialog.choice.row", String.valueOf(choices.get(index).key()), row.label()))
-                    .getOrElse("");
+            case OptionLine(int index) ->
+                shown.lift()
+                        .apply(index)
+                        .map(row -> Messages.get(
+                                "dialog.choice.row",
+                                String.valueOf(choices.get(index).key()),
+                                row.label()))
+                        .getOrElse("");
             case Heading(String heading) -> heading;
             case Blank() -> "";
         };
@@ -140,9 +144,9 @@ public final class ChoiceList<P extends Popup> {
             highlight(lines.lastIndexWhere(OptionLine.class::isInstance));
             return EventResult.HANDLED;
         }
-        Option<Choice<P>> chosen = event.code() == KeyCode.ESCAPE ? Option.of(choices.last())
-                : event.isConfirm() ? selected().map(choices::get)
-                : choices.find(choice -> event.isChar(choice.key()));
+        Option<Choice<P>> chosen = event.code() == KeyCode.ESCAPE
+                ? Option.of(choices.last())
+                : event.isConfirm() ? selected().map(choices::get) : choices.find(choice -> event.isChar(choice.key()));
         chosen.forEach(this::choose);
         return chosen.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
     }
@@ -151,7 +155,8 @@ public final class ChoiceList<P extends Popup> {
      * The index of the highlighted option.
      */
     private Option<Integer> selected() {
-        return lines.lift().apply(Math.clamp(list.selected(), 0, lines.size() - 1))
+        return lines.lift()
+                .apply(Math.clamp(list.selected(), 0, lines.size() - 1))
                 .flatMap(line -> line instanceof OptionLine(int index) ? Option.of(index) : Option.none());
     }
 
@@ -172,7 +177,9 @@ public final class ChoiceList<P extends Popup> {
     private void highlight(int line) {
         if (line != list.selected()) {
             list.selected(line);
-            selected().flatMap(index -> choices.get(index).onHighlight()).forEach(preview -> dispatch.accept(preview.get()));
+            selected()
+                    .flatMap(index -> choices.get(index).onHighlight())
+                    .forEach(preview -> dispatch.accept(preview.get()));
         }
     }
 
@@ -202,24 +209,19 @@ public final class ChoiceList<P extends Popup> {
     /**
      * A line of the list: an option, or the heading of a group of them, or the blank line before one.
      */
-    private sealed interface Line {
-    }
+    private sealed interface Line {}
 
     /**
      * An option as it is shown: its text, and whether it applies.
      */
-    private record Row(String label, boolean enabled) {
-    }
+    private record Row(String label, boolean enabled) {}
 
     /**
      * @param index the index of the option among the choices
      */
-    private record OptionLine(int index) implements Line {
-    }
+    private record OptionLine(int index) implements Line {}
 
-    private record Heading(String text) implements Line {
-    }
+    private record Heading(String text) implements Line {}
 
-    private record Blank() implements Line {
-    }
+    private record Blank() implements Line {}
 }

@@ -1,22 +1,21 @@
 package net.vanfleteren.jazygit.gh;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import net.vanfleteren.jazygit.gh.model.GhAccount;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.attribute.PosixFilePermissions;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 /**
  * Running gh as the account configured for a repository, with a script standing in for gh that writes down how
@@ -71,14 +70,17 @@ class GhTokenTest {
 
     @Test
     void aTokenThatCannotBeHadIsKeptAsSuch() throws IOException {
-        GhToken token = new GhToken(dir, gh("echo 'no oauth token found for github.com account alice-work' >&2; exit 1"),
+        GhToken token = new GhToken(
+                dir,
+                gh("echo 'no oauth token found for github.com account alice-work' >&2; exit 1"),
                 () -> Option.of(ALICE));
 
         GhError error = token.environment().getLeft();
 
         GhError.TokenUnavailable unavailable = assertInstanceOf(GhError.TokenUnavailable.class, error);
         assertEquals(ALICE, unavailable.account());
-        assertEquals(new GhError.CommandFailed(Option.of("no oauth token found for github.com account alice-work"), 1),
+        assertEquals(
+                new GhError.CommandFailed(Option.of("no oauth token found for github.com account alice-work"), 1),
                 unavailable.cause());
         token.environment();
         assertEquals(1, called().size());
@@ -118,10 +120,13 @@ class GhTokenTest {
 
         new GhProcess(dir, gh, token).log(GhCommand.gh("pr", "close", "1")).get();
 
-        assertEquals(List.of("auth token --user alice-work --hostname github.com token=",
-                "pr close 1 token=token1",
-                "auth token --user alice-work --hostname github.com token=",
-                "pr close 1 token=token2"), called());
+        assertEquals(
+                List.of(
+                        "auth token --user alice-work --hostname github.com token=",
+                        "pr close 1 token=token1",
+                        "auth token --user alice-work --hostname github.com token=",
+                        "pr close 1 token=token2"),
+                called());
     }
 
     @Test
@@ -136,7 +141,8 @@ class GhTokenTest {
     @Test
     void anEnterpriseServerGetsItsOwnToken() {
         assertEquals(HashMap.of("GH_TOKEN", "t"), GhToken.variables("github.com", "t"));
-        assertEquals(HashMap.of("GH_ENTERPRISE_TOKEN", "t", "GH_HOST", "github.corp.example"),
+        assertEquals(
+                HashMap.of("GH_ENTERPRISE_TOKEN", "t", "GH_HOST", "github.corp.example"),
                 GhToken.variables("github.corp.example", "t"));
     }
 

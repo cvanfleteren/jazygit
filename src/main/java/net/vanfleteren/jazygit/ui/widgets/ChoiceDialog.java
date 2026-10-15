@@ -4,15 +4,14 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Popup;
-
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Popup;
 
 /**
  * The standard popup offering a choice between several options, as a {@link ChoiceList}. Whether the popup is
@@ -21,7 +20,6 @@ import java.util.function.Supplier;
  * @param <P> the popup that makes this dialog show
  */
 public final class ChoiceDialog<P extends Popup> implements PopupView {
-
 
     private final Spec<P> spec;
     private final ChoiceList<P> list;
@@ -46,12 +44,16 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
     @Override
     public Option<Element> render(Model model) {
         Option<P> open = model.popup(spec.popupType());
-        open.filter(popup -> !shownFor.contains(popup)).forEach(popup -> list.highlightKey(spec.opensAt().apply(popup)));
+        open.filter(popup -> !shownFor.contains(popup))
+                .forEach(popup -> list.highlightKey(spec.opensAt().apply(popup)));
         shownFor = open;
         return open.map(popup -> {
             StyledElement<?> rows = list.render(model, popup);
-            return DialogFrame.withHint(spec.title().apply(popup), Math.max(spec.minWidth(), list.width() + DialogFrame.FRAME),
-                    "dialog.hint.selectCancel", List.of(rows));
+            return DialogFrame.withHint(
+                    spec.title().apply(popup),
+                    Math.max(spec.minWidth(), list.width() + DialogFrame.FRAME),
+                    "dialog.hint.selectCancel",
+                    List.of(rows));
         });
     }
 
@@ -65,8 +67,13 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
      * @param heading     the message key of the heading it starts a group of options under, if any
      * @param onHighlight the message for highlighting it with the arrow keys, if it shows what choosing it does
      */
-    public record Choice<P>(char key, Function<P, String> label, Supplier<Msg> msg, BiPredicate<Model, P> enabled,
-                            Option<String> heading, Option<Supplier<Msg>> onHighlight) {
+    public record Choice<P>(
+            char key,
+            Function<P, String> label,
+            Supplier<Msg> msg,
+            BiPredicate<Model, P> enabled,
+            Option<String> heading,
+            Option<Supplier<Msg>> onHighlight) {
 
         /**
          * An option with a text that depends on the popup, without a heading.
@@ -122,22 +129,37 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
      * @param minWidth  the width it takes at least, borders included, so it does not grow as the options change
      * @param opensAt   the key of the option highlighted when the dialog opens, given the popup; else the first
      */
-    public record Spec<P>(String id, Class<P> popupType, Function<P, String> title, List<Choice<P>> choices,
-                          Supplier<Msg> onCancel, int minWidth, Function<P, Option<Character>> opensAt) {
+    public record Spec<P>(
+            String id,
+            Class<P> popupType,
+            Function<P, String> title,
+            List<Choice<P>> choices,
+            Supplier<Msg> onCancel,
+            int minWidth,
+            Function<P, Option<Character>> opensAt) {
 
         /**
          * A dialog that opens with its first option highlighted.
          */
-        public Spec(String id, Class<P> popupType, Function<P, String> title, List<Choice<P>> choices,
-                    Supplier<Msg> onCancel, int minWidth) {
+        public Spec(
+                String id,
+                Class<P> popupType,
+                Function<P, String> title,
+                List<Choice<P>> choices,
+                Supplier<Msg> onCancel,
+                int minWidth) {
             this(id, popupType, title, choices, onCancel, minWidth, popup -> Option.none());
         }
 
         /**
          * A dialog as wide as a list, or its widest option.
          */
-        public Spec(String id, Class<P> popupType, Function<P, String> title, List<Choice<P>> choices,
-                    Supplier<Msg> onCancel) {
+        public Spec(
+                String id,
+                Class<P> popupType,
+                Function<P, String> title,
+                List<Choice<P>> choices,
+                Supplier<Msg> onCancel) {
             this(id, popupType, title, choices, onCancel, DialogFrame.LIST_WIDTH);
         }
 

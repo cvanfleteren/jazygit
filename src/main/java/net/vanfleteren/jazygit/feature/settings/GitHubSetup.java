@@ -14,8 +14,8 @@ import net.vanfleteren.jazygit.state.Failure;
  * @param user    the account the repository is configured to use, if any
  * @param logins  the accounts gh is logged in to, on every host, or why they could not be listed
  */
-public record GitHubSetup(Either<Failure, String> version, String host, Option<String> user,
-                          Either<Failure, List<GhLogin>> logins) {
+public record GitHubSetup(
+        Either<Failure, String> version, String host, Option<String> user, Either<Failure, List<GhLogin>> logins) {
 
     /**
      * The accounts gh is logged in to on the repository's host.
@@ -36,7 +36,8 @@ public record GitHubSetup(Either<Failure, String> version, String host, Option<S
      * accounts could not be listed, that is not known, and taken to be so.
      */
     public boolean userAvailable() {
-        return logins.isLeft() || user.forAll(configured -> onHost().exists(login -> login.login().equals(configured)
-                && login.valid()));
+        return logins.isLeft()
+                || user.forAll(
+                        configured -> onHost().exists(login -> login.login().equals(configured) && login.valid()));
     }
 }

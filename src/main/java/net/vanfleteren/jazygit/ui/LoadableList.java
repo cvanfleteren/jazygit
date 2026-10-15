@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
+import static dev.tamboui.toolkit.Toolkit.*;
+
 import dev.tamboui.text.Line;
 import dev.tamboui.toolkit.Toolkit;
 import dev.tamboui.toolkit.element.StyledElement;
@@ -9,13 +11,10 @@ import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.widgets.common.ScrollBarPolicy;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.util.function.Function;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
-
-import java.util.function.Function;
-
-import static dev.tamboui.toolkit.Toolkit.*;
 
 /**
  * A focusable list showing a {@link Loadable} value. The list widget keeps its own selection, so
@@ -42,14 +41,13 @@ final class LoadableList<T> {
         this(title, id, items, (previous, next, selected) -> selected, highlights);
     }
 
-    LoadableList(String title, String id, Function<T, List<Row>> items, Reselect<T> reselect,
-                 Theme.Highlights highlights) {
+    LoadableList(
+            String title, String id, Function<T, List<Row>> items, Reselect<T> reselect, Theme.Highlights highlights) {
         this.title = title;
         this.items = items;
         this.reselect = reselect;
         this.highlights = highlights;
-        this.list = list()
-                .id(id)
+        this.list = list().id(id)
                 .focusable()
                 .autoScroll()
                 .scrollbar(ScrollBarPolicy.AS_NEEDED)
@@ -76,16 +74,18 @@ final class LoadableList<T> {
         List<Row> rows = switch (value) {
             case Loadable.Loading<T>() -> List.of(Row.of(Placeholders.loading()));
             case Loadable.Failed<T>(Failure failure) -> List.of(Row.of(Placeholders.error(failure)));
-            case Loadable.Loaded<T>(T loaded) -> items.isEmpty()
-                    ? empty.map(text -> List.of(Row.of(Seg.styled(text, Theme.Classes.DIM)))).getOrElse(items)
-                    : items;
+            case Loadable.Loaded<T>(T loaded) ->
+                items.isEmpty()
+                        ? empty.map(text -> List.of(Row.of(Seg.styled(text, Theme.Classes.DIM))))
+                                .getOrElse(items)
+                        : items;
         };
         if (!shown.exists(previous -> previous == value)) {
             Option<T> before = shown.flatMap(Loadable::toOption);
             shown = Option.of(value);
             show(rows);
-            before.forEach(previous -> value.toOption()
-                    .forEach(after -> list.selected(reselect.apply(previous, after, selectedIndex()))));
+            before.forEach(previous ->
+                    value.toOption().forEach(after -> list.selected(reselect.apply(previous, after, selectedIndex()))));
             if (list.selected() >= rows.size()) {
                 list.selected(Math.max(0, rows.size() - 1));
             }
@@ -159,9 +159,11 @@ final class LoadableList<T> {
          * it; when it is gone, the selection stays where it was.
          */
         static <E, K> Reselect<List<E>> following(Function<E, K> key) {
-            return (previous, next, selected) -> previous.lift().apply(selected)
+            return (previous, next, selected) -> previous.lift()
+                    .apply(selected)
                     .map(key)
-                    .map(item -> next.indexWhere(candidate -> key.apply(candidate).equals(item)))
+                    .map(item ->
+                            next.indexWhere(candidate -> key.apply(candidate).equals(item)))
                     .filter(index -> index >= 0)
                     .getOrElse(selected);
         }
@@ -217,7 +219,8 @@ final class LoadableList<T> {
 
         StyledElement<?> element() {
             StyledElement<?> first = firstLine();
-            return detail.<StyledElement<?>>map(line -> column(first, Toolkit.text(line).addClass(Theme.Classes.DIM)))
+            return detail.<StyledElement<?>>map(
+                            line -> column(first, Toolkit.text(line).addClass(Theme.Classes.DIM)))
                     .getOrElse(first);
         }
 

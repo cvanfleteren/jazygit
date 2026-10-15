@@ -48,36 +48,58 @@ import net.vanfleteren.jazygit.settings.ThemeName;
  *                            gives it back to; none before the view reported one
  */
 @With
-public record Model(String repositoryName,
-                    Loadable<RepoStatus> status,
-                    Loadable<List<Branch>> branches,
-                    Loadable<List<RemoteRef>> remoteBranches,
-                    BranchesTab branchesTab,
-                    Loadable<List<Commit>> commits,
-                    Loadable<List<Stash>> stashes,
-                    Option<Preview<BranchRef, List<Commit>>> branchLog,
-                    Option<Preview<Sha, DiffText>> commitDetail,
-                    Option<Preview<List<FileEntry>, Diffs>> fileDiff,
-                    Set<Cmd.Load> refreshing,
-                    Option<AppError> error,
-                    Map<BranchRef, Operation> busy,
-                    Option<Fetching> fetching,
-                    Option<Map<Branch.Name, PullRequest>> pullRequests,
-                    Option<Failure> pullRequestsFailure,
-                    int readingPullRequests,
-                    Option<GitHubChecks> branchChecks,
-                    int readingBranchChecks,
-                    List<LogEntry> commandLog,
-                    Option<Popup> popup,
-                    Settings settings,
-                    Option<ThemeName> themeOverride,
-                    Option<String> focusedPane) {
+public record Model(
+        String repositoryName,
+        Loadable<RepoStatus> status,
+        Loadable<List<Branch>> branches,
+        Loadable<List<RemoteRef>> remoteBranches,
+        BranchesTab branchesTab,
+        Loadable<List<Commit>> commits,
+        Loadable<List<Stash>> stashes,
+        Option<Preview<BranchRef, List<Commit>>> branchLog,
+        Option<Preview<Sha, DiffText>> commitDetail,
+        Option<Preview<List<FileEntry>, Diffs>> fileDiff,
+        Set<Cmd.Load> refreshing,
+        Option<AppError> error,
+        Map<BranchRef, Operation> busy,
+        Option<Fetching> fetching,
+        Option<Map<Branch.Name, PullRequest>> pullRequests,
+        Option<Failure> pullRequestsFailure,
+        int readingPullRequests,
+        Option<GitHubChecks> branchChecks,
+        int readingBranchChecks,
+        List<LogEntry> commandLog,
+        Option<Popup> popup,
+        Settings settings,
+        Option<ThemeName> themeOverride,
+        Option<String> focusedPane) {
 
     public static Model initial(String repositoryName) {
-        return new Model(repositoryName, Loadable.loading(), Loadable.loading(), Loadable.loading(),
-                BranchesTab.LOCAL, Loadable.loading(), Loadable.loading(), Option.none(),
-                Option.none(), Option.none(), HashSet.empty(), Option.none(), HashMap.empty(), Option.none(), Option.none(), Option.none(), 0, Option.none(), 0, List.empty(),
-                Option.none(), Settings.DEFAULT, Option.none(), Option.none());
+        return new Model(
+                repositoryName,
+                Loadable.loading(),
+                Loadable.loading(),
+                Loadable.loading(),
+                BranchesTab.LOCAL,
+                Loadable.loading(),
+                Loadable.loading(),
+                Option.none(),
+                Option.none(),
+                Option.none(),
+                HashSet.empty(),
+                Option.none(),
+                HashMap.empty(),
+                Option.none(),
+                Option.none(),
+                Option.none(),
+                0,
+                Option.none(),
+                0,
+                List.empty(),
+                Option.none(),
+                Settings.DEFAULT,
+                Option.none(),
+                Option.none());
     }
 
     /**
@@ -98,14 +120,16 @@ public record Model(String repositoryName,
      * The commit {@code sha} in the log of HEAD, if the log is loaded and has it.
      */
     public Option<Commit> commit(Sha sha) {
-        return commits.toOption().flatMap(loaded -> loaded.find(commit -> commit.sha().equals(sha)));
+        return commits.toOption()
+                .flatMap(loaded -> loaded.find(commit -> commit.sha().equals(sha)));
     }
 
     /**
      * The local branch {@code name}, if the branches are loaded and it is one of them.
      */
     public Option<Branch> branch(Branch.Name name) {
-        return branches.toOption().flatMap(loaded -> loaded.find(branch -> branch.name().equals(name)));
+        return branches.toOption()
+                .flatMap(loaded -> loaded.find(branch -> branch.name().equals(name)));
     }
 
     /**
@@ -120,15 +144,18 @@ public record Model(String repositoryName,
      * The remote-tracking branch of {@code branch}, if the remote branches are loaded and it is one of them.
      */
     public Option<RemoteRef> remoteBranch(RemoteBranch branch) {
-        return remoteBranches.toOption().flatMap(loaded -> loaded.find(ref -> ref.branch().equals(branch)));
+        return remoteBranches
+                .toOption()
+                .flatMap(loaded -> loaded.find(ref -> ref.branch().equals(branch)));
     }
 
     /**
      * The local branch that follows {@code upstream}, if the branches are loaded and one does.
      */
     public Option<Branch> trackingBranch(RemoteBranch upstream) {
-        return branches.toOption().flatMap(loaded -> loaded.find(branch ->
-                branch.upstream().exists(followed -> followed.branch().equals(upstream))));
+        return branches.toOption()
+                .flatMap(loaded -> loaded.find(branch ->
+                        branch.upstream().exists(followed -> followed.branch().equals(upstream))));
     }
 
     /**
@@ -146,9 +173,8 @@ public record Model(String repositoryName,
         Option<RemoteBranch> upstream = branch.remoteUpstream().map(Upstream::branch);
         return upstream.exists(followed -> !mayBeOnGitHub(followed))
                 ? Option.none()
-                : pullRequests.flatMap(open -> upstream.map(RemoteBranch::branch)
-                .flatMap(open::get)
-                .orElse(() -> open.get(branch.name())));
+                : pullRequests.flatMap(open ->
+                        upstream.map(RemoteBranch::branch).flatMap(open::get).orElse(() -> open.get(branch.name())));
     }
 
     /**
@@ -169,7 +195,8 @@ public record Model(String repositoryName,
      * How the CI checks are doing on {@code remote}, if it is a branch on GitHub.
      */
     public Option<Checks> checks(RemoteBranch remote) {
-        return branchChecks.filter(checks -> checks.remotes().contains(remote.remote()))
+        return branchChecks
+                .filter(checks -> checks.remotes().contains(remote.remote()))
                 .flatMap(checks -> checks.byBranch().get(remote.branch()));
     }
 

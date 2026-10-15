@@ -11,8 +11,7 @@ import net.vanfleteren.jazygit.state.Model;
  */
 final class Branches {
 
-    private Branches() {
-    }
+    private Branches() {}
 
     /**
      * The checked out branch and {@code other}, if {@code other} is a known branch other than the checked out

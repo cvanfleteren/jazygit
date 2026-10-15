@@ -10,9 +10,7 @@ public sealed interface SettingsMsg extends Msg {
         return SettingsUpdate.update(model, this);
     }
 
-    record Saved() implements SettingsMsg {
-    }
+    record Saved() implements SettingsMsg {}
 
-    record NotSaved(Failure failure) implements SettingsMsg {
-    }
+    record NotSaved(Failure failure) implements SettingsMsg {}
 }

@@ -5,13 +5,11 @@ import dev.tamboui.css.engine.StyleEngine;
 import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
 import io.vavr.collection.List;
-
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
-import net.vanfleteren.jazygit.settings.ThemeName;
-
 import java.util.Set;
+import net.vanfleteren.jazygit.settings.ThemeName;
 
 /**
  * The CSS styling of the UI: the {@link StyleEngine} holding the stylesheets, and the class names
@@ -21,20 +19,22 @@ public final class Theme {
 
     private static final String RESOURCE_DIR = "/net/vanfleteren/jazygit/themes/";
 
-    private Theme() {
-    }
+    private Theme() {}
 
     /**
      * The style engine with all themes loaded, the dark one active.
      */
     public static Either<LoadFailed, StyleEngine> createEngine() {
         StyleEngine engine = StyleEngine.create();
-        return List.of(ThemeName.values()).map(ThemeName::id)
-                .foldLeft(Either.<LoadFailed, StyleEngine>right(engine), (loaded, name) -> loaded.flatMap(e ->
-                        Try.run(() -> e.loadStylesheet(name, RESOURCE_DIR + name + ".tcss"))
-                                .toEither()
-                                .mapLeft(cause -> new LoadFailed(name, cause))
-                                .map(done -> e)))
+        return List.of(ThemeName.values())
+                .map(ThemeName::id)
+                .foldLeft(
+                        Either.<LoadFailed, StyleEngine>right(engine),
+                        (loaded, name) ->
+                                loaded.flatMap(e -> Try.run(() -> e.loadStylesheet(name, RESOURCE_DIR + name + ".tcss"))
+                                        .toEither()
+                                        .mapLeft(cause -> new LoadFailed(name, cause))
+                                        .map(done -> e)))
                 .peek(e -> e.setActiveStylesheet(ThemeName.DARK.id()));
     }
 
@@ -62,8 +62,9 @@ public final class Theme {
      */
     public static Highlights highlights(StyleEngine engine) {
         return active -> active
-                ? Option.of(ownStyle(engine, Classes.SELECTION)).filter(style -> !style.equals(Style.EMPTY))
-                .getOrElse(Highlights.DEFAULT.of(true))
+                ? Option.of(ownStyle(engine, Classes.SELECTION))
+                        .filter(style -> !style.equals(Style.EMPTY))
+                        .getOrElse(Highlights.DEFAULT.of(true))
                 : ownStyle(engine, Classes.INACTIVE_SELECTION);
     }
 
@@ -80,8 +81,10 @@ public final class Theme {
      * on rows with the background of the {@link Classes#SELECTION} rule.
      */
     public static SelectedText selectedText(StyleEngine engine) {
-        return new SelectedText(Option.ofOptional(ownStyle(engine, Classes.SELECTION).bg()),
-                Option.ofOptional(baseStyle(engine).fg()), Option.ofOptional(ownStyle(engine, Classes.SELECTED_TEXT).fg()));
+        return new SelectedText(
+                Option.ofOptional(ownStyle(engine, Classes.SELECTION).bg()),
+                Option.ofOptional(baseStyle(engine).fg()),
+                Option.ofOptional(ownStyle(engine, Classes.SELECTED_TEXT).fg()));
     }
 
     private static Style baseStyle(StyleEngine engine) {
@@ -103,8 +106,7 @@ public final class Theme {
                 .filter(bg -> !base.bg().equals(java.util.Optional.of(bg)))
                 .map(withFg::bg)
                 .getOrElse(withFg);
-        return List.ofAll(styled.addModifiers()).removeAll(base.addModifiers())
-                .foldLeft(withBg, Style::addModifier);
+        return List.ofAll(styled.addModifiers()).removeAll(base.addModifiers()).foldLeft(withBg, Style::addModifier);
     }
 
     /**
@@ -180,15 +182,13 @@ public final class Theme {
          */
         public static final String BACKDROP = "backdrop";
 
-        private Classes() {
-        }
+        private Classes() {}
     }
 
     /**
      * A stylesheet of a theme could not be read.
      */
-    public record LoadFailed(String theme, Throwable cause) {
-    }
+    public record LoadFailed(String theme, Throwable cause) {}
 
     /**
      * How what is behind an open popup is dimmed: every cell gets the terminal's dim attribute, and plain text
@@ -234,7 +234,8 @@ public final class Theme {
          * {@code style} as it is on a highlighted row, when it is a cell of one.
          */
         public Style of(Style style) {
-            boolean highlighted = rowBg.isDefined() && Option.ofOptional(style.bg()).equals(rowBg);
+            boolean highlighted =
+                    rowBg.isDefined() && Option.ofOptional(style.bg()).equals(rowBg);
             boolean isPlain = Option.ofOptional(style.fg()).equals(plainFg);
             return highlighted && isPlain ? fg.map(style::fg).getOrElse(style) : style;
         }

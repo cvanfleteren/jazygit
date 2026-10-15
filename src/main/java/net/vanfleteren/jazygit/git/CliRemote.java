@@ -6,11 +6,10 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-
 import java.nio.file.Path;
 import java.time.Duration;
+import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
  * Talks to the remotes through the {@code git} command line tool, in the background: nothing may ask the
@@ -25,15 +24,15 @@ final class CliRemote {
     private static final String SKIP_FETCH_ALL_KEY = ".skipfetchall";
     private static final String URL_KEY = ".url";
 
-    private CliRemote() {
-    }
+    private CliRemote() {}
 
     /**
      * The remotes {@code git fetch --all} would fetch: all of them but those with {@code skipFetchAll} set.
      */
     static Either<ProcessError, List<String>> remotes(Path workTree) {
         return GitProcess.read(workTree, GitCommand.reading("remote"), raw -> Either.right(names(raw)))
-                .flatMap(remotes -> skippedByFetchAll(workTree).map(remotes::removeAll).mapLeft(GitFailure::error));
+                .flatMap(remotes ->
+                        skippedByFetchAll(workTree).map(remotes::removeAll).mapLeft(GitFailure::error));
     }
 
     private static List<String> names(String raw) {
@@ -45,7 +44,9 @@ final class CliRemote {
      */
     private static Either<GitFailure<ProcessError>, List<String>> skippedByFetchAll(Path workTree) {
         // git config --get-regexp exits with 1, saying nothing, when no key matches.
-        return GitProcess.ask(workTree, GitCommand.reading("config", "--bool", "--get-regexp", "^remote\\..*\\.skipfetchall$"))
+        return GitProcess.ask(
+                        workTree,
+                        GitCommand.reading("config", "--bool", "--get-regexp", "^remote\\..*\\.skipfetchall$"))
                 .map(answer -> answer.map(output -> skipped(output.stdout())).getOrElse(List.empty()));
     }
 
@@ -93,8 +94,8 @@ final class CliRemote {
      *
      * @param credentials environment variables that tell the credential helper which account to use
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> run(Path workTree, GitCommand command,
-                                                                       Map<String, String> credentials) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> run(
+            Path workTree, GitCommand command, Map<String, String> credentials) {
         return toRemote(workTree, command, credentials).flatMap(remote -> GitProcess.log(workTree, remote));
     }
 
@@ -105,20 +106,19 @@ final class CliRemote {
      * @param environment the value of the environment variable {@code GIT_SSH_COMMAND}, if it is set
      * @param credentials environment variables that tell the credential helper which account to use
      */
-    static Either<GitFailure<ProcessError>, GitCommand> toRemote(Path workTree, GitCommand command,
-                                                                 Option<String> environment,
-                                                                 Map<String, String> credentials) {
-        return configuredSsh(workTree, environment).map(ssh -> command
-                .withEnvironment(credentials.put("GIT_SSH_COMMAND", batchMode(ssh)))
-                .withTimeout(TIMEOUT));
+    static Either<GitFailure<ProcessError>, GitCommand> toRemote(
+            Path workTree, GitCommand command, Option<String> environment, Map<String, String> credentials) {
+        return configuredSsh(workTree, environment)
+                .map(ssh -> command.withEnvironment(credentials.put("GIT_SSH_COMMAND", batchMode(ssh)))
+                        .withTimeout(TIMEOUT));
     }
 
     /**
      * {@code command}, which talks to a remote, as {@link #toRemote(Path, GitCommand, Option, Map)} runs it, with
      * the ssh command of this process's environment.
      */
-    static Either<GitFailure<ProcessError>, GitCommand> toRemote(Path workTree, GitCommand command,
-                                                                 Map<String, String> credentials) {
+    static Either<GitFailure<ProcessError>, GitCommand> toRemote(
+            Path workTree, GitCommand command, Map<String, String> credentials) {
         return toRemote(workTree, command, Option.of(System.getenv("GIT_SSH_COMMAND")), credentials);
     }
 
@@ -126,14 +126,15 @@ final class CliRemote {
      * The ssh command git would run, or none when it runs plain {@code ssh}: {@code GIT_SSH_COMMAND}, else
      * {@code core.sshCommand}. Only looked up, so not logged.
      */
-    private static Either<GitFailure<ProcessError>, Option<String>> configuredSsh(Path workTree,
-                                                                                  Option<String> environment) {
+    private static Either<GitFailure<ProcessError>, Option<String>> configuredSsh(
+            Path workTree, Option<String> environment) {
         Option<String> set = environment.filter(command -> !command.isBlank());
         // git config --get exits with 1, saying nothing, when the key is not set.
         return set.isDefined()
                 ? Either.right(set)
                 : GitProcess.ask(workTree, GitCommand.reading("config", "--get", "core.sshCommand"))
-                .map(answer -> answer.map(output -> output.stdout().strip()).filter(command -> !command.isEmpty()));
+                        .map(answer ->
+                                answer.map(output -> output.stdout().strip()).filter(command -> !command.isEmpty()));
     }
 
     /**

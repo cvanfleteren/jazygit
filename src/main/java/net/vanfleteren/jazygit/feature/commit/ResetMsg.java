@@ -16,24 +16,19 @@ public sealed interface ResetMsg extends Msg {
     /**
      * The user asked to reset the checked out branch to the commit {@code sha}; how is still to be chosen.
      */
-    record Requested(Sha sha) implements ResetMsg {
-    }
+    record Requested(Sha sha) implements ResetMsg {}
 
-    record Cancelled() implements ResetMsg {
-    }
+    record Cancelled() implements ResetMsg {}
 
     /**
      * The user chose how to reset.
      */
-    record Chosen(ResetMode mode) implements ResetMsg {
-    }
+    record Chosen(ResetMode mode) implements ResetMsg {}
 
     /**
      * The user confirmed discarding the uncommitted changes with a hard reset.
      */
-    record HardConfirmed() implements ResetMsg {
-    }
+    record HardConfirmed() implements ResetMsg {}
 
-    record HardCancelled() implements ResetMsg {
-    }
+    record HardCancelled() implements ResetMsg {}
 }

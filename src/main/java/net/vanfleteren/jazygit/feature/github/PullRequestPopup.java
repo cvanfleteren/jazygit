@@ -14,8 +14,9 @@ import net.vanfleteren.jazygit.state.Popup;
  * @param pullRequest what is known of it from the list of pull requests
  * @param details     what was read about it, or why that failed; nothing while it is being read
  */
-public record PullRequestPopup(Branch.Name branch, PullRequest pullRequest,
-                               Option<Either<Failure, PullRequestDetails>> details) implements Popup {
+public record PullRequestPopup(
+        Branch.Name branch, PullRequest pullRequest, Option<Either<Failure, PullRequestDetails>> details)
+        implements Popup {
 
     /**
      * The popup while its details are being read.
@@ -41,8 +42,10 @@ public record PullRequestPopup(Branch.Name branch, PullRequest pullRequest,
      * and branch protection are left to gh, whose refusal is shown as the error of the merge.
      */
     public boolean mergeable() {
-        return open() && readDetails().exists(details -> !details.draft()
-                && details.mergeable() != PullRequestDetails.Mergeable.CONFLICTING);
+        return open()
+                && readDetails()
+                        .exists(details ->
+                                !details.draft() && details.mergeable() != PullRequestDetails.Mergeable.CONFLICTING);
     }
 
     private Option<PullRequestDetails> readDetails() {

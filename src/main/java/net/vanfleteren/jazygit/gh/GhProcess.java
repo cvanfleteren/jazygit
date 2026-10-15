@@ -3,12 +3,11 @@ package net.vanfleteren.jazygit.gh;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
+import java.nio.file.Path;
+import java.util.function.Function;
 import net.vanfleteren.jazygit.process.Exec;
 import net.vanfleteren.jazygit.process.ExecFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-
-import java.nio.file.Path;
-import java.util.function.Function;
 
 /**
  * Runs {@link GhCommand}s through the {@code gh} command line tool. The only place that starts gh.
@@ -62,28 +61,35 @@ final class GhProcess {
      * accept it, as it may have been replaced since.
      */
     private Either<GhError, Output> execute(GhCommand command) {
-        return token.environment().flatMap(variables -> execute(command, variables).fold(
-                // Without a configured account, gh uses its own, which asking again does not change.
-                error -> variables.isEmpty() || !rejected(error) ? Either.left(error) : executeAgain(command),
-                Either::right));
-    }
-
-    private Either<GhError, Output> executeAgain(GhCommand command) {
-        token.forget();
-        return token.environment().flatMap(variables -> execute(command, variables));
+        return token.environment()
+                .flatMap(variables -> execute(command, variables)
+                        .fold(
+                                // Without a configured account, gh uses its own, which asking again does not change.
+                                error -> variables.isEmpty() || !rejected(error)
+                                        ? Either.left(error)
+                                        : executeAgain(command),
+                                Either::right));
     }
 
     private Either<GhError, Output> execute(GhCommand command, Map<String, String> variables) {
-        return Exec.run(workTree, command.commandLine(executable), command.environment().merge(variables),
+        return Exec.run(
+                        workTree,
+                        command.commandLine(executable),
+                        command.environment().merge(variables),
                         command.timeout())
                 .<GhError>mapLeft(failure -> switch (failure) {
                     case ExecFailure.NotStarted(var cause) -> new GhError.GhUnavailable(cause);
                     case ExecFailure.TimedOut() -> new GhError.TimedOut(command.operation());
                     case ExecFailure.Interrupted() -> new GhError.Interrupted(command.operation());
                     case ExecFailure.NonZero(int exitCode, String stderr, String stdout) ->
-                            new GhError.CommandFailed(Exec.explanation(stderr, stdout), exitCode);
+                        new GhError.CommandFailed(Exec.explanation(stderr, stdout), exitCode);
                 })
                 .map(stdout -> new Output(stdout, command.executed()));
+    }
+
+    private Either<GhError, Output> executeAgain(GhCommand command) {
+        token.forget();
+        return token.environment().flatMap(variables -> execute(command, variables));
     }
 
     /**

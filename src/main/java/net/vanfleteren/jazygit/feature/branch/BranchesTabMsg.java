@@ -16,12 +16,10 @@ public sealed interface BranchesTabMsg extends Msg {
      * The user asked for the other list of the branches pane: the remote branches instead of the local ones, or
      * the other way around.
      */
-    record Switched() implements BranchesTabMsg {
-    }
+    record Switched() implements BranchesTabMsg {}
 
     /**
      * The user clicked the name of {@code tab} in the title of the branches pane.
      */
-    record Chosen(BranchesTab tab) implements BranchesTabMsg {
-    }
+    record Chosen(BranchesTab tab) implements BranchesTabMsg {}
 }

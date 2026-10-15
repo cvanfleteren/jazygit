@@ -19,8 +19,8 @@ public final class Scopes {
     /**
      * The selected remote-tracking branch.
      */
-    public static final Scope<RemoteBranch> REMOTE_BRANCHES = new Scope<>("remoteBranches",
-            "panel.remoteBranches.title");
+    public static final Scope<RemoteBranch> REMOTE_BRANCHES =
+            new Scope<>("remoteBranches", "panel.remoteBranches.title");
     /**
      * The selected commit.
      */
@@ -30,6 +30,5 @@ public final class Scopes {
      */
     public static final Scope<Stash> STASH = new Scope<>("stash", "panel.stash.title");
 
-    private Scopes() {
-    }
+    private Scopes() {}
 }

@@ -17,67 +17,52 @@ public sealed interface SettingsPanelMsg extends Msg {
     /**
      * The user asked to see the settings.
      */
-    record Requested() implements SettingsPanelMsg {
-    }
+    record Requested() implements SettingsPanelMsg {}
 
     /**
      * How gh is set up for the repository, as read for the settings.
      */
-    record GitHubRead(GitHubSetup gitHub) implements SettingsPanelMsg {
-    }
+    record GitHubRead(GitHubSetup gitHub) implements SettingsPanelMsg {}
 
-    record Closed() implements SettingsPanelMsg {
-    }
+    record Closed() implements SettingsPanelMsg {}
 
-    record ThemeRequested() implements SettingsPanelMsg {
-    }
+    record ThemeRequested() implements SettingsPanelMsg {}
 
-    record GhExecutableRequested() implements SettingsPanelMsg {
-    }
+    record GhExecutableRequested() implements SettingsPanelMsg {}
 
-    record GhExecutableCancelled() implements SettingsPanelMsg {
-    }
+    record GhExecutableCancelled() implements SettingsPanelMsg {}
 
     /**
      * The user entered the gh executable to run; blank for the one on the PATH.
      */
-    record GhExecutableEntered(String executable) implements SettingsPanelMsg {
-    }
+    record GhExecutableEntered(String executable) implements SettingsPanelMsg {}
 
     /**
      * Whether {@code executable}, none for the one on the PATH, is a gh that runs, by its version.
      */
     record GhExecutableChecked(Option<String> executable, Either<Failure, String> version)
-            implements SettingsPanelMsg {
-    }
+            implements SettingsPanelMsg {}
 
-    record AccountRequested() implements SettingsPanelMsg {
-    }
+    record AccountRequested() implements SettingsPanelMsg {}
 
-    record AccountCancelled() implements SettingsPanelMsg {
-    }
+    record AccountCancelled() implements SettingsPanelMsg {}
 
     /**
      * The user chose the account the repository uses; none for gh's active one.
      */
-    record AccountChosen(Option<String> user) implements SettingsPanelMsg {
-    }
+    record AccountChosen(Option<String> user) implements SettingsPanelMsg {}
 
     /**
      * The repository uses the account chosen now, and is shown again with it.
      */
-    record AccountSet() implements SettingsPanelMsg {
-    }
+    record AccountSet() implements SettingsPanelMsg {}
 
-    record AccountNotSet(Failure failure) implements SettingsPanelMsg {
-    }
+    record AccountNotSet(Failure failure) implements SettingsPanelMsg {}
 
     /**
      * The repository is shown again, with the settings changed.
      */
-    record Reopened() implements SettingsPanelMsg {
-    }
+    record Reopened() implements SettingsPanelMsg {}
 
-    record NotReopened(Failure failure) implements SettingsPanelMsg {
-    }
+    record NotReopened(Failure failure) implements SettingsPanelMsg {}
 }

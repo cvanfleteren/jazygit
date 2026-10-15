@@ -11,6 +11,12 @@ import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -21,13 +27,6 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
-
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
 
 /**
  * Left-side panel listing the local branches, with the current branch marked. Space checks out
@@ -79,29 +78,40 @@ public class BranchesPanel {
     /**
      * @param highlights how the highlighted branch is shown, also when the pane is not in use
      */
-    public BranchesPanel(Consumer<Msg> dispatch, Consumer<BranchesTab> tabClicked, Clock clock,
-                         Theme.Highlights highlights) {
+    public BranchesPanel(
+            Consumer<Msg> dispatch, Consumer<BranchesTab> tabClicked, Clock clock, Theme.Highlights highlights) {
         this.tabClicked = tabClicked;
-        list = new LoadableList<>(Messages.get("panel.branches.title"), ID,
-                branches -> branches
-                        .map(b -> row(b, Duration.between(b.tipTime(), clock.instant()),
-                                gitHub.apply(b),
-                                busy.get(new BranchRef.Local(b.name())).map(operation -> spinner(operation, clock.instant())))),
-                BranchesPanel::reselect, highlights);
+        list = new LoadableList<>(
+                Messages.get("panel.branches.title"),
+                ID,
+                branches -> branches.map(b -> row(
+                        b,
+                        Duration.between(b.tipTime(), clock.instant()),
+                        gitHub.apply(b),
+                        busy.get(new BranchRef.Local(b.name())).map(operation -> spinner(operation, clock.instant())))),
+                BranchesPanel::reselect,
+                highlights);
         // The highlight alone marks the selection; a symbol would indent the rows.
         list.highlightSymbol("");
         list.onKey(event -> Option.when(tab == BranchesTab.LOCAL, event)
                 .flatMap(key -> PaneKeys.sending(keymap.handle(Scopes.BRANCHES, key, selectedBranch()), dispatch)));
-        remoteList = new LoadableList<>(Messages.get("panel.remoteBranches.title"), ID,
-                refs -> refs.map(ref -> remoteRow(ref, Duration.between(ref.tipTime(), clock.instant()),
-                        tracked.test(ref.branch()), remoteGitHub.apply(ref.branch()),
-                        busy.get(new BranchRef.Remote(ref.branch())).map(operation -> spinner(operation, clock.instant())))),
-                LoadableList.Reselect.following(RemoteRef::branch), highlights);
+        remoteList = new LoadableList<>(
+                Messages.get("panel.remoteBranches.title"),
+                ID,
+                refs -> refs.map(ref -> remoteRow(
+                        ref,
+                        Duration.between(ref.tipTime(), clock.instant()),
+                        tracked.test(ref.branch()),
+                        remoteGitHub.apply(ref.branch()),
+                        busy.get(new BranchRef.Remote(ref.branch()))
+                                .map(operation -> spinner(operation, clock.instant())))),
+                LoadableList.Reselect.following(RemoteRef::branch),
+                highlights);
         remoteList.highlightSymbol("");
         remoteList.whenEmpty(Messages.get("remoteBranches.empty"));
         remoteList.onKey(event -> Option.when(tab == BranchesTab.REMOTE, event)
-                .flatMap(key -> PaneKeys.sending(keymap.handle(Scopes.REMOTE_BRANCHES, key, selectedRemoteBranch()),
-                        dispatch)));
+                .flatMap(key -> PaneKeys.sending(
+                        keymap.handle(Scopes.REMOTE_BRANCHES, key, selectedRemoteBranch()), dispatch)));
     }
 
     /**
@@ -122,17 +132,18 @@ public class BranchesPanel {
     /**
      * @param spinner the label and the spinner frame of a busy branch, as one text
      */
-    private static LoadableList.Row row(Branch b, Duration since, List<LoadableList.Seg> gitHub,
-                                        Option<String> spinner) {
-        return new LoadableList.Row(
-                List.of(LoadableList.Seg.of("%4s ".formatted(TimeText.age(since)) + (b.current() ? "* " : "  ") + b.name().value()))
-                        .appendAll(sync(b))
-                        .appendAll(gitHub)
-                        .appendAll(spinner.map(text -> LoadableList.Seg.styled(" " + text, Theme.Classes.SPINNER))));
+    private static LoadableList.Row row(
+            Branch b, Duration since, List<LoadableList.Seg> gitHub, Option<String> spinner) {
+        return new LoadableList.Row(List.of(LoadableList.Seg.of("%4s ".formatted(TimeText.age(since))
+                        + (b.current() ? "* " : "  ")
+                        + b.name().value()))
+                .appendAll(sync(b))
+                .appendAll(gitHub)
+                .appendAll(spinner.map(text -> LoadableList.Seg.styled(" " + text, Theme.Classes.SPINNER))));
     }
 
-    private static LoadableList.Row remoteRow(RemoteRef ref, Duration since, boolean tracked,
-                                              List<LoadableList.Seg> gitHub, Option<String> spinner) {
+    private static LoadableList.Row remoteRow(
+            RemoteRef ref, Duration since, boolean tracked, List<LoadableList.Seg> gitHub, Option<String> spinner) {
         String text = "%4s   ".formatted(TimeText.age(since)) + ref.branch().shortName();
         return new LoadableList.Row(
                 List.of(tracked ? LoadableList.Seg.styled(text, Theme.Classes.DIM) : LoadableList.Seg.of(text))
@@ -150,7 +161,8 @@ public class BranchesPanel {
         Span remote = Span.raw(Messages.get("panel.remoteBranches.title"));
         return tab == BranchesTab.LOCAL
                 ? Line.from(local.bold().underlined(), Span.raw(TITLE_SEPARATOR), remote.dim())
-                : Line.from(local.dim(), Span.raw(TITLE_SEPARATOR), remote.bold().underlined());
+                : Line.from(
+                        local.dim(), Span.raw(TITLE_SEPARATOR), remote.bold().underlined());
     }
 
     /**
@@ -160,7 +172,8 @@ public class BranchesPanel {
     static Option<BranchesTab> tabAt(int column) {
         int local = Span.raw(Messages.get("panel.branches.title")).width();
         int remoteStart = local + Span.raw(TITLE_SEPARATOR).width();
-        int remoteEnd = remoteStart + Span.raw(Messages.get("panel.remoteBranches.title")).width();
+        int remoteEnd = remoteStart
+                + Span.raw(Messages.get("panel.remoteBranches.title")).width();
         if (column >= 0 && column < local) {
             return Option.of(BranchesTab.LOCAL);
         }
@@ -181,13 +194,15 @@ public class BranchesPanel {
      */
     static List<LoadableList.Seg> sync(Branch branch) {
         return List.of(
-                        Option.of(branch.ahead()).filter(n -> n > 0)
+                        Option.of(branch.ahead())
+                                .filter(n -> n > 0)
                                 .map(n -> LoadableList.Seg.styled(" ↑" + n, Theme.Classes.AHEAD)),
-                        Option.of(branch.behind()).filter(n -> n > 0)
+                        Option.of(branch.behind())
+                                .filter(n -> n > 0)
                                 .map(n -> LoadableList.Seg.styled(" ↓" + n, Theme.Classes.BEHIND)),
                         branch.goneUpstream()
-                                .map(upstream -> LoadableList.Seg.styled(" " + Messages.get("branches.gone"),
-                                        Theme.Classes.GONE)))
+                                .map(upstream -> LoadableList.Seg.styled(
+                                        " " + Messages.get("branches.gone"), Theme.Classes.GONE)))
                 .flatMap(o -> o);
     }
 
@@ -196,12 +211,15 @@ public class BranchesPanel {
      * are doing and where its review stands, each as a coloured symbol; nothing for a branch without one.
      */
     static List<LoadableList.Seg> pullRequest(Option<PullRequest> pullRequest) {
-        return pullRequest.toList().flatMap(pr -> List.of(
-                        Option.of(LoadableList.Seg.styled(" #" + pr.number(),
-                                pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST)),
-                        PullRequestSymbols.checks(pr.checks()).map(BranchesPanel::symbol),
-                        PullRequestSymbols.review(pr.review()).map(BranchesPanel::symbol))
-                .flatMap(o -> o));
+        return pullRequest
+                .toList()
+                .flatMap(pr -> List.of(
+                                Option.of(LoadableList.Seg.styled(
+                                        " #" + pr.number(),
+                                        pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST)),
+                                PullRequestSymbols.checks(pr.checks()).map(BranchesPanel::symbol),
+                                PullRequestSymbols.review(pr.review()).map(BranchesPanel::symbol))
+                        .flatMap(o -> o));
     }
 
     /**
@@ -211,7 +229,9 @@ public class BranchesPanel {
     static List<LoadableList.Seg> gitHub(Option<PullRequest> pullRequest, Option<Checks> checks) {
         return pullRequest.isDefined()
                 ? pullRequest(pullRequest)
-                : checks.flatMap(PullRequestSymbols::checks).map(BranchesPanel::symbol).toList();
+                : checks.flatMap(PullRequestSymbols::checks)
+                        .map(BranchesPanel::symbol)
+                        .toList();
     }
 
     private static LoadableList.Seg symbol(PullRequestSymbols.Symbol symbol) {
@@ -225,11 +245,12 @@ public class BranchesPanel {
     private static int reselect(List<Branch> previous, List<Branch> next, int selected) {
         Option<Branch.Name> before = current(previous);
         Option<Branch.Name> target = before.equals(current(next))
-                ? Option.of(selected).filter(i -> i < previous.size()).map(i -> previous.get(i).name())
-                .map(name -> renamed(previous, next, name))
+                ? Option.of(selected)
+                        .filter(i -> i < previous.size())
+                        .map(i -> previous.get(i).name())
+                        .map(name -> renamed(previous, next, name))
                 : current(next);
-        return target
-                .map(name -> next.indexWhere(b -> b.name().equals(name)))
+        return target.map(name -> next.indexWhere(b -> b.name().equals(name)))
                 .filter(i -> i >= 0)
                 .getOrElse(selected);
     }
@@ -279,8 +300,11 @@ public class BranchesPanel {
      * after the corner of the border.
      */
     private EventResult titleClick(Rect area, MouseEvent event) {
-        return Option.when(event.kind() == MouseEventKind.PRESS && event.isLeftButton()
-                                && area != null && event.y() == area.top(),
+        return Option.when(
+                        event.kind() == MouseEventKind.PRESS
+                                && event.isLeftButton()
+                                && area != null
+                                && event.y() == area.top(),
                         event.x() - area.left() - 1)
                 .flatMap(BranchesPanel::tabAt)
                 .map(clicked -> {

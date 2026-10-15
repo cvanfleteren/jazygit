@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.i18n;
 
 import io.vavr.control.Option;
 import io.vavr.control.Try;
-
 import java.text.MessageFormat;
 import java.util.Locale;
 import java.util.ResourceBundle;
@@ -59,7 +58,8 @@ public final class Messages {
      */
     public String format(String key, Object... args) {
         return Option.when(bundle.containsKey(key), () -> bundle.getString(key))
-                .flatMap(pattern -> Try.of(() -> new MessageFormat(pattern, locale).format(args)).toOption())
+                .flatMap(pattern -> Try.of(() -> new MessageFormat(pattern, locale).format(args))
+                        .toOption())
                 .getOrElse(() -> "!" + key + "!");
     }
 }

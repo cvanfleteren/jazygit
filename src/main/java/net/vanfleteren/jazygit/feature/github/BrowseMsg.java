@@ -16,12 +16,10 @@ public sealed interface BrowseMsg extends Msg {
     /**
      * The user asked to open a local branch on GitHub, in the browser.
      */
-    record Requested(Branch.Name branch) implements BrowseMsg {
-    }
+    record Requested(Branch.Name branch) implements BrowseMsg {}
 
     /**
      * The user asked to open a remote branch on GitHub, in the browser.
      */
-    record RemoteRequested(RemoteBranch branch) implements BrowseMsg {
-    }
+    record RemoteRequested(RemoteBranch branch) implements BrowseMsg {}
 }

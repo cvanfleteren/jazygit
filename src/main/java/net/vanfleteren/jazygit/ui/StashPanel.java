@@ -3,14 +3,13 @@ package net.vanfleteren.jazygit.ui;
 import dev.tamboui.toolkit.elements.Panel;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.util.function.Consumer;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-
-import java.util.function.Consumer;
 
 /**
  * Bottom-left panel listing the stashes, newest first. The highlighted stash is unstashed with {@code g} and deleted with {@code d}.
@@ -33,9 +32,12 @@ public final class StashPanel {
      * @param highlights how the highlighted stash is shown, also when the pane is not in use
      */
     public StashPanel(Consumer<Msg> dispatch, Theme.Highlights highlights) {
-        list = new LoadableList<>(Messages.get("panel.stash.title"), ID,
+        list = new LoadableList<>(
+                Messages.get("panel.stash.title"),
+                ID,
                 stashes -> stashes.zipWithIndex((stash, index) -> LoadableList.Row.of(row(index, stash))),
-                LoadableList.Reselect.following(Stash::sha), highlights);
+                LoadableList.Reselect.following(Stash::sha),
+                highlights);
         list.onKey(event -> PaneKeys.sending(keymap.handle(Scopes.STASH, event, selectedStash()), dispatch));
     }
 
@@ -67,5 +69,4 @@ public final class StashPanel {
     public Option<Stash> selectedStash() {
         return list.selected(stashes -> stashes);
     }
-
 }

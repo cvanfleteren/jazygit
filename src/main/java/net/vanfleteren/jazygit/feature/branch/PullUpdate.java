@@ -14,8 +14,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
  */
 public final class PullUpdate {
 
-    private PullUpdate() {
-    }
+    private PullUpdate() {}
 
     public static Next update(Model model, PullMsg msg) {
         return switch (msg) {
@@ -32,8 +31,8 @@ public final class PullUpdate {
                         .map(upstream -> known.current()
                                 ? Update.start(model.clearError(), new Pull(branch))
                                 : known.ahead() > 0
-                                ? Next.of(model.fail(new AppError.UnpushedCommits(branch)))
-                                : Update.start(model.clearError(), new FastForward(branch, upstream.branch())))
+                                        ? Next.of(model.fail(new AppError.UnpushedCommits(branch)))
+                                        : Update.start(model.clearError(), new FastForward(branch, upstream.branch())))
                         .getOrElse(() -> Next.of(model.fail(known.goneUpstream()
                                 .<AppError>map(upstream -> new AppError.UpstreamGone(branch, upstream.shortName()))
                                 .getOrElse(() -> new AppError.NoUpstream(branch))))))

@@ -3,16 +3,16 @@ package net.vanfleteren.jazygit.i18n;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
-import org.junit.jupiter.api.Test;
-
 import java.util.Locale;
 import java.util.ResourceBundle;
+import org.junit.jupiter.api.Test;
 
 class MessagesTest {
 
     @Test
     void substitutesParameters() {
-        assertEquals("Checkout of main failed: boom",
+        assertEquals(
+                "Checkout of main failed: boom",
                 Messages.forLocale(Locale.ENGLISH).format("error.checkout.failed", "main", "boom"));
     }
 

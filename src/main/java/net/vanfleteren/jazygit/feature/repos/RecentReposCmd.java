@@ -1,13 +1,12 @@
 package net.vanfleteren.jazygit.feature.repos;
 
 import io.vavr.collection.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 /**
  * The IO of switching to a recent repository. That the recent repositories could not be kept is not worth
@@ -27,7 +26,8 @@ public sealed interface RecentReposCmd extends Cmd {
             if (gone.nonEmpty()) {
                 env.recent().forget(gone);
             }
-            return new RecentReposMsg.Listed(recent.removeAll(gone).remove(env.git().workTree()).map(Path::toString));
+            return new RecentReposMsg.Listed(
+                    recent.removeAll(gone).remove(env.git().workTree()).map(Path::toString));
         }
 
         @Override
@@ -45,13 +45,17 @@ public sealed interface RecentReposCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             Path chosen = Path.of(directory);
-            return env.repositories().switchTo(chosen).fold(error -> {
-                env.recent().forget(List.of(chosen));
-                return failedWith(error);
-            }, workTree -> {
-                env.recent().opened(workTree);
-                return new RecentReposMsg.Switched(workTree.toString());
-            });
+            return env.repositories()
+                    .switchTo(chosen)
+                    .fold(
+                            error -> {
+                                env.recent().forget(List.of(chosen));
+                                return failedWith(error);
+                            },
+                            workTree -> {
+                                env.recent().opened(workTree);
+                                return new RecentReposMsg.Switched(workTree.toString());
+                            });
         }
 
         @Override

@@ -1,10 +1,14 @@
 package net.vanfleteren.jazygit.git;
 
+import static net.vanfleteren.jazygit.git.GitCommand.git;
+
 import io.vavr.Tuple2;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.RewordError;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -13,11 +17,6 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.process.CommandLine;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-
-import static net.vanfleteren.jazygit.git.GitCommand.git;
 
 /**
  * Rewrites history through {@code git rebase}, driven without an interactive editor. When a rebase
@@ -31,8 +30,7 @@ final class CliRebase {
     private static final List<String> REBASE = List.of("rebase", "--autostash", "--keep-empty", "--rebase-merges");
     private static final List<String> INTERACTIVE = REBASE.insert(1, "--interactive");
 
-    private CliRebase() {
-    }
+    private CliRebase() {}
 
     /**
      * Replaces the message of {@code sha} with an interactive rebase that is told to stop at that commit
@@ -42,17 +40,25 @@ final class CliRebase {
      *
      * @return the command lines that were run
      */
-    static Either<GitFailure<RewordError>, List<ExecutedCommand>> reword(Path workTree, Sha sha, CommitMessage message) {
+    static Either<GitFailure<RewordError>, List<ExecutedCommand>> reword(
+            Path workTree, Sha sha, CommitMessage message) {
         // A merge in the todo list is "merge -C <commit>", which has to become "-c" for git to ask for a message.
-        String sequenceEditor = sequenceEditor(sha, List.of(new Tuple2<>("pick", "reword"), new Tuple2<>("merge -C", "merge -c")));
-        return TempFiles.using("jazygit-message", file -> Files.writeString(file, message.text()),
+        String sequenceEditor =
+                sequenceEditor(sha, List.of(new Tuple2<>("pick", "reword"), new Tuple2<>("merge -C", "merge -c")));
+        return TempFiles.using(
+                "jazygit-message",
+                file -> Files.writeString(file, message.text()),
                 failed -> new GitFailure<RewordError>(failed, List.empty()),
-                file -> GitFailure.widen(base(workTree, sha.value()).flatMap(base ->
-                        rebase(workTree, interactive(INTERACTIVE.append(base), sequenceEditor,
-                                CommandLine.format(List.of("cp", file.toString())))
-                                // The message is taken as it was entered: git would strip lines starting with
-                                // "#", like "#123", from a message that comes from an editor.
-                                .withConfig("commit.cleanup", "whitespace")))));
+                file -> GitFailure.widen(base(workTree, sha.value())
+                        .flatMap(base -> rebase(
+                                workTree,
+                                interactive(
+                                                INTERACTIVE.append(base),
+                                                sequenceEditor,
+                                                CommandLine.format(List.of("cp", file.toString())))
+                                        // The message is taken as it was entered: git would strip lines starting with
+                                        // "#", like "#123", from a message that comes from an editor.
+                                        .withConfig("commit.cleanup", "whitespace")))));
     }
 
     /**
@@ -78,8 +84,12 @@ final class CliRebase {
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Path workTree, Sha sha, SquashMode mode) {
         return GitProcess.run(workTree, git("rev-parse", sha.value() + "^"))
                 .flatMap(parent -> base(workTree, parent.stdout().strip()))
-                .flatMap(base -> rebase(workTree, interactive(INTERACTIVE.append("--no-autosquash").append(base),
-                        sequenceEditor(sha, List.of(new Tuple2<>("pick", mode.todoCommand()))), "true")));
+                .flatMap(base -> rebase(
+                        workTree,
+                        interactive(
+                                INTERACTIVE.append("--no-autosquash").append(base),
+                                sequenceEditor(sha, List.of(new Tuple2<>("pick", mode.todoCommand()))),
+                                "true")));
     }
 
     /**
@@ -101,10 +111,13 @@ final class CliRebase {
      */
     private static String sequenceEditor(Sha sha, List<Tuple2<String, String>> replacements) {
         // Plain sed and mv, as "sed -i" differs between GNU and BSD.
-        String find = replacements.map(r -> "-e '^" + r._1 + " " + sha.value() + " '").mkString(" ");
-        String replace = replacements.map(r -> "-e 's/^" + r._1 + " " + sha.value() + " /" + r._2 + " " + sha.value() + " /'")
+        String find =
+                replacements.map(r -> "-e '^" + r._1 + " " + sha.value() + " '").mkString(" ");
+        String replace = replacements
+                .map(r -> "-e 's/^" + r._1 + " " + sha.value() + " /" + r._2 + " " + sha.value() + " /'")
                 .mkString(" ");
-        return "f() { grep -q " + find + " \"$1\" && sed " + replace + " \"$1\" > \"$1.tmp\" && mv \"$1.tmp\" \"$1\"; }; f";
+        return "f() { grep -q " + find + " \"$1\" && sed " + replace
+                + " \"$1\" > \"$1.tmp\" && mv \"$1.tmp\" \"$1\"; }; f";
     }
 
     /**

@@ -1,10 +1,9 @@
 package net.vanfleteren.jazygit.feature.repos;
 
 import io.vavr.control.Option;
+import java.io.File;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.ui.widgets.PickDialog;
-
-import java.io.File;
 
 /**
  * Popup asking which recent repository to switch to. The directories in the home directory are shown from
@@ -12,15 +11,17 @@ import java.io.File;
  */
 public final class RecentReposDialog {
 
-    public static final PickDialog.Spec<RecentReposPopup> SPEC = new PickDialog.Spec<>("recent-repos",
-            RecentReposPopup.class, popup -> Messages.get("dialog.recentRepos.title"),
+    public static final PickDialog.Spec<RecentReposPopup> SPEC = new PickDialog.Spec<>(
+            "recent-repos",
+            RecentReposPopup.class,
+            popup -> Messages.get("dialog.recentRepos.title"),
             popup -> popup.directories().map(RecentReposDialog::shown),
-            shown -> new RecentReposMsg.Chosen(directory(shown)), RecentReposMsg.Cancelled::new,
+            shown -> new RecentReposMsg.Chosen(directory(shown)),
+            RecentReposMsg.Cancelled::new,
             Option.of("dialog.recentRepos.none"));
     private static final String HOME = System.getProperty("user.home");
 
-    private RecentReposDialog() {
-    }
+    private RecentReposDialog() {}
 
     /**
      * How {@code directory} is shown: from {@code ~} when it is in the home directory.

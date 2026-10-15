@@ -2,14 +2,13 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.util.function.Function;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Cmd.*;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
-
-import java.util.function.Function;
 
 /**
  * The pure state transitions of the app: given a model and a message, the next model and the IO
@@ -21,11 +20,10 @@ public final class Update {
     /**
      * Loads that a tick repeats. They are skipped while a previous one is still running.
      */
-    private static final List<Cmd.Load> PERIODIC = List.of(new LoadStatus(), new LoadBranches(),
-            new Cmd.LoadRemoteBranches(), new Cmd.LoadStashes());
+    private static final List<Cmd.Load> PERIODIC =
+            List.of(new LoadStatus(), new LoadBranches(), new Cmd.LoadRemoteBranches(), new Cmd.LoadStashes());
 
-    private Update() {
-    }
+    private Update() {}
 
     public static Next init(String repositoryName) {
         return init(repositoryName, SettingsStore.Loaded.DEFAULT);
@@ -44,7 +42,9 @@ public final class Update {
      */
     public static Next init(String repositoryName, SettingsStore.Loaded settings, Option<ThemeName> themeOverride) {
         // Commits are loaded once the first status tells us where HEAD is.
-        return refresh(Model.initial(repositoryName).withSettings(settings.settings()).withThemeOverride(themeOverride)
+        return refresh(Model.initial(repositoryName)
+                .withSettings(settings.settings())
+                .withThemeOverride(themeOverride)
                 .withError(settings.problem().map(AppError.SettingsNotLoaded::new)));
     }
 
@@ -56,7 +56,11 @@ public final class Update {
      * Starts {@code cmd}: its branch, if it has one, is busy until it is done.
      */
     public static Next start(Model model, OperationCmd cmd) {
-        return Next.of(cmd.busyBranch().map(branch -> model.withBusyBranch(branch, cmd.operation())).getOrElse(model), cmd);
+        return Next.of(
+                cmd.busyBranch()
+                        .map(branch -> model.withBusyBranch(branch, cmd.operation()))
+                        .getOrElse(model),
+                cmd);
     }
 
     /**
@@ -80,9 +84,10 @@ public final class Update {
      * {@code cmd} makes of it. When no such popup is open, or {@code cmd} makes none because what was entered
      * cannot be used, nothing happens.
      */
-    public static <P extends Popup> Next confirm(Model model, Class<P> type,
-                                                 Function<? super P, Option<? extends OperationCmd>> cmd) {
-        return model.popup(type).flatMap(cmd)
+    public static <P extends Popup> Next confirm(
+            Model model, Class<P> type, Function<? super P, Option<? extends OperationCmd>> cmd) {
+        return model.popup(type)
+                .flatMap(cmd)
                 .map(operation -> start(model.withoutPopup(type).clearError(), operation))
                 .getOrElse(() -> Next.of(model));
     }
@@ -100,7 +105,8 @@ public final class Update {
                 .appendAll(model.commitDetail()
                         .filter(detail -> detail.value() instanceof Failed)
                         .map(detail -> new LoadCommitDetail(detail.key())));
-        List<Cmd.Load> loads = PERIODIC.appendAll(retries).filter(cmd -> !model.refreshing().contains(cmd));
+        List<Cmd.Load> loads =
+                PERIODIC.appendAll(retries).filter(cmd -> !model.refreshing().contains(cmd));
         return new Next(model.withRefreshing(model.refreshing().addAll(loads)), List.narrow(loads));
     }
 
@@ -111,12 +117,12 @@ public final class Update {
      */
     static Next reloadDiff(Model model, List<Cmd> cmds) {
         return model.fileDiff()
-                .filter(d -> model.status().toOption().exists(status -> status.files().containsAll(d.key())))
+                .filter(d -> model.status()
+                        .toOption()
+                        .exists(status -> status.files().containsAll(d.key())))
                 .map(d -> new LoadFileDiff(d.key()))
                 .filter(cmd -> !model.refreshing().contains(cmd))
-                .map(cmd -> new Next(
-                        model.withRefreshing(model.refreshing().add(cmd)),
-                        cmds.append(cmd)))
+                .map(cmd -> new Next(model.withRefreshing(model.refreshing().add(cmd)), cmds.append(cmd)))
                 .getOrElse(() -> new Next(model, cmds));
     }
 

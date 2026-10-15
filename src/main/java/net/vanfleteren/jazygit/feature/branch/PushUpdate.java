@@ -16,8 +16,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
  */
 public final class PushUpdate {
 
-    private PushUpdate() {
-    }
+    private PushUpdate() {}
 
     public static Next update(Model model, PushMsg msg) {
         return switch (msg) {
@@ -25,9 +24,14 @@ public final class PushUpdate {
             case PushMsg.ForceCancelled() -> Next.of(model.withoutPopup(ForcePushPopup.class));
             case PushMsg.UpstreamCancelled() -> Next.of(model.withoutPopup(SetUpstreamPopup.class));
             case PushMsg.UpstreamConfirmed(String upstream) -> upstreamConfirmed(model, upstream);
-            case PushMsg.ForceConfirmed() -> Update.confirm(model, ForcePushPopup.class,
-                    popup -> model.branch(popup.branch()).flatMap(Branch::remoteUpstream)
-                            .map(upstream -> new Push(popup.branch(), upstream.branch(), PushMode.FORCE_WITH_LEASE)));
+            case PushMsg.ForceConfirmed() ->
+                Update.confirm(
+                        model,
+                        ForcePushPopup.class,
+                        popup -> model.branch(popup.branch())
+                                .flatMap(Branch::remoteUpstream)
+                                .map(upstream ->
+                                        new Push(popup.branch(), upstream.branch(), PushMode.FORCE_WITH_LEASE)));
         };
     }
 
@@ -39,7 +43,8 @@ public final class PushUpdate {
                 .map(known -> known.remoteUpstream()
                         .map(upstream -> known.behind() > 0
                                 ? Update.ask(model, new ForcePushPopup(branch))
-                                : Update.start(model.clearError(), new Push(branch, upstream.branch(), PushMode.FAST_FORWARD)))
+                                : Update.start(
+                                        model.clearError(), new Push(branch, upstream.branch(), PushMode.FAST_FORWARD)))
                         .getOrElse(() -> Update.ask(model, new SetUpstreamPopup(branch))))
                 .getOrElse(() -> Next.of(model));
     }
@@ -51,9 +56,9 @@ public final class PushUpdate {
         Option<RemoteBranch> upstream = RemoteBranch.parse(text);
         return model.popup(SetUpstreamPopup.class).isDefined() && upstream.isEmpty()
                 ? Next.of(model.fail(new AppError.InvalidUpstream(text)))
-                : Update.confirm(model, SetUpstreamPopup.class,
-                popup -> upstream.map(remote -> new PushSettingUpstream(popup.branch(), remote)));
+                : Update.confirm(
+                        model,
+                        SetUpstreamPopup.class,
+                        popup -> upstream.map(remote -> new PushSettingUpstream(popup.branch(), remote)));
     }
-
-
 }

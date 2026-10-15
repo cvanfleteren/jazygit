@@ -16,12 +16,9 @@ public sealed interface PullRequestsMsg extends Msg {
     /**
      * Read the pull requests again.
      */
-    record Refresh() implements PullRequestsMsg {
-    }
+    record Refresh() implements PullRequestsMsg {}
 
-    record Loaded(List<PullRequest> pullRequests) implements PullRequestsMsg {
-    }
+    record Loaded(List<PullRequest> pullRequests) implements PullRequestsMsg {}
 
-    record LoadFailed(Failure failure) implements PullRequestsMsg {
-    }
+    record LoadFailed(Failure failure) implements PullRequestsMsg {}
 }

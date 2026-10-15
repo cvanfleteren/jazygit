@@ -2,12 +2,11 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.control.Option;
 import io.vavr.control.Try;
+import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Update.Next;
-
-import java.util.concurrent.Executor;
-import java.util.function.Consumer;
 
 /**
  * The runtime around {@link Update}: holds the current {@link Model}, performs the commands
@@ -44,8 +43,7 @@ public final class Program {
      * @param ui         the thread that owns the model, i.e. the render thread
      */
     public static Program start(Env env, Executor io, Executor background, Executor ui) {
-        return start(env, SettingsStore.Loaded.DEFAULT, Option.none(), io, background, ui, bug -> {
-        });
+        return start(env, SettingsStore.Loaded.DEFAULT, Option.none(), io, background, ui, bug -> {});
     }
 
     /**
@@ -55,16 +53,21 @@ public final class Program {
      * @param themeOverride the theme for this session instead of the saved one, if any
      * @param bugs          told about every command that threw, which the user is only shown the message of
      */
-    public static Program start(Env env, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, Executor io,
-                                Executor background, Executor ui, Consumer<Throwable> bugs) {
+    public static Program start(
+            Env env,
+            SettingsStore.Loaded settings,
+            Option<ThemeName> themeOverride,
+            Executor io,
+            Executor background,
+            Executor ui,
+            Consumer<Throwable> bugs) {
         Program program = new Program(env, io, background, ui, bugs);
         program.apply(Update.init(env.git().repositoryName(), settings, themeOverride));
         return program;
     }
 
     static Msg perform(Env env, Cmd cmd) {
-        return perform(env, cmd, bug -> {
-        });
+        return perform(env, cmd, bug -> {});
     }
 
     static Msg perform(Env env, Cmd cmd, Consumer<Throwable> bugs) {
@@ -89,9 +92,10 @@ public final class Program {
     private void apply(Next next) {
         model = next.model();
         // Once the app stops, the executors take nothing anymore, and what is left is dropped.
-        next.cmds().forEach(cmd -> Try.run(() -> (cmd.background() ? background : io).execute(() -> {
-            Msg result = perform(env, cmd, bugs);
-            Try.run(() -> ui.execute(() -> dispatch(result)));
-        })));
+        next.cmds()
+                .forEach(cmd -> Try.run(() -> (cmd.background() ? background : io).execute(() -> {
+                    Msg result = perform(env, cmd, bugs);
+                    Try.run(() -> ui.execute(() -> dispatch(result)));
+                })));
     }
 }

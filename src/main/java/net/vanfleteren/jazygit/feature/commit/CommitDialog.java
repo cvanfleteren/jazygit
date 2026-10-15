@@ -1,11 +1,17 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import static dev.tamboui.toolkit.Toolkit.*;
+
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.widgets.block.BorderType;
 import dev.tamboui.widgets.input.TextAreaState;
 import dev.tamboui.widgets.input.TextInputState;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -14,13 +20,6 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
 import net.vanfleteren.jazygit.ui.SubmittableTextArea;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
-
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
-
-import static dev.tamboui.toolkit.Toolkit.*;
 
 /**
  * Popup asking for a commit message: a summary and a description. Tab switches between them. Enter
@@ -36,6 +35,7 @@ public final class CommitDialog implements PopupView {
      * The id of the summary field of the commit popup, which gets the focus when the popup opens.
      */
     public static final String ID = "commit-summary";
+
     public static final String DESCRIPTION_ID = "commit-description";
     public static final String REWORD_ID = "reword-summary";
     public static final String REWORD_DESCRIPTION_ID = "reword-description";
@@ -56,9 +56,14 @@ public final class CommitDialog implements PopupView {
     private final Consumer<Msg> dispatch;
     private Option<Popup> shownFor = Option.none();
 
-    private CommitDialog(String summaryId, String descriptionId, Predicate<Model> open,
-                         Function<Model, Option<Commit>> current, Function<CommitMessage, Msg> confirmed,
-                         Supplier<Msg> cancelled, Consumer<Msg> dispatch) {
+    private CommitDialog(
+            String summaryId,
+            String descriptionId,
+            Predicate<Model> open,
+            Function<Model, Option<Commit>> current,
+            Function<CommitMessage, Msg> confirmed,
+            Supplier<Msg> cancelled,
+            Consumer<Msg> dispatch) {
         this.summaryId = summaryId;
         this.descriptionId = descriptionId;
         this.open = open;
@@ -74,8 +79,14 @@ public final class CommitDialog implements PopupView {
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public CommitDialog(Consumer<Msg> dispatch) {
-        this(ID, DESCRIPTION_ID, model -> model.popup(CommitPopup.class).isDefined(), model -> Option.none(), CommitMsg.Confirmed::new,
-                CommitMsg.Cancelled::new, dispatch);
+        this(
+                ID,
+                DESCRIPTION_ID,
+                model -> model.popup(CommitPopup.class).isDefined(),
+                model -> Option.none(),
+                CommitMsg.Confirmed::new,
+                CommitMsg.Cancelled::new,
+                dispatch);
     }
 
     /**
@@ -84,8 +95,14 @@ public final class CommitDialog implements PopupView {
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public static CommitDialog reword(Consumer<Msg> dispatch) {
-        return new CommitDialog(REWORD_ID, REWORD_DESCRIPTION_ID, model -> model.popup(RewordPopup.class).isDefined(),
-                model -> model.popup(RewordPopup.class).map(RewordPopup::commit), RewordMsg.Confirmed::new, RewordMsg.Cancelled::new, dispatch);
+        return new CommitDialog(
+                REWORD_ID,
+                REWORD_DESCRIPTION_ID,
+                model -> model.popup(RewordPopup.class).isDefined(),
+                model -> model.popup(RewordPopup.class).map(RewordPopup::commit),
+                RewordMsg.Confirmed::new,
+                RewordMsg.Cancelled::new,
+                dispatch);
     }
 
     /**
@@ -116,17 +133,19 @@ public final class CommitDialog implements PopupView {
             });
         }
         return Option.of(dialog(
-                textInput(summary)
-                        .id(summaryId)
-                        .title(Messages.get("dialog.commit.summary.title"))
-                        .placeholder(Messages.get("dialog.commit.summary.placeholder"))
-                        .length(INPUT_HEIGHT)
-                        .onSubmit(this::confirm),
-                new SubmittableTextArea(textArea(description)
-                        .title(Messages.get("dialog.commit.description.title"))
-                        .placeholder(Messages.get("dialog.commit.description.placeholder")),
-                        descriptionId, this::confirm)
-                        .rows(DESCRIPTION_HEIGHT))
+                        textInput(summary)
+                                .id(summaryId)
+                                .title(Messages.get("dialog.commit.summary.title"))
+                                .placeholder(Messages.get("dialog.commit.summary.placeholder"))
+                                .length(INPUT_HEIGHT)
+                                .onSubmit(this::confirm),
+                        new SubmittableTextArea(
+                                        textArea(description)
+                                                .title(Messages.get("dialog.commit.description.title"))
+                                                .placeholder(Messages.get("dialog.commit.description.placeholder")),
+                                        descriptionId,
+                                        this::confirm)
+                                .rows(DESCRIPTION_HEIGHT))
                 .borderType(BorderType.NONE)
                 .width(WIDTH)
                 .onCancel(this::cancel));

@@ -1,7 +1,9 @@
 package net.vanfleteren.jazygit.feature.stage;
 
 import static net.vanfleteren.jazygit.git.StubGitProvider.executed;
-import net.vanfleteren.jazygit.state.Operation;
+import static net.vanfleteren.jazygit.state.TestModels.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.stage.StageCmd.Stage;
@@ -11,12 +13,10 @@ import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.LogEntry;
-import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
-
-import static net.vanfleteren.jazygit.state.TestModels.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * The staging transitions.
@@ -38,7 +38,8 @@ class StageUpdateTest {
     void toggleStagesAPartiallyStagedFile() {
         FileEntry both = new FileEntry("a.txt", ChangeType.MODIFIED, true, true);
 
-        assertEquals(List.of(new Stage(List.of("a.txt"))),
+        assertEquals(
+                List.of(new Stage(List.of("a.txt"))),
                 Update.update(loaded(), new StageMsg.Requested(List.of(both))).cmds());
     }
 
@@ -57,10 +58,14 @@ class StageUpdateTest {
     void toggleUnstagesBothSidesOfARename() {
         FileEntry renamed = FileEntry.renamed("src/b.txt", "a.txt", true, false);
 
-        assertEquals(List.of(new Unstage(List.of("src/b.txt"), List.of("a.txt"))),
-                Update.update(loaded(), new StageMsg.Requested(List.of(renamed))).cmds());
-        assertEquals(List.of(new Unstage(List.of("src/b.txt"), List.of("a.txt"))),
-                Update.update(loaded(), new StageMsg.Requested(List.of(renamed), Option.of("src"))).cmds());
+        assertEquals(
+                List.of(new Unstage(List.of("src/b.txt"), List.of("a.txt"))),
+                Update.update(loaded(), new StageMsg.Requested(List.of(renamed)))
+                        .cmds());
+        assertEquals(
+                List.of(new Unstage(List.of("src/b.txt"), List.of("a.txt"))),
+                Update.update(loaded(), new StageMsg.Requested(List.of(renamed), Option.of("src")))
+                        .cmds());
     }
 
     @Test
@@ -68,8 +73,10 @@ class StageUpdateTest {
         FileEntry edited = FileEntry.renamed("b.txt", "a.txt", true, true);
         FileEntry intentToAdd = FileEntry.renamed("d.txt", "c.txt", false, true);
 
-        assertEquals(List.of(new Stage(List.of("b.txt", "c.txt", "d.txt"))),
-                Update.update(loaded(), new StageMsg.Requested(List.of(edited, intentToAdd))).cmds());
+        assertEquals(
+                List.of(new Stage(List.of("b.txt", "c.txt", "d.txt"))),
+                Update.update(loaded(), new StageMsg.Requested(List.of(edited, intentToAdd)))
+                        .cmds());
     }
 
     @Test
@@ -77,10 +84,14 @@ class StageUpdateTest {
         FileEntry unstaged = new FileEntry("src/a.txt", ChangeType.MODIFIED);
         FileEntry staged = new FileEntry("src/c.txt", ChangeType.MODIFIED, true, false);
 
-        assertEquals(List.of(new Stage(List.of("src"))), Update.update(loaded(),
-                new StageMsg.Requested(List.of(unstaged, staged), Option.of("src"))).cmds());
-        assertEquals(List.of(new Stage(List.of("."))), Update.update(loaded(),
-                new StageMsg.Requested(List.of(unstaged, staged), Option.of(""))).cmds());
+        assertEquals(
+                List.of(new Stage(List.of("src"))),
+                Update.update(loaded(), new StageMsg.Requested(List.of(unstaged, staged), Option.of("src")))
+                        .cmds());
+        assertEquals(
+                List.of(new Stage(List.of("."))),
+                Update.update(loaded(), new StageMsg.Requested(List.of(unstaged, staged), Option.of("")))
+                        .cmds());
     }
 
     @Test
@@ -89,37 +100,63 @@ class StageUpdateTest {
         FileEntry deleted = new FileEntry("src/c.txt", ChangeType.DELETED, true, false);
         FileEntry added = new FileEntry("src/a.txt", ChangeType.ADDED);
 
-        assertEquals(List.of(new Unstage(List.of(), List.of("."))), Update.update(loaded(),
-                new StageMsg.Requested(List.of(modified, deleted), Option.of(""))).cmds());
-        assertEquals(List.of(new Unstage(List.of("src/a.txt"), List.of("src/b.txt"))), Update.update(loaded(),
-                new StageMsg.Requested(List.of(added, modified), Option.of("src"))).cmds());
+        assertEquals(
+                List.of(new Unstage(List.of(), List.of("."))),
+                Update.update(loaded(), new StageMsg.Requested(List.of(modified, deleted), Option.of("")))
+                        .cmds());
+        assertEquals(
+                List.of(new Unstage(List.of("src/a.txt"), List.of("src/b.txt"))),
+                Update.update(loaded(), new StageMsg.Requested(List.of(added, modified), Option.of("src")))
+                        .cmds());
     }
 
     @Test
     void toggleOfNothingDoesNothing() {
-        assertEquals(List.of(), Update.update(loaded(), new StageMsg.Requested(List.of())).cmds());
+        assertEquals(
+                List.of(),
+                Update.update(loaded(), new StageMsg.Requested(List.of())).cmds());
     }
 
     @Test
     void doneLogsTheExecutedCommands() {
         Next staged = Update.update(loaded(), succeeded(new StageCmd.Stage(List.of()), "git add -- a.txt"));
-        assertEquals(List.of(new LogEntry(Operation.STAGE, executed("git add -- a.txt"))), staged.model().commandLog());
+        assertEquals(
+                List.of(new LogEntry(Operation.STAGE, executed("git add -- a.txt"))),
+                staged.model().commandLog());
 
-        Next unstaged = Update.update(staged.model(),
+        Next unstaged = Update.update(
+                staged.model(),
                 succeeded(new StageCmd.Unstage(List.of(), List.of()), "git reset --quiet HEAD -- a.txt"));
-        assertEquals(List.of(Operation.STAGE, Operation.UNSTAGE), unstaged.model().commandLog().map(LogEntry::operation).toList());
+        assertEquals(
+                List.of(Operation.STAGE, Operation.UNSTAGE),
+                unstaged.model().commandLog().map(LogEntry::operation).toList());
 
-        assertEquals(List.of(), Update.update(loaded(), succeeded(new StageCmd.Stage(List.of())))
-                .model().commandLog());
+        assertEquals(
+                List.of(),
+                Update.update(loaded(), succeeded(new StageCmd.Stage(List.of())))
+                        .model()
+                        .commandLog());
     }
 
     @Test
     void toggledReloadsAndFailureIsReported() {
-        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadStashes()),
-                Update.update(loaded(), succeeded(new StageCmd.Stage(List.of()))).cmds());
+        assertEquals(
+                List.of(
+                        new LoadStatus(),
+                        new LoadBranches(),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadStashes()),
+                Update.update(loaded(), succeeded(new StageCmd.Stage(List.of())))
+                        .cmds());
 
         Next failed = Update.update(loaded(), failed(new StageCmd.Stage(List.of()), "fatal: pathspec"));
         assertEquals(Option.of("Staging failed: fatal: pathspec"), errorText(failed.model()));
-        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadStashes()), failed.cmds());
+        assertEquals(
+                List.of(
+                        new LoadStatus(),
+                        new LoadBranches(),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadStashes()),
+                failed.cmds());
     }
 }

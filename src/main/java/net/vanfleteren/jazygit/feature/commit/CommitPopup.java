@@ -5,5 +5,4 @@ import net.vanfleteren.jazygit.state.Popup;
 /**
  * Asking for the message of a new commit.
  */
-public record CommitPopup() implements Popup {
-}
+public record CommitPopup() implements Popup {}

@@ -1,5 +1,8 @@
 package net.vanfleteren.jazygit.feature.help;
 
+import static dev.tamboui.toolkit.Toolkit.list;
+import static dev.tamboui.toolkit.Toolkit.text;
+
 import dev.tamboui.layout.Constraint;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
@@ -16,6 +19,8 @@ import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
@@ -25,12 +30,6 @@ import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 import net.vanfleteren.jazygit.ui.widgets.WithDetails;
-
-import java.util.function.Consumer;
-import java.util.function.Predicate;
-
-import static dev.tamboui.toolkit.Toolkit.list;
-import static dev.tamboui.toolkit.Toolkit.text;
 
 /**
  * Popup listing the keys of a panel and what they do, under which the details of the highlighted key show when it
@@ -54,11 +53,13 @@ public final class HelpDialog implements PopupView {
      * What the symbols in a panel mean, as the symbols and the message keys of their descriptions.
      */
     private static final Map<String, List<Tuple2<String, String>>> LEGENDS = HashMap.of(
-            Scopes.BRANCHES.id(), List.of(
+            Scopes.BRANCHES.id(),
+            List.of(
                     Tuple.of(Messages.get("branches.gone"), "help.branches.legend.gone"),
                     Tuple.of("#42", "help.branches.legend.pullRequest"),
                     Tuple.of("✓ ✗ ●", "help.branches.legend.checks"),
                     Tuple.of("✔ ✎ ?", "help.branches.legend.review")));
+
     private final Consumer<Msg> dispatch;
     private final Keymap keymap;
     private final ListElement<?> list;
@@ -71,14 +72,11 @@ public final class HelpDialog implements PopupView {
     public HelpDialog(Consumer<Msg> dispatch) {
         this(dispatch, Keymap.standard());
     }
+
     HelpDialog(Consumer<Msg> dispatch, Keymap keymap) {
         this.dispatch = dispatch;
         this.keymap = keymap;
-        this.list = list()
-                .id(ID)
-                .focusable()
-                .highlightSymbol("")
-                .onKeyEvent(this::handleKey);
+        this.list = list().id(ID).focusable().highlightSymbol("").onKeyEvent(this::handleKey);
     }
 
     /**
@@ -125,17 +123,24 @@ public final class HelpDialog implements PopupView {
 
     @Override
     public Option<Element> render(Model model) {
-        Option<HelpPopup> open = model.popup(HelpPopup.class).filter(popup -> keymap.titleKey(popup.scopeId()).isDefined());
+        Option<HelpPopup> open = model.popup(HelpPopup.class)
+                .filter(popup -> keymap.titleKey(popup.scopeId()).isDefined());
         show(open);
         return open.map(popup -> {
             int widest = rows.map(HelpDialog::line).map(String::length).max().getOrElse(0);
             DialogElement frame = DialogFrame.withHint(
-                            Messages.get("dialog.help.title", Messages.get(keymap.titleKey(popup.scopeId()).get())),
-                            Math.max(WIDTH, widest + DialogFrame.FRAME), "dialog.help.hint",
+                            Messages.get(
+                                    "dialog.help.title",
+                                    Messages.get(
+                                            keymap.titleKey(popup.scopeId()).get())),
+                            Math.max(WIDTH, widest + DialogFrame.FRAME),
+                            "dialog.help.hint",
                             List.of(list.constraint(Constraint.fill())))
                     // The rows, the blank line and the hint, plus the border.
                     .length(rows.size() + 2 + 2);
-            return new WithDetails(frame, selected().flatMap(HelpDialog::details),
+            return new WithDetails(
+                    frame,
+                    selected().flatMap(HelpDialog::details),
                     rows.flatMap(row -> row instanceof Key key ? details(key) : Option.none()));
         });
     }
@@ -159,20 +164,26 @@ public final class HelpDialog implements PopupView {
         List<Keymap.Binding<?>> bindings = keymap.bindings(popup.scopeId());
         // A help opened without the actions of the keys runs none of them.
         List<Option<Msg>> actions = popup.actions().padTo(bindings.size(), Option.none());
-        return bindings.zipWith(actions, (binding, action) -> (Row) new Key(binding.label(), binding.descriptionKey(),
-                        binding::matches, action))
+        return bindings.zipWith(actions, (binding, action) ->
+                        (Row) new Key(binding.label(), binding.descriptionKey(), binding::matches, action))
                 .appendAll(legend(popup.scopeId()))
                 .append(new Text(""))
                 .append(Text.heading("dialog.help.global"))
-                .appendAll(keymap.globals().map(global -> new Key(global.label(), global.descriptionKey(),
-                        event -> global.handle(event).isDefined(), Option.of(global.action()))));
+                .appendAll(keymap.globals()
+                        .map(global -> new Key(
+                                global.label(),
+                                global.descriptionKey(),
+                                event -> global.handle(event).isDefined(),
+                                Option.of(global.action()))));
     }
 
     /**
      * The highlighted key, if the highlighted row is one.
      */
     private Option<Key> selected() {
-        return rows.lift().apply(list.selected()).flatMap(row -> row instanceof Key key ? Option.of(key) : Option.none());
+        return rows.lift()
+                .apply(list.selected())
+                .flatMap(row -> row instanceof Key key ? Option.of(key) : Option.none());
     }
 
     private EventResult handleKey(KeyEvent event) {
@@ -218,8 +229,7 @@ public final class HelpDialog implements PopupView {
     /**
      * A line of the list: a key, which can be highlighted, or a text around them.
      */
-    private sealed interface Row {
-    }
+    private sealed interface Row {}
 
     /**
      * A key, with the message it sends if it does anything.
@@ -227,8 +237,7 @@ public final class HelpDialog implements PopupView {
      * @param matches whether an event is this key
      */
     private record Key(String label, String descriptionKey, Predicate<KeyEvent> matches, Option<Msg> action)
-            implements Row {
-    }
+            implements Row {}
 
     /**
      * @param style the class it is drawn with, if any

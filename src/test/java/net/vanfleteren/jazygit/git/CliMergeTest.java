@@ -1,22 +1,20 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-
-import io.vavr.collection.List;
-import net.vanfleteren.jazygit.git.model.MergeMode;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import org.zeroturnaround.exec.ProcessExecutor;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import io.vavr.collection.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.MergeMode;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.zeroturnaround.exec.ProcessExecutor;
 
 /**
  * Merging a branch into the checked out one, in each of the four ways.
@@ -43,8 +41,11 @@ class CliMergeTest {
 
     @Test
     void fastForwardMovesTheBranchWhenItHasNothingOfItsOwn() throws Exception {
-        assertEquals(List.of("git merge --ff --no-edit feature"),
-                CliMerge.merge(repo, new Branch.Name("feature"), MergeMode.FAST_FORWARD).get().map(ExecutedCommand::line));
+        assertEquals(
+                List.of("git merge --ff --no-edit feature"),
+                CliMerge.merge(repo, new Branch.Name("feature"), MergeMode.FAST_FORWARD)
+                        .get()
+                        .map(ExecutedCommand::line));
 
         assertEquals(git("rev-parse", "feature"), git("rev-parse", "HEAD"));
     }
@@ -60,8 +61,11 @@ class CliMergeTest {
 
     @Test
     void mergeCommitIsMadeEvenWhenAFastForwardWouldDo() throws Exception {
-        assertEquals(List.of("git merge --no-ff --no-edit feature"),
-                CliMerge.merge(repo, new Branch.Name("feature"), MergeMode.MERGE_COMMIT).get().map(ExecutedCommand::line));
+        assertEquals(
+                List.of("git merge --no-ff --no-edit feature"),
+                CliMerge.merge(repo, new Branch.Name("feature"), MergeMode.MERGE_COMMIT)
+                        .get()
+                        .map(ExecutedCommand::line));
 
         assertEquals(2, parents("HEAD"));
         assertEquals("Merge branch 'feature'", git("log", "-1", "--format=%s").strip());
@@ -71,7 +75,11 @@ class CliMergeTest {
     void squashStagesTheChangesWithoutCommitting() throws Exception {
         String head = git("rev-parse", "HEAD");
 
-        assertEquals(List.of("git merge --squash feature"), CliMerge.merge(repo, new Branch.Name("feature"), MergeMode.SQUASH).get().map(ExecutedCommand::line));
+        assertEquals(
+                List.of("git merge --squash feature"),
+                CliMerge.merge(repo, new Branch.Name("feature"), MergeMode.SQUASH)
+                        .get()
+                        .map(ExecutedCommand::line));
 
         assertEquals(head, git("rev-parse", "HEAD"));
         assertEquals("A  b.txt\n", git("status", "--porcelain"));
@@ -81,8 +89,11 @@ class CliMergeTest {
     void squashAndCommitMakesOneCommitWithGitsSquashMessage() throws Exception {
         commitOnMain();
 
-        assertEquals(List.of("git merge --squash feature", "git commit --quiet --no-edit"),
-                CliMerge.merge(repo, new Branch.Name("feature"), MergeMode.SQUASH_AND_COMMIT).get().map(ExecutedCommand::line));
+        assertEquals(
+                List.of("git merge --squash feature", "git commit --quiet --no-edit"),
+                CliMerge.merge(repo, new Branch.Name("feature"), MergeMode.SQUASH_AND_COMMIT)
+                        .get()
+                        .map(ExecutedCommand::line));
 
         assertEquals(1, parents("HEAD"));
         assertTrue(git("log", "-1", "--format=%B").startsWith("Squashed commit of the following:"));
@@ -94,8 +105,11 @@ class CliMergeTest {
         CliMerge.merge(repo, new Branch.Name("feature"), MergeMode.FAST_FORWARD).get();
         String head = git("rev-parse", "HEAD");
 
-        assertEquals(List.of("git merge --squash feature"),
-                CliMerge.merge(repo, new Branch.Name("feature"), MergeMode.SQUASH_AND_COMMIT).get().map(ExecutedCommand::line));
+        assertEquals(
+                List.of("git merge --squash feature"),
+                CliMerge.merge(repo, new Branch.Name("feature"), MergeMode.SQUASH_AND_COMMIT)
+                        .get()
+                        .map(ExecutedCommand::line));
 
         assertEquals(head, git("rev-parse", "HEAD"));
     }
@@ -107,10 +121,14 @@ class CliMergeTest {
         git("commit", "-qam", "main changes a");
         write("unrelated.txt", "keep\n");
 
-        GitFailure<GitError.ProcessError> failure = CliMerge.merge(repo, new Branch.Name("conflicting"), MergeMode.MERGE_COMMIT).getLeft();
+        GitFailure<GitError.ProcessError> failure = CliMerge.merge(
+                        repo, new Branch.Name("conflicting"), MergeMode.MERGE_COMMIT)
+                .getLeft();
 
         assertInstanceOf(GitError.CommandFailed.class, failure.error());
-        assertEquals(List.of("git merge --no-ff --no-edit conflicting", "git merge --abort"), failure.commands().map(ExecutedCommand::line));
+        assertEquals(
+                List.of("git merge --no-ff --no-edit conflicting", "git merge --abort"),
+                failure.commands().map(ExecutedCommand::line));
         assertFalse(Files.exists(repo.resolve(".git/MERGE_HEAD")));
         assertEquals("main\n", Files.readString(repo.resolve("a.txt")));
         assertEquals("keep\n", Files.readString(repo.resolve("unrelated.txt")));
@@ -122,10 +140,13 @@ class CliMergeTest {
         write("a.txt", "main\n");
         git("commit", "-qam", "main changes a");
 
-        GitFailure<GitError.ProcessError> failure =
-                CliMerge.merge(repo, new Branch.Name("conflicting"), MergeMode.SQUASH_AND_COMMIT).getLeft();
+        GitFailure<GitError.ProcessError> failure = CliMerge.merge(
+                        repo, new Branch.Name("conflicting"), MergeMode.SQUASH_AND_COMMIT)
+                .getLeft();
 
-        assertEquals(List.of("git merge --squash conflicting", "git reset --merge"), failure.commands().map(ExecutedCommand::line));
+        assertEquals(
+                List.of("git merge --squash conflicting", "git reset --merge"),
+                failure.commands().map(ExecutedCommand::line));
         assertEquals("", git("status", "--porcelain"));
         assertEquals("main\n", Files.readString(repo.resolve("a.txt")));
     }
@@ -135,10 +156,13 @@ class CliMergeTest {
         write("b.txt", "local\n");
         git("add", "b.txt");
 
-        GitFailure<GitError.ProcessError> failure = CliMerge.merge(repo, new Branch.Name("feature"), MergeMode.FAST_FORWARD).getLeft();
+        GitFailure<GitError.ProcessError> failure = CliMerge.merge(
+                        repo, new Branch.Name("feature"), MergeMode.FAST_FORWARD)
+                .getLeft();
 
         // Nothing was started, so nothing is undone.
-        assertEquals(List.of("git merge --ff --no-edit feature"), failure.commands().map(ExecutedCommand::line));
+        assertEquals(
+                List.of("git merge --ff --no-edit feature"), failure.commands().map(ExecutedCommand::line));
         assertEquals("A  b.txt\n", git("status", "--porcelain"));
     }
 
@@ -150,9 +174,13 @@ class CliMergeTest {
         gitAnyExit("merge", "conflicting");
         write("a.txt", "resolved\n");
 
-        GitFailure<GitError.ProcessError> failure = CliMerge.merge(repo, new Branch.Name("feature"), MergeMode.MERGE_COMMIT).getLeft();
+        GitFailure<GitError.ProcessError> failure = CliMerge.merge(
+                        repo, new Branch.Name("feature"), MergeMode.MERGE_COMMIT)
+                .getLeft();
 
-        assertEquals(List.of("git merge --no-ff --no-edit feature"), failure.commands().map(ExecutedCommand::line));
+        assertEquals(
+                List.of("git merge --no-ff --no-edit feature"),
+                failure.commands().map(ExecutedCommand::line));
         assertTrue(Files.exists(repo.resolve(".git/MERGE_HEAD")));
         assertEquals("resolved\n", Files.readString(repo.resolve("a.txt")));
     }
@@ -166,7 +194,8 @@ class CliMergeTest {
         gitAnyExit("merge", "conflicting");
         Files.delete(repo.resolve(".git/MERGE_HEAD"));
 
-        GitFailure<GitError.ProcessError> failure = CliMerge.merge(repo, new Branch.Name("feature"), MergeMode.SQUASH).getLeft();
+        GitFailure<GitError.ProcessError> failure = CliMerge.merge(repo, new Branch.Name("feature"), MergeMode.SQUASH)
+                .getLeft();
 
         assertEquals(List.of("git merge --squash feature"), failure.commands().map(ExecutedCommand::line));
         assertTrue(git("status", "--porcelain").contains("UU a.txt"));
@@ -199,13 +228,24 @@ class CliMergeTest {
     private void gitAnyExit(String... args) throws Exception {
         java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of("git"));
         command.addAll(java.util.List.of(args));
-        new ProcessExecutor().command(command).directory(repo.toFile()).readOutput(true).exitValueAny().execute();
+        new ProcessExecutor()
+                .command(command)
+                .directory(repo.toFile())
+                .readOutput(true)
+                .exitValueAny()
+                .execute();
     }
 
     private String git(String... args) throws Exception {
         java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of("git"));
         command.addAll(java.util.List.of(args));
-        return new ProcessExecutor().command(command).directory(repo.toFile())
-                .readOutput(true).redirectErrorStream(true).exitValueNormal().execute().outputUTF8();
+        return new ProcessExecutor()
+                .command(command)
+                .directory(repo.toFile())
+                .readOutput(true)
+                .redirectErrorStream(true)
+                .exitValueNormal()
+                .execute()
+                .outputUTF8();
     }
 }

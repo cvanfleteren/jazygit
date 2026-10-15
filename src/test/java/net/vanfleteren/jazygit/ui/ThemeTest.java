@@ -7,12 +7,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.tamboui.css.Styleable;
 import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
-import dev.tamboui.tui.event.KeyEvent;
-import dev.tamboui.tui.event.KeyModifiers;
+import java.util.Set;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import org.junit.jupiter.api.Test;
-
-import java.util.Set;
 
 class ThemeTest {
 
@@ -54,8 +51,12 @@ class ThemeTest {
         Theme.activate(engine, ThemeName.DARK_COLORBLIND);
         Theme.SpanStyles styles = Theme.spanStyles(engine);
 
-        assertEquals(java.util.Optional.of(Color.hex("#56b4e9")), styles.of(Theme.Classes.DIFF_ADDED).fg());
-        assertEquals(java.util.Optional.of(Color.hex("#d55e00")), styles.of(Theme.Classes.DIFF_REMOVED).fg());
+        assertEquals(
+                java.util.Optional.of(Color.hex("#56b4e9")),
+                styles.of(Theme.Classes.DIFF_ADDED).fg());
+        assertEquals(
+                java.util.Optional.of(Color.hex("#d55e00")),
+                styles.of(Theme.Classes.DIFF_REMOVED).fg());
     }
 
     @Test
@@ -66,7 +67,10 @@ class ThemeTest {
 
             var popup = engine.resolve(new Node("DialogElement", Set.of())).borderColor();
             assertTrue(popup.isPresent(), name.id());
-            assertEquals(engine.resolve(new Node("Panel", Set.of(Theme.Classes.FOCUSED))).borderColor(), popup,
+            assertEquals(
+                    engine.resolve(new Node("Panel", Set.of(Theme.Classes.FOCUSED)))
+                            .borderColor(),
+                    popup,
                     name.id());
         }
     }
@@ -109,13 +113,14 @@ class ThemeTest {
 
     @Test
     void theDarkThemesBrightenPlainTextOnTheHighlightedRow() {
-        for (ThemeName name : java.util.List.of(ThemeName.DARK, ThemeName.DARK_COLORBLIND, ThemeName.DARCULA,
-                ThemeName.MONO)) {
+        for (ThemeName name :
+                java.util.List.of(ThemeName.DARK, ThemeName.DARK_COLORBLIND, ThemeName.DARCULA, ThemeName.MONO)) {
             var engine = Theme.createEngine().get();
             Theme.activate(engine, name);
             Theme.SelectedText selectedText = Theme.selectedText(engine);
 
-            assertEquals(Theme.highlights(engine).of(true).bg(), selectedText.rowBg().toJavaOptional(), name.id());
+            assertEquals(
+                    Theme.highlights(engine).of(true).bg(), selectedText.rowBg().toJavaOptional(), name.id());
             assertTrue(selectedText.fg().isDefined(), name.id());
             assertFalse(selectedText.plainFg().equals(selectedText.fg()), name.id());
         }

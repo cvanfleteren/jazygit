@@ -15,15 +15,12 @@ public sealed interface RebaseMsg extends Msg {
     /**
      * The user asked to rebase the checked out branch onto {@code onto}; how is still to be chosen.
      */
-    record Requested(Branch.Name onto) implements RebaseMsg {
-    }
+    record Requested(Branch.Name onto) implements RebaseMsg {}
 
-    record Cancelled() implements RebaseMsg {
-    }
+    record Cancelled() implements RebaseMsg {}
 
     /**
      * The user chose a plain rebase.
      */
-    record Chosen() implements RebaseMsg {
-    }
+    record Chosen() implements RebaseMsg {}
 }

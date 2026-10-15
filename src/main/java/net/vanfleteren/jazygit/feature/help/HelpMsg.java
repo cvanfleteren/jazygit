@@ -19,15 +19,12 @@ public sealed interface HelpMsg extends Msg {
      * @param actions what each key of the panel sends for what was selected in it, in the order the keys are
      *                listed; none for a key that does nothing then
      */
-    record Requested(String scopeId, List<Option<Msg>> actions) implements HelpMsg {
-    }
+    record Requested(String scopeId, List<Option<Msg>> actions) implements HelpMsg {}
 
-    record Closed() implements HelpMsg {
-    }
+    record Closed() implements HelpMsg {}
 
     /**
      * The user chose to run the key that sends {@code msg} from the help.
      */
-    record Chosen(Msg msg) implements HelpMsg {
-    }
+    record Chosen(Msg msg) implements HelpMsg {}
 }

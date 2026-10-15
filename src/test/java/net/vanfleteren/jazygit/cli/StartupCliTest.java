@@ -30,7 +30,8 @@ class StartupCliTest {
 
     @Test
     void aPathIsWhereToOpen() {
-        assertEquals(Either.right(new StartupOptions(Option.of(Path.of("src/main")), Option.none())), parse("src/main"));
+        assertEquals(
+                Either.right(new StartupOptions(Option.of(Path.of("src/main")), Option.none())), parse("src/main"));
     }
 
     @ParameterizedTest
@@ -41,14 +42,18 @@ class StartupCliTest {
 
     @Test
     void aPathAndATheme() {
-        assertEquals(Either.right(new StartupOptions(Option.of(Path.of("repo")), Option.of(ThemeName.LIGHT))),
+        assertEquals(
+                Either.right(new StartupOptions(Option.of(Path.of("repo")), Option.of(ThemeName.LIGHT))),
                 parse("--theme=light", "repo"));
     }
 
     @Test
     void anUnknownThemeExitsWithTheThemesThereAre() {
         assertEquals(Either.left(new StartupCli.Exit(2)), parse("--theme", "purple"));
-        assertTrue(err.toString().contains("'purple' is not a theme; expected one of: dark, light, darcula, dark-colorblind, mono"),
+        assertTrue(
+                err.toString()
+                        .contains(
+                                "'purple' is not a theme; expected one of: dark, light, darcula, dark-colorblind, mono"),
                 err.toString());
         assertTrue(err.toString().contains("Usage: jazygit"), err.toString());
         assertEquals("", out.toString());
@@ -68,8 +73,10 @@ class StartupCliTest {
     @Test
     void helpListsTheOptionsAndExits() {
         assertEquals(Either.left(new StartupCli.Exit(0)), parse("--help"));
-        assertTrue(List.of("Usage: jazygit", "--theme=THEME", "dark-colorblind", "PATH",
-                "--version").forAll(out.toString()::contains), out.toString());
+        assertTrue(
+                List.of("Usage: jazygit", "--theme=THEME", "dark-colorblind", "PATH", "--version")
+                        .forAll(out.toString()::contains),
+                out.toString());
         assertEquals("", err.toString());
     }
 

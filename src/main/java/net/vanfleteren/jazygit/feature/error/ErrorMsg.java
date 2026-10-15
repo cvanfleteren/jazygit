@@ -14,6 +14,5 @@ public sealed interface ErrorMsg extends Msg {
     /**
      * The user closed the error popup.
      */
-    record Dismissed() implements ErrorMsg {
-    }
+    record Dismissed() implements ErrorMsg {}
 }

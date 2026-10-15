@@ -16,15 +16,12 @@ public sealed interface MergeMsg extends Msg {
     /**
      * The user asked to merge {@code branch} into the checked out branch; how is still to be chosen.
      */
-    record Requested(Branch.Name branch) implements MergeMsg {
-    }
+    record Requested(Branch.Name branch) implements MergeMsg {}
 
-    record Cancelled() implements MergeMsg {
-    }
+    record Cancelled() implements MergeMsg {}
 
     /**
      * The user chose how to merge.
      */
-    record Chosen(MergeMode mode) implements MergeMsg {
-    }
+    record Chosen(MergeMode mode) implements MergeMsg {}
 }

@@ -7,8 +7,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
  */
 public final class SettingsUpdate {
 
-    private SettingsUpdate() {
-    }
+    private SettingsUpdate() {}
 
     public static Next update(Model model, SettingsMsg msg) {
         return switch (msg) {

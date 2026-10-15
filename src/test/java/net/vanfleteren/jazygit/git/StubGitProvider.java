@@ -1,17 +1,8 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.git.model.RemoteRef;
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
-import net.vanfleteren.jazygit.git.model.PushMode;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.git.model.DeleteScope;
-import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
@@ -23,18 +14,26 @@ import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.RewordError;
 import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
 import net.vanfleteren.jazygit.git.GitError.StashError;
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
+import net.vanfleteren.jazygit.git.model.DeleteScope;
+import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.MergeMode;
+import net.vanfleteren.jazygit.git.model.PushMode;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
-import net.vanfleteren.jazygit.git.model.DiffText;
+import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.git.model.ResetMode;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.git.model.Stash;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
  * A {@link GitInfoProvider} for tests: an empty repository whose operations all succeed without running
@@ -124,23 +123,26 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(Branch.Name name, String startPoint) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(
+            Branch.Name name, String startPoint) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewTrackingBranch(Branch.Name name,
-                                                                                        RemoteBranch upstream) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewTrackingBranch(
+            Branch.Name name, RemoteBranch upstream) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(Branch.Name name, RemoteBranch remote, DeleteScope scope) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(
+            Branch.Name name, RemoteBranch remote, DeleteScope scope) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> renameBranch(Branch.Name name, Branch.Name newName) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> renameBranch(
+            Branch.Name name, Branch.Name newName) {
         return ran();
     }
 
@@ -185,12 +187,14 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Branch.Name branch, RemoteBranch upstream, PushMode mode) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(
+            Branch.Name branch, RemoteBranch upstream, PushMode mode) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(Branch.Name branch, RemoteBranch upstream) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(
+            Branch.Name branch, RemoteBranch upstream) {
         return ran();
     }
 
@@ -200,7 +204,8 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(Branch.Name branch, RemoteBranch upstream) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(
+            Branch.Name branch, RemoteBranch upstream) {
         return ran();
     }
 

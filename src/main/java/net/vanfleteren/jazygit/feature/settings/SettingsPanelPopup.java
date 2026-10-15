@@ -12,5 +12,4 @@ import net.vanfleteren.jazygit.state.Popup;
  * @param gitHub       how gh is set up for the repository; none while it is read
  */
 public record SettingsPanelPopup(ThemeName theme, Option<String> ghExecutable, Option<GitHubSetup> gitHub)
-        implements Popup {
-}
+        implements Popup {}

@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.process;
 
 import io.vavr.collection.List;
-
 import java.util.regex.Pattern;
 
 /**
@@ -11,8 +10,7 @@ public final class CommandLine {
 
     private static final Pattern SAFE = Pattern.compile("[A-Za-z0-9_@%+=:,./^-]+");
 
-    private CommandLine() {
-    }
+    private CommandLine() {}
 
     public static String format(List<String> command) {
         return command.map(CommandLine::quote).mkString(" ");

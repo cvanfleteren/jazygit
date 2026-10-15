@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.nio.file.Path;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.settings.Settings;
@@ -13,8 +14,6 @@ import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.Path;
-
 class SettingsUpdateTest {
 
     private static final Path FILE = Path.of("/config/jazygit/config.toml");
@@ -22,8 +21,7 @@ class SettingsUpdateTest {
     private static final Cmd.SaveSettings SAVE = new Cmd.SaveSettings(Settings.DEFAULT, DARCULA);
 
     private static Env env(SettingsStore settings) {
-        return new Env(new StubGitProvider() {
-        }, StubGitHub.empty(), settings);
+        return new Env(new StubGitProvider() {}, StubGitHub.empty(), settings);
     }
 
     private static SettingsStore saving(Either<SettingsProblem, Settings> outcome) {
@@ -42,7 +40,8 @@ class SettingsUpdateTest {
 
     @Test
     void theLoadedSettingsAreUsedFromTheStart() {
-        Model model = Update.init("repo", new SettingsStore.Loaded(DARCULA, Option.none())).model();
+        Model model = Update.init("repo", new SettingsStore.Loaded(DARCULA, Option.none()))
+                .model();
 
         assertEquals(DARCULA, model.settings());
         assertEquals(Option.none(), model.error());
@@ -59,7 +58,8 @@ class SettingsUpdateTest {
 
     @Test
     void withoutAThemeAskedForAtStartupTheSavedOneIsDrawn() {
-        Model model = Update.init("repo", new SettingsStore.Loaded(DARCULA, Option.none()), Option.none()).model();
+        Model model = Update.init("repo", new SettingsStore.Loaded(DARCULA, Option.none()), Option.none())
+                .model();
 
         assertEquals(ThemeName.DARCULA, model.theme());
     }
@@ -68,7 +68,8 @@ class SettingsUpdateTest {
     void aProblemLoadingTheSettingsIsShownInTheCommandLogOnly() {
         SettingsProblem invalid = new SettingsProblem.Invalid(FILE, List.of("ui.theme"));
 
-        Model model = Update.init("repo", new SettingsStore.Loaded(Settings.DEFAULT, Option.of(invalid))).model();
+        Model model = Update.init("repo", new SettingsStore.Loaded(Settings.DEFAULT, Option.of(invalid)))
+                .model();
 
         assertEquals(Option.of(new AppError.SettingsNotLoaded(invalid)), model.error());
         assertEquals(Option.none(), model.popup());
@@ -89,7 +90,8 @@ class SettingsUpdateTest {
         Model model = TestModels.loaded().withSettings(DARCULA);
         SettingsProblem unwritable = new SettingsProblem.Unwritable(FILE, "read-only");
 
-        Model after = Update.update(model, Program.perform(env(saving(Either.left(unwritable))), SAVE)).model();
+        Model after = Update.update(model, Program.perform(env(saving(Either.left(unwritable))), SAVE))
+                .model();
 
         AppError error = new AppError.SettingsNotSaved(new Failure.Settings(unwritable));
         assertEquals(DARCULA, after.settings());

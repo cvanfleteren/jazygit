@@ -19,8 +19,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
  */
 public final class CommitUpdate {
 
-    private CommitUpdate() {
-    }
+    private CommitUpdate() {}
 
     public static Next update(Model model, CommitMsg msg) {
         return switch (msg) {
@@ -40,10 +39,13 @@ public final class CommitUpdate {
      * Commits what is staged; when nothing is, offers to stage everything first.
      */
     private static Next requested(Model model) {
-        return Update.withFiles(model, files -> files.exists(FileEntry::staged)
-                ? Update.ask(model, new CommitPopup())
-                : files.isEmpty() ? Next.of(model.fail(new AppError.NothingToCommit()))
-                : Update.ask(model, new StageAllPopup()));
+        return Update.withFiles(
+                model,
+                files -> files.exists(FileEntry::staged)
+                        ? Update.ask(model, new CommitPopup())
+                        : files.isEmpty()
+                                ? Next.of(model.fail(new AppError.NothingToCommit()))
+                                : Update.ask(model, new StageAllPopup()));
     }
 
     private static Next stageAllConfirmed(Model model) {
@@ -53,6 +55,7 @@ public final class CommitUpdate {
 
     private static Next confirmed(Model model, CommitMessage message) {
         // A blank summary keeps the dialog open.
-        return Update.confirm(model, CommitPopup.class, popup -> Option.when(message.hasSummary(), () -> new Commit(message)));
+        return Update.confirm(
+                model, CommitPopup.class, popup -> Option.when(message.hasSummary(), () -> new Commit(message)));
     }
 }

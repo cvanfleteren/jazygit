@@ -16,27 +16,21 @@ public sealed interface RecentReposMsg extends Msg {
     /**
      * The user asked to switch to a recent repository.
      */
-    record Requested() implements RecentReposMsg {
-    }
+    record Requested() implements RecentReposMsg {}
 
     /**
      * The recent repositories that can be switched to, by the root of their working tree.
      */
-    record Listed(List<String> directories) implements RecentReposMsg {
-    }
+    record Listed(List<String> directories) implements RecentReposMsg {}
 
-    record Cancelled() implements RecentReposMsg {
-    }
+    record Cancelled() implements RecentReposMsg {}
 
-    record Chosen(String directory) implements RecentReposMsg {
-    }
+    record Chosen(String directory) implements RecentReposMsg {}
 
     /**
      * The app shows the repository at {@code directory} now.
      */
-    record Switched(String directory) implements RecentReposMsg {
-    }
+    record Switched(String directory) implements RecentReposMsg {}
 
-    record NotSwitched(String directory, Failure failure) implements RecentReposMsg {
-    }
+    record NotSwitched(String directory, Failure failure) implements RecentReposMsg {}
 }

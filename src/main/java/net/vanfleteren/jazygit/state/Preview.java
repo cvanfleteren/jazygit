@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.control.Option;
-
 import java.util.function.UnaryOperator;
 
 /**
@@ -24,16 +23,16 @@ public record Preview<K, V>(K key, Loadable<V> value, Option<Preview<K, V>> prev
      * A preview of {@code key} that is loading, falling back to {@code shown}, the one that was shown before.
      */
     public static <K, V> Preview<K, V> loading(K key, Option<Preview<K, V>> shown) {
-        Option<Preview<K, V>> previous = shown.flatMap(preview ->
-                preview.value() instanceof Loadable.Loaded<V> ? Option.of(preview) : preview.previous());
+        Option<Preview<K, V>> previous = shown.flatMap(
+                preview -> preview.value() instanceof Loadable.Loaded<V> ? Option.of(preview) : preview.previous());
         return new Preview<>(key, Loadable.loading(), previous);
     }
 
     /**
      * Applies {@code f} to {@code preview} if it is the preview of {@code key}.
      */
-    public static <K, V> Option<Preview<K, V>> updated(Option<Preview<K, V>> preview, K key,
-                                                       UnaryOperator<Preview<K, V>> f) {
+    public static <K, V> Option<Preview<K, V>> updated(
+            Option<Preview<K, V>> preview, K key, UnaryOperator<Preview<K, V>> f) {
         return preview.map(shown -> shown.key().equals(key) ? f.apply(shown) : shown);
     }
 

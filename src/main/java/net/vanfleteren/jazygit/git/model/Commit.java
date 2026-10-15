@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.git.model;
 
 import io.vavr.collection.List;
-
 import java.time.Instant;
 
 /**
@@ -14,11 +13,24 @@ import java.time.Instant;
  *                that was merged into
  * @param tags    the tags pointing at the commit
  */
-public record Commit(Sha sha, String authorName, String authorEmail, Instant authorTime,
-                     String message, String body, List<Sha> parents, List<Tag> tags) {
+public record Commit(
+        Sha sha,
+        String authorName,
+        String authorEmail,
+        Instant authorTime,
+        String message,
+        String body,
+        List<Sha> parents,
+        List<Tag> tags) {
 
-    public Commit(Sha sha, String authorName, String authorEmail, Instant authorTime, String message, String body,
-                  List<Sha> parents) {
+    public Commit(
+            Sha sha,
+            String authorName,
+            String authorEmail,
+            Instant authorTime,
+            String message,
+            String body,
+            List<Sha> parents) {
         this(sha, authorName, authorEmail, authorTime, message, body, parents, List.of());
     }
 

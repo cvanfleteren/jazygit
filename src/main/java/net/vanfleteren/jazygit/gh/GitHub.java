@@ -68,6 +68,5 @@ public interface GitHub {
      * @param number   its number, if gh said where it is
      * @param commands the command log
      */
-    record Created(Option<Integer> number, List<ExecutedCommand> commands) {
-    }
+    record Created(Option<Integer> number, List<ExecutedCommand> commands) {}
 }

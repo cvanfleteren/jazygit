@@ -1,15 +1,14 @@
 package net.vanfleteren.jazygit.git;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import io.vavr.control.Option;
+import java.nio.file.Path;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.zeroturnaround.exec.ProcessExecutor;
-
-import java.nio.file.Path;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * The repository's own git configuration.
@@ -23,7 +22,10 @@ class CliConfigTest {
 
     @BeforeEach
     void init() throws Exception {
-        new ProcessExecutor().command("git", "init", "-q", repo.toString()).exitValueNormal().execute();
+        new ProcessExecutor()
+                .command("git", "init", "-q", repo.toString())
+                .exitValueNormal()
+                .execute();
     }
 
     @Test
@@ -33,7 +35,8 @@ class CliConfigTest {
 
     @Test
     void aKeySetIsReadBack() {
-        assertEquals(io.vavr.collection.List.of("git config --local jazygit.githubUser alice-work"),
+        assertEquals(
+                io.vavr.collection.List.of("git config --local jazygit.githubUser alice-work"),
                 CliConfig.set(repo, KEY, Option.of("alice-work")).get().map(ExecutedCommand::line));
 
         assertEquals(Option.of("alice-work"), CliConfig.get(repo, KEY).get());
@@ -50,7 +53,8 @@ class CliConfigTest {
 
     @Test
     void removingAKeyThatIsNotSetDoesNothing() {
-        assertEquals(io.vavr.collection.List.of("git config --local --unset-all jazygit.githubUser"),
+        assertEquals(
+                io.vavr.collection.List.of("git config --local --unset-all jazygit.githubUser"),
                 CliConfig.set(repo, KEY, Option.none()).get().map(ExecutedCommand::line));
     }
 }

@@ -17,8 +17,8 @@ public final class PullRequestSymbols {
     private static final Symbol APPROVED = new Symbol("✔", Theme.Classes.REVIEW_APPROVED);
     private static final Symbol CHANGES = new Symbol("✎", Theme.Classes.REVIEW_CHANGES);
     private static final Symbol TO_REVIEW = new Symbol("?", Theme.Classes.DIM);
-    private PullRequestSymbols() {
-    }
+
+    private PullRequestSymbols() {}
 
     /**
      * Nothing for no checks.
@@ -59,6 +59,5 @@ public final class PullRequestSymbols {
     /**
      * A symbol, in the colour of {@code cssClass}.
      */
-    public record Symbol(String text, String cssClass) {
-    }
+    public record Symbol(String text, String cssClass) {}
 }

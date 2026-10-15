@@ -17,27 +17,22 @@ public sealed interface NewBranchMsg extends Msg {
     /**
      * The user asked for a new branch starting at {@code base}; the name is still to be entered.
      */
-    record Requested(Branch.Name base) implements NewBranchMsg {
-    }
+    record Requested(Branch.Name base) implements NewBranchMsg {}
 
     /**
      * The user asked for a new branch starting at the commit {@code sha}.
      */
-    record RequestedAtCommit(Sha sha) implements NewBranchMsg {
-    }
+    record RequestedAtCommit(Sha sha) implements NewBranchMsg {}
 
     /**
      * The user asked for a new branch starting at the remote branch {@code branch}.
      */
-    record RequestedAtRemote(RemoteBranch branch) implements NewBranchMsg {
-    }
+    record RequestedAtRemote(RemoteBranch branch) implements NewBranchMsg {}
 
-    record Cancelled() implements NewBranchMsg {
-    }
+    record Cancelled() implements NewBranchMsg {}
 
     /**
      * The user entered the name of the new branch.
      */
-    record Confirmed(String name) implements NewBranchMsg {
-    }
+    record Confirmed(String name) implements NewBranchMsg {}
 }

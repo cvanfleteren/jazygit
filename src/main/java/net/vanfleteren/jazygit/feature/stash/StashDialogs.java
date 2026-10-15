@@ -14,20 +14,24 @@ public final class StashDialogs {
      * Asks for the name of a stash; a blank name stashes under a generated one.
      */
     public static final TextInputDialog.Spec<StashPopup> STASH = new TextInputDialog.Spec<>(
-            "stash-name", StashPopup.class,
+            "stash-name",
+            StashPopup.class,
             popup -> Messages.get("dialog.stash.title"),
             Option.of(Messages.get("dialog.stash.placeholder")),
-            popup -> "", StashMsg.Confirmed::new, StashMsg.Cancelled::new);
+            popup -> "",
+            StashMsg.Confirmed::new,
+            StashMsg.Cancelled::new);
 
     /**
      * Asks to drop a stash.
      */
     public static final ConfirmDialog.Spec<StashDropPopup> DROP = new ConfirmDialog.Spec<>(
-            "stash-drop", StashDropPopup.class,
+            "stash-drop",
+            StashDropPopup.class,
             popup -> Messages.get("dialog.stashDrop.title"),
             popup -> Messages.get("dialog.stashDrop.message", popup.stash().message()),
-            StashMsg.DropConfirmed::new, StashMsg.DropCancelled::new);
+            StashMsg.DropConfirmed::new,
+            StashMsg.DropCancelled::new);
 
-    private StashDialogs() {
-    }
+    private StashDialogs() {}
 }

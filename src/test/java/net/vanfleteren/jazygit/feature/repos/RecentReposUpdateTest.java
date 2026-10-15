@@ -7,6 +7,9 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import net.vanfleteren.jazygit.feature.commit.CommitPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.GitError;
@@ -24,10 +27,6 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
 
 class RecentReposUpdateTest {
 
@@ -64,12 +63,17 @@ class RecentReposUpdateTest {
     }
 
     private static Env env(Path current, RecentRepositories recent, Repositories repositories) {
-        return new Env(new StubGitProvider() {
-            @Override
-            public Path workTree() {
-                return current;
-            }
-        }, StubGitHub.empty(), SettingsStore.NONE, recent, repositories);
+        return new Env(
+                new StubGitProvider() {
+                    @Override
+                    public Path workTree() {
+                        return current;
+                    }
+                },
+                StubGitHub.empty(),
+                SettingsStore.NONE,
+                recent,
+                repositories);
     }
 
     private Path repo(String name) throws Exception {
@@ -96,7 +100,8 @@ class RecentReposUpdateTest {
 
     @Test
     void theListedRepositoriesOpenThePopup() {
-        Model model = Update.update(TestModels.loaded(), new RecentReposMsg.Listed(List.of("/repos/a"))).model();
+        Model model = Update.update(TestModels.loaded(), new RecentReposMsg.Listed(List.of("/repos/a")))
+                .model();
 
         assertEquals(Option.of(new RecentReposPopup(List.of("/repos/a"))), model.popup(RecentReposPopup.class));
     }
@@ -105,7 +110,9 @@ class RecentReposUpdateTest {
     void cancellingClosesThePopup() {
         Model open = TestModels.loaded().openPopup(new RecentReposPopup(List.of("/repos/a")));
 
-        assertEquals(Option.none(), Update.update(open, new RecentReposMsg.Cancelled()).model().popup());
+        assertEquals(
+                Option.none(),
+                Update.update(open, new RecentReposMsg.Cancelled()).model().popup());
     }
 
     @Test
@@ -122,9 +129,11 @@ class RecentReposUpdateTest {
     void notSwitchingSaysWhy() {
         Failure failure = new Failure.Git(new GitError.NotARepository(Path.of("/repos/a")));
 
-        Model model = Update.update(TestModels.loaded(), new RecentReposMsg.NotSwitched("/repos/a", failure)).model();
+        Model model = Update.update(TestModels.loaded(), new RecentReposMsg.NotSwitched("/repos/a", failure))
+                .model();
 
-        assertEquals(Option.of(new ErrorPopup(new AppError.RepositoryNotOpened("/repos/a", failure))),
+        assertEquals(
+                Option.of(new ErrorPopup(new AppError.RepositoryNotOpened("/repos/a", failure))),
                 model.popup(ErrorPopup.class));
     }
 

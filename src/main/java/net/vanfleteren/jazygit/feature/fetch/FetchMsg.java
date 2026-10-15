@@ -16,21 +16,16 @@ public sealed interface FetchMsg extends Msg {
     /**
      * Periodic prompt to fetch from the remotes.
      */
-    record Tick() implements FetchMsg {
-    }
+    record Tick() implements FetchMsg {}
 
     /**
      * The remotes to fetch from, in order.
      */
-    record RemotesListed(List<String> remotes) implements FetchMsg {
-    }
+    record RemotesListed(List<String> remotes) implements FetchMsg {}
 
-    record ListingFailed(Failure failure) implements FetchMsg {
-    }
+    record ListingFailed(Failure failure) implements FetchMsg {}
 
-    record Fetched(String remote) implements FetchMsg {
-    }
+    record Fetched(String remote) implements FetchMsg {}
 
-    record FetchFailed(String remote, Failure failure) implements FetchMsg {
-    }
+    record FetchFailed(String remote, Failure failure) implements FetchMsg {}
 }

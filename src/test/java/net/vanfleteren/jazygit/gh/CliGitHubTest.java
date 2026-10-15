@@ -1,9 +1,14 @@
 package net.vanfleteren.jazygit.gh;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.BranchChecks;
 import net.vanfleteren.jazygit.gh.model.GhLogin;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
@@ -17,12 +22,6 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewerState;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import org.junit.jupiter.api.Test;
 
-import java.time.Instant;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 class CliGitHubTest {
 
     @Test
@@ -31,7 +30,8 @@ class CliGitHubTest {
                 + "7\twip\ttrue\t\t\n"
                 + "5\tfix/npe\tfalse\tCHANGES_REQUESTED\tSUCCESS,PENDING\n";
 
-        assertEquals(Either.right(List.of(
+        assertEquals(
+                Either.right(List.of(
                         new PullRequest(9, "feature/login", false, Checks.PASSING, Review.APPROVED),
                         new PullRequest(7, "wip", true, Checks.NONE, Review.NONE),
                         new PullRequest(5, "fix/npe", false, Checks.PENDING, Review.CHANGES_REQUESTED))),
@@ -47,15 +47,26 @@ class CliGitHubTest {
                 + "branch\tmain\tFAILURE\n"
                 + "branch\tfix\tEXPECTED\n";
 
-        assertEquals(Either.right(new BranchChecks("owner/repo", HashMap.of(
-                        "feature/login", Checks.PASSING, "wip", Checks.NONE, "main", Checks.FAILING, "fix", Checks.PENDING))),
+        assertEquals(
+                Either.right(new BranchChecks(
+                        "owner/repo",
+                        HashMap.of(
+                                "feature/login",
+                                Checks.PASSING,
+                                "wip",
+                                Checks.NONE,
+                                "main",
+                                Checks.FAILING,
+                                "fix",
+                                Checks.PENDING))),
                 CliGitHub.parseBranchChecks(raw));
     }
 
     @Test
     void branchChecksWithoutTheRepositoryAreUnexpected() {
         assertTrue(CliGitHub.parseBranchChecks("branch\tmain\tSUCCESS\n").isLeft());
-        assertTrue(CliGitHub.parseBranchChecks("repo\towner/repo\nsomething\telse\n").isLeft());
+        assertTrue(CliGitHub.parseBranchChecks("repo\towner/repo\nsomething\telse\n")
+                .isLeft());
     }
 
     @Test
@@ -74,7 +85,8 @@ class CliGitHubTest {
 
     @Test
     void browsingOpensTheBranchByItsNameOnTheRemote() {
-        assertEquals(List.of("gh", "browse", "--branch", "feature/login"),
+        assertEquals(
+                List.of("gh", "browse", "--branch", "feature/login"),
                 CliGitHub.browseCommand("feature/login").commandLine("gh"));
     }
 
@@ -89,7 +101,9 @@ class CliGitHubTest {
 
     @Test
     void theLoginsOnEachHost() {
-        assertEquals(Either.right(List.of(new GhLogin("github.com", "alice", true, true),
+        assertEquals(
+                Either.right(List.of(
+                        new GhLogin("github.com", "alice", true, true),
                         new GhLogin("github.com", "alice-work", false, false),
                         new GhLogin("ghe.corp", "alice", true, true))),
                 CliGitHub.parseLogins("""
@@ -104,7 +118,8 @@ class CliGitHubTest {
         GhCommand command = CliGitHub.browseCommand("main");
 
         assertEquals("/opt/gh/bin/gh", command.commandLine("/opt/gh/bin/gh").head());
-        assertEquals(List.of("gh", "browse", "--branch", "main"), command.executed().commandLine());
+        assertEquals(
+                List.of("gh", "browse", "--branch", "main"), command.executed().commandLine());
     }
 
     @Test
@@ -129,7 +144,8 @@ class CliGitHubTest {
 
     @Test
     void theNumberOfACreatedPullRequestIsInTheUrlGhPrints() {
-        assertEquals(Option.of(12), CliGitHub.createdNumber("\nCreating pull request...\nhttps://github.com/o/r/pull/12\n"));
+        assertEquals(
+                Option.of(12), CliGitHub.createdNumber("\nCreating pull request...\nhttps://github.com/o/r/pull/12\n"));
         assertEquals(Option.none(), CliGitHub.createdNumber("nothing useful"));
     }
 
@@ -154,10 +170,25 @@ class CliGitHubTest {
                 + "check\tbuild\tPENDING\n"
                 + "check\tci/lint\tSUCCESS\n";
 
-        assertEquals(Either.right(new PullRequestDetails(42, "Add\trename", "cvf", State.OPEN, true, "support_rename",
-                        "main", Instant.parse("2026-10-10T08:00:00Z"), 120, 34, 7, Mergeable.MERGEABLE,
-                        Review.CHANGES_REQUESTED, 2, List.of("ui"),
-                        List.of(new Reviewer("bob", ReviewerState.CHANGES_REQUESTED),
+        assertEquals(
+                Either.right(new PullRequestDetails(
+                        42,
+                        "Add\trename",
+                        "cvf",
+                        State.OPEN,
+                        true,
+                        "support_rename",
+                        "main",
+                        Instant.parse("2026-10-10T08:00:00Z"),
+                        120,
+                        34,
+                        7,
+                        Mergeable.MERGEABLE,
+                        Review.CHANGES_REQUESTED,
+                        2,
+                        List.of("ui"),
+                        List.of(
+                                new Reviewer("bob", ReviewerState.CHANGES_REQUESTED),
                                 new Reviewer("carol", ReviewerState.REQUESTED),
                                 new Reviewer("core-team", ReviewerState.REQUESTED)),
                         List.of(new Check("build", Checks.PENDING), new Check("ci/lint", Checks.PASSING)))),
@@ -168,9 +199,25 @@ class CliGitHubTest {
     void aMergedPullRequestWithoutChecksLabelsOrReviewers() {
         String raw = "pr\t5\tFix\t\tMERGED\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\n";
 
-        assertEquals(Either.right(new PullRequestDetails(5, "Fix", "", State.MERGED, false, "fix", "main",
-                        Instant.parse("2026-01-01T00:00:00Z"), 1, 0, 1, Mergeable.UNKNOWN, Review.NONE, 0,
-                        List.empty(), List.empty(), List.empty())),
+        assertEquals(
+                Either.right(new PullRequestDetails(
+                        5,
+                        "Fix",
+                        "",
+                        State.MERGED,
+                        false,
+                        "fix",
+                        "main",
+                        Instant.parse("2026-01-01T00:00:00Z"),
+                        1,
+                        0,
+                        1,
+                        Mergeable.UNKNOWN,
+                        Review.NONE,
+                        0,
+                        List.empty(),
+                        List.empty(),
+                        List.empty())),
                 CliGitHub.parseDetails(raw));
     }
 

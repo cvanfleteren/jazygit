@@ -3,11 +3,10 @@ package net.vanfleteren.jazygit.git;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-
 import java.util.function.Function;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
  * A git operation that failed: why, and the command lines that were executed up to and including the
@@ -15,8 +14,8 @@ import java.util.function.Supplier;
  *
  * @param cleanupFailed why cleaning up after the failure, e.g. aborting a rebase, failed too, if it did
  */
-public record GitFailure<E extends GitError>(E error, List<ExecutedCommand> commands,
-                                             Option<ProcessError> cleanupFailed) {
+public record GitFailure<E extends GitError>(
+        E error, List<ExecutedCommand> commands, Option<ProcessError> cleanupFailed) {
 
     public GitFailure(E error, List<ExecutedCommand> commands) {
         this(error, commands, Option.none());
@@ -60,8 +59,10 @@ public record GitFailure<E extends GitError>(E error, List<ExecutedCommand> comm
      */
     public static <E extends GitError> Either<GitFailure<E>, List<ExecutedCommand>> sequence(
             List<Supplier<Either<GitFailure<E>, List<ExecutedCommand>>>> steps) {
-        return steps.foldLeft(nothing(), (done, step) -> done.flatMap(earlier ->
-                step.get().map(earlier::appendAll).mapLeft(failure -> failure.after(earlier))));
+        return steps.foldLeft(
+                nothing(),
+                (done, step) -> done.flatMap(
+                        earlier -> step.get().map(earlier::appendAll).mapLeft(failure -> failure.after(earlier))));
     }
 
     /**

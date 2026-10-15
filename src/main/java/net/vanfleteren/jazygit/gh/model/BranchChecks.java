@@ -1,9 +1,8 @@
 package net.vanfleteren.jazygit.gh.model;
 
 import io.vavr.collection.Map;
-import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
-
 import java.util.Locale;
+import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 
 /**
  * How the CI checks are doing on the tip of each branch of a GitHub repository.

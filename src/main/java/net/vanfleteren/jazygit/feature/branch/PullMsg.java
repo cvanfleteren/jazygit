@@ -15,6 +15,5 @@ public sealed interface PullMsg extends Msg {
     /**
      * The user asked to pull a branch.
      */
-    record Requested(Branch.Name branch) implements PullMsg {
-    }
+    record Requested(Branch.Name branch) implements PullMsg {}
 }

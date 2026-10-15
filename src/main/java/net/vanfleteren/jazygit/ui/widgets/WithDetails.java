@@ -29,7 +29,10 @@ public record WithDetails(Element dialog, Option<String> shown, List<String> pos
     }
 
     private static Element box(String text, int width, int height) {
-        return Toolkit.dialog(DialogFrame.wrapped(text, width, Integer.MAX_VALUE)).rounded().width(width).padding(1)
+        return Toolkit.dialog(DialogFrame.wrapped(text, width, Integer.MAX_VALUE))
+                .rounded()
+                .width(width)
+                .padding(1)
                 .length(height);
     }
 
@@ -45,8 +48,8 @@ public record WithDetails(Element dialog, Option<String> shown, List<String> pos
         context.renderChild(dialog, frame, popup);
         shown.forEach(text -> {
             int boxHeight = Math.min(boxHeight(text, width), area.bottom() - popup.bottom());
-            context.renderChild(box(text, width, boxHeight), frame,
-                    new Rect(area.x(), popup.bottom(), area.width(), boxHeight));
+            context.renderChild(
+                    box(text, width, boxHeight), frame, new Rect(area.x(), popup.bottom(), area.width(), boxHeight));
         });
     }
 

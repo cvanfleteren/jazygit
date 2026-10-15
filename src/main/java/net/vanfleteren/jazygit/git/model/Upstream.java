@@ -7,5 +7,4 @@ package net.vanfleteren.jazygit.git.model;
  * @param ahead  the commits of the branch not yet pushed
  * @param behind the commits of the upstream not yet in the branch
  */
-public record Upstream(RemoteBranch branch, int ahead, int behind) {
-}
+public record Upstream(RemoteBranch branch, int ahead, int behind) {}

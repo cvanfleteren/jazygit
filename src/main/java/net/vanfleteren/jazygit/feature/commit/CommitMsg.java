@@ -18,25 +18,18 @@ public sealed interface CommitMsg extends Msg {
      * The user asked to commit: the message is asked for, after staging everything if nothing is
      * staged yet.
      */
-    record Requested() implements CommitMsg {
-    }
+    record Requested() implements CommitMsg {}
 
-    record StageAllConfirmed() implements CommitMsg {
-    }
+    record StageAllConfirmed() implements CommitMsg {}
 
-    record StageAllCancelled() implements CommitMsg {
-    }
+    record StageAllCancelled() implements CommitMsg {}
 
     /**
      * Everything was staged for a commit.
      */
-    record StagedForCommit(CommitCmd.StageForCommit cmd, List<ExecutedCommand> commands) implements CommitMsg {
-    }
+    record StagedForCommit(CommitCmd.StageForCommit cmd, List<ExecutedCommand> commands) implements CommitMsg {}
 
+    record Cancelled() implements CommitMsg {}
 
-    record Cancelled() implements CommitMsg {
-    }
-
-    record Confirmed(CommitMessage message) implements CommitMsg {
-    }
+    record Confirmed(CommitMessage message) implements CommitMsg {}
 }

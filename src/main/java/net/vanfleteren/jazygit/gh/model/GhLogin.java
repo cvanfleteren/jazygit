@@ -8,5 +8,4 @@ package net.vanfleteren.jazygit.gh.model;
  * @param active whether gh uses it for the host, unless told otherwise
  * @param valid  whether its token works; it does not after it was revoked, say
  */
-public record GhLogin(String host, String login, boolean active, boolean valid) {
-}
+public record GhLogin(String host, String login, boolean active, boolean valid) {}

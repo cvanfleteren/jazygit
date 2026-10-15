@@ -1,5 +1,13 @@
 package net.vanfleteren.jazygit.ui.widgets;
 
+import static dev.tamboui.toolkit.Toolkit.dialog;
+import static dev.tamboui.toolkit.Toolkit.row;
+import static dev.tamboui.toolkit.Toolkit.stack;
+import static dev.tamboui.toolkit.Toolkit.text;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import dev.tamboui.buffer.Buffer;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.style.Color;
@@ -9,18 +17,9 @@ import dev.tamboui.terminal.Frame;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.RenderContext;
 import io.vavr.control.Option;
+import java.util.Optional;
 import net.vanfleteren.jazygit.ui.Theme.Backdrop;
 import org.junit.jupiter.api.Test;
-
-import java.util.Optional;
-
-import static dev.tamboui.toolkit.Toolkit.dialog;
-import static dev.tamboui.toolkit.Toolkit.row;
-import static dev.tamboui.toolkit.Toolkit.stack;
-import static dev.tamboui.toolkit.Toolkit.text;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * What is behind a popup, dimmed.
@@ -53,7 +52,8 @@ class DimmedTest {
         Color themeFg = Color.rgb(0xa9, 0xb7, 0xc6);
         Backdrop backdrop = new Backdrop(Option.of(themeFg), Style.EMPTY.fg(MUTED));
 
-        Buffer buffer = render(new Dimmed(row(text("plain").fg(themeFg).length(5), text("red").red()), backdrop));
+        Buffer buffer = render(
+                new Dimmed(row(text("plain").fg(themeFg).length(5), text("red").red()), backdrop));
 
         assertEquals(Optional.of(MUTED), buffer.get(0, 0).style().fg());
         assertEquals(Optional.of(Color.RED), buffer.get(5, 0).style().fg());

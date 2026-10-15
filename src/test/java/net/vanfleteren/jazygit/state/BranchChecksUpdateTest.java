@@ -1,11 +1,16 @@
 package net.vanfleteren.jazygit.state;
 
+import static net.vanfleteren.jazygit.state.TestModels.loaded;
+import static net.vanfleteren.jazygit.state.TestModels.refused;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.time.Instant;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.BranchChecks;
@@ -21,27 +26,29 @@ import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
-import java.time.Instant;
-
-import static net.vanfleteren.jazygit.state.TestModels.loaded;
-import static net.vanfleteren.jazygit.state.TestModels.refused;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 /**
  * Reading how the CI checks are doing on the branches on GitHub, and which branches show them.
  */
 class BranchChecksUpdateTest {
 
-    private static final GitHubChecks ON_ORIGIN = new GitHubChecks(HashSet.of("origin"),
+    private static final GitHubChecks ON_ORIGIN = new GitHubChecks(
+            HashSet.of("origin"),
             HashMap.of(new Branch.Name("feature"), Checks.FAILING, new Branch.Name("main"), Checks.PASSING));
-    private static final PullRequest FEATURE_PR = new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED);
+    private static final PullRequest FEATURE_PR =
+            new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED);
 
     private static RemoteBranch remote(String remote, String branch) {
         return new RemoteBranch(remote, new Branch.Name(branch));
     }
 
     private static Branch following(String name, RemoteBranch upstream) {
-        return new Branch(new Branch.Name(name), false, new Sha("abc"), Instant.EPOCH, true, false,
+        return new Branch(
+                new Branch.Name(name),
+                false,
+                new Sha("abc"),
+                Instant.EPOCH,
+                true,
+                false,
                 Option.of(new Upstream(upstream, 1, 0)));
     }
 
@@ -51,26 +58,37 @@ class BranchChecksUpdateTest {
 
     @Test
     void theChecksAreReadOnTheRemotesThatPointAtTheGitHubRepository() {
-        Msg msg = new LoadBranchChecks().run(new Env(new StubGitProvider() {
-            @Override
-            public Either<ProcessError, Map<String, String>> remoteUrls() {
-                return Either.right(HashMap.of("origin", "git@github.com:me/repo.git",
-                        "upstream", "git@github.com:owner/repo.git", "mirror", "https://github.com/owner/repo"));
-            }
-        }, new StubGitHub() {
-            @Override
-            public Either<GhError, BranchChecks> branchChecks() {
-                return Either.right(new BranchChecks("owner/repo", HashMap.of("main", Checks.PASSING)));
-            }
-        }));
+        Msg msg = new LoadBranchChecks()
+                .run(new Env(
+                        new StubGitProvider() {
+                            @Override
+                            public Either<ProcessError, Map<String, String>> remoteUrls() {
+                                return Either.right(HashMap.of(
+                                        "origin",
+                                        "git@github.com:me/repo.git",
+                                        "upstream",
+                                        "git@github.com:owner/repo.git",
+                                        "mirror",
+                                        "https://github.com/owner/repo"));
+                            }
+                        },
+                        new StubGitHub() {
+                            @Override
+                            public Either<GhError, BranchChecks> branchChecks() {
+                                return Either.right(new BranchChecks("owner/repo", HashMap.of("main", Checks.PASSING)));
+                            }
+                        }));
 
-        assertEquals(new BranchChecksMsg.Loaded(new GitHubChecks(HashSet.of("upstream", "mirror"),
-                HashMap.of(new Branch.Name("main"), Checks.PASSING))), msg);
+        assertEquals(
+                new BranchChecksMsg.Loaded(new GitHubChecks(
+                        HashSet.of("upstream", "mirror"), HashMap.of(new Branch.Name("main"), Checks.PASSING))),
+                msg);
     }
 
     @Test
     void failingToReadTheChecksKeepsTheOnesShownWithoutAnError() {
-        Model failed = Update.update(withChecks(), new BranchChecksMsg.LoadFailed(refused("offline"))).model();
+        Model failed = Update.update(withChecks(), new BranchChecksMsg.LoadFailed(refused("offline")))
+                .model();
 
         assertEquals(Option.of(ON_ORIGIN), failed.branchChecks());
         assertEquals(Option.none(), failed.error());
@@ -84,9 +102,16 @@ class BranchChecksUpdateTest {
         Next again = BranchChecksUpdate.load(Next.of(reading.model()));
         assertEquals(List.empty(), again.cmds());
 
-        assertEquals(0, Update.update(reading.model(), new BranchChecksMsg.Loaded(ON_ORIGIN)).model().readingBranchChecks());
-        assertEquals(0, Update.update(reading.model(), new BranchChecksMsg.LoadFailed(refused("offline"))).model()
-                .readingBranchChecks());
+        assertEquals(
+                0,
+                Update.update(reading.model(), new BranchChecksMsg.Loaded(ON_ORIGIN))
+                        .model()
+                        .readingBranchChecks());
+        assertEquals(
+                0,
+                Update.update(reading.model(), new BranchChecksMsg.LoadFailed(refused("offline")))
+                        .model()
+                        .readingBranchChecks());
     }
 
     @Test
@@ -102,7 +127,8 @@ class BranchChecksUpdateTest {
 
     @Test
     void onlyABranchOnGitHubShowsItsPullRequest() {
-        Model model = Update.update(withChecks(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR))).model();
+        Model model = Update.update(withChecks(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
+                .model();
 
         assertEquals(Option.of(FEATURE_PR), model.pullRequest(remote("origin", "feature")));
         assertEquals(Option.none(), model.pullRequest(remote("fork", "feature")));
@@ -112,7 +138,8 @@ class BranchChecksUpdateTest {
 
     @Test
     void untilTheRemotesOnGitHubAreKnownALocalBranchShowsThePullRequestByName() {
-        Model model = Update.update(loaded(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR))).model();
+        Model model = Update.update(loaded(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
+                .model();
 
         assertEquals(Option.of(FEATURE_PR), model.pullRequest(following("feature", remote("fork", "feature"))));
         assertEquals(Option.none(), model.pullRequest(remote("origin", "feature")));

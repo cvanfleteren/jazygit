@@ -1,25 +1,25 @@
 package net.vanfleteren.jazygit.ui;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Conflict;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.FileTree;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The files panel must follow the model as the working tree status changes.
@@ -34,7 +34,7 @@ class FilesPanelTest {
         }
     }
 
-    private final FilesPanel panel = new FilesPanel(msg -> { }, () -> { });
+    private final FilesPanel panel = new FilesPanel(msg -> {}, () -> {});
 
     @Test
     void conflictedFilesShowAMarkerForEachBranchThatChangedThem() throws Exception {
@@ -60,7 +60,8 @@ class FilesPanelTest {
 
     @Test
     void theHighlightedNodeOnlyShowsWhileThePaneIsInUse() throws Exception {
-        Model model = TestModels.loaded(new FixedProvider(List.of(FileEntry.conflicted("both.txt", Conflict.of('U', 'U')))));
+        Model model =
+                TestModels.loaded(new FixedProvider(List.of(FileEntry.conflicted("both.txt", Conflict.of('U', 'U')))));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.ID))) {
             String active = RenderedText.of(testRunner, () -> panel.render(model, FilesPanel.ID));
@@ -77,12 +78,12 @@ class FilesPanelTest {
     @Test
     void renamedFilesShowWhereTheyCameFrom() throws Exception {
         Model sameDirectory = TestModels.loaded(new FixedProvider(List.of(
-                FileEntry.renamed("b.txt", "a.txt", true, false),
-                FileEntry.renamed("c.txt", "old.txt", true, true))));
-        Model otherDirectory = TestModels.loaded(new FixedProvider(List.of(
-                FileEntry.renamed("lib/m.txt", "src/m.txt", true, false))));
+                FileEntry.renamed("b.txt", "a.txt", true, false), FileEntry.renamed("c.txt", "old.txt", true, true))));
+        Model otherDirectory =
+                TestModels.loaded(new FixedProvider(List.of(FileEntry.renamed("lib/m.txt", "src/m.txt", true, false))));
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(sameDirectory, FilesPanel.ID))) {
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(sameDirectory, FilesPanel.ID))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(sameDirectory, FilesPanel.ID));
             assertTrue(screen.contains("R  a.txt -> b.txt"), screen);
             assertTrue(screen.contains("RM old.txt -> c.txt"), screen);
@@ -141,7 +142,7 @@ class FilesPanelTest {
     }
 
     @Test
-    void rendersMergedDirectoriesAndKeepsSelectionWhenStatusChanges()throws Exception {
+    void rendersMergedDirectoriesAndKeepsSelectionWhenStatusChanges() throws Exception {
         FileEntry a = new FileEntry("net/vanfleteren/A.java", ChangeType.MODIFIED);
         FileEntry b = new FileEntry("net/vanfleteren/B.java", ChangeType.UNTRACKED);
         Model before = TestModels.loaded(new FixedProvider(List.of(a, b)));

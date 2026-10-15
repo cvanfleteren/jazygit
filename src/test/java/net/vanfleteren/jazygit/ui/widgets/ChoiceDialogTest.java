@@ -1,9 +1,15 @@
 package net.vanfleteren.jazygit.ui.widgets;
 
+import static dev.tamboui.toolkit.Toolkit.stack;
+import static dev.tamboui.toolkit.Toolkit.text;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
+import java.util.ArrayList;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
@@ -13,17 +19,9 @@ import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-
-import static dev.tamboui.toolkit.Toolkit.stack;
-import static dev.tamboui.toolkit.Toolkit.text;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 class ChoiceDialogTest {
 
-    private record PickPopup(boolean second) implements Popup {
-    }
+    private record PickPopup(boolean second) implements Popup {}
 
     private record Picked(String what) implements Msg {
         @Override
@@ -33,12 +31,20 @@ class ChoiceDialogTest {
     }
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final ChoiceDialog<PickPopup> dialog = new ChoiceDialog<>(new ChoiceDialog.Spec<>("pick", PickPopup.class,
-            popup -> "Pick one",
-            List.of(new Choice<>('a', "dialog.discard.all", () -> new Picked("a")),
-                    new Choice<>('b', "dialog.discard.unstaged", () -> new Picked("b"),
-                            (model, popup) -> popup.second())),
-            () -> new Picked("cancel")), dispatched::add);
+    private final ChoiceDialog<PickPopup> dialog = new ChoiceDialog<>(
+            new ChoiceDialog.Spec<>(
+                    "pick",
+                    PickPopup.class,
+                    popup -> "Pick one",
+                    List.of(
+                            new Choice<>('a', "dialog.discard.all", () -> new Picked("a")),
+                            new Choice<>(
+                                    'b',
+                                    "dialog.discard.unstaged",
+                                    () -> new Picked("b"),
+                                    (model, popup) -> popup.second())),
+                    () -> new Picked("cancel")),
+            dispatched::add);
 
     private static Model open(boolean second) {
         return TestModels.loaded().openPopup(new PickPopup(second));
@@ -54,7 +60,8 @@ class ChoiceDialogTest {
         try (ToolkitTestRunner runner = start(true)) {
             String screen = RenderedText.ofLarge(runner, () -> view(true));
             assertTrue(screen.contains("Pick one"), screen);
-            assertTrue(screen.indexOf("(a) Discard all changes") < screen.indexOf("(b) Discard unstaged changes"), screen);
+            assertTrue(
+                    screen.indexOf("(a) Discard all changes") < screen.indexOf("(b) Discard unstaged changes"), screen);
             assertTrue(screen.indexOf("(b) Discard unstaged changes") < screen.indexOf("(c) Cancel"), screen);
             assertTrue(screen.indexOf("(c) Cancel") < screen.indexOf("(enter) select   (esc) cancel"), screen);
         }

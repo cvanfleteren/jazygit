@@ -1,10 +1,21 @@
 package net.vanfleteren.jazygit.feature.github;
 
+import static dev.tamboui.toolkit.Toolkit.stack;
+import static dev.tamboui.toolkit.Toolkit.text;
+import static net.vanfleteren.jazygit.state.TestModels.refused;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -19,37 +30,56 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
-import net.vanfleteren.jazygit.ui.BranchesPanel;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
-
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneOffset;
-import java.util.ArrayList;
-
-import static dev.tamboui.toolkit.Toolkit.stack;
-import static dev.tamboui.toolkit.Toolkit.text;
-import static net.vanfleteren.jazygit.state.TestModels.refused;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PullRequestDialogTest {
 
     private static final Instant NOW = Instant.parse("2026-10-13T12:00:00Z");
-    private static final PullRequest PR = new PullRequest(42, "support_rename", true, Checks.FAILING,
-            Review.CHANGES_REQUESTED);
-    private static final PullRequestDetails DETAILS = new PullRequestDetails(42, "Add rename support to the files panel",
-            "cvf", State.OPEN, true, "support_rename", "main", Instant.parse("2026-10-10T08:00:00Z"), 120, 34, 7,
-            Mergeable.MERGEABLE, Review.CHANGES_REQUESTED, 5, List.of("enhancement", "ui"),
-            List.of(new Reviewer("alice", ReviewerState.APPROVED), new Reviewer("bob", ReviewerState.CHANGES_REQUESTED)),
-            List.of(new Check("lint", Checks.PASSING), new Check("integration", Checks.PENDING),
+    private static final PullRequest PR =
+            new PullRequest(42, "support_rename", true, Checks.FAILING, Review.CHANGES_REQUESTED);
+    private static final PullRequestDetails DETAILS = new PullRequestDetails(
+            42,
+            "Add rename support to the files panel",
+            "cvf",
+            State.OPEN,
+            true,
+            "support_rename",
+            "main",
+            Instant.parse("2026-10-10T08:00:00Z"),
+            120,
+            34,
+            7,
+            Mergeable.MERGEABLE,
+            Review.CHANGES_REQUESTED,
+            5,
+            List.of("enhancement", "ui"),
+            List.of(
+                    new Reviewer("alice", ReviewerState.APPROVED),
+                    new Reviewer("bob", ReviewerState.CHANGES_REQUESTED)),
+            List.of(
+                    new Check("lint", Checks.PASSING),
+                    new Check("integration", Checks.PENDING),
                     new Check("build", Checks.FAILING)));
 
-    private static final PullRequestDetails READY = new PullRequestDetails(42, "Ready", "cvf", State.OPEN, false,
-            "support_rename", "main", NOW, 1, 1, 1, Mergeable.MERGEABLE, Review.APPROVED, 0, List.empty(),
-            List.empty(), List.empty());
+    private static final PullRequestDetails READY = new PullRequestDetails(
+            42,
+            "Ready",
+            "cvf",
+            State.OPEN,
+            false,
+            "support_rename",
+            "main",
+            NOW,
+            1,
+            1,
+            1,
+            Mergeable.MERGEABLE,
+            Review.APPROVED,
+            0,
+            List.empty(),
+            List.empty(),
+            List.empty());
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final PullRequestDialog dialog = new PullRequestDialog(dispatched::add, Clock.fixed(NOW, ZoneOffset.UTC));
@@ -65,14 +95,17 @@ class PullRequestDialogTest {
 
         assertTrue(screen.contains("Pull request #42"), screen);
         assertTrue(screen.contains("Branch  support_rename"), screen);
-        assertTrue(screen.contains("Reading the pull request from GitHub… "
-                + net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(NOW)), screen);
+        assertTrue(
+                screen.contains("Reading the pull request from GitHub… "
+                        + net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(NOW)),
+                screen);
         assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
     }
 
     @Test
     void showsTheDetailsAsLabelledRows() throws Exception {
-        String screen = screen(PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(DETAILS)));
+        String screen = screen(
+                PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(DETAILS)));
 
         assertTrue(screen.contains("Add rename support to the files panel"), screen);
         assertTrue(screen.contains("    State  Open · Draft"), screen);
@@ -95,10 +128,27 @@ class PullRequestDialogTest {
     @Test
     void manyChecksThatDidNotPassAreCut() throws Exception {
         List<Check> checks = List.range(0, 8).map(i -> new Check("check" + i, Checks.FAILING));
-        PullRequestDetails details = new PullRequestDetails(42, "t", "", State.OPEN, false, "a", "b", NOW, 0, 0, 0,
-                Mergeable.UNKNOWN, Review.NONE, 0, List.empty(), List.empty(), checks);
+        PullRequestDetails details = new PullRequestDetails(
+                42,
+                "t",
+                "",
+                State.OPEN,
+                false,
+                "a",
+                "b",
+                NOW,
+                0,
+                0,
+                0,
+                Mergeable.UNKNOWN,
+                Review.NONE,
+                0,
+                List.empty(),
+                List.empty(),
+                checks);
 
-        String screen = screen(PullRequestPopup.loading(new Branch.Name("a"), PR).with(Either.right(details)));
+        String screen =
+                screen(PullRequestPopup.loading(new Branch.Name("a"), PR).with(Either.right(details)));
 
         assertTrue(screen.contains("check4"), screen);
         assertFalse(screen.contains("check5"), screen);
@@ -110,7 +160,8 @@ class PullRequestDialogTest {
 
     @Test
     void tellsWhyTheDetailsCouldNotBeRead() throws Exception {
-        String screen = screen(PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.left(refused("not logged in"))));
+        String screen = screen(PullRequestPopup.loading(new Branch.Name("support_rename"), PR)
+                .with(Either.left(refused("not logged in"))));
 
         assertTrue(screen.contains("Could not read the pull request: not logged in"), screen);
         assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
@@ -119,10 +170,25 @@ class PullRequestDialogTest {
     @Test
     void keepsItsSizeWhenTheDetailsArrive() throws Exception {
         List<Check> checks = List.range(0, 8).map(i -> new Check("check" + i, Checks.FAILING));
-        PullRequestDetails fullest = new PullRequestDetails(42, "A title long enough to need more than two lines "
-                + "at the width of the dialog, so that it must be cut to keep the dialog from growing", "cvf",
-                State.OPEN, false, "a", "b", NOW, 0, 0, 0, Mergeable.UNKNOWN, Review.APPROVED, 0, List.of("ui"),
-                DETAILS.reviewers(), checks);
+        PullRequestDetails fullest = new PullRequestDetails(
+                42,
+                "A title long enough to need more than two lines "
+                        + "at the width of the dialog, so that it must be cut to keep the dialog from growing",
+                "cvf",
+                State.OPEN,
+                false,
+                "a",
+                "b",
+                NOW,
+                0,
+                0,
+                0,
+                Mergeable.UNKNOWN,
+                Review.APPROVED,
+                0,
+                List.of("ui"),
+                DETAILS.reviewers(),
+                checks);
         PullRequestPopup loading = PullRequestPopup.loading(new Branch.Name("support_rename"), PR);
 
         int hintLine = hintLine(screen(loading));
@@ -138,7 +204,8 @@ class PullRequestDialogTest {
 
     @Test
     void listsWhatCanBeDoneWithThePullRequest() throws Exception {
-        String screen = screen(PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(READY)));
+        String screen = screen(
+                PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(READY)));
 
         assertTrue(screen.contains("(o) Open in browser"), screen);
         assertTrue(screen.contains("(m) Merge"), screen);
@@ -150,17 +217,24 @@ class PullRequestDialogTest {
 
     @Test
     void lettersMergeOrCloseAPullRequestThatIsReady() throws Exception {
-        Model model = TestModels.loaded().openPopup(PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(READY)));
+        Model model = TestModels.loaded()
+                .openPopup(PullRequestPopup.loading(new Branch.Name("support_rename"), PR)
+                        .with(Either.right(READY)));
         try (ToolkitTestRunner runner = start(model)) {
-            for (char key : new char[]{'m', 's', 'r', 'x', 'o'}) {
+            for (char key : new char[] {'m', 's', 'r', 'x', 'o'}) {
                 runner.pilot().press(key);
                 runner.pilot().pause();
             }
         }
 
-        assertEquals(java.util.List.of(new PullRequestMsg.MergeChosen(MergeMethod.MERGE),
-                new PullRequestMsg.MergeChosen(MergeMethod.SQUASH), new PullRequestMsg.MergeChosen(MergeMethod.REBASE),
-                new PullRequestMsg.CloseChosen(), new PullRequestMsg.OpenConfirmed()), dispatched);
+        assertEquals(
+                java.util.List.of(
+                        new PullRequestMsg.MergeChosen(MergeMethod.MERGE),
+                        new PullRequestMsg.MergeChosen(MergeMethod.SQUASH),
+                        new PullRequestMsg.MergeChosen(MergeMethod.REBASE),
+                        new PullRequestMsg.CloseChosen(),
+                        new PullRequestMsg.OpenConfirmed()),
+                dispatched);
     }
 
     @Test
@@ -189,7 +263,8 @@ class PullRequestDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(java.util.List.of(new PullRequestMsg.OpenConfirmed(), new PullRequestMsg.InfoClosed()), dispatched);
+        assertEquals(
+                java.util.List.of(new PullRequestMsg.OpenConfirmed(), new PullRequestMsg.InfoClosed()), dispatched);
     }
 
     private String screen(PullRequestPopup popup) throws Exception {

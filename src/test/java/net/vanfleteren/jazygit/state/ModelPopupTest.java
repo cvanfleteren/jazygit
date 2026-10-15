@@ -1,12 +1,12 @@
 package net.vanfleteren.jazygit.state;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchPopup;
 import net.vanfleteren.jazygit.feature.commit.AmendPopup;
 import net.vanfleteren.jazygit.git.model.Branch;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * At most one popup is open, and closing is specific to the kind of popup.
@@ -38,6 +38,10 @@ class ModelPopupTest {
         Model focused = Update.update(closed, new Msg.Focused("branches")).model();
 
         assertEquals(Option.of("branches"), focused.focusedPane());
-        assertEquals(Option.of("branches"), focused.openPopup(new AmendPopup()).withoutPopup(AmendPopup.class).focusedPane());
+        assertEquals(
+                Option.of("branches"),
+                focused.openPopup(new AmendPopup())
+                        .withoutPopup(AmendPopup.class)
+                        .focusedPane());
     }
 }

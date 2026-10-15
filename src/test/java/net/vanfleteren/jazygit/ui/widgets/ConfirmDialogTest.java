@@ -1,9 +1,14 @@
 package net.vanfleteren.jazygit.ui.widgets;
 
+import static dev.tamboui.toolkit.Toolkit.stack;
+import static dev.tamboui.toolkit.Toolkit.text;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
-import io.vavr.collection.List;
+import java.util.ArrayList;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
@@ -11,17 +16,9 @@ import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-
-import static dev.tamboui.toolkit.Toolkit.stack;
-import static dev.tamboui.toolkit.Toolkit.text;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 class ConfirmDialogTest {
 
-    private record AskPopup(String thing) implements Popup {
-    }
+    private record AskPopup(String thing) implements Popup {}
 
     private record Yes() implements Msg {
         @Override
@@ -43,8 +40,10 @@ class ConfirmDialogTest {
     private final java.util.List<Msg> dispatched = new ArrayList<>();
 
     private ConfirmDialog<AskPopup> dialog(String message) {
-        return new ConfirmDialog<>(new ConfirmDialog.Spec<>("ask", AskPopup.class, popup -> "Delete " + popup.thing(),
-                popup -> message, Yes::new, No::new), dispatched::add);
+        return new ConfirmDialog<>(
+                new ConfirmDialog.Spec<>(
+                        "ask", AskPopup.class, popup -> "Delete " + popup.thing(), popup -> message, Yes::new, No::new),
+                dispatched::add);
     }
 
     private static Model open() {

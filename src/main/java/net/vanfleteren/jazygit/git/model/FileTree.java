@@ -26,8 +26,8 @@ public sealed interface FileTree {
                 .groupBy(f -> relative(prefix, f).split("/", 2)[0])
                 .toList()
                 .sortBy(entry -> entry._1)
-                .map(entry -> merged(new Dir(entry._1, prefix + entry._1,
-                        children(prefix + entry._1 + "/", entry._2))));
+                .map(entry ->
+                        merged(new Dir(entry._1, prefix + entry._1, children(prefix + entry._1 + "/", entry._2))));
         List<FileTree> leaves = nested._2
                 .<FileTree>map(f -> new File(relative(prefix, f), f))
                 .sorted((a, b) -> a.name().compareTo(b.name()));
@@ -43,7 +43,8 @@ public sealed interface FileTree {
      * descendants, so one step is enough.
      */
     private static FileTree merged(Dir dir) {
-        return dir.children().headOption()
+        return dir.children()
+                .headOption()
                 .filter(only -> dir.children().size() == 1)
                 .flatMap(only -> only instanceof Dir child ? Option.of(child) : Option.none())
                 .<FileTree>map(child -> new Dir(dir.name() + "/" + child.name(), child.path(), child.children()))
@@ -72,17 +73,15 @@ public sealed interface FileTree {
     default List<FileEntry> directEntries() {
         return switch (this) {
             case File file -> List.of(file.entry());
-            case Dir dir -> dir.children()
-                    .flatMap(child -> child instanceof File file ? List.of(file.entry()) : List.empty());
+            case Dir dir ->
+                dir.children().flatMap(child -> child instanceof File file ? List.of(file.entry()) : List.empty());
         };
     }
 
     /**
      * @param path the full repository-relative path of the directory
      */
-    record Dir(String name, String path, List<FileTree> children) implements FileTree {
-    }
+    record Dir(String name, String path, List<FileTree> children) implements FileTree {}
 
-    record File(String name, FileEntry entry) implements FileTree {
-    }
+    record File(String name, FileEntry entry) implements FileTree {}
 }

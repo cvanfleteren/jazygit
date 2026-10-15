@@ -1,17 +1,21 @@
 package net.vanfleteren.jazygit.feature.stage;
 
+import static dev.tamboui.toolkit.Toolkit.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
+import java.util.ArrayList;
 import net.vanfleteren.jazygit.feature.commit.CommitMsg;
 import net.vanfleteren.jazygit.feature.commit.StageAllPopup;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
@@ -20,11 +24,6 @@ import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
-import static dev.tamboui.toolkit.Toolkit.*;
-
-import java.util.ArrayList;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * The popup asking whether to stage all files: Enter confirms, Escape cancels.
@@ -32,12 +31,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class StageAllDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<net.vanfleteren.jazygit.feature.commit.StageAllPopup> dialog = new net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<>(net.vanfleteren.jazygit.feature.commit.CommitDialogs.STAGE_ALL, dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<net.vanfleteren.jazygit.feature.commit.StageAllPopup>
+            dialog = new net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<>(
+                    net.vanfleteren.jazygit.feature.commit.CommitDialogs.STAGE_ALL, dispatched::add);
     private final Model open = openModel();
 
     private static Model openModel() {
-        Model unstaged = Update.update(TestModels.loaded(new SampleData()), new LoadMsg.StatusLoaded(
-                new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), List.of(new FileEntry("a.txt", ChangeType.MODIFIED))))).model();
+        Model unstaged = Update.update(
+                        TestModels.loaded(new SampleData()),
+                        new LoadMsg.StatusLoaded(new RepoStatus(
+                                Head.onBranch(new Branch.Name("main"), new Sha("aaaa")),
+                                List.of(new FileEntry("a.txt", ChangeType.MODIFIED)))))
+                .model();
         return Update.update(unstaged, new CommitMsg.Requested()).model();
     }
 

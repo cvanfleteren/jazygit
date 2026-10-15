@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit;
 
+import static dev.tamboui.toolkit.Toolkit.*;
+
 import dev.tamboui.css.engine.StyleEngine;
 import dev.tamboui.style.Style;
 import dev.tamboui.toolkit.app.ToolkitApp;
@@ -14,6 +16,19 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import net.vanfleteren.jazygit.cli.StartupCli;
 import net.vanfleteren.jazygit.cli.StartupOptions;
 import net.vanfleteren.jazygit.feature.branch.BranchDialogs;
@@ -40,22 +55,6 @@ import net.vanfleteren.jazygit.settings.*;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.*;
 import net.vanfleteren.jazygit.ui.widgets.*;
-
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-import java.util.function.Function;
-
-import static dev.tamboui.toolkit.Toolkit.*;
 
 /**
  * Entry point for jazygit, a lazygit-style terminal UI for Git built with TamboUI.
@@ -91,10 +90,10 @@ public class JazygitApp extends ToolkitApp {
     };
     private final ContentPanel contentPanel;
     private final FilesPanel filesPanel = new FilesPanel(dispatch, () -> openContent(FilesPanel.ID), this::highlight);
-    private final BranchesPanel branchesPanel = new BranchesPanel(dispatch, this::showBranchesTab,
-            Clock.systemUTC(), this::highlight);
-    private final CommitsPanel commitsPanel = new CommitsPanel(dispatch, () -> openContent(CommitsPanel.ID),
-            this::highlight);
+    private final BranchesPanel branchesPanel =
+            new BranchesPanel(dispatch, this::showBranchesTab, Clock.systemUTC(), this::highlight);
+    private final CommitsPanel commitsPanel =
+            new CommitsPanel(dispatch, () -> openContent(CommitsPanel.ID), this::highlight);
     private final StashPanel stashPanel = new StashPanel(dispatch, this::highlight);
     // Every popup, with where the focus goes when it closes. At most one is open.
     private final List<PopupSlot> popups = List.of(
@@ -138,12 +137,15 @@ public class JazygitApp extends ToolkitApp {
      * @param settings      the settings the session starts with, as {@code env} loaded them
      * @param themeOverride the theme for this session instead of the saved one, if any
      */
-    public JazygitApp(Env env, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, StyleEngine styleEngine) {
+    public JazygitApp(
+            Env env, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, StyleEngine styleEngine) {
         this.env = new Env(env.git(), env.gitHub(), env.settings(), env.recent(), this::switchTo);
         this.settings = settings;
         this.themeOverride = themeOverride;
         this.styleEngine = styleEngine;
-        this.contentPanel = new ContentPanel(Theme.spanStyles(styleEngine), this::leaveScrollArea,
+        this.contentPanel = new ContentPanel(
+                Theme.spanStyles(styleEngine),
+                this::leaveScrollArea,
                 id -> runner().focusManager().setFocus(id));
     }
 
@@ -151,12 +153,20 @@ public class JazygitApp extends ToolkitApp {
      * What commands run against for the repository {@code git} reads: gh at the executable {@code settings} name,
      * and both gh and git as the account configured for the repository, if any.
      */
-    private static Env env(CliGitInfoProvider git, Settings settings, SettingsStore store, RecentRepositories recent,
-                           Repositories repositories) {
+    private static Env env(
+            CliGitInfoProvider git,
+            Settings settings,
+            SettingsStore store,
+            RecentRepositories recent,
+            Repositories repositories) {
         GhToken token = new GhToken(git.workTree(), settings.gh(), () -> GitHubAccount.configured(git));
         // Without the token, git still talks to the remotes, as the credential helper's own account.
-        return new Env(git.withCredentials(() -> token.environment().getOrElse(HashMap.empty())),
-                new CliGitHub(git.workTree(), settings.gh(), token), store, recent, repositories);
+        return new Env(
+                git.withCredentials(() -> token.environment().getOrElse(HashMap.empty())),
+                new CliGitHub(git.workTree(), settings.gh(), token),
+                store,
+                recent,
+                repositories);
     }
 
     /**
@@ -170,7 +180,12 @@ public class JazygitApp extends ToolkitApp {
     }
 
     private static ThreadPoolExecutor singleThread(String name) {
-        return new ThreadPoolExecutor(1, 1, 0, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(),
+        return new ThreadPoolExecutor(
+                1,
+                1,
+                0,
+                TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>(),
                 Thread.ofPlatform().name(name).daemon().factory());
     }
 
@@ -180,8 +195,11 @@ public class JazygitApp extends ToolkitApp {
     private static void logBug(Throwable bug) {
         StringWriter trace = new StringWriter();
         bug.printStackTrace(new PrintWriter(trace));
-        Try.run(() -> Files.writeString(BUG_LOG, Instant.now() + " " + trace + System.lineSeparator(),
-                StandardOpenOption.CREATE, StandardOpenOption.APPEND));
+        Try.run(() -> Files.writeString(
+                BUG_LOG,
+                Instant.now() + " " + trace + System.lineSeparator(),
+                StandardOpenOption.CREATE,
+                StandardOpenOption.APPEND));
     }
 
     /**
@@ -205,7 +223,8 @@ public class JazygitApp extends ToolkitApp {
         Either<String, JazygitApp> app = CliGitInfoProvider.open(start)
                 .mapLeft(ErrorText::of)
                 .flatMap(provider -> Theme.createEngine()
-                        .mapLeft(failed -> Messages.get("theme.loadFailed", failed.theme(), ErrorText.reason(failed.cause())))
+                        .mapLeft(failed ->
+                                Messages.get("theme.loadFailed", failed.theme(), ErrorText.reason(failed.cause())))
                         .map(engine -> {
                             RecentRepositories recent = new RecentRepositoriesFile(SettingsPaths.stateFile());
                             recent.opened(provider.workTree()).onFailure(JazygitApp::logBug);
@@ -268,19 +287,20 @@ public class JazygitApp extends ToolkitApp {
     protected void onStart() {
         ToolkitRunner runner = runner();
         runner.styleEngine(styleEngine);
-        runner.eventRouter().addGlobalHandler(event -> Option.of(event)
-                .filter(KeyEvent.class::isInstance)
-                .flatMap(key -> Keymap.standard().handleGlobal((KeyEvent) key))
-                .map(msg -> {
-                    dispatch.accept(msg);
-                    return EventResult.HANDLED;
-                })
-                .getOrElse(EventResult.UNHANDLED));
+        runner.eventRouter()
+                .addGlobalHandler(event -> Option.of(event)
+                        .filter(KeyEvent.class::isInstance)
+                        .flatMap(key -> Keymap.standard().handleGlobal((KeyEvent) key))
+                        .map(msg -> {
+                            dispatch.accept(msg);
+                            return EventResult.HANDLED;
+                        })
+                        .getOrElse(EventResult.UNHANDLED));
         startRuntime(env, settings, themeOverride);
-        runner.scheduleRepeating(() -> runner.runOnRenderThread(() -> dispatch.accept(new Msg.Tick())),
-                REFRESH_INTERVAL);
-        runner.scheduleRepeating(() -> runner.runOnRenderThread(() -> dispatch.accept(new FetchMsg.Tick())),
-                FETCH_INTERVAL);
+        runner.scheduleRepeating(
+                () -> runner.runOnRenderThread(() -> dispatch.accept(new Msg.Tick())), REFRESH_INTERVAL);
+        runner.scheduleRepeating(
+                () -> runner.runOnRenderThread(() -> dispatch.accept(new FetchMsg.Tick())), FETCH_INTERVAL);
     }
 
     /**
@@ -291,7 +311,10 @@ public class JazygitApp extends ToolkitApp {
         runner.focusManager().setFocus(FilesPanel.ID);
         ThreadPoolExecutor io = singleThread("git-io");
         ThreadPoolExecutor fetch = singleThread("git-fetch");
-        runtime = Option.of(new Runtime(io, fetch, Program.start(env, settings, themeOverride, io, fetch, runner::runOnRenderThread, JazygitApp::logBug)));
+        runtime = Option.of(new Runtime(
+                io,
+                fetch,
+                Program.start(env, settings, themeOverride, io, fetch, runner::runOnRenderThread, JazygitApp::logBug)));
         // The first fetch is a while off; the pull requests show from the start.
         dispatch.accept(new PullRequestsMsg.Refresh());
     }
@@ -316,8 +339,10 @@ public class JazygitApp extends ToolkitApp {
             // Not waiting for the command that runs keeps the UI going. It finishes by itself, in the other
             // repository, and its outcome goes to the old program, which nobody looks at anymore.
             stop(running);
-            startRuntime(env(git, last.settings(), env.settings(), env.recent(), env.repositories()),
-                    new SettingsStore.Loaded(last.settings(), Option.none()), last.themeOverride());
+            startRuntime(
+                    env(git, last.settings(), env.settings(), env.recent(), env.repositories()),
+                    new SettingsStore.Loaded(last.settings(), Option.none()),
+                    last.themeOverride());
         });
     }
 
@@ -333,7 +358,9 @@ public class JazygitApp extends ToolkitApp {
             // gone.
             stop(running);
             Try.of(() -> running.io().awaitTermination(2, TimeUnit.SECONDS))
-                    .onFailure(InterruptedException.class, e -> Thread.currentThread().interrupt());
+                    .onFailure(
+                            InterruptedException.class,
+                            e -> Thread.currentThread().interrupt());
         });
         runtime = Option.none();
     }
@@ -355,26 +382,29 @@ public class JazygitApp extends ToolkitApp {
         Option<Integer> stashHeight = stashHeight(model);
         var panes = row(
                 column(
-                        StatusPanel.render(model),
-                        filesPanel.render(model, focusedId, activeId).percent(FILES_PERCENT),
-                        branches.percent(BRANCHES_PERCENT),
-                        // With the stash sized to its content, the commits take what is left, which is
-                        // their share when the stash is as tall as it may get.
-                        stashHeight.isDefined()
-                                ? commitsPanel.render(model, focusedId, activeId).fill()
-                                : commitsPanel.render(model, focusedId, activeId).percent(COMMITS_PERCENT),
-                        stashHeight.map(stash::length).getOrElse(stash::fill))
+                                StatusPanel.render(model),
+                                filesPanel.render(model, focusedId, activeId).percent(FILES_PERCENT),
+                                branches.percent(BRANCHES_PERCENT),
+                                // With the stash sized to its content, the commits take what is left, which is
+                                // their share when the stash is as tall as it may get.
+                                stashHeight.isDefined()
+                                        ? commitsPanel
+                                                .render(model, focusedId, activeId)
+                                                .fill()
+                                        : commitsPanel
+                                                .render(model, focusedId, activeId)
+                                                .percent(COMMITS_PERCENT),
+                                stashHeight.map(stash::length).getOrElse(stash::fill))
                         .percent(30),
                 column(
-                        contentPanel.render(model, focusedId)
-                                .fill(),
-                        CommandLogPanel.render(model).length(COMMAND_LOG_HEIGHT))
+                                contentPanel.render(model, focusedId).fill(),
+                                CommandLogPanel.render(model).length(COMMAND_LOG_HEIGHT))
                         .fill());
         // The fetch line keeps its row under the panes, also when nothing is fetched, so they do not move.
         Element layout = column(panes.fill(), FetchLine.render(model).length(FetchLine.HEIGHT));
         // The open popup takes the focus, and gives it back to where it was opened from.
-        List<Shown> shown = popups.map(slot -> new Shown(slot.view().render(model), slot.view().ids(),
-                slot.returnTo().apply(model)));
+        List<Shown> shown = popups.map(slot -> new Shown(
+                slot.view().render(model), slot.view().ids(), slot.returnTo().apply(model)));
         // The framework knows no focus before the first render. Where the focus is outside the popups is kept
         // in the model, as a closing popup gives it back there.
         Option<String> focus = Option.of(focusedId);
@@ -387,7 +417,9 @@ public class JazygitApp extends ToolkitApp {
                         // A popup that just closed gives the focus back.
                         () -> shown.find(p -> focus.exists(p.ids()::contains)).map(Shown::returnTo),
                         // A popup that just opened takes the focus.
-                        p -> focus.exists(p.ids()::contains) ? Option.<String>none() : p.ids().headOption())
+                        p -> focus.exists(p.ids()::contains)
+                                ? Option.<String>none()
+                                : p.ids().headOption())
                 .forEach(runner().focusManager()::setFocus);
         // What is behind an open popup is dimmed, so the popup stands out.
         Element screen = open.flatMap(Shown::element)
@@ -406,7 +438,8 @@ public class JazygitApp extends ToolkitApp {
         // The left column is the screen without the fetch line.
         return Try.of(() -> runner().tuiRunner().backend().size().height() - FetchLine.HEIGHT)
                 .toOption()
-                .map(height -> height - StatusPanel.HEIGHT
+                .map(height -> height
+                        - StatusPanel.HEIGHT
                         - height * (FILES_PERCENT + BRANCHES_PERCENT + COMMITS_PERCENT) / 100)
                 .map(share -> Math.max(MIN_STASH_HEIGHT, Math.min(rows + 2, share)));
     }
@@ -418,18 +451,15 @@ public class JazygitApp extends ToolkitApp {
      * @param io    where git is called
      * @param fetch where git talks to the remotes
      */
-    private record Runtime(ThreadPoolExecutor io, ThreadPoolExecutor fetch, Program program) {
-    }
+    private record Runtime(ThreadPoolExecutor io, ThreadPoolExecutor fetch, Program program) {}
 
     /**
      * A popup, and the pane that gets the focus back when it closes.
      */
-    private record PopupSlot(PopupView view, Function<Model, String> returnTo) {
-    }
+    private record PopupSlot(PopupView view, Function<Model, String> returnTo) {}
 
     /**
      * A popup as rendered: its dialog while it is open.
      */
-    private record Shown(Option<Element> element, List<String> ids, String returnTo) {
-    }
+    private record Shown(Option<Element> element, List<String> ids, String returnTo) {}
 }

@@ -1,7 +1,10 @@
 package net.vanfleteren.jazygit.git;
 
+import static net.vanfleteren.jazygit.git.GitCommand.git;
+
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.DeleteUntrackedError;
 import net.vanfleteren.jazygit.git.GitError.DiscardError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
@@ -9,17 +12,12 @@ import net.vanfleteren.jazygit.git.GitError.RefusedPath;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
-import java.nio.file.Path;
-
-import static net.vanfleteren.jazygit.git.GitCommand.git;
-
 /**
  * Changes the index (staging area) through the git command line tool.
  */
 final class CliIndex {
 
-    private CliIndex() {
-    }
+    private CliIndex() {}
 
     /**
      * {@code git add -- <paths>}: stages the changes of the paths.
@@ -46,7 +44,8 @@ final class CliIndex {
     /**
      * {@code git checkout -- <paths>}: resets the working tree of the paths to the index.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutFromIndex(Path workTree, List<String> paths) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutFromIndex(
+            Path workTree, List<String> paths) {
         return onPaths(workTree, List.of("checkout", "--quiet"), paths);
     }
 
@@ -80,13 +79,15 @@ final class CliIndex {
      * what is untracked in them. Git leaves ignored files alone, and a repository nested in the working tree.
      * Paths outside the working tree, and the working tree itself, are refused before git runs.
      */
-    static Either<GitFailure<DeleteUntrackedError>, List<ExecutedCommand>> deleteUntracked(Path workTree,
-                                                                                           List<String> paths) {
+    static Either<GitFailure<DeleteUntrackedError>, List<ExecutedCommand>> deleteUntracked(
+            Path workTree, List<String> paths) {
         Path root = workTree.toAbsolutePath().normalize();
-        return paths.map(path -> inside(root, path)).find(Either::isLeft)
-                .<Either<GitFailure<DeleteUntrackedError>, List<ExecutedCommand>>>map(refused ->
-                        Either.left(new GitFailure<>(refused.getLeft(), List.empty())))
-                .getOrElse(() -> GitFailure.widen(onPaths(workTree, List.of("clean", "--force", "-d", "--quiet"), paths)));
+        return paths.map(path -> inside(root, path))
+                .find(Either::isLeft)
+                .<Either<GitFailure<DeleteUntrackedError>, List<ExecutedCommand>>>map(
+                        refused -> Either.left(new GitFailure<>(refused.getLeft(), List.empty())))
+                .getOrElse(
+                        () -> GitFailure.widen(onPaths(workTree, List.of("clean", "--force", "-d", "--quiet"), paths)));
     }
 
     /**
@@ -103,10 +104,11 @@ final class CliIndex {
     /**
      * Runs {@code subcommand -- paths}; nothing when there are no paths.
      */
-    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> onPaths(Path workTree, List<String> subcommand,
-                                                                                   List<String> paths) {
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> onPaths(
+            Path workTree, List<String> subcommand, List<String> paths) {
         return paths.isEmpty()
                 ? GitFailure.nothing()
-                : GitProcess.log(workTree, git(subcommand.append("--").appendAll(paths)).withLiteralPaths());
+                : GitProcess.log(
+                        workTree, git(subcommand.append("--").appendAll(paths)).withLiteralPaths());
     }
 }

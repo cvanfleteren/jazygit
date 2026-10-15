@@ -1,13 +1,17 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import static dev.tamboui.toolkit.Toolkit.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import net.vanfleteren.jazygit.git.model.CommitMessage;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyModifiers;
 import io.vavr.collection.List;
+import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -15,12 +19,6 @@ import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
-import static dev.tamboui.toolkit.Toolkit.*;
-
-import java.util.ArrayList;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The commit popup: Tab switches fields, Enter in the summary and Ctrl+Enter in the description
@@ -36,7 +34,12 @@ class CommitDialogTest {
         // The sample data has staged files, so the commit popup opens directly.
         Model loaded = TestModels.loaded(new SampleData());
         Model asked = Update.update(loaded, new CommitMsg.Requested()).model();
-        return asked.popup(CommitPopup.class).isDefined() ? asked : Update.update(asked, new CommitMsg.StagedForCommit(new CommitCmd.StageForCommit(List.of()), List.of())).model();
+        return asked.popup(CommitPopup.class).isDefined()
+                ? asked
+                : Update.update(
+                                asked,
+                                new CommitMsg.StagedForCommit(new CommitCmd.StageForCommit(List.of()), List.of()))
+                        .model();
     }
 
     @Test
@@ -71,7 +74,9 @@ class CommitDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(java.util.List.of(new CommitMsg.Confirmed(new CommitMessage("fix it", "because\nreasons"))), dispatched);
+        assertEquals(
+                java.util.List.of(new CommitMsg.Confirmed(new CommitMessage("fix it", "because\nreasons"))),
+                dispatched);
     }
 
     @Test
@@ -89,27 +94,39 @@ class CommitDialogTest {
     @Test
     void rewordStartsOutWithTheCurrentMessageAndConfirmsIt() throws Exception {
         CommitDialog reword = CommitDialog.reword(dispatched::add);
-        Model rewording = Update.update(TestModels.loaded(new SampleData()), new RewordMsg.Requested(new SampleData().commits().get().head().sha())).model();
+        Model rewording = Update.update(
+                        TestModels.loaded(new SampleData()),
+                        new RewordMsg.Requested(
+                                new SampleData().commits().get().head().sha()))
+                .model();
         Commit last = rewording.popup(RewordPopup.class).get().commit();
 
-        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> reword.render(rewording).get())) {
+        try (ToolkitTestRunner runner =
+                ToolkitTestRunner.runTest(() -> reword.render(rewording).get())) {
             runner.runner().focusManager().setFocus(CommitDialog.REWORD_ID);
-            String screen = RenderedText.ofLarge(runner, () -> reword.render(rewording).get());
+            String screen =
+                    RenderedText.ofLarge(runner, () -> reword.render(rewording).get());
             assertTrue(screen.contains(last.message()), screen);
             runner.pilot().press(KeyCode.ENTER);
             runner.pilot().pause();
         }
 
-        assertEquals(java.util.List.of(new RewordMsg.Confirmed(new CommitMessage(last.message(), last.body()))), dispatched);
+        assertEquals(
+                java.util.List.of(new RewordMsg.Confirmed(new CommitMessage(last.message(), last.body()))), dispatched);
     }
 
     @Test
     void typingInTheRewordDialogAddsToTheEndOfTheCurrentSummary() throws Exception {
         CommitDialog reword = CommitDialog.reword(dispatched::add);
-        Model rewording = Update.update(TestModels.loaded(new SampleData()), new RewordMsg.Requested(new SampleData().commits().get().head().sha())).model();
+        Model rewording = Update.update(
+                        TestModels.loaded(new SampleData()),
+                        new RewordMsg.Requested(
+                                new SampleData().commits().get().head().sha()))
+                .model();
         Commit last = rewording.popup(RewordPopup.class).get().commit();
 
-        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> reword.render(rewording).get())) {
+        try (ToolkitTestRunner runner =
+                ToolkitTestRunner.runTest(() -> reword.render(rewording).get())) {
             runner.runner().focusManager().setFocus(CommitDialog.REWORD_ID);
             RenderedText.ofLarge(runner, () -> reword.render(rewording).get());
             runner.pilot().press('!');
@@ -117,7 +134,9 @@ class CommitDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(java.util.List.of(new RewordMsg.Confirmed(new CommitMessage(last.message() + "!", last.body()))), dispatched);
+        assertEquals(
+                java.util.List.of(new RewordMsg.Confirmed(new CommitMessage(last.message() + "!", last.body()))),
+                dispatched);
     }
 
     private ToolkitTestRunner start() throws Exception {

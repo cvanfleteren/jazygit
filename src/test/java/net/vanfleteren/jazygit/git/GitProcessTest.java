@@ -1,20 +1,18 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.process.Exec;
-import net.vanfleteren.jazygit.process.ExecutedCommand;
+import static net.vanfleteren.jazygit.git.GitCommand.git;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.CommandFailed;
+import net.vanfleteren.jazygit.process.Exec;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-
-import java.nio.file.Path;
-
-import static net.vanfleteren.jazygit.git.GitCommand.git;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GitProcessTest {
 
@@ -23,7 +21,8 @@ class GitProcessTest {
 
     @Test
     void aSuccessfulCommandReturnsItsOutputAndLine() {
-        GitProcess.Output output = GitProcess.run(dir, git("init", "-q", "-b", "main")).get();
+        GitProcess.Output output =
+                GitProcess.run(dir, git("init", "-q", "-b", "main")).get();
 
         assertEquals("git init -q -b main", output.command().line());
         assertEquals(List.of("git init -q -b main"), output.log().map(ExecutedCommand::line));
@@ -31,7 +30,8 @@ class GitProcessTest {
 
     @Test
     void aRefusedCommandFailsWithGitsExplanationAndItsLine() {
-        GitFailure<GitError.ProcessError> failure = GitProcess.run(dir, git("rev-parse", "HEAD")).getLeft();
+        GitFailure<GitError.ProcessError> failure =
+                GitProcess.run(dir, git("rev-parse", "HEAD")).getLeft();
 
         CommandFailed failed = (CommandFailed) failure.error();
         assertTrue(failed.says("fatal: not a git repository"), failed.toString());
@@ -55,12 +55,15 @@ class GitProcessTest {
                 hint: Updates were rejected because the remote contains work that you do not have
                 """;
 
-        assertEquals(Option.of("error: failed to push some refs to 'github.com:o/r.git'"), Exec.explanation(rejected, ""));
+        assertEquals(
+                Option.of("error: failed to push some refs to 'github.com:o/r.git'"), Exec.explanation(rejected, ""));
     }
 
     @Test
     void aRefusalSaysWhatGitPrintedAfterItsExplanationToo() {
-        CommandFailed failed = new CommandFailed(Option.of("error: patch failed: f:1"), 1,
+        CommandFailed failed = new CommandFailed(
+                Option.of("error: patch failed: f:1"),
+                1,
                 "error: patch failed: f:1\nerror: conflicts in index. Try without --index.\n");
 
         assertTrue(failed.says("Try without --index"));
@@ -68,7 +71,9 @@ class GitProcessTest {
 
     @Test
     void aConfigValueIsNoSubcommand() {
-        assertEquals("rebase", git("rebase", "--root").withConfig("core.abbrev", "no").operation());
+        assertEquals(
+                "rebase",
+                git("rebase", "--root").withConfig("core.abbrev", "no").operation());
     }
 
     @Test

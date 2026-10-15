@@ -1,18 +1,16 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.process.ExecutedCommand;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.nio.file.Path;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.zeroturnaround.exec.ProcessExecutor;
-
-import java.nio.file.Path;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Fetching from the remotes.
@@ -43,8 +41,16 @@ class CliFetchTest {
 
         List<String> remotes = CliRemote.remotes(repo).get();
         assertEquals(List.of("origin", "other"), remotes);
-        assertEquals(List.of("git fetch --quiet --prune origin"), CliFetch.fetch(repo, "origin", Option.none(), HashMap.empty()).get().map(ExecutedCommand::line));
-        assertEquals(List.of("git fetch --quiet --prune other"), CliFetch.fetch(repo, "other", Option.none(), HashMap.empty()).get().map(ExecutedCommand::line));
+        assertEquals(
+                List.of("git fetch --quiet --prune origin"),
+                CliFetch.fetch(repo, "origin", Option.none(), HashMap.empty())
+                        .get()
+                        .map(ExecutedCommand::line));
+        assertEquals(
+                List.of("git fetch --quiet --prune other"),
+                CliFetch.fetch(repo, "other", Option.none(), HashMap.empty())
+                        .get()
+                        .map(ExecutedCommand::line));
 
         assertTrue(git(repo, "branch", "-r").contains("origin/main"));
         assertTrue(git(repo, "branch", "-r").contains("other/main"));
@@ -71,7 +77,13 @@ class CliFetchTest {
     private static String git(Path in, String... args) throws Exception {
         java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of("git"));
         command.addAll(java.util.List.of(args));
-        return new ProcessExecutor().command(command).directory(in.toFile())
-                .readOutput(true).redirectErrorStream(true).exitValueNormal().execute().outputUTF8();
+        return new ProcessExecutor()
+                .command(command)
+                .directory(in.toFile())
+                .readOutput(true)
+                .redirectErrorStream(true)
+                .exitValueNormal()
+                .execute()
+                .outputUTF8();
     }
 }

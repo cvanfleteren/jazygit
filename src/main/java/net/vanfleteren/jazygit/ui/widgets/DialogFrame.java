@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.ui.widgets;
 
+import static dev.tamboui.toolkit.Toolkit.*;
+
 import dev.tamboui.style.Overflow;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
@@ -8,8 +10,6 @@ import dev.tamboui.widgets.paragraph.Paragraph;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.ui.Theme;
-
-import static dev.tamboui.toolkit.Toolkit.*;
 
 /**
  * The frame every popup is drawn in: a rounded border with the title, padding, and optionally a dimmed hint
@@ -27,14 +27,16 @@ public final class DialogFrame {
      */
     public static final int FRAME = 2 + 2;
 
-    private DialogFrame() {
-    }
+    private DialogFrame() {}
 
     /**
      * {@code text}, wrapped at the content width of a popup {@code width} wide, and cut after {@code maxLines}.
      */
     public static StyledElement<?> wrapped(String text, int width, int maxLines) {
-        return widget(Paragraph.builder().text(text).overflow(Overflow.WRAP_WORD).build())
+        return widget(Paragraph.builder()
+                        .text(text)
+                        .overflow(Overflow.WRAP_WORD)
+                        .build())
                 .length(wrappedHeight(text, width, maxLines));
     }
 
@@ -56,10 +58,13 @@ public final class DialogFrame {
      * A popup showing {@code content}, a blank line, and the hint {@code hintKey} says.
      */
     public static DialogElement withHint(String title, int width, String hintKey, List<? extends Element> content) {
-        return of(title, width, content.<Element>map(element -> element)
-                .append(text(""))
-                .append(hint(hintKey))
-                .toJavaArray(Element[]::new));
+        return of(
+                title,
+                width,
+                content.<Element>map(element -> element)
+                        .append(text(""))
+                        .append(hint(hintKey))
+                        .toJavaArray(Element[]::new));
     }
 
     /**

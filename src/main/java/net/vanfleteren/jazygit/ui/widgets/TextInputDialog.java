@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.ui.widgets;
 
+import static dev.tamboui.toolkit.Toolkit.textInput;
+
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.TextInputElement;
 import dev.tamboui.toolkit.event.EventResult;
@@ -7,15 +9,12 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.widgets.input.TextInputState;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Popup;
-
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
-
-import static dev.tamboui.toolkit.Toolkit.textInput;
+import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Popup;
 
 /**
  * The standard popup asking for one line of text. Enter confirms it, Escape cancels. Whether it is open lives
@@ -93,7 +92,12 @@ public final class TextInputDialog<P extends Popup> implements PopupView {
      * @param onConfirm   the message for Enter, given the text; it decides whether the popup closes
      * @param onCancel    the message for Escape
      */
-    public record Spec<P>(String id, Class<P> popupType, Function<P, String> title, Option<String> placeholder,
-                          Function<P, String> initialText, Function<String, Msg> onConfirm, Supplier<Msg> onCancel) {
-    }
+    public record Spec<P>(
+            String id,
+            Class<P> popupType,
+            Function<P, String> title,
+            Option<String> placeholder,
+            Function<P, String> initialText,
+            Function<String, Msg> onConfirm,
+            Supplier<Msg> onCancel) {}
 }

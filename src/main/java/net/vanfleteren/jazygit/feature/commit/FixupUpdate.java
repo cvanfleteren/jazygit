@@ -13,15 +13,17 @@ import net.vanfleteren.jazygit.state.Update.Next;
  */
 public final class FixupUpdate {
 
-    private FixupUpdate() {
-    }
+    private FixupUpdate() {}
 
     public static Next update(Model model, FixupMsg msg) {
         return switch (msg) {
             case FixupMsg.Requested(Sha sha) -> requested(model, sha);
             case FixupMsg.Cancelled() -> Next.of(model.withoutPopup(FixupPopup.class));
             case FixupMsg.Chosen(SquashMode mode) ->
-                    Update.confirm(model, FixupPopup.class, popup -> Option.of(new Squash(popup.commit().sha(), mode)));
+                Update.confirm(
+                        model,
+                        FixupPopup.class,
+                        popup -> Option.of(new Squash(popup.commit().sha(), mode)));
         };
     }
 

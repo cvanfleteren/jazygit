@@ -15,18 +15,14 @@ public sealed interface ThemeMsg extends Msg {
     /**
      * The user asked to choose a theme.
      */
-    record Requested() implements ThemeMsg {
-    }
+    record Requested() implements ThemeMsg {}
 
-    record Cancelled() implements ThemeMsg {
-    }
+    record Cancelled() implements ThemeMsg {}
 
     /**
      * The user highlighted {@code theme}, which shows until they choose one or cancel.
      */
-    record Previewed(ThemeName theme) implements ThemeMsg {
-    }
+    record Previewed(ThemeName theme) implements ThemeMsg {}
 
-    record Chosen(ThemeName theme) implements ThemeMsg {
-    }
+    record Chosen(ThemeName theme) implements ThemeMsg {}
 }

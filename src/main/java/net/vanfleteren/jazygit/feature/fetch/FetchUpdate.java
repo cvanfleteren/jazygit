@@ -15,8 +15,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
  */
 public final class FetchUpdate {
 
-    private FetchUpdate() {
-    }
+    private FetchUpdate() {}
 
     public static Next update(Model model, FetchMsg msg) {
         return switch (msg) {
@@ -37,13 +36,15 @@ public final class FetchUpdate {
      * running, which may have missed it, once that one is done.
      */
     public static Next requested(Next next) {
-        return next.model().fetching()
+        return next.model()
+                .fetching()
                 .map(running -> new Next(next.model().withFetching(Option.of(running.thenAgain())), next.cmds()))
                 .getOrElse(() -> start(next));
     }
 
     private static Next start(Next next) {
-        return new Next(next.model().withFetching(Option.of(Fetching.LISTING)),
+        return new Next(
+                next.model().withFetching(Option.of(Fetching.LISTING)),
                 next.cmds().append(new FetchCmd.ListRemotes()));
     }
 
@@ -58,7 +59,8 @@ public final class FetchUpdate {
     private static Next next(Model model, List<String> remotes) {
         boolean again = model.fetching().exists(Fetching::again);
         return remotes.pop2Option()
-                .map(next -> Next.of(model.withFetching(Option.of(new Fetching(Option.of(next._1), next._2, again))),
+                .map(next -> Next.of(
+                        model.withFetching(Option.of(new Fetching(Option.of(next._1), next._2, again))),
                         new FetchCmd.Fetch(next._1)))
                 .getOrElse(() -> done(model));
     }

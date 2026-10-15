@@ -9,5 +9,4 @@ import java.time.Instant;
  * @param tipOid  the commit it points to
  * @param tipTime when that commit was made
  */
-public record RemoteRef(RemoteBranch branch, Sha tipOid, Instant tipTime) {
-}
+public record RemoteRef(RemoteBranch branch, Sha tipOid, Instant tipTime) {}

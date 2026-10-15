@@ -1,9 +1,14 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import static dev.tamboui.toolkit.Toolkit.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
+import java.time.Instant;
+import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.LoadMsg;
@@ -13,12 +18,6 @@ import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
-import static dev.tamboui.toolkit.Toolkit.*;
-
-import java.time.Instant;
-import java.util.ArrayList;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * The popup asking to confirm squashing a commit into the one below it: Enter confirms, Escape cancels.
@@ -26,13 +25,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class SquashDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<SquashPopup> dialog = new net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<>(CommitDialogs.SQUASH, dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<SquashPopup> dialog =
+            new net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<>(CommitDialogs.SQUASH, dispatched::add);
     private final Model open = openModel();
 
     private static Model openModel() {
         Commit below = new Commit(new Sha("c1"), "Ada", "ada@example.com", Instant.EPOCH, "Below", "");
-        Commit selected = new Commit(new Sha("c2"), "Ada", "ada@example.com", Instant.EPOCH, "Selected", "", List.of(new Sha("c1")));
-        Model model = Update.update(TestModels.loaded(), new LoadMsg.CommitsLoaded(List.of(selected, below))).model();
+        Commit selected = new Commit(
+                new Sha("c2"), "Ada", "ada@example.com", Instant.EPOCH, "Selected", "", List.of(new Sha("c1")));
+        Model model = Update.update(TestModels.loaded(), new LoadMsg.CommitsLoaded(List.of(selected, below)))
+                .model();
         return Update.update(model, new SquashMsg.Requested(selected.sha())).model();
     }
 
@@ -61,7 +63,8 @@ class SquashDialogTest {
         try (ToolkitTestRunner runner = start()) {
             String screen = RenderedText.ofLarge(runner, this::view);
             org.junit.jupiter.api.Assertions.assertTrue(screen.contains("Squash commit"), screen);
-            org.junit.jupiter.api.Assertions.assertTrue(screen.contains("Are you sure you want to squash the selected commit"), screen);
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    screen.contains("Are you sure you want to squash the selected commit"), screen);
             org.junit.jupiter.api.Assertions.assertTrue(screen.contains("the commit below?"), screen);
         }
     }

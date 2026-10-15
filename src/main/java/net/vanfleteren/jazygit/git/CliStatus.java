@@ -5,14 +5,13 @@ import io.vavr.collection.Map;
 import io.vavr.collection.TreeMap;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.util.function.Function;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
-
-import java.nio.file.Path;
-import java.time.Duration;
-import java.util.function.Function;
 
 /**
  * Reads the working tree status through the {@code git status} command line tool.
@@ -23,15 +22,17 @@ final class CliStatus {
     private static final String HEAD = "# branch.head ";
     private static final String OID = "# branch.oid ";
 
-    private CliStatus() {
-    }
+    private CliStatus() {}
 
     /**
      * Runs {@code git status} in {@code workTree} and parses its output.
      */
     static Either<ProcessError, RepoStatus> read(Path workTree) {
-        return GitProcess.read(workTree, GitCommand.reading("status",
-                "--porcelain=v2", "--branch", "-z", "--untracked-files=all").withTimeout(TIMEOUT), CliStatus::parse);
+        return GitProcess.read(
+                workTree,
+                GitCommand.reading("status", "--porcelain=v2", "--branch", "-z", "--untracked-files=all")
+                        .withTimeout(TIMEOUT),
+                CliStatus::parse);
     }
 
     /**
@@ -39,11 +40,14 @@ final class CliStatus {
      */
     static Either<UnexpectedOutput, RepoStatus> parse(String raw) {
         return List.of(raw.split("\0"))
-                .foldLeft(Either.<UnexpectedOutput, Parsed>right(Parsed.NOTHING),
+                .foldLeft(
+                        Either.<UnexpectedOutput, Parsed>right(Parsed.NOTHING),
                         (parsed, field) -> parsed.flatMap(p -> next(p, field)))
                 .flatMap(parsed -> parsed.head()
                         .toEither(() -> new UnexpectedOutput(raw))
-                        .map(branch -> new RepoStatus(head(branch, parsed.oid()), parsed.byPath().values().toList())));
+                        .map(branch -> new RepoStatus(
+                                head(branch, parsed.oid()),
+                                parsed.byPath().values().toList())));
     }
 
     /**
@@ -66,28 +70,39 @@ final class CliStatus {
     private static Either<UnexpectedOutput, Parsed> entry(Parsed parsed, String field) {
         return switch (field.charAt(0)) {
             case '#' -> Either.right(header(parsed, field));
-            case '?' -> GitOutput.after(field, "? ")
-                    .toEither(() -> new UnexpectedOutput(field))
-                    .map(path -> parsed.with(new FileEntry(path, ChangeType.UNTRACKED, false, true)));
+            case '?' ->
+                GitOutput.after(field, "? ")
+                        .toEither(() -> new UnexpectedOutput(field))
+                        .map(path -> parsed.with(new FileEntry(path, ChangeType.UNTRACKED, false, true)));
             // 1 XY sub mH mI mW hH hI path
-            case '1' -> xy(field).flatMap(xy -> pathAfter(field, 8)
-                    .map(path -> parsed.with(changed(path, ordinaryChange(xy), xy))));
+            case '1' ->
+                xy(field)
+                        .flatMap(xy ->
+                                pathAfter(field, 8).map(path -> parsed.with(changed(path, ordinaryChange(xy), xy))));
             // 2 XY sub mH mI mW hH hI Xscore path, followed by the original path as its own field. A copy
             // leaves its original path as it was, so it shows as added.
-            case '2' -> xy(field).flatMap(xy -> pathAfter(field, 9)
-                    .map(path -> parsed.expectingOrigin(xy.staged() == 'R' || xy.unstaged() == 'R'
-                            ? origin -> FileEntry.renamed(path, origin, xy.staged() != '.', xy.unstaged() != '.')
-                            : origin -> changed(path, ChangeType.ADDED, xy))));
+            case '2' ->
+                xy(field)
+                        .flatMap(xy -> pathAfter(field, 9)
+                                .map(path -> parsed.expectingOrigin(
+                                        xy.staged() == 'R' || xy.unstaged() == 'R'
+                                                ? origin -> FileEntry.renamed(
+                                                        path, origin, xy.staged() != '.', xy.unstaged() != '.')
+                                                : origin -> changed(path, ChangeType.ADDED, xy))));
             // u XY sub m1 m2 m3 mW h1 h2 h3 path
-            case 'u' -> xy(field).flatMap(xy -> pathAfter(field, 10)
-                    .map(path -> parsed.with(FileEntry.conflicted(path, Conflict.of(xy.staged(), xy.unstaged())))));
+            case 'u' ->
+                xy(field)
+                        .flatMap(xy -> pathAfter(field, 10)
+                                .map(path -> parsed.with(
+                                        FileEntry.conflicted(path, Conflict.of(xy.staged(), xy.unstaged())))));
             // Ignored entries ('!') and anything unknown are not shown.
             default -> Either.right(parsed);
         };
     }
 
     private static Parsed header(Parsed parsed, String field) {
-        return GitOutput.after(field, HEAD).map(parsed::withHead)
+        return GitOutput.after(field, HEAD)
+                .map(parsed::withHead)
                 .orElse(() -> GitOutput.after(field, OID).map(parsed::withOid))
                 .getOrElse(parsed);
     }
@@ -103,9 +118,9 @@ final class CliStatus {
     }
 
     private static ChangeType ordinaryChange(Xy xy) {
-        return xy.staged() == 'D' || xy.unstaged() == 'D' ? ChangeType.DELETED
-                : xy.staged() == 'A' ? ChangeType.ADDED
-                : ChangeType.MODIFIED;
+        return xy.staged() == 'D' || xy.unstaged() == 'D'
+                ? ChangeType.DELETED
+                : xy.staged() == 'A' ? ChangeType.ADDED : ChangeType.MODIFIED;
     }
 
     /**
@@ -121,8 +136,11 @@ final class CliStatus {
      * @param origin for the rename or copy just parsed, its entry given its original path, which is the
      *               next field
      */
-    private record Parsed(Option<String> head, Option<String> oid, Map<String, FileEntry> byPath,
-                          Option<Function<String, FileEntry>> origin) {
+    private record Parsed(
+            Option<String> head,
+            Option<String> oid,
+            Map<String, FileEntry> byPath,
+            Option<Function<String, FileEntry>> origin) {
 
         static final Parsed NOTHING = new Parsed(Option.none(), Option.none(), TreeMap.empty(), Option.none());
 
@@ -146,6 +164,5 @@ final class CliStatus {
     /**
      * The two status letters of an entry: what is staged, and what is not.
      */
-    private record Xy(char staged, char unstaged) {
-    }
+    private record Xy(char staged, char unstaged) {}
 }

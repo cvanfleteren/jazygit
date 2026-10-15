@@ -1,5 +1,8 @@
 package net.vanfleteren.jazygit.ui.widgets;
 
+import static dev.tamboui.toolkit.Toolkit.list;
+import static dev.tamboui.toolkit.Toolkit.text;
+
 import dev.tamboui.style.Style;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
@@ -9,18 +12,14 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
 import net.vanfleteren.jazygit.ui.Theme;
-
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
-
-import static dev.tamboui.toolkit.Toolkit.list;
-import static dev.tamboui.toolkit.Toolkit.text;
 
 /**
  * The standard popup to pick one of a list of names that comes from the open popup, like the branches. A name is
@@ -48,18 +47,14 @@ public final class PickDialog<P extends Popup> implements PopupView {
     public PickDialog(Spec<P> spec, Consumer<Msg> dispatch) {
         this.spec = spec;
         this.dispatch = dispatch;
-        this.list = list()
-                .id(spec.id())
-                .focusable()
-                .highlightSymbol("")
-                .onKeyEvent(this::handleKey);
-        this.empty = spec.emptyKey().map(key -> list()
-                .id(spec.id())
-                .focusable()
-                .highlightSymbol("")
-                .highlightStyle(Style.EMPTY)
-                .onKeyEvent(this::handleKey)
-                .elements(text(Messages.get(key)).addClass(Theme.Classes.DIM)));
+        this.list = list().id(spec.id()).focusable().highlightSymbol("").onKeyEvent(this::handleKey);
+        this.empty = spec.emptyKey()
+                .map(key -> list().id(spec.id())
+                        .focusable()
+                        .highlightSymbol("")
+                        .highlightStyle(Style.EMPTY)
+                        .onKeyEvent(this::handleKey)
+                        .elements(text(Messages.get(key)).addClass(Theme.Classes.DIM)));
     }
 
     @Override
@@ -76,8 +71,11 @@ public final class PickDialog<P extends Popup> implements PopupView {
             show(spec.options().apply(popup));
             int widest = shown.map(String::length).max().getOrElse(0);
             ListElement<?> rows = empty.filter(none -> shown.isEmpty()).getOrElse(list);
-            return DialogFrame.withHint(spec.title().apply(popup), Math.max(DialogFrame.LIST_WIDTH, widest + DialogFrame.FRAME),
-                    "dialog.hint.pickCancel", List.of(rows.length(Math.clamp(shown.size(), 1, MAX_ROWS))));
+            return DialogFrame.withHint(
+                    spec.title().apply(popup),
+                    Math.max(DialogFrame.LIST_WIDTH, widest + DialogFrame.FRAME),
+                    "dialog.hint.pickCancel",
+                    List.of(rows.length(Math.clamp(shown.size(), 1, MAX_ROWS))));
         });
     }
 
@@ -90,9 +88,9 @@ public final class PickDialog<P extends Popup> implements PopupView {
     }
 
     private EventResult handleKey(KeyEvent event) {
-        Option<Msg> msg = event.code() == KeyCode.ESCAPE ? Option.of(spec.onCancel().get())
-                : event.isConfirm() ? shown.lift().apply(list.selected()).map(spec.onPick())
-                : Option.none();
+        Option<Msg> msg = event.code() == KeyCode.ESCAPE
+                ? Option.of(spec.onCancel().get())
+                : event.isConfirm() ? shown.lift().apply(list.selected()).map(spec.onPick()) : Option.none();
         msg.forEach(this::send);
         return msg.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
     }
@@ -114,14 +112,25 @@ public final class PickDialog<P extends Popup> implements PopupView {
      * @param onCancel  the message for cancelling, by Escape
      * @param emptyKey  the message key of the line shown when there are no names to pick, if any
      */
-    public record Spec<P>(String id, Class<P> popupType, Function<P, String> title, Function<P, List<String>> options,
-                          Function<String, Msg> onPick, Supplier<Msg> onCancel, Option<String> emptyKey) {
+    public record Spec<P>(
+            String id,
+            Class<P> popupType,
+            Function<P, String> title,
+            Function<P, List<String>> options,
+            Function<String, Msg> onPick,
+            Supplier<Msg> onCancel,
+            Option<String> emptyKey) {
 
         /**
          * A dialog that shows no line when there are no names to pick.
          */
-        public Spec(String id, Class<P> popupType, Function<P, String> title, Function<P, List<String>> options,
-                    Function<String, Msg> onPick, Supplier<Msg> onCancel) {
+        public Spec(
+                String id,
+                Class<P> popupType,
+                Function<P, String> title,
+                Function<P, List<String>> options,
+                Function<String, Msg> onPick,
+                Supplier<Msg> onCancel) {
             this(id, popupType, title, options, onPick, onCancel, Option.none());
         }
     }

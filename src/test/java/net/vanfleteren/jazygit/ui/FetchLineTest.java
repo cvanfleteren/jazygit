@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -8,8 +10,6 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 /**
  * The line saying which remote is being fetched from, or that the pull requests are being read.
  */
@@ -17,7 +17,8 @@ class FetchLineTest {
 
     @Test
     void showsTheRemoteBeingFetchedFrom() throws Exception {
-        assertEquals("Fetching origin",
+        assertEquals(
+                "Fetching origin",
                 rendered(TestModels.loaded().withFetching(Option.of(new Fetching(Option.of("origin"), List.empty())))));
     }
 
@@ -26,7 +27,8 @@ class FetchLineTest {
         Model reading = TestModels.loaded().withReadingPullRequests(1);
 
         assertEquals("Reading pull requests from GitHub", rendered(reading));
-        assertEquals("Fetching origin",
+        assertEquals(
+                "Fetching origin",
                 rendered(reading.withFetching(Option.of(new Fetching(Option.of("origin"), List.empty())))));
     }
 

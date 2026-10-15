@@ -46,8 +46,8 @@ public sealed interface PullRequestCmd extends Cmd {
      * Creates a pull request from {@code branch}, as it is on its remote under the name {@code head}, into
      * {@code base}.
      */
-    record CreatePullRequest(Branch.Name branch, Branch.Name head,
-                             Branch.Name base) implements PullRequestCmd, OperationCmd {
+    record CreatePullRequest(Branch.Name branch, Branch.Name head, Branch.Name base)
+            implements PullRequestCmd, OperationCmd {
 
         @Override
         public Operation operation() {
@@ -66,11 +66,16 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub().createPullRequest(head.value(), base.value()).fold(
-                    this::failedWith,
-                    created -> new PullRequestMsg.Created(this,
-                            created.number().map(number -> new PullRequest(number, head.value(), false, Checks.NONE, Review.NONE)),
-                            created.commands()));
+            return env.gitHub()
+                    .createPullRequest(head.value(), base.value())
+                    .fold(
+                            this::failedWith,
+                            created -> new PullRequestMsg.Created(
+                                    this,
+                                    created.number()
+                                            .map(number -> new PullRequest(
+                                                    number, head.value(), false, Checks.NONE, Review.NONE)),
+                                    created.commands()));
         }
     }
 
@@ -134,9 +139,9 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub().pullRequestDetails(number).fold(
-                    this::failedWith,
-                    details -> new PullRequestMsg.DetailsLoaded(number, details));
+            return env.gitHub()
+                    .pullRequestDetails(number)
+                    .fold(this::failedWith, details -> new PullRequestMsg.DetailsLoaded(number, details));
         }
 
         @Override

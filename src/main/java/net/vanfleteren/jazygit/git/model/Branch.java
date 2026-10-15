@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.git.model;
 
 import io.vavr.control.Option;
-
 import java.time.Instant;
 
 /**
@@ -13,20 +12,37 @@ import java.time.Instant;
  * @param isDefault whether this is the repository's main branch, i.e. the default branch of the remote
  * @param tracking  what it follows on its remote: nothing, a remote-tracking branch, or one that is gone
  */
-public record Branch(Name name, boolean current, Sha tipOid, Instant tipTime, boolean hasRemote,
-                     boolean isDefault, Tracking tracking) {
+public record Branch(
+        Name name,
+        boolean current,
+        Sha tipOid,
+        Instant tipTime,
+        boolean hasRemote,
+        boolean isDefault,
+        Tracking tracking) {
 
     /**
      * A branch following {@code upstream}, or nothing.
      */
-    public Branch(Name name, boolean current, Sha tipOid, Instant tipTime, boolean hasRemote,
-                  boolean isDefault, Option<Upstream> upstream) {
-        this(name, current, tipOid, tipTime, hasRemote, isDefault,
+    public Branch(
+            Name name,
+            boolean current,
+            Sha tipOid,
+            Instant tipTime,
+            boolean hasRemote,
+            boolean isDefault,
+            Option<Upstream> upstream) {
+        this(
+                name,
+                current,
+                tipOid,
+                tipTime,
+                hasRemote,
+                isDefault,
                 upstream.<Tracking>map(Tracking.Tracks::new).getOrElse(new Tracking.None()));
     }
 
-    public Branch(Name name, boolean current, Sha tipOid, Instant tipTime, boolean hasRemote,
-                  boolean isDefault) {
+    public Branch(Name name, boolean current, Sha tipOid, Instant tipTime, boolean hasRemote, boolean isDefault) {
         this(name, current, tipOid, tipTime, hasRemote, isDefault, new Tracking.None());
     }
 
@@ -69,7 +85,8 @@ public record Branch(Name name, boolean current, Sha tipOid, Instant tipTime, bo
      * on {@code origin} when it has none, or follows a local branch.
      */
     public RemoteBranch pushTarget() {
-        return upstream().map(Upstream::branch)
+        return upstream()
+                .map(Upstream::branch)
                 .orElse(this::goneUpstream)
                 .filter(upstream -> !upstream.local())
                 .getOrElse(() -> new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, name));

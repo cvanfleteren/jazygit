@@ -9,8 +9,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
  */
 public final class ErrorUpdate {
 
-    private ErrorUpdate() {
-    }
+    private ErrorUpdate() {}
 
     public static Next update(Model model, ErrorMsg msg) {
         return switch (msg) {

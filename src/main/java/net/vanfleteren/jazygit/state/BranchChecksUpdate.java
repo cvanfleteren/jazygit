@@ -9,13 +9,12 @@ import net.vanfleteren.jazygit.state.Update.Next;
  */
 public final class BranchChecksUpdate {
 
-    private BranchChecksUpdate() {
-    }
+    private BranchChecksUpdate() {}
 
     public static Next update(Model model, BranchChecksMsg msg) {
         return switch (msg) {
             case BranchChecksMsg.Loaded(GitHubChecks checks) ->
-                    Next.of(read(model).withBranchChecks(Option.of(checks)));
+                Next.of(read(model).withBranchChecks(Option.of(checks)));
             // Like for the pull requests, a failure is no reason to bother the user: the checks read last stay.
             case BranchChecksMsg.LoadFailed(var failure) -> Next.of(read(model));
         };
@@ -34,7 +33,8 @@ public final class BranchChecksUpdate {
      * a change just made.
      */
     static Next loadAnyway(Next next) {
-        return new Next(next.model().withReadingBranchChecks(next.model().readingBranchChecks() + 1),
+        return new Next(
+                next.model().withReadingBranchChecks(next.model().readingBranchChecks() + 1),
                 next.cmds().append(new LoadBranchChecks()));
     }
 

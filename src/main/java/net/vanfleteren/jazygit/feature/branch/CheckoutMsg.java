@@ -18,38 +18,32 @@ public sealed interface CheckoutMsg extends Msg {
     /**
      * The user asked to check out a branch.
      */
-    record Requested(Branch.Name branch) implements CheckoutMsg {
-    }
+    record Requested(Branch.Name branch) implements CheckoutMsg {}
 
     /**
      * The user asked to check out the remote branch {@code branch}: the local branch that follows it, or a new
      * one that does.
      */
-    record RemoteRequested(RemoteBranch branch) implements CheckoutMsg {
-    }
+    record RemoteRequested(RemoteBranch branch) implements CheckoutMsg {}
 
     /**
      * {@code cmd} ran {@code commands} and left a local branch checked out.
      */
-    record CheckedOut(BranchCmd.ChecksOutBranch cmd, List<ExecutedCommand> commands) implements CheckoutMsg {
-    }
+    record CheckedOut(BranchCmd.ChecksOutBranch cmd, List<ExecutedCommand> commands) implements CheckoutMsg {}
 
     /**
      * Git refused the checkout {@code cmd}, which ran {@code commands}, because uncommitted changes would be
      * overwritten.
      */
-    record NeedsStash(BranchCmd.Checkout cmd, List<ExecutedCommand> commands) implements CheckoutMsg {
-    }
+    record NeedsStash(BranchCmd.Checkout cmd, List<ExecutedCommand> commands) implements CheckoutMsg {}
 
     /**
      * The user agreed to stash the uncommitted changes, check out and pop them again.
      */
-    record StashConfirmed() implements CheckoutMsg {
-    }
+    record StashConfirmed() implements CheckoutMsg {}
 
     /**
      * The user cancelled the checkout that needed the changes stashed.
      */
-    record StashCancelled() implements CheckoutMsg {
-    }
+    record StashCancelled() implements CheckoutMsg {}
 }

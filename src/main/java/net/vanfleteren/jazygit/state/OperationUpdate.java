@@ -11,16 +11,15 @@ import net.vanfleteren.jazygit.state.Update.Next;
  */
 public final class OperationUpdate {
 
-    private OperationUpdate() {
-    }
+    private OperationUpdate() {}
 
     public static Next update(Model model, OperationMsg msg) {
         return switch (msg) {
             case OperationMsg.Succeeded(OperationCmd cmd, List<ExecutedCommand> commands) ->
-                    succeeded(model, cmd, commands);
+                succeeded(model, cmd, commands);
             case OperationMsg.Failed(OperationCmd cmd, Failure failure) ->
-                    Update.refresh(done(model, cmd, failure.commands())
-                            .fail(new AppError.OperationFailed(cmd.operation(), cmd.subject(), failure)));
+                Update.refresh(done(model, cmd, failure.commands())
+                        .fail(new AppError.OperationFailed(cmd.operation(), cmd.subject(), failure)));
         };
     }
 

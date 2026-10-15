@@ -3,9 +3,8 @@ package net.vanfleteren.jazygit.gh;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-
 import java.time.Duration;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
  * A {@code gh} invocation, as data; {@link GhProcess} runs it.

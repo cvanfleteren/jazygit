@@ -15,15 +15,12 @@ public sealed interface RenameBranchMsg extends Msg {
     /**
      * The user asked to rename {@code branch}; the new name is still to be entered.
      */
-    record Requested(Branch.Name branch) implements RenameBranchMsg {
-    }
+    record Requested(Branch.Name branch) implements RenameBranchMsg {}
 
-    record Cancelled() implements RenameBranchMsg {
-    }
+    record Cancelled() implements RenameBranchMsg {}
 
     /**
      * The user entered the new name of the branch.
      */
-    record Confirmed(String name) implements RenameBranchMsg {
-    }
+    record Confirmed(String name) implements RenameBranchMsg {}
 }

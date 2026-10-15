@@ -14,15 +14,17 @@ import net.vanfleteren.jazygit.state.Update.Next;
  */
 public final class SquashUpdate {
 
-    private SquashUpdate() {
-    }
+    private SquashUpdate() {}
 
     public static Next update(Model model, SquashMsg msg) {
         return switch (msg) {
             case SquashMsg.Requested(Sha sha) -> requested(model, sha);
             case SquashMsg.Cancelled() -> Next.of(model.withoutPopup(SquashPopup.class));
             case SquashMsg.Confirmed() ->
-                    Update.confirm(model, SquashPopup.class, popup -> Option.of(new Squash(popup.commit().sha(), SquashMode.SQUASH)));
+                Update.confirm(
+                        model,
+                        SquashPopup.class,
+                        popup -> Option.of(new Squash(popup.commit().sha(), SquashMode.SQUASH)));
         };
     }
 
@@ -32,9 +34,7 @@ public final class SquashUpdate {
      */
     private static Next requested(Model model, Sha sha) {
         return model.commit(sha)
-                .flatMap(commit -> onlyParent(commit)
-                        .flatMap(model::commit)
-                        .map(into -> new SquashPopup(commit, into)))
+                .flatMap(commit -> onlyParent(commit).flatMap(model::commit).map(into -> new SquashPopup(commit, into)))
                 .transform(popup -> Update.ask(model, popup));
     }
 

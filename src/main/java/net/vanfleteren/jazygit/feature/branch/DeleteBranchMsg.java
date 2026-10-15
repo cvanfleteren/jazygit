@@ -17,24 +17,18 @@ public sealed interface DeleteBranchMsg extends Msg {
     /**
      * The user asked to delete a branch; where is still to be chosen.
      */
-    record Requested(Branch.Name branch) implements DeleteBranchMsg {
-    }
+    record Requested(Branch.Name branch) implements DeleteBranchMsg {}
 
-    record Cancelled() implements DeleteBranchMsg {
-    }
+    record Cancelled() implements DeleteBranchMsg {}
 
-    record Chosen(DeleteScope scope) implements DeleteBranchMsg {
-    }
+    record Chosen(DeleteScope scope) implements DeleteBranchMsg {}
 
     /**
      * The user asked to delete a remote branch; that is still to be confirmed.
      */
-    record RemoteRequested(RemoteBranch branch) implements DeleteBranchMsg {
-    }
+    record RemoteRequested(RemoteBranch branch) implements DeleteBranchMsg {}
 
-    record RemoteCancelled() implements DeleteBranchMsg {
-    }
+    record RemoteCancelled() implements DeleteBranchMsg {}
 
-    record RemoteConfirmed() implements DeleteBranchMsg {
-    }
+    record RemoteConfirmed() implements DeleteBranchMsg {}
 }

@@ -14,22 +14,25 @@ import net.vanfleteren.jazygit.state.Update.Next;
  */
 public final class PullRequestsUpdate {
 
-    private PullRequestsUpdate() {
-    }
+    private PullRequestsUpdate() {}
 
     public static Next update(Model model, PullRequestsMsg msg) {
         return switch (msg) {
             case PullRequestsMsg.Refresh() -> load(Next.of(model));
-            case PullRequestsMsg.Loaded(List<PullRequest> pullRequests) -> Next.of(read(model)
-                    .withPullRequests(Option.of(byHeadBranch(pullRequests))).withPullRequestsFailure(Option.none()));
+            case PullRequestsMsg.Loaded(List<PullRequest> pullRequests) ->
+                Next.of(read(model)
+                        .withPullRequests(Option.of(byHeadBranch(pullRequests)))
+                        .withPullRequestsFailure(Option.none()));
             // gh can be missing, logged out or offline, or the remote not on GitHub: then no pull requests show.
             // That is no reason to bother the user until they ask for a pull request. The account they chose for
             // the repository not being available is, once: gh is not run as another one.
             case PullRequestsMsg.LoadFailed(var failure) -> {
                 Model failed = read(model).withPullRequestsFailure(Option.of(failure));
-                yield Next.of(failure.accountUnavailable() && !model.pullRequestsFailure().contains(failure)
-                        ? failed.fail(new AppError.PullRequestsUnavailable(failure))
-                        : failed);
+                yield Next.of(
+                        failure.accountUnavailable()
+                                        && !model.pullRequestsFailure().contains(failure)
+                                ? failed.fail(new AppError.PullRequestsUnavailable(failure))
+                                : failed);
             }
         };
     }
@@ -69,7 +72,8 @@ public final class PullRequestsUpdate {
      * gh lists them in.
      */
     static Map<Branch.Name, PullRequest> byHeadBranch(List<PullRequest> pullRequests) {
-        // Vavr's toMap has no merge function; a later entry replaces an earlier one, so ascending numbers keep the newest.
+        // Vavr's toMap has no merge function; a later entry replaces an earlier one, so ascending numbers keep the
+        // newest.
         return pullRequests.sortBy(PullRequest::number).toMap(pr -> new Branch.Name(pr.headBranch()), pr -> pr);
     }
 }

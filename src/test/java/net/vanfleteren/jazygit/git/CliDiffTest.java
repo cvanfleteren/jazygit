@@ -1,6 +1,12 @@
 package net.vanfleteren.jazygit.git;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import io.vavr.collection.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
@@ -8,13 +14,6 @@ import net.vanfleteren.jazygit.git.model.FileEntry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.zeroturnaround.exec.ProcessExecutor;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CliDiffTest {
 
@@ -26,7 +25,8 @@ class CliDiffTest {
         git("init", "-q");
         Files.writeString(repo.resolve("new.txt"), "first\n");
 
-        Diffs diffs = CliDiff.diff(repo, List.of(new FileEntry("new.txt", ChangeType.UNTRACKED))).get();
+        Diffs diffs = CliDiff.diff(repo, List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)))
+                .get();
 
         assertTrue(diffs.unstaged().text().contains("+first"), diffs.unstaged().text());
         assertFalse(Files.exists(repo.resolve(".git/index")));
@@ -45,10 +45,13 @@ class CliDiffTest {
         Files.writeString(repo.resolve("new2.txt"), "second\n");
         String indexBefore = git("ls-files", "--stage");
 
-        Diffs diffs = CliDiff.diff(repo, List.of(
-                new FileEntry("a.txt", ChangeType.MODIFIED),
-                new FileEntry("new1.txt", ChangeType.UNTRACKED),
-                new FileEntry("new2.txt", ChangeType.UNTRACKED))).get();
+        Diffs diffs = CliDiff.diff(
+                        repo,
+                        List.of(
+                                new FileEntry("a.txt", ChangeType.MODIFIED),
+                                new FileEntry("new1.txt", ChangeType.UNTRACKED),
+                                new FileEntry("new2.txt", ChangeType.UNTRACKED)))
+                .get();
 
         assertEquals("", diffs.staged().text());
         assertTrue(diffs.unstaged().text().contains("+two"));
@@ -69,7 +72,13 @@ class CliDiffTest {
     private String git(String... args) throws Exception {
         java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of("git"));
         command.addAll(java.util.List.of(args));
-        return new ProcessExecutor().command(command).directory(repo.toFile())
-                .readOutput(true).redirectErrorStream(true).exitValueNormal().execute().outputUTF8();
+        return new ProcessExecutor()
+                .command(command)
+                .directory(repo.toFile())
+                .readOutput(true)
+                .redirectErrorStream(true)
+                .exitValueNormal()
+                .execute()
+                .outputUTF8();
     }
 }

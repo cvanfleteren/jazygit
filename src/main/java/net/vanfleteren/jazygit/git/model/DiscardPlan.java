@@ -10,8 +10,7 @@ import io.vavr.collection.List;
  * @param fromHead  tracked paths whose index and working tree are both reset to HEAD
  * @param added     paths added to the index but not in HEAD, which are removed from both
  */
-public record DiscardPlan(List<String> untracked, List<String> fromIndex, List<String> fromHead,
-                          List<String> added) {
+public record DiscardPlan(List<String> untracked, List<String> fromIndex, List<String> fromHead, List<String> added) {
 
     public boolean isEmpty() {
         return untracked.isEmpty() && fromIndex.isEmpty() && fromHead.isEmpty() && added.isEmpty();

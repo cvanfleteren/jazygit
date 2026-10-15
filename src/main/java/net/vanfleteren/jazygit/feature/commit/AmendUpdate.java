@@ -17,8 +17,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
  */
 public final class AmendUpdate {
 
-    private AmendUpdate() {
-    }
+    private AmendUpdate() {}
 
     public static Next update(Model model, AmendMsg msg) {
         return switch (msg) {
@@ -32,9 +31,11 @@ public final class AmendUpdate {
      * Asks for confirmation, when the last commit has something to be amended with.
      */
     private static Next requested(Model model) {
-        return Update.withFiles(model, files -> files.isEmpty()
-                ? Next.of(model.fail(new AppError.NothingToAmend()))
-                : Update.ask(model, new AmendPopup()));
+        return Update.withFiles(
+                model,
+                files -> files.isEmpty()
+                        ? Next.of(model.fail(new AppError.NothingToAmend()))
+                        : Update.ask(model, new AmendPopup()));
     }
 
     /**
@@ -42,9 +43,7 @@ public final class AmendUpdate {
      */
     private static Next confirmed(Model model) {
         List<FileEntry> files = Update.files(model);
-        List<String> stage = files.exists(FileEntry::staged)
-                ? List.of()
-                : FileEntry.paths(files, FileEntry::unstaged);
+        List<String> stage = files.exists(FileEntry::staged) ? List.of() : FileEntry.paths(files, FileEntry::unstaged);
         return Update.confirm(model, AmendPopup.class, popup -> Option.of(new Amend(stage)));
     }
 }

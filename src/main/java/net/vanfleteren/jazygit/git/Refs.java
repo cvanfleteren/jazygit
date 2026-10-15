@@ -12,8 +12,7 @@ final class Refs {
     static final String HEADS = "refs/heads/";
     static final String REMOTES = "refs/remotes/";
 
-    private Refs() {
-    }
+    private Refs() {}
 
     /**
      * The ref of the local branch {@code branch}.

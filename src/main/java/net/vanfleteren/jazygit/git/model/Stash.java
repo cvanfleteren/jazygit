@@ -8,5 +8,4 @@ package net.vanfleteren.jazygit.git.model;
  * @param sha     the commit git keeps it as, which does not change
  * @param message what it was stashed as, without git's {@code On <branch>:} prefix
  */
-public record Stash(String ref, Sha sha, String message) {
-}
+public record Stash(String ref, Sha sha, String message) {}

@@ -1,18 +1,17 @@
 package net.vanfleteren.jazygit.git;
 
+import static net.vanfleteren.jazygit.git.GitCommand.reading;
+
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Function;
 import java.util.function.Supplier;
-
-import static net.vanfleteren.jazygit.git.GitCommand.reading;
+import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
  * What the repository is in the middle of: a merge, a rebase, a cherry-pick or revert, or conflicts still to
@@ -27,17 +26,24 @@ import static net.vanfleteren.jazygit.git.GitCommand.reading;
 record Unfinished(boolean merging, boolean rebasing, boolean picking, boolean conflicted) {
 
     // Where git keeps what it is in the middle of; --git-path finds them in a linked worktree too.
-    private static final List<String> MARKERS = List.of("MERGE_HEAD", "rebase-merge", "rebase-apply",
-            "CHERRY_PICK_HEAD", "REVERT_HEAD");
+    private static final List<String> MARKERS =
+            List.of("MERGE_HEAD", "rebase-merge", "rebase-apply", "CHERRY_PICK_HEAD", "REVERT_HEAD");
 
     /**
      * Reads what the repository in {@code workTree} is in the middle of. Only asked, so not logged.
      */
     static Either<ProcessError, Unfinished> read(Path workTree) {
-        return GitProcess.read(workTree, reading(MARKERS.flatMap(marker -> List.of("--git-path", marker)).prepend("rev-parse")),
+        return GitProcess.read(
+                        workTree,
+                        reading(MARKERS.flatMap(marker -> List.of("--git-path", marker))
+                                .prepend("rev-parse")),
                         raw -> paths(raw, workTree))
-                .flatMap(markers -> CliMerge.conflicted(workTree).map(conflicted -> new Unfinished(
-                        markers.get(0), markers.get(1) || markers.get(2), markers.get(3) || markers.get(4), conflicted)));
+                .flatMap(markers -> CliMerge.conflicted(workTree)
+                        .map(conflicted -> new Unfinished(
+                                markers.get(0),
+                                markers.get(1) || markers.get(2),
+                                markers.get(3) || markers.get(4),
+                                conflicted)));
     }
 
     private static Either<UnexpectedOutput, List<Boolean>> paths(String raw, Path workTree) {
@@ -58,11 +64,16 @@ record Unfinished(boolean merging, boolean rebasing, boolean picking, boolean co
         return read(workTree)
                 .mapLeft(error -> new GitFailure<>(error, List.empty()))
                 .flatMap(before -> GitProcess.log(workTree, command)
-                        .mapLeft(failure -> before.any() ? failure : uninterrupted(() -> read(workTree).fold(
-                                error -> new GitFailure<>(failure.error(), failure.commands(), Option.of(error)),
-                                after -> undo.apply(after)
-                                        .map(cleanup -> failure.followedBy(GitProcess.log(workTree, cleanup)))
-                                        .getOrElse(failure)))));
+                        .mapLeft(failure -> before.any()
+                                ? failure
+                                : uninterrupted(() -> read(workTree)
+                                        .fold(
+                                                error -> new GitFailure<>(
+                                                        failure.error(), failure.commands(), Option.of(error)),
+                                                after -> undo.apply(after)
+                                                        .map(cleanup ->
+                                                                failure.followedBy(GitProcess.log(workTree, cleanup)))
+                                                        .getOrElse(failure)))));
     }
 
     /**

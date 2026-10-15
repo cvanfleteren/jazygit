@@ -1,9 +1,14 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import static dev.tamboui.toolkit.Toolkit.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
+import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.state.Model;
@@ -13,21 +18,17 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-
-import static dev.tamboui.toolkit.Toolkit.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 /**
  * The popup asking how to merge a branch into the checked out one.
  */
 class MergeDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<MergePopup> dialog = new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(BranchDialogs.MERGE, dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<MergePopup> dialog =
+            new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(BranchDialogs.MERGE, dispatched::add);
     // In the test models, main is checked out.
-    private final Model open = Update.update(TestModels.loaded(), new MergeMsg.Requested(new Branch.Name("feature"))).model();
+    private final Model open = Update.update(TestModels.loaded(), new MergeMsg.Requested(new Branch.Name("feature")))
+            .model();
 
     @Test
     void listsTheFourWaysToMergeAndCancel() throws Exception {

@@ -1,10 +1,9 @@
 package net.vanfleteren.jazygit.gh.model;
 
 import io.vavr.collection.List;
+import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
-
-import java.time.Instant;
 
 /**
  * Everything shown about one pull request, read when the user asks for it.
@@ -27,11 +26,24 @@ import java.time.Instant;
  * @param reviewers    who reviewed it or is asked to
  * @param checks       its CI checks, one by one
  */
-public record PullRequestDetails(int number, String title, String author, State state, boolean draft,
-                                 String headBranch, String baseBranch, Instant createdAt,
-                                 int additions, int deletions, int changedFiles, Mergeable mergeable,
-                                 Review review, int comments, List<String> labels, List<Reviewer> reviewers,
-                                 List<Check> checks) {
+public record PullRequestDetails(
+        int number,
+        String title,
+        String author,
+        State state,
+        boolean draft,
+        String headBranch,
+        String baseBranch,
+        Instant createdAt,
+        int additions,
+        int deletions,
+        int changedFiles,
+        Mergeable mergeable,
+        Review review,
+        int comments,
+        List<String> labels,
+        List<Reviewer> reviewers,
+        List<Check> checks) {
 
     public enum State {
         OPEN,
@@ -66,8 +78,7 @@ public record PullRequestDetails(int number, String title, String author, State 
      *
      * @param login their login, or the name of a team
      */
-    public record Reviewer(String login, ReviewerState state) {
-    }
+    public record Reviewer(String login, ReviewerState state) {}
 
     /**
      * One CI check.
@@ -75,6 +86,5 @@ public record PullRequestDetails(int number, String title, String author, State 
      * @param name  the name of the check run, or the context of the commit status
      * @param state how it is doing; never {@link Checks#NONE}
      */
-    public record Check(String name, Checks state) {
-    }
+    public record Check(String name, Checks state) {}
 }

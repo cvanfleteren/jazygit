@@ -1,18 +1,17 @@
 package net.vanfleteren.jazygit.gh;
 
+import static net.vanfleteren.jazygit.gh.GhCommand.gh;
+
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.gh.model.GhAccount;
-import net.vanfleteren.jazygit.process.Exec;
-
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.function.Supplier;
-
-import static net.vanfleteren.jazygit.gh.GhCommand.gh;
+import net.vanfleteren.jazygit.gh.model.GhAccount;
+import net.vanfleteren.jazygit.process.Exec;
 
 /**
  * The token of the account a repository is configured to use with gh, as the environment variables that make gh,
@@ -90,8 +89,10 @@ public final class GhToken {
         String host = resolve(configured.host());
         GhAccount resolved = new GhAccount(host, configured.user());
         return new GhProcess(workTree, executable, NONE)
-                .read(gh("auth", "token", "--user", resolved.user(), "--hostname", resolved.host()),
-                        raw -> Option.of(raw.strip()).filter(token -> !token.isEmpty())
+                .read(
+                        gh("auth", "token", "--user", resolved.user(), "--hostname", resolved.host()),
+                        raw -> Option.of(raw.strip())
+                                .filter(token -> !token.isEmpty())
                                 .toEither(() -> new GhError.UnexpectedOutput(raw)))
                 .map(token -> variables(host, token))
                 .mapLeft(cause -> new GhError.TokenUnavailable(resolved, cause));
@@ -104,8 +105,9 @@ public final class GhToken {
     private String resolve(String host) {
         return GhAccount.isGitHubCom(host)
                 ? host
-                : Exec.run(workTree, List.of("ssh", "-G", host), HashMap.empty(), SSH_TIMEOUT).toOption()
-                .flatMap(GhToken::sshHostName)
-                .getOrElse(host);
+                : Exec.run(workTree, List.of("ssh", "-G", host), HashMap.empty(), SSH_TIMEOUT)
+                        .toOption()
+                        .flatMap(GhToken::sshHostName)
+                        .getOrElse(host);
     }
 }

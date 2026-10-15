@@ -5,5 +5,4 @@ package net.vanfleteren.jazygit.state;
  * time: it lives in {@link Model#popup()}. Each feature defines the popups it opens, as records
  * implementing this interface.
  */
-public interface Popup {
-}
+public interface Popup {}

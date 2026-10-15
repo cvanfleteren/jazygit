@@ -22,61 +22,50 @@ public sealed interface PullRequestMsg extends Msg {
     /**
      * The user asked for the pull request of a branch: to show it, or to create it when there is none.
      */
-    record Requested(Branch.Name branch) implements PullRequestMsg {
-    }
+    record Requested(Branch.Name branch) implements PullRequestMsg {}
 
     /**
      * The details of pull request {@code number} were read.
      */
-    record DetailsLoaded(int number, PullRequestDetails details) implements PullRequestMsg {
-    }
+    record DetailsLoaded(int number, PullRequestDetails details) implements PullRequestMsg {}
 
-    record DetailsFailed(int number, Failure failure) implements PullRequestMsg {
-    }
+    record DetailsFailed(int number, Failure failure) implements PullRequestMsg {}
 
     /**
      * The user asked to open the pull request that is shown in the browser.
      */
-    record OpenConfirmed() implements PullRequestMsg {
-    }
+    record OpenConfirmed() implements PullRequestMsg {}
 
     /**
      * The user asked to merge the pull request that is shown, as {@code method} says.
      */
-    record MergeChosen(MergeMethod method) implements PullRequestMsg {
-    }
+    record MergeChosen(MergeMethod method) implements PullRequestMsg {}
 
     /**
      * The user asked to close the pull request that is shown.
      */
-    record CloseChosen() implements PullRequestMsg {
-    }
+    record CloseChosen() implements PullRequestMsg {}
 
     /**
      * The pull request was merged or closed by running {@code commands}.
      */
-    record Ended(PullRequestCmd.ChangingCmd cmd, List<ExecutedCommand> commands) implements PullRequestMsg {
-    }
+    record Ended(PullRequestCmd.ChangingCmd cmd, List<ExecutedCommand> commands) implements PullRequestMsg {}
 
-    record InfoClosed() implements PullRequestMsg {
-    }
+    record InfoClosed() implements PullRequestMsg {}
 
     /**
      * The user picked the branch the pull request merges into.
      */
-    record BaseChosen(Branch.Name base) implements PullRequestMsg {
-    }
+    record BaseChosen(Branch.Name base) implements PullRequestMsg {}
 
-    record BaseCancelled() implements PullRequestMsg {
-    }
+    record BaseCancelled() implements PullRequestMsg {}
 
     /**
      * The pull request was created by running {@code commands}.
      *
      * @param pullRequest the new pull request, as far as it is known before it is read from GitHub
      */
-    record Created(PullRequestCmd.CreatePullRequest cmd, Option<PullRequest> pullRequest,
-                   List<ExecutedCommand> commands)
-            implements PullRequestMsg {
-    }
+    record Created(
+            PullRequestCmd.CreatePullRequest cmd, Option<PullRequest> pullRequest, List<ExecutedCommand> commands)
+            implements PullRequestMsg {}
 }

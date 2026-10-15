@@ -17,15 +17,12 @@ public sealed interface FixupMsg extends Msg {
      * The user asked to fix up the commit {@code sha} into the one below it; which message to keep is still
      * to be chosen.
      */
-    record Requested(Sha sha) implements FixupMsg {
-    }
+    record Requested(Sha sha) implements FixupMsg {}
 
-    record Cancelled() implements FixupMsg {
-    }
+    record Cancelled() implements FixupMsg {}
 
     /**
      * The user chose which message to keep: {@link SquashMode#FIXUP} or {@link SquashMode#FIXUP_KEEP_MESSAGE}.
      */
-    record Chosen(SquashMode mode) implements FixupMsg {
-    }
+    record Chosen(SquashMode mode) implements FixupMsg {}
 }

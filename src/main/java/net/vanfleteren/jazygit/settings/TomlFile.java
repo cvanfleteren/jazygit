@@ -8,7 +8,6 @@ import com.electronwill.nightconfig.toml.TomlParser;
 import com.electronwill.nightconfig.toml.TomlWriter;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
-
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringWriter;
@@ -24,8 +23,7 @@ import java.util.LinkedHashMap;
  */
 final class TomlFile {
 
-    private TomlFile() {
-    }
+    private TomlFile() {}
 
     static Try<CommentedConfig> read(Path file) {
         return Try.withResources(() -> Files.newBufferedReader(file, StandardCharsets.UTF_8))
@@ -46,9 +44,13 @@ final class TomlFile {
             writer.setIndent(IndentStyle.NONE);
             writer.write(config, text);
             Path dir = Files.createDirectories(file.toAbsolutePath().getParent());
-            Path temp = Files.writeString(Files.createTempFile(dir, file.getFileName().toString(), ".tmp"),
-                    text.toString(), StandardCharsets.UTF_8);
-            return Try.of(() -> move(temp, file)).onFailure(failed -> Try.run(() -> Files.deleteIfExists(temp))).get();
+            Path temp = Files.writeString(
+                    Files.createTempFile(dir, file.getFileName().toString(), ".tmp"),
+                    text.toString(),
+                    StandardCharsets.UTF_8);
+            return Try.of(() -> move(temp, file))
+                    .onFailure(failed -> Try.run(() -> Files.deleteIfExists(temp)))
+                    .get();
         });
     }
 
@@ -68,7 +70,8 @@ final class TomlFile {
     }
 
     static String reason(Throwable cause) {
-        return Option.of(cause.getMessage()).filter(message -> !message.isBlank())
+        return Option.of(cause.getMessage())
+                .filter(message -> !message.isBlank())
                 .getOrElse(() -> cause.getClass().getSimpleName());
     }
 }

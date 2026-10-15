@@ -10,8 +10,7 @@ public final class CommandLog {
 
     static final int MAX_ENTRIES = 100;
 
-    private CommandLog() {
-    }
+    private CommandLog() {}
 
     /**
      * The model with an entry for {@code commands} of {@code operation} added; nothing is added when no
@@ -21,7 +20,7 @@ public final class CommandLog {
         return commands.isEmpty()
                 ? model
                 : model.withCommandLog(model.commandLog()
-                .append(new LogEntry(operation, commands))
-                .takeRight(MAX_ENTRIES));
+                        .append(new LogEntry(operation, commands))
+                        .takeRight(MAX_ENTRIES));
     }
 }

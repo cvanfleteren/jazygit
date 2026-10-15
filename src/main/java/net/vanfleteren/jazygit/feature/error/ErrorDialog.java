@@ -11,11 +11,13 @@ import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
 public final class ErrorDialog {
 
     public static final ConfirmDialog.Spec<ErrorPopup> SPEC = new ConfirmDialog.Spec<>(
-            "error", ErrorPopup.class,
+            "error",
+            ErrorPopup.class,
             popup -> Messages.get("dialog.error.title"),
             popup -> ErrorText.of(popup.error()),
-            ErrorMsg.Dismissed::new, ErrorMsg.Dismissed::new, "dialog.hint.close");
+            ErrorMsg.Dismissed::new,
+            ErrorMsg.Dismissed::new,
+            "dialog.hint.close");
 
-    private ErrorDialog() {
-    }
+    private ErrorDialog() {}
 }

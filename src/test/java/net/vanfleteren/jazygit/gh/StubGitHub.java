@@ -4,14 +4,13 @@ import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.BranchChecks;
 import net.vanfleteren.jazygit.gh.model.GhLogin;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-
-import java.time.Instant;
 
 /**
  * A {@link GitHub} for tests: a repository without pull requests or branches, whose operations all succeed without running
@@ -23,8 +22,7 @@ public interface StubGitHub extends GitHub {
      * A GitHub repository without pull requests.
      */
     static StubGitHub empty() {
-        return new StubGitHub() {
-        };
+        return new StubGitHub() {};
     }
 
     @Override
@@ -58,14 +56,30 @@ public interface StubGitHub extends GitHub {
      */
     @Override
     default Either<GhError, PullRequestDetails> pullRequestDetails(int number) {
-        return Either.right(new PullRequestDetails(number, "A pull request", "someone", PullRequestDetails.State.OPEN,
-                false, "feature", "main", Instant.EPOCH, 0, 0, 0, PullRequestDetails.Mergeable.UNKNOWN,
-                PullRequest.Review.NONE, 0, List.empty(), List.empty(), List.empty()));
+        return Either.right(new PullRequestDetails(
+                number,
+                "A pull request",
+                "someone",
+                PullRequestDetails.State.OPEN,
+                false,
+                "feature",
+                "main",
+                Instant.EPOCH,
+                0,
+                0,
+                0,
+                PullRequestDetails.Mergeable.UNKNOWN,
+                PullRequest.Review.NONE,
+                0,
+                List.empty(),
+                List.empty(),
+                List.empty()));
     }
 
     @Override
     default Either<GhFailure, Created> createPullRequest(String head, String base) {
-        return Either.right(new Created(Option.none(),
+        return Either.right(new Created(
+                Option.none(),
                 List.of(ExecutedCommand.of("gh", "pr", "create", "--head", head, "--base", base, "--fill"))));
     }
 
@@ -81,8 +95,8 @@ public interface StubGitHub extends GitHub {
 
     @Override
     default Either<GhFailure, List<ExecutedCommand>> mergePullRequest(int number, MergeMethod method) {
-        return Either.right(List.of(ExecutedCommand.of("gh", "pr", "merge", String.valueOf(number),
-                CliGitHub.mergeFlag(method))));
+        return Either.right(
+                List.of(ExecutedCommand.of("gh", "pr", "merge", String.valueOf(number), CliGitHub.mergeFlag(method))));
     }
 
     @Override

@@ -81,6 +81,44 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <version>${spotless.version}</version>
+        <configuration>
+          <java>
+            <palantirJavaFormat>
+              <version>${palantir-java-format.version}</version>
+            </palantirJavaFormat>
+            <removeUnusedImports />
+          </java>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>3.6.0</version>
+        <executions>
+          <execution>
+            <phase>verify</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+        <dependencies>
+          <dependency>
+            <groupId>com.puppycrawl.tools</groupId>
+            <artifactId>checkstyle</artifactId>
+            <version>${checkstyle.version}</version>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <configLocation>checkstyle.xml</configLocation>
+          <includeTestSourceDirectory>true</includeTestSourceDirectory>
+          <consoleOutput>true</consoleOutput>
+          <violationSeverity>error</violationSeverity>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
   <repositories>
@@ -178,12 +216,15 @@
   </dependencyManagement>
   <properties>
     <maven.compiler.release>25</maven.compiler.release>
+    <palantir-java-format.version>2.102.0</palantir-java-format.version>
+    <main.class>net.vanfleteren.jazygit.JazygitApp</main.class>
+    <spotless.version>3.10.4</spotless.version>
+    <night-config.version>3.9.0</night-config.version>
     <lombok.version>1.18.46</lombok.version>
     <zt-exec.version>1.13.0</zt-exec.version>
-    <main.class>net.vanfleteren.jazygit.JazygitApp</main.class>
-    <slf4j.version>2.0.17</slf4j.version>
+    <checkstyle.version>14.3.0</checkstyle.version>
     <picocli.version>4.7.7</picocli.version>
-    <night-config.version>3.9.0</night-config.version>
+    <slf4j.version>2.0.17</slf4j.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <archunit.version>1.4.1</archunit.version>
     <junit.version>5.14.4</junit.version>

@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.git.model;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-
 import java.util.function.Predicate;
 
 /**
@@ -13,8 +12,13 @@ import java.util.function.Predicate;
  * @param conflict what each side of the merge did, for a {@link ChangeType#CONFLICTED} file
  * @param origin   the path a {@link ChangeType#RENAMED} file was moved from
  */
-public record FileEntry(String path, ChangeType type, boolean staged, boolean unstaged, Option<Conflict> conflict,
-                        Option<String> origin) {
+public record FileEntry(
+        String path,
+        ChangeType type,
+        boolean staged,
+        boolean unstaged,
+        Option<Conflict> conflict,
+        Option<String> origin) {
 
     public FileEntry(String path, ChangeType type, boolean staged, boolean unstaged) {
         this(path, type, staged, unstaged, Option.none(), Option.none());
@@ -50,17 +54,17 @@ public record FileEntry(String path, ChangeType type, boolean staged, boolean un
     }
 
     /**
-     * Whether the file is not in HEAD at its path: it was added, or renamed to it.
-     */
-    public boolean isNew() {
-        return type == ChangeType.ADDED || type == ChangeType.RENAMED;
-    }
-
-    /**
      * The paths that the staged change ({@code stagedSide}) or the unstaged change of this file touches:
      * a rename also touches its origin, on the side that holds the rename.
      */
     public List<String> paths(boolean stagedSide) {
         return origin.filter(o -> stagedSide == staged).toList().append(path);
+    }
+
+    /**
+     * Whether the file is not in HEAD at its path: it was added, or renamed to it.
+     */
+    public boolean isNew() {
+        return type == ChangeType.ADDED || type == ChangeType.RENAMED;
     }
 }

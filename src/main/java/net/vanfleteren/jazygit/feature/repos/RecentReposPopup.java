@@ -8,5 +8,4 @@ import net.vanfleteren.jazygit.state.Popup;
  *
  * @param directories the roots of their working trees, the last one opened first
  */
-public record RecentReposPopup(List<String> directories) implements Popup {
-}
+public record RecentReposPopup(List<String> directories) implements Popup {}

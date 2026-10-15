@@ -1,8 +1,5 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.keys.Scopes;
@@ -12,12 +9,11 @@ import net.vanfleteren.jazygit.keys.Scopes;
  */
 public final class BranchKeys {
 
-    private BranchKeys() {
-    }
+    private BranchKeys() {}
 
     public static Keymap register(Keymap keys) {
-        return keys
-                .add(Scopes.BRANCHES,
+        return keys.add(
+                        Scopes.BRANCHES,
                         Binding.onSelected(" ", "help.branches.checkout", CheckoutMsg.Requested::new),
                         Binding.onSelected("P", "help.branches.push", PushMsg.Requested::new),
                         Binding.onSelected("p", "help.branches.pull", PullMsg.Requested::new),
@@ -28,13 +24,18 @@ public final class BranchKeys {
                         Binding.onSelected("d", "help.branches.delete", DeleteBranchMsg.Requested::new),
                         Binding.always("[", "help.branches.previousTab", BranchesTabMsg.Switched::new),
                         Binding.always("]", "help.branches.nextTab", BranchesTabMsg.Switched::new))
-                .add(Scopes.REMOTE_BRANCHES,
+                .add(
+                        Scopes.REMOTE_BRANCHES,
                         Binding.onSelected(" ", "help.remoteBranches.checkout", CheckoutMsg.RemoteRequested::new),
                         Binding.onSelected("n", "help.branches.new", NewBranchMsg.RequestedAtRemote::new),
                         Binding.onSelected("d", "help.remoteBranches.delete", DeleteBranchMsg.RemoteRequested::new),
                         Binding.always("[", "help.branches.previousTab", BranchesTabMsg.Switched::new),
                         Binding.always("]", "help.branches.nextTab", BranchesTabMsg.Switched::new))
-                .add(Scopes.COMMITS,
-                        Binding.onSelected("n", "help.commits.newBranch", commit -> new NewBranchMsg.RequestedAtCommit(commit.sha())));
+                .add(
+                        Scopes.COMMITS,
+                        Binding.onSelected(
+                                "n",
+                                "help.commits.newBranch",
+                                commit -> new NewBranchMsg.RequestedAtCommit(commit.sha())));
     }
 }

@@ -8,8 +8,7 @@ import net.vanfleteren.jazygit.state.Failure;
  */
 final class Placeholders {
 
-    private Placeholders() {
-    }
+    private Placeholders() {}
 
     static String loading() {
         return Messages.get("placeholder.loading");

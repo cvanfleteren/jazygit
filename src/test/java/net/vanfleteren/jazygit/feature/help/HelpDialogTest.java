@@ -1,11 +1,17 @@
 package net.vanfleteren.jazygit.feature.help;
 
+import static dev.tamboui.toolkit.Toolkit.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyModifiers;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.util.ArrayList;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.PushMsg;
@@ -20,12 +26,6 @@ import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
-import static dev.tamboui.toolkit.Toolkit.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.ArrayList;
 
 /**
  * The popup listing the keys of a panel: Enter or the key itself runs one, Escape or ? closes it.
@@ -49,7 +49,8 @@ class HelpDialogTest {
     }
 
     private static Model open(String topic, Option<List<Option<Msg>>> actions) {
-        return Update.update(TestModels.loaded(), new HelpMsg.Requested(topic, actions.getOrElse(List.empty()))).model();
+        return Update.update(TestModels.loaded(), new HelpMsg.Requested(topic, actions.getOrElse(List.empty())))
+                .model();
     }
 
     @Test
@@ -91,13 +92,13 @@ class HelpDialogTest {
 
     @Test
     void enterRunsTheHighlightedKeyStartingAtTheFirst() throws Exception {
-        assertEquals(List.of(new HelpMsg.Chosen(new CheckoutMsg.Requested(FEATURE))),
+        assertEquals(
+                List.of(new HelpMsg.Chosen(new CheckoutMsg.Requested(FEATURE))),
                 press(onFeature(), r -> r.pilot().press(KeyCode.ENTER)));
-        assertEquals(List.of(new HelpMsg.Chosen(new PushMsg.Requested(FEATURE))),
-                press(onFeature(), r -> {
-                    r.pilot().press(KeyCode.DOWN);
-                    r.pilot().press(KeyCode.ENTER);
-                }));
+        assertEquals(List.of(new HelpMsg.Chosen(new PushMsg.Requested(FEATURE))), press(onFeature(), r -> {
+            r.pilot().press(KeyCode.DOWN);
+            r.pilot().press(KeyCode.ENTER);
+        }));
     }
 
     @Test
@@ -118,16 +119,19 @@ class HelpDialogTest {
 
     @Test
     void pressingAKeyRunsIt() throws Exception {
-        assertEquals(List.of(new HelpMsg.Chosen(new DeleteBranchMsg.Requested(FEATURE))),
+        assertEquals(
+                List.of(new HelpMsg.Chosen(new DeleteBranchMsg.Requested(FEATURE))),
                 press(onFeature(), r -> r.pilot().press('d')));
-        assertEquals(List.of(new HelpMsg.Chosen(new SettingsPanelMsg.Requested())),
+        assertEquals(
+                List.of(new HelpMsg.Chosen(new SettingsPanelMsg.Requested())),
                 press(onFeature(), r -> r.pilot().press('s', KeyModifiers.CTRL)));
     }
 
     @Test
     void aGlobalKeyWithCtrlIsNotThePanelKeyWithout() throws Exception {
         // The branches panel has r, for rebase.
-        assertEquals(List.of(new HelpMsg.Chosen(new RecentReposMsg.Requested())),
+        assertEquals(
+                List.of(new HelpMsg.Chosen(new RecentReposMsg.Requested())),
                 press(onFeature(), r -> r.pilot().press('r', KeyModifiers.CTRL)));
     }
 
@@ -164,7 +168,10 @@ class HelpDialogTest {
             String push = RenderedText.ofTall(runner, () -> view(open));
             assertFalse(push.contains("Switches to the selected branch."), push);
             // The popup stays where it was.
-            assertEquals(checkout.lines().filter(line -> line.contains("Keybindings")).toList(),
+            assertEquals(
+                    checkout.lines()
+                            .filter(line -> line.contains("Keybindings"))
+                            .toList(),
                     push.lines().filter(line -> line.contains("Keybindings")).toList());
         }
     }

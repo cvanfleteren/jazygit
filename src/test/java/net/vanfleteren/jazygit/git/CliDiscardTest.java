@@ -1,21 +1,19 @@
 package net.vanfleteren.jazygit.git;
 
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-
-import io.vavr.collection.List;
-import net.vanfleteren.jazygit.git.model.DiscardPlan;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import org.zeroturnaround.exec.ProcessExecutor;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import io.vavr.collection.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import net.vanfleteren.jazygit.git.model.DiscardPlan;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.zeroturnaround.exec.ProcessExecutor;
 
 /**
  * Throwing changes away through git and the file system.
@@ -77,7 +75,8 @@ class CliDiscardTest {
         write("dir/y.txt", "y\n");
         write("z.txt", "z\n");
 
-        assertEquals(List.of("git clean --force -d --quiet -- dir z.txt"),
+        assertEquals(
+                List.of("git clean --force -d --quiet -- dir z.txt"),
                 CliIndex.deleteUntracked(repo, List.of("dir", "z.txt")).get().map(ExecutedCommand::line));
 
         assertFalse(Files.exists(repo.resolve("dir")));
@@ -99,10 +98,17 @@ class CliDiscardTest {
     void pathsOutsideTheWorkingTreeAreRefused() throws Exception {
         Path outside = Files.createTempFile("outside", ".txt");
         try {
-            assertInstanceOf(GitError.RefusedPath.class,
-                    CliIndex.deleteUntracked(repo, List.of("../" + outside.getFileName())).getLeft().error());
-            assertInstanceOf(GitError.RefusedPath.class, CliIndex.deleteUntracked(repo, List.of(".")).getLeft().error());
-            assertInstanceOf(GitError.RefusedPath.class, CliIndex.deleteUntracked(repo, List.of(".git")).getLeft().error());
+            assertInstanceOf(
+                    GitError.RefusedPath.class,
+                    CliIndex.deleteUntracked(repo, List.of("../" + outside.getFileName()))
+                            .getLeft()
+                            .error());
+            assertInstanceOf(
+                    GitError.RefusedPath.class,
+                    CliIndex.deleteUntracked(repo, List.of(".")).getLeft().error());
+            assertInstanceOf(
+                    GitError.RefusedPath.class,
+                    CliIndex.deleteUntracked(repo, List.of(".git")).getLeft().error());
             assertTrue(Files.exists(outside));
             assertTrue(Files.exists(repo.resolve(".git")));
         } finally {
@@ -118,7 +124,8 @@ class CliDiscardTest {
         write("new.txt", "n\n");
         git("add", "new.txt");
         write("loose.txt", "l\n");
-        DiscardPlan plan = new DiscardPlan(List.of("loose.txt"), List.of("a.txt"), List.of("b.txt"), List.of("new.txt"));
+        DiscardPlan plan =
+                new DiscardPlan(List.of("loose.txt"), List.of("a.txt"), List.of("b.txt"), List.of("new.txt"));
 
         CliIndex.removeAdded(repo, plan.added());
         CliIndex.checkoutFromHead(repo, plan.fromHead());
@@ -155,7 +162,13 @@ class CliDiscardTest {
     private String git(String... args) throws Exception {
         java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of("git"));
         command.addAll(java.util.List.of(args));
-        return new ProcessExecutor().command(command).directory(repo.toFile())
-                .readOutput(true).redirectErrorStream(true).exitValueNormal().execute().outputUTF8();
+        return new ProcessExecutor()
+                .command(command)
+                .directory(repo.toFile())
+                .readOutput(true)
+                .redirectErrorStream(true)
+                .exitValueNormal()
+                .execute()
+                .outputUTF8();
     }
 }

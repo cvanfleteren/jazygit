@@ -82,7 +82,8 @@ public interface Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.settings().save(previous, next)
+            return env.settings()
+                    .save(previous, next)
                     .fold(problem -> failed(new Failure.Settings(problem)), saved -> new SettingsMsg.Saved());
         }
 
@@ -136,7 +137,9 @@ public interface Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.git().log(branch).fold(this::failedWith, commits -> new LoadMsg.BranchLogLoaded(branch, commits));
+            return env.git()
+                    .log(branch)
+                    .fold(this::failedWith, commits -> new LoadMsg.BranchLogLoaded(branch, commits));
         }
     }
 
@@ -144,7 +147,9 @@ public interface Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.git().commitChanges(sha).fold(this::failedWith, changes -> new LoadMsg.CommitDetailLoaded(sha, changes));
+            return env.git()
+                    .commitChanges(sha)
+                    .fold(this::failedWith, changes -> new LoadMsg.CommitDetailLoaded(sha, changes));
         }
     }
 

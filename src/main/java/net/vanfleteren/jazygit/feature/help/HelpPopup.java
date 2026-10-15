@@ -11,5 +11,4 @@ import net.vanfleteren.jazygit.state.Popup;
  * @param actions what each key of the panel sends for what was selected in it when the help opened, in the order
  *                the keys are listed; none for a key that does nothing then
  */
-public record HelpPopup(String scopeId, List<Option<Msg>> actions) implements Popup {
-}
+public record HelpPopup(String scopeId, List<Option<Msg>> actions) implements Popup {}

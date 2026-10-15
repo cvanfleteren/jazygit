@@ -16,49 +16,70 @@ import net.vanfleteren.jazygit.state.Update.Next;
  */
 public final class PullRequestUpdate {
 
-    private PullRequestUpdate() {
-    }
+    private PullRequestUpdate() {}
 
     public static Next update(Model model, PullRequestMsg msg) {
         return switch (msg) {
             case PullRequestMsg.Requested(Branch.Name branch) -> requested(model, branch);
-            case PullRequestMsg.BaseChosen(Branch.Name base) -> Update.confirm(model, BasePopup.class,
-                    // The branch can have another name on its remote; gh needs that one.
-                    popup -> model.branch(popup.branch()).map(known ->
-                            new CreatePullRequest(known.name(), known.pushTarget().branch(), base)));
+            case PullRequestMsg.BaseChosen(Branch.Name base) ->
+                Update.confirm(
+                        model,
+                        BasePopup.class,
+                        // The branch can have another name on its remote; gh needs that one.
+                        popup -> model.branch(popup.branch())
+                                .map(known -> new CreatePullRequest(
+                                        known.name(), known.pushTarget().branch(), base)));
             case PullRequestMsg.BaseCancelled() -> Next.of(model.withoutPopup(BasePopup.class));
             case PullRequestMsg.Created(CreatePullRequest cmd, var pullRequest, var commands) -> {
                 // Done like any operation. The new pull request shows at once, as GitHub may not list it yet;
                 // reading the pull requests then gives its checks and review.
                 Next done = OperationUpdate.succeeded(model, cmd, commands);
                 Model shown = pullRequest
-                        .map(pr -> done.model().withPullRequests(done.model().pullRequests().map(open -> open.put(new Branch.Name(pr.headBranch()), pr))))
+                        .map(pr -> done.model()
+                                .withPullRequests(done.model()
+                                        .pullRequests()
+                                        .map(open -> open.put(new Branch.Name(pr.headBranch()), pr))))
                         .getOrElse(done.model());
                 // A read that is still running may have missed it, so this one is started anyway. GitHub may have
                 // changed the remote too, which a fetch brings in.
                 yield FetchUpdate.requested(PullRequestsUpdate.loadAnyway(new Next(shown, done.cmds())));
             }
             case PullRequestMsg.DetailsLoaded(int number, var details) ->
-                    Next.of(shown(model, number, Either.right(details)));
+                Next.of(shown(model, number, Either.right(details)));
             case PullRequestMsg.DetailsFailed(int number, var failure) ->
-                    Next.of(shown(model, number, Either.left(failure)));
+                Next.of(shown(model, number, Either.left(failure)));
             // The dialog stays open, so the pull request can still be merged or closed from it.
-            case PullRequestMsg.OpenConfirmed() -> model.popup(PullRequestPopup.class)
-                    .map(popup -> Update.start(model.clearError(),
-                            new OpenPullRequest(popup.branch(), popup.pullRequest().number())))
-                    .getOrElse(() -> Next.of(model));
-            case PullRequestMsg.MergeChosen(MergeMethod method) -> Update.confirm(model, PullRequestPopup.class,
-                    popup -> Option.when(popup.mergeable(),
-                            () -> new MergePullRequest(popup.branch(), popup.pullRequest().number(), method)));
-            case PullRequestMsg.CloseChosen() -> Update.confirm(model, PullRequestPopup.class,
-                    popup -> Option.when(popup.open(),
-                            () -> new ClosePullRequest(popup.branch(), popup.pullRequest().number())));
+            case PullRequestMsg.OpenConfirmed() ->
+                model.popup(PullRequestPopup.class)
+                        .map(popup -> Update.start(
+                                model.clearError(),
+                                new OpenPullRequest(
+                                        popup.branch(), popup.pullRequest().number())))
+                        .getOrElse(() -> Next.of(model));
+            case PullRequestMsg.MergeChosen(MergeMethod method) ->
+                Update.confirm(
+                        model,
+                        PullRequestPopup.class,
+                        popup -> Option.when(
+                                popup.mergeable(),
+                                () -> new MergePullRequest(
+                                        popup.branch(), popup.pullRequest().number(), method)));
+            case PullRequestMsg.CloseChosen() ->
+                Update.confirm(
+                        model,
+                        PullRequestPopup.class,
+                        popup -> Option.when(
+                                popup.open(),
+                                () -> new ClosePullRequest(
+                                        popup.branch(), popup.pullRequest().number())));
             case PullRequestMsg.Ended(ChangingCmd cmd, var commands) -> {
                 // Done like any operation. The pull request is no longer open, which reading them again confirms;
                 // a merge changed the base branch on the remote, which a fetch brings in.
                 Next done = OperationUpdate.succeeded(model, cmd, commands);
-                Model ended = done.model().withPullRequests(done.model().pullRequests()
-                        .map(open -> open.filterValues(pr -> pr.number() != cmd.number())));
+                Model ended = done.model()
+                        .withPullRequests(done.model()
+                                .pullRequests()
+                                .map(open -> open.filterValues(pr -> pr.number() != cmd.number())));
                 // A read that is still running may have missed it, and would show it open again.
                 yield FetchUpdate.requested(PullRequestsUpdate.loadAnyway(new Next(ended, done.cmds())));
             }
@@ -84,16 +105,19 @@ public final class PullRequestUpdate {
     private static Next requested(Model model, Branch.Name branch) {
         return model.idleBranch(branch)
                 .map(known -> model.pullRequest(known)
-                        .map(pr -> Next.of(Update.ask(model, PullRequestPopup.loading(branch, pr)).model(),
+                        .map(pr -> Next.of(
+                                Update.ask(model, PullRequestPopup.loading(branch, pr))
+                                        .model(),
                                 new LoadPullRequestDetails(pr.number())))
                         // Without the pull requests it is unknown whether there is one to open.
-                        .getOrElse(() -> model.pullRequestsFailure().isDefined() || model.pullRequests().isEmpty()
+                        .getOrElse(() -> model.pullRequestsFailure().isDefined()
+                                        || model.pullRequests().isEmpty()
                                 ? Next.of(model.fail(model.pullRequestsFailure()
-                                .<AppError>map(AppError.PullRequestsUnavailable::new)
-                                .getOrElse(AppError.PullRequestsNotRead::new)))
+                                        .<AppError>map(AppError.PullRequestsUnavailable::new)
+                                        .getOrElse(AppError.PullRequestsNotRead::new)))
                                 : known.remoteUpstream().isEmpty() || known.ahead() > 0
-                                ? Next.of(model.fail(new AppError.NotPushed(branch)))
-                                : Update.ask(model, new BasePopup(branch, bases(model, branch)))))
+                                        ? Next.of(model.fail(new AppError.NotPushed(branch)))
+                                        : Update.ask(model, new BasePopup(branch, bases(model, branch)))))
                 .getOrElse(() -> Next.of(model));
     }
 
@@ -102,7 +126,9 @@ public final class PullRequestUpdate {
      * default branch first.
      */
     static List<Branch.Name> bases(Model model, Branch.Name branch) {
-        return model.branches().toOption().getOrElse(List.empty())
+        return model.branches()
+                .toOption()
+                .getOrElse(List.empty())
                 .filter(b -> b.hasRemote() && !b.name().equals(branch))
                 .sortBy(b -> !b.isDefault())
                 .map(Branch::name);

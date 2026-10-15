@@ -1,11 +1,17 @@
 package net.vanfleteren.jazygit.gh;
 
+import static net.vanfleteren.jazygit.gh.GhCommand.gh;
+
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.gh.GhError.UnexpectedOutput;
 import net.vanfleteren.jazygit.gh.model.*;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -16,13 +22,6 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Reviewer;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewerState;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
-import java.nio.file.Path;
-import java.time.Instant;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import static net.vanfleteren.jazygit.gh.GhCommand.gh;
-
 /**
  * {@link GitHub} through the {@code gh} command line tool, for the repository in a working tree. gh finds the
  * GitHub repository from the git remotes itself.
@@ -30,7 +29,8 @@ import static net.vanfleteren.jazygit.gh.GhCommand.gh;
 public final class CliGitHub implements GitHub {
 
     private static final String LIMIT = "200";
-    private static final String FIELDS = "number,headRefName,isDraft,isCrossRepository,reviewDecision,statusCheckRollup";
+    private static final String FIELDS =
+            "number,headRefName,isDraft,isCrossRepository,reviewDecision,statusCheckRollup";
     // The state of a check, in jq: a check run that is not completed yet is PENDING; a commit status gives its state.
     private static final String CHECK_STATE = """
             (if .__typename == "CheckRun" \
@@ -87,8 +87,8 @@ public final class CliGitHub implements GitHub {
             .data.repository | (["repo", .nameWithOwner] | @tsv), \
             (.refs.nodes[] | ["branch", .name, (.target.statusCheckRollup.state // "")] | @tsv)""";
 
-    private static final Set<String> FAILED = HashSet.of(
-            "FAILURE", "ERROR", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED", "STARTUP_FAILURE");
+    private static final Set<String> FAILED =
+            HashSet.of("FAILURE", "ERROR", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED", "STARTUP_FAILURE");
     private static final Set<String> RUNNING = HashSet.of("PENDING", "EXPECTED", "QUEUED", "IN_PROGRESS", "WAITING");
 
     private static final Pattern CREATED_URL = Pattern.compile("/pull/(\\d{1,9})$");
@@ -117,7 +117,8 @@ public final class CliGitHub implements GitHub {
      * The version in the first line {@code gh --version} prints, e.g. {@code gh version 2.102.0 (2026-09-30)}.
      */
     static Either<UnexpectedOutput, String> parseVersion(String raw) {
-        return List.of(raw.split("\\R")).headOption()
+        return List.of(raw.split("\\R"))
+                .headOption()
                 .map(String::strip)
                 .filter(line -> line.startsWith("gh version "))
                 .map(line -> line.substring("gh version ".length()).split(" ")[0])
@@ -132,7 +133,11 @@ public final class CliGitHub implements GitHub {
                 .filter(line -> !line.isBlank())
                 .map(line -> List.of(line.split("\t", -1)).map(CliGitHub::unescape))
                 .map(fields -> Option.when(fields.size() == 4, fields)
-                        .map(f -> new GhLogin(f.get(0), f.get(1), f.get(2).equals("true"), f.get(3).equals("success")))
+                        .map(f -> new GhLogin(
+                                f.get(0),
+                                f.get(1),
+                                f.get(2).equals("true"),
+                                f.get(3).equals("success")))
                         .toEither(() -> new UnexpectedOutput(fields.mkString("\t"))))
                 .transform(Either::sequenceRight)
                 .map(List::ofAll);
@@ -175,8 +180,12 @@ public final class CliGitHub implements GitHub {
     private static Option<PullRequest> pullRequest(String line) {
         List<String> fields = List.of(line.split("\t", -1));
         return Option.when(fields.size() == FIELD_COUNT, fields)
-                .flatMap(f -> Try.of(() -> Integer.parseInt(f.get(0))).toOption()
-                        .map(number -> new PullRequest(number, f.get(1), f.get(2).equals("true"),
+                .flatMap(f -> Try.of(() -> Integer.parseInt(f.get(0)))
+                        .toOption()
+                        .map(number -> new PullRequest(
+                                number,
+                                f.get(1),
+                                f.get(2).equals("true"),
                                 checks(List.of(f.get(4).split(",")).filter(state -> !state.isEmpty())),
                                 review(f.get(3)))));
     }
@@ -188,14 +197,19 @@ public final class CliGitHub implements GitHub {
         List<List<String>> lines = List.of(raw.split("\\R"))
                 .filter(line -> !line.isBlank())
                 .map(line -> List.of(line.split("\t", -1)).map(CliGitHub::unescape));
-        Option<List<String>> unknown = lines.find(fields -> !(fields.size() == 2 && fields.head().equals("repo")
-                || fields.size() == 3 && fields.head().equals("branch")));
+        Option<List<String>> unknown =
+                lines.find(fields -> !(fields.size() == 2 && fields.head().equals("repo")
+                        || fields.size() == 3 && fields.head().equals("branch")));
         if (unknown.isDefined()) {
             return Either.left(new UnexpectedOutput(unknown.get().mkString("\t")));
         }
         return lines.find(f -> f.head().equals("repo"))
-                .map(repo -> new BranchChecks(repo.get(1), lines.filter(f -> f.head().equals("branch"))
-                        .toMap(f -> f.get(1), f -> checks(List.of(f.get(2)).filter(state -> !state.isEmpty())))))
+                .map(repo -> new BranchChecks(
+                        repo.get(1),
+                        lines.filter(f -> f.head().equals("branch"))
+                                .toMap(
+                                        f -> f.get(1),
+                                        f -> checks(List.of(f.get(2)).filter(state -> !state.isEmpty())))))
                 .toEither(() -> new UnexpectedOutput(raw));
     }
 
@@ -221,11 +235,25 @@ public final class CliGitHub implements GitHub {
                 // A check without a state yet, like a status nobody set, is neither passing nor failing.
                 .map(f -> new Check(f.get(1), checks(List.of(f.get(2)).filter(state -> !state.isEmpty()))));
         return lines.find(f -> f.head().equals("pr"))
-                .flatMap(f -> Try.of(() -> new PullRequestDetails(Integer.parseInt(f.get(1)), f.get(2), f.get(3),
-                        PullRequestDetails.State.valueOf(f.get(4)), f.get(5).equals("true"), f.get(6), f.get(7),
-                        Instant.parse(f.get(8)), Integer.parseInt(f.get(9)), Integer.parseInt(f.get(10)),
-                        Integer.parseInt(f.get(11)), mergeable(f.get(12)), review(f.get(13)),
-                        Integer.parseInt(f.get(14)), labels, reviewers, checks)).toOption())
+                .flatMap(f -> Try.of(() -> new PullRequestDetails(
+                                Integer.parseInt(f.get(1)),
+                                f.get(2),
+                                f.get(3),
+                                PullRequestDetails.State.valueOf(f.get(4)),
+                                f.get(5).equals("true"),
+                                f.get(6),
+                                f.get(7),
+                                Instant.parse(f.get(8)),
+                                Integer.parseInt(f.get(9)),
+                                Integer.parseInt(f.get(10)),
+                                Integer.parseInt(f.get(11)),
+                                mergeable(f.get(12)),
+                                review(f.get(13)),
+                                Integer.parseInt(f.get(14)),
+                                labels,
+                                reviewers,
+                                checks))
+                        .toOption())
                 .toEither(() -> new UnexpectedOutput(raw));
     }
 
@@ -247,12 +275,13 @@ public final class CliGitHub implements GitHub {
             char c = field.charAt(i);
             if (c == '\\' && i + 1 < field.length()) {
                 char next = field.charAt(++i);
-                out.append(switch (next) {
-                    case 't' -> '\t';
-                    case 'n' -> '\n';
-                    case 'r' -> '\r';
-                    default -> next;
-                });
+                out.append(
+                        switch (next) {
+                            case 't' -> '\t';
+                            case 'n' -> '\n';
+                            case 'r' -> '\r';
+                            default -> next;
+                        });
             } else {
                 out.append(c);
             }
@@ -283,10 +312,9 @@ public final class CliGitHub implements GitHub {
      * still running, else passing when there are any.
      */
     static Checks checks(List<String> states) {
-        return states.exists(FAILED::contains) ? Checks.FAILING
-                : states.exists(RUNNING::contains) ? Checks.PENDING
-                : states.isEmpty() ? Checks.NONE
-                : Checks.PASSING;
+        return states.exists(FAILED::contains)
+                ? Checks.FAILING
+                : states.exists(RUNNING::contains) ? Checks.PENDING : states.isEmpty() ? Checks.NONE : Checks.PASSING;
     }
 
     static Review review(String decision) {
@@ -311,20 +339,32 @@ public final class CliGitHub implements GitHub {
 
     @Override
     public Either<GhError, List<PullRequest>> pullRequests() {
-        return process.read(gh("pr", "list", "--state", "open", "--limit", LIMIT, "--json", FIELDS, "--jq", JQ),
-                CliGitHub::parse);
+        return process.read(
+                gh("pr", "list", "--state", "open", "--limit", LIMIT, "--json", FIELDS, "--jq", JQ), CliGitHub::parse);
     }
 
     @Override
     public Either<GhError, BranchChecks> branchChecks() {
-        return process.read(gh("api", "graphql", "--paginate", "-F", "owner={owner}", "-F", "name={repo}",
-                        "-f", "query=" + BRANCHES_QUERY, "--jq", BRANCHES_JQ),
+        return process.read(
+                gh(
+                        "api",
+                        "graphql",
+                        "--paginate",
+                        "-F",
+                        "owner={owner}",
+                        "-F",
+                        "name={repo}",
+                        "-f",
+                        "query=" + BRANCHES_QUERY,
+                        "--jq",
+                        BRANCHES_JQ),
                 CliGitHub::parseBranchChecks);
     }
 
     @Override
     public Either<GhError, PullRequestDetails> pullRequestDetails(int number) {
-        return process.read(gh("pr", "view", String.valueOf(number), "--json", DETAIL_FIELDS, "--jq", DETAILS_JQ),
+        return process.read(
+                gh("pr", "view", String.valueOf(number), "--json", DETAIL_FIELDS, "--jq", DETAILS_JQ),
                 CliGitHub::parseDetails);
     }
 

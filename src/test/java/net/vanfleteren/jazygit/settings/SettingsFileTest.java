@@ -8,13 +8,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.settings.SettingsStore.Loaded;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import net.vanfleteren.jazygit.settings.SettingsStore.Loaded;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class SettingsFileTest {
 
@@ -59,7 +58,8 @@ class SettingsFileTest {
                 theme = "pink"
                 """);
 
-        assertEquals(new Loaded(Settings.DEFAULT, Option.of(new SettingsProblem.Invalid(file(), List.of("ui.theme")))),
+        assertEquals(
+                new Loaded(Settings.DEFAULT, Option.of(new SettingsProblem.Invalid(file(), List.of("ui.theme")))),
                 settingsFile().load());
     }
 
@@ -70,7 +70,9 @@ class SettingsFileTest {
                 theme = 3
                 """);
 
-        assertEquals(Option.of(new SettingsProblem.Invalid(file(), List.of("ui.theme"))), settingsFile().load().problem());
+        assertEquals(
+                Option.of(new SettingsProblem.Invalid(file(), List.of("ui.theme"))),
+                settingsFile().load().problem());
     }
 
     @Test
@@ -121,8 +123,15 @@ class SettingsFileTest {
 
         String saved = Files.readString(file());
         List<String> lines = List.of(saved.split("\n")).map(String::strip);
-        assertTrue(lines.containsAll(List.of("# my settings", "future = true", "# the one I like",
-                "theme = \"darcula\"", "other = 3", "x = [1, 2]")), saved);
+        assertTrue(
+                lines.containsAll(List.of(
+                        "# my settings",
+                        "future = true",
+                        "# the one I like",
+                        "theme = \"darcula\"",
+                        "other = 3",
+                        "x = [1, 2]")),
+                saved);
         assertTrue(lines.indexOf("theme = \"darcula\"") < lines.indexOf("other = 3"), saved);
         assertTrue(lines.indexOf("other = 3") < lines.indexOf("[mine]"), saved);
     }
@@ -137,7 +146,9 @@ class SettingsFileTest {
 
         settingsFile().save(Settings.DEFAULT, Settings.DEFAULT);
 
-        assertEquals(Settings.DEFAULT.withTheme(ThemeName.LIGHT), settingsFile().load().settings());
+        assertEquals(
+                Settings.DEFAULT.withTheme(ThemeName.LIGHT),
+                settingsFile().load().settings());
     }
 
     @Test

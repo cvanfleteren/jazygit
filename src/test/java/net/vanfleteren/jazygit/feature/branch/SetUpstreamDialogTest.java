@@ -1,8 +1,13 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import static dev.tamboui.toolkit.Toolkit.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
+import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -11,12 +16,6 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-
-import static dev.tamboui.toolkit.Toolkit.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 /**
  * The popup asking where to push a branch without an upstream: it starts out with the branch of the same
  * name on origin, Enter confirms what is in it, Escape cancels.
@@ -24,9 +23,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class SetUpstreamDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final net.vanfleteren.jazygit.ui.widgets.TextInputDialog<SetUpstreamPopup> dialog = new net.vanfleteren.jazygit.ui.widgets.TextInputDialog<>(BranchDialogs.SET_UPSTREAM, dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.TextInputDialog<SetUpstreamPopup> dialog =
+            new net.vanfleteren.jazygit.ui.widgets.TextInputDialog<>(BranchDialogs.SET_UPSTREAM, dispatched::add);
     // In the test models, feature has no upstream.
-    private final Model open = Update.update(TestModels.loaded(), new PushMsg.Requested(new Branch.Name("feature"))).model();
+    private final Model open = Update.update(TestModels.loaded(), new PushMsg.Requested(new Branch.Name("feature")))
+            .model();
 
     @Test
     void showsTheTitleAndStartsOutWithTheSameBranchOnOrigin() throws Exception {

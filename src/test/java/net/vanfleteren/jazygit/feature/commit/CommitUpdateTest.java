@@ -1,26 +1,25 @@
 package net.vanfleteren.jazygit.feature.commit;
 
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.state.AppError;
-import net.vanfleteren.jazygit.git.model.CommitMessage;
-import io.vavr.collection.List;
-import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
-import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.model.ChangeType;
-import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.git.model.RepoStatus;
-import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.state.Loadable.Loaded;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.Update;
-import org.junit.jupiter.api.Test;
-
-import java.time.Instant;
-
 import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import io.vavr.collection.List;
+import io.vavr.control.Option;
+import java.time.Instant;
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.CommitMessage;
+import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
+import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.state.AppError;
+import net.vanfleteren.jazygit.state.Loadable.Loaded;
+import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.Update.Next;
+import org.junit.jupiter.api.Test;
 
 /**
  * The commit transitions: committing, amending and rewording.
@@ -31,8 +30,10 @@ class CommitUpdateTest {
     void nothingIsSaidToBeUnchangedBeforeTheStatusIsRead() {
         Model starting = loaded().withStatus(net.vanfleteren.jazygit.state.Loadable.loading());
 
-        for (net.vanfleteren.jazygit.state.Msg msg : List.<net.vanfleteren.jazygit.state.Msg>of(new CommitMsg.Requested(),
-                new AmendMsg.Requested(), new net.vanfleteren.jazygit.feature.stash.StashMsg.Requested())) {
+        for (net.vanfleteren.jazygit.state.Msg msg : List.<net.vanfleteren.jazygit.state.Msg>of(
+                new CommitMsg.Requested(),
+                new AmendMsg.Requested(),
+                new net.vanfleteren.jazygit.feature.stash.StashMsg.Requested())) {
             Model next = Update.update(starting, msg).model();
             assertEquals(Option.none(), next.error(), msg.toString());
             assertEquals(Option.none(), next.popup(), msg.toString());
@@ -40,7 +41,8 @@ class CommitUpdateTest {
     }
 
     private Model withFiles(FileEntry... files) {
-        return loaded().withStatus(new Loaded<>(new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), List.of(files))));
+        return loaded().withStatus(new Loaded<>(
+                new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), List.of(files))));
     }
 
     private Model withCommits(Commit... commits) {
@@ -58,7 +60,9 @@ class CommitUpdateTest {
     @Test
     void rewordOpensTheDialogForTheLastCommit() {
         Commit last = commit("last", "details");
-        Model model = Update.update(withCommits(last, commit("def5678", "older", "")), new RewordMsg.Requested(last.sha())).model();
+        Model model = Update.update(
+                        withCommits(last, commit("def5678", "older", "")), new RewordMsg.Requested(last.sha()))
+                .model();
 
         assertEquals(Option.of(new RewordPopup(last)), model.popup());
     }
@@ -66,31 +70,36 @@ class CommitUpdateTest {
     @Test
     void anyCommitCanBeReworded() {
         Commit older = commit("def5678", "older", "why");
-        Model model = Update.update(withCommits(commit("last", ""), older), new RewordMsg.Requested(older.sha())).model();
+        Model model = Update.update(withCommits(commit("last", ""), older), new RewordMsg.Requested(older.sha()))
+                .model();
 
         assertEquals(Option.of(new RewordPopup(older)), model.popup());
     }
 
     @Test
     void rewordOfAnUnknownCommitDoesNothing() {
-        Model model = Update.update(withCommits(commit("last", "")), new RewordMsg.Requested(new Sha("elsewhere"))).model();
+        Model model = Update.update(withCommits(commit("last", "")), new RewordMsg.Requested(new Sha("elsewhere")))
+                .model();
 
         assertEquals(Option.none(), model.popup());
     }
 
     @Test
     void confirmingTheRewordRewordsAndClosesTheDialog() {
-        Model open = Update.update(withCommits(commit("last", "")), new RewordMsg.Requested(new Sha("abc1234"))).model();
+        Model open = Update.update(withCommits(commit("last", "")), new RewordMsg.Requested(new Sha("abc1234")))
+                .model();
 
         Next next = Update.update(open, new RewordMsg.Confirmed(new CommitMessage(" better ", "\nwhy\n")));
 
-        assertEquals(List.of(new CommitCmd.Reword(new Sha("abc1234"), new CommitMessage("better", "why"))), next.cmds());
+        assertEquals(
+                List.of(new CommitCmd.Reword(new Sha("abc1234"), new CommitMessage("better", "why"))), next.cmds());
         assertEquals(Option.none(), next.model().popup());
     }
 
     @Test
     void blankSummaryKeepsTheRewordDialogOpen() {
-        Model open = Update.update(withCommits(commit("last", "")), new RewordMsg.Requested(new Sha("abc1234"))).model();
+        Model open = Update.update(withCommits(commit("last", "")), new RewordMsg.Requested(new Sha("abc1234")))
+                .model();
 
         Next next = Update.update(open, new RewordMsg.Confirmed(new CommitMessage(" ", "why")));
 
@@ -100,15 +109,21 @@ class CommitUpdateTest {
 
     @Test
     void cancellingTheRewordClosesTheDialog() {
-        Model open = Update.update(withCommits(commit("last", "")), new RewordMsg.Requested(new Sha("abc1234"))).model();
+        Model open = Update.update(withCommits(commit("last", "")), new RewordMsg.Requested(new Sha("abc1234")))
+                .model();
 
-        assertEquals(Option.none(), Update.update(open, new RewordMsg.Cancelled()).model().popup());
+        assertEquals(
+                Option.none(),
+                Update.update(open, new RewordMsg.Cancelled()).model().popup());
     }
 
     @Test
     void amendAsksForConfirmationThenAmendsWithTheStagedFiles() {
-        Model asking = Update.update(withFiles(new FileEntry("a.txt", ChangeType.ADDED),
-                new FileEntry("b.txt", ChangeType.MODIFIED)), new AmendMsg.Requested()).model();
+        Model asking = Update.update(
+                        withFiles(
+                                new FileEntry("a.txt", ChangeType.ADDED), new FileEntry("b.txt", ChangeType.MODIFIED)),
+                        new AmendMsg.Requested())
+                .model();
         assertEquals(true, asking.popup(AmendPopup.class).isDefined());
 
         Next next = Update.update(asking, new AmendMsg.Confirmed());
@@ -119,10 +134,15 @@ class CommitUpdateTest {
 
     @Test
     void amendStagesAllFilesWhenNoneIsStaged() {
-        Model asking = Update.update(withFiles(new FileEntry("a.txt", ChangeType.MODIFIED),
-                new FileEntry("b.txt", ChangeType.UNTRACKED)), new AmendMsg.Requested()).model();
+        Model asking = Update.update(
+                        withFiles(
+                                new FileEntry("a.txt", ChangeType.MODIFIED),
+                                new FileEntry("b.txt", ChangeType.UNTRACKED)),
+                        new AmendMsg.Requested())
+                .model();
 
-        assertEquals(List.of(new CommitCmd.Amend(List.of("a.txt", "b.txt"))),
+        assertEquals(
+                List.of(new CommitCmd.Amend(List.of("a.txt", "b.txt"))),
                 Update.update(asking, new AmendMsg.Confirmed()).cmds());
     }
 
@@ -139,7 +159,8 @@ class CommitUpdateTest {
 
     @Test
     void amendWithoutChangesIsAnError() {
-        assertEquals(Option.of(new AppError.NothingToAmend()),
+        assertEquals(
+                Option.of(new AppError.NothingToAmend()),
                 Update.update(withFiles(), new AmendMsg.Requested()).model().error());
     }
 
@@ -171,22 +192,38 @@ class CommitUpdateTest {
 
     @Test
     void confirmingStageAllStagesEverythingUnstaged() {
-        Model asking = Update.update(withFiles(new FileEntry("a.txt", ChangeType.MODIFIED),
-                new FileEntry("b.txt", ChangeType.UNTRACKED)), new CommitMsg.Requested()).model();
+        Model asking = Update.update(
+                        withFiles(
+                                new FileEntry("a.txt", ChangeType.MODIFIED),
+                                new FileEntry("b.txt", ChangeType.UNTRACKED)),
+                        new CommitMsg.Requested())
+                .model();
 
         Next next = Update.update(asking, new CommitMsg.StageAllConfirmed());
 
         assertEquals(List.of(new CommitCmd.StageForCommit(List.of("a.txt", "b.txt"))), next.cmds());
         assertEquals(false, next.model().popup(StageAllPopup.class).isDefined());
-        assertEquals(true, Update.update(next.model(), new CommitMsg.StagedForCommit(new CommitCmd.StageForCommit(List.of()), List.of())).model().popup(CommitPopup.class).isDefined());
+        assertEquals(
+                true,
+                Update.update(
+                                next.model(),
+                                new CommitMsg.StagedForCommit(new CommitCmd.StageForCommit(List.of()), List.of()))
+                        .model()
+                        .popup(CommitPopup.class)
+                        .isDefined());
     }
 
     @Test
     void cancellingStageAllClosesThePrompt() {
-        Model asking = Update.update(withFiles(new FileEntry("a.txt", ChangeType.MODIFIED)),
-                new CommitMsg.Requested()).model();
+        Model asking = Update.update(withFiles(new FileEntry("a.txt", ChangeType.MODIFIED)), new CommitMsg.Requested())
+                .model();
 
-        assertEquals(false, Update.update(asking, new CommitMsg.StageAllCancelled()).model().popup(StageAllPopup.class).isDefined());
+        assertEquals(
+                false,
+                Update.update(asking, new CommitMsg.StageAllCancelled())
+                        .model()
+                        .popup(StageAllPopup.class)
+                        .isDefined());
     }
 
     @Test
@@ -216,6 +253,11 @@ class CommitUpdateTest {
         Model open = Update.update(withFiles(new FileEntry("a.txt", ChangeType.ADDED)), new CommitMsg.Requested())
                 .model();
 
-        assertEquals(false, Update.update(open, new CommitMsg.Cancelled()).model().popup(CommitPopup.class).isDefined());
+        assertEquals(
+                false,
+                Update.update(open, new CommitMsg.Cancelled())
+                        .model()
+                        .popup(CommitPopup.class)
+                        .isDefined());
     }
 }

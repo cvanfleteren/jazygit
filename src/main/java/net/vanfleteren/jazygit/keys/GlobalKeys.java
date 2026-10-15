@@ -11,17 +11,19 @@ import net.vanfleteren.jazygit.state.Msg;
  */
 final class GlobalKeys {
 
-    private GlobalKeys() {
-    }
+    private GlobalKeys() {}
 
     static Keymap register(Keymap keys) {
         // The panels show their help for ? themselves; run from the help, it closes it, as pressing it there does.
-        return keys.global(new Keymap.Global.Dispatching(Keymap.HELP_KEY, "help.global.help", event -> false,
-                        HelpMsg.Closed::new))
-                .global(new Keymap.Global.Dispatching("ctrl+r", "help.global.recentRepos",
-                        GlobalKeys::isRecentReposKey, RecentReposMsg.Requested::new))
-                .global(new Keymap.Global.Dispatching("ctrl+s", "help.global.settings",
-                        GlobalKeys::isSettingsKey, SettingsPanelMsg.Requested::new))
+        return keys.global(new Keymap.Global.Dispatching(
+                        Keymap.HELP_KEY, "help.global.help", event -> false, HelpMsg.Closed::new))
+                .global(new Keymap.Global.Dispatching(
+                        "ctrl+r",
+                        "help.global.recentRepos",
+                        GlobalKeys::isRecentReposKey,
+                        RecentReposMsg.Requested::new))
+                .global(new Keymap.Global.Dispatching(
+                        "ctrl+s", "help.global.settings", GlobalKeys::isSettingsKey, SettingsPanelMsg.Requested::new))
                 .global(new Keymap.Global.Dispatching("q", "help.global.quit", GlobalKeys::isQuitKey, Msg.Quit::new));
     }
 

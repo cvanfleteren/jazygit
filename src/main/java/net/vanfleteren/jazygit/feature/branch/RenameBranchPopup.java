@@ -6,5 +6,4 @@ import net.vanfleteren.jazygit.state.Popup;
 /**
  * Asking for the new name of {@code branch}.
  */
-public record RenameBranchPopup(Branch.Name branch) implements Popup {
-}
+public record RenameBranchPopup(Branch.Name branch) implements Popup {}

@@ -48,13 +48,11 @@ public record RepoStatus(Head head, List<FileEntry> files) {
          *
          * @param tip the commit it points to; none in a repository without commits
          */
-        record OnBranch(Branch.Name branch, Option<Sha> tip) implements Head {
-        }
+        record OnBranch(Branch.Name branch, Option<Sha> tip) implements Head {}
 
         /**
          * A commit checked out without a branch.
          */
-        record Detached(Sha at) implements Head {
-        }
+        record Detached(Sha at) implements Head {}
     }
 }

@@ -5,13 +5,12 @@ import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.help.HelpMsg;
-import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.state.Msg;
-
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.feature.help.HelpMsg;
+import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.state.Msg;
 
 /**
  * The single source of truth for keyboard shortcuts: every key is declared once, with its description, and
@@ -25,6 +24,7 @@ public final class Keymap {
      * The key that shows the keys of the panel that has the focus, and closes that help again.
      */
     public static final String HELP_KEY = "?";
+
     private final Map<String, Section> sections;
     private final List<Global> globals;
 
@@ -62,7 +62,11 @@ public final class Keymap {
     public final <S> Keymap add(Scope<S> scope, Binding<S>... bindings) {
         List<Binding<?>> all = bindings(scope.id()).appendAll(List.of(bindings));
         // A key bound twice would only do what it was bound to first, silently; the help key does nothing else.
-        all.map(Binding::key).append(HELP_KEY).groupBy(key -> key).filterValues(keys -> keys.size() > 1).keySet()
+        all.map(Binding::key)
+                .append(HELP_KEY)
+                .groupBy(key -> key)
+                .filterValues(keys -> keys.size() > 1)
+                .keySet()
                 .headOption()
                 .forEach(key -> {
                     throw new IllegalArgumentException("The key \"" + key + "\" is bound twice in " + scope.id());
@@ -185,8 +189,7 @@ public final class Keymap {
      * @param titleKey the message key of the panel's title
      * @param <S>      what is selected in the panel, which its keys act on
      */
-    public record Scope<S>(String id, String titleKey) {
-    }
+    public record Scope<S>(String id, String titleKey) {}
 
     /**
      * A key in a panel.
@@ -228,6 +231,5 @@ public final class Keymap {
         }
     }
 
-    private record Section(Scope<?> scope, List<Binding<?>> bindings) {
-    }
+    private record Section(Scope<?> scope, List<Binding<?>> bindings) {}
 }

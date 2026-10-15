@@ -13,15 +13,14 @@ import net.vanfleteren.jazygit.state.Update.Next;
  */
 public final class MergeUpdate {
 
-    private MergeUpdate() {
-    }
+    private MergeUpdate() {}
 
     public static Next update(Model model, MergeMsg msg) {
         return switch (msg) {
             case MergeMsg.Requested(Branch.Name branch) -> requested(model, branch);
             case MergeMsg.Cancelled() -> Next.of(model.withoutPopup(MergePopup.class));
             case MergeMsg.Chosen(MergeMode mode) ->
-                    Update.confirm(model, MergePopup.class, popup -> Option.of(new Merge(popup.branch(), mode)));
+                Update.confirm(model, MergePopup.class, popup -> Option.of(new Merge(popup.branch(), mode)));
         };
     }
 

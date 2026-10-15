@@ -10,8 +10,7 @@ import net.vanfleteren.jazygit.state.Popup;
  * @param name      the name the dialog starts out with
  * @param following the remote branch the new branch is to follow, if any
  */
-public record NewBranchPopup(String base, String label, String name, Option<RemoteBranch> following)
-        implements Popup {
+public record NewBranchPopup(String base, String label, String name, Option<RemoteBranch> following) implements Popup {
 
     public NewBranchPopup(String base, String label) {
         this(base, label, "", Option.none());
@@ -25,6 +24,7 @@ public record NewBranchPopup(String base, String label, String name, Option<Remo
      * Asking for the name of a new branch that follows {@code remote}, starting out with the name it has there.
      */
     static NewBranchPopup following(RemoteBranch remote) {
-        return new NewBranchPopup(remote.trackingRef(), remote.shortName(), remote.branch().value(), Option.of(remote));
+        return new NewBranchPopup(
+                remote.trackingRef(), remote.shortName(), remote.branch().value(), Option.of(remote));
     }
 }

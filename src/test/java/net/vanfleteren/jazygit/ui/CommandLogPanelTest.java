@@ -1,17 +1,16 @@
 package net.vanfleteren.jazygit.ui;
 
 import static net.vanfleteren.jazygit.git.StubGitProvider.executed;
-import net.vanfleteren.jazygit.state.Operation;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
-import io.vavr.collection.List;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.LogEntry;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.TestModels;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The command log panel shows why the last operation failed.
@@ -33,8 +32,8 @@ class CommandLogPanelTest {
 
     @Test
     void showsExecutedCommandsUnderTheirTitle() throws Exception {
-        Model model = TestModels.withLog(TestModels.loaded(new SampleData()),
-                new LogEntry(Operation.PUSH, executed("git push origin main")));
+        Model model = TestModels.withLog(
+                TestModels.loaded(new SampleData()), new LogEntry(Operation.PUSH, executed("git push origin main")));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> CommandLogPanel.render(model))) {
             String screen = RenderedText.of(testRunner, () -> CommandLogPanel.render(model));
@@ -47,10 +46,19 @@ class CommandLogPanelTest {
 
     @Test
     void keepsTheNewestLinesWhenTheyDoNotAllFit() throws Exception {
-        Model model = TestModels.withLog(TestModels.loaded(new SampleData()),
+        Model model = TestModels.withLog(
+                TestModels.loaded(new SampleData()),
                 new LogEntry(Operation.STAGE, executed("git add -- old.txt")),
-                new LogEntry(Operation.COMMIT, executed("git commit -m a", "git commit -m b", "git commit -m c",
-                        "git commit -m d", "git commit -m e", "git commit -m f", "git commit -m g")));
+                new LogEntry(
+                        Operation.COMMIT,
+                        executed(
+                                "git commit -m a",
+                                "git commit -m b",
+                                "git commit -m c",
+                                "git commit -m d",
+                                "git commit -m e",
+                                "git commit -m f",
+                                "git commit -m g")));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> CommandLogPanel.render(model))) {
             String screen = RenderedText.ofLarge(testRunner, () -> CommandLogPanel.render(model));

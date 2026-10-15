@@ -7,5 +7,4 @@ import net.vanfleteren.jazygit.state.Popup;
  *
  * @param current the one chosen now; empty for the one on the PATH
  */
-public record GhExecutablePopup(String current) implements Popup {
-}
+public record GhExecutablePopup(String current) implements Popup {}

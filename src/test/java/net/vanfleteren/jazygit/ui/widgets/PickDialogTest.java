@@ -1,10 +1,17 @@
 package net.vanfleteren.jazygit.ui.widgets;
 
+import static dev.tamboui.toolkit.Toolkit.stack;
+import static dev.tamboui.toolkit.Toolkit.text;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.util.ArrayList;
+import java.util.function.Supplier;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
@@ -13,18 +20,9 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.function.Supplier;
-
-import static dev.tamboui.toolkit.Toolkit.stack;
-import static dev.tamboui.toolkit.Toolkit.text;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 class PickDialogTest {
 
-    private record BranchPopup(List<String> branches) implements Popup {
-    }
+    private record BranchPopup(List<String> branches) implements Popup {}
 
     private record Picked(String what) implements Msg {
         @Override
@@ -36,8 +34,15 @@ class PickDialogTest {
     private static final List<String> BRANCHES = List.of("main", "develop", "release");
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final PickDialog<BranchPopup> dialog = new PickDialog<>(new PickDialog.Spec<>("pick", BranchPopup.class,
-            popup -> "Merge into", BranchPopup::branches, Picked::new, () -> new Picked("cancel")), dispatched::add);
+    private final PickDialog<BranchPopup> dialog = new PickDialog<>(
+            new PickDialog.Spec<>(
+                    "pick",
+                    BranchPopup.class,
+                    popup -> "Merge into",
+                    BranchPopup::branches,
+                    Picked::new,
+                    () -> new Picked("cancel")),
+            dispatched::add);
 
     @Test
     void closedModelShowsNoPopup() {
@@ -73,11 +78,20 @@ class PickDialogTest {
 
     @Test
     void withoutNamesItSaysSoAndOnlyCancels() throws Exception {
-        PickDialog<BranchPopup> empty = new PickDialog<>(new PickDialog.Spec<>("pick", BranchPopup.class,
-                popup -> "Merge into", BranchPopup::branches, Picked::new, () -> new Picked("cancel"),
-                Option.of("dialog.recentRepos.none")), dispatched::add);
-        Supplier<Element> view = () -> stack(text("background"),
-                empty.render(TestModels.loaded().openPopup(new BranchPopup(List.empty()))).get());
+        PickDialog<BranchPopup> empty = new PickDialog<>(
+                new PickDialog.Spec<>(
+                        "pick",
+                        BranchPopup.class,
+                        popup -> "Merge into",
+                        BranchPopup::branches,
+                        Picked::new,
+                        () -> new Picked("cancel"),
+                        Option.of("dialog.recentRepos.none")),
+                dispatched::add);
+        Supplier<Element> view = () -> stack(
+                text("background"),
+                empty.render(TestModels.loaded().openPopup(new BranchPopup(List.empty())))
+                        .get());
 
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
             runner.runner().focusManager().setFocus("pick");
@@ -100,6 +114,9 @@ class PickDialogTest {
     }
 
     private Element view() {
-        return stack(text("background"), dialog.render(TestModels.loaded().openPopup(new BranchPopup(BRANCHES))).get());
+        return stack(
+                text("background"),
+                dialog.render(TestModels.loaded().openPopup(new BranchPopup(BRANCHES)))
+                        .get());
     }
 }

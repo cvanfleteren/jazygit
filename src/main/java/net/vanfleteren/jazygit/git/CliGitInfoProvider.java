@@ -6,13 +6,12 @@ import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
-import net.vanfleteren.jazygit.git.GitError.*;
-import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.process.ExecutedCommand;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.git.GitError.*;
+import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
  * {@link GitInfoProvider} backed by a real repository, through the {@code git} command line tool only, so
@@ -37,14 +36,18 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     public static Either<OpenError, CliGitInfoProvider> open(Path startDir) {
         return !Files.isDirectory(startDir)
                 ? Either.left(new NotARepository(startDir))
-                : Either.narrow(GitProcess.read(startDir, GitCommand.reading("rev-parse", "--is-bare-repository"),
-                                raw -> Either.right(raw.strip().equals("true")))
-                        .mapLeft(error -> notARepository(error, startDir)))
-                .flatMap(bare -> bare
-                        ? Either.left(new NoWorkTree(startDir))
-                        : Either.narrow(GitProcess.read(startDir, GitCommand.reading("rev-parse", "--show-toplevel"),
-                        CliGitInfoProvider::path)))
-                .map(workTree -> new CliGitInfoProvider(workTree, HashMap::empty));
+                : Either.narrow(GitProcess.read(
+                                        startDir,
+                                        GitCommand.reading("rev-parse", "--is-bare-repository"),
+                                        raw -> Either.right(raw.strip().equals("true")))
+                                .mapLeft(error -> notARepository(error, startDir)))
+                        .flatMap(bare -> bare
+                                ? Either.left(new NoWorkTree(startDir))
+                                : Either.narrow(GitProcess.read(
+                                        startDir,
+                                        GitCommand.reading("rev-parse", "--show-toplevel"),
+                                        CliGitInfoProvider::path)))
+                        .map(workTree -> new CliGitInfoProvider(workTree, HashMap::empty));
     }
 
     private static Either<UnexpectedOutput, Path> path(String raw) {
@@ -132,23 +135,26 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(Branch.Name name, String startPoint) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(
+            Branch.Name name, String startPoint) {
         return CliCheckout.checkoutNewBranch(workTree, name, startPoint);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewTrackingBranch(Branch.Name name,
-                                                                                             RemoteBranch upstream) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewTrackingBranch(
+            Branch.Name name, RemoteBranch upstream) {
         return CliCheckout.checkoutNewTrackingBranch(workTree, name, upstream);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Branch.Name branch, RemoteBranch upstream, PushMode mode) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(
+            Branch.Name branch, RemoteBranch upstream, PushMode mode) {
         return CliPush.push(workTree, branch, upstream, mode, credentials.get());
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(Branch.Name branch, RemoteBranch upstream) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(
+            Branch.Name branch, RemoteBranch upstream) {
         return CliPush.pushSettingUpstream(workTree, branch, upstream, credentials.get());
     }
 
@@ -158,7 +164,8 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(Branch.Name branch, RemoteBranch upstream) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(
+            Branch.Name branch, RemoteBranch upstream) {
         return CliFetch.fastForward(workTree, branch, upstream, credentials.get());
     }
 
@@ -198,7 +205,8 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(Branch.Name name, RemoteBranch remote, DeleteScope scope) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(
+            Branch.Name name, RemoteBranch remote, DeleteScope scope) {
         return CliBranch.delete(workTree, name, remote, scope, credentials.get());
     }
 

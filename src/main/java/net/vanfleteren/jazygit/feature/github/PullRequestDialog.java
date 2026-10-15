@@ -1,9 +1,16 @@
 package net.vanfleteren.jazygit.feature.github;
 
+import static dev.tamboui.toolkit.Toolkit.row;
+import static dev.tamboui.toolkit.Toolkit.text;
+
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.util.function.Consumer;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -22,14 +29,6 @@ import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceList;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
-
-import java.time.Clock;
-import java.time.Duration;
-import java.time.LocalDate;
-import java.util.function.Consumer;
-
-import static dev.tamboui.toolkit.Toolkit.row;
-import static dev.tamboui.toolkit.Toolkit.text;
 
 /**
  * Popup showing the pull request of a branch: its title, state, branches, review and checks, as labelled
@@ -72,27 +71,33 @@ public final class PullRequestDialog implements PopupView {
      */
     PullRequestDialog(Consumer<Msg> dispatch, Clock clock) {
         this.clock = clock;
-        this.actions = new ChoiceList<>(ID, List.of(
-                new Choice<>('o', "dialog.pullRequest.open", PullRequestMsg.OpenConfirmed::new),
-                merge('m', "dialog.pullRequest.merge", MergeMethod.MERGE),
-                merge('s', "dialog.pullRequest.squash", MergeMethod.SQUASH),
-                merge('r', "dialog.pullRequest.rebase", MergeMethod.REBASE),
-                new Choice<>('x', "dialog.pullRequest.close", PullRequestMsg.CloseChosen::new,
-                        (model, popup) -> popup.open())),
-                PullRequestMsg.InfoClosed::new, dispatch);
+        this.actions = new ChoiceList<>(
+                ID,
+                List.of(
+                        new Choice<>('o', "dialog.pullRequest.open", PullRequestMsg.OpenConfirmed::new),
+                        merge('m', "dialog.pullRequest.merge", MergeMethod.MERGE),
+                        merge('s', "dialog.pullRequest.squash", MergeMethod.SQUASH),
+                        merge('r', "dialog.pullRequest.rebase", MergeMethod.REBASE),
+                        new Choice<>(
+                                'x',
+                                "dialog.pullRequest.close",
+                                PullRequestMsg.CloseChosen::new,
+                                (model, popup) -> popup.open())),
+                PullRequestMsg.InfoClosed::new,
+                dispatch);
     }
 
     /**
      * Merging as {@code method} says; only for a pull request that can be merged, as far as is known.
      */
     private static Choice<PullRequestPopup> merge(char key, String labelKey, MergeMethod method) {
-        return new Choice<>(key, labelKey, () -> new PullRequestMsg.MergeChosen(method),
-                (model, popup) -> popup.mergeable());
+        return new Choice<>(
+                key, labelKey, () -> new PullRequestMsg.MergeChosen(method), (model, popup) -> popup.mergeable());
     }
 
     private static List<Line> failed(Failure failure) {
-        return List.of(Line.wrapped(Messages.get("dialog.pullRequest.failed", ErrorText.of(failure)), Theme.Classes.ERROR,
-                CONTENT_HEIGHT));
+        return List.of(Line.wrapped(
+                Messages.get("dialog.pullRequest.failed", ErrorText.of(failure)), Theme.Classes.ERROR, CONTENT_HEIGHT));
     }
 
     private static StyledElement<?> label(String labelKey) {
@@ -100,11 +105,12 @@ public final class PullRequestDialog implements PopupView {
     }
 
     private static String state(PullRequestDetails pr) {
-        String state = Messages.get(switch (pr.state()) {
-            case OPEN -> "dialog.pullRequest.state.open";
-            case CLOSED -> "dialog.pullRequest.state.closed";
-            case MERGED -> "dialog.pullRequest.state.merged";
-        });
+        String state = Messages.get(
+                switch (pr.state()) {
+                    case OPEN -> "dialog.pullRequest.state.open";
+                    case CLOSED -> "dialog.pullRequest.state.closed";
+                    case MERGED -> "dialog.pullRequest.state.merged";
+                });
         return pr.draft() ? state + " · " + Messages.get("dialog.pullRequest.draft") : state;
     }
 
@@ -112,18 +118,20 @@ public final class PullRequestDialog implements PopupView {
         return switch (mergeable) {
             case MERGEABLE -> text(Messages.get("dialog.pullRequest.mergeable.yes"));
             case CONFLICTING ->
-                    text(Messages.get("dialog.pullRequest.mergeable.conflicting")).addClass(Theme.Classes.CHECKS_FAILED);
-            case UNKNOWN -> text(Messages.get("dialog.pullRequest.mergeable.unknown")).addClass(Theme.Classes.DIM);
+                text(Messages.get("dialog.pullRequest.mergeable.conflicting")).addClass(Theme.Classes.CHECKS_FAILED);
+            case UNKNOWN ->
+                text(Messages.get("dialog.pullRequest.mergeable.unknown")).addClass(Theme.Classes.DIM);
         };
     }
 
     private static List<StyledElement<?>> review(Review review) {
-        String text = Messages.get(switch (review) {
-            case NONE -> "dialog.pullRequest.review.none";
-            case REQUIRED -> "dialog.pullRequest.review.required";
-            case APPROVED -> "dialog.pullRequest.review.approved";
-            case CHANGES_REQUESTED -> "dialog.pullRequest.review.changes";
-        });
+        String text = Messages.get(
+                switch (review) {
+                    case NONE -> "dialog.pullRequest.review.none";
+                    case REQUIRED -> "dialog.pullRequest.review.required";
+                    case APPROVED -> "dialog.pullRequest.review.approved";
+                    case CHANGES_REQUESTED -> "dialog.pullRequest.review.changes";
+                });
         return PullRequestSymbols.review(review)
                 .map(symbol -> List.of(symbol(symbol), text(" " + text)))
                 .getOrElse(() -> List.of(text(text).addClass(Theme.Classes.DIM)));
@@ -133,11 +141,13 @@ public final class PullRequestDialog implements PopupView {
      * Each reviewer, followed by the symbol of their review; two spaces in between.
      */
     private static List<StyledElement<?>> reviewers(PullRequestDetails pr) {
-        return pr.reviewers().zipWithIndex().flatMap(indexed -> List.<StyledElement<?>>of(
-                        text((indexed._2 > 0 ? "  " : "") + "@" + indexed._1.login()))
-                .appendAll(PullRequestSymbols.reviewer(indexed._1.state())
-                        .map(symbol -> List.of(text(" "), symbol(symbol)))
-                        .getOrElse(List.empty())));
+        return pr.reviewers()
+                .zipWithIndex()
+                .flatMap(indexed -> List.<StyledElement<?>>of(
+                                text((indexed._2 > 0 ? "  " : "") + "@" + indexed._1.login()))
+                        .appendAll(PullRequestSymbols.reviewer(indexed._1.state())
+                                .map(symbol -> List.of(text(" "), symbol(symbol)))
+                                .getOrElse(List.empty())));
     }
 
     /**
@@ -145,7 +155,8 @@ public final class PullRequestDialog implements PopupView {
      */
     private static List<Line> checks(List<Check> checks) {
         if (checks.isEmpty()) {
-            return List.of(Line.labelled("dialog.pullRequest.checks",
+            return List.of(Line.labelled(
+                    "dialog.pullRequest.checks",
                     text(Messages.get("dialog.pullRequest.checks.none")).addClass(Theme.Classes.DIM)));
         }
         List<StyledElement<?>> counts = List.of(
@@ -157,13 +168,21 @@ public final class PullRequestDialog implements PopupView {
                 .flatMap(indexed -> indexed._2 > 0 ? indexed._1.prepend(text(" · ")) : indexed._1);
         List<Check> notPassed = checks.filter(check -> check.state() != Checks.PASSING)
                 .sortBy(check -> check.state() == Checks.FAILING ? 0 : 1);
-        return List.of(Line.pieces(List.<StyledElement<?>>of(label("dialog.pullRequest.checks")).appendAll(counts)))
-                .appendAll(notPassed.take(LISTED_CHECKS).map(check -> Line.pieces(List.<StyledElement<?>>of(text(INDENT))
-                        .appendAll(PullRequestSymbols.checks(check.state()).map(PullRequestDialog::symbol))
-                        .append(text(" " + check.name())))))
-                .appendAll(Option.when(notPassed.size() > LISTED_CHECKS, () -> Line.of(text(INDENT
-                        + Messages.get("dialog.pullRequest.checks.more", String.valueOf(notPassed.size() - LISTED_CHECKS)))
-                        .addClass(Theme.Classes.DIM))));
+        return List.of(Line.pieces(List.<StyledElement<?>>of(label("dialog.pullRequest.checks"))
+                        .appendAll(counts)))
+                .appendAll(notPassed
+                        .take(LISTED_CHECKS)
+                        .map(check -> Line.pieces(List.<StyledElement<?>>of(text(INDENT))
+                                .appendAll(
+                                        PullRequestSymbols.checks(check.state()).map(PullRequestDialog::symbol))
+                                .append(text(" " + check.name())))))
+                .appendAll(Option.when(
+                        notPassed.size() > LISTED_CHECKS,
+                        () -> Line.of(text(INDENT
+                                        + Messages.get(
+                                                "dialog.pullRequest.checks.more",
+                                                String.valueOf(notPassed.size() - LISTED_CHECKS)))
+                                .addClass(Theme.Classes.DIM))));
     }
 
     /**
@@ -171,9 +190,12 @@ public final class PullRequestDialog implements PopupView {
      */
     private static Option<List<StyledElement<?>>> count(List<Check> checks, Checks state, String key) {
         int count = checks.count(check -> check.state() == state);
-        return Option.when(count > 0, () -> PullRequestSymbols.checks(state).toList()
-                .<StyledElement<?>>map(PullRequestDialog::symbol)
-                .append(text(" " + Messages.get(key, String.valueOf(count)))));
+        return Option.when(
+                count > 0,
+                () -> PullRequestSymbols.checks(state)
+                        .toList()
+                        .<StyledElement<?>>map(PullRequestDialog::symbol)
+                        .append(text(" " + Messages.get(key, String.valueOf(count)))));
     }
 
     private static StyledElement<?> symbol(Symbol symbol) {
@@ -192,10 +214,16 @@ public final class PullRequestDialog implements PopupView {
                     .map(read -> read.fold(PullRequestDialog::failed, this::details))
                     .getOrElse(() -> loading(popup));
             int blanks = CONTENT_HEIGHT - lines.map(Line::height).sum().intValue();
-            return DialogFrame.withHint(Messages.get("dialog.pullRequest.title", String.valueOf(popup.pullRequest().number())),
-                            WIDTH, "dialog.hint.selectCancel",
-                            lines.appendAll(List.fill(Math.max(0, blanks), Line::blank)).append(Line.blank())
-                                    .map(Line::element).append(actions.render(model, popup)))
+            return DialogFrame.withHint(
+                            Messages.get(
+                                    "dialog.pullRequest.title",
+                                    String.valueOf(popup.pullRequest().number())),
+                            WIDTH,
+                            "dialog.hint.selectCancel",
+                            lines.appendAll(List.fill(Math.max(0, blanks), Line::blank))
+                                    .append(Line.blank())
+                                    .map(Line::element)
+                                    .append(actions.render(model, popup)))
                     // The lines, a blank line, the actions, the blank line and the hint, plus the border.
                     .length(CONTENT_HEIGHT + 1 + actions.height() + 2 + 2);
         });
@@ -203,38 +231,53 @@ public final class PullRequestDialog implements PopupView {
 
     private List<Line> loading(PullRequestPopup popup) {
         return List.of(
-                Line.labelled("dialog.pullRequest.branch", text(popup.pullRequest().headBranch())),
+                Line.labelled(
+                        "dialog.pullRequest.branch", text(popup.pullRequest().headBranch())),
                 Line.blank(),
-                Line.pieces(List.of(text(Messages.get("dialog.pullRequest.loading") + " ").addClass(Theme.Classes.DIM),
+                Line.pieces(List.of(
+                        text(Messages.get("dialog.pullRequest.loading") + " ").addClass(Theme.Classes.DIM),
                         text(TimeText.spinnerFrame(clock.instant())).addClass(Theme.Classes.SPINNER))));
     }
 
     private List<Line> details(PullRequestDetails pr) {
-        return List.of(Line.wrapped(pr.title(), Theme.Classes.BOLD, TITLE_LINES), Line.blank(),
+        return List.of(
+                        Line.wrapped(pr.title(), Theme.Classes.BOLD, TITLE_LINES),
+                        Line.blank(),
                         Line.labelled("dialog.pullRequest.state", text(state(pr))))
-                .appendAll(Option.when(!pr.author().isEmpty(),
+                .appendAll(Option.when(
+                        !pr.author().isEmpty(),
                         () -> Line.labelled("dialog.pullRequest.author", text("@" + pr.author()))))
                 .appendAll(List.of(
                         Line.labelled("dialog.pullRequest.branch", text(pr.headBranch() + " → " + pr.baseBranch())),
                         Line.labelled("dialog.pullRequest.created", text(created(pr))),
-                        Line.labelled("dialog.pullRequest.changes",
+                        Line.labelled(
+                                "dialog.pullRequest.changes",
                                 text("+" + pr.additions()).addClass(Theme.Classes.DIFF_ADDED),
                                 text(" −" + pr.deletions()).addClass(Theme.Classes.DIFF_REMOVED),
-                                text(" " + Messages.get("dialog.pullRequest.changes.files", String.valueOf(pr.changedFiles())))),
+                                text(" "
+                                        + Messages.get(
+                                                "dialog.pullRequest.changes.files",
+                                                String.valueOf(pr.changedFiles())))),
                         Line.labelled("dialog.pullRequest.mergeable", mergeable(pr.mergeable())),
                         Line.blank(),
-                        Line.pieces(List.<StyledElement<?>>of(label("dialog.pullRequest.review")).appendAll(review(pr.review())))))
-                .appendAll(Option.when(!pr.reviewers().isEmpty(), () -> Line.pieces(
-                        List.<StyledElement<?>>of(label("dialog.pullRequest.reviewers")).appendAll(reviewers(pr)))))
+                        Line.pieces(List.<StyledElement<?>>of(label("dialog.pullRequest.review"))
+                                .appendAll(review(pr.review())))))
+                .appendAll(Option.when(
+                        !pr.reviewers().isEmpty(),
+                        () -> Line.pieces(List.<StyledElement<?>>of(label("dialog.pullRequest.reviewers"))
+                                .appendAll(reviewers(pr)))))
                 .append(Line.labelled("dialog.pullRequest.comments", text(String.valueOf(pr.comments()))))
-                .appendAll(Option.when(!pr.labels().isEmpty(),
-                        () -> Line.labelled("dialog.pullRequest.labels", text(pr.labels().mkString(", ")))))
+                .appendAll(Option.when(
+                        !pr.labels().isEmpty(),
+                        () -> Line.labelled(
+                                "dialog.pullRequest.labels", text(pr.labels().mkString(", ")))))
                 .append(Line.blank())
                 .appendAll(checks(pr.checks()));
     }
 
     private String created(PullRequestDetails pr) {
-        return Messages.get("dialog.pullRequest.created.value",
+        return Messages.get(
+                "dialog.pullRequest.created.value",
                 LocalDate.ofInstant(pr.createdAt(), clock.getZone()).toString(),
                 TimeText.age(Duration.between(pr.createdAt(), clock.instant())));
     }
@@ -256,7 +299,8 @@ public final class PullRequestDialog implements PopupView {
          * {@code text}, wrapped at the width of the dialog, and cut after {@code maxLines}.
          */
         static Line wrapped(String text, String cssClass, int maxLines) {
-            return new Line(DialogFrame.wrapped(text, WIDTH, maxLines).addClass(cssClass),
+            return new Line(
+                    DialogFrame.wrapped(text, WIDTH, maxLines).addClass(cssClass),
                     DialogFrame.wrappedHeight(text, WIDTH, maxLines));
         }
 

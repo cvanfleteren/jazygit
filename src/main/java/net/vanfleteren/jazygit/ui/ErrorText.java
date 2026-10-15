@@ -15,45 +15,47 @@ import net.vanfleteren.jazygit.state.Failure;
  */
 public final class ErrorText {
 
-    private ErrorText() {
-    }
+    private ErrorText() {}
 
     public static String of(AppError error) {
         return switch (error) {
             case AppError.OperationFailed(var operation, Option<String> subject, Failure failure) ->
-                    Messages.get(operation.errorKey(), subject.toList().<Object>map(s -> s).append(of(failure)).toJavaArray());
+                Messages.get(
+                        operation.errorKey(),
+                        subject.toList().<Object>map(s -> s).append(of(failure)).toJavaArray());
             case AppError.NothingToCommit() -> Messages.get("error.commit.nothing");
             case AppError.NothingToAmend() -> Messages.get("error.amend.nothing");
             case AppError.NothingToStash() -> Messages.get("error.stash.nothing");
             case AppError.InvalidUpstream(String text) -> Messages.get("error.upstream.invalid", text.strip());
             case AppError.NoUpstream(Branch.Name branch) -> Messages.get("error.pull.noUpstream", branch.value());
             case AppError.UpstreamGone(Branch.Name branch, String upstream) ->
-                    Messages.get("error.pull.upstreamGone", branch.value(), upstream);
+                Messages.get("error.pull.upstreamGone", branch.value(), upstream);
             case AppError.UnpushedCommits(Branch.Name branch) ->
-                    Messages.get("error.fastForward.unpushed", branch.value());
+                Messages.get("error.fastForward.unpushed", branch.value());
             case AppError.NotPushed(Branch.Name branch) -> Messages.get("error.pullRequest.notPushed", branch.value());
             case AppError.DefaultBranch(String branch) -> Messages.get("error.deleteBranch.default", branch);
             case AppError.NotOnRemote(Branch.Name branch) -> Messages.get("error.browse.notOnRemote", branch.value());
             case AppError.PullRequestsNotRead() -> Messages.get("error.pullRequest.notRead");
             case AppError.PullRequestsUnavailable(Failure failure) ->
-                    Messages.get("error.pullRequest.unavailable", of(failure));
+                Messages.get("error.pullRequest.unavailable", of(failure));
             case AppError.SettingsNotLoaded(SettingsProblem problem) -> of(problem);
             case AppError.SettingsNotSaved(Failure failure) -> Messages.get("error.settings.notSaved", of(failure));
             case AppError.RepositoryNotOpened(String directory, Failure failure) ->
-                    Messages.get("error.recentRepos.notOpened", directory, of(failure));
+                Messages.get("error.recentRepos.notOpened", directory, of(failure));
             case AppError.GhExecutableUnusable(Option<String> executable, Failure failure) ->
-                    Messages.get("error.settings.ghUnusable", executable.getOrElse("gh"), of(failure));
+                Messages.get("error.settings.ghUnusable", executable.getOrElse("gh"), of(failure));
             case AppError.GitHubAccountNotSet(Failure failure) ->
-                    Messages.get("error.settings.accountNotSet", of(failure));
+                Messages.get("error.settings.accountNotSet", of(failure));
             case AppError.SettingsNotApplied(Failure failure) -> Messages.get("error.settings.notApplied", of(failure));
         };
     }
 
     public static String of(Failure failure) {
         return switch (failure) {
-            case Failure.Git(GitError error, var commands, var cleanupFailed) -> cleanupFailed
-                    .map(cleanup -> Messages.get("error.cleanupFailed", of(error), of(cleanup)))
-                    .getOrElse(() -> of(error));
+            case Failure.Git(GitError error, var commands, var cleanupFailed) ->
+                cleanupFailed
+                        .map(cleanup -> Messages.get("error.cleanupFailed", of(error), of(cleanup)))
+                        .getOrElse(() -> of(error));
             case Failure.GitHub(GhError error, var commands) -> of(error);
             case Failure.Settings(SettingsProblem problem) -> of(problem);
             case Failure.Bug(Throwable cause) -> Messages.get("error.bug", reason(cause));
@@ -63,11 +65,11 @@ public final class ErrorText {
     public static String of(SettingsProblem problem) {
         return switch (problem) {
             case SettingsProblem.Unreadable(var file, String reason) ->
-                    Messages.get("settings.unreadable", file, reason);
+                Messages.get("settings.unreadable", file, reason);
             case SettingsProblem.Invalid(var file, var keys) ->
-                    Messages.get("settings.invalid", file, keys.mkString(", "));
+                Messages.get("settings.invalid", file, keys.mkString(", "));
             case SettingsProblem.Unwritable(var file, String reason) ->
-                    Messages.get("settings.unwritable", file, reason);
+                Messages.get("settings.unwritable", file, reason);
         };
     }
 
@@ -77,10 +79,10 @@ public final class ErrorText {
             case GhError.TimedOut(String operation) -> Messages.get("gh.timedOut", operation);
             case GhError.Interrupted(String operation) -> Messages.get("gh.interrupted", operation);
             case GhError.CommandFailed(var explanation, int exitCode) ->
-                    explanation.getOrElse(() -> Messages.get("gh.exitedWithCode", String.valueOf(exitCode)));
+                explanation.getOrElse(() -> Messages.get("gh.exitedWithCode", String.valueOf(exitCode)));
             case GhError.UnexpectedOutput(String output) -> Messages.get("gh.unexpectedOutput", output);
             case GhError.TokenUnavailable(var account, GhError cause) ->
-                    Messages.get("gh.tokenUnavailable", account.user(), account.host(), of(cause));
+                Messages.get("gh.tokenUnavailable", account.user(), account.host(), of(cause));
         };
     }
 
@@ -90,7 +92,7 @@ public final class ErrorText {
             case GitError.TimedOut(String operation, var workTree) -> Messages.get("git.timedOut", operation, workTree);
             case GitError.Interrupted(String operation) -> Messages.get("git.interrupted", operation);
             case GitError.CommandFailed(var explanation, int exitCode, var output) ->
-                    explanation.getOrElse(() -> Messages.get("git.exitedWithCode", String.valueOf(exitCode)));
+                explanation.getOrElse(() -> Messages.get("git.exitedWithCode", String.valueOf(exitCode)));
             case GitError.UnexpectedOutput(String output) -> Messages.get("git.unexpectedOutput", output);
             case GitError.NotARepository(var directory) -> Messages.get("git.notRepository", directory);
             case GitError.NoWorkTree(var directory) -> Messages.get("git.noWorkTree", directory);
@@ -107,7 +109,8 @@ public final class ErrorText {
      * What an exception says about why it happened, or what kind it is when it says nothing.
      */
     public static String reason(Throwable cause) {
-        return Option.of(cause.getMessage()).filter(message -> !message.isBlank())
+        return Option.of(cause.getMessage())
+                .filter(message -> !message.isBlank())
                 .getOrElse(() -> cause.getClass().getSimpleName());
     }
 }

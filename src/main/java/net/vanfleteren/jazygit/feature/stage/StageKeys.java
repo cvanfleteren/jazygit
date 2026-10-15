@@ -11,12 +11,16 @@ import net.vanfleteren.jazygit.keys.Scopes;
  */
 public final class StageKeys {
 
-    private StageKeys() {
-    }
+    private StageKeys() {}
 
     public static Keymap register(Keymap keys) {
-        return keys.add(Scopes.FILES, Binding.onSelected(" ", "help.files.stage",
-                node -> new StageMsg.Requested(node.entries(),
-                        node instanceof FileTree.Dir dir ? Option.of(dir.path()) : Option.none())));
+        return keys.add(
+                Scopes.FILES,
+                Binding.onSelected(
+                        " ",
+                        "help.files.stage",
+                        node -> new StageMsg.Requested(
+                                node.entries(),
+                                node instanceof FileTree.Dir dir ? Option.of(dir.path()) : Option.none())));
     }
 }

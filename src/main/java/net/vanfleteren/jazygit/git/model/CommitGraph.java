@@ -8,8 +8,7 @@ import io.vavr.collection.*;
  */
 public final class CommitGraph {
 
-    private CommitGraph() {
-    }
+    private CommitGraph() {}
 
     /**
      * The commits with every merge directly followed by the commits it brought in, i.e. those reachable
@@ -18,18 +17,19 @@ public final class CommitGraph {
      */
     public static List<Commit> arrange(List<Commit> commits) {
         Map<Sha, Commit> bySha = index(commits);
-        return commits
-                .foldLeft(new Placed(HashSet.empty(), List.empty()),
+        return commits.foldLeft(
+                        new Placed(HashSet.empty(), List.empty()),
                         (state, commit) -> place(commit, commits, bySha, state))
                 .latestFirst()
                 .reverse();
     }
 
     private static Placed place(Commit commit, List<Commit> commits, Map<Sha, Commit> bySha, Placed state) {
-        Placed placed = new Placed(state.shas().add(commit.sha()), state.latestFirst().prepend(commit));
-        return state.shas().contains(commit.sha()) ? state
-                : !commit.isMerge() ? placed
-                : placeBroughtIn(commit, commits, bySha, placed);
+        Placed placed =
+                new Placed(state.shas().add(commit.sha()), state.latestFirst().prepend(commit));
+        return state.shas().contains(commit.sha())
+                ? state
+                : !commit.isMerge() ? placed : placeBroughtIn(commit, commits, bySha, placed);
     }
 
     /**
@@ -37,8 +37,7 @@ public final class CommitGraph {
      */
     private static Placed placeBroughtIn(Commit merge, List<Commit> commits, Map<Sha, Commit> bySha, Placed state) {
         Set<Sha> brought = broughtIn(merge, bySha);
-        return commits
-                .filter(candidate -> brought.contains(candidate.sha()))
+        return commits.filter(candidate -> brought.contains(candidate.sha()))
                 .foldLeft(state, (next, candidate) -> place(candidate, commits, bySha, next));
     }
 
@@ -50,12 +49,11 @@ public final class CommitGraph {
         Map<Sha, Integer> position = arranged.zipWithIndex().toMap(entry -> entry._1.sha(), entry -> entry._2);
         List<Set<Sha>> brought = arranged.filter(Commit::isMerge).map(merge -> broughtIn(merge, bySha));
         // The last commit of each merged branch closes it.
-        Set<Integer> closing = brought
-                .flatMap(shas -> shas.flatMap(position::get).max())
-                .toSet();
-        return arranged.zipWithIndex().map(entry -> new Node(entry._1,
-                brought.count(shas -> shas.contains(entry._1.sha())),
-                closing.contains(entry._2)));
+        Set<Integer> closing =
+                brought.flatMap(shas -> shas.flatMap(position::get).max()).toSet();
+        return arranged.zipWithIndex()
+                .map(entry -> new Node(
+                        entry._1, brought.count(shas -> shas.contains(entry._1.sha())), closing.contains(entry._2)));
     }
 
     private static Map<Sha, Commit> index(List<Commit> commits) {
@@ -67,7 +65,8 @@ public final class CommitGraph {
      * its first parent.
      */
     private static Set<Sha> broughtIn(Commit merge, Map<Sha, Commit> bySha) {
-        return reachable(merge.parents().drop(1), bySha).removeAll(reachable(merge.parents().take(1), bySha));
+        return reachable(merge.parents().drop(1), bySha)
+                .removeAll(reachable(merge.parents().take(1), bySha));
     }
 
     private static Set<Sha> reachable(List<Sha> from, Map<Sha, Commit> bySha) {
@@ -83,14 +82,12 @@ public final class CommitGraph {
      * @param depth        in how many merged branches the commit is
      * @param closesBranch whether it is the last commit of the (innermost) branch it is in
      */
-    public record Node(Commit commit, int depth, boolean closesBranch) {
-    }
+    public record Node(Commit commit, int depth, boolean closesBranch) {}
 
     /**
      * The shas placed so far, and the commits in the order they were placed, last placed first.
      */
-    private record Placed(Set<Sha> shas, List<Commit> latestFirst) {
-    }
+    private record Placed(Set<Sha> shas, List<Commit> latestFirst) {}
 
     /**
      * A depth-first walk through the parents: the shas still to visit, and those visited.
@@ -98,7 +95,8 @@ public final class CommitGraph {
     private record Walk(List<Sha> todo, Set<Sha> seen) {
 
         Walk step(Map<Sha, Commit> bySha) {
-            return todo.pop2Option().map(next -> bySha.get(next._1)
+            return todo.pop2Option()
+                    .map(next -> bySha.get(next._1)
                             .filter(commit -> !seen.contains(next._1))
                             .map(commit -> new Walk(next._2.prependAll(commit.parents()), seen.add(next._1)))
                             .getOrElse(() -> new Walk(next._2, seen)))

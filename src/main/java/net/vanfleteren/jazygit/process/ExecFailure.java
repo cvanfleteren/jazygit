@@ -10,18 +10,14 @@ public sealed interface ExecFailure {
     /**
      * The program could not be started, e.g. because it is not installed.
      */
-    record NotStarted(IOException cause) implements ExecFailure {
-    }
+    record NotStarted(IOException cause) implements ExecFailure {}
 
-    record TimedOut() implements ExecFailure {
-    }
+    record TimedOut() implements ExecFailure {}
 
-    record Interrupted() implements ExecFailure {
-    }
+    record Interrupted() implements ExecFailure {}
 
     /**
      * The program ran, and exited with a non-zero code.
      */
-    record NonZero(int exitCode, String stderr, String stdout) implements ExecFailure {
-    }
+    record NonZero(int exitCode, String stderr, String stdout) implements ExecFailure {}
 }

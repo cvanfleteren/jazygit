@@ -15,24 +15,19 @@ public sealed interface PushMsg extends Msg {
     /**
      * The user asked to push a branch.
      */
-    record Requested(Branch.Name branch) implements PushMsg {
-    }
+    record Requested(Branch.Name branch) implements PushMsg {}
 
-    record ForceCancelled() implements PushMsg {
-    }
+    record ForceCancelled() implements PushMsg {}
 
-    record UpstreamCancelled() implements PushMsg {
-    }
+    record UpstreamCancelled() implements PushMsg {}
 
     /**
      * The user entered the upstream of a branch without one, as {@code <remote> <branch>}.
      */
-    record UpstreamConfirmed(String upstream) implements PushMsg {
-    }
+    record UpstreamConfirmed(String upstream) implements PushMsg {}
 
     /**
      * The user confirmed overwriting the diverged remote branch.
      */
-    record ForceConfirmed() implements PushMsg {
-    }
+    record ForceConfirmed() implements PushMsg {}
 }

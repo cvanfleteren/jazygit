@@ -9,6 +9,7 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.util.ArrayList;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Model;
@@ -19,53 +20,69 @@ import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-
 /**
  * The popup asking how to rebase the checked out branch.
  */
 class ThemeDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final ChoiceDialog<ThemePopup> dialog = new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(ThemeDialog.SPEC, dispatched::add);
-    private final Model open = Update.update(TestModels.loaded(new SampleData()),
-            new ThemeMsg.Requested()).model();
+    private final ChoiceDialog<ThemePopup> dialog =
+            new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(ThemeDialog.SPEC, dispatched::add);
+    private final Model open = Update.update(TestModels.loaded(new SampleData()), new ThemeMsg.Requested())
+            .model();
 
     @Test
     void lettersChooseATheme() throws Exception {
-        assertEquals(List.of(new ThemeMsg.Chosen(ThemeName.DARK)), pressing(r -> r.pilot().press('d')));
+        assertEquals(
+                List.of(new ThemeMsg.Chosen(ThemeName.DARK)),
+                pressing(r -> r.pilot().press('d')));
         dispatched.clear();
-        assertEquals(List.of(new ThemeMsg.Chosen(ThemeName.LIGHT)), pressing(r -> r.pilot().press('l')));
+        assertEquals(
+                List.of(new ThemeMsg.Chosen(ThemeName.LIGHT)),
+                pressing(r -> r.pilot().press('l')));
         dispatched.clear();
-        assertEquals(List.of(new ThemeMsg.Chosen(ThemeName.DARCULA)), pressing(r -> r.pilot().press('a')));
+        assertEquals(
+                List.of(new ThemeMsg.Chosen(ThemeName.DARCULA)),
+                pressing(r -> r.pilot().press('a')));
         dispatched.clear();
-        assertEquals(List.of(new ThemeMsg.Chosen(ThemeName.DARK_COLORBLIND)), pressing(r -> r.pilot().press('b')));
+        assertEquals(
+                List.of(new ThemeMsg.Chosen(ThemeName.DARK_COLORBLIND)),
+                pressing(r -> r.pilot().press('b')));
         dispatched.clear();
-        assertEquals(List.of(new ThemeMsg.Chosen(ThemeName.MONO)), pressing(r -> r.pilot().press('m')));
+        assertEquals(
+                List.of(new ThemeMsg.Chosen(ThemeName.MONO)),
+                pressing(r -> r.pilot().press('m')));
     }
 
     @Test
     void arrowsAndEnterChooseTheSelectedLine() throws Exception {
-        assertEquals(List.of(new ThemeMsg.Previewed(ThemeName.LIGHT), new ThemeMsg.Chosen(ThemeName.LIGHT)), pressing(r -> {
-            r.pilot().press(KeyCode.DOWN);
-            r.pilot().press(KeyCode.ENTER);
-        }));
+        assertEquals(
+                List.of(new ThemeMsg.Previewed(ThemeName.LIGHT), new ThemeMsg.Chosen(ThemeName.LIGHT)), pressing(r -> {
+                    r.pilot().press(KeyCode.DOWN);
+                    r.pilot().press(KeyCode.ENTER);
+                }));
     }
 
     @Test
     void highlightingAThemePreviewsIt() throws Exception {
-        assertEquals(List.of(new ThemeMsg.Previewed(ThemeName.LIGHT), new ThemeMsg.Previewed(ThemeName.DARCULA),
-                new ThemeMsg.Previewed(ThemeName.LIGHT)), pressing(r -> {
-            r.pilot().press(KeyCode.DOWN);
-            r.pilot().press(KeyCode.DOWN);
-            r.pilot().press(KeyCode.UP);
-        }));
+        assertEquals(
+                List.of(
+                        new ThemeMsg.Previewed(ThemeName.LIGHT),
+                        new ThemeMsg.Previewed(ThemeName.DARCULA),
+                        new ThemeMsg.Previewed(ThemeName.LIGHT)),
+                pressing(r -> {
+                    r.pilot().press(KeyCode.DOWN);
+                    r.pilot().press(KeyCode.DOWN);
+                    r.pilot().press(KeyCode.UP);
+                }));
     }
 
     @Test
     void opensAtTheThemeInUse() throws Exception {
-        Model light = Update.update(TestModels.loaded(new SampleData()).withThemeOverride(Option.of(ThemeName.LIGHT)),
-                new ThemeMsg.Requested()).model();
+        Model light = Update.update(
+                        TestModels.loaded(new SampleData()).withThemeOverride(Option.of(ThemeName.LIGHT)),
+                        new ThemeMsg.Requested())
+                .model();
 
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(light))) {
             runner.runner().focusManager().setFocus(ThemeDialog.SPEC.id());
@@ -75,7 +92,8 @@ class ThemeDialogTest {
             runner.pilot().pause();
         }
 
-        assertEquals(List.of(new ThemeMsg.Previewed(ThemeName.DARCULA), new ThemeMsg.Chosen(ThemeName.DARCULA)),
+        assertEquals(
+                List.of(new ThemeMsg.Previewed(ThemeName.DARCULA), new ThemeMsg.Chosen(ThemeName.DARCULA)),
                 List.ofAll(dispatched));
     }
 

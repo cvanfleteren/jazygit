@@ -11,13 +11,18 @@ import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
  */
 public final class DiscardDialog {
 
-    public static final ChoiceDialog.Spec<DiscardPopup> SPEC = new ChoiceDialog.Spec<>("discard", DiscardPopup.class,
+    public static final ChoiceDialog.Spec<DiscardPopup> SPEC = new ChoiceDialog.Spec<>(
+            "discard",
+            DiscardPopup.class,
             popup -> Messages.get("dialog.discard.title"),
-            List.of(new Choice<>('x', "dialog.discard.all", () -> new DiscardMsg.Chosen(Scope.ALL)),
-                    new Choice<>('u', "dialog.discard.unstaged", () -> new DiscardMsg.Chosen(Scope.UNSTAGED),
+            List.of(
+                    new Choice<>('x', "dialog.discard.all", () -> new DiscardMsg.Chosen(Scope.ALL)),
+                    new Choice<>(
+                            'u',
+                            "dialog.discard.unstaged",
+                            () -> new DiscardMsg.Chosen(Scope.UNSTAGED),
                             (model, popup) -> popup.hasUnstaged())),
             DiscardMsg.Cancelled::new);
 
-    private DiscardDialog() {
-    }
+    private DiscardDialog() {}
 }

@@ -3,13 +3,12 @@ package net.vanfleteren.jazygit.git;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.nio.file.Path;
+import java.util.function.Function;
 import net.vanfleteren.jazygit.git.GitError.*;
 import net.vanfleteren.jazygit.process.Exec;
 import net.vanfleteren.jazygit.process.ExecFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-
-import java.nio.file.Path;
-import java.util.function.Function;
 
 /**
  * Runs {@link GitCommand}s through the {@code git} command line tool, with {@link Exec}. The only place that
@@ -17,8 +16,7 @@ import java.util.function.Function;
  */
 final class GitProcess {
 
-    private GitProcess() {
-    }
+    private GitProcess() {}
 
     /**
      * Runs {@code command} in {@code workTree}. A non-zero exit code is a {@link CommandFailed}.
@@ -37,8 +35,8 @@ final class GitProcess {
     /**
      * Runs {@code command} to read something, which {@code parse} makes of its output. Reads are not logged.
      */
-    static <T> Either<ProcessError, T> read(Path workTree, GitCommand command,
-                                            Function<String, Either<UnexpectedOutput, T>> parse) {
+    static <T> Either<ProcessError, T> read(
+            Path workTree, GitCommand command, Function<String, Either<UnexpectedOutput, T>> parse) {
         return execute(workTree, command).flatMap(output -> Either.narrow(parse.apply(output.stdout())));
     }
 
@@ -47,11 +45,12 @@ final class GitProcess {
      * {@code git diff --quiet} or {@code git config --get} for a key that is not set. That answer is none.
      */
     static Either<GitFailure<ProcessError>, Option<Output>> ask(Path workTree, GitCommand command) {
-        return run(workTree, command).fold(
-                failure -> failure.error() instanceof CommandFailed failed && failed.silent()
-                        ? Either.right(Option.none())
-                        : Either.left(failure),
-                output -> Either.right(Option.of(output)));
+        return run(workTree, command)
+                .fold(
+                        failure -> failure.error() instanceof CommandFailed failed && failed.silent()
+                                ? Either.right(Option.none())
+                                : Either.left(failure),
+                        output -> Either.right(Option.of(output)));
     }
 
     private static Either<ProcessError, Output> execute(Path workTree, GitCommand command) {
@@ -61,7 +60,7 @@ final class GitProcess {
                     case ExecFailure.TimedOut() -> new TimedOut(command.operation(), workTree);
                     case ExecFailure.Interrupted() -> new Interrupted(command.operation());
                     case ExecFailure.NonZero(int exitCode, String stderr, String stdout) ->
-                            new CommandFailed(Exec.explanation(stderr, stdout), exitCode, stderr);
+                        new CommandFailed(Exec.explanation(stderr, stdout), exitCode, stderr);
                 })
                 .map(stdout -> new Output(stdout, command.executed()));
     }

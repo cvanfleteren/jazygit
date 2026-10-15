@@ -11,8 +11,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
  */
 public final class BranchesTabUpdate {
 
-    private BranchesTabUpdate() {
-    }
+    private BranchesTabUpdate() {}
 
     public static Next update(Model model, BranchesTabMsg msg) {
         return switch (msg) {

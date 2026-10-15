@@ -2,6 +2,10 @@ package net.vanfleteren.jazygit.feature.discard;
 
 import static net.vanfleteren.jazygit.state.TestModels.errorText;
 import static net.vanfleteren.jazygit.state.TestModels.failed;
+import static net.vanfleteren.jazygit.state.TestModels.loaded;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.discard.DiscardCmd.Discard;
@@ -10,13 +14,9 @@ import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
-
-import static net.vanfleteren.jazygit.state.TestModels.loaded;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DiscardUpdateTest {
 
@@ -38,7 +38,11 @@ class DiscardUpdateTest {
 
     @Test
     void requestWithoutFilesDoesNothing() {
-        assertEquals(Option.none(), Update.update(loaded(), new DiscardMsg.Requested(List.of())).model().popup());
+        assertEquals(
+                Option.none(),
+                Update.update(loaded(), new DiscardMsg.Requested(List.of()))
+                        .model()
+                        .popup());
     }
 
     @Test
@@ -53,7 +57,8 @@ class DiscardUpdateTest {
 
     @Test
     void discardingEverythingResetsTrackedFilesToHeadAndRemovesTheRest() {
-        assertEquals(new DiscardPlan(
+        assertEquals(
+                new DiscardPlan(
                         List.of("dir/untracked.txt"),
                         List.of(),
                         List.of("unstaged.txt", "staged.txt", "both.txt"),
@@ -63,7 +68,8 @@ class DiscardUpdateTest {
 
     @Test
     void discardingUnstagedChangesKeepsWhatIsStaged() {
-        assertEquals(new DiscardPlan(
+        assertEquals(
+                new DiscardPlan(
                         List.of("dir/untracked.txt"),
                         List.of("unstaged.txt", "both.txt", "edited-new.txt"),
                         List.of(),
@@ -75,15 +81,18 @@ class DiscardUpdateTest {
     void discardingARenameRemovesItAndRestoresItsOrigin() {
         List<FileEntry> renamed = List.of(FileEntry.renamed("b.txt", "a.txt", true, true));
 
-        assertEquals(new DiscardPlan(List.of(), List.of(), List.of("a.txt"), List.of("b.txt")),
+        assertEquals(
+                new DiscardPlan(List.of(), List.of(), List.of("a.txt"), List.of("b.txt")),
                 DiscardUpdate.plan(renamed, Scope.ALL));
-        assertEquals(new DiscardPlan(List.of(), List.of("b.txt"), List.of(), List.of()),
+        assertEquals(
+                new DiscardPlan(List.of(), List.of("b.txt"), List.of(), List.of()),
                 DiscardUpdate.plan(renamed, Scope.UNSTAGED));
     }
 
     @Test
     void choosingStartsTheDiscardAndClosesThePopup() {
-        Model open = Update.update(loaded(), new DiscardMsg.Requested(List.of(UNSTAGED_MOD))).model();
+        Model open = Update.update(loaded(), new DiscardMsg.Requested(List.of(UNSTAGED_MOD)))
+                .model();
 
         Next next = Update.update(open, new DiscardMsg.Chosen(Scope.ALL));
 
@@ -93,7 +102,8 @@ class DiscardUpdateTest {
 
     @Test
     void choosingUnstagedWithNoUnstagedChangesDoesNothing() {
-        Model open = Update.update(loaded(), new DiscardMsg.Requested(List.of(STAGED_MOD))).model();
+        Model open = Update.update(loaded(), new DiscardMsg.Requested(List.of(STAGED_MOD)))
+                .model();
 
         Next next = Update.update(open, new DiscardMsg.Chosen(Scope.UNSTAGED));
 
@@ -103,12 +113,16 @@ class DiscardUpdateTest {
 
     @Test
     void choosingWithoutAnOpenPopupDoesNothing() {
-        assertEquals(List.of(), Update.update(loaded(), new DiscardMsg.Chosen(Scope.ALL)).cmds());
+        assertEquals(
+                List.of(),
+                Update.update(loaded(), new DiscardMsg.Chosen(Scope.ALL)).cmds());
     }
 
     @Test
     void aFailureIsStoredAsAnError() {
-        Next next = Update.update(loaded(), failed(new DiscardCmd.Discard(new DiscardPlan(List.of(), List.of(), List.of(), List.of())), "boom"));
+        Next next = Update.update(
+                loaded(),
+                failed(new DiscardCmd.Discard(new DiscardPlan(List.of(), List.of(), List.of(), List.of())), "boom"));
 
         assertEquals(Option.of("Discarding changes failed: boom"), errorText(next.model()));
     }

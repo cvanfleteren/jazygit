@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.control.Option;
-
 import java.util.function.Function;
 
 /**
@@ -43,12 +42,9 @@ public sealed interface Loadable<T> {
         return toOption().contains(value) ? this : new Loaded<>(value);
     }
 
-    record Loading<T>() implements Loadable<T> {
-    }
+    record Loading<T>() implements Loadable<T> {}
 
-    record Loaded<T>(T value) implements Loadable<T> {
-    }
+    record Loaded<T>(T value) implements Loadable<T> {}
 
-    record Failed<T>(Failure failure) implements Loadable<T> {
-    }
+    record Failed<T>(Failure failure) implements Loadable<T> {}
 }

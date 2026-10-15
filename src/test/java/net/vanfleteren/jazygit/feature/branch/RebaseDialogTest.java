@@ -8,6 +8,7 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
+import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Model;
@@ -18,17 +19,18 @@ import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-
 /**
  * The popup asking how to rebase the checked out branch.
  */
 class RebaseDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final ChoiceDialog<RebasePopup> dialog = new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(BranchDialogs.REBASE, dispatched::add);
-    private final Model open = Update.update(TestModels.loaded(new SampleData()),
-            new RebaseMsg.Requested(new Branch.Name("feature/initial-layout"))).model();
+    private final ChoiceDialog<RebasePopup> dialog =
+            new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(BranchDialogs.REBASE, dispatched::add);
+    private final Model open = Update.update(
+                    TestModels.loaded(new SampleData()),
+                    new RebaseMsg.Requested(new Branch.Name("feature/initial-layout")))
+            .model();
 
     @Test
     void sChoosesASimpleRebase() throws Exception {

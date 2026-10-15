@@ -4,9 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.Map;
-import org.junit.jupiter.api.Test;
-
 import java.nio.file.Path;
+import org.junit.jupiter.api.Test;
 
 class SettingsPathsTest {
 
@@ -18,8 +17,7 @@ class SettingsPathsTest {
 
     @Test
     void linuxUsesTheXdgConfigHome() {
-        assertEquals(Path.of("/xdg/jazygit/config.toml"),
-                configFile("Linux", HashMap.of("XDG_CONFIG_HOME", "/xdg")));
+        assertEquals(Path.of("/xdg/jazygit/config.toml"), configFile("Linux", HashMap.of("XDG_CONFIG_HOME", "/xdg")));
     }
 
     @Test
@@ -37,33 +35,36 @@ class SettingsPathsTest {
 
     @Test
     void macOsUsesApplicationSupport() {
-        assertEquals(Path.of("/home/ada/Library/Application Support/jazygit/config.toml"),
+        assertEquals(
+                Path.of("/home/ada/Library/Application Support/jazygit/config.toml"),
                 configFile("Mac OS X", HashMap.empty()));
     }
 
     @Test
     void macOsUsesTheXdgConfigHomeWhenItIsSet() {
-        assertEquals(Path.of("/xdg/jazygit/config.toml"),
-                configFile("Mac OS X", HashMap.of("XDG_CONFIG_HOME", "/xdg")));
+        assertEquals(
+                Path.of("/xdg/jazygit/config.toml"), configFile("Mac OS X", HashMap.of("XDG_CONFIG_HOME", "/xdg")));
     }
 
     @Test
     void windowsUsesAppData() {
-        assertEquals(Path.of("C:\\Users\\ada\\AppData\\Roaming", "jazygit", "config.toml"),
-                configFile("Windows 11", HashMap.of("APPDATA", "C:\\Users\\ada\\AppData\\Roaming",
-                        "XDG_CONFIG_HOME", "/xdg")));
+        assertEquals(
+                Path.of("C:\\Users\\ada\\AppData\\Roaming", "jazygit", "config.toml"),
+                configFile(
+                        "Windows 11",
+                        HashMap.of("APPDATA", "C:\\Users\\ada\\AppData\\Roaming", "XDG_CONFIG_HOME", "/xdg")));
     }
 
     @Test
     void windowsWithoutAppDataUsesTheRoamingFolderInTheHome() {
-        assertEquals(Path.of("/home/ada/AppData/Roaming/jazygit/config.toml"),
-                configFile("Windows 11", HashMap.empty()));
+        assertEquals(
+                Path.of("/home/ada/AppData/Roaming/jazygit/config.toml"), configFile("Windows 11", HashMap.empty()));
     }
 
     @Test
     void theOverrideWinsEverywhere() {
-        Map<String, String> env = HashMap.of("JAZYGIT_CONFIG_DIR", "/mine", "XDG_CONFIG_HOME", "/xdg",
-                "APPDATA", "C:\\AppData");
+        Map<String, String> env =
+                HashMap.of("JAZYGIT_CONFIG_DIR", "/mine", "XDG_CONFIG_HOME", "/xdg", "APPDATA", "C:\\AppData");
 
         assertEquals(Path.of("/mine/config.toml"), configFile("Linux", env));
         assertEquals(Path.of("/mine/config.toml"), configFile("Mac OS X", env));
@@ -76,7 +77,8 @@ class SettingsPathsTest {
 
     @Test
     void theStateIsInTheXdgStateHomeOnLinux() {
-        assertEquals(Path.of("/xdg-state/jazygit/state.toml"),
+        assertEquals(
+                Path.of("/xdg-state/jazygit/state.toml"),
                 stateFile("Linux", HashMap.of("XDG_STATE_HOME", "/xdg-state", "XDG_CONFIG_HOME", "/xdg")));
     }
 
@@ -90,21 +92,23 @@ class SettingsPathsTest {
 
     @Test
     void theStateIsInApplicationSupportOnMacOs() {
-        assertEquals(Path.of("/home/ada/Library/Application Support/jazygit/state.toml"),
+        assertEquals(
+                Path.of("/home/ada/Library/Application Support/jazygit/state.toml"),
                 stateFile("Mac OS X", HashMap.empty()));
     }
 
     @Test
     void theStateIsInTheLocalAppDataOnWindows() {
-        assertEquals(Path.of("C:\\Users\\ada\\AppData\\Local", "jazygit", "state.toml"),
+        assertEquals(
+                Path.of("C:\\Users\\ada\\AppData\\Local", "jazygit", "state.toml"),
                 stateFile("Windows 11", HashMap.of("LOCALAPPDATA", "C:\\Users\\ada\\AppData\\Local")));
         assertEquals(Path.of("/home/ada/AppData/Local/jazygit/state.toml"), stateFile("Windows 11", HashMap.empty()));
     }
 
     @Test
     void theStateOverrideWinsEverywhere() {
-        Map<String, String> env = HashMap.of("JAZYGIT_STATE_DIR", "/mine", "XDG_STATE_HOME", "/xdg",
-                "LOCALAPPDATA", "C:\\AppData");
+        Map<String, String> env =
+                HashMap.of("JAZYGIT_STATE_DIR", "/mine", "XDG_STATE_HOME", "/xdg", "LOCALAPPDATA", "C:\\AppData");
 
         assertEquals(Path.of("/mine/state.toml"), stateFile("Linux", env));
         assertEquals(Path.of("/mine/state.toml"), stateFile("Mac OS X", env));

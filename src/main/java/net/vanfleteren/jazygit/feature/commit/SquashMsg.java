@@ -15,12 +15,9 @@ public sealed interface SquashMsg extends Msg {
     /**
      * The user asked to squash the commit {@code sha} into the one below it.
      */
-    record Requested(Sha sha) implements SquashMsg {
-    }
+    record Requested(Sha sha) implements SquashMsg {}
 
-    record Cancelled() implements SquashMsg {
-    }
+    record Cancelled() implements SquashMsg {}
 
-    record Confirmed() implements SquashMsg {
-    }
+    record Confirmed() implements SquashMsg {}
 }

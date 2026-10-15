@@ -1,15 +1,14 @@
 package net.vanfleteren.jazygit.git;
 
+import static net.vanfleteren.jazygit.git.GitCommand.git;
+
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.*;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-
-import java.nio.file.Path;
-
-import static net.vanfleteren.jazygit.git.GitCommand.git;
 
 /**
  * Checks out branches through the {@code git checkout} command line tool, so the working tree is
@@ -23,8 +22,7 @@ final class CliCheckout {
     private static final String LOCAL_CHANGES =
             "Your local changes to the following files would be overwritten by checkout";
 
-    private CliCheckout() {
-    }
+    private CliCheckout() {}
 
     /**
      * Runs {@code git checkout <branch>} in {@code workTree}.
@@ -50,12 +48,14 @@ final class CliCheckout {
      * this method itself; only a conflict while popping on the new branch leaves them in the stash,
      * which is a {@link StashNotRestored}.
      */
-    static Either<GitFailure<StashCheckoutError>, List<ExecutedCommand>> checkoutWithStash(Path workTree, Branch.Name branch) {
-        return GitFailure.<StashCheckoutError, CliStash.Stashed>widen(CliStash.pushQuietly(workTree)).flatMap(stashed ->
-                GitFailure.sequence(
+    static Either<GitFailure<StashCheckoutError>, List<ExecutedCommand>> checkoutWithStash(
+            Path workTree, Branch.Name branch) {
+        return GitFailure.<StashCheckoutError, CliStash.Stashed>widen(CliStash.pushQuietly(workTree))
+                .flatMap(stashed -> GitFailure.sequence(
                         () -> Either.right(stashed.commands()),
-                        () -> GitFailure.<StashCheckoutError, List<ExecutedCommand>>widen(checkout(workTree, branch)).mapLeft(failure ->
-                                stashed.any() ? failure.followedBy(CliStash.popQuietly(workTree)) : failure),
+                        () -> GitFailure.<StashCheckoutError, List<ExecutedCommand>>widen(checkout(workTree, branch))
+                                .mapLeft(failure ->
+                                        stashed.any() ? failure.followedBy(CliStash.popQuietly(workTree)) : failure),
                         () -> stashed.any() ? restore(workTree) : GitFailure.nothing()));
     }
 
@@ -70,8 +70,8 @@ final class CliCheckout {
      * Runs {@code git checkout -b <name> <startPoint>} in {@code workTree}: creates the branch at
      * {@code startPoint} and switches to it.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(Path workTree, Branch.Name name,
-                                                                                     String startPoint) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(
+            Path workTree, Branch.Name name, String startPoint) {
         return GitProcess.log(workTree, git("checkout", "--quiet", "-b", name.value(), startPoint, "--"));
     }
 
@@ -79,9 +79,17 @@ final class CliCheckout {
      * Runs {@code git checkout --track -b <name> <remote-tracking ref>} in {@code workTree}: creates the branch
      * at the remote-tracking branch of {@code upstream}, following it, and checks it out.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewTrackingBranch(Path workTree, Branch.Name name,
-                                                                                             RemoteBranch upstream) {
-        return GitProcess.log(workTree, git("checkout", "--quiet", "--track", "-b", name.value(),
-                Refs.remote(upstream.remote(), upstream.branch()), "--"));
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewTrackingBranch(
+            Path workTree, Branch.Name name, RemoteBranch upstream) {
+        return GitProcess.log(
+                workTree,
+                git(
+                        "checkout",
+                        "--quiet",
+                        "--track",
+                        "-b",
+                        name.value(),
+                        Refs.remote(upstream.remote(), upstream.branch()),
+                        "--"));
     }
 }

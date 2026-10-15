@@ -19,21 +19,22 @@ import net.vanfleteren.jazygit.state.Update.Next;
  */
 public final class CheckoutUpdate {
 
-    private CheckoutUpdate() {
-    }
+    private CheckoutUpdate() {}
 
     public static Next update(Model model, CheckoutMsg msg) {
         return switch (msg) {
             case Requested(Branch.Name branch) -> requested(model, branch);
             case RemoteRequested(RemoteBranch branch) -> remoteRequested(model, branch);
             // The checkout ran, and failed; the stash it needs is offered instead of the failure.
-            case NeedsStash(var cmd, var commands) -> Update.refresh(OperationUpdate.done(model, cmd, commands)
-                    .openPopupIfFree(new StashCheckoutPopup(cmd.branch())));
+            case NeedsStash(var cmd, var commands) ->
+                Update.refresh(OperationUpdate.done(model, cmd, commands)
+                        .openPopupIfFree(new StashCheckoutPopup(cmd.branch())));
             case CheckedOut(var cmd, var commands) ->
-                    OperationUpdate.succeeded(model.withBranchesTab(BranchesTab.LOCAL), cmd, commands);
+                OperationUpdate.succeeded(model.withBranchesTab(BranchesTab.LOCAL), cmd, commands);
             case StashCancelled() -> Next.of(model.withoutPopup(StashCheckoutPopup.class));
-            case StashConfirmed() -> Update.confirm(model, StashCheckoutPopup.class,
-                    popup -> Option.of(new CheckoutWithStash(popup.branch())));
+            case StashConfirmed() ->
+                Update.confirm(
+                        model, StashCheckoutPopup.class, popup -> Option.of(new CheckoutWithStash(popup.branch())));
         };
     }
 
@@ -53,6 +54,8 @@ public final class CheckoutUpdate {
     }
 
     private static Next requested(Model model, Branch.Name branch) {
-        return Branches.isOtherIdleBranch(model, branch) ? Update.start(model.clearError(), new Checkout(branch)) : Next.of(model);
+        return Branches.isOtherIdleBranch(model, branch)
+                ? Update.start(model.clearError(), new Checkout(branch))
+                : Next.of(model);
     }
 }

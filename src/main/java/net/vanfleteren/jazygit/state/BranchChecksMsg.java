@@ -10,9 +10,7 @@ public sealed interface BranchChecksMsg extends Msg {
         return BranchChecksUpdate.update(model, this);
     }
 
-    record Loaded(GitHubChecks checks) implements BranchChecksMsg {
-    }
+    record Loaded(GitHubChecks checks) implements BranchChecksMsg {}
 
-    record LoadFailed(Failure failure) implements BranchChecksMsg {
-    }
+    record LoadFailed(Failure failure) implements BranchChecksMsg {}
 }

@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.settings;
 
 import io.vavr.collection.List;
 import io.vavr.control.Try;
-
 import java.nio.file.Path;
 
 /**
@@ -38,14 +37,6 @@ public interface RecentRepositories {
     };
 
     /**
-     * {@code recent} after the repository at {@code workTree} was opened: it comes first, once, and the ones
-     * opened longest ago drop off past {@link #MAX}.
-     */
-    static List<Path> opened(List<Path> recent, Path workTree) {
-        return recent.remove(workTree).prepend(workTree).take(MAX);
-    }
-
-    /**
      * The recent repositories, the last one opened first; none when they cannot be read.
      */
     List<Path> load();
@@ -54,6 +45,14 @@ public interface RecentRepositories {
      * Keeps that the repository at {@code workTree} was opened just now, and gives the recent repositories then.
      */
     Try<List<Path>> opened(Path workTree);
+
+    /**
+     * {@code recent} after the repository at {@code workTree} was opened: it comes first, once, and the ones
+     * opened longest ago drop off past {@link #MAX}.
+     */
+    static List<Path> opened(List<Path> recent, Path workTree) {
+        return recent.remove(workTree).prepend(workTree).take(MAX);
+    }
 
     /**
      * Drops {@code workTrees}, which are no repositories anymore, and gives the recent repositories then.
