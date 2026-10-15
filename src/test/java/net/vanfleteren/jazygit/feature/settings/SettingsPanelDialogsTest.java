@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.settings;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -62,7 +63,7 @@ class SettingsPanelDialogsTest {
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view)) {
             String screen = RenderedText.ofLarge(runner, () -> view);
             assertTrue(screen.contains("(g) gh executable: /opt/gh (reading…)"), screen);
-            assertTrue(screen.contains("(a) GitHub account for this repository: reading…"), screen);
+            assertTrue(screen.contains("(a) Account for this repository: reading…"), screen);
         }
     }
 
@@ -76,7 +77,36 @@ class SettingsPanelDialogsTest {
             String screen = RenderedText.ofLarge(runner, () -> view);
             assertTrue(screen.contains("(g) gh executable: gh on the PATH (2.102.0)"), screen);
             assertTrue(screen.contains("(t) Theme: darcula"), screen);
-            assertTrue(screen.contains("(a) GitHub account for this repository on github.com: ⚠ alice-work"), screen);
+            assertTrue(screen.contains("(a) Account for this repository on github.com: ⚠ alice-work"), screen);
+            List<String> lines = List.of(screen.split("\n")).map(String::strip);
+            assertEquals(List.of("Appearance", "(t)", "", "GitHub", "(g)", "(a)", "", "(c)"),
+                    lines.dropWhile(line -> !line.contains("Appearance")).take(8)
+                            .map(line -> line.replaceAll("^│", "").strip())
+                            .map(line -> line.startsWith("(") ? line.substring(0, 3) : line.replaceAll("│$", "").strip()));
         }
+    }
+
+    @Test
+    void theArrowsSkipTheHeadings() throws Exception {
+        java.util.List<Msg> dispatched = new ArrayList<>();
+        ChoiceDialog<SettingsPanelPopup> dialog = new ChoiceDialog<>(SettingsPanelDialogs.PANEL, dispatched::add);
+        SettingsPanelPopup popup = new SettingsPanelPopup(ThemeName.DARK, Option.none(), Option.of(setup(Option.none())));
+        Element view = stack(text("background"), dialog.render(TestModels.loaded().openPopup(popup)).get());
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view)) {
+            runner.runner().focusManager().setFocus(SettingsPanelDialogs.PANEL.id());
+            RenderedText.of(runner, () -> view);
+            runner.pilot().press(KeyCode.DOWN);
+            runner.pilot().press(KeyCode.DOWN);
+            runner.pilot().press(KeyCode.ENTER);
+            runner.pilot().press(KeyCode.UP);
+            runner.pilot().press(KeyCode.UP);
+            runner.pilot().press(KeyCode.UP);
+            runner.pilot().press(KeyCode.ENTER);
+            runner.pilot().pause();
+        }
+
+        assertEquals(List.of(new SettingsPanelMsg.AccountRequested(), new SettingsPanelMsg.ThemeRequested()),
+                List.ofAll(dispatched));
     }
 }

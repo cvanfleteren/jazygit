@@ -30,8 +30,17 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
      * @param label    its text, given the open popup
      * @param msg      the message for choosing it
      * @param enabled  whether it applies, given the model and the open popup
+     * @param heading  the message key of the heading it starts a group of options under, if any
      */
-    public record Choice<P>(char key, Function<P, String> label, Supplier<Msg> msg, BiPredicate<Model, P> enabled) {
+    public record Choice<P>(char key, Function<P, String> label, Supplier<Msg> msg, BiPredicate<Model, P> enabled,
+                            Option<String> heading) {
+
+        /**
+         * An option with a text that depends on the popup, without a heading.
+         */
+        public Choice(char key, Function<P, String> label, Supplier<Msg> msg, BiPredicate<Model, P> enabled) {
+            this(key, label, msg, enabled, Option.none());
+        }
 
         /**
          * An option with a fixed text, given by its message key.
@@ -53,6 +62,13 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
         public Choice(char key, Function<P, String> label, Supplier<Msg> msg) {
             this(key, label, msg, (model, popup) -> true);
         }
+
+        /**
+         * This option, starting a group of options under the heading with the message key {@code headingKey}.
+         */
+        public Choice<P> withHeading(String headingKey) {
+            return new Choice<>(key, label, msg, enabled, Option.of(headingKey));
+        }
     }
 
     /**
@@ -63,9 +79,18 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
      * @param title     the title, from the popup
      * @param choices   the options, in order; a cancel option is added after them
      * @param onCancel  the message for cancelling, by the cancel option or by Escape
+     * @param minWidth  the width it takes at least, borders included, so it does not grow as the options change
      */
     public record Spec<P>(String id, Class<P> popupType, Function<P, String> title, List<Choice<P>> choices,
-                          Supplier<Msg> onCancel) {
+                          Supplier<Msg> onCancel, int minWidth) {
+
+        /**
+         * A dialog as wide as a list, or its widest option.
+         */
+        public Spec(String id, Class<P> popupType, Function<P, String> title, List<Choice<P>> choices,
+                    Supplier<Msg> onCancel) {
+            this(id, popupType, title, choices, onCancel, DialogFrame.LIST_WIDTH);
+        }
     }
 
     private final Spec<P> spec;
@@ -91,7 +116,7 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
     public Option<Element> render(Model model) {
         return model.popup(spec.popupType()).map(popup -> {
             StyledElement<?> rows = list.render(model, popup);
-            return DialogFrame.withHint(spec.title().apply(popup), Math.max(DialogFrame.LIST_WIDTH, list.width() + DialogFrame.FRAME),
+            return DialogFrame.withHint(spec.title().apply(popup), Math.max(spec.minWidth(), list.width() + DialogFrame.FRAME),
                     "dialog.hint.selectCancel", List.of(rows));
         });
     }

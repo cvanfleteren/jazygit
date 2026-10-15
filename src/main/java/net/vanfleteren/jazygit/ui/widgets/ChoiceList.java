@@ -5,8 +5,10 @@ import static dev.tamboui.toolkit.Toolkit.*;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.tui.bindings.Actions;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
+import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -22,7 +24,7 @@ import java.util.function.Supplier;
 /**
  * A selectable list of options that ends in a cancel option, for inside a popup. An option is chosen with its
  * letter, or with the arrow keys and Enter; Escape cancels. An option that does not apply is struck through
- * and dimmed, and cannot be chosen.
+ * and dimmed, and cannot be chosen. Options can be grouped under headings, which the arrow keys skip.
  *
  * @param <P> the popup the list is shown in
  */
@@ -36,7 +38,26 @@ public final class ChoiceList<P extends Popup> {
     private record Row(String label, boolean enabled) {
     }
 
+    /**
+     * A line of the list: an option, or the heading of a group of them, or the blank line before one.
+     */
+    private sealed interface Line {
+    }
+
+    /**
+     * @param index the index of the option among the choices
+     */
+    private record OptionLine(int index) implements Line {
+    }
+
+    private record Heading(String text) implements Line {
+    }
+
+    private record Blank() implements Line {
+    }
+
     private final List<Choice<P>> choices;
+    private final List<Line> lines;
     private final Consumer<Msg> dispatch;
     private final ListElement<?> list;
     // What the rows show, as of the last render.
@@ -50,16 +71,37 @@ public final class ChoiceList<P extends Popup> {
      */
     public ChoiceList(String id, List<Choice<P>> choices, Supplier<Msg> onCancel, Consumer<Msg> dispatch) {
         this.choices = choices.append(new Choice<P>(CANCEL_KEY, "dialog.choice.cancel", onCancel));
+        this.lines = lines(this.choices);
         this.dispatch = dispatch;
         this.list = list()
                 .id(id)
                 .focusable()
                 .highlightSymbol("")
                 .onKeyEvent(this::handleKey);
+        list.selected(firstOption());
     }
 
     /**
-     * The list for {@code popup}, one line per option.
+     * The lines that show {@code choices}: a heading starts a group, after a blank line unless it is the first
+     * line; with groups, cancelling comes after a blank line too, so it is in none of them.
+     */
+    private static <P> List<Line> lines(List<Choice<P>> choices) {
+        boolean grouped = choices.exists(choice -> choice.heading().isDefined());
+        return choices.zipWithIndex().flatMap(indexed -> {
+            Choice<P> choice = indexed._1;
+            int index = indexed._2;
+            boolean last = index == choices.size() - 1;
+            List<Line> before = choice.heading()
+                    .map(key -> List.<Line>of(new Heading(Messages.get(key))))
+                    .getOrElse(List.empty())
+                    .prependAll(index > 0 && (choice.heading().isDefined() || grouped && last)
+                            ? List.of(new Blank()) : List.empty());
+            return before.append(new OptionLine(index));
+        });
+    }
+
+    /**
+     * The list for {@code popup}, one line per option and per heading.
      */
     public StyledElement<?> render(Model model, P popup) {
         show(choices.map(choice -> new Row(choice.label().apply(popup), choice.enabled().test(model, popup))));
@@ -70,45 +112,84 @@ public final class ChoiceList<P extends Popup> {
      * How many lines the list takes.
      */
     public int height() {
-        return choices.size();
+        return lines.size();
     }
 
     /**
-     * The width of the widest option, as of the last render, with its letter.
+     * The width of the widest line, as of the last render, with the letter of an option.
      */
     public int width() {
-        return shown.zipWith(choices, (row, choice) -> rowText(choice, row).length()).max().getOrElse(0);
+        return lines.map(this::lineText).map(String::length).max().getOrElse(0);
     }
 
     private void show(List<Row> rows) {
         if (!rows.equals(shown)) {
             shown = rows;
-            list.elements(choices.zipWith(rows, ChoiceList::row).toJavaArray(StyledElement[]::new));
+            list.elements(lines.map(this::element).toJavaArray(StyledElement[]::new));
         }
     }
 
-    private static StyledElement<?> row(Choice<?> choice, Row row) {
-        String text = rowText(choice, row);
-        return row.enabled() ? text(text) : text(text).addClass(Theme.Classes.DISABLED);
+    private StyledElement<?> element(Line line) {
+        return switch (line) {
+            case OptionLine(int index) -> shown.get(index).enabled()
+                    ? text(lineText(line))
+                    : text(lineText(line)).addClass(Theme.Classes.DISABLED);
+            case Heading(String heading) -> text(heading).addClass(Theme.Classes.BOLD);
+            case Blank() -> text("");
+        };
     }
 
-    private static String rowText(Choice<?> choice, Row row) {
-        return Messages.get("dialog.choice.row", String.valueOf(choice.key()), row.label());
+    private String lineText(Line line) {
+        return switch (line) {
+            case OptionLine(int index) -> shown.lift().apply(index)
+                    .map(row -> Messages.get("dialog.choice.row", String.valueOf(choices.get(index).key()), row.label()))
+                    .getOrElse("");
+            case Heading(String heading) -> heading;
+            case Blank() -> "";
+        };
     }
 
     private EventResult handleKey(KeyEvent event) {
+        boolean grouped = lines.exists(line -> !(line instanceof OptionLine));
+        if (grouped && (event.matches(Actions.MOVE_UP) || event.matches(Actions.MOVE_DOWN))) {
+            move(event.matches(Actions.MOVE_UP) ? -1 : 1);
+            return EventResult.HANDLED;
+        }
         Option<Choice<P>> chosen = event.code() == KeyCode.ESCAPE ? Option.of(choices.last())
-                : event.isConfirm() ? choices.lift().apply(Math.clamp(list.selected(), 0, choices.size() - 1))
+                : event.isConfirm() ? selected().map(choices::get)
                 : choices.find(choice -> event.isChar(choice.key()));
         chosen.forEach(this::choose);
         return chosen.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
+    }
+
+    /**
+     * The index of the highlighted option.
+     */
+    private Option<Integer> selected() {
+        return lines.lift().apply(Math.clamp(list.selected(), 0, lines.size() - 1))
+                .flatMap(line -> line instanceof OptionLine(int index) ? Option.of(index) : Option.none());
+    }
+
+    /**
+     * Highlights the next option in {@code direction}, skipping headings and blank lines; stays put at either end.
+     */
+    private void move(int direction) {
+        int from = list.selected();
+        Iterator<Integer> next = direction < 0
+                ? Iterator.iterate(from - 1, i -> i - 1).takeWhile(i -> i >= 0)
+                : Iterator.iterate(from + 1, i -> i + 1).takeWhile(i -> i < lines.size());
+        next.find(i -> lines.get(i) instanceof OptionLine).forEach(list::selected);
+    }
+
+    private int firstOption() {
+        return lines.indexWhere(OptionLine.class::isInstance);
     }
 
     private void choose(Choice<P> choice) {
         // A disabled option is not actionable.
         boolean disabled = shown.lift().apply(choices.indexOf(choice)).exists(row -> !row.enabled());
         if (!disabled) {
-            list.selected(0);
+            list.selected(firstOption());
             dispatch.accept(choice.msg().get());
         }
     }

@@ -15,17 +15,23 @@ import net.vanfleteren.jazygit.ui.widgets.TextInputDialog;
  */
 public final class SettingsPanelDialogs {
 
+    // Wide enough for the usual gh executable and account, so it does not grow once they are read.
+    private static final int WIDTH = 80;
+
     /**
-     * The settings, one per line, each changed by its key.
+     * The settings, one per line under the heading of what they are about, each changed by its key.
      */
     public static final ChoiceDialog.Spec<SettingsPanelPopup> PANEL = new ChoiceDialog.Spec<>("settings",
             SettingsPanelPopup.class, popup -> Messages.get("dialog.settings.title"),
-            List.of(new Choice<>('g', SettingsPanelDialogs::ghExecutable, SettingsPanelMsg.GhExecutableRequested::new),
-                    new Choice<>('t', popup -> Messages.get("dialog.settings.theme",
-                            Messages.get("dialog.theme." + popup.theme().id())), SettingsPanelMsg.ThemeRequested::new),
+            List.of(new Choice<SettingsPanelPopup>('t', popup -> Messages.get("dialog.settings.theme",
+                                    Messages.get("dialog.theme." + popup.theme().id())), SettingsPanelMsg.ThemeRequested::new)
+                            .withHeading("dialog.settings.group.appearance"),
+                    new Choice<SettingsPanelPopup>('g', SettingsPanelDialogs::ghExecutable,
+                            SettingsPanelMsg.GhExecutableRequested::new)
+                            .withHeading("dialog.settings.group.github"),
                     new Choice<>('a', SettingsPanelDialogs::account, SettingsPanelMsg.AccountRequested::new,
                             (model, popup) -> popup.gitHub().exists(gitHub -> gitHub.logins().isRight()))),
-            SettingsPanelMsg.Closed::new);
+            SettingsPanelMsg.Closed::new, WIDTH);
 
     /**
      * Asks which gh executable to run; left empty, the one on the PATH runs.
