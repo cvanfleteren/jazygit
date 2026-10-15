@@ -324,51 +324,17 @@ has its own `XxxMsg`, `XxxUpdate` and popups, and they share `BranchCmd`, `Branc
 classDiagram
     class GitInfoProvider {
         <<interface>>
-    }
-    class GitRead {
-        <<interface>>
         status() Either of ProcessError or RepoStatus
-        branches() Either of ProcessError or branches
         log(branch) Either of LogError or commits
         diff(files) Either of DiffError or Diffs
-        ...
-    }
-    class GitBranches {
-        <<interface>>
         checkout(branch) Either of GitFailure of CheckoutError or commands
-        push(branch, PushMode)
-        deleteBranch(name, DeleteScope)
-        ...
-    }
-    class GitCommits {
-        <<interface>>
-        commit(CommitMessage)
         reword(Sha, CommitMessage) Either of GitFailure of RewordError or commands
-        squash(Sha)
-        ...
-    }
-    class GitIndex {
-        <<interface>>
-    }
-    class GitStash {
-        <<interface>>
         pop(Stash) Either of GitFailure of StashError or commands
         ...
-    }
-    class GitRemotes {
-        <<interface>>
-        remotes()
-        fetch(remote)
     }
     class CliGitInfoProvider {
         +open(Path) Either of OpenError or provider
     }
-    GitInfoProvider --|> GitRead
-    GitInfoProvider --|> GitBranches
-    GitInfoProvider --|> GitCommits
-    GitInfoProvider --|> GitIndex
-    GitInfoProvider --|> GitStash
-    GitInfoProvider --|> GitRemotes
     CliGitInfoProvider ..|> GitInfoProvider
     CliGitInfoProvider ..> CliStatus
     CliGitInfoProvider ..> CliBranches

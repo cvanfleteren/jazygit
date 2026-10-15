@@ -16,14 +16,6 @@ Refactorings that were left out of the functional/immutable cleanup, and why.
   shows. The panels copy the focus (`FilesPanel.focused`, `LoadableList.focused`), and `BranchesPanel` copies
   the busy branches and pull requests, because `LoadableList` builds its rows from the value alone.
 
-## Git layer
-
-- [ ] **Reshape the capability interfaces** so that each one maps onto one `Cli*` class (optional):
-  - `GitRead.branches()` belongs with `GitBranches`;
-  - `GitRead.stashes()` belongs with `GitStash`;
-  - `commits`/`log`/`commitChanges` belong with `GitCommits`;
-  - `GitCommits.commit` and `amendLastCommit` are implemented in `CliIndex`.
-
 ## Smaller items
 
 - [ ] **Telescoping constructors** on `Branch`, `Commit` and `FileEntry` (cleanup only).
@@ -33,10 +25,6 @@ Refactorings that were left out of the functional/immutable cleanup, and why.
 - [ ] **Typed reasons for ignored requests.** Some requests do nothing and don't say why, for example
   squashing a root or merge commit, or deleting the current or a busy branch. They could report an
   `AppError` instead.
-- [ ] **One process layer for git and gh.** `GitProcess` and `GhProcess` turn an `ExecFailure` into their own
-  errors the same way, and `GitError` and `GhError` repeat the same five process failures, which have started
-  to drift (`TimedOut.workTree`, `CommandFailed.says`). A `process.ProcessFailure` that both wrap would share
-  them, at the cost of changing every match on those errors.
 - [ ] **A fetch can run next to another git command.** It runs on its own thread so it doesn't hold up the
   others; git's locks keep the repository intact, but a command that needs a ref the fetch holds can fail.
   Retrying such a failure, or pausing the fetch while an operation runs, would avoid it.
