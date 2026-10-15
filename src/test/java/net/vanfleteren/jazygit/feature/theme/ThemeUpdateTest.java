@@ -19,7 +19,50 @@ class ThemeUpdateTest {
     void requestOpensTheChoiceWithTheCurrentTheme() {
         Model model = Update.update(TestModels.loaded(), new ThemeMsg.Requested()).model();
 
-        assertEquals(Option.of(new ThemePopup(ThemeName.DARK)), model.popup(ThemePopup.class));
+        assertEquals(Option.of(new ThemePopup(ThemeName.DARK, Option.none())), model.popup(ThemePopup.class));
+    }
+
+    @Test
+    void theHighlightedThemeShowsWithoutBeingSaved() {
+        Model open = Update.update(TestModels.loaded(), new ThemeMsg.Requested()).model();
+
+        Next previewed = Update.update(open, new ThemeMsg.Previewed(ThemeName.DARCULA));
+
+        assertEquals(ThemeName.DARCULA, previewed.model().theme());
+        assertEquals(Settings.DEFAULT, previewed.model().settings());
+        assertEquals(List.empty(), previewed.cmds());
+        assertEquals(open.popup(), previewed.model().popup());
+    }
+
+    @Test
+    void cancellingShowsTheThemeFromBeforeAgain() {
+        Model open = Update.update(TestModels.loaded().withThemeOverride(Option.of(ThemeName.LIGHT)),
+                new ThemeMsg.Requested()).model();
+        Model previewed = Update.update(open, new ThemeMsg.Previewed(ThemeName.DARCULA)).model();
+
+        Model cancelled = Update.update(previewed, new ThemeMsg.Cancelled()).model();
+
+        assertEquals(ThemeName.LIGHT, cancelled.theme());
+        assertEquals(Option.none(), cancelled.popup());
+    }
+
+    @Test
+    void choosingAfterHighlightingAnotherThemeSavesTheChosenOne() {
+        Model open = Update.update(TestModels.loaded(), new ThemeMsg.Requested()).model();
+        Model previewed = Update.update(open, new ThemeMsg.Previewed(ThemeName.DARCULA)).model();
+
+        Next chosen = Update.update(previewed, new ThemeMsg.Chosen(ThemeName.LIGHT));
+
+        assertEquals(ThemeName.LIGHT, chosen.model().theme());
+        assertEquals(Option.none(), chosen.model().themeOverride());
+        assertEquals(List.of(new Cmd.SaveSettings(Settings.DEFAULT, Settings.DEFAULT.withTheme(ThemeName.LIGHT))), chosen.cmds());
+    }
+
+    @Test
+    void aPreviewAfterThePopupClosedIsDropped() {
+        Model closed = TestModels.loaded();
+
+        assertEquals(closed, Update.update(closed, new ThemeMsg.Previewed(ThemeName.DARCULA)).model());
     }
 
     @Test
@@ -57,7 +100,7 @@ class ThemeUpdateTest {
         Model model = Update.update(TestModels.loaded().withThemeOverride(Option.of(ThemeName.LIGHT)),
                 new ThemeMsg.Requested()).model();
 
-        assertEquals(Option.of(new ThemePopup(ThemeName.LIGHT)), model.popup(ThemePopup.class));
+        assertEquals(Option.of(new ThemePopup(ThemeName.LIGHT, Option.of(ThemeName.LIGHT))), model.popup(ThemePopup.class));
     }
 
     @Test

@@ -9,7 +9,8 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
- * Choosing the theme, which is kept for the next session; it replaces a theme asked for at startup.
+ * Choosing the theme, which is kept for the next session; it replaces a theme asked for at startup. The highlighted
+ * theme shows while the user chooses.
  */
 public final class ThemeUpdate {
 
@@ -19,8 +20,16 @@ public final class ThemeUpdate {
     public static Next update(Model model, ThemeMsg msg) {
         return switch (msg) {
             // The key works everywhere, also while a dialog is open, which it does not take away.
-            case ThemeMsg.Requested() -> Next.of(model.openPopupIfFree(new ThemePopup(model.theme())));
-            case ThemeMsg.Cancelled() -> Next.of(model.withoutPopup(ThemePopup.class));
+            case ThemeMsg.Requested() ->
+                    Next.of(model.openPopupIfFree(new ThemePopup(model.theme(), model.themeOverride())));
+            // Shown as a theme for this session only, which choosing or cancelling replaces.
+            case ThemeMsg.Previewed(ThemeName theme) -> Next.of(model.popup(ThemePopup.class)
+                    .map(popup -> model.withThemeOverride(Option.of(theme)))
+                    .getOrElse(model));
+            case ThemeMsg.Cancelled() -> Next.of(model.popup(ThemePopup.class)
+                    .map(popup -> model.withThemeOverride(popup.overridden()))
+                    .getOrElse(model)
+                    .withoutPopup(ThemePopup.class));
             case ThemeMsg.Chosen(ThemeName theme) -> choose(model.withoutPopup(ThemePopup.class), theme);
         };
     }

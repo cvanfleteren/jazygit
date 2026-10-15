@@ -43,9 +43,19 @@ class ThemeDialogTest {
 
     @Test
     void arrowsAndEnterChooseTheSelectedLine() throws Exception {
-        assertEquals(List.of(new ThemeMsg.Chosen(ThemeName.LIGHT)), pressing(r -> {
+        assertEquals(List.of(new ThemeMsg.Previewed(ThemeName.LIGHT), new ThemeMsg.Chosen(ThemeName.LIGHT)), pressing(r -> {
             r.pilot().press(KeyCode.DOWN);
             r.pilot().press(KeyCode.ENTER);
+        }));
+    }
+
+    @Test
+    void highlightingAThemePreviewsIt() throws Exception {
+        assertEquals(List.of(new ThemeMsg.Previewed(ThemeName.LIGHT), new ThemeMsg.Previewed(ThemeName.DARCULA),
+                new ThemeMsg.Previewed(ThemeName.LIGHT)), pressing(r -> {
+            r.pilot().press(KeyCode.DOWN);
+            r.pilot().press(KeyCode.DOWN);
+            r.pilot().press(KeyCode.UP);
         }));
     }
 

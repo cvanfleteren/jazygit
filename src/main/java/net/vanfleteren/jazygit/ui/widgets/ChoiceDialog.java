@@ -31,15 +31,16 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
      * @param msg      the message for choosing it
      * @param enabled  whether it applies, given the model and the open popup
      * @param heading  the message key of the heading it starts a group of options under, if any
+     * @param onHighlight the message for highlighting it with the arrow keys, if it shows what choosing it does
      */
     public record Choice<P>(char key, Function<P, String> label, Supplier<Msg> msg, BiPredicate<Model, P> enabled,
-                            Option<String> heading) {
+                            Option<String> heading, Option<Supplier<Msg>> onHighlight) {
 
         /**
          * An option with a text that depends on the popup, without a heading.
          */
         public Choice(char key, Function<P, String> label, Supplier<Msg> msg, BiPredicate<Model, P> enabled) {
-            this(key, label, msg, enabled, Option.none());
+            this(key, label, msg, enabled, Option.none(), Option.none());
         }
 
         /**
@@ -67,7 +68,14 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
          * This option, starting a group of options under the heading with the message key {@code headingKey}.
          */
         public Choice<P> withHeading(String headingKey) {
-            return new Choice<>(key, label, msg, enabled, Option.of(headingKey));
+            return new Choice<>(key, label, msg, enabled, Option.of(headingKey), onHighlight);
+        }
+
+        /**
+         * This option, sending {@code preview} when it is highlighted, so what choosing it does shows before.
+         */
+        public Choice<P> withPreview(Supplier<Msg> preview) {
+            return new Choice<>(key, label, msg, enabled, heading, Option.of(preview));
         }
     }
 

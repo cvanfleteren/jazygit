@@ -57,7 +57,8 @@ import net.vanfleteren.jazygit.settings.ThemeName;
  * @param commandLog     the mutating git commands that were executed, oldest first
  * @param popup          the popup that is open, if any; only one can be
  * @param settings       what the user chose to keep from one session to the next, like the theme
- * @param themeOverride  the theme asked for at startup, for this session only, until the user chooses one
+ * @param themeOverride  the theme asked for at startup, or highlighted in the theme dialog, for this session only,
+ *                       until the user chooses one
  * @param focusedPane    the id of the element outside the popups that had the focus last, which a closing popup
  *                       gives it back to; none before the view reported one
  */

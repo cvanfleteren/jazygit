@@ -84,7 +84,7 @@ class SettingsPanelUpdateTest {
 
         Model choosing = Update.update(open, new SettingsPanelMsg.ThemeRequested()).model();
 
-        assertEquals(Option.of(new ThemePopup(ThemeName.DARK)), choosing.popup(ThemePopup.class));
+        assertEquals(Option.of(new ThemePopup(ThemeName.DARK, Option.none())), choosing.popup(ThemePopup.class));
     }
 
     @Test

@@ -25,10 +25,11 @@ public final class ThemeDialog {
      */
     private static Choice<ThemePopup> choice(char key, ThemeName theme) {
         String labelKey = "dialog.theme." + theme.id();
-        return new Choice<>(key,
+        return new Choice<ThemePopup>(key,
                 popup -> theme == popup.current()
                         ? Messages.get("dialog.theme.current", Messages.get(labelKey))
                         : Messages.get(labelKey),
-                () -> new ThemeMsg.Chosen(theme));
+                () -> new ThemeMsg.Chosen(theme))
+                .withPreview(() -> new ThemeMsg.Previewed(theme));
     }
 }

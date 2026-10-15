@@ -21,6 +21,12 @@ public sealed interface ThemeMsg extends Msg {
     record Cancelled() implements ThemeMsg {
     }
 
+    /**
+     * The user highlighted {@code theme}, which shows until they choose one or cancel.
+     */
+    record Previewed(ThemeName theme) implements ThemeMsg {
+    }
+
     record Chosen(ThemeName theme) implements ThemeMsg {
     }
 }

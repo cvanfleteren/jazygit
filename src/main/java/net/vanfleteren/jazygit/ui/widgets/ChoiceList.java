@@ -24,7 +24,8 @@ import java.util.function.Supplier;
 /**
  * A selectable list of options that ends in a cancel option, for inside a popup. An option is chosen with its
  * letter, or with the arrow keys and Enter; Escape cancels. An option that does not apply is struck through
- * and dimmed, and cannot be chosen. Options can be grouped under headings, which the arrow keys skip.
+ * and dimmed, and cannot be chosen. Options can be grouped under headings, which the arrow keys skip. An option
+ * can preview what choosing it does, as soon as it is highlighted.
  *
  * @param <P> the popup the list is shown in
  */
@@ -150,9 +151,17 @@ public final class ChoiceList<P extends Popup> {
     }
 
     private EventResult handleKey(KeyEvent event) {
-        boolean grouped = lines.exists(line -> !(line instanceof OptionLine));
-        if (grouped && (event.matches(Actions.MOVE_UP) || event.matches(Actions.MOVE_DOWN))) {
+        // The list is not left to move the highlight, which would not skip headings, nor say it moved.
+        if (event.matches(Actions.MOVE_UP) || event.matches(Actions.MOVE_DOWN)) {
             move(event.matches(Actions.MOVE_UP) ? -1 : 1);
+            return EventResult.HANDLED;
+        }
+        if (event.matches(Actions.HOME) || event.matches(Actions.PAGE_UP)) {
+            highlight(firstOption());
+            return EventResult.HANDLED;
+        }
+        if (event.matches(Actions.END) || event.matches(Actions.PAGE_DOWN)) {
+            highlight(lines.lastIndexWhere(OptionLine.class::isInstance));
             return EventResult.HANDLED;
         }
         Option<Choice<P>> chosen = event.code() == KeyCode.ESCAPE ? Option.of(choices.last())
@@ -178,7 +187,17 @@ public final class ChoiceList<P extends Popup> {
         Iterator<Integer> next = direction < 0
                 ? Iterator.iterate(from - 1, i -> i - 1).takeWhile(i -> i >= 0)
                 : Iterator.iterate(from + 1, i -> i + 1).takeWhile(i -> i < lines.size());
-        next.find(i -> lines.get(i) instanceof OptionLine).forEach(list::selected);
+        next.find(i -> lines.get(i) instanceof OptionLine).forEach(this::highlight);
+    }
+
+    /**
+     * Highlights the option on {@code line}, which says so when it previews what choosing it does.
+     */
+    private void highlight(int line) {
+        if (line != list.selected()) {
+            list.selected(line);
+            selected().flatMap(index -> choices.get(index).onHighlight()).forEach(preview -> dispatch.accept(preview.get()));
+        }
     }
 
     private int firstOption() {
