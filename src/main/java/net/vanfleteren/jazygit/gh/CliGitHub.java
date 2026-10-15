@@ -117,6 +117,15 @@ public final class CliGitHub implements GitHub {
     }
 
     @Override
+    public Either<GhFailure, List<ExecutedCommand>> browse(String branch) {
+        return GhProcess.log(workTree, browseCommand(branch));
+    }
+
+    static GhCommand browseCommand(String branch) {
+        return gh("browse", "--branch", branch);
+    }
+
+    @Override
     public Either<GhFailure, List<ExecutedCommand>> mergePullRequest(int number, MergeMethod method) {
         return GhProcess.log(workTree, gh("pr", "merge", String.valueOf(number), mergeFlag(method)));
     }

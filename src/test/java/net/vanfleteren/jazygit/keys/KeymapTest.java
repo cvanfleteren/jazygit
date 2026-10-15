@@ -8,7 +8,9 @@ import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
+import net.vanfleteren.jazygit.feature.github.BrowseMsg;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Msg;
 import org.junit.jupiter.api.Test;
@@ -38,6 +40,15 @@ class KeymapTest {
     void aKeyActsOnTheSelection() {
         assertEquals(Option.of(new CheckoutMsg.Requested(new Branch.Name("x"))),
                 keymap.handle(Scopes.BRANCHES, KeyEvent.ofChar(' '), Option.of(new Branch.Name("x"))));
+    }
+
+    @Test
+    void shiftOOpensTheBranchOnGitHub() {
+        assertEquals(Option.of(new BrowseMsg.Requested(new Branch.Name("x"))),
+                keymap.handle(Scopes.BRANCHES, KeyEvent.ofChar('O'), Option.of(new Branch.Name("x"))));
+        RemoteBranch remote = new RemoteBranch("origin", new Branch.Name("x"));
+        assertEquals(Option.of(new BrowseMsg.RemoteRequested(remote)),
+                keymap.handle(Scopes.REMOTE_BRANCHES, KeyEvent.ofChar('O'), Option.of(remote)));
     }
 
     @Test

@@ -35,6 +35,12 @@ class CliGitHubTest {
     }
 
     @Test
+    void browsingOpensTheBranchByItsNameOnTheRemote() {
+        assertEquals(List.of("gh", "browse", "--branch", "feature/login"),
+                CliGitHub.browseCommand("feature/login").commandLine());
+    }
+
+    @Test
     void noPullRequestsIsAnEmptyList() {
         assertEquals(Either.right(List.empty()), CliGitHub.parse(""));
     }

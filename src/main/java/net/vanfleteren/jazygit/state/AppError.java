@@ -69,6 +69,12 @@ public sealed interface AppError {
     }
 
     /**
+     * Opening a branch on GitHub was asked for, but the branch is on no remote, or its upstream is gone.
+     */
+    record NotOnRemote(Branch.Name branch) implements AppError {
+    }
+
+    /**
      * A pull request was asked for before the pull requests were read, so it is unknown whether the branch has
      * one yet.
      */

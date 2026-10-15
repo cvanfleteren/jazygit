@@ -44,6 +44,11 @@ public interface GitHub {
     Either<GhFailure, List<ExecutedCommand>> openPullRequest(int number);
 
     /**
+     * Opens {@code branch}, as it is named on the remote, in the browser.
+     */
+    Either<GhFailure, List<ExecutedCommand>> browse(String branch);
+
+    /**
      * Merges pull request {@code number} as {@code method} says, keeping its branch.
      */
     Either<GhFailure, List<ExecutedCommand>> mergePullRequest(int number, MergeMethod method);
