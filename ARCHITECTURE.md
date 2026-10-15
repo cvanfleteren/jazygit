@@ -395,8 +395,14 @@ Every `Cli*` class runs git through `GitProcess`; only a few of those arrows are
   - **Reads:**
     - `CliStatus` reads `git status --porcelain=v2`.
     - `CliBranches` runs one `git for-each-ref` for all branches, with their upstream and ahead/behind
-      counts, and another one for the remote-tracking branches, which the branches pane shows on its
-      second tab (`Model.branchesTab`, switched with `[` and `]`).
+      counts and the other worktree each is checked out in (`%(worktreepath)`, `Branch.worktree`), and another
+      one for the remote-tracking branches, which the branches pane shows on its second tab
+      (`Model.branchesTab`, switched with `[` and `]`).
+    - **Linked worktrees** are read like any repository: nothing assumes `.git` is a directory. What lives in
+      the repository's own directory, like the index or `MERGE_HEAD`, is found with `git rev-parse --git-path`.
+      A branch checked out in another worktree is marked in the branches pane; checking it out,
+      fast-forwarding it or deleting it locally, which git refuses, is refused up front with an
+      `AppError.CheckedOutElsewhere` that names the worktree.
     - `CliLog` runs `git rev-parse` and `git log -z`.
     - `CliStash` runs `git stash list`, and `CliRemote` reads the remotes.
     - These each have a pure parser for git's output. `CliDiff` and `CliShow` return git's text, cut off

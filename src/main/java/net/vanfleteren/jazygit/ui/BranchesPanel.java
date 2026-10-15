@@ -87,6 +87,7 @@ public class BranchesPanel {
                                         Option<String> spinner) {
         return new LoadableList.Row(
                 List.of(LoadableList.Seg.of("%4s ".formatted(TimeText.age(since)) + (b.current() ? "* " : "  ") + b.name().value()))
+                        .appendAll(worktree(b))
                         .appendAll(sync(b))
                         .appendAll(gitHub)
                         .appendAll(spinner.map(text -> LoadableList.Seg.styled(" " + text, Theme.Classes.SPINNER))));
@@ -133,6 +134,16 @@ public class BranchesPanel {
      */
     static String spinner(Operation operation, Instant now) {
         return busyLabel(operation).map(label -> label + " ").getOrElse("") + TimeText.spinnerFrame(now);
+    }
+
+    /**
+     * That the branch is checked out in another worktree, dimmed and with a leading space; nothing for one that
+     * is not.
+     */
+    static List<LoadableList.Seg> worktree(Branch branch) {
+        return Option.when(branch.checkedOutElsewhere(),
+                        () -> LoadableList.Seg.styled(" " + Messages.get("branches.worktree"), Theme.Classes.DIM))
+                .toList();
     }
 
     /**

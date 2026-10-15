@@ -5,6 +5,7 @@ import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import io.vavr.control.Try;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -34,7 +35,7 @@ public final class CliBranch {
     private static final String ORIGIN = Refs.REMOTES + RemoteBranch.DEFAULT_REMOTE + "/";
     private static final List<String> FIELDS = List.of("%(refname)", "%(objectname)", "%(committerdate:unix)",
             "%(HEAD)", "%(upstream:remotename)", "%(upstream:remoteref)", "%(upstream:track)", "%(symref)",
-            "%(upstream)");
+            "%(upstream)", "%(worktreepath)");
     private static final String FORMAT = FIELDS.mkString(GitOutput.REF_FIELD_SEPARATOR);
     private static final Pattern AHEAD = Pattern.compile("ahead (\\d{1,9})");
     private static final Pattern BEHIND = Pattern.compile("behind (\\d{1,9})");
@@ -130,16 +131,18 @@ public final class CliBranch {
      *                    they are equal, {@code [gone]} when the upstream does not exist
      * @param symref      what a symbolic ref points to, e.g. {@code refs/remotes/origin/main}
      * @param upstreamRef the remote-tracking ref of the upstream, e.g. {@code refs/remotes/origin/main}
+     * @param worktree    the root of the worktree the branch is checked out in, this one included; last, as a
+     *                    path is free text
      */
     private record Ref(String name, Sha tip, Instant time, boolean head, Option<String> remote,
                        Option<String> remoteRef, Option<String> track, Option<String> symref,
-                       Option<String> upstreamRef) {
+                       Option<String> upstreamRef, Option<String> worktree) {
 
         static Either<UnexpectedOutput, Ref> parse(String line) {
             return GitOutput.fields(line, FIELDS.size()).flatMap(f -> GitOutput.sha(f.get(1)).flatMap(tip ->
                     GitOutput.epochSeconds(f.get(2)).map(time -> new Ref(f.get(0), tip, time, f.get(3).equals("*"),
                             present(f.get(4)), present(f.get(5)), present(f.get(6)), present(f.get(7)),
-                            present(f.get(8))))));
+                            present(f.get(8)), present(f.get(9))))));
         }
 
         private static Option<String> present(String field) {
@@ -168,6 +171,13 @@ public final class CliBranch {
         String pushedTo(Branch.Name branch) {
             return upstreamRef.getOrElse(() -> ORIGIN + branch.value());
         }
+
+        /**
+         * The worktree the branch is checked out in, if that is not this one: the one where it is {@code HEAD}.
+         */
+        Option<Path> otherWorktree() {
+            return worktree.filter(path -> !head).flatMap(path -> Try.of(() -> Path.of(path)).toOption());
+        }
     }
 
     static Either<UnexpectedOutput, List<Branch>> parse(String raw) {
@@ -182,7 +192,8 @@ public final class CliBranch {
                 .flatMap(ref -> ref.localName().map(name -> new Branch(name, ref.head(), ref.tip(), ref.time(),
                         remote.contains(ref.pushedTo(name)),
                         defaultBranch.contains(name),
-                        tracking(ref))))
+                        tracking(ref),
+                        ref.otherWorktree())))
                 .sorted(ORDER);
     }
 

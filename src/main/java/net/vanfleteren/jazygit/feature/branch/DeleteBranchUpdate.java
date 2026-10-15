@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Chosen;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg.Requested;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -36,16 +37,25 @@ public final class DeleteBranchUpdate {
     }
 
     /**
-     * Only a known branch that is not checked out can be deleted, and not while it is being pushed or deleted.
+     * Only a known branch that is not checked out can be deleted, and not while it is being pushed or deleted. One
+     * that is checked out in another worktree can only be deleted on its remote; when it cannot be deleted there
+     * either, that is said.
      */
     private static Next requested(Model model, Branch.Name branch) {
-        return Update.ask(model, Option.when(Branches.isOtherIdleBranch(model, branch), () -> new DeleteBranchPopup(branch)));
+        return model.branch(branch)
+                .filter(known -> !known.remoteDeletable())
+                .flatMap(known -> Branches.checkedOutElsewhere(model, Operation.DELETE_BRANCH, branch))
+                .map(error -> Next.of(model.fail(error)))
+                .getOrElse(() -> Update.ask(model, Option.when(Branches.isOtherIdleBranch(model, branch),
+                        () -> new DeleteBranchPopup(branch))));
     }
 
     private static Next chosen(Model model, DeleteScope scope) {
-        // Deleting on the remote is not possible for a local-only branch, nor for the default one.
+        // Deleting on the remote is not possible for a local-only branch, nor for the default one; deleting it
+        // locally is not possible while another worktree has it checked out.
         return Update.confirm(model, DeleteBranchPopup.class, popup -> model.branch(popup.branch())
                 .filter(branch -> scope == DeleteScope.LOCAL || branch.remoteDeletable())
+                .filter(branch -> scope == DeleteScope.REMOTE || !branch.checkedOutElsewhere())
                 .map(branch -> new DeleteBranch(branch.name(), branch.pushTarget(), scope)));
     }
 
@@ -74,5 +84,12 @@ public final class DeleteBranchUpdate {
 
     static boolean remoteDeletable(Model model, Branch.Name branch) {
         return model.branch(branch).exists(Branch::remoteDeletable);
+    }
+
+    /**
+     * Whether {@code branch} can be deleted here: not while another worktree has it checked out.
+     */
+    static boolean localDeletable(Model model, Branch.Name branch) {
+        return model.branch(branch).exists(known -> !known.checkedOutElsewhere());
     }
 }

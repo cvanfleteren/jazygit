@@ -102,6 +102,14 @@ class BranchesPanelTest {
     }
 
     @Test
+    void aBranchCheckedOutInAnotherWorktreeSaysSo() {
+        assertEquals(List.of(LoadableList.Seg.styled(" (worktree)", Theme.Classes.DIM)),
+                BranchesPanel.worktree(new Branch(new Branch.Name("b"), false, new Sha("1"), java.time.Instant.EPOCH, false, false,
+                        new Tracking.None(), Option.of(java.nio.file.Path.of("/repos/linked")))));
+        assertEquals(List.of(), BranchesPanel.worktree(new Branch(new Branch.Name("b"), false, new Sha("1"))));
+    }
+
+    @Test
     void syncShowsAnAheadArrowForUnpushedAndABehindOneForIncomingCommits() {
         java.time.Instant t = java.time.Instant.EPOCH;
         assertEquals(List.of(), BranchesPanel.sync(new Branch(new Branch.Name("b"), false, new Sha("1"), t, true, false, Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("b")), 0, 0)))));

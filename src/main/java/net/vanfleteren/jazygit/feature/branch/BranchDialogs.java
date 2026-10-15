@@ -65,16 +65,17 @@ public final class BranchDialogs {
 
     /**
      * Asks where to delete a branch. The options that act on the remote only apply when the branch has a
-     * remote branch that can be deleted.
+     * remote branch that can be deleted, the ones that act locally when no other worktree has it checked out.
      */
     public static final ChoiceDialog.Spec<DeleteBranchPopup> DELETE_BRANCH = new ChoiceDialog.Spec<>(
             "delete-branch", DeleteBranchPopup.class,
             popup -> Messages.get("dialog.deleteBranch.title", popup.branch().value()),
-            List.of(new Choice<>('d', "dialog.deleteBranch.local", () -> new DeleteBranchMsg.Chosen(DeleteScope.LOCAL)),
+            List.of(new Choice<>('d', "dialog.deleteBranch.local", () -> new DeleteBranchMsg.Chosen(DeleteScope.LOCAL),
+                            BranchDialogs::localDeletable),
                     new Choice<>('r', "dialog.deleteBranch.remote", () -> new DeleteBranchMsg.Chosen(DeleteScope.REMOTE),
                             BranchDialogs::remoteDeletable),
                     new Choice<>('b', "dialog.deleteBranch.both", () -> new DeleteBranchMsg.Chosen(DeleteScope.BOTH),
-                            BranchDialogs::remoteDeletable)),
+                            (model, popup) -> localDeletable(model, popup) && remoteDeletable(model, popup))),
             DeleteBranchMsg.Cancelled::new);
 
     /**
@@ -114,5 +115,9 @@ public final class BranchDialogs {
 
     private static boolean remoteDeletable(Model model, DeleteBranchPopup popup) {
         return DeleteBranchUpdate.remoteDeletable(model, popup.branch());
+    }
+
+    private static boolean localDeletable(Model model, DeleteBranchPopup popup) {
+        return DeleteBranchUpdate.localDeletable(model, popup.branch());
     }
 }

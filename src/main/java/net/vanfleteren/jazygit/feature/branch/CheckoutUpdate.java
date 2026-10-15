@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.StashConfirmed;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -57,7 +58,15 @@ public final class CheckoutUpdate {
                         : Update.start(model.clearError(), new CheckoutRemote(remote.branch(), remote)));
     }
 
+    /**
+     * Checks out {@code branch}; one that is checked out in another worktree git would refuse, so that is said
+     * instead.
+     */
     private static Next requested(Model model, Branch.Name branch) {
-        return Branches.isOtherIdleBranch(model, branch) ? Update.start(model.clearError(), new Checkout(branch)) : Next.of(model);
+        return Branches.checkedOutElsewhere(model, Operation.CHECKOUT, branch)
+                .map(error -> Next.of(model.fail(error)))
+                .getOrElse(() -> Branches.isOtherIdleBranch(model, branch)
+                        ? Update.start(model.clearError(), new Checkout(branch))
+                        : Next.of(model));
     }
 }
