@@ -40,7 +40,7 @@ public final class HelpDialog implements PopupView {
 
     public static final String ID = "help";
 
-    private static final int WIDTH = 50;
+    private static final int WIDTH = 70;
 
     // The key right-aligned in a column of this many characters, then a space and the description.
     private static final int KEY_COLUMN = 12;
