@@ -23,7 +23,7 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
 /**
  * Lists and creates stashes through the {@code git stash} command line tool.
  */
-public final class CliStash {
+final class CliStash {
 
     // What git prefixes the message of a stash with when it is given one.
     // What git says when the staged changes of a stash do not apply.
@@ -36,7 +36,7 @@ public final class CliStash {
     /**
      * Runs {@code git stash list}, newest stash first.
      */
-    public static Either<ProcessError, List<Stash>> list(Path workTree) {
+    static Either<ProcessError, List<Stash>> list(Path workTree) {
         return GitProcess.read(workTree,
                 GitCommand.reading("stash", "list", "--format=%gd" + GitOutput.PRETTY_FIELD_SEPARATOR + "%H"
                         + GitOutput.PRETTY_FIELD_SEPARATOR + "%gs"),
@@ -57,14 +57,14 @@ public final class CliStash {
      * Runs {@code git stash pop <ref>} for {@code stash}, under the name it has now. Git refuses e.g. when local
      * changes would be overwritten, or when the stash conflicts, which keeps it.
      */
-    public static Either<GitFailure<StashError>, List<ExecutedCommand>> pop(Path workTree, Stash stash) {
+    static Either<GitFailure<StashError>, List<ExecutedCommand>> pop(Path workTree, Stash stash) {
         return onStash(workTree, stash, ref -> git("stash", "pop", ref));
     }
 
     /**
      * Runs {@code git stash drop <ref>} for {@code stash}, under the name it has now.
      */
-    public static Either<GitFailure<StashError>, List<ExecutedCommand>> drop(Path workTree, Stash stash) {
+    static Either<GitFailure<StashError>, List<ExecutedCommand>> drop(Path workTree, Stash stash) {
         return onStash(workTree, stash, ref -> git("stash", "drop", ref));
     }
 
@@ -87,7 +87,7 @@ public final class CliStash {
      * unstaged, and the untracked files. Without a message, git names the stash after the branch and its
      * commit, e.g. {@code WIP on main: abc1234 Add widget}.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Path workTree, Option<String> message) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Path workTree, Option<String> message) {
         return GitProcess.log(workTree, git(List.of("stash", "push", "--include-untracked")
                 .appendAll(message.toList().flatMap(text -> List.of("--message", text)))));
     }

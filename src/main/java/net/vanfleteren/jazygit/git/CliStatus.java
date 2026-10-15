@@ -24,7 +24,7 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
 /**
  * Reads the working tree status through the {@code git status} command line tool.
  */
-public final class CliStatus {
+final class CliStatus {
 
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
     private static final String HEAD = "# branch.head ";
@@ -36,7 +36,7 @@ public final class CliStatus {
     /**
      * Runs {@code git status} in {@code workTree} and parses its output.
      */
-    public static Either<ProcessError, RepoStatus> read(Path workTree) {
+    static Either<ProcessError, RepoStatus> read(Path workTree) {
         return GitProcess.read(workTree, GitCommand.reading("status",
                 "--porcelain=v2", "--branch", "-z", "--untracked-files=all").withTimeout(TIMEOUT), CliStatus::parse);
     }

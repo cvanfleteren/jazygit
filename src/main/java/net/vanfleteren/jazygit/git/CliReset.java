@@ -15,7 +15,7 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
 /**
  * Moves the checked out branch through {@code git reset}.
  */
-public final class CliReset {
+final class CliReset {
 
     private CliReset() {
     }
@@ -25,7 +25,7 @@ public final class CliReset {
      *
      * @return the command lines that were run
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> reset(Path workTree, Sha sha, ResetMode mode) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> reset(Path workTree, Sha sha, ResetMode mode) {
         return GitProcess.log(workTree, git("reset", "--quiet", mode.option(), sha.value()));
     }
 }

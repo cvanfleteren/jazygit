@@ -17,7 +17,7 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
 /**
  * Fetches from the remotes through {@code git fetch}, in the background: nothing may ask the user anything.
  */
-public final class CliFetch {
+final class CliFetch {
 
     private CliFetch() {
     }
@@ -31,7 +31,7 @@ public final class CliFetch {
      * @param environment the value of the environment variable {@code GIT_SSH_COMMAND}, if it is set
      * @param credentials environment variables that tell the credential helper which account to use
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(Path workTree, String remote,
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(Path workTree, String remote,
                                                                      Option<String> environment,
                                                                      Map<String, String> credentials) {
         return CliRemote.toRemote(workTree, git("fetch", "--quiet", "--prune", remote), environment, credentials)
@@ -42,7 +42,7 @@ public final class CliFetch {
      * Runs {@code git fetch <remote> refs/heads/<upstream>:refs/heads/<name>}: fast-forwards {@code name}, which
      * is not checked out, to {@code upstream}, the branch it tracks. Git refuses when that is not a fast-forward.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(Path workTree, Branch.Name name,
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(Path workTree, Branch.Name name,
                                                                                RemoteBranch upstream,
                                                                                Map<String, String> credentials) {
         return CliRemote.run(workTree, git("fetch", upstream.remote(), Refs.head(upstream.branch()) + ":" + Refs.head(name)),

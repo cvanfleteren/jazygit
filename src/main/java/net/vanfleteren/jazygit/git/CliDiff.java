@@ -22,7 +22,7 @@ import static net.vanfleteren.jazygit.git.GitCommand.reading;
 /**
  * Reads the diff of changed files through the git command line tool.
  */
-public final class CliDiff {
+final class CliDiff {
 
     static final int MAX_LINES = 5000;
     private static final List<String> STAGED = List.of("diff", "--cached", "--no-color", "--no-ext-diff", "--");
@@ -35,7 +35,7 @@ public final class CliDiff {
      * The staged changes of the files (index against HEAD), and their unstaged changes (working tree
      * against the index). Untracked files are shown as entirely added. Long diffs are cut off.
      */
-    public static Either<DiffError, Diffs> diff(Path workTree, List<FileEntry> files) {
+    static Either<DiffError, Diffs> diff(Path workTree, List<FileEntry> files) {
         // A rename only shows as one when both of its paths are diffed.
         List<String> staged = files.filter(f -> f.staged() && f.type() != ChangeType.UNTRACKED)
                 .flatMap(f -> f.paths(true));

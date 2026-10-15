@@ -29,7 +29,7 @@ import static net.vanfleteren.jazygit.git.Refs.REMOTES;
  * Lists, renames and deletes branches through the {@code git} command line tool. The branches are read through
  * {@code git for-each-ref}, in one call for all of them.
  */
-public final class CliBranch {
+final class CliBranch {
 
     private static final String ORIGIN = Refs.REMOTES + RemoteBranch.DEFAULT_REMOTE + "/";
     private static final List<String> FIELDS = List.of("%(refname)", "%(objectname)", "%(committerdate:unix)",
@@ -55,7 +55,7 @@ public final class CliBranch {
     /**
      * The local branches: the checked out one first, then the most recently committed to.
      */
-    public static Either<ProcessError, List<Branch>> list(Path workTree) {
+    static Either<ProcessError, List<Branch>> list(Path workTree) {
         return GitProcess.read(workTree, GitCommand.reading("for-each-ref", "--format=" + FORMAT, HEADS, REMOTES),
                 CliBranch::parse);
     }
@@ -64,7 +64,7 @@ public final class CliBranch {
      * The remote-tracking branches, the most recently committed to first; not the {@code HEAD} of a remote,
      * which only names one of the others.
      */
-    public static Either<ProcessError, List<RemoteRef>> remotes(Path workTree) {
+    static Either<ProcessError, List<RemoteRef>> remotes(Path workTree) {
         return GitProcess.read(workTree, GitCommand.reading("for-each-ref", "--format=" + REMOTE_FORMAT, REMOTES),
                 CliBranch::parseRemotes);
     }
@@ -73,7 +73,7 @@ public final class CliBranch {
      * Deletes the branch {@code name} where {@code scope} says: locally, and/or {@code remote}, the branch it is
      * pushed to. With both, the remote one goes first, so a failure leaves the local branch in place.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> delete(Path workTree, Branch.Name name,
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> delete(Path workTree, Branch.Name name,
                                                                           RemoteBranch remote, DeleteScope scope,
                                                                           Map<String, String> credentials) {
         return GitFailure.sequence(
@@ -84,7 +84,7 @@ public final class CliBranch {
     /**
      * Runs {@code git branch -m <name> <newName>} in {@code workTree}, which refuses to overwrite a branch.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> rename(Path workTree, Branch.Name name,
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> rename(Path workTree, Branch.Name name,
                                                                           Branch.Name newName) {
         return GitProcess.log(workTree, git("branch", "--move", name.value(), newName.value()));
     }
@@ -92,14 +92,14 @@ public final class CliBranch {
     /**
      * Runs {@code git branch -D <name>} in {@code workTree}.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocal(Path workTree, Branch.Name name) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocal(Path workTree, Branch.Name name) {
         return GitProcess.log(workTree, git("branch", "--delete", "--force", name.value()));
     }
 
     /**
      * Runs {@code git push <remote> --delete <branch>} in {@code workTree}.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemote(Path workTree, RemoteBranch remote,
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemote(Path workTree, RemoteBranch remote,
                                                                                 Map<String, String> credentials) {
         return CliRemote.run(workTree, git("push", remote.remote(), "--delete", remote.branch().value()), credentials);
     }

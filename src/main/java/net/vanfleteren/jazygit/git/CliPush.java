@@ -18,7 +18,7 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
  * Pushes branches through {@code git push}, so the remote is reached with the user's own configuration and
  * credentials.
  */
-public final class CliPush {
+final class CliPush {
 
     private CliPush() {
     }
@@ -26,7 +26,7 @@ public final class CliPush {
     /**
      * Pushes {@code name} to {@code upstream}, the branch it tracks.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Path workTree, Branch.Name name,
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Path workTree, Branch.Name name,
                                                                         RemoteBranch upstream, PushMode mode,
                                                                         Map<String, String> credentials) {
         return CliRemote.run(workTree, git(List.of("push")
@@ -39,7 +39,7 @@ public final class CliPush {
      * Runs {@code git push --set-upstream <remote> <name>:<branch>}: pushes {@code name} to {@code upstream},
      * which it then tracks. Git only sets the upstream when the push succeeds.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(Path workTree, Branch.Name name,
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(Path workTree, Branch.Name name,
                                                                                    RemoteBranch upstream,
                                                                                    Map<String, String> credentials) {
         return CliRemote.run(workTree, git("push", "--set-upstream", upstream.remote(), refspec(name, upstream)),

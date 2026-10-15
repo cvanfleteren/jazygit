@@ -17,7 +17,7 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
  * Pulls the checked out branch through {@code git pull}, so the remote is reached with the user's own
  * configuration and credentials.
  */
-public final class CliPull {
+final class CliPull {
 
     private CliPull() {
     }
@@ -29,7 +29,7 @@ public final class CliPull {
      * conflicts is undone again, so the repository is left as it was; one that git refuses to start, as the
      * repository is in the middle of something else, leaves that alone.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> pull(Path workTree, Map<String, String> credentials) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> pull(Path workTree, Map<String, String> credentials) {
         return CliRemote.toRemote(workTree, git("pull", "--no-edit").withEnvironment(HashMap.of("GIT_SEQUENCE_EDITOR", ":")),
                         credentials)
                 .flatMap(pull -> Unfinished.runOrUndo(workTree, pull, left -> left.rebasing()

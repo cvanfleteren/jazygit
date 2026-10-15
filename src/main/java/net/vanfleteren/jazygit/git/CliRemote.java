@@ -17,7 +17,7 @@ import java.time.Duration;
  * Talks to the remotes through the {@code git} command line tool, in the background: nothing may ask the
  * user anything.
  */
-public final class CliRemote {
+final class CliRemote {
 
     // A first fetch of a big repository takes a while; a fetch that is still running is not started again.
     // Talking to a remote takes a while for a big repository, or over a slow connection.
@@ -32,7 +32,7 @@ public final class CliRemote {
     /**
      * The remotes {@code git fetch --all} would fetch: all of them but those with {@code skipFetchAll} set.
      */
-    public static Either<ProcessError, List<String>> remotes(Path workTree) {
+    static Either<ProcessError, List<String>> remotes(Path workTree) {
         return GitProcess.read(workTree, GitCommand.reading("remote"), raw -> Either.right(names(raw)))
                 .flatMap(remotes -> skippedByFetchAll(workTree).map(remotes::removeAll).mapLeft(GitFailure::error));
     }
@@ -66,7 +66,7 @@ public final class CliRemote {
     /**
      * The URL of each remote, by its name. Only looked up, so not logged.
      */
-    public static Either<ProcessError, Map<String, String>> remoteUrls(Path workTree) {
+    static Either<ProcessError, Map<String, String>> remoteUrls(Path workTree) {
         // git config --get-regexp exits with 1, saying nothing, when no key matches.
         return GitProcess.ask(workTree, GitCommand.reading("config", "--get-regexp", "^remote\\..*\\.url$"))
                 .map(answer -> answer.map(output -> urls(output.stdout())).getOrElse(HashMap.empty()))

@@ -26,7 +26,7 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
  * stops half-way, it is aborted again, so the repository is left as it was; a rebase that was already
  * running is left alone.
  */
-public final class CliRebase {
+final class CliRebase {
 
     static final GitCommand ABORT = git("rebase", "--abort");
     // Merges are recreated instead of flattened, and uncommitted changes are stashed and brought back.
@@ -44,7 +44,7 @@ public final class CliRebase {
      *
      * @return the command lines that were run
      */
-    public static Either<GitFailure<RewordError>, List<ExecutedCommand>> reword(Path workTree, Sha sha, CommitMessage message) {
+    static Either<GitFailure<RewordError>, List<ExecutedCommand>> reword(Path workTree, Sha sha, CommitMessage message) {
         // A merge in the todo list is "merge -C <commit>", which has to become "-c" for git to ask for a message.
         String sequenceEditor = sequenceEditor(sha, List.of(new Tuple2<>("pick", "reword"), new Tuple2<>("merge -C", "merge -c")));
         return TempFiles.using("jazygit-message", file -> Files.writeString(file, message.text()),
@@ -64,7 +64,7 @@ public final class CliRebase {
      *
      * @return the command lines that were run
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> onto(Path workTree, Branch.Name onto) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> onto(Path workTree, Branch.Name onto) {
         return rebase(workTree, git(REBASE.append("--no-autosquash").append(onto.value())));
     }
 
@@ -77,7 +77,7 @@ public final class CliRebase {
      * @param sha the object id of a commit that has exactly one parent
      * @return the command lines that were run
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Path workTree, Sha sha, SquashMode mode) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Path workTree, Sha sha, SquashMode mode) {
         return GitProcess.run(workTree, git("rev-parse", sha.value() + "^"))
                 .flatMap(parent -> base(workTree, parent.stdout().strip()))
                 .flatMap(base -> rebase(workTree, interactive(INTERACTIVE.append("--no-autosquash").append(base),

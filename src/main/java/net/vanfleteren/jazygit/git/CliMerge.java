@@ -19,7 +19,7 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
  * uncommitted changes would be overwritten, or while the repository is in the middle of something else,
  * which is then left alone.
  */
-public final class CliMerge {
+final class CliMerge {
 
     static final GitCommand ABORT = git("merge", "--abort");
     // A squash leaves no merge to abort, so its conflicts are undone by resetting the merge.
@@ -33,7 +33,7 @@ public final class CliMerge {
      *
      * @return the command lines that were run
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> merge(Path workTree, Branch.Name branch, MergeMode mode) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> merge(Path workTree, Branch.Name branch, MergeMode mode) {
         return switch (mode) {
             case FAST_FORWARD -> merge(workTree, git("merge", "--ff", "--no-edit", branch.value()), ABORT);
             case MERGE_COMMIT -> merge(workTree, git("merge", "--no-ff", "--no-edit", branch.value()), ABORT);

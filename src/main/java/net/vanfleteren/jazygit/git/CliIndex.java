@@ -17,7 +17,7 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
 /**
  * Changes the index (staging area) through the git command line tool.
  */
-public final class CliIndex {
+final class CliIndex {
 
     private CliIndex() {
     }
@@ -25,7 +25,7 @@ public final class CliIndex {
     /**
      * {@code git add -- <paths>}: stages the changes of the paths.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> add(Path workTree, List<String> paths) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> add(Path workTree, List<String> paths) {
         return onPaths(workTree, List.of("add"), paths);
     }
 
@@ -33,42 +33,42 @@ public final class CliIndex {
      * {@code git rm --cached --force -- <paths>}: removes newly added paths from the index, leaving
      * them untracked in the working tree.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> removeCached(Path workTree, List<String> paths) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> removeCached(Path workTree, List<String> paths) {
         return onPaths(workTree, List.of("rm", "--cached", "--force", "--quiet"), paths);
     }
 
     /**
      * {@code git reset HEAD -- <paths>}: resets the index entries of the paths to HEAD.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> reset(Path workTree, List<String> paths) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> reset(Path workTree, List<String> paths) {
         return onPaths(workTree, List.of("reset", "--quiet", "HEAD"), paths);
     }
 
     /**
      * {@code git checkout -- <paths>}: resets the working tree of the paths to the index.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutFromIndex(Path workTree, List<String> paths) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutFromIndex(Path workTree, List<String> paths) {
         return onPaths(workTree, List.of("checkout", "--quiet"), paths);
     }
 
     /**
      * {@code git checkout HEAD -- <paths>}: resets the index and the working tree of the paths to HEAD.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutFromHead(Path workTree, List<String> paths) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutFromHead(Path workTree, List<String> paths) {
         return onPaths(workTree, List.of("checkout", "--quiet", "HEAD"), paths);
     }
 
     /**
      * {@code git rm --force -- <paths>}: removes newly added paths from the index and the working tree.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> removeAdded(Path workTree, List<String> paths) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> removeAdded(Path workTree, List<String> paths) {
         return onPaths(workTree, List.of("rm", "--force", "--quiet"), paths);
     }
 
     /**
      * Throws changes away as {@code plan} says.
      */
-    public static Either<GitFailure<DiscardError>, List<ExecutedCommand>> discard(Path workTree, DiscardPlan plan) {
+    static Either<GitFailure<DiscardError>, List<ExecutedCommand>> discard(Path workTree, DiscardPlan plan) {
         return GitFailure.<DiscardError>sequence(
                 () -> GitFailure.widen(removeAdded(workTree, plan.added())),
                 () -> GitFailure.widen(checkoutFromHead(workTree, plan.fromHead())),
@@ -81,7 +81,7 @@ public final class CliIndex {
      * what is untracked in them. Git leaves ignored files alone, and a repository nested in the working tree.
      * Paths outside the working tree, and the working tree itself, are refused before git runs.
      */
-    public static Either<GitFailure<DeleteUntrackedError>, List<ExecutedCommand>> deleteUntracked(Path workTree,
+    static Either<GitFailure<DeleteUntrackedError>, List<ExecutedCommand>> deleteUntracked(Path workTree,
                                                                                        List<String> paths) {
         Path root = workTree.toAbsolutePath().normalize();
         return paths.map(path -> inside(root, path)).find(Either::isLeft)

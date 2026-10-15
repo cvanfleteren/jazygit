@@ -21,7 +21,7 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
 /**
  * Reads commits through {@code git rev-parse} and {@code git log}.
  */
-public final class CliLog {
+final class CliLog {
 
     static final int MAX_COMMITS = 300;
     // sha, parents, author name, author email, author time, subject, ref names, raw message
@@ -36,7 +36,7 @@ public final class CliLog {
      * The commit {@code revision} names; none when it names nothing, e.g. {@code HEAD} in a repository
      * without commits.
      */
-    public static Either<GitFailure<ProcessError>, Option<Sha>> resolve(Path workTree, String revision) {
+    static Either<GitFailure<ProcessError>, Option<Sha>> resolve(Path workTree, String revision) {
         // rev-parse --verify --quiet exits with 1, saying nothing, when the revision names nothing.
         return GitProcess.ask(workTree, GitCommand.reading("rev-parse", "--verify", "--quiet", revision + "^{commit}"))
                 .flatMap(answer -> answer.fold(
@@ -49,7 +49,7 @@ public final class CliLog {
     /**
      * The log of HEAD, newest first; empty in a repository without commits.
      */
-    public static Either<ProcessError, List<Commit>> commits(Path workTree) {
+    static Either<ProcessError, List<Commit>> commits(Path workTree) {
         return resolve(workTree, "HEAD").mapLeft(GitFailure::error)
                 .flatMap(head -> head.fold(() -> Either.right(List.empty()), tip -> log(workTree, tip)));
     }
@@ -57,7 +57,7 @@ public final class CliLog {
     /**
      * The log of the branch {@code branch}, local or remote-tracking, newest first.
      */
-    public static Either<LogError, List<Commit>> log(Path workTree, BranchRef branch) {
+    static Either<LogError, List<Commit>> log(Path workTree, BranchRef branch) {
         return Either.<LogError, Option<Sha>>narrow(resolve(workTree, Refs.of(branch)).mapLeft(GitFailure::error))
                 .flatMap(tip -> tip.<LogError>toEither(() -> new UnknownBranch(branch)))
                 .flatMap(tip -> Either.narrow(log(workTree, tip)));
@@ -66,7 +66,7 @@ public final class CliLog {
     /**
      * The newest commits reachable from {@code start}, newest first, laid out by {@link CommitGraph#arrange}.
      */
-    public static Either<ProcessError, List<Commit>> log(Path workTree, Sha start) {
+    static Either<ProcessError, List<Commit>> log(Path workTree, Sha start) {
         return GitProcess.read(workTree, GitCommand.reading("log", "--no-color", "--no-show-signature", "-z",
                         "--max-count=" + MAX_COMMITS, "--format=" + FORMAT, start.value(), "--"),
                 raw -> parse(raw).map(CommitGraph::arrange));

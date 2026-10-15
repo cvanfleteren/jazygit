@@ -19,7 +19,7 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
  * Creates and rewrites commits through {@code git commit}, and through {@link CliRebase} for commits before
  * the last one.
  */
-public final class CliCommit {
+final class CliCommit {
 
     private CliCommit() {
     }
@@ -27,14 +27,14 @@ public final class CliCommit {
     /**
      * {@code git commit -m <summary> [-m <description>]}: commits the index.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> commit(Path workTree, CommitMessage message) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> commit(Path workTree, CommitMessage message) {
         return run(workTree, List.of("commit", "--quiet").appendAll(messageArgs(message)));
     }
 
     /**
      * {@code git commit --amend --no-edit}: amends the last commit with the index.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> amend(Path workTree) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> amend(Path workTree) {
         return run(workTree, List.of("commit", "--quiet", "--amend", "--no-edit"));
     }
 
@@ -43,7 +43,7 @@ public final class CliCommit {
      *
      * @return the command lines that were run
      */
-    public static Either<GitFailure<RewordError>, List<ExecutedCommand>> reword(Path workTree, Sha sha,
+    static Either<GitFailure<RewordError>, List<ExecutedCommand>> reword(Path workTree, Sha sha,
                                                                         CommitMessage message) {
         return GitFailure.<RewordError, Option<Sha>>widen(CliLog.resolve(workTree, "HEAD"))
                 .flatMap(head -> head.contains(sha)
@@ -57,7 +57,7 @@ public final class CliCommit {
      * @param sha the object id of a commit that has exactly one parent
      * @return the command lines that were run
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Path workTree, Sha sha, SquashMode mode) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Path workTree, Sha sha, SquashMode mode) {
         return CliRebase.squash(workTree, sha, mode);
     }
 
