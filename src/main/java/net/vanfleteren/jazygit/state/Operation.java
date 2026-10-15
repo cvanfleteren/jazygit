@@ -16,6 +16,7 @@ public enum Operation {
     REWORD("log.title.reword", "error.reword.failed"),
     SQUASH("log.title.squash", "error.squash.failed"),
     FIXUP("log.title.fixup", "error.fixup.failed"),
+    RESET("log.title.reset", "error.reset.failed"),
     DISCARD("log.title.discard", "error.discard.failed"),
     CHECKOUT("log.title.checkout", "error.checkout.failed"),
     NEW_BRANCH("log.title.newBranch", "error.newBranch.failed"),

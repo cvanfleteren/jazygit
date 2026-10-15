@@ -7,7 +7,7 @@ import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 
 /**
- * The keys for committing, amending, rewording, squashing and fixing up.
+ * The keys for committing, amending, rewording, squashing, fixing up and resetting.
  */
 public final class CommitKeys {
 
@@ -22,6 +22,7 @@ public final class CommitKeys {
                 .add(Scopes.COMMITS,
                         Binding.<Commit>onSelected("r", "help.commits.reword", commit -> new RewordMsg.Requested(commit.sha())),
                         Binding.<Commit>onSelected("s", "help.commits.squash", commit -> new SquashMsg.Requested(commit.sha())),
-                        Binding.<Commit>onSelected("f", "help.commits.fixup", commit -> new FixupMsg.Requested(commit.sha())));
+                        Binding.<Commit>onSelected("f", "help.commits.fixup", commit -> new FixupMsg.Requested(commit.sha())),
+                        Binding.<Commit>onSelected("g", "help.commits.reset", commit -> new ResetMsg.Requested(commit.sha())));
     }
 }

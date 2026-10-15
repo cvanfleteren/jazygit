@@ -391,6 +391,33 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void eachResetMovesTheBranchAndKeepsOrDiscardsTheChangesAsItsModeSays() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+        Sha second = provider.commits().get().head().sha();
+        Sha initial = provider.commits().get().get(1).sha();
+
+        List<String> executed = provider.reset(initial, ResetMode.SOFT).get().map(ExecutedCommand::line);
+        assertEquals(List.of("git reset --quiet --soft " + initial.value()), executed);
+        assertEquals(List.of("Initial commit"), provider.commits().get().map(Commit::message).toList());
+        assertTrue(provider.status().get().files().exists(file -> file.path().equals("a.txt") && file.staged()));
+
+        git("reset", "-q", "--hard", second.value());
+        provider.reset(initial, ResetMode.MIXED).get();
+        assertTrue(provider.status().get().files().exists(file -> file.path().equals("a.txt") && !file.staged()));
+
+        git("reset", "-q", "--hard", second.value());
+        Files.writeString(repo.resolve("README.md"), "dirty\n");
+        Files.writeString(repo.resolve("untracked.txt"), "kept\n");
+        provider.reset(initial, ResetMode.HARD).get();
+        assertEquals(List.of("Initial commit"), provider.commits().get().map(Commit::message).toList());
+        assertTrue(Files.notExists(repo.resolve("a.txt")));
+        assertEquals("hello\n", Files.readString(repo.resolve("README.md")));
+        assertEquals("kept\n", Files.readString(repo.resolve("untracked.txt")));
+    }
+
+    @Test
     void rewordOfTheFirstCommitRebasesFromTheRoot() throws Exception {
         Files.writeString(repo.resolve("a.txt"), "a\n");
         git("add", "a.txt");

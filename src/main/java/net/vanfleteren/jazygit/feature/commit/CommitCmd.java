@@ -3,10 +3,12 @@ package net.vanfleteren.jazygit.feature.commit;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
+import net.vanfleteren.jazygit.git.model.ResetMode;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.state.Msg;
@@ -97,6 +99,27 @@ public sealed interface CommitCmd extends GitOperationCmd {
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return git.reword(sha, message);
+        }
+    }
+
+    /**
+     * Moves the checked out branch to a commit, doing with the changes {@code mode} says.
+     */
+    record Reset(Sha sha, ResetMode mode) implements CommitCmd {
+
+        @Override
+        public Operation operation() {
+            return Operation.RESET;
+        }
+
+        @Override
+        public Option<String> subject() {
+            return Option.of(sha.shortSha());
+        }
+
+        @Override
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+            return git.reset(sha, mode);
         }
     }
 }

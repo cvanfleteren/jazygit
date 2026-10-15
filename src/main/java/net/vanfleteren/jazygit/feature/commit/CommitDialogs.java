@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.commit;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.ResetMode;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
@@ -39,6 +40,28 @@ public final class CommitDialogs {
             List.of(new Choice<>('f', "dialog.fixup.fixup", () -> new FixupMsg.Chosen(SquashMode.FIXUP)),
                     new Choice<>('C', "dialog.fixup.keepMessage", () -> new FixupMsg.Chosen(SquashMode.FIXUP_KEEP_MESSAGE))),
             FixupMsg.Cancelled::new);
+
+    /**
+     * Asks how to reset the checked out branch to a commit.
+     */
+    public static final ChoiceDialog.Spec<ResetPopup> RESET = new ChoiceDialog.Spec<>(
+            "reset-commit", ResetPopup.class,
+            popup -> Messages.get("dialog.reset.title", popup.target().sha().shortSha()),
+            List.of(new Choice<>('m', "dialog.reset.mixed", () -> new ResetMsg.Chosen(ResetMode.MIXED)),
+                    new Choice<>('s', "dialog.reset.soft", () -> new ResetMsg.Chosen(ResetMode.SOFT)),
+                    new Choice<>('h', "dialog.reset.hard", () -> new ResetMsg.Chosen(ResetMode.HARD))),
+            ResetMsg.Cancelled::new);
+
+    /**
+     * Asks to confirm a hard reset, which discards the uncommitted changes.
+     */
+    public static final ConfirmDialog.Spec<HardResetPopup> HARD_RESET = new ConfirmDialog.Spec<>(
+            "hard-reset", HardResetPopup.class,
+            popup -> Messages.get("dialog.hardReset.title", popup.target().sha().shortSha()),
+            popup -> popup.files()
+                    .map(files -> Messages.get("dialog.hardReset.message", files))
+                    .getOrElse(() -> Messages.get("dialog.hardReset.messageUnknown")),
+            ResetMsg.HardConfirmed::new, ResetMsg.HardCancelled::new);
 
     /**
      * Asks whether to stage all files, because a commit needs something staged.

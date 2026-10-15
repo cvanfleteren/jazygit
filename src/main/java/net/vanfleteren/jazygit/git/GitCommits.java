@@ -7,6 +7,7 @@ import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.RewordError;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
+import net.vanfleteren.jazygit.git.model.ResetMode;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 
@@ -42,4 +43,11 @@ public interface GitCommits {
      * @param sha the full object id of a commit that has exactly one parent
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode);
+
+    /**
+     * Moves the checked out branch to the commit {@code sha}, doing with the changes {@code mode} says.
+     *
+     * @param sha the full object id of the commit
+     */
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> reset(Sha sha, ResetMode mode);
 }
