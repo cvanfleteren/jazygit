@@ -4,7 +4,6 @@ import dev.tamboui.tui.event.KeyEvent;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.feature.repos.RecentReposMsg;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelMsg;
-import net.vanfleteren.jazygit.feature.theme.ThemeMsg;
 import net.vanfleteren.jazygit.state.Msg;
 
 /**
@@ -19,8 +18,6 @@ final class GlobalKeys {
         // The panels show their help for ? themselves; run from the help, it closes it, as pressing it there does.
         return keys.global(new Keymap.Global.Dispatching(Keymap.HELP_KEY, "help.global.help", event -> false,
                         HelpMsg.Closed::new))
-                .global(new Keymap.Global.Dispatching("ctrl+t", "help.global.theme", GlobalKeys::isThemeKey,
-                        ThemeMsg.Requested::new))
                 .global(new Keymap.Global.Dispatching("ctrl+r", "help.global.recentRepos",
                         GlobalKeys::isRecentReposKey, RecentReposMsg.Requested::new))
                 .global(new Keymap.Global.Dispatching("ctrl+s", "help.global.settings",
@@ -31,11 +28,6 @@ final class GlobalKeys {
     /** Whether {@code event} is the key that quits. */
     static boolean isQuitKey(KeyEvent event) {
         return event.isChar('q') && !event.hasCtrl() && !event.hasAlt();
-    }
-
-    /** Whether {@code event} is the shortcut that asks which theme to use. */
-    static boolean isThemeKey(KeyEvent event) {
-        return event.hasCtrl() && event.isCharIgnoreCase('t');
     }
 
     /** Whether {@code event} is the shortcut that shows the settings. */

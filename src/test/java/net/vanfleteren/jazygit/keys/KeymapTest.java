@@ -30,13 +30,6 @@ class KeymapTest {
     }
 
     @Test
-    void ctrlTAsksForTheTheme() {
-        assertTrue(GlobalKeys.isThemeKey(KeyEvent.ofChar('t', dev.tamboui.tui.event.KeyModifiers.CTRL)));
-        assertFalse(GlobalKeys.isThemeKey(KeyEvent.ofChar('t')));
-        assertFalse(GlobalKeys.isThemeKey(KeyEvent.ofChar('x', dev.tamboui.tui.event.KeyModifiers.CTRL)));
-    }
-
-    @Test
     void aKeyCannotBeBoundTwiceInAPanel() {
         Keymap once = Keymap.empty().add(Scopes.BRANCHES, Keymap.Binding.<Branch.Name>onSelected("x", "help.global.quit", CheckoutMsg.Requested::new));
 

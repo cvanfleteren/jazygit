@@ -10,7 +10,7 @@ import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.PushMsg;
 import net.vanfleteren.jazygit.feature.repos.RecentReposMsg;
-import net.vanfleteren.jazygit.feature.theme.ThemeMsg;
+import net.vanfleteren.jazygit.feature.settings.SettingsPanelMsg;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
@@ -79,7 +79,7 @@ class HelpDialogTest {
         for (String scope : List.of(Scopes.FILES.id(), Scopes.BRANCHES.id(), Scopes.COMMITS.id(), Scopes.STASH.id())) {
             String screen = screen(scope);
             assertTrue(screen.contains("Global"), screen);
-            assertTrue(screen.contains("      ctrl+t Choose the theme"), screen);
+            assertTrue(screen.contains("      ctrl+s Show the settings"), screen);
         }
     }
 
@@ -104,7 +104,7 @@ class HelpDialogTest {
     void theArrowsSkipTheHeadingsAndStopAtTheEnds() throws Exception {
         int panelKeys = Keymap.standard().bindings(Scopes.BRANCHES.id()).size();
         // Past the panel keys, the legend and the heading, to the second global key, after ?.
-        assertEquals(List.of(new HelpMsg.Chosen(new ThemeMsg.Requested())), press(onFeature(), r -> {
+        assertEquals(List.of(new HelpMsg.Chosen(new RecentReposMsg.Requested())), press(onFeature(), r -> {
             for (int i = 0; i < panelKeys + 1; i++) {
                 r.pilot().press(KeyCode.DOWN);
             }
@@ -120,8 +120,8 @@ class HelpDialogTest {
     void pressingAKeyRunsIt() throws Exception {
         assertEquals(List.of(new HelpMsg.Chosen(new DeleteBranchMsg.Requested(FEATURE))),
                 press(onFeature(), r -> r.pilot().press('d')));
-        assertEquals(List.of(new HelpMsg.Chosen(new ThemeMsg.Requested())),
-                press(onFeature(), r -> r.pilot().press('t', KeyModifiers.CTRL)));
+        assertEquals(List.of(new HelpMsg.Chosen(new SettingsPanelMsg.Requested())),
+                press(onFeature(), r -> r.pilot().press('s', KeyModifiers.CTRL)));
     }
 
     @Test
