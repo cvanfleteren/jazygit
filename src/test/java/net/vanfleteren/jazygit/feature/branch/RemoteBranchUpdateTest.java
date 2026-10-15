@@ -44,11 +44,15 @@ class RemoteBranchUpdateTest {
     }
 
     @Test
-    void theTabSwitchesBetweenTheLocalAndTheRemoteBranches() {
-        Model remote = Update.update(loaded(), new BranchesTabMsg.Switched()).model();
+    void theTabGoesRoundTheLocalBranchesTheRemoteOnesAndTheWorktrees() {
+        Model remote = Update.update(loaded(), new BranchesTabMsg.Switched(1)).model();
         assertEquals(BranchesTab.REMOTE, remote.branchesTab());
 
-        assertEquals(BranchesTab.LOCAL, Update.update(remote, new BranchesTabMsg.Switched()).model().branchesTab());
+        Model worktrees = Update.update(remote, new BranchesTabMsg.Switched(1)).model();
+        assertEquals(BranchesTab.WORKTREES, worktrees.branchesTab());
+        assertEquals(BranchesTab.LOCAL, Update.update(worktrees, new BranchesTabMsg.Switched(1)).model().branchesTab());
+        assertEquals(BranchesTab.WORKTREES, Update.update(loaded(), new BranchesTabMsg.Switched(-1)).model().branchesTab());
+        assertEquals(BranchesTab.LOCAL, Update.update(remote, new BranchesTabMsg.Switched(-1)).model().branchesTab());
     }
 
     @Test
@@ -111,7 +115,7 @@ class RemoteBranchUpdateTest {
 
     @Test
     void aCheckoutOrANewBranchFromTheRemoteBranchesShowsTheLocalOnesOnceItSucceeded() {
-        Model onRemotes = Update.update(withRemotes(), new BranchesTabMsg.Switched()).model();
+        Model onRemotes = Update.update(withRemotes(), new BranchesTabMsg.Switched(1)).model();
 
         List.<BranchCmd>of(new CheckoutRemote(new Branch.Name("new"), ORIGIN_NEW), new Checkout(new Branch.Name("feature")),
                         new CreateBranch(new Branch.Name("topic"), "refs/remotes/origin/new"))
@@ -130,7 +134,7 @@ class RemoteBranchUpdateTest {
 
     @Test
     void aFailedCheckoutFromTheRemoteBranchesStaysOnThem() {
-        Model started = Update.update(Update.update(withRemotes(), new BranchesTabMsg.Switched()).model(),
+        Model started = Update.update(Update.update(withRemotes(), new BranchesTabMsg.Switched(1)).model(),
                 new CheckoutMsg.RemoteRequested(ORIGIN_NEW)).model();
 
         Model failed = Update.update(started, new CheckoutRemote(new Branch.Name("new"), ORIGIN_NEW).failed(

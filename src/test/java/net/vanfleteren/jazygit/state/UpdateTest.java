@@ -33,7 +33,8 @@ class UpdateTest {
         assertInstanceOf(Loading.class, next.model().status());
         assertInstanceOf(Loading.class, next.model().commits());
         assertEquals(List.of(new LoadStatus(), new LoadBranches(),
-                new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadStashes()), next.cmds());
+                new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
+                new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()), next.cmds());
     }
 
     @Test

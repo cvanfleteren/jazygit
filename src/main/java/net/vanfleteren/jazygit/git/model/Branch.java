@@ -92,6 +92,13 @@ public record Branch(Name name, boolean current, Sha tipOid, Instant tipTime, bo
     }
 
     /**
+     * Where the other worktree it is checked out in is, as text, if it is checked out in one.
+     */
+    public Option<String> worktreeLocation() {
+        return worktree.map(Path::toString);
+    }
+
+    /**
      * Whether it is checked out in another worktree.
      */
     public boolean checkedOutElsewhere() {

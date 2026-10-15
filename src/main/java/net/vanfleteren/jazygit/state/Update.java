@@ -27,7 +27,7 @@ public final class Update {
      * Loads that a tick repeats. They are skipped while a previous one is still running.
      */
     private static final List<Cmd.Load> PERIODIC = List.of(new LoadStatus(), new LoadBranches(),
-            new Cmd.LoadRemoteBranches(), new Cmd.LoadStashes());
+            new Cmd.LoadRemoteBranches(), new Cmd.LoadStashes(), new Cmd.LoadWorktrees());
 
     private Update() {
     }

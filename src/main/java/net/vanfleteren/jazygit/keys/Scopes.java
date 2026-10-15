@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.FileTree;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Stash;
+import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.keys.Keymap.Scope;
 
 /**
@@ -19,6 +20,8 @@ public final class Scopes {
     /** The selected remote-tracking branch. */
     public static final Scope<RemoteBranch> REMOTE_BRANCHES = new Scope<>("remoteBranches",
             "panel.remoteBranches.title");
+    /** The selected worktree. */
+    public static final Scope<Worktree> WORKTREES = new Scope<>("worktrees", "panel.worktrees.title");
     /** The selected commit. */
     public static final Scope<Commit> COMMITS = new Scope<>("commits", "panel.commits.title");
     /** The selected stash. */

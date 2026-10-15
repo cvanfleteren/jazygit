@@ -13,10 +13,10 @@ public sealed interface BranchesTabMsg extends Msg {
     }
 
     /**
-     * The user asked for the other list of the branches pane: the remote branches instead of the local ones, or
-     * the other way around.
+     * The user asked for another list of the branches pane: the one {@code by} lists further, going round; -1 for
+     * the previous one, 1 for the next one.
      */
-    record Switched() implements BranchesTabMsg {
+    record Switched(int by) implements BranchesTabMsg {
     }
 
     /**

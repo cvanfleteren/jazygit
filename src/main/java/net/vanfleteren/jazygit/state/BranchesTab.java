@@ -1,18 +1,21 @@
 package net.vanfleteren.jazygit.state;
 
 /**
- * Which branches the branches pane lists.
+ * Which list the branches pane shows, in the order {@code [} and {@code ]} go through them.
  */
 public enum BranchesTab {
     /** The local branches. */
     LOCAL,
     /** The remote-tracking branches. */
-    REMOTE;
+    REMOTE,
+    /** The worktrees of the repository. */
+    WORKTREES;
 
     /**
-     * The other tab; with two, the next and the previous one are the same.
+     * The tab {@code by} tabs after this one, going round: -1 is the previous one, 1 the next one.
      */
-    public BranchesTab other() {
-        return this == LOCAL ? REMOTE : LOCAL;
+    public BranchesTab shifted(int by) {
+        int count = values().length;
+        return values()[Math.floorMod(ordinal() + by, count)];
     }
 }

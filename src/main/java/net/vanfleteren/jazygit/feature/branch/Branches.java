@@ -32,8 +32,8 @@ final class Branches {
      * worktree.
      */
     static Option<AppError> checkedOutElsewhere(Model model, Operation operation, Branch.Name name) {
-        return model.branch(name).flatMap(Branch::worktree)
-                .map(worktree -> new AppError.CheckedOutElsewhere(operation, name, worktree.toString()));
+        return model.branch(name).flatMap(Branch::worktreeLocation)
+                .map(worktree -> new AppError.CheckedOutElsewhere(operation, name, worktree));
     }
 
     /**

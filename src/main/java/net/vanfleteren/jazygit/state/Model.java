@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.git.model.Upstream;
+import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.ThemeName;
 
@@ -34,6 +35,7 @@ import net.vanfleteren.jazygit.settings.ThemeName;
  * @param branchesTab    which branches the branches pane lists; it stays when the focus leaves the pane
  * @param commits        the commit log of HEAD
  * @param stashes        the stashes, newest first
+ * @param worktrees      the worktrees of the repository, the main one first
  * @param branchLog      the log of the branch, local or remote, highlighted in the branches pane, once one is
  *                       highlighted
  * @param commitDetail   what the commit highlighted in the commits pane changed (its files, a summary and its
@@ -70,6 +72,7 @@ public record Model(String repositoryName,
                     BranchesTab branchesTab,
                     Loadable<List<Commit>> commits,
                     Loadable<List<Stash>> stashes,
+                    Loadable<List<Worktree>> worktrees,
                     Option<Preview<BranchRef, List<Commit>>> branchLog,
                     Option<Preview<Sha, DiffText>> commitDetail,
                     Option<Preview<List<FileEntry>, Diffs>> fileDiff,
@@ -90,7 +93,7 @@ public record Model(String repositoryName,
 
     public static Model initial(String repositoryName) {
         return new Model(repositoryName, Loadable.loading(), Loadable.loading(), Loadable.loading(),
-                BranchesTab.LOCAL, Loadable.loading(), Loadable.loading(), Option.none(),
+                BranchesTab.LOCAL, Loadable.loading(), Loadable.loading(), Loadable.loading(), Option.none(),
                 Option.none(), Option.none(), HashSet.empty(), Option.none(), HashMap.empty(), Option.none(), Option.none(), Option.none(), 0, Option.none(), 0, List.empty(),
                 Option.none(), Settings.DEFAULT, Option.none(), Option.none());
     }
@@ -151,6 +154,20 @@ public record Model(String repositoryName,
      */
     public Option<Branch> currentBranch() {
         return branches.toOption().flatMap(loaded -> loaded.find(Branch::current));
+    }
+
+    /**
+     * The worktree at {@code location}, if the worktrees are loaded and it is one of them.
+     */
+    public Option<Worktree> worktree(String location) {
+        return worktrees.toOption().flatMap(loaded -> loaded.find(worktree -> worktree.location().equals(location)));
+    }
+
+    /**
+     * The main worktree, if the worktrees are loaded and the repository has one.
+     */
+    public Option<Worktree> mainWorktree() {
+        return worktrees.toOption().flatMap(loaded -> loaded.find(Worktree::main));
     }
 
     /**

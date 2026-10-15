@@ -25,6 +25,8 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.feature.branch.BranchesTabMsg;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
+import net.vanfleteren.jazygit.git.model.Worktree;
+import net.vanfleteren.jazygit.feature.worktree.WorktreeMsg;
 import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.SelectionMsg;
@@ -279,6 +281,59 @@ class BranchesPanelTest {
     }
 
     @Test
+    void theWorktreesTabListsTheWorktreesAndItsKeysActOnTheHighlightedOne() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> { });
+        Model worktrees = withWorktrees(before);
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(worktrees, BranchesPanel.ID))) {
+            testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
+            String screen = RenderedText.of(testRunner, () -> panel.render(worktrees, BranchesPanel.ID));
+            testRunner.pilot().press(KeyCode.DOWN);
+            testRunner.pilot().press(' ');
+            testRunner.pilot().press('d');
+            testRunner.pilot().press(']');
+            testRunner.pilot().pause();
+            testRunner.pilot().quit();
+
+            assertTrue(screen.contains("Branches │ Remotes │ Worktrees"), screen);
+            assertTrue(screen.contains("* app main (main)"), screen);
+            assertTrue(screen.contains("  app-feature feature"), screen);
+        }
+
+        assertEquals(java.util.List.of(new WorktreeMsg.SwitchRequested("/repos/app-feature"),
+                new WorktreeMsg.RemoveRequested("/repos/app-feature"), new BranchesTabMsg.Switched(1)), dispatched);
+        assertEquals(Option.of(new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("feature")))),
+                panel.selectionChange(worktrees));
+    }
+
+    @Test
+    void aWorktreeSaysWhatItHasCheckedOutAndWhatKeepsItFromBeingRemoved() {
+        Worktree detached = new Worktree(java.nio.file.Path.of("/repos/x"), Option.of(new Sha("1234567890")), Option.none(),
+                false, false, true, true);
+
+        assertEquals("  x (detached at 1234567) locked missing", BranchesPanel.worktreeRow(detached).text());
+        assertEquals(List.of(Option.none(), Option.of(Theme.Classes.DIM), Option.of(Theme.Classes.DIM),
+                        Option.of(Theme.Classes.GONE)),
+                BranchesPanel.worktreeRow(detached).segs().map(LoadableList.Seg::cssClass));
+    }
+
+    @Test
+    void onTheLocalTabWChecksTheHighlightedBranchOutInANewWorktree() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> { });
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
+            testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
+            RenderedText.of(testRunner, () -> panel.render(before, BranchesPanel.ID));
+            testRunner.pilot().press(KeyCode.DOWN);
+            testRunner.pilot().press('w');
+            testRunner.pilot().pause();
+            testRunner.pilot().quit();
+        }
+
+        assertEquals(java.util.List.of(new WorktreeMsg.NewRequested(new Branch.Name("feature"))), dispatched);
+    }
+
+    @Test
     void theRemoteTabSaysWhenThereAreNoRemoteBranches() throws Exception {
         Model none = before.withBranchesTab(BranchesTab.REMOTE).withRemoteBranches(new Loadable.Loaded<>(List.empty()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(none, BranchesPanel.ID))) {
@@ -310,7 +365,7 @@ class BranchesPanelTest {
         RemoteBranch upstreamMain = new RemoteBranch("upstream", new Branch.Name("main"));
         // P pushes a local branch; it does nothing here.
         assertEquals(java.util.List.of(new CheckoutMsg.RemoteRequested(upstreamMain),
-                new NewBranchMsg.RequestedAtRemote(upstreamMain), new BranchesTabMsg.Switched()), dispatched);
+                new NewBranchMsg.RequestedAtRemote(upstreamMain), new BranchesTabMsg.Switched(-1)), dispatched);
     }
 
     @Test
@@ -325,7 +380,7 @@ class BranchesPanelTest {
             testRunner.pilot().quit();
         }
 
-        assertEquals(java.util.List.of(new BranchesTabMsg.Switched()), dispatched);
+        assertEquals(java.util.List.of(new BranchesTabMsg.Switched(1)), dispatched);
     }
 
     @Test
@@ -356,16 +411,25 @@ class BranchesPanelTest {
         assertEquals(Option.of(BranchesTab.REMOTE), BranchesPanel.tabAt(local + 3));
         assertEquals(Option.of(BranchesTab.REMOTE), BranchesPanel.tabAt(local + 3 + remote - 1));
         assertEquals(Option.none(), BranchesPanel.tabAt(local + 3 + remote));
+        assertEquals(Option.of(BranchesTab.WORKTREES), BranchesPanel.tabAt(local + 3 + remote + 3));
+        assertEquals(Option.none(), BranchesPanel.tabAt(local + 3 + remote + 3 + Messages.get("panel.worktrees.title").length()));
         assertEquals(Option.none(), BranchesPanel.tabAt(-1));
     }
 
     @Test
     void theTitleShowsWhichTabIsShownInBoldAndUnderlined() {
-        assertEquals(List.of(true, false), List.ofAll(BranchesPanel.title(BranchesTab.REMOTE).spans())
+        assertEquals(List.of(false, true, false), List.ofAll(BranchesPanel.title(BranchesTab.REMOTE).spans())
                 .filter(span -> !span.content().contains("│"))
                 .map(span -> span.style().addModifiers().containsAll(java.util.Set.of(
-                        dev.tamboui.style.Modifier.BOLD, dev.tamboui.style.Modifier.UNDERLINED)))
-                .reverse());
+                        dev.tamboui.style.Modifier.BOLD, dev.tamboui.style.Modifier.UNDERLINED))));
+    }
+
+    private static Model withWorktrees(Model model) {
+        return model.withBranchesTab(BranchesTab.WORKTREES).withWorktrees(new Loadable.Loaded<>(List.of(
+                new Worktree(java.nio.file.Path.of("/repos/app"), Option.of(new Sha("1")), Option.of(new Branch.Name("main")),
+                        true, true, false, false),
+                new Worktree(java.nio.file.Path.of("/repos/app-feature"), Option.of(new Sha("2")),
+                        Option.of(new Branch.Name("feature")), false, false, false, false))));
     }
 
     private static Model withRemotes(Model model) {

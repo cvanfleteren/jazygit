@@ -95,6 +95,7 @@ public final class ErrorText {
             case GitError.NoWorkTree(var directory) -> Messages.get("git.noWorkTree", directory);
             case GitError.UnknownBranch(BranchRef branch) -> Messages.get("git.unknownBranch", branch.name());
             case GitError.LocalChanges(String explanation) -> explanation;
+            case GitError.WorktreeHasChanges(String explanation) -> explanation;
             case GitError.StashNotRestored(var cause) -> Messages.get("git.stashPopFailed", of(cause));
             case GitError.StashGone(String message) -> Messages.get("git.stashGone", message);
             case GitError.TempFileFailed(Throwable cause) -> Messages.get("git.tempFileFailed", reason(cause));

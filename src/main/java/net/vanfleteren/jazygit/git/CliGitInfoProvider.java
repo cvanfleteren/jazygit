@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.git.GitError.NotARepository;
 import net.vanfleteren.jazygit.git.GitError.OpenError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.StashError;
+import net.vanfleteren.jazygit.git.GitError.RemoveWorktreeError;
 import net.vanfleteren.jazygit.git.GitError.RewordError;
 import net.vanfleteren.jazygit.git.GitError.StashCheckoutError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
@@ -39,6 +40,7 @@ import net.vanfleteren.jazygit.git.model.ResetMode;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.git.model.Stash;
+import net.vanfleteren.jazygit.git.model.Worktree;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -116,6 +118,21 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     @Override
     public Either<ProcessError, List<Branch>> branches() {
         return CliBranch.list(workTree);
+    }
+
+    @Override
+    public Either<ProcessError, List<Worktree>> worktrees() {
+        return CliWorktree.list(workTree);
+    }
+
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktree(Path location, Branch.Name branch) {
+        return CliWorktree.add(workTree, location, branch);
+    }
+
+    @Override
+    public Either<GitFailure<RemoveWorktreeError>, List<ExecutedCommand>> removeWorktree(Path location, boolean force) {
+        return CliWorktree.remove(workTree, location, force);
     }
 
     @Override

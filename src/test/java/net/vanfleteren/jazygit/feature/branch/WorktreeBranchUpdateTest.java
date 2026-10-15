@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.branch;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -23,7 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * A branch that is checked out in another worktree, which git keeps from being checked out, deleted or
- * fast-forwarded here: that is said up front, instead of running a command git refuses.
+ * fast-forwarded here: that is said up front, instead of running a command git refuses, and switching to that
+ * worktree is offered instead of the checkout.
  */
 class WorktreeBranchUpdateTest {
 
@@ -46,12 +48,18 @@ class WorktreeBranchUpdateTest {
     }
 
     @Test
-    void itIsNotCheckedOutAndTheErrorSaysWhere() {
-        Next next = Update.update(elsewhere(), new CheckoutMsg.Requested(FEATURE));
+    void insteadOfCheckingItOutSwitchingToItsWorktreeIsOffered() {
+        Next asked = Update.update(elsewhere(), new CheckoutMsg.Requested(FEATURE));
 
-        assertEquals(List.of(), next.cmds());
-        assertEquals(Option.of("Checkout of feature failed: it is checked out in the worktree at /repos/linked"),
-                errorText(next.model()));
+        assertEquals(List.of(), asked.cmds());
+        assertEquals(Option.of(new SwitchWorktreePopup(FEATURE, "/repos/linked")), asked.model().popup());
+
+        Next confirmed = Update.update(asked.model(), new CheckoutMsg.SwitchWorktreeConfirmed());
+        assertEquals(List.of(new RecentReposCmd.SwitchTo("/repos/linked")), confirmed.cmds());
+        assertEquals(Option.none(), confirmed.model().popup());
+        assertEquals(Option.none(), Update.update(asked.model(), new CheckoutMsg.SwitchWorktreeCancelled()).model().popup());
+        // Without the popup open, confirming does nothing.
+        assertEquals(List.of(), Update.update(elsewhere(), new CheckoutMsg.SwitchWorktreeConfirmed()).cmds());
     }
 
     @Test

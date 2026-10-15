@@ -22,6 +22,8 @@ public enum Operation {
     NEW_BRANCH("log.title.newBranch", "error.newBranch.failed"),
     RENAME_BRANCH("log.title.renameBranch", "error.renameBranch.failed"),
     DELETE_BRANCH("log.title.deleteBranch", "error.deleteBranch.failed"),
+    ADD_WORKTREE("log.title.addWorktree", "error.addWorktree.failed"),
+    REMOVE_WORKTREE("log.title.removeWorktree", "error.removeWorktree.failed"),
     PUSH("log.title.push", "error.push.failed"),
     PULL("log.title.pull", "error.pull.failed"),
     FAST_FORWARD("log.title.fastForward", "error.fastForward.failed"),

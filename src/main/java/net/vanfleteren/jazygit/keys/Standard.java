@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.feature.github.BrowseKeys;
 import net.vanfleteren.jazygit.feature.github.PullRequestKeys;
 import net.vanfleteren.jazygit.feature.stage.StageKeys;
 import net.vanfleteren.jazygit.feature.stash.StashKeys;
+import net.vanfleteren.jazygit.feature.worktree.WorktreeKeys;
 
 import java.util.function.UnaryOperator;
 
@@ -24,6 +25,7 @@ final class Standard {
                     BranchKeys::register,
                     PullRequestKeys::register,
                     BrowseKeys::register,
+                    WorktreeKeys::register,
                     GlobalKeys::register)
             .foldLeft(Keymap.empty(), (keymap, feature) -> feature.apply(keymap));
 

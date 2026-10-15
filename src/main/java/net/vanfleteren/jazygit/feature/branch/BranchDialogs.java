@@ -64,6 +64,15 @@ public final class BranchDialogs {
             CheckoutMsg.StashConfirmed::new, CheckoutMsg.StashCancelled::new);
 
     /**
+     * Tells that the branch to check out is checked out in another worktree, and asks to switch to that one.
+     */
+    public static final ConfirmDialog.Spec<SwitchWorktreePopup> SWITCH_WORKTREE = new ConfirmDialog.Spec<>(
+            "switch-worktree", SwitchWorktreePopup.class,
+            popup -> Messages.get("dialog.switchWorktree.title", popup.branch().value()),
+            popup -> Messages.get("dialog.switchWorktree.message", popup.branch().value(), popup.worktree()),
+            CheckoutMsg.SwitchWorktreeConfirmed::new, CheckoutMsg.SwitchWorktreeCancelled::new);
+
+    /**
      * Asks where to delete a branch. The options that act on the remote only apply when the branch has a
      * remote branch that can be deleted, the ones that act locally when no other worktree has it checked out.
      */

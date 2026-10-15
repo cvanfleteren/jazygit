@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
+import net.vanfleteren.jazygit.git.model.Worktree;
 
 /**
  * The outcome of reading from the repository.
@@ -56,6 +57,14 @@ public sealed interface LoadMsg extends Msg {
         @Override
         public Cmd.Load cmd() {
             return new Cmd.LoadStashes();
+        }
+    }
+
+    record WorktreesLoaded(List<Worktree> worktrees) implements LoadMsg {
+
+        @Override
+        public Cmd.Load cmd() {
+            return new Cmd.LoadWorktrees();
         }
     }
 

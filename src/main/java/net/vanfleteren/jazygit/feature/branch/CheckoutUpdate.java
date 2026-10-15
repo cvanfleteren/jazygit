@@ -13,10 +13,12 @@ import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.RemoteRequested;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.Requested;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.StashCancelled;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.StashConfirmed;
+import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.SwitchWorktreeCancelled;
+import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.SwitchWorktreeConfirmed;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Operation;
+import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -40,6 +42,11 @@ public final class CheckoutUpdate {
             case StashCancelled() -> Next.of(model.withoutPopup(StashCheckoutPopup.class));
             case StashConfirmed() -> Update.confirm(model, StashCheckoutPopup.class,
                     popup -> Option.of(new CheckoutWithStash(popup.branch())));
+            case SwitchWorktreeCancelled() -> Next.of(model.withoutPopup(SwitchWorktreePopup.class));
+            case SwitchWorktreeConfirmed() -> model.popup(SwitchWorktreePopup.class)
+                    .map(popup -> Next.of(model.withoutPopup(SwitchWorktreePopup.class).clearError(),
+                            new RecentReposCmd.SwitchTo(popup.worktree())))
+                    .getOrElse(() -> Next.of(model));
         };
     }
 
@@ -59,12 +66,12 @@ public final class CheckoutUpdate {
     }
 
     /**
-     * Checks out {@code branch}; one that is checked out in another worktree git would refuse, so that is said
-     * instead.
+     * Checks out {@code branch}. One that another worktree has checked out git would refuse, so switching to that
+     * worktree is offered instead.
      */
     private static Next requested(Model model, Branch.Name branch) {
-        return Branches.checkedOutElsewhere(model, Operation.CHECKOUT, branch)
-                .map(error -> Next.of(model.fail(error)))
+        return model.idleBranch(branch).flatMap(Branch::worktreeLocation)
+                .map(worktree -> Update.ask(model, new SwitchWorktreePopup(branch, worktree)))
                 .getOrElse(() -> Branches.isOtherIdleBranch(model, branch)
                         ? Update.start(model.clearError(), new Checkout(branch))
                         : Next.of(model));

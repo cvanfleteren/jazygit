@@ -124,6 +124,14 @@ public interface Cmd {
         }
     }
 
+    record LoadWorktrees() implements Load {
+
+        @Override
+        public Msg run(Env env) {
+            return env.git().worktrees().fold(this::failedWith, LoadMsg.WorktreesLoaded::new);
+        }
+    }
+
     record LoadCommits() implements Load {
 
         @Override

@@ -7,7 +7,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
- * Switching the branches pane between the local and the remote branches.
+ * Switching the branches pane between the local branches, the remote ones and the worktrees.
  */
 public final class BranchesTabUpdate {
 
@@ -16,7 +16,7 @@ public final class BranchesTabUpdate {
 
     public static Next update(Model model, BranchesTabMsg msg) {
         return switch (msg) {
-            case Switched() -> Next.of(model.withBranchesTab(model.branchesTab().other()));
+            case Switched(int by) -> Next.of(model.withBranchesTab(model.branchesTab().shifted(by)));
             case Chosen(BranchesTab tab) -> Next.of(model.withBranchesTab(tab));
         };
     }

@@ -64,6 +64,12 @@ public sealed interface GitError {
     }
 
     /**
+     * The failures of removing a linked worktree.
+     */
+    sealed interface RemoveWorktreeError extends GitError {
+    }
+
+    /**
      * The failures of deleting untracked files.
      */
     sealed interface DeleteUntrackedError extends DiscardError {
@@ -73,7 +79,7 @@ public sealed interface GitError {
      * A failure that running any git command can have.
      */
     sealed interface ProcessError extends CheckoutError, RewordError, DeleteUntrackedError, DiffError, LogError,
-            OpenError, StashError {
+            OpenError, StashError, RemoveWorktreeError {
     }
 
     /**
@@ -160,6 +166,14 @@ public sealed interface GitError {
      * @param explanation git's explanation
      */
     record LocalChanges(String explanation) implements CheckoutError {
+    }
+
+    /**
+     * Git refused to remove a worktree because it has modified or untracked files, which forcing it would lose.
+     *
+     * @param explanation git's explanation
+     */
+    record WorktreeHasChanges(String explanation) implements RemoveWorktreeError {
     }
 
     /**
