@@ -57,6 +57,31 @@ public final class Exec {
     }
 
     /**
+     * Runs {@code commandLine} in {@code directory} on the terminal of this process, for the user to work with,
+     * like an editor, and waits for it however long that takes. What it prints goes to the terminal, so a
+     * {@link ExecFailure.NonZero} has no output.
+     *
+     * @return the command as it was run, when it exited with 0
+     */
+    public static Either<ExecFailure, ExecutedCommand> interactive(Path directory, List<String> commandLine) {
+        try {
+            Process process = new ProcessBuilder(commandLine.toJavaList())
+                    .directory(directory.toFile())
+                    .inheritIO()
+                    .start();
+            int exitCode = process.waitFor();
+            return exitCode == 0
+                    ? Either.right(new ExecutedCommand(commandLine))
+                    : Either.left(new ExecFailure.NonZero(exitCode, "", ""));
+        } catch (IOException e) {
+            return Either.left(new ExecFailure.NotStarted(e));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return Either.left(new ExecFailure.Interrupted());
+        }
+    }
+
+    /**
      * The line of what a program printed that states why it failed: the first one that says it is an error,
      * like {@code error: failed to push some refs}, as progress or hints may come before it; else the first
      * non-blank one. Its error output is looked at first.

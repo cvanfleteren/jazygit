@@ -21,6 +21,7 @@ public enum Operation {
     RESET("log.title.reset", "error.reset.failed"),
     CHERRY_PICK("log.title.cherryPick", "error.cherryPick.failed"),
     DISCARD("log.title.discard", "error.discard.failed"),
+    EDIT("log.title.edit", "error.edit.failed"),
     CHECKOUT("log.title.checkout", "error.checkout.failed"),
     NEW_BRANCH("log.title.newBranch", "error.newBranch.failed"),
     RENAME_BRANCH("log.title.renameBranch", "error.renameBranch.failed"),

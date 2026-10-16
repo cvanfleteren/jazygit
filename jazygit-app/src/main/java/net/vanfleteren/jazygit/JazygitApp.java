@@ -24,11 +24,13 @@ import java.nio.file.StandardOpenOption;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import net.vanfleteren.jazygit.cli.StartupCli;
 import net.vanfleteren.jazygit.cli.StartupOptions;
 import net.vanfleteren.jazygit.feature.branch.BranchDialogs;
@@ -148,6 +150,9 @@ public class JazygitApp extends ToolkitApp {
             new PopupSlot(new ConfirmDialog<>(ErrorDialog.SPEC, dispatch), JazygitApp::focusedPane));
     // What runs while the app is started.
     private Option<Runtime> runtime = Option.none();
+    // How the terminal is set up, and the backend that hands it over to an editor, once the app is started.
+    private TuiConfig config = TuiConfig.defaults();
+    private Option<HandOverBackend> backend = Option.none();
 
     /**
      * @param env           what the repository the app starts in is read with; it opens other repositories in
@@ -157,7 +162,7 @@ public class JazygitApp extends ToolkitApp {
      */
     public JazygitApp(
             Env env, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, StyleEngine styleEngine) {
-        this.env = new Env(env.git(), env.gitHub(), env.settings(), env.recent(), this::switchTo);
+        this.env = new Env(env.git(), env.gitHub(), env.settings(), env.recent(), this::switchTo, this::handOver);
         this.settings = settings;
         this.themeOverride = themeOverride;
         this.styleEngine = styleEngine;
@@ -176,7 +181,8 @@ public class JazygitApp extends ToolkitApp {
             Settings settings,
             SettingsStore store,
             RecentRepositories recent,
-            Repositories repositories) {
+            Repositories repositories,
+            Terminal terminal) {
         GhToken token = new GhToken(git.workTree(), settings.gh(), () -> GitHubAccount.configured(git));
         // Without the token, git still talks to the remotes, as the credential helper's own account.
         return new Env(
@@ -184,7 +190,8 @@ public class JazygitApp extends ToolkitApp {
                 new CliGitHub(git.workTree(), settings.gh(), token),
                 store,
                 recent,
-                repositories);
+                repositories,
+                terminal);
     }
 
     /**
@@ -248,7 +255,8 @@ public class JazygitApp extends ToolkitApp {
                             recent.opened(provider.workTree()).onFailure(JazygitApp::logBug);
                             SettingsStore settings = new SettingsFile(SettingsPaths.configFile());
                             SettingsStore.Loaded loaded = settings.load();
-                            Env env = env(provider, loaded.settings(), settings, recent, Repositories.NONE);
+                            Env env = env(
+                                    provider, loaded.settings(), settings, recent, Repositories.NONE, Terminal.NONE);
                             return new JazygitApp(env, loaded, options.theme(), engine);
                         }));
         app.flatMap(jazygit -> Try.run(jazygit::run).toEither().mapLeft(ErrorText::reason))
@@ -358,15 +366,44 @@ public class JazygitApp extends ToolkitApp {
             // repository, and its outcome goes to the old program, which nobody looks at anymore.
             stop(running);
             startRuntime(
-                    env(git, last.settings(), env.settings(), env.recent(), env.repositories()),
+                    env(git, last.settings(), env.settings(), env.recent(), env.repositories(), env.terminal()),
                     new SettingsStore.Loaded(last.settings(), Option.none()),
                     last.themeOverride());
         });
     }
 
+    /**
+     * Runs {@code program} with the terminal handed over to it, as {@link Terminal} asks; called on the thread of a
+     * command. The app keeps running meanwhile, but draws nothing and reads no keys, and is drawn anew afterwards.
+     */
+    private <T> T handOver(Supplier<T> program) {
+        return backend.fold(program::get, handing -> {
+            onRenderThread(() -> Try.run(() -> handing.leave(config)).get());
+            try {
+                return program.get();
+            } finally {
+                onRenderThread(() -> {
+                    Try.run(() -> handing.comeBack(config)).get();
+                    runner().tuiRunner().terminal().clear();
+                });
+            }
+        });
+    }
+
+    /**
+     * Runs {@code action} on the render thread, between two frames, and waits for it.
+     */
+    private void onRenderThread(Runnable action) {
+        CompletableFuture.runAsync(action, runner()::runOnRenderThread).join();
+    }
+
     @Override
     protected TuiConfig configure() {
-        return TuiConfig.builder().mouseCapture(true).build();
+        // Without a backend of its own, the app still runs, but cannot hand the terminal over.
+        backend = Try.of(HandOverBackend::system).onFailure(JazygitApp::logBug).toOption();
+        TuiConfig.Builder builder = TuiConfig.builder().mouseCapture(true);
+        config = backend.map(builder::backend).getOrElse(builder).build();
+        return config;
     }
 
     @Override

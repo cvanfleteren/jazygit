@@ -135,4 +135,19 @@ public sealed interface GitError {
      * An untracked path that was not deleted because it is not inside the working tree.
      */
     record RefusedPath(String path) implements GitError {}
+
+    /**
+     * The editor could not be started.
+     *
+     * @param editor the editor as git names it, e.g. {@code nvim} or {@code code --wait}
+     */
+    record EditorNotStarted(String editor, IOException cause) implements GitError {}
+
+    /**
+     * The editor exited with a non-zero code, as {@code vim} does after {@code :cq}, or a shell when it cannot find
+     * the editor.
+     *
+     * @param editor the editor as git names it
+     */
+    record EditorFailed(String editor, int exitCode) implements GitError {}
 }

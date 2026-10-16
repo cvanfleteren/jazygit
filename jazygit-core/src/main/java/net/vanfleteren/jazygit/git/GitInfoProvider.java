@@ -331,4 +331,14 @@ public interface GitInfoProvider {
      * {@link GitError.WorktreeHasChanges}.
      */
     Either<GitFailure<GitError>, List<ExecutedCommand>> removeWorktree(Path location, boolean force);
+
+    // Editing files, as git edits commit messages.
+
+    /**
+     * Opens {@code files}, relative to the working tree, in the editor git uses for commit messages, and waits until
+     * it is closed. It runs on the terminal, which the caller must have handed over. Fails with a
+     * {@link GitError.EditorNotStarted} or {@link GitError.EditorFailed}, or a {@link ProcessError} when git names no
+     * editor.
+     */
+    Either<GitFailure<GitError>, List<ExecutedCommand>> edit(List<String> files);
 }

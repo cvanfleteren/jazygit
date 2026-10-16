@@ -37,7 +37,7 @@ graph TD
     App["JazygitApp<br/><i>entry point, layout, popups, focus</i>"]
     UI["ui<br/><i>panels and widgets: render a Model</i>"]
     Keys["keys<br/><i>Keymap: every shortcut, declared once</i>"]
-    Feature["feature.*<br/><i>branch, commit, stage, stash, discard,<br/>github, fetch, error, help, theme, repos,<br/>settings, worktree, inprogress</i>"]
+    Feature["feature.*<br/><i>branch, commit, stage, stash, discard,<br/>github, fetch, error, help, theme, repos,<br/>settings, worktree, inprogress, edit</i>"]
     State["state<br/><i>Model, Msg, Update, Cmd, Program</i>"]
     Git["git<br/><i>GitInfoProvider, CliGitInfoProvider, Cli*, GitProcess, GitError</i>"]
     GitModel["git.model<br/><i>Branch, Commit, RepoStatus, Sha, ...</i>"]
@@ -173,6 +173,31 @@ one and one whose directory is gone.
   out in one worktree at a time, so what it would refuse is not run: checking the branch out offers to switch to
   that worktree instead, and fast-forwarding it, deleting it locally or adding a worktree for it fail up front with
   an `AppError.CheckedOutElsewhere` that names the worktree. Deleting it on its remote still works.
+
+## The editor
+
+`e` on a file in the files pane opens it in git's editor (`feature.edit`): the one `git var GIT_EDITOR` names, so
+`$GIT_EDITOR`, `core.editor`, `$VISUAL`, `$EDITOR`, else `vi`, as for a commit message. `CliEditor` runs it as git
+does: the program itself when it is a plain name, else through `sh -c '<editor> "$@"'`, so `code --wait` works. It
+is an `Operation.EDIT` like any other: the command log shows it, an editor that exits with an error is shown as a
+failure, and the repository is read again once it is closed.
+
+The editor needs the terminal, which the TUI owns. `Env.terminal()` (`state.Terminal`) hands it over: `EditCmd`
+runs the editor inside `terminal().handOver(...)`, on the `git-io` thread. `JazygitApp` implements it with
+`HandOverBackend`, the TamboUI backend it gives the runner:
+
+- **Leaving**, on the render thread between two frames: it stops reading keys, then puts the terminal back as it
+  was before the app started (no mouse capture or bracketed paste, cursor shown, main screen, cooked mode), and
+  from then on drops what the app draws.
+- **Meanwhile** the app keeps running, as it does not block the render thread: TamboUI's ticks, which come every
+  40 ms, would otherwise pile up and be handled one by one afterwards. Loads and fetches carry on; what they draw
+  is dropped.
+- **Coming back**, on the render thread again: it sets the terminal up as before, reads keys again, and clears
+  TamboUI's buffers, so the next frame draws the whole screen.
+
+Keys are read by polling the terminal (`available()` on the standard input), not through JLine. After a read that
+timed out, JLine leaves a thread blocked on reading the terminal, which would take the first key typed in the
+editor. On Windows, whose console cannot be polled that way, keys are read through JLine.
 
 ## The runtime loop
 

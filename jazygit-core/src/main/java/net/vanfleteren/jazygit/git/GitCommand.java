@@ -53,6 +53,13 @@ record GitCommand(List<String> args, Map<String, String> environment, Duration t
     }
 
     /**
+     * This command with {@code variable} as the user has it, if at all, rather than as jazygit sets it.
+     */
+    GitCommand withInheritedEnvironment(String variable) {
+        return new GitCommand(args, environment.remove(variable), timeout);
+    }
+
+    /**
      * This command with its paths taken as the files of that name, never as patterns: discarding a file named
      * {@code *.txt} must not discard every text file. Not for every command, as some, like
      * {@code git stash --include-untracked}, use patterns themselves.

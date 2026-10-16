@@ -105,6 +105,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> edit(List<String> files) {
+        return CliEditor.edit(workTree, files);
+    }
+
+    @Override
     public Either<ProcessError, List<Stash>> stashes() {
         return CliStash.list(workTree);
     }

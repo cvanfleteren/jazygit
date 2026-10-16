@@ -104,6 +104,11 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> edit(List<String> files) {
+        return ran();
+    }
+
+    @Override
     default Either<ProcessError, List<Commit>> commits() {
         return Either.right(List.empty());
     }
