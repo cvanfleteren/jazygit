@@ -237,6 +237,28 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void divergenceListsTheCommitsOnlyOnEitherSide() throws Exception {
+        git("checkout", "-q", "-b", "side");
+        git("commit", "-q", "--allow-empty", "-m", "Side one");
+        git("commit", "-q", "--allow-empty", "-m", "Side two");
+        git("checkout", "-q", "main");
+        git("commit", "-q", "--allow-empty", "-m", "Main one");
+        BranchRef side = new BranchRef.Local(new Branch.Name("side"));
+        BranchRef main = new BranchRef.Local(new Branch.Name("main"));
+
+        Divergence divergence = provider.divergence(side, main).get();
+
+        assertEquals(List.of("Side two", "Side one"), divergence.ahead().map(Commit::message));
+        assertEquals(2, divergence.aheadCount());
+        assertEquals(List.of("Main one"), divergence.behind().map(Commit::message));
+        assertEquals(1, divergence.behindCount());
+        BranchRef gone = new BranchRef.Local(new Branch.Name("gone"));
+        assertEquals(
+                new GitError.UnknownBranch(gone),
+                provider.divergence(side, gone).getLeft());
+    }
+
+    @Test
     void reportsRepositoryNameAndCurrentBranch() throws Exception {
         assertEquals(repo.getFileName().toString(), provider.repositoryName());
         assertEquals(

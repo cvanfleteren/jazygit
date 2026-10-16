@@ -26,6 +26,10 @@ public final class Scopes {
      */
     public static final Scope<Worktree> WORKTREES = new Scope<>("worktrees", "panel.worktrees.title");
     /**
+     * The selected commit of the divergence the branches pane lists in place of the local branches.
+     */
+    public static final Scope<Commit> DIVERGENCE = new Scope<>("divergence", "panel.divergence.title");
+    /**
      * The selected commit.
      */
     public static final Scope<Commit> COMMITS = new Scope<>("commits", "panel.commits.title");

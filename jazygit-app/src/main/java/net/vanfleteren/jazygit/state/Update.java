@@ -121,6 +121,13 @@ public final class Update {
                         .map(log -> new LoadBranchLog(log.key())))
                 .appendAll(model.commitDetail()
                         .filter(detail -> detail.value() instanceof Failed)
+                        .map(detail -> new LoadCommitDetail(detail.key())))
+                .appendAll(model.divergence()
+                        .filter(view -> view.commits() instanceof Failed)
+                        .map(DivergenceView::load))
+                .appendAll(model.divergence()
+                        .flatMap(DivergenceView::detail)
+                        .filter(detail -> detail.value() instanceof Failed)
                         .map(detail -> new LoadCommitDetail(detail.key())));
         List<Cmd.Load> loads =
                 PERIODIC.appendAll(retries).filter(cmd -> !model.refreshing().contains(cmd));

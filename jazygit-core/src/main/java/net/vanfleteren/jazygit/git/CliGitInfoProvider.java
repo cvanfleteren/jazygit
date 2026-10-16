@@ -152,6 +152,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<GitError, Divergence> divergence(BranchRef branch, BranchRef other) {
+        return CliLog.divergence(workTree, branch, other);
+    }
+
+    @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> checkout(Branch.Name branch) {
         return CliCheckout.checkout(workTree, branch);
     }

@@ -24,6 +24,8 @@ import java.util.function.Supplier;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.settings.ThemeName;
+import net.vanfleteren.jazygit.state.BranchesTab;
+import net.vanfleteren.jazygit.state.DivergenceView;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
@@ -36,6 +38,7 @@ import net.vanfleteren.jazygit.state.Preview;
 public final class ContentPanel {
 
     private static final String COMMIT_AREA_ID = "commit-changes";
+    private static final String DIVERGENCE_AREA_ID = "divergence-commit";
     private static final List<String> LEFT_PANES =
             List.of(FilesPanel.ID, BranchesPanel.ID, CommitsPanel.ID, StashPanel.ID);
     private static final String MESSAGE_INDENT = "    ";
@@ -46,6 +49,8 @@ public final class ContentPanel {
     private final ScrollArea stagedArea;
     private final ScrollArea unstagedArea;
     private final ScrollArea commitArea;
+    // The commit highlighted in the divergence the branches pane lists.
+    private final ScrollArea divergenceArea;
     // Not focusable: clicking the log must not take the focus from the branches pane it mirrors.
     private final ScrollArea logArea;
     private final List<ScrollArea> focusableAreas;
@@ -70,8 +75,10 @@ public final class ContentPanel {
                 "diff-unstaged", Option.of(FilesPanel.ID), text -> diffText(text, styles), leaveScrollArea, focus);
         commitArea = new ScrollArea(
                 COMMIT_AREA_ID, Option.of(CommitsPanel.ID), ContentPanel::plainText, leaveScrollArea, focus);
+        divergenceArea = new ScrollArea(
+                DIVERGENCE_AREA_ID, Option.of(BranchesPanel.ID), ContentPanel::plainText, leaveScrollArea, focus);
         logArea = new ScrollArea("branch-log", Option.none(), text -> logText(text, styles), leaveScrollArea, focus);
-        focusableAreas = List.of(stagedArea, unstagedArea, commitArea);
+        focusableAreas = List.of(stagedArea, unstagedArea, commitArea, divergenceArea);
     }
 
     /**
@@ -253,13 +260,17 @@ public final class ContentPanel {
      * until the focus is given back.
      */
     public StyledElement<?> render(Model model, String focusedId) {
-        List.of(stagedArea, unstagedArea, commitArea, logArea).forEach(area -> area.restyle(model.theme()));
+        List.of(stagedArea, unstagedArea, commitArea, divergenceArea, logArea)
+                .forEach(area -> area.restyle(model.theme()));
         boolean inContent = focusableAreas.exists(area -> area.id().equals(focusedId));
         focusableAreas.forEach(area -> area.tabbable(inContent));
         boolean onPane = inContent || LEFT_PANES.contains(focusedId);
         String pane = onPane ? focusedId : model.focusedPane().getOrElse(focusedId);
-        if (BranchesPanel.ID.equals(pane)) {
-            return branchLogView(model);
+        if (BranchesPanel.ID.equals(pane) || DIVERGENCE_AREA_ID.equals(pane)) {
+            return model.divergence()
+                    .filter(view -> model.branchesTab() == BranchesTab.LOCAL)
+                    .map(this::divergenceCommitView)
+                    .getOrElse(() -> branchLogView(model));
         }
         if (CommitsPanel.ID.equals(pane) || COMMIT_AREA_ID.equals(pane)) {
             return commitDiffView(model);
@@ -307,6 +318,31 @@ public final class ContentPanel {
                                     .show(title));
                 })
                 .getOrElse(() -> loadingPanel(Messages.get("panel.log.title")));
+    }
+
+    /**
+     * The commit highlighted in the divergence {@code view}, as the commits pane shows its commits.
+     */
+    private StyledElement<?> divergenceCommitView(DivergenceView view) {
+        String title = Messages.get("panel.commit.title");
+        return view.detail()
+                .map(Preview::shown)
+                .<StyledElement<?>>map(detail -> whenLoaded(
+                        title,
+                        detail.value(),
+                        changes -> view.commit(detail.key())
+                                .<StyledElement<?>>map(commit -> divergenceArea
+                                        .with(
+                                                new CommitContent(commit, changes),
+                                                () -> commitText(commit, shown(changes), styles))
+                                        .show(Messages.get("panel.commit.titleFor", commit.shortSha())))
+                                .getOrElse(() -> loadingPanel(title))))
+                .getOrElse(() -> view.commits()
+                                .toOption()
+                                .exists(divergence -> divergence.ahead().isEmpty()
+                                        && divergence.behind().isEmpty())
+                        ? dimPanel(title, Messages.get("content.noDivergence"))
+                        : loadingPanel(title));
     }
 
     private StyledElement<?> commitDiffView(Model model) {

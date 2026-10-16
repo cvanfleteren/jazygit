@@ -9,6 +9,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchesTabMsg;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.NewBranchMsg;
+import net.vanfleteren.jazygit.feature.branch.UpstreamMsg;
 import net.vanfleteren.jazygit.feature.worktree.WorktreeMsg;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -561,6 +562,72 @@ class BranchesPanelTest {
                                 .addModifiers()
                                 .containsAll(java.util.Set.of(
                                         dev.tamboui.style.Modifier.BOLD, dev.tamboui.style.Modifier.UNDERLINED))));
+    }
+
+    @Test
+    void aDivergenceListsTheCommitsOfEitherBranchUnderItsNameAndTheHighlightSkipsTheNames() throws Exception {
+        Commit behind = new Commit(new Sha("b1"), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, "Theirs", "");
+        Commit newer = new Commit(new Sha("a2"), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, "Ours two", "");
+        Commit older = new Commit(new Sha("a1"), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, "Ours one", "");
+        RemoteBranch upstream = new RemoteBranch("origin", new Branch.Name("feature"));
+        Model diverged = before.withDivergence(Option.of(new DivergenceView(
+                new Branch.Name("feature"),
+                new BranchRef.Remote(upstream),
+                DivergenceView.Against.UPSTREAM,
+                new Loadable.Loaded<>(new Divergence(List.of(newer, older), 2, List.of(behind), 1)),
+                Option.none())));
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        java.util.List<String> opened = new java.util.ArrayList<>();
+        BranchesPanel panel = new BranchesPanel(
+                dispatched::add,
+                tab -> {},
+                () -> opened.add("commit"),
+                java.time.Clock.systemUTC(),
+                Theme.Highlights.DEFAULT);
+        java.util.List<Integer> highlighted = new java.util.ArrayList<>();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(diverged, BranchesPanel.ID))) {
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
+            String screen = RenderedText.ofLarge(testRunner, () -> panel.render(diverged, BranchesPanel.ID));
+            highlighted.add(panel.selectedIndex());
+            assertEquals(
+                    Option.of(new SelectionMsg.DivergenceCommitSelected(new Sha("b1"))),
+                    panel.selectionChange(diverged));
+            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner).pause();
+            highlighted.add(panel.selectedIndex());
+            SettledPilot.of(testRunner).press(KeyCode.UP);
+            SettledPilot.of(testRunner).pause();
+            highlighted.add(panel.selectedIndex());
+            SettledPilot.of(testRunner).press(KeyCode.ENTER);
+            SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
+            SettledPilot.of(testRunner).press(']');
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).quit();
+
+            assertTrue(screen.contains("Branches (feature ↔ origin/feature)"), screen);
+            assertTrue(screen.contains("── origin/feature"), screen);
+            assertTrue(screen.contains("↓ b1 AL ○ Theirs"), screen);
+            assertTrue(screen.contains("── feature"), screen);
+            assertTrue(screen.contains("↑ a2 AL ○ Ours two"), screen);
+            assertFalse(screen.contains(" old"), screen);
+        }
+        // The rows are: origin/feature, Theirs, feature, Ours two, Ours one.
+        assertEquals(java.util.List.of(1, 3, 1), highlighted);
+        assertEquals(java.util.List.of("commit"), opened);
+        assertEquals(java.util.List.of(new UpstreamMsg.DivergenceClosed(), new BranchesTabMsg.Switched(1)), dispatched);
+    }
+
+    @Test
+    void aDivergenceSaysWhenABranchHasNoCommitsOfItsOwnOrMoreThanAreListed() {
+        DivergenceView view = DivergenceView.loading(
+                new Branch.Name("feature"), new BranchRef.Local(new Branch.Name("main")), DivergenceView.Against.BASE);
+        Commit ours = new Commit(new Sha("a1"), "Ada", "a@x", java.time.Instant.EPOCH, "Ours", "");
+
+        List<String> rows = BranchesPanel.entries(view, new Divergence(List.of(ours), 400, List.of(), 0))
+                .map(BranchesPanel::divergenceRow)
+                .map(LoadableList.Row::text);
+
+        assertEquals(List.of("── main", "  no commits", "── feature", "↑ a1 Ad ○ Ours", "  … 399 more"), rows);
     }
 
     private String highlightedAfterMovingTo(int index, Model after) throws Exception {

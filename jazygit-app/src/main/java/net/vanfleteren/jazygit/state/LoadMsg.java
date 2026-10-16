@@ -74,6 +74,14 @@ public sealed interface LoadMsg extends Msg {
         }
     }
 
+    record DivergenceLoaded(Branch.Name branch, BranchRef other, Divergence divergence) implements LoadMsg {
+
+        @Override
+        public Cmd.Load cmd() {
+            return new Cmd.LoadDivergence(branch, other);
+        }
+    }
+
     record CommitDetailLoaded(Sha sha, DiffText changes) implements LoadMsg {
 
         @Override

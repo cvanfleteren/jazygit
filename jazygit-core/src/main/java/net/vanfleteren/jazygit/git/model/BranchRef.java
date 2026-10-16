@@ -11,6 +11,14 @@ public sealed interface BranchRef {
     String name();
 
     /**
+     * The branch {@code upstream} is read from: the remote-tracking one, or the local branch for an upstream in
+     * this repository itself.
+     */
+    static BranchRef of(RemoteBranch upstream) {
+        return upstream.local() ? new Local(upstream.branch()) : new Remote(upstream);
+    }
+
+    /**
      * The local branch {@code branch}.
      */
     record Local(Branch.Name branch) implements BranchRef {

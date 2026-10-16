@@ -174,6 +174,27 @@ one and one whose directory is gone.
   that worktree instead, and fast-forwarding it, deleting it locally or adding a worktree for it fail up front with
   an `AppError.CheckedOutElsewhere` that names the worktree. Deleting it on its remote still works.
 
+## Divergence
+
+`u` on a local branch offers, besides resetting the checked out branch onto its upstream, to view how the
+highlighted branch diverged (`feature.branch`, `UpstreamUpdate`):
+
+- **From its upstream** (`v`): the remote-tracking branch it follows, or the local one for an upstream in the
+  repository itself (`BranchRef.of`).
+- **From the base branch** (`b`): `origin/<main>`, else the local `<main>`, where `<main>` is the branch `Branch.isDefault`
+  marks. The main branch itself has no base.
+
+`Model.divergence` (`state.DivergenceView`) holds the two branches, the commits only on either of them, read with
+`GitInfoProvider.divergence` (two `git log a ^b` of at most 300 commits each, and `rev-list --left-right --count` for
+how many there are), and the preview of the highlighted one. While it is open, the branches pane lists it in place of
+the local branches: the commits only on the other branch, then the ones only on the local branch, each under the
+name of its branch. The highlight skips those names. The content panel shows the highlighted commit as the commits
+pane does, in a scroll area of its own, so the two panes do not take each other's preview. Escape, or switching
+tabs, closes it.
+
+It is read again when either branch moves, as the periodic loads of the branches tell. When the branch is gone, it
+closes; when the upstream is gone, or the base branch, it closes with the error that says so.
+
 ## The editor
 
 `e` on a file in the files pane opens it in git's editor (`feature.edit`): the one `git var GIT_EDITOR` names, so

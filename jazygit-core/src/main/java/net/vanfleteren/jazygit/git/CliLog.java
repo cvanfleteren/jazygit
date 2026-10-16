@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.collection.Seq;
 import io.vavr.control.Either;
@@ -50,27 +52,68 @@ final class CliLog {
      * The log of the branch {@code branch}, local or remote-tracking, newest first.
      */
     static Either<GitError, List<Commit>> log(Path workTree, BranchRef branch) {
-        return Either.<GitError, Option<Sha>>narrow(
-                        resolve(workTree, Refs.of(branch)).mapLeft(GitFailure::error))
-                .flatMap(tip -> tip.toEither(() -> new UnknownBranch(branch)))
-                .flatMap(tip -> Either.narrow(log(workTree, tip)));
+        return tip(workTree, branch).flatMap(tip -> Either.narrow(log(workTree, tip)));
     }
 
     /**
      * The newest commits reachable from {@code start}, newest first, laid out by {@link CommitGraph#arrange}.
      */
     static Either<ProcessError, List<Commit>> log(Path workTree, Sha start) {
+        return selected(workTree, List.of(start.value()));
+    }
+
+    /**
+     * The commits only on {@code branch} and the ones only on {@code other}: at most {@link #MAX_COMMITS} of
+     * each, and how many there are in all.
+     */
+    static Either<GitError, Divergence> divergence(Path workTree, BranchRef branch, BranchRef other) {
+        return tip(workTree, branch)
+                .flatMap(ours -> tip(workTree, other)
+                        .flatMap(theirs -> Either.narrow(counts(workTree, ours, theirs)
+                                .flatMap(counts -> selected(workTree, List.of(ours.value(), "^" + theirs.value()))
+                                        .flatMap(ahead -> selected(
+                                                        workTree, List.of(theirs.value(), "^" + ours.value()))
+                                                .map(behind ->
+                                                        new Divergence(ahead, counts._1, behind, counts._2)))))));
+    }
+
+    private static Either<GitError, Sha> tip(Path workTree, BranchRef branch) {
+        return Either.<GitError, Option<Sha>>narrow(
+                        resolve(workTree, Refs.of(branch)).mapLeft(GitFailure::error))
+                .flatMap(tip -> tip.toEither(() -> new UnknownBranch(branch)));
+    }
+
+    /**
+     * How many commits are only on {@code ours}, and how many only on {@code theirs}.
+     */
+    private static Either<ProcessError, Tuple2<Integer, Integer>> counts(Path workTree, Sha ours, Sha theirs) {
+        return GitProcess.read(
+                workTree,
+                GitCommand.reading("rev-list", "--left-right", "--count", ours.value() + "..." + theirs.value(), "--"),
+                CliLog::counts);
+    }
+
+    /**
+     * The output of {@code rev-list --left-right --count}: the two counts, separated by a tab.
+     */
+    static Either<UnexpectedOutput, Tuple2<Integer, Integer>> counts(String raw) {
+        return GitOutput.fields(raw.strip(), "\t", 2)
+                .flatMap(counts -> GitOutput.number(counts.get(0))
+                        .flatMap(left -> GitOutput.number(counts.get(1))
+                                .map(right -> Tuple.of(left.intValue(), right.intValue()))));
+    }
+
+    /**
+     * The newest commits {@code revisions} select, newest first, laid out by {@link CommitGraph#arrange}.
+     */
+    private static Either<ProcessError, List<Commit>> selected(Path workTree, List<String> revisions) {
         return GitProcess.read(
                 workTree,
                 GitCommand.reading(
-                        "log",
-                        "--no-color",
-                        "--no-show-signature",
-                        "-z",
-                        "--max-count=" + MAX_COMMITS,
-                        "--format=" + FORMAT,
-                        start.value(),
-                        "--"),
+                        List.of("log", "--no-color", "--no-show-signature", "-z", "--max-count=" + MAX_COMMITS)
+                                .append("--format=" + FORMAT)
+                                .appendAll(revisions)
+                                .append("--")),
                 raw -> parse(raw).map(CommitGraph::arrange));
     }
 

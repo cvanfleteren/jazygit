@@ -5,11 +5,13 @@ import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
+import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 import java.time.Clock;
 import java.time.Duration;
@@ -24,6 +26,7 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.ui.widgets.Pane;
 
 /**
  * Left-side panel listing the local branches, with the current branch marked. Space checks out
@@ -39,6 +42,10 @@ import net.vanfleteren.jazygit.state.*;
  * <p>
  * The third list is the worktrees of the repository, the one shown marked. Space switches to the highlighted one,
  * d removes it. On the local branches, w checks the highlighted branch out in a new worktree.
+ * <p>
+ * While a divergence is open, it is listed in place of the local branches: the commits only on the branch it is
+ * compared with, then the ones only on the local branch, each under the name of their branch. Enter moves the
+ * focus to the highlighted commit, Escape goes back to the branches.
  */
 public class BranchesPanel {
 
@@ -49,6 +56,7 @@ public class BranchesPanel {
     private final LoadableList<List<Branch>> list;
     private final LoadableList<List<RemoteRef>> remoteList;
     private final LoadableList<List<Worktree>> worktreeList;
+    private final LoadableList<Divergence> divergenceList;
     private final Keymap keymap = Keymap.standard();
     private final Consumer<BranchesTab> tabClicked;
     // The list the pane shows, as of the last render; the keys of the others do nothing.
@@ -60,6 +68,12 @@ public class BranchesPanel {
     // How a branch is doing on GitHub, as of the last render; the rows are built from it on every render.
     private Function<Branch, List<LoadableList.Seg>> gitHub = branch -> List.empty();
     private Function<RemoteBranch, List<LoadableList.Seg>> remoteGitHub = remote -> List.empty();
+    // The divergence listed in place of the local branches, as of the last render.
+    private Option<DivergenceView> divergence = Option.none();
+    // The highlighted row of the divergence at the last render, which tells which way the highlight moved.
+    private int divergenceSelected;
+    // Which divergence was listed at the last render, by the load that reads it.
+    private Option<Cmd.LoadDivergence> divergenceShown = Option.none();
 
     /**
      * @param dispatch   receives the messages for the user's actions, on the render thread
@@ -81,6 +95,18 @@ public class BranchesPanel {
      */
     public BranchesPanel(
             Consumer<Msg> dispatch, Consumer<BranchesTab> tabClicked, Clock clock, Theme.Highlights highlights) {
+        this(dispatch, tabClicked, () -> {}, clock, highlights);
+    }
+
+    /**
+     * @param openCommit called when Enter is pressed on a commit of the divergence, to move focus to its content
+     */
+    public BranchesPanel(
+            Consumer<Msg> dispatch,
+            Consumer<BranchesTab> tabClicked,
+            Runnable openCommit,
+            Clock clock,
+            Theme.Highlights highlights) {
         this.tabClicked = tabClicked;
         list = new LoadableList<>(
                 Messages.get("panel.branches.title"),
@@ -94,7 +120,7 @@ public class BranchesPanel {
                 highlights);
         // The highlight alone marks the selection; a symbol would indent the rows.
         list.highlightSymbol("");
-        list.onKey(event -> Option.when(tab == BranchesTab.LOCAL, event)
+        list.onKey(event -> Option.when(tab == BranchesTab.LOCAL && divergence.isEmpty(), event)
                 .flatMap(key -> PaneKeys.sending(keymap.handle(Scopes.BRANCHES, key, selectedBranch()), dispatch)));
         remoteList = new LoadableList<>(
                 Messages.get("panel.remoteBranches.title"),
@@ -123,6 +149,70 @@ public class BranchesPanel {
         worktreeList.whenEmpty(Messages.get("worktrees.empty"));
         worktreeList.onKey(event -> Option.when(tab == BranchesTab.WORKTREES, event)
                 .flatMap(key -> PaneKeys.sending(keymap.handle(Scopes.WORKTREES, key, selectedWorktree()), dispatch)));
+        divergenceList = new LoadableList<>(
+                Messages.get("panel.divergence.title"),
+                ID,
+                commits -> divergence
+                        .map(view -> entries(view, commits).map(BranchesPanel::divergenceRow))
+                        .getOrElse(List.empty()),
+                (previous, next, selected) -> divergence
+                        .map(view -> LoadableList.Reselect.following(BranchesPanel::identity)
+                                .apply(entries(view, previous), entries(view, next), selected))
+                        .getOrElse(selected),
+                highlights);
+        divergenceList.highlightSymbol("");
+        divergenceList.onKey(event -> Option.when(divergence.isDefined(), event)
+                .flatMap(key -> key.code() == KeyCode.ENTER
+                        ? selectedDivergenceCommit().map(commit -> openCommit)
+                        : PaneKeys.sending(
+                                keymap.handle(Scopes.DIVERGENCE, key, selectedDivergenceCommit()), dispatch)));
+    }
+
+    /**
+     * The rows of a divergence: the commits only on the branch it is compared with, then the ones only on the
+     * local branch, each under the name of their branch, with a line when there are none or more than are listed.
+     */
+    static List<DivergenceEntry> entries(DivergenceView view, Divergence divergence) {
+        return side(view.other().name(), false, divergence.behind(), divergence.behindCount())
+                .appendAll(side(view.branch().value(), true, divergence.ahead(), divergence.aheadCount()));
+    }
+
+    private static List<DivergenceEntry> side(String branch, boolean ahead, List<Commit> commits, int count) {
+        List<CommitGraph.Node> nodes = CommitGraph.layout(commits);
+        return List.<DivergenceEntry>of(new DivergenceEntry.Header(branch))
+                .appendAll(nodes.zipWith(
+                        nodes.map(CommitGraph.Node::closesBranch).prepend(false),
+                        (node, joins) -> new DivergenceEntry.Shown(node, joins, ahead)))
+                .appendAll(Option.<DivergenceEntry>when(commits.isEmpty(), DivergenceEntry.None::new))
+                .appendAll(Option.<DivergenceEntry>when(
+                        count > commits.size(), () -> new DivergenceEntry.More(count - commits.size())));
+    }
+
+    /**
+     * What a row of a divergence is, which the highlight follows: a commit by its sha.
+     */
+    private static Object identity(DivergenceEntry entry) {
+        return entry instanceof DivergenceEntry.Shown(var node, var joins, var ahead)
+                ? node.commit().sha()
+                : entry;
+    }
+
+    static LoadableList.Row divergenceRow(DivergenceEntry entry) {
+        return switch (entry) {
+            case DivergenceEntry.Header(String branch) ->
+                LoadableList.Row.of(LoadableList.Seg.styled("── " + branch, Theme.Classes.BOLD));
+            case DivergenceEntry.Shown(CommitGraph.Node node, boolean joins, boolean ahead) ->
+                new LoadableList.Row(List.of(
+                                ahead
+                                        ? LoadableList.Seg.styled("↑ ", Theme.Classes.AHEAD)
+                                        : LoadableList.Seg.styled("↓ ", Theme.Classes.BEHIND))
+                        .appendAll(CommitsPanel.row(node, joins).segs()));
+            case DivergenceEntry.None() ->
+                LoadableList.Row.of(LoadableList.Seg.styled("  " + Messages.get("divergence.none"), Theme.Classes.DIM));
+            case DivergenceEntry.More(int more) ->
+                LoadableList.Row.of(
+                        LoadableList.Seg.styled("  " + Messages.get("divergence.more", more), Theme.Classes.DIM));
+        };
     }
 
     /**
@@ -352,12 +442,58 @@ public class BranchesPanel {
         tracked = remote -> model.trackingBranch(remote).isDefined();
         boolean focused = ID.equals(focusedId);
         boolean active = ID.equals(activeId);
+        divergence = Option.when(tab == BranchesTab.LOCAL, model::divergence).flatMap(open -> open);
+        if (divergence.isDefined()) {
+            DivergenceView view = divergence.get();
+            if (!divergenceShown.contains(view.load())) {
+                // A divergence just opened starts at its first commit.
+                divergenceShown = Option.of(view.load());
+                divergenceList.select(0);
+                divergenceSelected = 0;
+            }
+            Panel panel = divergenceList.render(
+                    view.commits(),
+                    focused,
+                    active,
+                    Pane.title(Messages.get(
+                            "panel.divergence.titleFor",
+                            view.branch().value(),
+                            view.other().name())));
+            skipToCommit();
+            return panel;
+        }
+        divergenceShown = Option.none();
         Panel panel = switch (tab) {
             case LOCAL -> list.render(model.branches(), focused, active, title(tab));
             case REMOTE -> remoteList.render(model.remoteBranches(), focused, active, title(tab));
             case WORKTREES -> worktreeList.render(model.worktrees(), focused, active, title(tab));
         };
         return panel.onMouseEvent(event -> titleClick(panel.renderedArea(), event));
+    }
+
+    /**
+     * Moves the highlight off a row of the divergence that is not a commit, to the nearest commit the way it
+     * moved, else the other way; when there are no commits, it stays.
+     */
+    private void skipToCommit() {
+        List<Boolean> commits = divergence
+                .flatMap(view -> view.commits()
+                        .toOption()
+                        .map(shown -> entries(view, shown).map(DivergenceEntry.Shown.class::isInstance)))
+                .getOrElse(List.empty());
+        int at = divergenceList.selectedIndex();
+        int way = at >= divergenceSelected ? 1 : -1;
+        Option<Integer> target = commits.lift().apply(at).contains(false)
+                ? nearest(commits, at, way).orElse(() -> nearest(commits, at, -way))
+                : Option.none();
+        target.forEach(divergenceList::select);
+        divergenceSelected = target.getOrElse(at);
+    }
+
+    private static Option<Integer> nearest(List<Boolean> commits, int from, int way) {
+        return Stream.iterate(from + way, i -> i + way)
+                .takeWhile(i -> i >= 0 && i < commits.size())
+                .find(commits::get);
     }
 
     /**
@@ -383,6 +519,9 @@ public class BranchesPanel {
      * The index of the currently highlighted branch in the list shown, never negative.
      */
     public int selectedIndex() {
+        if (divergence.isDefined()) {
+            return divergenceList.selectedIndex();
+        }
         return switch (tab) {
             case LOCAL -> list.selectedIndex();
             case REMOTE -> remoteList.selectedIndex();
@@ -405,6 +544,17 @@ public class BranchesPanel {
     }
 
     /**
+     * The highlighted commit of the divergence, once one is shown.
+     */
+    public Option<Commit> selectedDivergenceCommit() {
+        return divergence.flatMap(view -> divergenceList
+                .selected(shown -> entries(view, shown))
+                .flatMap(entry -> entry instanceof DivergenceEntry.Shown(var node, var joins, var ahead)
+                        ? Option.of(node.commit())
+                        : Option.none()));
+    }
+
+    /**
      * The highlighted worktree, once the worktrees are shown.
      */
     public Option<Worktree> selectedWorktree() {
@@ -416,6 +566,12 @@ public class BranchesPanel {
      * holds.
      */
     public Option<Msg> selectionChange(Model model) {
+        if (model.branchesTab() == BranchesTab.LOCAL && model.divergence().isDefined()) {
+            return PaneKeys.selectionChange(
+                    selectedDivergenceCommit().map(Commit::sha),
+                    model.divergence().flatMap(DivergenceView::detail),
+                    SelectionMsg.DivergenceCommitSelected::new);
+        }
         Option<BranchRef> selected = switch (model.branchesTab()) {
             case LOCAL -> selectedBranch().map(BranchRef.Local::new);
             case REMOTE -> selectedRemoteBranch().map(BranchRef.Remote::new);
@@ -423,5 +579,34 @@ public class BranchesPanel {
             case WORKTREES -> selectedWorktree().flatMap(Worktree::branch).map(BranchRef.Local::new);
         };
         return PaneKeys.selectionChange(selected, model.branchLog(), SelectionMsg.BranchSelected::new);
+    }
+
+    /**
+     * A row of a divergence; only its commits can be highlighted.
+     */
+    sealed interface DivergenceEntry {
+
+        /**
+         * The name of the branch the commits below are only on.
+         */
+        record Header(String branch) implements DivergenceEntry {}
+
+        /**
+         * A commit only on one of the branches.
+         *
+         * @param joins whether the branch before this commit joins the main line at it
+         * @param ahead whether it is on the local branch, rather than on the one it is compared with
+         */
+        record Shown(CommitGraph.Node node, boolean joins, boolean ahead) implements DivergenceEntry {}
+
+        /**
+         * That the branch above has no commits the other has not.
+         */
+        record None() implements DivergenceEntry {}
+
+        /**
+         * That the branch above has {@code more} commits than are listed.
+         */
+        record More(int more) implements DivergenceEntry {}
     }
 }

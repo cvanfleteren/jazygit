@@ -50,6 +50,8 @@ import net.vanfleteren.jazygit.settings.ThemeName;
  * @param focusedPane         the id of the element outside the popups that had the focus last, which a closing popup
  *                            gives it back to; none before the view reported one
  * @param cherryPick          the commit copied to be cherry-picked onto the branch checked out later, if one is
+ * @param divergence          the commits a local branch and its upstream or base branch do not share, which the
+ *                            branches pane lists in place of the local branches while it is open
  */
 @With
 public record Model(
@@ -79,7 +81,8 @@ public record Model(
         Settings settings,
         Option<ThemeName> themeOverride,
         Option<String> focusedPane,
-        Option<Commit> cherryPick) {
+        Option<Commit> cherryPick,
+        Option<DivergenceView> divergence) {
 
     public static Model initial(String repositoryName) {
         return new Model(
@@ -107,6 +110,7 @@ public record Model(
                 List.empty(),
                 Option.none(),
                 Settings.DEFAULT,
+                Option.none(),
                 Option.none(),
                 Option.none(),
                 Option.none());

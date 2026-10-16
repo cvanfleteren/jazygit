@@ -95,8 +95,8 @@ public class JazygitApp extends ToolkitApp {
     };
     private final ContentPanel contentPanel;
     private final FilesPanel filesPanel = new FilesPanel(dispatch, () -> openContent(FilesPanel.ID), this::highlight);
-    private final BranchesPanel branchesPanel =
-            new BranchesPanel(dispatch, this::showBranchesTab, Clock.systemUTC(), this::highlight);
+    private final BranchesPanel branchesPanel = new BranchesPanel(
+            dispatch, this::showBranchesTab, () -> openContent(BranchesPanel.ID), Clock.systemUTC(), this::highlight);
     private final CommitsPanel commitsPanel =
             new CommitsPanel(dispatch, () -> openContent(CommitsPanel.ID), this::highlight);
     private final StashPanel stashPanel = new StashPanel(dispatch, this::highlight);

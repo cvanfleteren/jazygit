@@ -160,8 +160,9 @@ public final class BranchDialogs {
             RebaseMsg.Cancelled::new);
 
     /**
-     * Asks what to do with the upstream of the checked out branch. Its options are offered also when there is
-     * none, to tell why they cannot be done.
+     * Asks what to do with the upstream: view how the highlighted branch diverged from it or from the main
+     * branch, or reset the checked out branch onto it. Its options are offered also when they cannot be done, to
+     * tell why.
      */
     public static final ChoiceDialog.Spec<UpstreamPopup> UPSTREAM = new ChoiceDialog.Spec<>(
             "upstream",
@@ -170,18 +171,30 @@ public final class BranchDialogs {
                     .map(branch ->
                             Messages.get("dialog.upstream.title", branch.name().value()))
                     .getOrElse(() -> Messages.get("dialog.upstream.titleDetached")),
-            List.of(new Choice<UpstreamPopup>(
-                    'g',
-                    popup -> Messages.get(
-                            "dialog.upstream.reset",
-                            popup.branch()
-                                    .flatMap(Branch::upstream)
-                                    .map(upstream -> upstream.branch().shortName())
-                                    .getOrElse(() -> Messages.get("dialog.upstream.unknown"))),
-                    UpstreamMsg.ResetChosen::new)),
+            List.of(
+                    new Choice<UpstreamPopup>(
+                            'v',
+                            popup -> Messages.get("dialog.upstream.divergence", upstreamName(popup.branch())),
+                            UpstreamMsg.UpstreamDivergenceChosen::new),
+                    new Choice<UpstreamPopup>(
+                            'b',
+                            popup -> popup.base()
+                                    .map(base -> Messages.get("dialog.upstream.baseDivergence", base.name()))
+                                    .getOrElse(() -> Messages.get("dialog.upstream.baseDivergenceUnknown")),
+                            UpstreamMsg.BaseDivergenceChosen::new),
+                    new Choice<UpstreamPopup>(
+                            'g',
+                            popup -> Messages.get("dialog.upstream.reset", upstreamName(popup.checkedOut())),
+                            UpstreamMsg.ResetChosen::new)),
             UpstreamMsg.Cancelled::new);
 
     private BranchDialogs() {}
+
+    private static String upstreamName(Option<Branch> branch) {
+        return branch.flatMap(Branch::upstream)
+                .map(upstream -> upstream.branch().shortName())
+                .getOrElse(() -> Messages.get("dialog.upstream.unknown"));
+    }
 
     private static boolean remoteDeletable(Model model, DeleteBranchPopup popup) {
         return DeleteBranchUpdate.remoteDeletable(model, popup.branch());

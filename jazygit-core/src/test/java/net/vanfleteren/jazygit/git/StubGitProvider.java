@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
+import net.vanfleteren.jazygit.git.model.Divergence;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.InProgressAction;
@@ -132,6 +133,11 @@ public interface StubGitProvider extends GitInfoProvider {
     @Override
     default Either<GitError, List<Commit>> log(BranchRef branch) {
         return Either.right(List.empty());
+    }
+
+    @Override
+    default Either<GitError, Divergence> divergence(BranchRef branch, BranchRef other) {
+        return Either.right(new Divergence(List.empty(), 0, List.empty(), 0));
     }
 
     @Override

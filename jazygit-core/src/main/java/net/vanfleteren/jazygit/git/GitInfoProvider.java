@@ -199,6 +199,12 @@ public interface GitInfoProvider {
      */
     Either<GitError, List<Commit>> log(BranchRef branch);
 
+    /**
+     * The commits only on {@code branch} and the ones only on {@code other}, as {@code git log branch...other}
+     * shows them.
+     */
+    Either<GitError, Divergence> divergence(BranchRef branch, BranchRef other);
+
     // A single commit, as git show shows it.
 
     /**

@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -148,6 +149,19 @@ public interface Cmd {
             return env.git()
                     .log(branch)
                     .fold(this::failedWith, commits -> new LoadMsg.BranchLogLoaded(branch, commits));
+        }
+    }
+
+    /**
+     * Reads the commits only on {@code branch} and the ones only on {@code other}.
+     */
+    record LoadDivergence(Branch.Name branch, BranchRef other) implements Load {
+
+        @Override
+        public Msg run(Env env) {
+            return env.git()
+                    .divergence(new BranchRef.Local(branch), other)
+                    .fold(this::failedWith, divergence -> new LoadMsg.DivergenceLoaded(branch, other, divergence));
         }
     }
 

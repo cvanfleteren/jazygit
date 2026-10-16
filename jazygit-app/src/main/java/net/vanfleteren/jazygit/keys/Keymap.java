@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.keys;
 
+import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
@@ -25,6 +26,11 @@ public final class Keymap {
      */
     public static final String HELP_KEY = "?";
 
+    /**
+     * How a binding names the Escape key.
+     */
+    public static final String ESCAPE = "esc";
+
     private final Map<String, Section> sections;
     private final List<Global> globals;
 
@@ -41,11 +47,14 @@ public final class Keymap {
     }
 
     /**
-     * The key {@code event} is, as {@link Binding#key() bindings} name it: the character, prefixed with {@code ctrl+} and
-     * {@code alt+} when those are held. Shift is left out, as it is already in the character.
+     * The key {@code event} is, as {@link Binding#key() bindings} name it: the character, or {@link #ESCAPE},
+     * prefixed with {@code ctrl+} and {@code alt+} when those are held. Shift is left out, as it is already in the
+     * character.
      */
     static String name(KeyEvent event) {
-        return (event.hasCtrl() ? "ctrl+" : "") + (event.hasAlt() ? "alt+" : "") + event.string();
+        return (event.hasCtrl() ? "ctrl+" : "")
+                + (event.hasAlt() ? "alt+" : "")
+                + (event.code() == KeyCode.ESCAPE ? ESCAPE : event.string());
     }
 
     /**

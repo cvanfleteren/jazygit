@@ -155,6 +155,51 @@ class ContentPanelTest {
     }
 
     @Test
+    void withADivergenceOpenTheBranchesShowItsHighlightedCommitWhichCanBeFocused() throws Exception {
+        Commit ours = plain("cccc");
+        Model diverged = TestModels.loaded()
+                .withDivergence(io.vavr.control.Option.of(new DivergenceView(
+                        new Branch.Name("main"),
+                        new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main"))),
+                        DivergenceView.Against.UPSTREAM,
+                        new Loadable.Loaded<>(new Divergence(List.of(ours), 1, List.of(), 0)),
+                        io.vavr.control.Option.none())));
+        Model selected = Update.update(
+                        Update.update(diverged, new SelectionMsg.DivergenceCommitSelected(new Sha("cccc")))
+                                .model(),
+                        new LoadMsg.CommitDetailLoaded(new Sha("cccc"), DiffText.of("+added line")))
+                .model();
+
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> content.render(selected, BranchesPanel.ID))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> content.render(selected, BranchesPanel.ID));
+            assertTrue(screen.contains("Commit: cccc"), screen);
+            assertTrue(screen.contains("+added line"), screen);
+            assertFalse(screen.contains("Log:"), screen);
+        }
+
+        String area = content.areaOfPane(BranchesPanel.ID).get();
+        assertEquals(io.vavr.control.Option.of(BranchesPanel.ID), content.paneOfArea(area));
+    }
+
+    @Test
+    void aDivergenceWithoutCommitsSaysTheBranchesHaveNotDiverged() throws Exception {
+        Model diverged = TestModels.loaded()
+                .withDivergence(io.vavr.control.Option.of(new DivergenceView(
+                        new Branch.Name("main"),
+                        new BranchRef.Local(new Branch.Name("feature")),
+                        DivergenceView.Against.BASE,
+                        new Loadable.Loaded<>(new Divergence(List.of(), 0, List.of(), 0)),
+                        io.vavr.control.Option.none())));
+
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> content.render(diverged, BranchesPanel.ID))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> content.render(diverged, BranchesPanel.ID));
+            assertTrue(screen.contains("The branches have not diverged"), screen);
+        }
+    }
+
+    @Test
     void theDiffAreasReturnToTheFilesPane() {
         assertEquals(io.vavr.control.Option.none(), content.paneOfArea("unknown"));
         assertEquals(io.vavr.control.Option.of(FilesPanel.ID), content.paneOfArea("diff-staged"));

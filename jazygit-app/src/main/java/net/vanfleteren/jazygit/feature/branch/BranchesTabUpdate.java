@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchesTabMsg.Chosen;
 import net.vanfleteren.jazygit.feature.branch.BranchesTabMsg.Switched;
 import net.vanfleteren.jazygit.state.BranchesTab;
@@ -7,7 +8,8 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
- * Switching the branches pane between the local branches, the remote ones and the worktrees.
+ * Switching the branches pane between the local branches, the remote ones and the worktrees. Switching closes the
+ * divergence listed in place of the local branches.
  */
 public final class BranchesTabUpdate {
 
@@ -15,9 +17,12 @@ public final class BranchesTabUpdate {
 
     public static Next update(Model model, BranchesTabMsg msg) {
         return switch (msg) {
-            case Switched(int by) ->
-                Next.of(model.withBranchesTab(model.branchesTab().shifted(by)));
-            case Chosen(BranchesTab tab) -> Next.of(model.withBranchesTab(tab));
+            case Switched(int by) -> switched(model, model.branchesTab().shifted(by));
+            case Chosen(BranchesTab tab) -> switched(model, tab);
         };
+    }
+
+    private static Next switched(Model model, BranchesTab tab) {
+        return Next.of(model.withBranchesTab(tab).withDivergence(Option.none()));
     }
 }

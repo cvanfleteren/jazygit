@@ -110,6 +110,13 @@ final class LoadableList<T> {
     }
 
     /**
+     * Highlights the row at {@code index}.
+     */
+    void select(int index) {
+        list.selected(index);
+    }
+
+    /**
      * The item of the highlighted row, once the value is shown; {@code items} are the items of the value, one
      * per row.
      */

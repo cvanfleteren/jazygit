@@ -10,6 +10,14 @@ import net.vanfleteren.jazygit.settings.SettingsProblem;
  * What the user is told went wrong, as data; the view turns it into text.
  */
 public sealed interface AppError {
+    /**
+     * Why {@code branch} has no upstream: none was set, or it was deleted on the remote.
+     */
+    static AppError noUpstream(Branch branch) {
+        return branch.goneUpstream()
+                .<AppError>map(upstream -> new UpstreamGone(branch.name(), upstream.shortName()))
+                .getOrElse(() -> new NoUpstream(branch.name()));
+    }
 
     /**
      * An operation on the repository failed.
@@ -76,6 +84,17 @@ public sealed interface AppError {
      * @param upstream the short name the upstream had, e.g. {@code origin/feature}
      */
     record UpstreamGone(Branch.Name branch, String upstream) implements AppError {}
+
+    /**
+     * Comparing a branch with the main branch was asked for, but there is no main branch to compare it with:
+     * none is known, or it is gone.
+     */
+    record NoBaseBranch(Branch.Name branch) implements AppError {}
+
+    /**
+     * Comparing a branch with the main branch was asked for, but it is the main branch.
+     */
+    record IsBaseBranch(Branch.Name branch) implements AppError {}
 
     /**
      * An operation on the checked out branch was asked for, but HEAD is detached.

@@ -43,6 +43,8 @@ public final class ErrorText {
             case AppError.NoUpstream(Branch.Name branch) -> Messages.get("error.upstream.none", branch.value());
             case AppError.UpstreamGone(Branch.Name branch, String upstream) ->
                 Messages.get("error.upstream.gone", branch.value(), upstream);
+            case AppError.NoBaseBranch(Branch.Name branch) -> Messages.get("error.divergence.noBase", branch.value());
+            case AppError.IsBaseBranch(Branch.Name branch) -> Messages.get("error.divergence.isBase", branch.value());
             case AppError.NoBranchCheckedOut() -> Messages.get("error.detached");
             case AppError.UnpushedCommits(Branch.Name branch) ->
                 Messages.get("error.fastForward.unpushed", branch.value());
