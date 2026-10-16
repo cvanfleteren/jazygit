@@ -165,6 +165,9 @@
                 <version>3.2.5</version>
                 <configuration>
                     <argLine>-Duser.language=en -Duser.country=US</argLine>
+                    <!-- One JVM per core, not JUnit's in-JVM parallelism: tamboui has a JVM-wide render thread. -->
+                    <forkCount>1C</forkCount>
+                    <reuseForks>true</reuseForks>
                 </configuration>
             </plugin>
             <plugin>
