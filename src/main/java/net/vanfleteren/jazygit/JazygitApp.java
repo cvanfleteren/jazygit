@@ -129,6 +129,7 @@ public class JazygitApp extends ToolkitApp {
             new PopupSlot(new CommitDialog(dispatch), model -> FilesPanel.ID),
             new PopupSlot(new ConfirmDialog<>(CommitDialogs.SQUASH, dispatch), model -> CommitsPanel.ID),
             new PopupSlot(new ChoiceDialog<>(CommitDialogs.FIXUP, dispatch), model -> CommitsPanel.ID),
+            new PopupSlot(new ConfirmDialog<>(CommitDialogs.DROP, dispatch), model -> CommitsPanel.ID),
             // A reset is asked about from the commits, or from the upstream options of the branches.
             new PopupSlot(new ChoiceDialog<>(CommitDialogs.RESET, dispatch), JazygitApp::focusedPane),
             new PopupSlot(new ConfirmDialog<>(CommitDialogs.HARD_RESET, dispatch), JazygitApp::focusedPane),

@@ -16,6 +16,7 @@ public enum Operation {
     REWORD("log.title.reword", "error.reword.failed"),
     SQUASH("log.title.squash", "error.squash.failed"),
     FIXUP("log.title.fixup", "error.fixup.failed"),
+    DROP("log.title.drop", "error.drop.failed"),
     RESET("log.title.reset", "error.reset.failed"),
     CHERRY_PICK("log.title.cherryPick", "error.cherryPick.failed"),
     DISCARD("log.title.discard", "error.discard.failed"),

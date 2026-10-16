@@ -91,6 +91,24 @@ final class CliRebase {
     }
 
     /**
+     * Removes the commit {@code sha} with an interactive rebase that is told to turn that commit's {@code pick}
+     * into {@code drop}: {@code git rebase --interactive --autostash --keep-empty --rebase-merges --no-autosquash
+     * <sha>^}, or {@code --root} for a commit without parent. Uncommitted changes are stashed and brought back.
+     *
+     * @param sha the object id of a commit that is not a merge
+     * @return the command lines that were run
+     */
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> drop(Path workTree, Sha sha) {
+        return base(workTree, sha.value())
+                .flatMap(base -> rebase(
+                        workTree,
+                        interactive(
+                                INTERACTIVE.append("--no-autosquash").append(base),
+                                sequenceEditor(sha, List.of(new Tuple2<>("pick", "drop"))),
+                                "true")));
+    }
+
+    /**
      * An interactive rebase whose todo list is edited by {@code sequenceEditor}, and whose messages by
      * {@code editor}. The todo list names every commit by its full object id and spells out its commands,
      * whatever the user's configuration says, so the sequence editor can find the commit it is after.

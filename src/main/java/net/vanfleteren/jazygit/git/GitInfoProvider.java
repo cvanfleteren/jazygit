@@ -252,6 +252,14 @@ public interface GitInfoProvider {
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode);
 
+    /**
+     * Removes the commit {@code sha} from the history of the checked out branch. This rebases the commits after
+     * it, uncommitted changes being stashed meanwhile; the rebase is aborted when it fails.
+     *
+     * @param sha the full object id of a commit that is not a merge
+     */
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> drop(Sha sha);
+
     // Moving the checked out branch, as git reset does.
 
     /**

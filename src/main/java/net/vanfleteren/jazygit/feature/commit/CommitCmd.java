@@ -87,6 +87,22 @@ public sealed interface CommitCmd extends GitOperationCmd {
     }
 
     /**
+     * Removes a commit from the history of the checked out branch.
+     */
+    record Drop(Sha sha) implements CommitCmd {
+
+        @Override
+        public Operation operation() {
+            return Operation.DROP;
+        }
+
+        @Override
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+            return git.drop(sha);
+        }
+    }
+
+    /**
      * Replaces the message of a commit.
      */
     record Reword(Sha sha, CommitMessage message) implements CommitCmd {

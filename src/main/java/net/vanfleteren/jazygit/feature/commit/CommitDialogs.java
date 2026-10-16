@@ -36,6 +36,20 @@ public final class CommitDialogs {
             SquashMsg.Cancelled::new);
 
     /**
+     * Asks to drop a commit.
+     */
+    public static final ConfirmDialog.Spec<DropPopup> DROP = new ConfirmDialog.Spec<>(
+            "drop-commit",
+            DropPopup.class,
+            popup -> Messages.get("dialog.drop.title"),
+            popup -> Messages.get(
+                    "dialog.drop.message",
+                    popup.commit().sha().shortSha(),
+                    popup.commit().message()),
+            DropMsg.Confirmed::new,
+            DropMsg.Cancelled::new);
+
+    /**
      * Asks which message to keep when fixing up a commit into the one below it.
      */
     public static final ChoiceDialog.Spec<FixupPopup> FIXUP = new ChoiceDialog.Spec<>(

@@ -696,6 +696,63 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void dropRemovesACommitAndKeepsTheOnesAfterIt() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "-m", "Third");
+        Files.writeString(repo.resolve("README.md"), "dirty\n");
+        List<Commit> before = provider.commits().get();
+
+        List<String> executed = provider.drop(before.get(1).sha()).get().map(ExecutedCommand::line);
+
+        assertTrue(
+                executed.head()
+                        .startsWith("git -c rebase.abbreviateCommands=false -c core.abbrev=no"
+                                + " rebase --interactive --autostash --keep-empty --rebase-merges"),
+                executed.toString());
+        assertEquals(
+                List.of("Third", "Initial commit"),
+                provider.commits().get().map(Commit::message).toList());
+        assertTrue(Files.notExists(repo.resolve("a.txt")));
+        assertTrue(Files.exists(repo.resolve("b.txt")));
+        assertEquals("dirty\n", Files.readString(repo.resolve("README.md")));
+    }
+
+    @Test
+    void dropOfTheFirstCommitRebasesFromTheRoot() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+        Sha root = provider.commits().get().last().sha();
+
+        provider.drop(root).get();
+
+        assertEquals(
+                List.of("Second"), provider.commits().get().map(Commit::message).toList());
+        assertTrue(Files.notExists(repo.resolve("README.md")));
+    }
+
+    @Test
+    void aConflictingDropIsAbortedAndLeavesTheBranchAsItWas() throws Exception {
+        Files.writeString(repo.resolve("README.md"), "second\n");
+        git("commit", "-q", "-am", "Second");
+        Files.writeString(repo.resolve("README.md"), "third\n");
+        git("commit", "-q", "-am", "Third");
+        Sha second = provider.commits().get().get(1).sha();
+
+        assertTrue(provider.drop(second).isLeft());
+
+        assertEquals(
+                List.of("Third", "Second", "Initial commit"),
+                provider.commits().get().map(Commit::message).toList());
+        assertEquals("third\n", Files.readString(repo.resolve("README.md")));
+        assertTrue(Files.notExists(repo.resolve(".git/rebase-merge")));
+    }
+
+    @Test
     void squashOfACommitThatIsNotInTheLogFailsInsteadOfDoingNothing() throws Exception {
         Files.writeString(repo.resolve("b.txt"), "b\n");
         git("add", "b.txt");
