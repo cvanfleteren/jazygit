@@ -272,6 +272,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> amendCommit(Sha sha) {
+        return CliCommit.amend(workTree, sha);
+    }
+
+    @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message) {
         return CliCommit.reword(workTree, sha, message);
     }

@@ -128,6 +128,9 @@ public class JazygitApp extends ToolkitApp {
             new PopupSlot(new TextInputDialog<>(StashDialogs.STASH, dispatch), model -> FilesPanel.ID),
             new PopupSlot(new ConfirmDialog<>(CommitDialogs.STAGE_ALL, dispatch), model -> FilesPanel.ID),
             new PopupSlot(new CommitDialog(dispatch), model -> FilesPanel.ID),
+            new PopupSlot(new ConfirmDialog<>(CommitDialogs.AMEND_COMMIT, dispatch), model -> CommitsPanel.ID),
+            new PopupSlot(
+                    new ConfirmDialog<>(CommitDialogs.AMEND_COMMIT_STAGE_ALL, dispatch), model -> CommitsPanel.ID),
             new PopupSlot(new ConfirmDialog<>(CommitDialogs.SQUASH, dispatch), model -> CommitsPanel.ID),
             new PopupSlot(new ChoiceDialog<>(CommitDialogs.FIXUP, dispatch), model -> CommitsPanel.ID),
             new PopupSlot(new ConfirmDialog<>(CommitDialogs.DROP, dispatch), model -> CommitsPanel.ID),

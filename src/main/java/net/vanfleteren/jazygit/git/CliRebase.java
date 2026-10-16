@@ -91,6 +91,27 @@ final class CliRebase {
     }
 
     /**
+     * Folds the last commit into the commit {@code sha} further down, keeping the message of {@code sha}, with an
+     * interactive rebase that is told to move the {@code pick} of the last commit to right after that of {@code sha},
+     * as a {@code fixup}: {@code git rebase --interactive --autostash --keep-empty --rebase-merges --no-autosquash
+     * <sha>^}, or {@code --root} for a commit without parent. Uncommitted changes are stashed and brought back.
+     *
+     * @param sha the object id of a commit before the last one that is not a merge
+     * @return the command lines that were run
+     */
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> fixupInto(Path workTree, Sha sha) {
+        return GitFailure.<GitError, String>widen(GitProcess.run(workTree, git("rev-parse", "HEAD"))
+                        .map(head -> head.stdout().strip()))
+                .flatMap(head -> GitFailure.<GitError, String>widen(base(workTree, sha.value()))
+                        .flatMap(base -> rebase(
+                                workTree,
+                                interactive(
+                                        INTERACTIVE.append("--no-autosquash").append(base),
+                                        moveUnder(sha, head),
+                                        "true"))));
+    }
+
+    /**
      * Removes the commit {@code sha} with an interactive rebase that is told to turn that commit's {@code pick}
      * into {@code drop}: {@code git rebase --interactive --autostash --keep-empty --rebase-merges --no-autosquash
      * <sha>^}, or {@code --root} for a commit without parent. Uncommitted changes are stashed and brought back.
@@ -133,6 +154,21 @@ final class CliRebase {
                 .map(r -> "-e 's/^" + r._1 + " " + sha.value() + " /" + r._2 + " " + sha.value() + " /'")
                 .mkString(" ");
         return "f() { grep -q " + find + " \"$1\" && sed " + replace
+                + " \"$1\" > \"$1.tmp\" && mv \"$1.tmp\" \"$1\"; }; f";
+    }
+
+    /**
+     * A shell function, run by git on the todo list, that moves the line picking {@code fixup} to right after the
+     * one picking {@code sha}, as a {@code fixup}. When the todo list lacks either line, it fails, so git stops the
+     * rebase instead of doing it unchanged.
+     */
+    private static String moveUnder(Sha sha, String fixup) {
+        String target = "pick " + sha.value() + " ";
+        String moved = "pick " + fixup + " ";
+        // awk, as inserting a line with sed differs between GNU and BSD.
+        return "f() { grep -q '^" + target + "' \"$1\" && grep -q '^" + moved + "' \"$1\""
+                + " && awk -v t='" + target + "' -v m='" + moved + "' -v l='fixup " + fixup + "'"
+                + " 'index($0, m) == 1 { next } { print } index($0, t) == 1 { print l }'"
                 + " \"$1\" > \"$1.tmp\" && mv \"$1.tmp\" \"$1\"; }; f";
     }
 

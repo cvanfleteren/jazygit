@@ -24,9 +24,14 @@ public sealed interface AppError {
     record NothingToCommit() implements AppError {}
 
     /**
-     * Amending was asked for, but nothing has changed to amend the last commit with.
+     * Amending was asked for, but nothing has changed to amend the commit with.
      */
     record NothingToAmend() implements AppError {}
+
+    /**
+     * Amending a merge commit was asked for, which is not possible.
+     */
+    record MergeNotAmendable() implements AppError {}
 
     /**
      * A stash was asked for, but nothing has changed.

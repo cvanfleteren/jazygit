@@ -13,6 +13,7 @@ public enum Operation {
     UNSTAGE("log.title.unstage", "error.staging.failed"),
     COMMIT("log.title.commit", "error.commit.failed"),
     AMEND("log.title.amend", "error.amend.failed"),
+    AMEND_COMMIT("log.title.amendCommit", "error.amendCommit.failed"),
     REWORD("log.title.reword", "error.reword.failed"),
     SQUASH("log.title.squash", "error.squash.failed"),
     FIXUP("log.title.fixup", "error.fixup.failed"),
@@ -65,7 +66,7 @@ public enum Operation {
      */
     public boolean waitsForUnfinished() {
         return switch (this) {
-            case CHECKOUT, MERGE, REBASE, PULL, CHERRY_PICK, SQUASH, FIXUP, DROP, REWORD -> true;
+            case CHECKOUT, MERGE, REBASE, PULL, CHERRY_PICK, SQUASH, FIXUP, DROP, REWORD, AMEND_COMMIT -> true;
             default -> false;
         };
     }

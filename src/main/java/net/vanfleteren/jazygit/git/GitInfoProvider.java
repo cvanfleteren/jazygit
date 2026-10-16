@@ -248,6 +248,15 @@ public interface GitInfoProvider {
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> amendLastCommit();
 
     /**
+     * Amends the commit {@code sha} with what is staged, keeping its message. Other than for the last commit, this
+     * rebases the commits after it, unstaged changes being stashed meanwhile; the rebase is left as it stopped on
+     * conflicts, see {@link #rebase}, and aborted when it fails otherwise, leaving the staged changes staged.
+     *
+     * @param sha the full object id of a commit that is not a merge
+     */
+    Either<GitFailure<GitError>, List<ExecutedCommand>> amendCommit(Sha sha);
+
+    /**
      * Replaces the message of the commit {@code sha}, leaving its content alone. Other than for the last commit,
      * this rebases the commits after it, uncommitted changes being stashed meanwhile; the rebase is left
      * as it stopped on conflicts, see {@link #rebase}, and aborted when it fails otherwise.

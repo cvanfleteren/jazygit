@@ -33,7 +33,10 @@ class CliGitInfoProviderTest {
         return branches.map(b -> new Branch(b.name(), b.current(), b.tipOid())).toList();
     }
 
-    private static void gitIn(Path dir, String... args) throws IOException, InterruptedException, TimeoutException {
+    /**
+     * Runs git in {@code dir}, failing the test when it fails; what it printed.
+     */
+    private static String gitIn(Path dir, String... args) throws IOException, InterruptedException, TimeoutException {
         java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of(
                 "git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "-c", "commit.gpgsign=false"));
         command.addAll(java.util.List.of(args));
@@ -46,6 +49,7 @@ class CliGitInfoProviderTest {
                 .execute();
         assertEquals(
                 0, result.getExitValue(), () -> "git " + String.join(" ", args) + " failed: " + result.outputUTF8());
+        return result.outputUTF8();
     }
 
     private static boolean gitSucceedsIn(Path dir, String... args)
@@ -750,6 +754,126 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void amendCommitAddsTheStagedChangesToAnEarlierCommitAndLeavesTheUnstagedOnes() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "-m", "Third");
+        Files.writeString(repo.resolve("a.txt"), "amended\n");
+        git("add", "a.txt");
+        Files.writeString(repo.resolve("README.md"), "dirty\n");
+        Sha second = provider.commits().get().get(1).sha();
+
+        provider.amendCommit(second).get();
+
+        assertEquals(
+                List.of("Third", "Second", "Initial commit"),
+                provider.commits().get().map(Commit::message).toList());
+        assertEquals("amended\n", git("show", "HEAD~1:a.txt"));
+        assertEquals("", git("diff", "--cached", "--name-only"));
+        assertEquals("dirty\n", Files.readString(repo.resolve("README.md")));
+    }
+
+    @Test
+    void amendCommitOfTheLastCommitAmendsIt() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+        Files.writeString(repo.resolve("a.txt"), "amended\n");
+        git("add", "a.txt");
+
+        List<String> executed = provider.amendCommit(
+                        provider.commits().get().head().sha())
+                .get()
+                .map(ExecutedCommand::line);
+
+        assertEquals(List.of("git commit --quiet --amend --no-edit"), executed);
+        assertEquals(
+                List.of("Second", "Initial commit"),
+                provider.commits().get().map(Commit::message).toList());
+        assertEquals("amended\n", git("show", "HEAD:a.txt"));
+    }
+
+    @Test
+    void amendCommitOfTheFirstCommitRebasesFromTheRoot() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+        Files.writeString(repo.resolve("root.txt"), "root\n");
+        git("add", "root.txt");
+        Sha root = provider.commits().get().last().sha();
+
+        provider.amendCommit(root).get();
+
+        assertEquals(
+                List.of("Second", "Initial commit"),
+                provider.commits().get().map(Commit::message).toList());
+        assertEquals("root\n", git("show", "HEAD~1:root.txt"));
+    }
+
+    @Test
+    void amendCommitLeavesOtherFixupCommitsAlone() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+        Sha second = provider.commits().get().head().sha();
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "--fixup=" + second.value());
+        Files.writeString(repo.resolve("c.txt"), "c\n");
+        git("add", "c.txt");
+
+        provider.amendCommit(second).get();
+
+        assertEquals(
+                List.of("fixup! Second", "Second", "Initial commit"),
+                provider.commits().get().map(Commit::message).toList());
+        assertEquals("c\n", git("show", "HEAD~1:c.txt"));
+    }
+
+    @Test
+    void aConflictingAmendCommitIsLeftForTheUserToResolve() throws Exception {
+        Files.writeString(repo.resolve("README.md"), "second\n");
+        git("commit", "-q", "-am", "Second");
+        Files.writeString(repo.resolve("README.md"), "third\n");
+        git("commit", "-q", "-am", "Third");
+        Sha initial = provider.commits().get().last().sha();
+        Files.writeString(repo.resolve("README.md"), "staged\n");
+        git("add", "README.md");
+
+        assertInstanceOf(
+                GitError.StoppedOnConflicts.class,
+                provider.amendCommit(initial).getLeft().error());
+
+        assertTrue(Files.exists(repo.resolve(".git/rebase-merge")));
+    }
+
+    @Test
+    void amendCommitOfACommitThatIsNotInTheLogFailsAndKeepsTheChangesStaged() throws Exception {
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "-m", "Second");
+        git("checkout", "-q", "-b", "elsewhere");
+        Files.writeString(repo.resolve("c.txt"), "c\n");
+        git("add", "c.txt");
+        git("commit", "-q", "-m", "Elsewhere");
+        Sha elsewhere = provider.commits().get().head().sha();
+        git("checkout", "-q", "main");
+        Files.writeString(repo.resolve("b.txt"), "staged\n");
+        git("add", "b.txt");
+
+        assertTrue(provider.amendCommit(elsewhere).isLeft());
+
+        assertEquals(
+                List.of("Second", "Initial commit"),
+                provider.commits().get().map(Commit::message).toList());
+        assertEquals("b.txt\n", git("diff", "--cached", "--name-only"));
+        assertTrue(Files.notExists(repo.resolve(".git/rebase-merge")));
+    }
+
+    @Test
     void squashOfACommitThatIsNotInTheLogFailsInsteadOfDoingNothing() throws Exception {
         Files.writeString(repo.resolve("b.txt"), "b\n");
         git("add", "b.txt");
@@ -1422,8 +1546,8 @@ class CliGitInfoProviderTest {
         assertEquals(List.of(), emptyProvider.branches().get());
     }
 
-    private void git(String... args) throws IOException, InterruptedException, TimeoutException {
-        gitIn(repo, args);
+    private String git(String... args) throws IOException, InterruptedException, TimeoutException {
+        return gitIn(repo, args);
     }
 
     private void gitWithEnvironment(String variable, String value, String... args) throws Exception {

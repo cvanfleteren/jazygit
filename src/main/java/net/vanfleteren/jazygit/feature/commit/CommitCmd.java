@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.commit;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
@@ -67,6 +68,22 @@ public sealed interface CommitCmd extends GitOperationCmd {
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return GitFailure.sequence(() -> git.stage(stage), git::amendLastCommit);
+        }
+    }
+
+    /**
+     * Stages the paths, if any, then amends the commit {@code sha} with the index, keeping its message.
+     */
+    record AmendCommit(Sha sha, List<String> stage) implements CommitCmd {
+
+        @Override
+        public Operation operation() {
+            return Operation.AMEND_COMMIT;
+        }
+
+        @Override
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+            return GitFailure.<GitError>sequence(() -> GitFailure.widen(git.stage(stage)), () -> git.amendCommit(sha));
         }
     }
 

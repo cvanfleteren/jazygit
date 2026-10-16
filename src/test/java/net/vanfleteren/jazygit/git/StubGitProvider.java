@@ -256,6 +256,11 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> amendCommit(Sha sha) {
+        return ran();
+    }
+
+    @Override
     default Either<GitFailure<GitError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message) {
         return ran();
     }

@@ -26,6 +26,7 @@ public final class ErrorText {
                         subject.toList().<Object>map(s -> s).append(of(failure)).toJavaArray());
             case AppError.NothingToCommit() -> Messages.get("error.commit.nothing");
             case AppError.NothingToAmend() -> Messages.get("error.amend.nothing");
+            case AppError.MergeNotAmendable() -> Messages.get("error.amendCommit.merge");
             case AppError.NothingToStash() -> Messages.get("error.stash.nothing");
             case AppError.AlreadyPicked(Sha sha) -> Messages.get("error.cherryPick.already", sha.shortSha());
             case AppError.ConflictsRemain(int files) -> Messages.get("error.conflictsRemain", files);

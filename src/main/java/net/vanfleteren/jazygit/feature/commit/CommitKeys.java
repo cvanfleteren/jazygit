@@ -5,7 +5,7 @@ import net.vanfleteren.jazygit.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.keys.Scopes;
 
 /**
- * The keys for committing, amending, rewording, squashing, fixing up, dropping and resetting.
+ * The keys for committing, amending (the last or any commit), rewording, squashing, fixing up, dropping and resetting.
  */
 public final class CommitKeys {
 
@@ -18,6 +18,8 @@ public final class CommitKeys {
                         Binding.always("A", "help.files.amend", AmendMsg.Requested::new))
                 .add(
                         Scopes.COMMITS,
+                        Binding.onSelected(
+                                "A", "help.commits.amend", commit -> new AmendCommitMsg.Requested(commit.sha())),
                         Binding.onSelected("r", "help.commits.reword", commit -> new RewordMsg.Requested(commit.sha())),
                         Binding.onSelected("s", "help.commits.squash", commit -> new SquashMsg.Requested(commit.sha())),
                         Binding.onSelected("f", "help.commits.fixup", commit -> new FixupMsg.Requested(commit.sha())),

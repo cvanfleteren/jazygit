@@ -25,6 +25,28 @@ public final class CommitDialogs {
             AmendMsg.Cancelled::new);
 
     /**
+     * Asks to amend a commit with the staged changes.
+     */
+    public static final ConfirmDialog.Spec<AmendCommitPopup> AMEND_COMMIT = new ConfirmDialog.Spec<>(
+            "amend-selected-commit",
+            AmendCommitPopup.class,
+            popup -> Messages.get("dialog.amendCommit.title"),
+            popup -> Messages.get("dialog.amendCommit.message"),
+            AmendCommitMsg.Confirmed::new,
+            AmendCommitMsg.Cancelled::new);
+
+    /**
+     * Asks whether to amend a commit with all files, because none is staged.
+     */
+    public static final ConfirmDialog.Spec<AmendCommitStageAllPopup> AMEND_COMMIT_STAGE_ALL = new ConfirmDialog.Spec<>(
+            "amend-selected-commit-stage-all",
+            AmendCommitStageAllPopup.class,
+            popup -> Messages.get("dialog.amendCommit.stageAll.title"),
+            popup -> Messages.get("dialog.amendCommit.stageAll.message"),
+            AmendCommitMsg.StageAllConfirmed::new,
+            AmendCommitMsg.Cancelled::new);
+
+    /**
      * Asks to squash a commit into the one below it.
      */
     public static final ConfirmDialog.Spec<SquashPopup> SQUASH = new ConfirmDialog.Spec<>(

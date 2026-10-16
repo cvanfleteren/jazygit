@@ -35,6 +35,27 @@ final class CliCommit {
     }
 
     /**
+     * Amends the commit {@code sha} with the index, keeping its message: by amending when it is HEAD, else by
+     * committing the index as a fixup of it, which {@link CliRebase#fixupInto} folds into it. When that fails other
+     * than on conflicts, the fixup commit is undone again, so its changes are staged as before.
+     *
+     * @return the command lines that were run
+     */
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> amend(Path workTree, Sha sha) {
+        return GitFailure.<GitError, Option<Sha>>widen(CliLog.resolve(workTree, "HEAD"))
+                .flatMap(head -> head.contains(sha)
+                        ? GitFailure.widen(amend(workTree))
+                        : GitFailure.<GitError>sequence(
+                                () -> GitFailure.widen(
+                                        run(workTree, List.of("commit", "--quiet", "--fixup=" + sha.value()))),
+                                () -> CliRebase.fixupInto(workTree, sha)
+                                        .mapLeft(failure -> failure.error() instanceof GitError.StoppedOnConflicts
+                                                ? failure
+                                                : failure.followedBy(run(
+                                                        workTree, List.of("reset", "--quiet", "--soft", "HEAD^"))))));
+    }
+
+    /**
      * Replaces the message of {@code sha}: by amending when it is HEAD, else by {@link CliRebase#reword}.
      *
      * @return the command lines that were run
