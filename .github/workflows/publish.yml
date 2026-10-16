@@ -29,15 +29,15 @@ jobs:
       - name: Build fat-jar and native image
         run: |
           mvn --batch-mode --no-transfer-progress -Pnative verify
-          version=$(mvn --batch-mode --no-transfer-progress help:evaluate -Dexpression=project.version -q -DforceStdout)
-          mv target/jazygit "target/jazygit-$version-linux-x86_64"
+          version=$(mvn --batch-mode --no-transfer-progress -N help:evaluate -Dexpression=project.version -q -DforceStdout)
+          mv jazygit-app/target/jazygit "jazygit-app/target/jazygit-$version-linux-x86_64"
 
       - name: Replace the rolling snapshot release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete snapshot --cleanup-tag --yes || true
-          gh release create snapshot target/jazygit-*-fat.jar target/jazygit-*-linux-x86_64 \
+          gh release create snapshot jazygit-app/target/jazygit-*-fat.jar jazygit-app/target/jazygit-*-linux-x86_64 \
             --target "$GITHUB_SHA" \
             --prerelease \
             --title "Latest snapshot" \
@@ -66,10 +66,10 @@ jobs:
       - name: Build fat-jar and native image
         run: |
           mvn --batch-mode --no-transfer-progress -Pnative verify
-          version=$(mvn --batch-mode --no-transfer-progress help:evaluate -Dexpression=project.version -q -DforceStdout)
-          mv target/jazygit "target/jazygit-$version-linux-x86_64"
+          version=$(mvn --batch-mode --no-transfer-progress -N help:evaluate -Dexpression=project.version -q -DforceStdout)
+          mv jazygit-app/target/jazygit "jazygit-app/target/jazygit-$version-linux-x86_64"
 
       - name: Attach fat-jar and native image to the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$GITHUB_REF_NAME" target/jazygit-*-fat.jar target/jazygit-*-linux-x86_64 --clobber
+        run: gh release upload "$GITHUB_REF_NAME" jazygit-app/target/jazygit-*-fat.jar jazygit-app/target/jazygit-*-linux-x86_64 --clobber

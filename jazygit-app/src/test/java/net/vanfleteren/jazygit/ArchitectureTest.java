@@ -8,6 +8,7 @@ import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.sli
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.importer.ImportOption;
+import com.tngtech.archunit.core.importer.Location;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
@@ -15,65 +16,24 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Program;
 
 /**
- * Rules about which parts of the application may depend on which, and how.
+ * Rules about which parts of the application may depend on which, and how. That jazygit-core knows nothing of
+ * the application the compiler sees to; its own rules are in its {@code CoreArchitectureTest}.
  */
-@AnalyzeClasses(packages = "net.vanfleteren.jazygit", importOptions = ImportOption.DoNotIncludeTests.class)
+@AnalyzeClasses(
+        packages = "net.vanfleteren.jazygit",
+        importOptions = {ImportOption.DoNotIncludeTests.class, ArchitectureTest.LeaveOutCore.class})
 class ArchitectureTest {
 
     /**
-     * The data read from git and GitHub is plain values, with nothing that runs anything.
+     * jazygit-core is checked by its own rules; its classes, and its test-jar, are left out here.
      */
-    @ArchTest
-    static final ArchRule modelsArePure = classes()
-            .that()
-            .resideInAnyPackage("..jazygit.git.model..", "..jazygit.gh.model..")
-            .should()
-            .onlyDependOnClassesThat()
-            .resideInAnyPackage("java..", "io.vavr..", "..jazygit.git.model..", "..jazygit.gh.model..");
-    /**
-     * The git, gh and process layers return data; what the application does with it, and turning it into text
-     * for the user, is up to the layers above.
-     */
-    @ArchTest
-    static final ArchRule lowLayersDoNotKnowTheApplication = noClasses()
-            .that()
-            .resideInAnyPackage("..jazygit.git..", "..jazygit.gh..", "..jazygit.process..")
-            .should()
-            .dependOnClassesThat()
-            .resideInAnyPackage(
-                    "..jazygit.state..",
-                    "..jazygit.feature..",
-                    "..jazygit.keys..",
-                    "..jazygit.ui..",
-                    "..jazygit.i18n..",
-                    "dev.tamboui..");
-    /**
-     * git and gh are reached each on their own; the features combine them. The process layer runs any program,
-     * and knows neither.
-     */
-    @ArchTest
-    static final ArchRule gitKnowsNothingOfGh = noClasses()
-            .that()
-            .resideInAPackage("..jazygit.git..")
-            .should()
-            .dependOnClassesThat()
-            .resideInAPackage("..jazygit.gh..");
+    static final class LeaveOutCore implements ImportOption {
+        @Override
+        public boolean includes(Location location) {
+            return !location.contains("/jazygit-core/");
+        }
+    }
 
-    @ArchTest
-    static final ArchRule ghKnowsNothingOfGit = noClasses()
-            .that()
-            .resideInAPackage("..jazygit.gh..")
-            .should()
-            .dependOnClassesThat()
-            .resideInAPackage("..jazygit.git..");
-
-    @ArchTest
-    static final ArchRule processKnowsNeitherGitNorGh = noClasses()
-            .that()
-            .resideInAPackage("..jazygit.process..")
-            .should()
-            .dependOnClassesThat()
-            .resideInAnyPackage("..jazygit.git..", "..jazygit.gh..");
     /**
      * The settings stand on their own: what is kept, and where, knows nothing of the application.
      */
@@ -209,13 +169,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule fieldsAreFinal = fields().that()
             .areDeclaredInClassesThat()
-            .resideInAnyPackage(
-                    "..jazygit.state..",
-                    "..jazygit.git.model..",
-                    "..jazygit.gh.model..",
-                    "..jazygit.feature..",
-                    "..jazygit.settings..",
-                    "..jazygit.cli..")
+            .resideInAnyPackage("..jazygit.state..", "..jazygit.feature..", "..jazygit.settings..", "..jazygit.cli..")
             .and()
             .areNotDeclaredIn(Program.class)
             .and()

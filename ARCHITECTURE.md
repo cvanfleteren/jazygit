@@ -12,6 +12,24 @@ It follows the **Elm architecture**:
 
 Rendering never talks to git, and update functions never do IO.
 
+## Modules
+
+The Maven build has two modules under the parent `pom.xml`:
+
+| Module | Holds | Depends on |
+|---|---|---|
+| `jazygit-core` | `process`, `git`, `git.model`, `gh`, `gh.model`: running git and gh, and what they report as values. | vavr, zt-exec |
+| `jazygit-app` | Everything else: `JazygitApp`, `cli`, `state`, `feature.*`, `ui`, `keys`, `settings`, `i18n`, and all resources. Builds the fat jar and the native image. | `jazygit-core`, TamboUI, picocli, night-config |
+
+The packages keep their names (`net.vanfleteren.jazygit.git`, ...), whichever module they are in. The core
+cannot see the application, TamboUI, picocli or night-config, so the compiler stops it from depending on them.
+The rules inside the core (git and gh know nothing of each other, the models are pure) are in
+`CoreArchitectureTest`. The core's test-jar shares `StubGitProvider`, `StubGitHub` and `SampleData` with the
+app's tests.
+
+`mvn verify` at the root builds and tests both. `./run.sh` runs the fat jar from `jazygit-app/target`, and
+`mvn -Pnative package` builds `jazygit-app/target/jazygit`.
+
 ## Packages
 
 ```mermaid
@@ -60,7 +78,8 @@ graph TD
     Feature --> I18n
 ```
 
-The arrows are the dependencies `ArchitectureTest` allows; it fails on any other.
+The arrows are the dependencies allowed. Inside `jazygit-app`, `ArchitectureTest` fails on any other;
+inside `jazygit-core`, `CoreArchitectureTest` does; and the core cannot reach the app's packages at all.
 
 - **The parts have no cycles**, with one exception: `Keymap.standard()` lists the keys of the features, which
   declare them with the types of `keys` (dotted).
@@ -68,7 +87,7 @@ The arrows are the dependencies `ArchitectureTest` allows; it fails on any other
   - The dialogs of a feature use the widgets of `ui`.
   - `ui` uses `git` and `gh` only for the errors, which `ErrorText` describes.
   - Nothing in `ui`, `keys` or a dialog runs git or gh.
-- **`git` and `gh` know nothing of each other**, nor of anything above them.
+- **`git` and `gh` know nothing of each other**, nor of anything above them: they live in `jazygit-core`.
 - **Only views use `i18n`.** `state` does not.
 - **`settings` knows nothing of the application**, and is the only part that reads or writes TOML.
 

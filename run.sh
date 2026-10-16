@@ -15,7 +15,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-JAR_GLOB="target/jazygit-*-fat.jar"
+JAR_GLOB="jazygit-app/target/jazygit-*-fat.jar"
 DEBUG_PORT=5005
 
 newest_jar() {
@@ -26,8 +26,8 @@ newest_jar() {
 
 JAR="$(newest_jar)"
 
-# Rebuild when there is no jar yet, or when the sources or pom are newer than it.
-if [[ -z "$JAR" ]] || [[ -n "$(find src pom.xml -newer "$JAR" -print -quit)" ]]; then
+# Rebuild when there is no jar yet, or when the sources or poms are newer than it.
+if [[ -z "$JAR" ]] || [[ -n "$(find jazygit-core/src jazygit-app/src pom.xml jazygit-core/pom.xml jazygit-app/pom.xml -newer "$JAR" -print -quit)" ]]; then
     mvn -q -DskipTests package
     JAR="$(newest_jar)"
 fi
