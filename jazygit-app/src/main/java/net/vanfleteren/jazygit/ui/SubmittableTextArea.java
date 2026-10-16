@@ -13,7 +13,8 @@ import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.control.Option;
 
 /**
- * A text area where Ctrl+Enter submits instead of inserting a newline. The plain text area turns
+ * A text area where Ctrl+Enter submits instead of inserting a newline, where the terminal tells it from Enter; most
+ * send both alike. The plain text area turns
  * every Enter into a newline, whatever the modifiers, and handles its keys before any handler that
  * can be attached to it; so this element registers itself with the same id, ahead of the text area,
  * to see the keys first.

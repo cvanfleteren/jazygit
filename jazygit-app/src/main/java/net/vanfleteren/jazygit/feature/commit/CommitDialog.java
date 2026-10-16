@@ -25,7 +25,8 @@ import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
 /**
  * Popup asking for a commit message: a summary and a description. Tab switches between them. Enter
- * in the summary, or Ctrl+Enter in the description, confirms; Escape cancels. Whether it is open
+ * in the summary, or Ctrl+S in either, confirms; Escape cancels. Terminals send Ctrl+Enter as a plain Enter, so it
+ * only confirms where the terminal tells them apart. Whether it is open
  * lives in the {@link Model}; the text being typed lives in the input widgets.
  *
  * <p>There are two flavours: {@link #commit} asks for the message of a new commit, {@link #reword}
@@ -44,6 +45,8 @@ public final class CommitDialog implements PopupView {
 
     // With Ctrl held, opens the message in the editor.
     private static final char EDITOR_KEY = 'o';
+    // With Ctrl held, confirms from either field; Enter adds a line to the description.
+    private static final char CONFIRM_KEY = 's';
     private static final int WIDTH = 110;
     private static final int INPUT_HEIGHT = 3;
     private static final int DESCRIPTION_HEIGHT = 10;
@@ -169,12 +172,17 @@ public final class CommitDialog implements PopupView {
     }
 
     /**
-     * Cancels on Escape in a field, and opens the message in the editor on {@link #EDITOR_KEY}. The dialog around the
-     * fields only gets keys after the global handlers, and one of those takes Escape too.
+     * Cancels on Escape in a field, confirms on {@link #CONFIRM_KEY} and opens the message in the editor on
+     * {@link #EDITOR_KEY}. The dialog around the fields only gets keys after the global handlers, and those take
+     * Escape and Ctrl+S too.
      */
     private EventResult keys(KeyEvent event) {
         if (event.code() == KeyCode.ESCAPE) {
             cancel();
+            return EventResult.HANDLED;
+        }
+        if (event.hasCtrl() && event.isChar(CONFIRM_KEY)) {
+            confirm();
             return EventResult.HANDLED;
         }
         if (event.hasCtrl() && event.isChar(EDITOR_KEY)) {

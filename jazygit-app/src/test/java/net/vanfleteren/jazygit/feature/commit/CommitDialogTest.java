@@ -25,8 +25,8 @@ import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
 
 /**
- * The commit popup: Tab switches fields, Enter in the summary and Ctrl+Enter in the description
- * commit, Escape cancels.
+ * The commit popup: Tab switches fields, Enter in the summary and Ctrl+S or Ctrl+Enter in either commit, Escape
+ * cancels.
  */
 class CommitDialogTest {
 
@@ -95,6 +95,33 @@ class CommitDialogTest {
 
         assertEquals(
                 java.util.List.of(new CommitMsg.Confirmed(new CommitMessage("fix it", "because\nreasons"))),
+                dispatched);
+    }
+
+    @Test
+    void ctrlSCommitsFromEitherField() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            // The app's global Ctrl+S opens the settings, after the fields had their chance.
+            runner.runner()
+                    .eventRouter()
+                    .addGlobalHandler(event -> event instanceof KeyEvent key && key.hasCtrl() && key.isChar('s')
+                            ? EventResult.HANDLED
+                            : EventResult.UNHANDLED);
+            type(runner, "fix it");
+            SettledPilot.of(runner).press('s', KeyModifiers.CTRL);
+            type(runner, "again");
+            SettledPilot.of(runner).press(KeyCode.TAB);
+            type(runner, "because");
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            type(runner, "reasons");
+            SettledPilot.of(runner).press('s', KeyModifiers.CTRL);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(
+                java.util.List.of(
+                        new CommitMsg.Confirmed(new CommitMessage("fix it", "")),
+                        new CommitMsg.Confirmed(new CommitMessage("again", "because\nreasons"))),
                 dispatched);
     }
 
