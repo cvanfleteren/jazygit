@@ -4,13 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.ChangeType;
-import net.vanfleteren.jazygit.git.model.Conflict;
-import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
-import net.vanfleteren.jazygit.git.model.Sha;
 import org.junit.jupiter.api.Test;
 
 /**

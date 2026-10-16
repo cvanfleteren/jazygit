@@ -1,9 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import static net.vanfleteren.jazygit.state.TestModels.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -37,7 +35,8 @@ class UpdateTest {
                         new LoadStatus(),
                         new LoadBranches(),
                         new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadStashes()),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
                 next.cmds());
     }
 
@@ -134,9 +133,9 @@ class UpdateTest {
                 .model();
         Model retrying = Update.update(failed, new Tick()).model();
 
-        assertEquals(false, Update.update(retrying, new Tick()).cmds().contains(new LoadCommits()));
+        assertFalse(Update.update(retrying, new Tick()).cmds().contains(new LoadCommits()));
         Model retried =
                 Update.update(retrying, new LoadMsg.CommitsLoaded(COMMITS)).model();
-        assertEquals(false, retried.refreshing().contains(new LoadCommits()));
+        assertFalse(retried.refreshing().contains(new LoadCommits()));
     }
 }

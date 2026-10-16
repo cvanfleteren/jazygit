@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import static dev.tamboui.toolkit.Toolkit.*;
+import static dev.tamboui.toolkit.Toolkit.stack;
+import static dev.tamboui.toolkit.Toolkit.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -72,7 +73,7 @@ class MergeDialogTest {
     }
 
     private ToolkitTestRunner start() throws Exception {
-        assertEquals(true, open.popup(MergePopup.class).isDefined());
+        assertTrue(open.popup(MergePopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
         runner.runner().focusManager().setFocus(BranchDialogs.MERGE.id());
         RenderedText.of(runner, this::view);

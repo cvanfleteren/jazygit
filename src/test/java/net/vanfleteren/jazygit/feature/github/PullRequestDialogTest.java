@@ -3,9 +3,7 @@ package net.vanfleteren.jazygit.feature.github;
 import static dev.tamboui.toolkit.Toolkit.stack;
 import static dev.tamboui.toolkit.Toolkit.text;
 import static net.vanfleteren.jazygit.state.TestModels.refused;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
@@ -21,11 +19,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
-import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
-import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Mergeable;
-import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Reviewer;
-import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewerState;
-import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.*;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -83,6 +77,10 @@ class PullRequestDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final PullRequestDialog dialog = new PullRequestDialog(dispatched::add, Clock.fixed(NOW, ZoneOffset.UTC));
+
+    private static int hintLine(String screen) {
+        return List.of(screen.split("\n")).indexWhere(line -> line.contains("(enter) select"));
+    }
 
     @Test
     void closedModelShowsNoPopup() {
@@ -196,10 +194,6 @@ class PullRequestDialogTest {
         assertEquals(hintLine, hintLine(screen(loading.with(Either.right(DETAILS)))));
         assertEquals(hintLine, hintLine(screen(loading.with(Either.right(fullest)))));
         assertEquals(hintLine, hintLine(screen(loading.with(Either.left(refused("offline"))))));
-    }
-
-    private static int hintLine(String screen) {
-        return List.of(screen.split("\n")).indexWhere(line -> line.contains("(enter) select"));
     }
 
     @Test

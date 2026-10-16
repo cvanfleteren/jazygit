@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.commit;
 
-import static dev.tamboui.toolkit.Toolkit.*;
+import static dev.tamboui.toolkit.Toolkit.stack;
+import static dev.tamboui.toolkit.Toolkit.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -13,11 +14,7 @@ import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
-import net.vanfleteren.jazygit.state.LoadMsg;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.TestModels;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import org.junit.jupiter.api.Test;
@@ -81,7 +78,7 @@ class FixupDialogTest {
     }
 
     private ToolkitTestRunner start() throws Exception {
-        assertEquals(true, open.popup(FixupPopup.class).isDefined());
+        assertTrue(open.popup(FixupPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
         runner.runner().focusManager().setFocus(CommitDialogs.FIXUP.id());
         RenderedText.of(runner, this::view);

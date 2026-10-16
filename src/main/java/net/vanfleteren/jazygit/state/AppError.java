@@ -61,6 +61,14 @@ public sealed interface AppError {
     record UnpushedCommits(Branch.Name branch) implements AppError {}
 
     /**
+     * An operation was asked for on a branch that is checked out in another worktree, which keeps git from
+     * doing it here.
+     *
+     * @param worktree the root of the worktree the branch is checked out in
+     */
+    record CheckedOutElsewhere(Operation operation, Branch.Name branch, String worktree) implements AppError {}
+
+    /**
      * A pull request was asked for, but the branch is not on its remote yet, or not with all its commits.
      */
     record NotPushed(Branch.Name branch) implements AppError {}

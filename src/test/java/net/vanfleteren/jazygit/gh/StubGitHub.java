@@ -5,11 +5,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.gh.model.BranchChecks;
-import net.vanfleteren.jazygit.gh.model.GhLogin;
-import net.vanfleteren.jazygit.gh.model.MergeMethod;
-import net.vanfleteren.jazygit.gh.model.PullRequest;
-import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**

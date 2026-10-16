@@ -12,27 +12,13 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.ArrayList;
 import java.util.function.Supplier;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Popup;
-import net.vanfleteren.jazygit.state.TestModels;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
 
 class PickDialogTest {
 
-    private record BranchPopup(List<String> branches) implements Popup {}
-
-    private record Picked(String what) implements Msg {
-        @Override
-        public Update.Next apply(Model model) {
-            return Update.Next.of(model);
-        }
-    }
-
     private static final List<String> BRANCHES = List.of("main", "develop", "release");
-
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final PickDialog<BranchPopup> dialog = new PickDialog<>(
             new PickDialog.Spec<>(
@@ -118,5 +104,14 @@ class PickDialogTest {
                 text("background"),
                 dialog.render(TestModels.loaded().openPopup(new BranchPopup(BRANCHES)))
                         .get());
+    }
+
+    private record BranchPopup(List<String> branches) implements Popup {}
+
+    private record Picked(String what) implements Msg {
+        @Override
+        public Update.Next apply(Model model) {
+            return Update.Next.of(model);
+        }
     }
 }

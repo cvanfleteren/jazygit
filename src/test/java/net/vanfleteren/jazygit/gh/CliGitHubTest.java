@@ -1,8 +1,6 @@
 package net.vanfleteren.jazygit.gh;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
@@ -15,11 +13,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
-import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
-import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Mergeable;
-import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Reviewer;
-import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewerState;
-import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.*;
 import org.junit.jupiter.api.Test;
 
 class CliGitHubTest {

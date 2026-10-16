@@ -1,7 +1,9 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import static dev.tamboui.toolkit.Toolkit.*;
+import static dev.tamboui.toolkit.Toolkit.stack;
+import static dev.tamboui.toolkit.Toolkit.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
@@ -14,11 +16,7 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Upstream;
-import net.vanfleteren.jazygit.state.LoadMsg;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.TestModels;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
 
@@ -81,11 +79,11 @@ class ForcePushDialogTest {
 
     @Test
     void closedModelShowsNoPopup() {
-        assertEquals(true, dialog.render(TestModels.loaded()).isEmpty());
+        assertTrue(dialog.render(TestModels.loaded()).isEmpty());
     }
 
     private ToolkitTestRunner start() throws Exception {
-        assertEquals(true, open.popup(ForcePushPopup.class).isDefined());
+        assertTrue(open.popup(ForcePushPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
         runner.runner().focusManager().setFocus(BranchDialogs.FORCE_PUSH.id());
         RenderedText.of(runner, this::view);

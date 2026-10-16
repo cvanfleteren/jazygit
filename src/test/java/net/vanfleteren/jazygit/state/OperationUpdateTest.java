@@ -1,10 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import static net.vanfleteren.jazygit.git.StubGitProvider.executed;
-import static net.vanfleteren.jazygit.state.TestModels.errorText;
-import static net.vanfleteren.jazygit.state.TestModels.failed;
-import static net.vanfleteren.jazygit.state.TestModels.loaded;
-import static net.vanfleteren.jazygit.state.TestModels.succeeded;
+import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 

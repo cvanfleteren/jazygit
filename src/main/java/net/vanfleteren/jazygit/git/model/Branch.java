@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.git.model;
 
 import io.vavr.control.Option;
+import java.nio.file.Path;
 import java.time.Instant;
 
 /**
@@ -11,6 +12,8 @@ import java.time.Instant;
  * @param hasRemote whether the branch also exists on its remote, according to the remote-tracking refs
  * @param isDefault whether this is the repository's main branch, i.e. the default branch of the remote
  * @param tracking  what it follows on its remote: nothing, a remote-tracking branch, or one that is gone
+ * @param worktree  the root of the other worktree it is checked out in, if it is: git checks a branch out in
+ *                  one worktree at a time, so it can be neither checked out nor deleted here
  */
 public record Branch(
         Name name,
@@ -19,7 +22,22 @@ public record Branch(
         Instant tipTime,
         boolean hasRemote,
         boolean isDefault,
-        Tracking tracking) {
+        Tracking tracking,
+        Option<Path> worktree) {
+
+    /**
+     * A branch that is checked out in no other worktree.
+     */
+    public Branch(
+            Name name,
+            boolean current,
+            Sha tipOid,
+            Instant tipTime,
+            boolean hasRemote,
+            boolean isDefault,
+            Tracking tracking) {
+        this(name, current, tipOid, tipTime, hasRemote, isDefault, tracking, Option.none());
+    }
 
     /**
      * A branch following {@code upstream}, or nothing.
@@ -90,6 +108,20 @@ public record Branch(
                 .orElse(this::goneUpstream)
                 .filter(upstream -> !upstream.local())
                 .getOrElse(() -> new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, name));
+    }
+
+    /**
+     * Where the other worktree it is checked out in is, as text, if it is checked out in one.
+     */
+    public Option<String> worktreeLocation() {
+        return worktree.map(Path::toString);
+    }
+
+    /**
+     * Whether it is checked out in another worktree.
+     */
+    public boolean checkedOutElsewhere() {
+        return worktree.isDefined();
     }
 
     /**

@@ -1,8 +1,6 @@
 package net.vanfleteren.jazygit.settings;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import java.io.IOException;
@@ -52,7 +50,7 @@ class RecentRepositoriesFileTest {
     void theOnesOpenedLongestAgoDropOff() {
         List<Path> many = List.range(0, RecentRepositories.MAX + 5).map(i -> Path.of("/repos/" + i));
 
-        List<Path> kept = many.foldLeft(List.<Path>empty(), RecentRepositories::opened);
+        List<Path> kept = many.foldLeft(List.empty(), RecentRepositories::opened);
 
         assertEquals(RecentRepositories.MAX, kept.size());
         assertEquals(many.last(), kept.head());

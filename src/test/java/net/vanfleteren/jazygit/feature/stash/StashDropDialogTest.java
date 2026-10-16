@@ -12,11 +12,7 @@ import io.vavr.collection.List;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
-import net.vanfleteren.jazygit.state.LoadMsg;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.TestModels;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import org.junit.jupiter.api.Test;
 

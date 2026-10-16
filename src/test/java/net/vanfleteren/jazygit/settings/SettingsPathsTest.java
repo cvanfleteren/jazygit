@@ -15,6 +15,10 @@ class SettingsPathsTest {
         return SettingsPaths.configFile(osName, env::get, HOME);
     }
 
+    private static Path stateFile(String osName, Map<String, String> env) {
+        return SettingsPaths.stateFile(osName, env::get, HOME);
+    }
+
     @Test
     void linuxUsesTheXdgConfigHome() {
         assertEquals(Path.of("/xdg/jazygit/config.toml"), configFile("Linux", HashMap.of("XDG_CONFIG_HOME", "/xdg")));
@@ -69,10 +73,6 @@ class SettingsPathsTest {
         assertEquals(Path.of("/mine/config.toml"), configFile("Linux", env));
         assertEquals(Path.of("/mine/config.toml"), configFile("Mac OS X", env));
         assertEquals(Path.of("/mine/config.toml"), configFile("Windows 11", env));
-    }
-
-    private static Path stateFile(String osName, Map<String, String> env) {
-        return SettingsPaths.stateFile(osName, env::get, HOME);
     }
 
     @Test

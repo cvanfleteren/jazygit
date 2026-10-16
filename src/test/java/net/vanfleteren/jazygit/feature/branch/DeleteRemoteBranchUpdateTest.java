@@ -7,16 +7,8 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.DeleteRemoteBranch;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.git.model.RemoteRef;
-import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.state.AppError;
-import net.vanfleteren.jazygit.state.LoadMsg;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Operation;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 

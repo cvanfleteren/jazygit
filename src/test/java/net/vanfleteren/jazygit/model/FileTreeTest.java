@@ -36,7 +36,7 @@ class FileTreeTest {
         Dir root = new Dir("root", "", FileTree.of(List.of(a, b, c)));
 
         assertEquals(List.of(c), root.directEntries());
-        assertEquals(List.of(a), ((Dir) root.children().get(0)).directEntries());
+        assertEquals(List.of(a), root.children().get(0).directEntries());
         assertEquals(List.of(c), new File("c.txt", c).directEntries());
     }
 

@@ -1,9 +1,8 @@
 package net.vanfleteren.jazygit.feature.help;
 
-import static dev.tamboui.toolkit.Toolkit.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static dev.tamboui.toolkit.Toolkit.stack;
+import static dev.tamboui.toolkit.Toolkit.text;
+import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
@@ -32,10 +31,9 @@ import org.junit.jupiter.api.Test;
  */
 class HelpDialogTest {
 
+    private static final Branch.Name FEATURE = new Branch.Name("feature");
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final HelpDialog dialog = new HelpDialog(dispatched::add);
-
-    private static final Branch.Name FEATURE = new Branch.Name("feature");
 
     private static Model open(String topic) {
         return open(topic, Option.none());
@@ -51,6 +49,10 @@ class HelpDialogTest {
     private static Model open(String topic, Option<List<Option<Msg>>> actions) {
         return Update.update(TestModels.loaded(), new HelpMsg.Requested(topic, actions.getOrElse(List.empty())))
                 .model();
+    }
+
+    private static Model onFeature() {
+        return open(Scopes.BRANCHES, Option.of(FEATURE));
     }
 
     @Test
@@ -179,10 +181,6 @@ class HelpDialogTest {
     @Test
     void closedModelShowsNoPopup() {
         assertTrue(dialog.render(TestModels.loaded()).isEmpty());
-    }
-
-    private static Model onFeature() {
-        return open(Scopes.BRANCHES, Option.of(FEATURE));
     }
 
     private List<Msg> press(java.util.function.Consumer<ToolkitTestRunner> keys) throws Exception {

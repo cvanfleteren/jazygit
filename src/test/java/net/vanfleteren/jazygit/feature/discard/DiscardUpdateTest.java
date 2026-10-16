@@ -1,8 +1,6 @@
 package net.vanfleteren.jazygit.feature.discard;
 
-import static net.vanfleteren.jazygit.state.TestModels.errorText;
-import static net.vanfleteren.jazygit.state.TestModels.failed;
-import static net.vanfleteren.jazygit.state.TestModels.loaded;
+import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 

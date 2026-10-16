@@ -77,15 +77,31 @@ public final class BranchDialogs {
             CheckoutMsg.StashCancelled::new);
 
     /**
+     * Tells that the branch to check out is checked out in another worktree, and asks to switch to that one.
+     */
+    public static final ConfirmDialog.Spec<SwitchWorktreePopup> SWITCH_WORKTREE = new ConfirmDialog.Spec<>(
+            "switch-worktree",
+            SwitchWorktreePopup.class,
+            popup -> Messages.get("dialog.switchWorktree.title", popup.branch().value()),
+            popup ->
+                    Messages.get("dialog.switchWorktree.message", popup.branch().value(), popup.worktree()),
+            CheckoutMsg.SwitchWorktreeConfirmed::new,
+            CheckoutMsg.SwitchWorktreeCancelled::new);
+
+    /**
      * Asks where to delete a branch. The options that act on the remote only apply when the branch has a
-     * remote branch that can be deleted.
+     * remote branch that can be deleted, the ones that act locally when no other worktree has it checked out.
      */
     public static final ChoiceDialog.Spec<DeleteBranchPopup> DELETE_BRANCH = new ChoiceDialog.Spec<>(
             "delete-branch",
             DeleteBranchPopup.class,
             popup -> Messages.get("dialog.deleteBranch.title", popup.branch().value()),
             List.of(
-                    new Choice<>('d', "dialog.deleteBranch.local", () -> new DeleteBranchMsg.Chosen(DeleteScope.LOCAL)),
+                    new Choice<>(
+                            'd',
+                            "dialog.deleteBranch.local",
+                            () -> new DeleteBranchMsg.Chosen(DeleteScope.LOCAL),
+                            BranchDialogs::localDeletable),
                     new Choice<>(
                             'r',
                             "dialog.deleteBranch.remote",
@@ -95,7 +111,7 @@ public final class BranchDialogs {
                             'b',
                             "dialog.deleteBranch.both",
                             () -> new DeleteBranchMsg.Chosen(DeleteScope.BOTH),
-                            BranchDialogs::remoteDeletable)),
+                            (model, popup) -> localDeletable(model, popup) && remoteDeletable(model, popup))),
             DeleteBranchMsg.Cancelled::new);
 
     /**
@@ -146,5 +162,9 @@ public final class BranchDialogs {
 
     private static boolean remoteDeletable(Model model, DeleteBranchPopup popup) {
         return DeleteBranchUpdate.remoteDeletable(model, popup.branch());
+    }
+
+    private static boolean localDeletable(Model model, DeleteBranchPopup popup) {
+        return DeleteBranchUpdate.localDeletable(model, popup.branch());
     }
 }

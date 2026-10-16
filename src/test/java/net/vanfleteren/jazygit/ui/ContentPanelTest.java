@@ -1,10 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.text.Span;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
@@ -14,17 +10,9 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.stream.Collectors;
-import net.vanfleteren.jazygit.git.model.ChangeType;
-import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.git.model.DiffText;
-import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.model.SampleData;
-import net.vanfleteren.jazygit.state.LoadMsg;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.SelectionMsg;
-import net.vanfleteren.jazygit.state.TestModels;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.*;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -36,6 +24,21 @@ class ContentPanelTest {
     private final ContentPanel content = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
 
     private final Model model = TestModels.loaded(new SampleData(), "feature/initial-layout");
+
+    private static Commit plain(String sha, String... parents) {
+        return new Commit(
+                new Sha(sha),
+                "Ada",
+                "a@e.com",
+                Instant.EPOCH,
+                sha,
+                "",
+                List.of(parents).map(Sha::new));
+    }
+
+    private static Commit merge(String sha, String... parents) {
+        return plain(sha, parents);
+    }
 
     @Test
     void filesFocusedRendersFileStatusView() {
@@ -247,25 +250,10 @@ class ContentPanelTest {
 
         List<String> lines = ContentPanel.logLines(log, ZoneOffset.UTC);
 
-        assertEquals(true, lines.contains("*   commit m"));
-        assertEquals(true, lines.contains("|\\  Merge: b f"));
-        assertEquals(true, lines.contains("| * commit f"));
-        assertEquals(true, lines.contains("|/  Ada <a@e.com>"));
-    }
-
-    private static Commit plain(String sha, String... parents) {
-        return new Commit(
-                new Sha(sha),
-                "Ada",
-                "a@e.com",
-                Instant.EPOCH,
-                sha,
-                "",
-                List.of(parents).map(Sha::new));
-    }
-
-    private static Commit merge(String sha, String... parents) {
-        return plain(sha, parents);
+        assertTrue(lines.contains("*   commit m"));
+        assertTrue(lines.contains("|\\  Merge: b f"));
+        assertTrue(lines.contains("| * commit f"));
+        assertTrue(lines.contains("|/  Ada <a@e.com>"));
     }
 
     @Test

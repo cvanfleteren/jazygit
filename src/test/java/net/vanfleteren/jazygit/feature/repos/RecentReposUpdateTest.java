@@ -16,14 +16,7 @@ import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.settings.RecentRepositories;
 import net.vanfleteren.jazygit.settings.SettingsStore;
-import net.vanfleteren.jazygit.state.AppError;
-import net.vanfleteren.jazygit.state.Env;
-import net.vanfleteren.jazygit.state.ErrorPopup;
-import net.vanfleteren.jazygit.state.Failure;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Repositories;
-import net.vanfleteren.jazygit.state.TestModels;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -32,35 +25,6 @@ class RecentReposUpdateTest {
 
     @TempDir
     Path dir;
-
-    /**
-     * Recent repositories kept in memory.
-     */
-    private static final class InMemory implements RecentRepositories {
-
-        private List<Path> recent;
-
-        InMemory(Path... recent) {
-            this.recent = List.of(recent);
-        }
-
-        @Override
-        public List<Path> load() {
-            return recent;
-        }
-
-        @Override
-        public Try<List<Path>> opened(Path workTree) {
-            recent = RecentRepositories.opened(recent, workTree);
-            return Try.success(recent);
-        }
-
-        @Override
-        public Try<List<Path>> forget(List<Path> workTrees) {
-            recent = recent.removeAll(workTrees);
-            return Try.success(recent);
-        }
-    }
 
     private static Env env(Path current, RecentRepositories recent, Repositories repositories) {
         return new Env(
@@ -178,5 +142,34 @@ class RecentReposUpdateTest {
         RecentReposMsg.NotSwitched notSwitched = assertInstanceOf(RecentReposMsg.NotSwitched.class, msg);
         assertEquals(other.toString(), notSwitched.directory());
         assertEquals(List.of(current), recent.load());
+    }
+
+    /**
+     * Recent repositories kept in memory.
+     */
+    private static final class InMemory implements RecentRepositories {
+
+        private List<Path> recent;
+
+        InMemory(Path... recent) {
+            this.recent = List.of(recent);
+        }
+
+        @Override
+        public List<Path> load() {
+            return recent;
+        }
+
+        @Override
+        public Try<List<Path>> opened(Path workTree) {
+            recent = RecentRepositories.opened(recent, workTree);
+            return Try.success(recent);
+        }
+
+        @Override
+        public Try<List<Path>> forget(List<Path> workTrees) {
+            recent = recent.removeAll(workTrees);
+            return Try.success(recent);
+        }
     }
 }

@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import static dev.tamboui.toolkit.Toolkit.*;
+import static dev.tamboui.toolkit.Toolkit.stack;
+import static dev.tamboui.toolkit.Toolkit.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -76,11 +77,11 @@ class SetUpstreamDialogTest {
 
     @Test
     void closedModelShowsNoPopup() {
-        assertEquals(true, dialog.render(TestModels.loaded()).isEmpty());
+        assertTrue(dialog.render(TestModels.loaded()).isEmpty());
     }
 
     private ToolkitTestRunner start() throws Exception {
-        assertEquals(true, open.popup(SetUpstreamPopup.class).isDefined());
+        assertTrue(open.popup(SetUpstreamPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
         runner.runner().focusManager().setFocus(BranchDialogs.SET_UPSTREAM.id());
         RenderedText.of(runner, this::view);

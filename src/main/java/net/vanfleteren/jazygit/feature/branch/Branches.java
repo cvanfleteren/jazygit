@@ -4,7 +4,9 @@ import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Operation;
 
 /**
  * Questions about the branches that several branch operations ask.
@@ -22,6 +24,16 @@ final class Branches {
                 .filter(current -> !current.name().equals(other))
                 .flatMap(current -> model.idleBranch(current.name()))
                 .flatMap(current -> model.idleBranch(other).map(found -> Tuple.of(current.name(), found.name())));
+    }
+
+    /**
+     * Why {@code operation} cannot be done to {@code name} here, when it is a branch checked out in another
+     * worktree.
+     */
+    static Option<AppError> checkedOutElsewhere(Model model, Operation operation, Branch.Name name) {
+        return model.branch(name)
+                .flatMap(Branch::worktreeLocation)
+                .map(worktree -> new AppError.CheckedOutElsewhere(operation, name, worktree));
     }
 
     /**

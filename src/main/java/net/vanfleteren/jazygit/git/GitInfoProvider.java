@@ -282,4 +282,24 @@ public interface GitInfoProvider {
      * Resets the index entries of {@code paths} to HEAD.
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> unstage(List<String> paths);
+
+    // Listing, adding and removing the worktrees of the repository, as git worktree does.
+
+    /**
+     * The worktrees, the main one first; none for a bare repository itself, which has no working tree.
+     */
+    Either<ProcessError, List<Worktree>> worktrees();
+
+    /**
+     * Checks {@code branch} out in a new worktree at {@code location}, which is taken relative to the working
+     * tree of this one. Git refuses a branch that is checked out already, and a location that is not empty.
+     */
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktree(Path location, Branch.Name branch);
+
+    /**
+     * Removes the linked worktree at {@code location}, its directory included; its branch stays. Without
+     * {@code force}, git refuses one with modified or untracked files, which is a
+     * {@link GitError.WorktreeHasChanges}.
+     */
+    Either<GitFailure<GitError>, List<ExecutedCommand>> removeWorktree(Path location, boolean force);
 }

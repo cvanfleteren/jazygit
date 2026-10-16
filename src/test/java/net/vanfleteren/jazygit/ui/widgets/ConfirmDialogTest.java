@@ -18,36 +18,19 @@ import org.junit.jupiter.api.Test;
 
 class ConfirmDialogTest {
 
-    private record AskPopup(String thing) implements Popup {}
-
-    private record Yes() implements Msg {
-        @Override
-        public net.vanfleteren.jazygit.state.Update.Next apply(Model model) {
-            return net.vanfleteren.jazygit.state.Update.Next.of(model);
-        }
-    }
-
-    private record No() implements Msg {
-        @Override
-        public net.vanfleteren.jazygit.state.Update.Next apply(Model model) {
-            return net.vanfleteren.jazygit.state.Update.Next.of(model);
-        }
-    }
-
     private static final String LONG = "This is a long question that needs several lines at the width of the dialog, "
             + "so that the hint below it must still stay visible after the message has been wrapped. Really?";
-
     private final java.util.List<Msg> dispatched = new ArrayList<>();
+
+    private static Model open() {
+        return TestModels.loaded().openPopup(new AskPopup("foo"));
+    }
 
     private ConfirmDialog<AskPopup> dialog(String message) {
         return new ConfirmDialog<>(
                 new ConfirmDialog.Spec<>(
                         "ask", AskPopup.class, popup -> "Delete " + popup.thing(), popup -> message, Yes::new, No::new),
                 dispatched::add);
-    }
-
-    private static Model open() {
-        return TestModels.loaded().openPopup(new AskPopup("foo"));
     }
 
     @Test
@@ -107,5 +90,21 @@ class ConfirmDialogTest {
 
     private Element view(ConfirmDialog<AskPopup> dialog) {
         return stack(text("background"), dialog.render(open()).get());
+    }
+
+    private record AskPopup(String thing) implements Popup {}
+
+    private record Yes() implements Msg {
+        @Override
+        public net.vanfleteren.jazygit.state.Update.Next apply(Model model) {
+            return net.vanfleteren.jazygit.state.Update.Next.of(model);
+        }
+    }
+
+    private record No() implements Msg {
+        @Override
+        public net.vanfleteren.jazygit.state.Update.Next apply(Model model) {
+            return net.vanfleteren.jazygit.state.Update.Next.of(model);
+        }
     }
 }

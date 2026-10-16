@@ -26,6 +26,12 @@ class SelectedTextColouredTest {
     private static final SelectedText TERMINAL_DEFAULT =
             new SelectedText(Option.of(ROW), Option.none(), Option.of(BRIGHT));
 
+    private static Buffer render(Element element) {
+        Buffer buffer = Buffer.empty(AREA);
+        element.render(Frame.forTesting(buffer), AREA, RenderContext.empty());
+        return buffer;
+    }
+
     @Test
     void plainTextOnAHighlightedRowTakesTheColour() {
         Buffer buffer = render(new SelectedTextColoured(text("plain").bg(ROW), TERMINAL_DEFAULT));
@@ -67,11 +73,5 @@ class SelectedTextColouredTest {
         Buffer buffer = render(new SelectedTextColoured(text("plain").bg(ROW), SelectedText.UNCHANGED));
 
         assertEquals(Optional.empty(), buffer.get(0, 0).style().fg());
-    }
-
-    private static Buffer render(Element element) {
-        Buffer buffer = Buffer.empty(AREA);
-        element.render(Frame.forTesting(buffer), AREA, RenderContext.empty());
-        return buffer;
     }
 }

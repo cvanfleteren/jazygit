@@ -34,6 +34,8 @@ public final class ErrorText {
                 Messages.get("error.pull.upstreamGone", branch.value(), upstream);
             case AppError.UnpushedCommits(Branch.Name branch) ->
                 Messages.get("error.fastForward.unpushed", branch.value());
+            case AppError.CheckedOutElsewhere(var operation, Branch.Name branch, var worktree) ->
+                Messages.get(operation.errorKey(), branch.value(), Messages.get("error.checkedOutElsewhere", worktree));
             case AppError.NotPushed(Branch.Name branch) -> Messages.get("error.pullRequest.notPushed", branch.value());
             case AppError.DefaultBranch(String branch) -> Messages.get("error.deleteBranch.default", branch);
             case AppError.NotOnRemote(Branch.Name branch) -> Messages.get("error.browse.notOnRemote", branch.value());
@@ -100,6 +102,7 @@ public final class ErrorText {
             case GitError.NoWorkTree(var directory) -> Messages.get("git.noWorkTree", directory);
             case GitError.UnknownBranch(BranchRef branch) -> Messages.get("git.unknownBranch", branch.name());
             case GitError.LocalChanges(String explanation) -> explanation;
+            case GitError.WorktreeHasChanges(String explanation) -> explanation;
             case GitError.StashNotRestored(var cause) -> Messages.get("git.stashPopFailed", of(cause));
             case GitError.StashGone(String message) -> Messages.get("git.stashGone", message);
             case GitError.TempFileFailed(Throwable cause) -> Messages.get("git.tempFileFailed", reason(cause));

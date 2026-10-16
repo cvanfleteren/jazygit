@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import static dev.tamboui.toolkit.Toolkit.*;
+import static dev.tamboui.toolkit.Toolkit.stack;
+import static dev.tamboui.toolkit.Toolkit.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
@@ -117,11 +118,6 @@ class DeleteBranchDialogTest {
         }
     }
 
-    @FunctionalInterface
-    private interface Keys {
-        void press(ToolkitTestRunner runner) throws Exception;
-    }
-
     private List<Msg> pressing(Keys keys) throws Exception {
         return pressing(open, keys);
     }
@@ -138,5 +134,10 @@ class DeleteBranchDialogTest {
 
     private Element view(Model model) {
         return stack(text("background"), dialog.render(model).get());
+    }
+
+    @FunctionalInterface
+    private interface Keys {
+        void press(ToolkitTestRunner runner) throws Exception;
     }
 }

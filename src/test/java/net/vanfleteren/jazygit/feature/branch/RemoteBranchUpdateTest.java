@@ -9,19 +9,9 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.Checkout;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.CheckoutRemote;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.CreateBranch;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.git.model.RemoteRef;
-import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.git.model.Upstream;
-import net.vanfleteren.jazygit.state.BranchesTab;
+import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
-import net.vanfleteren.jazygit.state.LoadMsg;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Operation;
-import net.vanfleteren.jazygit.state.SelectionMsg;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
@@ -46,13 +36,21 @@ class RemoteBranchUpdateTest {
     }
 
     @Test
-    void theTabSwitchesBetweenTheLocalAndTheRemoteBranches() {
-        Model remote = Update.update(loaded(), new BranchesTabMsg.Switched()).model();
+    void theTabGoesRoundTheLocalBranchesTheRemoteOnesAndTheWorktrees() {
+        Model remote = Update.update(loaded(), new BranchesTabMsg.Switched(1)).model();
         assertEquals(BranchesTab.REMOTE, remote.branchesTab());
 
+        Model worktrees = Update.update(remote, new BranchesTabMsg.Switched(1)).model();
+        assertEquals(BranchesTab.WORKTREES, worktrees.branchesTab());
         assertEquals(
                 BranchesTab.LOCAL,
-                Update.update(remote, new BranchesTabMsg.Switched()).model().branchesTab());
+                Update.update(worktrees, new BranchesTabMsg.Switched(1)).model().branchesTab());
+        assertEquals(
+                BranchesTab.WORKTREES,
+                Update.update(loaded(), new BranchesTabMsg.Switched(-1)).model().branchesTab());
+        assertEquals(
+                BranchesTab.LOCAL,
+                Update.update(remote, new BranchesTabMsg.Switched(-1)).model().branchesTab());
     }
 
     @Test
@@ -148,7 +146,7 @@ class RemoteBranchUpdateTest {
     @Test
     void aCheckoutOrANewBranchFromTheRemoteBranchesShowsTheLocalOnesOnceItSucceeded() {
         Model onRemotes =
-                Update.update(withRemotes(), new BranchesTabMsg.Switched()).model();
+                Update.update(withRemotes(), new BranchesTabMsg.Switched(1)).model();
 
         List.<BranchCmd>of(
                         new CheckoutRemote(new Branch.Name("new"), ORIGIN_NEW),
@@ -177,7 +175,7 @@ class RemoteBranchUpdateTest {
     @Test
     void aFailedCheckoutFromTheRemoteBranchesStaysOnThem() {
         Model started = Update.update(
-                        Update.update(withRemotes(), new BranchesTabMsg.Switched())
+                        Update.update(withRemotes(), new BranchesTabMsg.Switched(1))
                                 .model(),
                         new CheckoutMsg.RemoteRequested(ORIGIN_NEW))
                 .model();

@@ -56,6 +56,7 @@ public final class HelpDialog implements PopupView {
             Scopes.BRANCHES.id(),
             List.of(
                     Tuple.of(Messages.get("branches.gone"), "help.branches.legend.gone"),
+                    Tuple.of(Messages.get("branches.worktree"), "help.branches.legend.worktree"),
                     Tuple.of("#42", "help.branches.legend.pullRequest"),
                     Tuple.of("✓ ✗ ●", "help.branches.legend.checks"),
                     Tuple.of("✔ ✎ ?", "help.branches.legend.review")));

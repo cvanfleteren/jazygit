@@ -1,0 +1,131 @@
+package net.vanfleteren.jazygit.git;
+
+import static net.vanfleteren.jazygit.git.GitCommand.git;
+import static net.vanfleteren.jazygit.git.Refs.HEADS;
+
+import io.vavr.collection.List;
+import io.vavr.collection.Seq;
+import io.vavr.control.Either;
+import io.vavr.control.Option;
+import io.vavr.control.Try;
+import java.nio.file.Path;
+import net.vanfleteren.jazygit.git.GitError.*;
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.Worktree;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
+
+/**
+ * Lists, adds and removes worktrees through the {@code git worktree} command line tool.
+ */
+final class CliWorktree {
+
+    // What separates the worktrees in the -z porcelain output: the NUL ending the last line of one, and an empty
+    // line.
+    private static final String RECORD_SEPARATOR = "\0\0";
+    // What git says when the worktree to remove has changes that removing it would lose. It is matched in
+    // English, so git is run with the C locale.
+    private static final String HAS_CHANGES = "contains modified or untracked files";
+
+    private CliWorktree() {}
+
+    /**
+     * Runs {@code git worktree list --porcelain -z}: the worktrees, the main one first. {@code workTree} is the one
+     * that is current.
+     */
+    static Either<ProcessError, List<Worktree>> list(Path workTree) {
+        return GitProcess.read(
+                workTree, GitCommand.reading("worktree", "list", "--porcelain", "-z"), raw -> parse(raw, workTree));
+    }
+
+    /**
+     * The worktrees in the output of {@code git worktree list --porcelain -z}: per worktree, one NUL-terminated
+     * line per attribute, the first naming it, and an empty line after it. A bare repository is listed too, first,
+     * and left out, as it has no working tree.
+     */
+    static Either<UnexpectedOutput, List<Worktree>> parse(String raw, Path current) {
+        List<List<String>> records = List.of(raw.split(RECORD_SEPARATOR))
+                .map(record -> List.of(record.split("\0")).filter(line -> !line.isEmpty()))
+                .filter(List::nonEmpty);
+        return Either.sequenceRight(records.zipWithIndex().map(record -> worktree(record._1, record._2 == 0, current)))
+                .map(worktrees -> worktrees.flatMap(worktree -> worktree).toList());
+    }
+
+    /**
+     * The worktree {@code lines} describe; none for a bare repository.
+     */
+    private static Either<UnexpectedOutput, Option<Worktree>> worktree(
+            List<String> lines, boolean first, Path current) {
+        Either<UnexpectedOutput, Path> path = GitOutput.after(lines.head(), "worktree ")
+                .flatMap(text -> Try.of(() -> Path.of(text)).toOption())
+                .toEither(() -> new UnexpectedOutput(lines.head()));
+        Either<UnexpectedOutput, Option<Sha>> head = value(lines, "HEAD")
+                .map(text -> GitOutput.sha(text).map(Option::of))
+                .getOrElse(() -> Either.right(Option.none()));
+        return path.flatMap(root -> head.map(sha -> Option.when(
+                !lines.contains("bare"),
+                () -> new Worktree(
+                        root,
+                        // A repository without commits has a HEAD of zeroes.
+                        sha.filter(commit -> !commit.value().matches("0+")),
+                        value(lines, "branch")
+                                .flatMap(ref -> GitOutput.after(ref, HEADS))
+                                .map(Branch.Name::new),
+                        first,
+                        root.equals(current),
+                        flag(lines, "locked"),
+                        flag(lines, "prunable")))));
+    }
+
+    /**
+     * The value of the attribute {@code name}, if {@code lines} have it.
+     */
+    private static Option<String> value(Seq<String> lines, String name) {
+        return lines.iterator()
+                .flatMap(line -> GitOutput.after(line, name + " "))
+                .headOption();
+    }
+
+    /**
+     * Whether {@code lines} have the attribute {@code name}, with a reason or without.
+     */
+    private static boolean flag(Seq<String> lines, String name) {
+        return lines.exists(line -> line.equals(name) || line.startsWith(name + " "));
+    }
+
+    /**
+     * Runs {@code git worktree add --quiet <location> <branch>} in {@code workTree}.
+     */
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> add(
+            Path workTree, Path location, Branch.Name branch) {
+        return GitProcess.log(
+                workTree,
+                git(
+                        "worktree",
+                        "add",
+                        "--quiet",
+                        workTree.resolve(location).normalize().toString(),
+                        branch.value()));
+    }
+
+    /**
+     * Runs {@code git worktree remove [--force] <location>} in {@code workTree}.
+     *
+     * @return the command lines that were run, or why git refused, {@link WorktreeHasChanges} when forcing it
+     * would let the removal go through
+     */
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> remove(Path workTree, Path location, boolean force) {
+        return GitProcess.log(
+                        workTree,
+                        git(List.of("worktree", "remove")
+                                .appendAll(Option.when(force, "--force"))
+                                .append(workTree.resolve(location).normalize().toString())))
+                .mapLeft(failure -> failure.map(CliWorktree::classify));
+    }
+
+    static GitError classify(ProcessError error) {
+        return error instanceof CommandFailed failed && failed.says(HAS_CHANGES)
+                ? new WorktreeHasChanges(failed.explanation().getOrElse(""))
+                : error;
+    }
+}

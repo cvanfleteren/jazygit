@@ -1,12 +1,7 @@
 package net.vanfleteren.jazygit.ui.widgets;
 
-import static dev.tamboui.toolkit.Toolkit.dialog;
-import static dev.tamboui.toolkit.Toolkit.row;
-import static dev.tamboui.toolkit.Toolkit.stack;
-import static dev.tamboui.toolkit.Toolkit.text;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static dev.tamboui.toolkit.Toolkit.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.buffer.Buffer;
 import dev.tamboui.layout.Rect;
@@ -29,6 +24,16 @@ class DimmedTest {
     private static final Rect AREA = new Rect(0, 0, 40, 10);
     private static final Color MUTED = Color.rgb(0x80, 0x80, 0x80);
     private static final Backdrop TERMINAL_DEFAULT = new Backdrop(Option.none(), Style.EMPTY.fg(MUTED));
+
+    private static Buffer render(Element element) {
+        Buffer buffer = Buffer.empty(AREA);
+        element.render(Frame.forTesting(buffer), AREA, RenderContext.empty());
+        return buffer;
+    }
+
+    private static boolean dim(Buffer buffer, int x, int y) {
+        return buffer.get(x, y).style().addModifiers().contains(Modifier.DIM);
+    }
 
     @Test
     void plainTextTakesTheBackdropColourAndIsDimmed() {
@@ -65,16 +70,6 @@ class DimmedTest {
 
         assertTrue(dim(buffer, 0, 0));
         assertFalse(dim(buffer, AREA.width() / 2, AREA.height() / 2));
-        assertFalse(buffer.get(AREA.width() / 2, AREA.height() / 2).style().fg().equals(Optional.of(MUTED)));
-    }
-
-    private static Buffer render(Element element) {
-        Buffer buffer = Buffer.empty(AREA);
-        element.render(Frame.forTesting(buffer), AREA, RenderContext.empty());
-        return buffer;
-    }
-
-    private static boolean dim(Buffer buffer, int x, int y) {
-        return buffer.get(x, y).style().addModifiers().contains(Modifier.DIM);
+        assertNotEquals(buffer.get(AREA.width() / 2, AREA.height() / 2).style().fg(), Optional.of(MUTED));
     }
 }

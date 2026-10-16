@@ -50,6 +50,14 @@ public sealed interface LoadMsg extends Msg {
         }
     }
 
+    record WorktreesLoaded(List<Worktree> worktrees) implements LoadMsg {
+
+        @Override
+        public Cmd.Load cmd() {
+            return new Cmd.LoadWorktrees();
+        }
+    }
+
     record CommitsLoaded(List<Commit> commits) implements LoadMsg {
 
         @Override

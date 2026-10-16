@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.commit;
 
-import static dev.tamboui.toolkit.Toolkit.*;
+import static dev.tamboui.toolkit.Toolkit.stack;
+import static dev.tamboui.toolkit.Toolkit.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -13,11 +14,7 @@ import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.ResetMode;
 import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.state.LoadMsg;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.TestModels;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
@@ -38,6 +35,12 @@ class ResetDialogTest {
                             .model(),
                     new ResetMsg.Requested(TARGET.sha()))
             .model();
+
+    private static String render(java.util.function.Supplier<Element> view) throws Exception {
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view::get)) {
+            return RenderedText.ofLarge(runner, view::get);
+        }
+    }
 
     @Test
     void listsTheThreeResetsAndCancel() throws Exception {
@@ -72,12 +75,6 @@ class ResetDialogTest {
         ConfirmDialog<HardResetPopup> confirm = new ConfirmDialog<>(CommitDialogs.HARD_RESET, dispatched::add);
         Model asking = TestModels.loaded().openPopup(new HardResetPopup(TARGET, files));
         return render(() -> stack(text("background"), confirm.render(asking).get()));
-    }
-
-    private static String render(java.util.function.Supplier<Element> view) throws Exception {
-        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view::get)) {
-            return RenderedText.ofLarge(runner, view::get);
-        }
     }
 
     private List<Msg> pressing(char key) throws Exception {

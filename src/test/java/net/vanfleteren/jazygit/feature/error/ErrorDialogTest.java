@@ -10,11 +10,7 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.state.AppError;
-import net.vanfleteren.jazygit.state.ErrorPopup;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
 import org.junit.jupiter.api.Test;
@@ -60,7 +56,7 @@ class ErrorDialogTest {
 
     @Test
     void closedModelShowsNoPopup() {
-        assertEquals(true, dialog.render(TestModels.loaded()).isEmpty());
+        assertTrue(dialog.render(TestModels.loaded()).isEmpty());
     }
 
     private ToolkitTestRunner start() throws Exception {

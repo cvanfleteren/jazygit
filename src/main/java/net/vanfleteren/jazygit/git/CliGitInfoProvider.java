@@ -90,6 +90,21 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<ProcessError, List<Worktree>> worktrees() {
+        return CliWorktree.list(workTree);
+    }
+
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktree(Path location, Branch.Name branch) {
+        return CliWorktree.add(workTree, location, branch);
+    }
+
+    @Override
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> removeWorktree(Path location, boolean force) {
+        return CliWorktree.remove(workTree, location, force);
+    }
+
+    @Override
     public Either<ProcessError, List<Stash>> stashes() {
         return CliStash.list(workTree);
     }

@@ -1,8 +1,6 @@
 package net.vanfleteren.jazygit.feature.github;
 
-import static net.vanfleteren.jazygit.state.TestModels.errorText;
-import static net.vanfleteren.jazygit.state.TestModels.loaded;
-import static net.vanfleteren.jazygit.state.TestModels.refused;
+import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -11,11 +9,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.fetch.FetchCmd;
-import net.vanfleteren.jazygit.feature.github.PullRequestCmd.ClosePullRequest;
-import net.vanfleteren.jazygit.feature.github.PullRequestCmd.CreatePullRequest;
-import net.vanfleteren.jazygit.feature.github.PullRequestCmd.LoadPullRequestDetails;
-import net.vanfleteren.jazygit.feature.github.PullRequestCmd.MergePullRequest;
-import net.vanfleteren.jazygit.feature.github.PullRequestCmd.OpenPullRequest;
+import net.vanfleteren.jazygit.feature.github.PullRequestCmd.*;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.gh.StubGitHub;
@@ -25,21 +19,9 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.git.StubGitProvider;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.git.model.Upstream;
+import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-import net.vanfleteren.jazygit.state.AppError;
-import net.vanfleteren.jazygit.state.Env;
-import net.vanfleteren.jazygit.state.ErrorPopup;
-import net.vanfleteren.jazygit.state.LoadMsg;
-import net.vanfleteren.jazygit.state.LoadPullRequests;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Operation;
-import net.vanfleteren.jazygit.state.PullRequestsMsg;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 

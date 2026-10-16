@@ -1,8 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.control.Either;
 import java.io.IOException;
@@ -12,6 +10,14 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 class TempFilesTest {
+
+    private static String readQuietly(Path file) {
+        try {
+            return Files.readString(file);
+        } catch (IOException e) {
+            return e.toString();
+        }
+    }
 
     @Test
     void theActionSeesThePreparedFileWhichIsDeletedAfterwards() {
@@ -43,13 +49,5 @@ class TempFilesTest {
         GitError.TempFileFailed failed = assertInstanceOf(GitError.TempFileFailed.class, outcome.getLeft());
         assertEquals("disk full", failed.cause().getMessage());
         assertFalse(Files.exists(used.get()));
-    }
-
-    private static String readQuietly(Path file) {
-        try {
-            return Files.readString(file);
-        } catch (IOException e) {
-            return e.toString();
-        }
     }
 }

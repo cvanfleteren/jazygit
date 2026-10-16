@@ -1,22 +1,12 @@
 package net.vanfleteren.jazygit.state;
 
 import static net.vanfleteren.jazygit.state.TestModels.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.git.model.ChangeType;
-import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.git.model.DiffText;
-import net.vanfleteren.jazygit.git.model.Diffs;
-import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
-import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
@@ -287,7 +277,7 @@ class SelectionUpdateTest {
         // The diff is read again once the status confirms that its files are still as they were.
         Model refreshed = Update.update(model, new Tick()).model();
         Next statusLoaded = Update.update(refreshed, new LoadMsg.StatusLoaded(DIRTY));
-        assertEquals(true, statusLoaded.cmds().contains(new Cmd.LoadFileDiff(DIRTY.files())));
+        assertTrue(statusLoaded.cmds().contains(new Cmd.LoadFileDiff(DIRTY.files())));
 
         List<FileEntry> next = List.of(new FileEntry("b.txt", ChangeType.UNTRACKED));
         Preview<List<FileEntry>, Diffs> loading = Update.update(model, new SelectionMsg.FilesSelected(next))
@@ -311,7 +301,7 @@ class SelectionUpdateTest {
                 new LoadMsg.StatusLoaded(
                         new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), restaged)));
 
-        assertEquals(false, statusLoaded.cmds().contains(new Cmd.LoadFileDiff(DIRTY.files())));
+        assertFalse(statusLoaded.cmds().contains(new Cmd.LoadFileDiff(DIRTY.files())));
     }
 
     @Test

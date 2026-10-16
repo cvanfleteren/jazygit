@@ -19,7 +19,7 @@ graph TD
     App["JazygitApp<br/><i>entry point, layout, popups, focus</i>"]
     UI["ui<br/><i>panels and widgets: render a Model</i>"]
     Keys["keys<br/><i>Keymap: every shortcut, declared once</i>"]
-    Feature["feature.*<br/><i>branch, commit, stage, stash, discard,<br/>github, fetch, error, help, theme, repos,<br/>settings</i>"]
+    Feature["feature.*<br/><i>branch, commit, stage, stash, discard,<br/>github, fetch, error, help, theme, repos,<br/>settings, worktree</i>"]
     State["state<br/><i>Model, Msg, Update, Cmd, Program</i>"]
     Git["git<br/><i>GitInfoProvider, CliGitInfoProvider, Cli*, GitProcess, GitError</i>"]
     GitModel["git.model<br/><i>Branch, Commit, RepoStatus, Sha, ...</i>"]
@@ -136,6 +136,24 @@ the repository on the thread of the command and then, on the render thread, stop
 without waiting for the git command that runs, and starts a new `Program` for the new one from scratch. The
 theme and the settings of the session stay. A repository that cannot be opened is forgotten, and the error is
 shown in the one still open.
+
+## Worktrees
+
+The worktrees of the repository are read with the other periodic loads, into `Model.worktrees`, and listed on the
+third tab of the branches pane (`feature.worktree`). The one shown is marked, and so are the main one, a locked
+one and one whose directory is gone.
+
+- **Adding:** `w` on a local branch asks where to check it out (`git worktree add <path> <branch>`), next to the
+  main worktree by default, as `<main>-<branch>`. A leading `~` is the home directory. Once added, the pane shows
+  the worktrees.
+- **Switching:** space on a worktree opens it in place of the one shown, as switching to a recent repository
+  does (`RecentReposCmd.SwitchTo`), which makes it a recent one too.
+- **Removing:** `d` removes a worktree other than the main one and the one shown (`git worktree remove`). When
+  git refuses because it has changes (`GitError.WorktreeHasChanges`), removing it anyway (`--force`) is offered.
+- **A branch checked out in another worktree** is marked `(worktree)` in the list of branches. git checks a branch
+  out in one worktree at a time, so what it would refuse is not run: checking the branch out offers to switch to
+  that worktree instead, and fast-forwarding it, deleting it locally or adding a worktree for it fail up front with
+  an `AppError.CheckedOutElsewhere` that names the worktree. Deleting it on its remote still works.
 
 ## The runtime loop
 
@@ -361,14 +379,18 @@ Every `Cli*` class runs git through `GitProcess`; only a few of those arrows are
   - **Reads:**
     - `CliStatus` reads `git status --porcelain=v2`.
     - `CliBranches` runs one `git for-each-ref` for all branches, with their upstream and ahead/behind
-      counts, and another one for the remote-tracking branches, which the branches pane shows on its
-      second tab (`Model.branchesTab`, switched with `[` and `]`).
+      counts and the other worktree each is checked out in (`%(worktreepath)`, `Branch.worktree`), and another
+      one for the remote-tracking branches, which the branches pane shows on its second tab
+      (`Model.branchesTab`, switched with `[` and `]`).
+    - `CliWorktree` reads `git worktree list --porcelain -z`, which the branches pane shows on its third tab.
+    - **Linked worktrees** are read like any repository: nothing assumes `.git` is a directory. What lives in
+      the repository's own directory, like the index or `MERGE_HEAD`, is found with `git rev-parse --git-path`.
     - `CliLog` runs `git rev-parse` and `git log -z`.
     - `CliStash` runs `git stash list`, and `CliRemote` reads the remotes.
     - These each have a pure parser for git's output. `CliDiff` and `CliShow` return git's text, cut off
       when it is long.
   - **Writes:** `CliCheckout`, `CliBranch` (push, pull, delete), `CliIndex` (stage, commit, discard),
-    `CliMerge`, `CliRebase`, `CliStash` and `CliRemote` (fetch).
+    `CliMerge`, `CliRebase`, `CliStash`, `CliRemote` (fetch) and `CliWorktree` (add, remove).
   - **Opening:** `CliGitInfoProvider.open` asks `git rev-parse` whether the directory is in a repository,
     whether that is bare, and where its working tree is.
 - **`GitProcess.run(workTree, GitCommand)`** is the only place that starts git, through `process.Exec`:
@@ -454,6 +476,7 @@ classDiagram
     CommandFailed --|> ProcessError
     UnexpectedOutput --|> ProcessError
     LocalChanges --|> GitError
+    WorktreeHasChanges --|> GitError
     StashNotRestored --|> GitError
     TempFileFailed --|> GitError
     UnknownBranch --|> GitError

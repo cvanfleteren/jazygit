@@ -32,6 +32,8 @@ public final class LoadUpdate {
                         model, done.withRemoteBranches(model.remoteBranches().reload(branches)));
             case StashesLoaded(var stashes) ->
                 Next.of(done.withStashes(model.stashes().reload(stashes)));
+            case LoadMsg.WorktreesLoaded(var worktrees) ->
+                Next.of(done.withWorktrees(model.worktrees().reload(worktrees)));
             case CommitsLoaded(var commits) ->
                 Next.of(done.withCommits(model.commits().reload(commits)));
             // What arrives after another item was highlighted is dropped.
@@ -102,6 +104,7 @@ public final class LoadUpdate {
             case Cmd.LoadBranches() -> model.withBranches(new Failed<>(failure));
             case Cmd.LoadRemoteBranches() -> model.withRemoteBranches(new Failed<>(failure));
             case Cmd.LoadStashes() -> model.withStashes(new Failed<>(failure));
+            case Cmd.LoadWorktrees() -> model.withWorktrees(new Failed<>(failure));
             case LoadCommits() -> model.withCommits(new Failed<>(failure));
             case LoadCommitDetail(Sha sha) ->
                 model.withCommitDetail(Preview.updated(model.commitDetail(), sha, d -> d.failed(failure)));

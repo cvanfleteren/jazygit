@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.error;
 
-import static net.vanfleteren.jazygit.state.TestModels.*;
+import static net.vanfleteren.jazygit.state.TestModels.failed;
+import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.control.Option;

@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit;
 import static dev.tamboui.toolkit.Toolkit.column;
 import static dev.tamboui.toolkit.Toolkit.row;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
@@ -20,29 +21,10 @@ import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.commit.CommitMsg;
 import net.vanfleteren.jazygit.feature.commit.RewordMsg;
 import net.vanfleteren.jazygit.feature.stage.StageMsg;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.git.model.Diffs;
-import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.git.model.RemoteRef;
-import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.model.SampleData;
-import net.vanfleteren.jazygit.state.BranchesTab;
-import net.vanfleteren.jazygit.state.LoadMsg;
-import net.vanfleteren.jazygit.state.Loadable;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.SelectionMsg;
-import net.vanfleteren.jazygit.state.TestModels;
-import net.vanfleteren.jazygit.state.Update;
-import net.vanfleteren.jazygit.ui.BranchesPanel;
-import net.vanfleteren.jazygit.ui.CommitsPanel;
-import net.vanfleteren.jazygit.ui.ContentPanel;
-import net.vanfleteren.jazygit.ui.FilesPanel;
-import net.vanfleteren.jazygit.ui.StashPanel;
-import net.vanfleteren.jazygit.ui.StatusPanel;
-import net.vanfleteren.jazygit.ui.Theme;
+import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.ui.*;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -58,53 +40,6 @@ import org.junit.jupiter.api.Test;
 class JazygitAppPilotTest {
 
     private static final ContentPanel CONTENT = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
-
-    private record Fixture(
-            SampleData data,
-            Model model,
-            java.util.List<Msg> dispatched,
-            java.util.List<Msg> selections,
-            FilesPanel files,
-            BranchesPanel branches,
-            CommitsPanel commits,
-            StashPanel stash,
-            AtomicReference<FocusManager> focusManagerRef) {
-
-        private Fixture() {
-            this(new SampleData(), new ArrayList<>());
-        }
-
-        private Fixture(SampleData data, java.util.List<Msg> dispatched) {
-            this(
-                    data,
-                    TestModels.loaded(data),
-                    dispatched,
-                    new ArrayList<>(),
-                    new FilesPanel(dispatched::add, () -> {}),
-                    new BranchesPanel(dispatched::add, tab -> {}),
-                    new CommitsPanel(dispatched::add, () -> {}),
-                    new StashPanel(dispatched::add),
-                    new AtomicReference<>());
-        }
-
-        Supplier<Element> renderer() {
-            return () -> {
-                FocusManager focusManager = focusManagerRef.get();
-                String focusedId = focusManager == null ? null : focusManager.focusedId();
-                Panel branchesPane = branches.render(model, focusedId);
-                branches.selectionChange(model).forEach(selections::add);
-                return row(
-                        column(
-                                        StatusPanel.render(model),
-                                        files.render(model, focusedId).percent(25),
-                                        branchesPane.percent(20),
-                                        commits.render(model, focusedId).percent(30),
-                                        stash.render(model, focusedId).fill())
-                                .percent(30),
-                        CONTENT.render(model, focusedId).fill());
-            };
-        }
-    }
 
     @Test
     void tabCyclesFocusThroughAllFourPanesAndWrapsAround() throws Exception {
@@ -342,11 +277,9 @@ class JazygitAppPilotTest {
             pilot.press('r');
             pilot.pause();
 
-            assertEquals(
-                    true,
-                    fixture.dispatched()
-                            .contains(new RewordMsg.Requested(
-                                    fixture.data().commits().get().head().sha())));
+            assertTrue(fixture.dispatched()
+                    .contains(new RewordMsg.Requested(
+                            fixture.data().commits().get().head().sha())));
 
             pilot.quit();
         }
@@ -370,7 +303,7 @@ class JazygitAppPilotTest {
             pilot.press('c');
             pilot.pause();
 
-            assertEquals(true, fixture.dispatched().contains(new CommitMsg.Requested()));
+            assertTrue(fixture.dispatched().contains(new CommitMsg.Requested()));
 
             pilot.quit();
         }
@@ -413,6 +346,53 @@ class JazygitAppPilotTest {
                     requested.files().map(f -> f.path()).toList());
 
             pilot.quit();
+        }
+    }
+
+    private record Fixture(
+            SampleData data,
+            Model model,
+            java.util.List<Msg> dispatched,
+            java.util.List<Msg> selections,
+            FilesPanel files,
+            BranchesPanel branches,
+            CommitsPanel commits,
+            StashPanel stash,
+            AtomicReference<FocusManager> focusManagerRef) {
+
+        private Fixture() {
+            this(new SampleData(), new ArrayList<>());
+        }
+
+        private Fixture(SampleData data, java.util.List<Msg> dispatched) {
+            this(
+                    data,
+                    TestModels.loaded(data),
+                    dispatched,
+                    new ArrayList<>(),
+                    new FilesPanel(dispatched::add, () -> {}),
+                    new BranchesPanel(dispatched::add, tab -> {}),
+                    new CommitsPanel(dispatched::add, () -> {}),
+                    new StashPanel(dispatched::add),
+                    new AtomicReference<>());
+        }
+
+        Supplier<Element> renderer() {
+            return () -> {
+                FocusManager focusManager = focusManagerRef.get();
+                String focusedId = focusManager == null ? null : focusManager.focusedId();
+                Panel branchesPane = branches.render(model, focusedId);
+                branches.selectionChange(model).forEach(selections::add);
+                return row(
+                        column(
+                                        StatusPanel.render(model),
+                                        files.render(model, focusedId).percent(25),
+                                        branchesPane.percent(20),
+                                        commits.render(model, focusedId).percent(30),
+                                        stash.render(model, focusedId).fill())
+                                .percent(30),
+                        CONTENT.render(model, focusedId).fill());
+            };
         }
     }
 }

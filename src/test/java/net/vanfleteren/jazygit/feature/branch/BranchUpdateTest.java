@@ -2,24 +2,15 @@ package net.vanfleteren.jazygit.feature.branch;
 
 import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.Checkout;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.CheckoutWithStash;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.git.model.ChangeType;
-import net.vanfleteren.jazygit.git.model.DeleteScope;
-import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.git.model.PushMode;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
-import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.git.model.Tracking;
-import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadStashes;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
@@ -33,6 +24,56 @@ import org.junit.jupiter.api.Test;
  * The branch transitions: checkout, creating and deleting branches.
  */
 class BranchUpdateTest {
+
+    /**
+     * The loaded model, with feature tracking origin/feature.
+     */
+    private static Model tracking() {
+        return Update.update(
+                        loaded(),
+                        new LoadMsg.BranchesLoaded(List.of(
+                                new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
+                                new Branch(
+                                        new Branch.Name("feature"),
+                                        false,
+                                        new Sha("ffff"),
+                                        Instant.EPOCH,
+                                        true,
+                                        false,
+                                        Option.of(new Upstream(
+                                                new RemoteBranch("origin", new Branch.Name("feature")), 0, 0))))))
+                .model();
+    }
+
+    /**
+     * The loaded model, with main checked out and feature not, both tracking their remote branch.
+     */
+    private static Model pullable(int mainAhead, int featureAhead) {
+        return Update.update(
+                        loaded(),
+                        new LoadMsg.BranchesLoaded(List.of(
+                                new Branch(
+                                        new Branch.Name("main"),
+                                        true,
+                                        new Sha("aaaa"),
+                                        Instant.EPOCH,
+                                        true,
+                                        true,
+                                        Option.of(new Upstream(
+                                                new RemoteBranch("origin", new Branch.Name("main")), mainAhead, 1))),
+                                new Branch(
+                                        new Branch.Name("feature"),
+                                        false,
+                                        new Sha("ffff"),
+                                        Instant.EPOCH,
+                                        true,
+                                        false,
+                                        Option.of(new Upstream(
+                                                new RemoteBranch("origin", new Branch.Name("feature")),
+                                                featureAhead,
+                                                1))))))
+                .model();
+    }
 
     @Test
     void checkoutRequestOfAnotherBranchChecksItOut() {
@@ -168,26 +209,6 @@ class BranchUpdateTest {
                         .cmds());
     }
 
-    /**
-     * The loaded model, with feature tracking origin/feature.
-     */
-    private static Model tracking() {
-        return Update.update(
-                        loaded(),
-                        new LoadMsg.BranchesLoaded(List.of(
-                                new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
-                                new Branch(
-                                        new Branch.Name("feature"),
-                                        false,
-                                        new Sha("ffff"),
-                                        Instant.EPOCH,
-                                        true,
-                                        false,
-                                        Option.of(new Upstream(
-                                                new RemoteBranch("origin", new Branch.Name("feature")), 0, 0))))))
-                .model();
-    }
-
     @Test
     void pushRequestOfABranchWithoutUpstreamAsksWhereToPushIt() {
         Next asked = Update.update(
@@ -254,7 +275,7 @@ class BranchUpdateTest {
             assertEquals(
                     Option.of(new SetUpstreamPopup(new Branch.Name("feature"))),
                     next.model().popup());
-            assertEquals(true, next.model().error().isDefined());
+            assertTrue(next.model().error().isDefined());
         }
     }
 
@@ -396,37 +417,7 @@ class BranchUpdateTest {
                         new RemoteBranch("origin", new Branch.Name("feature")),
                         PushMode.FAST_FORWARD)));
         assertEquals(Option.none(), done.model().error());
-        assertEquals(true, done.cmds().contains(new LoadBranches()));
-    }
-
-    /**
-     * The loaded model, with main checked out and feature not, both tracking their remote branch.
-     */
-    private static Model pullable(int mainAhead, int featureAhead) {
-        return Update.update(
-                        loaded(),
-                        new LoadMsg.BranchesLoaded(List.of(
-                                new Branch(
-                                        new Branch.Name("main"),
-                                        true,
-                                        new Sha("aaaa"),
-                                        Instant.EPOCH,
-                                        true,
-                                        true,
-                                        Option.of(new Upstream(
-                                                new RemoteBranch("origin", new Branch.Name("main")), mainAhead, 1))),
-                                new Branch(
-                                        new Branch.Name("feature"),
-                                        false,
-                                        new Sha("ffff"),
-                                        Instant.EPOCH,
-                                        true,
-                                        false,
-                                        Option.of(new Upstream(
-                                                new RemoteBranch("origin", new Branch.Name("feature")),
-                                                featureAhead,
-                                                1))))))
-                .model();
+        assertTrue(done.cmds().contains(new LoadBranches()));
     }
 
     @Test

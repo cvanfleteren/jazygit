@@ -1,22 +1,14 @@
 package net.vanfleteren.jazygit.ui;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.StubGitProvider;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.ChangeType;
-import net.vanfleteren.jazygit.git.model.Conflict;
-import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.git.model.FileTree;
-import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
-import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import org.junit.jupiter.api.Test;
@@ -25,14 +17,6 @@ import org.junit.jupiter.api.Test;
  * The files panel must follow the model as the working tree status changes.
  */
 class FilesPanelTest {
-
-    private record FixedProvider(List<FileEntry> files) implements StubGitProvider {
-
-        @Override
-        public Either<ProcessError, RepoStatus> status() {
-            return Either.right(new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), files));
-        }
-    }
 
     private final FilesPanel panel = new FilesPanel(msg -> {}, () -> {});
 
@@ -160,6 +144,14 @@ class FilesPanelTest {
             assertEquals(b, ((FileTree.File) selected).entry());
 
             testRunner.pilot().quit();
+        }
+    }
+
+    private record FixedProvider(List<FileEntry> files) implements StubGitProvider {
+
+        @Override
+        public Either<ProcessError, RepoStatus> status() {
+            return Either.right(new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), files));
         }
     }
 }

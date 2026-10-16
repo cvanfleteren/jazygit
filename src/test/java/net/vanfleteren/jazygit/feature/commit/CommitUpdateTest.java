@@ -1,19 +1,14 @@
 package net.vanfleteren.jazygit.feature.commit;
 
-import static net.vanfleteren.jazygit.state.TestModels.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static net.vanfleteren.jazygit.state.TestModels.errorText;
+import static net.vanfleteren.jazygit.state.TestModels.loaded;
+import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.ChangeType;
-import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.git.model.CommitMessage;
-import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
-import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Model;
@@ -25,6 +20,14 @@ import org.junit.jupiter.api.Test;
  * The commit transitions: committing, amending and rewording.
  */
 class CommitUpdateTest {
+
+    private static Commit commit(String message, String body) {
+        return commit("abc1234", message, body);
+    }
+
+    private static Commit commit(String sha, String message, String body) {
+        return new Commit(new Sha(sha), "me", "me@example.com", Instant.EPOCH, message, body);
+    }
 
     @Test
     void nothingIsSaidToBeUnchangedBeforeTheStatusIsRead() {
@@ -47,14 +50,6 @@ class CommitUpdateTest {
 
     private Model withCommits(Commit... commits) {
         return loaded().withCommits(new Loaded<>(List.of(commits)));
-    }
-
-    private static Commit commit(String message, String body) {
-        return commit("abc1234", message, body);
-    }
-
-    private static Commit commit(String sha, String message, String body) {
-        return new Commit(new Sha(sha), "me", "me@example.com", Instant.EPOCH, message, body);
     }
 
     @Test
@@ -124,12 +119,12 @@ class CommitUpdateTest {
                                 new FileEntry("a.txt", ChangeType.ADDED), new FileEntry("b.txt", ChangeType.MODIFIED)),
                         new AmendMsg.Requested())
                 .model();
-        assertEquals(true, asking.popup(AmendPopup.class).isDefined());
+        assertTrue(asking.popup(AmendPopup.class).isDefined());
 
         Next next = Update.update(asking, new AmendMsg.Confirmed());
 
         assertEquals(List.of(new CommitCmd.Amend(List.of())), next.cmds());
-        assertEquals(false, next.model().popup(AmendPopup.class).isDefined());
+        assertFalse(next.model().popup(AmendPopup.class).isDefined());
     }
 
     @Test
@@ -153,7 +148,7 @@ class CommitUpdateTest {
 
         Next next = Update.update(asking, new AmendMsg.Cancelled());
 
-        assertEquals(false, next.model().popup(AmendPopup.class).isDefined());
+        assertFalse(next.model().popup(AmendPopup.class).isDefined());
         assertEquals(List.of(), next.cmds());
     }
 
@@ -169,8 +164,8 @@ class CommitUpdateTest {
         Model model = Update.update(withFiles(new FileEntry("a.txt", ChangeType.ADDED)), new CommitMsg.Requested())
                 .model();
 
-        assertEquals(true, model.popup(CommitPopup.class).isDefined());
-        assertEquals(false, model.popup(StageAllPopup.class).isDefined());
+        assertTrue(model.popup(CommitPopup.class).isDefined());
+        assertFalse(model.popup(StageAllPopup.class).isDefined());
     }
 
     @Test
@@ -178,8 +173,8 @@ class CommitUpdateTest {
         Model model = Update.update(withFiles(new FileEntry("a.txt", ChangeType.MODIFIED)), new CommitMsg.Requested())
                 .model();
 
-        assertEquals(true, model.popup(StageAllPopup.class).isDefined());
-        assertEquals(false, model.popup(CommitPopup.class).isDefined());
+        assertTrue(model.popup(StageAllPopup.class).isDefined());
+        assertFalse(model.popup(CommitPopup.class).isDefined());
     }
 
     @Test
@@ -187,7 +182,7 @@ class CommitUpdateTest {
         Model model = Update.update(withFiles(), new CommitMsg.Requested()).model();
 
         assertEquals(Option.of("Nothing to commit"), errorText(model));
-        assertEquals(false, model.popup(StageAllPopup.class).isDefined());
+        assertFalse(model.popup(StageAllPopup.class).isDefined());
     }
 
     @Test
@@ -202,15 +197,12 @@ class CommitUpdateTest {
         Next next = Update.update(asking, new CommitMsg.StageAllConfirmed());
 
         assertEquals(List.of(new CommitCmd.StageForCommit(List.of("a.txt", "b.txt"))), next.cmds());
-        assertEquals(false, next.model().popup(StageAllPopup.class).isDefined());
-        assertEquals(
-                true,
-                Update.update(
-                                next.model(),
-                                new CommitMsg.StagedForCommit(new CommitCmd.StageForCommit(List.of()), List.of()))
-                        .model()
-                        .popup(CommitPopup.class)
-                        .isDefined());
+        assertFalse(next.model().popup(StageAllPopup.class).isDefined());
+        assertTrue(Update.update(
+                        next.model(), new CommitMsg.StagedForCommit(new CommitCmd.StageForCommit(List.of()), List.of()))
+                .model()
+                .popup(CommitPopup.class)
+                .isDefined());
     }
 
     @Test
@@ -218,12 +210,10 @@ class CommitUpdateTest {
         Model asking = Update.update(withFiles(new FileEntry("a.txt", ChangeType.MODIFIED)), new CommitMsg.Requested())
                 .model();
 
-        assertEquals(
-                false,
-                Update.update(asking, new CommitMsg.StageAllCancelled())
-                        .model()
-                        .popup(StageAllPopup.class)
-                        .isDefined());
+        assertFalse(Update.update(asking, new CommitMsg.StageAllCancelled())
+                .model()
+                .popup(StageAllPopup.class)
+                .isDefined());
     }
 
     @Test
@@ -234,7 +224,7 @@ class CommitUpdateTest {
         Next next = Update.update(open, new CommitMsg.Confirmed(new CommitMessage(" summary ", "\ndetails\n")));
 
         assertEquals(List.of(new CommitCmd.Commit(new CommitMessage("summary", "details"))), next.cmds());
-        assertEquals(false, next.model().popup(CommitPopup.class).isDefined());
+        assertFalse(next.model().popup(CommitPopup.class).isDefined());
     }
 
     @Test
@@ -245,7 +235,7 @@ class CommitUpdateTest {
         Next next = Update.update(open, new CommitMsg.Confirmed(new CommitMessage("  ", "details")));
 
         assertEquals(List.of(), next.cmds());
-        assertEquals(true, next.model().popup(CommitPopup.class).isDefined());
+        assertTrue(next.model().popup(CommitPopup.class).isDefined());
     }
 
     @Test
@@ -253,11 +243,9 @@ class CommitUpdateTest {
         Model open = Update.update(withFiles(new FileEntry("a.txt", ChangeType.ADDED)), new CommitMsg.Requested())
                 .model();
 
-        assertEquals(
-                false,
-                Update.update(open, new CommitMsg.Cancelled())
-                        .model()
-                        .popup(CommitPopup.class)
-                        .isDefined());
+        assertFalse(Update.update(open, new CommitMsg.Cancelled())
+                .model()
+                .popup(CommitPopup.class)
+                .isDefined());
     }
 }

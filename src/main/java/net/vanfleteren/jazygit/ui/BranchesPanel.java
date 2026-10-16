@@ -19,10 +19,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.git.model.RemoteRef;
+import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
@@ -35,10 +32,13 @@ import net.vanfleteren.jazygit.state.*;
  * A branch with a pull request shows its number, its CI checks and its review; one without shows the CI checks
  * of the branch it follows on GitHub.
  * <p>
- * {@code [} and {@code ]} switch to the remote-tracking branches and back, in the same pane, so the focus moves
- * through it as one. Space checks out the highlighted remote branch, n starts a new branch at it. A remote branch
+ * {@code [} and {@code ]} go through the lists of the pane: the local branches, the remote-tracking ones and the
+ * worktrees, in the same pane, so the focus moves through it as one. Space checks out the highlighted remote branch, n starts a new branch at it. A remote branch
  * that a local branch follows is dimmed. A remote branch on GitHub shows its pull request or its CI checks, like a
  * local branch. Clicking the name of a list in the title shows that list.
+ * <p>
+ * The third list is the worktrees of the repository, the one shown marked. Space switches to the highlighted one,
+ * d removes it. On the local branches, w checks the highlighted branch out in a new worktree.
  */
 public class BranchesPanel {
 
@@ -48,9 +48,10 @@ public class BranchesPanel {
 
     private final LoadableList<List<Branch>> list;
     private final LoadableList<List<RemoteRef>> remoteList;
+    private final LoadableList<List<Worktree>> worktreeList;
     private final Keymap keymap = Keymap.standard();
     private final Consumer<BranchesTab> tabClicked;
-    // The list the pane shows, as of the last render; the keys of the other one do nothing.
+    // The list the pane shows, as of the last render; the keys of the others do nothing.
     private BranchesTab tab = BranchesTab.LOCAL;
     // Whether a local branch follows a remote branch, as of the last render.
     private Predicate<RemoteBranch> tracked = remote -> false;
@@ -112,6 +113,16 @@ public class BranchesPanel {
         remoteList.onKey(event -> Option.when(tab == BranchesTab.REMOTE, event)
                 .flatMap(key -> PaneKeys.sending(
                         keymap.handle(Scopes.REMOTE_BRANCHES, key, selectedRemoteBranch()), dispatch)));
+        worktreeList = new LoadableList<>(
+                Messages.get("panel.worktrees.title"),
+                ID,
+                worktrees -> worktrees.map(BranchesPanel::worktreeRow),
+                LoadableList.Reselect.following(Worktree::path),
+                highlights);
+        worktreeList.highlightSymbol("");
+        worktreeList.whenEmpty(Messages.get("worktrees.empty"));
+        worktreeList.onKey(event -> Option.when(tab == BranchesTab.WORKTREES, event)
+                .flatMap(key -> PaneKeys.sending(keymap.handle(Scopes.WORKTREES, key, selectedWorktree()), dispatch)));
     }
 
     /**
@@ -137,6 +148,7 @@ public class BranchesPanel {
         return new LoadableList.Row(List.of(LoadableList.Seg.of("%4s ".formatted(TimeText.age(since))
                         + (b.current() ? "* " : "  ")
                         + b.name().value()))
+                .appendAll(worktree(b))
                 .appendAll(sync(b))
                 .appendAll(gitHub)
                 .appendAll(spinner.map(text -> LoadableList.Seg.styled(" " + text, Theme.Classes.SPINNER))));
@@ -152,32 +164,73 @@ public class BranchesPanel {
     }
 
     /**
-     * The title of the pane: the names of both lists, the one shown in bold and underlined, the other dimmed.
+     * The name of {@code tab} in the title.
+     */
+    private static Span tabName(BranchesTab tab) {
+        return Span.raw(Messages.get(
+                switch (tab) {
+                    case LOCAL -> "panel.branches.title";
+                    case REMOTE -> "panel.remoteBranches.title";
+                    case WORKTREES -> "panel.worktrees.title";
+                }));
+    }
+
+    /**
+     * The title of the pane: the names of the lists, the one shown in bold and underlined, the others dimmed.
      * The title takes the colour of the border, so they differ in text style only; underlining shows the
      * difference in themes with colours that bold and dim barely change.
      */
     static Line title(BranchesTab tab) {
-        Span local = Span.raw(Messages.get("panel.branches.title"));
-        Span remote = Span.raw(Messages.get("panel.remoteBranches.title"));
-        return tab == BranchesTab.LOCAL
-                ? Line.from(local.bold().underlined(), Span.raw(TITLE_SEPARATOR), remote.dim())
-                : Line.from(
-                        local.dim(), Span.raw(TITLE_SEPARATOR), remote.bold().underlined());
+        List<Span> names = List.of(BranchesTab.values())
+                .map(each -> each == tab
+                        ? tabName(each).bold().underlined()
+                        : tabName(each).dim());
+        return Line.from(names.intersperse(Span.raw(TITLE_SEPARATOR)).toJavaList());
     }
 
     /**
      * The list whose name in the title is {@code column} cells from the start of the title, if any; the
-     * separator between them is none.
+     * separators between them are none.
      */
     static Option<BranchesTab> tabAt(int column) {
-        int local = Span.raw(Messages.get("panel.branches.title")).width();
-        int remoteStart = local + Span.raw(TITLE_SEPARATOR).width();
-        int remoteEnd = remoteStart
-                + Span.raw(Messages.get("panel.remoteBranches.title")).width();
-        if (column >= 0 && column < local) {
-            return Option.of(BranchesTab.LOCAL);
-        }
-        return Option.when(column >= remoteStart && column < remoteEnd, BranchesTab.REMOTE);
+        int separator = Span.raw(TITLE_SEPARATOR).width();
+        List<BranchesTab> tabs = List.of(BranchesTab.values());
+        // Where the name of each tab starts: after the names and separators before it.
+        List<Integer> starts =
+                tabs.init().scanLeft(0, (start, tab) -> start + tabName(tab).width() + separator);
+        return tabs.zip(starts)
+                .find(tab ->
+                        column >= tab._2 && column < tab._2 + tabName(tab._1).width())
+                .map(tab -> tab._1);
+    }
+
+    /**
+     * A worktree: marked when it is the one shown, the name of its directory, and what it has checked out; then
+     * whether it is the main one, locked, or gone from disk.
+     */
+    static LoadableList.Row worktreeRow(Worktree worktree) {
+        String checkedOut = worktree.branch()
+                .map(Branch.Name::value)
+                .getOrElse(() -> Messages.get(
+                        "worktrees.detached", worktree.head().map(Sha::shortSha).getOrElse("")));
+        return new LoadableList.Row(List.of(
+                        Option.of(LoadableList.Seg.of((worktree.current() ? "* " : "  ") + worktree.name() + " ")),
+                        Option.of(
+                                worktree.branch().isDefined()
+                                        ? LoadableList.Seg.of(checkedOut)
+                                        : LoadableList.Seg.styled(checkedOut, Theme.Classes.DIM)),
+                        Option.when(
+                                worktree.main(),
+                                () -> LoadableList.Seg.styled(" " + Messages.get("worktrees.main"), Theme.Classes.DIM)),
+                        Option.when(
+                                worktree.locked(),
+                                () -> LoadableList.Seg.styled(
+                                        " " + Messages.get("worktrees.locked"), Theme.Classes.DIM)),
+                        Option.when(
+                                worktree.prunable(),
+                                () -> LoadableList.Seg.styled(
+                                        " " + Messages.get("worktrees.missing"), Theme.Classes.GONE)))
+                .flatMap(segment -> segment));
     }
 
     /**
@@ -185,6 +238,17 @@ public class BranchesPanel {
      */
     static String spinner(Operation operation, Instant now) {
         return busyLabel(operation).map(label -> label + " ").getOrElse("") + TimeText.spinnerFrame(now);
+    }
+
+    /**
+     * That the branch is checked out in another worktree, dimmed and with a leading space; nothing for one that
+     * is not.
+     */
+    static List<LoadableList.Seg> worktree(Branch branch) {
+        return Option.when(
+                        branch.checkedOutElsewhere(),
+                        () -> LoadableList.Seg.styled(" " + Messages.get("branches.worktree"), Theme.Classes.DIM))
+                .toList();
     }
 
     /**
@@ -291,6 +355,7 @@ public class BranchesPanel {
         Panel panel = switch (tab) {
             case LOCAL -> list.render(model.branches(), focused, active, title(tab));
             case REMOTE -> remoteList.render(model.remoteBranches(), focused, active, title(tab));
+            case WORKTREES -> worktreeList.render(model.worktrees(), focused, active, title(tab));
         };
         return panel.onMouseEvent(event -> titleClick(panel.renderedArea(), event));
     }
@@ -318,7 +383,11 @@ public class BranchesPanel {
      * The index of the currently highlighted branch in the list shown, never negative.
      */
     public int selectedIndex() {
-        return tab == BranchesTab.LOCAL ? list.selectedIndex() : remoteList.selectedIndex();
+        return switch (tab) {
+            case LOCAL -> list.selectedIndex();
+            case REMOTE -> remoteList.selectedIndex();
+            case WORKTREES -> worktreeList.selectedIndex();
+        };
     }
 
     /**
@@ -336,6 +405,13 @@ public class BranchesPanel {
     }
 
     /**
+     * The highlighted worktree, once the worktrees are shown.
+     */
+    public Option<Worktree> selectedWorktree() {
+        return worktreeList.selected(worktrees -> worktrees);
+    }
+
+    /**
      * The message to send when the highlighted branch of the list shown is not the one whose log {@code model}
      * holds.
      */
@@ -343,6 +419,8 @@ public class BranchesPanel {
         Option<BranchRef> selected = switch (model.branchesTab()) {
             case LOCAL -> selectedBranch().map(BranchRef.Local::new);
             case REMOTE -> selectedRemoteBranch().map(BranchRef.Remote::new);
+            // The log of the branch the worktree has checked out; a detached one leaves the log as it is.
+            case WORKTREES -> selectedWorktree().flatMap(Worktree::branch).map(BranchRef.Local::new);
         };
         return PaneKeys.selectionChange(selected, model.branchLog(), SelectionMsg.BranchSelected::new);
     }

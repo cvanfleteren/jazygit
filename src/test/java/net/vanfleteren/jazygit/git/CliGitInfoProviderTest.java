@@ -1,9 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import io.vavr.collection.List;
@@ -13,8 +10,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeoutException;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,6 +28,49 @@ class CliGitInfoProviderTest {
     Path repo;
 
     private CliGitInfoProvider provider;
+
+    private static List<Branch> withoutTimes(List<Branch> branches) {
+        return branches.map(b -> new Branch(b.name(), b.current(), b.tipOid())).toList();
+    }
+
+    private static void gitIn(Path dir, String... args) throws IOException, InterruptedException, TimeoutException {
+        java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of(
+                "git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "-c", "commit.gpgsign=false"));
+        command.addAll(java.util.List.of(args));
+        ProcessResult result = new ProcessExecutor()
+                .command(command)
+                .directory(dir.toFile())
+                .redirectErrorStream(true)
+                .readOutput(true)
+                .exitValueAny()
+                .execute();
+        assertEquals(
+                0, result.getExitValue(), () -> "git " + String.join(" ", args) + " failed: " + result.outputUTF8());
+    }
+
+    private static boolean gitSucceedsIn(Path dir, String... args)
+            throws IOException, InterruptedException, TimeoutException {
+        java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of("git"));
+        command.addAll(java.util.List.of(args));
+        return new ProcessExecutor()
+                        .command(command)
+                        .directory(dir.toFile())
+                        .readOutput(true)
+                        .execute()
+                        .getExitValue()
+                == 0;
+    }
+
+    private static boolean gitAvailable() {
+        try {
+            return new ProcessExecutor("git", "--version").execute().getExitValue() == 0;
+        } catch (IOException | TimeoutException e) {
+            return false;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
 
     @BeforeEach
     void setUp() throws Exception {
@@ -818,10 +856,6 @@ class CliGitInfoProviderTest {
                 provider.status().get().head().branchName());
     }
 
-    private static List<Branch> withoutTimes(List<Branch> branches) {
-        return branches.map(b -> new Branch(b.name(), b.current(), b.tipOid())).toList();
-    }
-
     @Test
     void branchesCarryTheTimeOfTheirLastCommit() {
         assertEquals(
@@ -988,7 +1022,7 @@ class CliGitInfoProviderTest {
                 .isLeft());
 
         assertEquals(Option.none(), provider.branches().get().head().upstream());
-        assertTrue(!gitSucceedsIn(repo, "config", "--get", "branch.main.merge"));
+        assertFalse(gitSucceedsIn(repo, "config", "--get", "branch.main.merge"));
     }
 
     @Test
@@ -1070,7 +1104,7 @@ class CliGitInfoProviderTest {
                 failure.commands().map(ExecutedCommand::line));
         assertEquals(Option.none(), failure.cleanupFailed());
         assertEquals("ours\n", Files.readString(repo.resolve("README.md")));
-        assertTrue(!gitSucceedsIn(repo, "rev-parse", "--verify", "--quiet", "MERGE_HEAD"));
+        assertFalse(gitSucceedsIn(repo, "rev-parse", "--verify", "--quiet", "MERGE_HEAD"));
     }
 
     @Test
@@ -1281,7 +1315,7 @@ class CliGitInfoProviderTest {
 
         assertTrue(diffs.staged().text().contains("-hello"), diffs.toString());
         assertTrue(diffs.staged().text().contains("+staged"), diffs.toString());
-        assertTrue(!diffs.staged().text().contains("unstaged"), diffs.toString());
+        assertFalse(diffs.staged().text().contains("unstaged"), diffs.toString());
         assertTrue(diffs.unstaged().text().contains("-staged"), diffs.toString());
         assertTrue(diffs.unstaged().text().contains("+unstaged"), diffs.toString());
         assertTrue(diffs.unstaged().text().contains("+brand new"), diffs.toString());
@@ -1298,8 +1332,8 @@ class CliGitInfoProviderTest {
 
         assertEquals("", diffs.staged().text());
         assertTrue(diffs.unstaged().text().contains("+new"), diffs.unstaged().text());
-        assertTrue(
-                !diffs.unstaged().text().contains("README.md"), diffs.unstaged().text());
+        assertFalse(
+                diffs.unstaged().text().contains("README.md"), diffs.unstaged().text());
     }
 
     @Test
@@ -1325,21 +1359,6 @@ class CliGitInfoProviderTest {
         gitIn(repo, args);
     }
 
-    private static void gitIn(Path dir, String... args) throws IOException, InterruptedException, TimeoutException {
-        java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of(
-                "git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "-c", "commit.gpgsign=false"));
-        command.addAll(java.util.List.of(args));
-        ProcessResult result = new ProcessExecutor()
-                .command(command)
-                .directory(dir.toFile())
-                .redirectErrorStream(true)
-                .readOutput(true)
-                .exitValueAny()
-                .execute();
-        assertEquals(
-                0, result.getExitValue(), () -> "git " + String.join(" ", args) + " failed: " + result.outputUTF8());
-    }
-
     private void gitWithEnvironment(String variable, String value, String... args) throws Exception {
         java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of("git"));
         command.addAll(java.util.List.of(args));
@@ -1352,29 +1371,5 @@ class CliGitInfoProviderTest {
                 .exitValueAny()
                 .execute();
         assertEquals(0, result.getExitValue(), result::outputUTF8);
-    }
-
-    private static boolean gitSucceedsIn(Path dir, String... args)
-            throws IOException, InterruptedException, TimeoutException {
-        java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of("git"));
-        command.addAll(java.util.List.of(args));
-        return new ProcessExecutor()
-                        .command(command)
-                        .directory(dir.toFile())
-                        .readOutput(true)
-                        .execute()
-                        .getExitValue()
-                == 0;
-    }
-
-    private static boolean gitAvailable() {
-        try {
-            return new ProcessExecutor("git", "--version").execute().getExitValue() == 0;
-        } catch (IOException | TimeoutException e) {
-            return false;
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return false;
-        }
     }
 }

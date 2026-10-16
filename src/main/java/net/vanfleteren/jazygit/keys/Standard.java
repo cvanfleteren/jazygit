@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.feature.github.BrowseKeys;
 import net.vanfleteren.jazygit.feature.github.PullRequestKeys;
 import net.vanfleteren.jazygit.feature.stage.StageKeys;
 import net.vanfleteren.jazygit.feature.stash.StashKeys;
+import net.vanfleteren.jazygit.feature.worktree.WorktreeKeys;
 
 /**
  * The features that declare keys. The order is the order in which the keys of a panel are listed.
@@ -25,6 +26,7 @@ final class Standard {
                     BranchKeys::register,
                     PullRequestKeys::register,
                     BrowseKeys::register,
+                    WorktreeKeys::register,
                     GlobalKeys::register)
             .foldLeft(Keymap.empty(), (keymap, feature) -> feature.apply(keymap));
 

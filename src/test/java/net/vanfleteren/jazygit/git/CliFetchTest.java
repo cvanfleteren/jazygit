@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
@@ -19,6 +18,19 @@ class CliFetchTest {
 
     @TempDir
     Path dir;
+
+    private static String git(Path in, String... args) throws Exception {
+        java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of("git"));
+        command.addAll(java.util.List.of(args));
+        return new ProcessExecutor()
+                .command(command)
+                .directory(in.toFile())
+                .readOutput(true)
+                .redirectErrorStream(true)
+                .exitValueNormal()
+                .execute()
+                .outputUTF8();
+    }
 
     @Test
     void fetchAllBringsInWhatWasPushedToEveryRemote() throws Exception {
@@ -70,20 +82,7 @@ class CliFetchTest {
 
         CliFetch.fetch(repo, "origin", Option.none(), HashMap.empty()).get();
 
-        assertTrue(!git(repo, "branch", "-r").contains("origin/feature"));
+        assertFalse(git(repo, "branch", "-r").contains("origin/feature"));
         assertTrue(git(repo, "branch", "-vv").contains("[origin/feature: gone]"));
-    }
-
-    private static String git(Path in, String... args) throws Exception {
-        java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of("git"));
-        command.addAll(java.util.List.of(args));
-        return new ProcessExecutor()
-                .command(command)
-                .directory(in.toFile())
-                .readOutput(true)
-                .redirectErrorStream(true)
-                .exitValueNormal()
-                .execute()
-                .outputUTF8();
     }
 }

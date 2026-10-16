@@ -5,15 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.git.model.RemoteRef;
-import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.git.model.Stash;
-import net.vanfleteren.jazygit.git.model.Tag;
-import net.vanfleteren.jazygit.git.model.Tracking;
-import net.vanfleteren.jazygit.git.model.Upstream;
+import net.vanfleteren.jazygit.git.model.*;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -66,7 +58,8 @@ class CliParseTest {
                         "refs/heads/feature",
                         "[ahead 1, behind 2]",
                         "",
-                        "refs/remotes/origin/feature")
+                        "refs/remotes/origin/feature",
+                        "")
                 + ref(
                         "refs/heads/gone",
                         B,
@@ -76,7 +69,8 @@ class CliParseTest {
                         "refs/heads/gone",
                         "[gone]",
                         "",
-                        "refs/remotes/origin/gone")
+                        "refs/remotes/origin/gone",
+                        "")
                 + ref(
                         "refs/heads/trunk",
                         A,
@@ -86,10 +80,11 @@ class CliParseTest {
                         "refs/heads/trunk",
                         "",
                         "",
-                        "refs/remotes/origin/trunk")
-                + ref("refs/remotes/origin/HEAD", A, "300", " ", "", "", "", "refs/remotes/origin/trunk", "")
-                + ref("refs/remotes/origin/feature", B, "200", " ", "", "", "", "", "")
-                + ref("refs/remotes/origin/trunk", A, "300", " ", "", "", "", "", "");
+                        "refs/remotes/origin/trunk",
+                        "")
+                + ref("refs/remotes/origin/HEAD", A, "300", " ", "", "", "", "refs/remotes/origin/trunk", "", "")
+                + ref("refs/remotes/origin/feature", B, "200", " ", "", "", "", "", "", "")
+                + ref("refs/remotes/origin/trunk", A, "300", " ", "", "", "", "", "", "");
 
         assertEquals(
                 List.of(
@@ -131,8 +126,9 @@ class CliParseTest {
                         "refs/heads/elsewhere",
                         "",
                         "",
-                        "refs/remotes/origin/elsewhere")
-                + ref("refs/remotes/origin/elsewhere", A, "1", " ", "", "", "", "", "");
+                        "refs/remotes/origin/elsewhere",
+                        "")
+                + ref("refs/remotes/origin/elsewhere", A, "1", " ", "", "", "", "", "", "");
 
         assertEquals(List.of(true), CliBranch.parse(raw).get().map(Branch::hasRemote));
     }
@@ -148,7 +144,8 @@ class CliParseTest {
                 "refs/heads/feature/x",
                 "",
                 "",
-                "refs/remotes/my/fork/feature/x");
+                "refs/remotes/my/fork/feature/x",
+                "");
 
         Branch local = CliBranch.parse(raw).get().head();
         assertEquals(
@@ -158,8 +155,19 @@ class CliParseTest {
     }
 
     @Test
+    void aBranchKnowsTheOtherWorktreeItIsCheckedOutInButNotThisOne() {
+        String raw = ref("refs/heads/main", A, "2", "*", "", "", "", "", "", "/repos/main")
+                + ref("refs/heads/linked", A, "1", " ", "", "", "", "", "", "/repos/linked dir")
+                + ref("refs/heads/free", A, "0", " ", "", "", "", "", "", "");
+
+        assertEquals(
+                List.of(Option.none(), Option.of(java.nio.file.Path.of("/repos/linked dir")), Option.none()),
+                CliBranch.parse(raw).get().map(Branch::worktree));
+    }
+
+    @Test
     void withoutOriginHeadMainOrMasterIsTheDefault() {
-        String raw = ref("refs/heads/master", A, "1", "*", "", "", "", "", "");
+        String raw = ref("refs/heads/master", A, "1", "*", "", "", "", "", "", "");
 
         assertEquals(List.of(true), CliBranch.parse(raw).get().map(Branch::isDefault));
     }
@@ -200,7 +208,7 @@ class CliParseTest {
                 CliBranch.parse(ref("refs/heads/main", A)).getLeft());
         assertEquals(
                 new GitError.UnexpectedOutput("soon"),
-                CliBranch.parse(ref("refs/heads/main", A, "soon", "*", "", "", "", "", ""))
+                CliBranch.parse(ref("refs/heads/main", A, "soon", "*", "", "", "", "", "", ""))
                         .getLeft());
         assertEquals(
                 new GitError.UnexpectedOutput(" "),

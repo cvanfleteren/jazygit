@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.discard;
 
-import static dev.tamboui.toolkit.Toolkit.*;
+import static dev.tamboui.toolkit.Toolkit.stack;
+import static dev.tamboui.toolkit.Toolkit.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -102,11 +103,6 @@ class DiscardDialogTest {
         }
     }
 
-    @FunctionalInterface
-    private interface Keys {
-        void press(ToolkitTestRunner runner) throws Exception;
-    }
-
     private List<Msg> pressing(Model model, Keys keys) throws Exception {
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(model))) {
             runner.runner().focusManager().setFocus(DiscardDialog.SPEC.id());
@@ -119,5 +115,10 @@ class DiscardDialogTest {
 
     private Element view(Model model) {
         return stack(text("background"), dialog.render(model).get());
+    }
+
+    @FunctionalInterface
+    private interface Keys {
+        void press(ToolkitTestRunner runner) throws Exception;
     }
 }

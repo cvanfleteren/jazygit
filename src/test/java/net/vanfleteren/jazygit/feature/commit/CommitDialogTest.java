@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.commit;
 
-import static dev.tamboui.toolkit.Toolkit.*;
+import static dev.tamboui.toolkit.Toolkit.stack;
+import static dev.tamboui.toolkit.Toolkit.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -40,6 +41,13 @@ class CommitDialogTest {
                                 asked,
                                 new CommitMsg.StagedForCommit(new CommitCmd.StageForCommit(List.of()), List.of()))
                         .model();
+    }
+
+    private static void type(ToolkitTestRunner runner, String text) throws Exception {
+        for (char c : text.toCharArray()) {
+            runner.pilot().press(c);
+        }
+        runner.pilot().pause();
     }
 
     @Test
@@ -149,12 +157,5 @@ class CommitDialogTest {
 
     private Element view() {
         return stack(text("background"), dialog.render(open).get());
-    }
-
-    private static void type(ToolkitTestRunner runner, String text) throws Exception {
-        for (char c : text.toCharArray()) {
-            runner.pilot().press(c);
-        }
-        runner.pilot().pause();
     }
 }

@@ -1,7 +1,9 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import static dev.tamboui.toolkit.Toolkit.*;
+import static dev.tamboui.toolkit.Toolkit.stack;
+import static dev.tamboui.toolkit.Toolkit.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
@@ -28,6 +30,13 @@ class NewBranchDialogTest {
                     TestModels.loaded(new SampleData()), new NewBranchMsg.Requested(new Branch.Name("main")))
             .model();
 
+    private static void type(ToolkitTestRunner runner, String text) throws Exception {
+        for (char c : text.toCharArray()) {
+            runner.pilot().press(c);
+        }
+        runner.pilot().pause();
+    }
+
     @Test
     void enterConfirmsTheTypedName() throws Exception {
         try (ToolkitTestRunner runner = start()) {
@@ -52,7 +61,7 @@ class NewBranchDialogTest {
 
     @Test
     void closedModelShowsNoPopup() {
-        assertEquals(true, dialog.render(TestModels.loaded(new SampleData())).isEmpty());
+        assertTrue(dialog.render(TestModels.loaded(new SampleData())).isEmpty());
     }
 
     private ToolkitTestRunner start() throws Exception {
@@ -64,12 +73,5 @@ class NewBranchDialogTest {
 
     private Element view() {
         return stack(text("background"), dialog.render(open).get());
-    }
-
-    private static void type(ToolkitTestRunner runner, String text) throws Exception {
-        for (char c : text.toCharArray()) {
-            runner.pilot().press(c);
-        }
-        runner.pilot().pause();
     }
 }

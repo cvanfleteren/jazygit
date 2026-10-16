@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.git.model.ResetMode;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.git.model.Stash;
+import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -78,6 +79,25 @@ public interface StubGitProvider extends GitInfoProvider {
     @Override
     default Either<ProcessError, List<Stash>> stashes() {
         return Either.right(List.empty());
+    }
+
+    /**
+     * Only the main worktree, which is the one shown.
+     */
+    @Override
+    default Either<ProcessError, List<Worktree>> worktrees() {
+        return Either.right(List.of(new Worktree(
+                workTree(), Option.of(new Sha("aaaa")), Option.of(new Branch.Name("main")), true, true, false, false)));
+    }
+
+    @Override
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktree(Path location, Branch.Name branch) {
+        return ran();
+    }
+
+    @Override
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> removeWorktree(Path location, boolean force) {
+        return ran();
     }
 
     @Override

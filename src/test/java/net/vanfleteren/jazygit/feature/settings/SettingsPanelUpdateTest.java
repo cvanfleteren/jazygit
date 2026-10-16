@@ -22,16 +22,7 @@ import net.vanfleteren.jazygit.settings.RecentRepositories;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
-import net.vanfleteren.jazygit.state.AppError;
-import net.vanfleteren.jazygit.state.Cmd;
-import net.vanfleteren.jazygit.state.Env;
-import net.vanfleteren.jazygit.state.ErrorPopup;
-import net.vanfleteren.jazygit.state.Failure;
-import net.vanfleteren.jazygit.state.GitHubAccount;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.TestModels;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 

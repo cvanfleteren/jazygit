@@ -10,25 +10,12 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Popup;
-import net.vanfleteren.jazygit.state.TestModels;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 import org.junit.jupiter.api.Test;
 
 class ChoiceDialogTest {
-
-    private record PickPopup(boolean second) implements Popup {}
-
-    private record Picked(String what) implements Msg {
-        @Override
-        public Update.Next apply(Model model) {
-            return Update.Next.of(model);
-        }
-    }
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final ChoiceDialog<PickPopup> dialog = new ChoiceDialog<>(
@@ -114,5 +101,14 @@ class ChoiceDialogTest {
 
     private Element view(boolean second) {
         return stack(text("background"), dialog.render(open(second)).get());
+    }
+
+    private record PickPopup(boolean second) implements Popup {}
+
+    private record Picked(String what) implements Msg {
+        @Override
+        public Update.Next apply(Model model) {
+            return Update.Next.of(model);
+        }
     }
 }

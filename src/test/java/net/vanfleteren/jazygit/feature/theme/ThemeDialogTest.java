@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.theme;
 
-import static dev.tamboui.toolkit.Toolkit.*;
+import static dev.tamboui.toolkit.Toolkit.stack;
+import static dev.tamboui.toolkit.Toolkit.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -116,11 +117,6 @@ class ThemeDialogTest {
         }
     }
 
-    @FunctionalInterface
-    private interface Keys {
-        void press(ToolkitTestRunner runner) throws Exception;
-    }
-
     private List<Msg> pressing(Keys keys) throws Exception {
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view())) {
             runner.runner().focusManager().setFocus(ThemeDialog.SPEC.id());
@@ -137,5 +133,10 @@ class ThemeDialogTest {
 
     private Element view(Model model) {
         return stack(text("background"), dialog.render(model).get());
+    }
+
+    @FunctionalInterface
+    private interface Keys {
+        void press(ToolkitTestRunner runner) throws Exception;
     }
 }

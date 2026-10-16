@@ -22,6 +22,10 @@ public final class Scopes {
     public static final Scope<RemoteBranch> REMOTE_BRANCHES =
             new Scope<>("remoteBranches", "panel.remoteBranches.title");
     /**
+     * The selected worktree.
+     */
+    public static final Scope<Worktree> WORKTREES = new Scope<>("worktrees", "panel.worktrees.title");
+    /**
      * The selected commit.
      */
     public static final Scope<Commit> COMMITS = new Scope<>("commits", "panel.commits.title");

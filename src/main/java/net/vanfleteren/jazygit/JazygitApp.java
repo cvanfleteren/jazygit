@@ -46,6 +46,7 @@ import net.vanfleteren.jazygit.feature.repos.RecentReposDialog;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelDialogs;
 import net.vanfleteren.jazygit.feature.stash.StashDialogs;
 import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
+import net.vanfleteren.jazygit.feature.worktree.WorktreeDialogs;
 import net.vanfleteren.jazygit.gh.CliGitHub;
 import net.vanfleteren.jazygit.gh.GhToken;
 import net.vanfleteren.jazygit.git.CliGitInfoProvider;
@@ -113,6 +114,11 @@ public class JazygitApp extends ToolkitApp {
             new PopupSlot(new TextInputDialog<>(BranchDialogs.RENAME_BRANCH, dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new TextInputDialog<>(BranchDialogs.SET_UPSTREAM, dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new ConfirmDialog<>(BranchDialogs.STASH_CHECKOUT, dispatch), model -> BranchesPanel.ID),
+            new PopupSlot(new ConfirmDialog<>(BranchDialogs.SWITCH_WORKTREE, dispatch), model -> BranchesPanel.ID),
+            new PopupSlot(new TextInputDialog<>(WorktreeDialogs.NEW_WORKTREE, dispatch), model -> BranchesPanel.ID),
+            new PopupSlot(new ConfirmDialog<>(WorktreeDialogs.REMOVE_WORKTREE, dispatch), model -> BranchesPanel.ID),
+            new PopupSlot(
+                    new ConfirmDialog<>(WorktreeDialogs.FORCE_REMOVE_WORKTREE, dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new PickDialog<>(PullRequestDialogs.BASE, dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new PullRequestDialog(dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new ConfirmDialog<>(CommitDialogs.AMEND, dispatch), model -> FilesPanel.ID),

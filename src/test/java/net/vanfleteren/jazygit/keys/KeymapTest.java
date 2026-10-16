@@ -1,8 +1,6 @@
 package net.vanfleteren.jazygit.keys;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
@@ -33,21 +31,18 @@ class KeymapTest {
     @Test
     void aKeyCannotBeBoundTwiceInAPanel() {
         Keymap once = Keymap.empty()
-                .add(
-                        Scopes.BRANCHES,
-                        Keymap.Binding.<Branch.Name>onSelected("x", "help.global.quit", CheckoutMsg.Requested::new));
+                .add(Scopes.BRANCHES, Keymap.Binding.onSelected("x", "help.global.quit", CheckoutMsg.Requested::new));
 
         org.junit.jupiter.api.Assertions.assertThrows(
                 IllegalArgumentException.class,
                 () -> once.add(
                         Scopes.BRANCHES,
-                        Keymap.Binding.<Branch.Name>onSelected("x", "help.global.quit", CheckoutMsg.Requested::new)));
+                        Keymap.Binding.onSelected("x", "help.global.quit", CheckoutMsg.Requested::new)));
         org.junit.jupiter.api.Assertions.assertThrows(
                 IllegalArgumentException.class,
                 () -> once.add(
                         Scopes.BRANCHES,
-                        Keymap.Binding.<Branch.Name>onSelected(
-                                Keymap.HELP_KEY, "help.global.quit", CheckoutMsg.Requested::new)));
+                        Keymap.Binding.onSelected(Keymap.HELP_KEY, "help.global.quit", CheckoutMsg.Requested::new)));
     }
 
     @Test
@@ -102,8 +97,7 @@ class KeymapTest {
         Keymap ctrlX = Keymap.empty()
                 .add(
                         Scopes.BRANCHES,
-                        Keymap.Binding.<Branch.Name>onSelected(
-                                "ctrl+x", "help.global.quit", CheckoutMsg.Requested::new));
+                        Keymap.Binding.onSelected("ctrl+x", "help.global.quit", CheckoutMsg.Requested::new));
         Option<Branch.Name> selection = Option.of(new Branch.Name("x"));
 
         assertEquals(

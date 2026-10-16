@@ -7,14 +7,58 @@ import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 
 /**
  * Fixed sample data used by tests, so they don't depend on the state of a real repository.
  */
 public final class SampleData implements StubGitProvider {
+
+    private static final String ADA = "Ada Lovelace <ada@example.com>";
+    private static final String GRACE = "Grace Hopper <grace@example.com>";
+    private static final String LINUS = "Linus Torvalds <linus@example.com>";
+    private static final List<Commit> MAIN = List.of(
+            commit(
+                    "a1b2c3d",
+                    ADA,
+                    "2026-10-09T12:30:00Z",
+                    "Add initial TUI layout",
+                    "Adds the JazygitApp entry point and the Files/Branches/Commits panels."),
+            commit(
+                    "b2c3d4e",
+                    ADA,
+                    "2026-10-08T09:12:00Z",
+                    "Scaffold Maven project",
+                    "Adds pom.xml with the TamboUI dependencies."),
+            commit("c3d4e5f", GRACE, "2026-10-07T17:45:00Z", "Wire content panel", ""),
+            commit(
+                    "d4e5f6a",
+                    GRACE,
+                    "2026-10-06T11:00:00Z",
+                    "Implement focus cycling",
+                    "Tab and Shift+Tab move the focus between the left panes."),
+            commit("e5f6a7b", LINUS, "2026-10-05T08:20:00Z", "Initial commit", ""),
+            commit("f6a7b8c", LINUS, "2026-10-04T19:05:00Z", "Project setup", "Adds .gitignore and LICENSE."));
+
+    /**
+     * @param author name and email, as {@code "Name <email>"}
+     */
+    private static Commit commit(String sha, String author, String time, String message, String body) {
+        int lt = author.indexOf(" <");
+        return new Commit(
+                new Sha(sha),
+                author.substring(0, lt),
+                author.substring(lt + 2, author.length() - 1),
+                Instant.parse(time),
+                message,
+                body);
+    }
+
+    private static String sample(List<FileEntry> files, java.util.function.Predicate<FileEntry> filter) {
+        return files.filter(filter)
+                .map(f -> "diff --git a/" + f.path() + " b/" + f.path() + "\n@@ -1 +1 @@\n-old\n+new\n")
+                .mkString();
+    }
 
     @Override
     public String repositoryName() {
@@ -90,47 +134,6 @@ public final class SampleData implements StubGitProvider {
         };
     }
 
-    private static final String ADA = "Ada Lovelace <ada@example.com>";
-    private static final String GRACE = "Grace Hopper <grace@example.com>";
-    private static final String LINUS = "Linus Torvalds <linus@example.com>";
-
-    private static final List<Commit> MAIN = List.of(
-            commit(
-                    "a1b2c3d",
-                    ADA,
-                    "2026-10-09T12:30:00Z",
-                    "Add initial TUI layout",
-                    "Adds the JazygitApp entry point and the Files/Branches/Commits panels."),
-            commit(
-                    "b2c3d4e",
-                    ADA,
-                    "2026-10-08T09:12:00Z",
-                    "Scaffold Maven project",
-                    "Adds pom.xml with the TamboUI dependencies."),
-            commit("c3d4e5f", GRACE, "2026-10-07T17:45:00Z", "Wire content panel", ""),
-            commit(
-                    "d4e5f6a",
-                    GRACE,
-                    "2026-10-06T11:00:00Z",
-                    "Implement focus cycling",
-                    "Tab and Shift+Tab move the focus between the left panes."),
-            commit("e5f6a7b", LINUS, "2026-10-05T08:20:00Z", "Initial commit", ""),
-            commit("f6a7b8c", LINUS, "2026-10-04T19:05:00Z", "Project setup", "Adds .gitignore and LICENSE."));
-
-    /**
-     * @param author name and email, as {@code "Name <email>"}
-     */
-    private static Commit commit(String sha, String author, String time, String message, String body) {
-        int lt = author.indexOf(" <");
-        return new Commit(
-                new Sha(sha),
-                author.substring(0, lt),
-                author.substring(lt + 2, author.length() - 1),
-                Instant.parse(time),
-                message,
-                body);
-    }
-
     @Override
     public Either<ProcessError, DiffText> commitChanges(Sha sha) {
         return Either.right(DiffText.of(
@@ -140,11 +143,5 @@ public final class SampleData implements StubGitProvider {
     @Override
     public Either<GitError, Diffs> diff(List<FileEntry> files) {
         return Either.right(new Diffs(sample(files, FileEntry::staged), sample(files, FileEntry::unstaged)));
-    }
-
-    private static String sample(List<FileEntry> files, java.util.function.Predicate<FileEntry> filter) {
-        return files.filter(filter)
-                .map(f -> "diff --git a/" + f.path() + " b/" + f.path() + "\n@@ -1 +1 @@\n-old\n+new\n")
-                .mkString();
     }
 }

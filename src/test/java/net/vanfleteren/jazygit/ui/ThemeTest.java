@@ -1,8 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.css.Styleable;
 import dev.tamboui.style.Color;
@@ -12,16 +10,6 @@ import net.vanfleteren.jazygit.settings.ThemeName;
 import org.junit.jupiter.api.Test;
 
 class ThemeTest {
-
-    private record Node(String styleType, Set<String> cssClasses) implements Styleable {
-        public java.util.Optional<String> cssId() {
-            return java.util.Optional.empty();
-        }
-
-        public java.util.Optional<Styleable> cssParent() {
-            return java.util.Optional.empty();
-        }
-    }
 
     @Test
     void focusedPanelBorderIsHighlightedAndTheOthersDimmed() {
@@ -122,7 +110,7 @@ class ThemeTest {
             assertEquals(
                     Theme.highlights(engine).of(true).bg(), selectedText.rowBg().toJavaOptional(), name.id());
             assertTrue(selectedText.fg().isDefined(), name.id());
-            assertFalse(selectedText.plainFg().equals(selectedText.fg()), name.id());
+            assertNotEquals(selectedText.plainFg(), selectedText.fg(), name.id());
         }
     }
 
@@ -151,5 +139,15 @@ class ThemeTest {
         engine.setActiveStylesheet("dimmed");
 
         assertEquals(Style.EMPTY.dim(), Theme.highlights(engine).of(false));
+    }
+
+    private record Node(String styleType, Set<String> cssClasses) implements Styleable {
+        public java.util.Optional<String> cssId() {
+            return java.util.Optional.empty();
+        }
+
+        public java.util.Optional<Styleable> cssParent() {
+            return java.util.Optional.empty();
+        }
     }
 }

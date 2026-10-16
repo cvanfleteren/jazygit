@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import static dev.tamboui.toolkit.Toolkit.*;
+import static dev.tamboui.toolkit.Toolkit.stack;
+import static dev.tamboui.toolkit.Toolkit.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -59,11 +60,6 @@ class RebaseDialogTest {
         }
     }
 
-    @FunctionalInterface
-    private interface Keys {
-        void press(ToolkitTestRunner runner) throws Exception;
-    }
-
     private List<Msg> pressing(Keys keys) throws Exception {
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view())) {
             runner.runner().focusManager().setFocus(BranchDialogs.REBASE.id());
@@ -76,5 +72,10 @@ class RebaseDialogTest {
 
     private Element view() {
         return stack(text("background"), dialog.render(open).get());
+    }
+
+    @FunctionalInterface
+    private interface Keys {
+        void press(ToolkitTestRunner runner) throws Exception;
     }
 }

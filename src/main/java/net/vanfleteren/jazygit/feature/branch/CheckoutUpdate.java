@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.feature.branch.BranchCmd.Checkout;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.CheckoutRemote;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd.CheckoutWithStash;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg.*;
+import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -35,6 +36,13 @@ public final class CheckoutUpdate {
             case StashConfirmed() ->
                 Update.confirm(
                         model, StashCheckoutPopup.class, popup -> Option.of(new CheckoutWithStash(popup.branch())));
+            case SwitchWorktreeCancelled() -> Next.of(model.withoutPopup(SwitchWorktreePopup.class));
+            case SwitchWorktreeConfirmed() ->
+                model.popup(SwitchWorktreePopup.class)
+                        .map(popup -> Next.of(
+                                model.withoutPopup(SwitchWorktreePopup.class).clearError(),
+                                new RecentReposCmd.SwitchTo(popup.worktree())))
+                        .getOrElse(() -> Next.of(model));
         };
     }
 
@@ -53,9 +61,16 @@ public final class CheckoutUpdate {
                         : Update.start(model.clearError(), new CheckoutRemote(remote.branch(), remote)));
     }
 
+    /**
+     * Checks out {@code branch}. One that another worktree has checked out git would refuse, so switching to that
+     * worktree is offered instead.
+     */
     private static Next requested(Model model, Branch.Name branch) {
-        return Branches.isOtherIdleBranch(model, branch)
-                ? Update.start(model.clearError(), new Checkout(branch))
-                : Next.of(model);
+        return model.idleBranch(branch)
+                .flatMap(Branch::worktreeLocation)
+                .map(worktree -> Update.ask(model, new SwitchWorktreePopup(branch, worktree)))
+                .getOrElse(() -> Branches.isOtherIdleBranch(model, branch)
+                        ? Update.start(model.clearError(), new Checkout(branch))
+                        : Next.of(model));
     }
 }

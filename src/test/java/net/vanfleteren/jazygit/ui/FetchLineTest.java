@@ -15,6 +15,12 @@ import org.junit.jupiter.api.Test;
  */
 class FetchLineTest {
 
+    private static String rendered(Model model) throws Exception {
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> FetchLine.render(model))) {
+            return RenderedText.of(runner, () -> FetchLine.render(model)).strip();
+        }
+    }
+
     @Test
     void showsTheRemoteBeingFetchedFrom() throws Exception {
         assertEquals(
@@ -36,11 +42,5 @@ class FetchLineTest {
     void isBlankWhileNoRemoteIsBeingFetchedFrom() throws Exception {
         assertEquals("", rendered(TestModels.loaded()));
         assertEquals("", rendered(TestModels.loaded().withFetching(Option.of(Fetching.LISTING))));
-    }
-
-    private static String rendered(Model model) throws Exception {
-        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> FetchLine.render(model))) {
-            return RenderedText.of(runner, () -> FetchLine.render(model)).strip();
-        }
     }
 }

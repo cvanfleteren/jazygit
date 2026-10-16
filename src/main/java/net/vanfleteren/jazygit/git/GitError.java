@@ -96,6 +96,13 @@ public sealed interface GitError {
     record LocalChanges(String explanation) implements GitError {}
 
     /**
+     * Git refused to remove a worktree because it has modified or untracked files, which forcing it would lose.
+     *
+     * @param explanation git's explanation
+     */
+    record WorktreeHasChanges(String explanation) implements GitError {}
+
+    /**
      * The branch was checked out, but the stashed changes could not be applied on it, so they stay in
      * the stash.
      */
