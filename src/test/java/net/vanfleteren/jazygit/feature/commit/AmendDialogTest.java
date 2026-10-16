@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
+import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -40,8 +41,8 @@ class AmendDialogTest {
     @Test
     void enterConfirms() throws Exception {
         try (ToolkitTestRunner runner = start()) {
-            runner.pilot().press(KeyCode.ENTER);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(java.util.List.of(new AmendMsg.Confirmed()), dispatched);
@@ -50,8 +51,8 @@ class AmendDialogTest {
     @Test
     void escapeCancels() throws Exception {
         try (ToolkitTestRunner runner = start()) {
-            runner.pilot().press(KeyCode.ESCAPE);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(java.util.List.of(new AmendMsg.Cancelled()), dispatched);
@@ -76,7 +77,7 @@ class AmendDialogTest {
     private ToolkitTestRunner start() throws Exception {
         assertTrue(open.popup(AmendPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        runner.runner().focusManager().setFocus(CommitDialogs.AMEND.id());
+        SettledPilot.focus(runner, CommitDialogs.AMEND.id());
         RenderedText.of(runner, this::view);
         return runner;
     }

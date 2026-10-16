@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
+import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
 
 class PullRequestDialogTest {
@@ -216,8 +217,8 @@ class PullRequestDialogTest {
                         .with(Either.right(READY)));
         try (ToolkitTestRunner runner = start(model)) {
             for (char key : new char[] {'m', 's', 'r', 'x', 'o'}) {
-                runner.pilot().press(key);
-                runner.pilot().pause();
+                SettledPilot.of(runner).press(key);
+                SettledPilot.of(runner).pause();
             }
         }
 
@@ -236,10 +237,10 @@ class PullRequestDialogTest {
         PullRequestPopup loading = PullRequestPopup.loading(new Branch.Name("support_rename"), PR);
         for (PullRequestPopup popup : List.of(loading, loading.with(Either.right(DETAILS)))) {
             try (ToolkitTestRunner runner = start(TestModels.loaded().openPopup(popup))) {
-                runner.pilot().press('m');
-                runner.pilot().pause();
-                runner.pilot().press('x');
-                runner.pilot().pause();
+                SettledPilot.of(runner).press('m');
+                SettledPilot.of(runner).pause();
+                SettledPilot.of(runner).press('x');
+                SettledPilot.of(runner).pause();
             }
         }
 
@@ -251,10 +252,10 @@ class PullRequestDialogTest {
     void enterOpensInTheBrowserAndEscapeCloses() throws Exception {
         Model model = TestModels.loaded().openPopup(PullRequestPopup.loading(new Branch.Name("support_rename"), PR));
         try (ToolkitTestRunner runner = start(model)) {
-            runner.pilot().press(KeyCode.ENTER);
-            runner.pilot().pause();
-            runner.pilot().press(KeyCode.ESCAPE);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(
@@ -270,7 +271,7 @@ class PullRequestDialogTest {
 
     private ToolkitTestRunner start(Model model) throws Exception {
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(model));
-        runner.runner().focusManager().setFocus(PullRequestDialog.ID);
+        SettledPilot.focus(runner, PullRequestDialog.ID);
         RenderedText.of(runner, () -> view(model));
         return runner;
     }

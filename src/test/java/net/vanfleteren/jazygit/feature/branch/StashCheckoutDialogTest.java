@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
+import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -38,8 +39,8 @@ class StashCheckoutDialogTest {
     @Test
     void enterConfirms() throws Exception {
         try (ToolkitTestRunner runner = start()) {
-            runner.pilot().press(KeyCode.ENTER);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(java.util.List.of(new CheckoutMsg.StashConfirmed()), dispatched);
@@ -48,8 +49,8 @@ class StashCheckoutDialogTest {
     @Test
     void escapeCancels() throws Exception {
         try (ToolkitTestRunner runner = start()) {
-            runner.pilot().press(KeyCode.ESCAPE);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(java.util.List.of(new CheckoutMsg.StashCancelled()), dispatched);
@@ -73,7 +74,7 @@ class StashCheckoutDialogTest {
     private ToolkitTestRunner start() throws Exception {
         assertTrue(open.popup(StashCheckoutPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        runner.runner().focusManager().setFocus(BranchDialogs.STASH_CHECKOUT.id());
+        SettledPilot.focus(runner, BranchDialogs.STASH_CHECKOUT.id());
         RenderedText.of(runner, this::view);
         return runner;
     }

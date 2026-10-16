@@ -306,7 +306,7 @@ class ContentPanelTest {
             assertTrue(screen.contains("Unstaged changes"), screen);
             assertTrue(screen.indexOf("Staged changes") < screen.indexOf("Unstaged changes"), screen);
 
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).quit();
         }
     }
 }

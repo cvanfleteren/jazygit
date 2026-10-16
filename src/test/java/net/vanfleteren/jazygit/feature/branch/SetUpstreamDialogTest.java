@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
+import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -42,8 +43,8 @@ class SetUpstreamDialogTest {
     @Test
     void enterConfirmsTheDefault() throws Exception {
         try (ToolkitTestRunner runner = start()) {
-            runner.pilot().press(KeyCode.ENTER);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(java.util.List.of(new PushMsg.UpstreamConfirmed("origin feature")), dispatched);
@@ -53,13 +54,13 @@ class SetUpstreamDialogTest {
     void theUpstreamCanBeChanged() throws Exception {
         try (ToolkitTestRunner runner = start()) {
             for (int i = 0; i < "feature".length(); i++) {
-                runner.pilot().press(KeyCode.BACKSPACE);
+                SettledPilot.of(runner).press(KeyCode.BACKSPACE);
             }
             for (char c : "shared".toCharArray()) {
-                runner.pilot().press(c);
+                SettledPilot.of(runner).press(c);
             }
-            runner.pilot().press(KeyCode.ENTER);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(java.util.List.of(new PushMsg.UpstreamConfirmed("origin shared")), dispatched);
@@ -68,8 +69,8 @@ class SetUpstreamDialogTest {
     @Test
     void escapeCancels() throws Exception {
         try (ToolkitTestRunner runner = start()) {
-            runner.pilot().press(KeyCode.ESCAPE);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(java.util.List.of(new PushMsg.UpstreamCancelled()), dispatched);
@@ -83,7 +84,7 @@ class SetUpstreamDialogTest {
     private ToolkitTestRunner start() throws Exception {
         assertTrue(open.popup(SetUpstreamPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        runner.runner().focusManager().setFocus(BranchDialogs.SET_UPSTREAM.id());
+        SettledPilot.focus(runner, BranchDialogs.SET_UPSTREAM.id());
         RenderedText.of(runner, this::view);
         return runner;
     }

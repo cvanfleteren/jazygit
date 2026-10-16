@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
+import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -88,18 +89,20 @@ class HelpDialogTest {
 
     @Test
     void escapeAndQuestionMarkClose() throws Exception {
-        assertEquals(List.of(new HelpMsg.Closed()), press(r -> r.pilot().press(KeyCode.ESCAPE)));
-        assertEquals(List.of(new HelpMsg.Closed()), press(r -> r.pilot().press('?')));
+        assertEquals(
+                List.of(new HelpMsg.Closed()), press(r -> SettledPilot.of(r).press(KeyCode.ESCAPE)));
+        assertEquals(
+                List.of(new HelpMsg.Closed()), press(r -> SettledPilot.of(r).press('?')));
     }
 
     @Test
     void enterRunsTheHighlightedKeyStartingAtTheFirst() throws Exception {
         assertEquals(
                 List.of(new HelpMsg.Chosen(new CheckoutMsg.Requested(FEATURE))),
-                press(onFeature(), r -> r.pilot().press(KeyCode.ENTER)));
+                press(onFeature(), r -> SettledPilot.of(r).press(KeyCode.ENTER)));
         assertEquals(List.of(new HelpMsg.Chosen(new PushMsg.Requested(FEATURE))), press(onFeature(), r -> {
-            r.pilot().press(KeyCode.DOWN);
-            r.pilot().press(KeyCode.ENTER);
+            SettledPilot.of(r).press(KeyCode.DOWN);
+            SettledPilot.of(r).press(KeyCode.ENTER);
         }));
     }
 
@@ -109,13 +112,13 @@ class HelpDialogTest {
         // Past the panel keys, the legend and the heading, to the second global key, after ?.
         assertEquals(List.of(new HelpMsg.Chosen(new RecentReposMsg.Requested())), press(onFeature(), r -> {
             for (int i = 0; i < panelKeys + 1; i++) {
-                r.pilot().press(KeyCode.DOWN);
+                SettledPilot.of(r).press(KeyCode.DOWN);
             }
-            r.pilot().press(KeyCode.ENTER);
+            SettledPilot.of(r).press(KeyCode.ENTER);
         }));
         assertEquals(List.of(new HelpMsg.Chosen(new CheckoutMsg.Requested(FEATURE))), press(onFeature(), r -> {
-            r.pilot().press(KeyCode.UP);
-            r.pilot().press(KeyCode.ENTER);
+            SettledPilot.of(r).press(KeyCode.UP);
+            SettledPilot.of(r).press(KeyCode.ENTER);
         }));
     }
 
@@ -123,10 +126,10 @@ class HelpDialogTest {
     void pressingAKeyRunsIt() throws Exception {
         assertEquals(
                 List.of(new HelpMsg.Chosen(new DeleteBranchMsg.Requested(FEATURE))),
-                press(onFeature(), r -> r.pilot().press('d')));
+                press(onFeature(), r -> SettledPilot.of(r).press('d')));
         assertEquals(
                 List.of(new HelpMsg.Chosen(new SettingsPanelMsg.Requested())),
-                press(onFeature(), r -> r.pilot().press('s', KeyModifiers.CTRL)));
+                press(onFeature(), r -> SettledPilot.of(r).press('s', KeyModifiers.CTRL)));
     }
 
     @Test
@@ -134,7 +137,7 @@ class HelpDialogTest {
         // The branches panel has r, for rebase.
         assertEquals(
                 List.of(new HelpMsg.Chosen(new RecentReposMsg.Requested())),
-                press(onFeature(), r -> r.pilot().press('r', KeyModifiers.CTRL)));
+                press(onFeature(), r -> SettledPilot.of(r).press('r', KeyModifiers.CTRL)));
     }
 
     @Test
@@ -142,31 +145,33 @@ class HelpDialogTest {
         int panelKeys = Keymap.standard().bindings(Scopes.BRANCHES.id()).size();
         assertEquals(List.of(new HelpMsg.Chosen(new HelpMsg.Closed())), press(onFeature(), r -> {
             for (int i = 0; i < panelKeys; i++) {
-                r.pilot().press(KeyCode.DOWN);
+                SettledPilot.of(r).press(KeyCode.DOWN);
             }
-            r.pilot().press(KeyCode.ENTER);
+            SettledPilot.of(r).press(KeyCode.ENTER);
         }));
         // Quitting goes to the app as is.
-        assertEquals(List.of(new Msg.Quit()), press(onFeature(), r -> r.pilot().press('q')));
+        assertEquals(
+                List.of(new Msg.Quit()),
+                press(onFeature(), r -> SettledPilot.of(r).press('q')));
     }
 
     @Test
     void aKeyThatNeedsASelectionDoesNothingWithout() throws Exception {
         Model none = open(Scopes.BRANCHES, Option.none());
-        assertEquals(List.empty(), press(none, r -> r.pilot().press(KeyCode.ENTER)));
-        assertEquals(List.empty(), press(none, r -> r.pilot().press('d')));
+        assertEquals(List.empty(), press(none, r -> SettledPilot.of(r).press(KeyCode.ENTER)));
+        assertEquals(List.empty(), press(none, r -> SettledPilot.of(r).press('d')));
     }
 
     @Test
     void theDetailsOfTheHighlightedKeyShowUnderThePopup() throws Exception {
         Model open = onFeature();
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(open))) {
-            runner.runner().focusManager().setFocus(HelpDialog.ID);
+            SettledPilot.focus(runner, HelpDialog.ID);
             String checkout = RenderedText.ofTall(runner, () -> view(open));
             assertTrue(checkout.contains("Switches to the selected branch."), checkout);
 
-            runner.pilot().press(KeyCode.DOWN);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).pause();
             String push = RenderedText.ofTall(runner, () -> view(open));
             assertFalse(push.contains("Switches to the selected branch."), push);
             // The popup stays where it was.
@@ -192,10 +197,10 @@ class HelpDialogTest {
         // Closed in between, as the app draws it, so it starts at the top again.
         dialog.render(TestModels.loaded());
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(open))) {
-            runner.runner().focusManager().setFocus(HelpDialog.ID);
+            SettledPilot.focus(runner, HelpDialog.ID);
             RenderedText.of(runner, () -> view(open));
             keys.accept(runner);
-            runner.pilot().pause();
+            SettledPilot.of(runner).pause();
         }
         return List.ofAll(dispatched);
     }

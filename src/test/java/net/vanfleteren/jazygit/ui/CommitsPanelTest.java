@@ -91,16 +91,16 @@ class CommitsPanelTest {
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(model.get(), CommitsPanel.ID))) {
-            testRunner.runner().focusManager().setFocus(CommitsPanel.ID);
-            testRunner.pilot().pause();
-            testRunner.pilot().press(KeyCode.DOWN);
-            testRunner.pilot().pause();
+            SettledPilot.focus(testRunner, CommitsPanel.ID);
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner).pause();
             model.set(model.get().withCommits(new Loadable.Loaded<>(log.prepend(commit("s2")))));
             RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), CommitsPanel.ID));
 
             assertEquals(commit("s0").sha(), panel.selectedCommit().get().sha());
 
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).quit();
         }
     }
 
@@ -113,14 +113,14 @@ class CommitsPanelTest {
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(model.get(), CommitsPanel.ID))) {
-            testRunner.runner().focusManager().setFocus(CommitsPanel.ID);
-            testRunner.pilot().pause();
+            SettledPilot.focus(testRunner, CommitsPanel.ID);
+            SettledPilot.of(testRunner).pause();
             model.set(model.get().withCommits(new Loadable.Loaded<>(log.prepend(commit("s2")))));
             RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), CommitsPanel.ID));
 
             assertEquals(commit("s2").sha(), panel.selectedCommit().get().sha());
 
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).quit();
         }
     }
 
@@ -131,19 +131,19 @@ class CommitsPanelTest {
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.ID))) {
-            testRunner.runner().focusManager().setFocus(CommitsPanel.ID);
-            testRunner.pilot().pause();
+            SettledPilot.focus(testRunner, CommitsPanel.ID);
+            SettledPilot.of(testRunner).pause();
             for (int i = 0; i < 45; i++) {
-                testRunner.pilot().press(KeyCode.DOWN);
+                SettledPilot.of(testRunner).press(KeyCode.DOWN);
             }
-            testRunner.pilot().pause();
+            SettledPilot.of(testRunner).pause();
 
             String screen = RenderedText.ofLarge(testRunner, () -> panel.render(model, CommitsPanel.ID));
             assertEquals(45, panel.selectedIndex());
             assertTrue(screen.contains("msg s45"), screen);
             assertFalse(screen.contains("msg s0 "), screen);
 
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).quit();
         }
     }
 }

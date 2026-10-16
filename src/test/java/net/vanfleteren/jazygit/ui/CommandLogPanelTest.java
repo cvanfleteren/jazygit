@@ -28,7 +28,7 @@ class CommandLogPanelTest {
             assertTrue(screen.contains("Command log"), screen);
             assertTrue(screen.contains("Checkout of foo failed: boom"), screen);
 
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).quit();
         }
     }
 
@@ -40,7 +40,7 @@ class CommandLogPanelTest {
             String screen = RenderedText.of(testRunner, () -> CommandLogPanel.render(model));
             assertTrue(screen.contains("The merge stopped on 2 conflicts"), screen);
 
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).quit();
         }
     }
 
@@ -54,7 +54,7 @@ class CommandLogPanelTest {
             assertTrue(screen.contains("Push"), screen);
             assertTrue(screen.contains("  git push origin main"), screen);
 
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).quit();
         }
     }
 
@@ -79,7 +79,7 @@ class CommandLogPanelTest {
             assertFalse(screen.contains("old.txt"), screen);
             assertTrue(screen.contains("git commit -m g"), screen);
 
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).quit();
         }
     }
 
@@ -92,7 +92,7 @@ class CommandLogPanelTest {
             assertTrue(screen.contains("Command log"), screen);
             assertFalse(screen.contains("failed"), screen);
 
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).quit();
         }
     }
 }

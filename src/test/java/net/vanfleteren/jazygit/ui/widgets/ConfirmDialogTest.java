@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
+import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
 
 class ConfirmDialogTest {
@@ -63,10 +64,10 @@ class ConfirmDialogTest {
     void enterConfirmsAndEscapeCancels() throws Exception {
         ConfirmDialog<AskPopup> dialog = dialog("Sure?");
         try (ToolkitTestRunner runner = start(dialog)) {
-            runner.pilot().press(KeyCode.ENTER);
-            runner.pilot().pause();
-            runner.pilot().press(KeyCode.ESCAPE);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(java.util.List.of(new Yes(), new No()), dispatched);
@@ -83,7 +84,7 @@ class ConfirmDialogTest {
 
     private ToolkitTestRunner start(ConfirmDialog<AskPopup> dialog) throws Exception {
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(dialog));
-        runner.runner().focusManager().setFocus("ask");
+        SettledPilot.focus(runner, "ask");
         RenderedText.of(runner, () -> view(dialog));
         return runner;
     }

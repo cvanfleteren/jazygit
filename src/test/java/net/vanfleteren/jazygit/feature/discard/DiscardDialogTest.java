@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
+import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -41,32 +42,32 @@ class DiscardDialogTest {
     void lettersChooseAnOption() throws Exception {
         assertEquals(
                 List.of(new DiscardMsg.Chosen(Scope.ALL)),
-                pressing(open(MODIFIED), r -> r.pilot().press('x')));
+                pressing(open(MODIFIED), r -> SettledPilot.of(r).press('x')));
         dispatched.clear();
         assertEquals(
                 List.of(new DiscardMsg.Chosen(Scope.UNSTAGED)),
-                pressing(open(MODIFIED), r -> r.pilot().press('u')));
+                pressing(open(MODIFIED), r -> SettledPilot.of(r).press('u')));
         dispatched.clear();
         assertEquals(
                 List.of(new DiscardMsg.Cancelled()),
-                pressing(open(MODIFIED), r -> r.pilot().press('c')));
+                pressing(open(MODIFIED), r -> SettledPilot.of(r).press('c')));
     }
 
     @Test
     void arrowsAndEnterChooseTheSelectedLine() throws Exception {
         assertEquals(
                 List.of(new DiscardMsg.Chosen(Scope.ALL)),
-                pressing(open(MODIFIED), r -> r.pilot().press(KeyCode.ENTER)));
+                pressing(open(MODIFIED), r -> SettledPilot.of(r).press(KeyCode.ENTER)));
         dispatched.clear();
         assertEquals(List.of(new DiscardMsg.Chosen(Scope.UNSTAGED)), pressing(open(MODIFIED), r -> {
-            r.pilot().press(KeyCode.DOWN);
-            r.pilot().press(KeyCode.ENTER);
+            SettledPilot.of(r).press(KeyCode.DOWN);
+            SettledPilot.of(r).press(KeyCode.ENTER);
         }));
         dispatched.clear();
         assertEquals(List.of(new DiscardMsg.Cancelled()), pressing(open(MODIFIED), r -> {
-            r.pilot().press(KeyCode.DOWN);
-            r.pilot().press(KeyCode.DOWN);
-            r.pilot().press(KeyCode.ENTER);
+            SettledPilot.of(r).press(KeyCode.DOWN);
+            SettledPilot.of(r).press(KeyCode.DOWN);
+            SettledPilot.of(r).press(KeyCode.ENTER);
         }));
     }
 
@@ -74,20 +75,20 @@ class DiscardDialogTest {
     void escapeCancels() throws Exception {
         assertEquals(
                 List.of(new DiscardMsg.Cancelled()),
-                pressing(open(MODIFIED), r -> r.pilot().press(KeyCode.ESCAPE)));
+                pressing(open(MODIFIED), r -> SettledPilot.of(r).press(KeyCode.ESCAPE)));
     }
 
     @Test
     void theUnstagedOptionIsNotActionableWithoutUnstagedChanges() throws Exception {
         assertEquals(List.of(), pressing(open(STAGED), r -> {
-            r.pilot().press('u');
-            r.pilot().press(KeyCode.DOWN);
-            r.pilot().press(KeyCode.ENTER);
+            SettledPilot.of(r).press('u');
+            SettledPilot.of(r).press(KeyCode.DOWN);
+            SettledPilot.of(r).press(KeyCode.ENTER);
         }));
         dispatched.clear();
         assertEquals(
                 List.of(new DiscardMsg.Chosen(Scope.ALL)),
-                pressing(open(STAGED), r -> r.pilot().press('x')));
+                pressing(open(STAGED), r -> SettledPilot.of(r).press('x')));
     }
 
     @Test
@@ -105,10 +106,10 @@ class DiscardDialogTest {
 
     private List<Msg> pressing(Model model, Keys keys) throws Exception {
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(model))) {
-            runner.runner().focusManager().setFocus(DiscardDialog.SPEC.id());
+            SettledPilot.focus(runner, DiscardDialog.SPEC.id());
             RenderedText.of(runner, () -> view(model));
             keys.press(runner);
-            runner.pilot().pause();
+            SettledPilot.of(runner).pause();
         }
         return List.ofAll(dispatched);
     }

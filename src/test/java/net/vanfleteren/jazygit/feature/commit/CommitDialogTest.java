@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
+import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -47,9 +48,9 @@ class CommitDialogTest {
 
     private static void type(ToolkitTestRunner runner, String text) throws Exception {
         for (char c : text.toCharArray()) {
-            runner.pilot().press(c);
+            SettledPilot.of(runner).press(c);
         }
-        runner.pilot().pause();
+        SettledPilot.of(runner).pause();
     }
 
     @Test
@@ -65,8 +66,8 @@ class CommitDialogTest {
     void enterInTheSummaryCommits() throws Exception {
         try (ToolkitTestRunner runner = start()) {
             type(runner, "fix it");
-            runner.pilot().press(KeyCode.ENTER);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(java.util.List.of(new CommitMsg.Confirmed(new CommitMessage("fix it", ""))), dispatched);
@@ -76,12 +77,12 @@ class CommitDialogTest {
     void ctrlEnterInTheDescriptionCommits() throws Exception {
         try (ToolkitTestRunner runner = start()) {
             type(runner, "fix it");
-            runner.pilot().press(KeyCode.TAB);
+            SettledPilot.of(runner).press(KeyCode.TAB);
             type(runner, "because");
-            runner.pilot().press(KeyCode.ENTER);
+            SettledPilot.of(runner).press(KeyCode.ENTER);
             type(runner, "reasons");
-            runner.pilot().press(KeyCode.ENTER, KeyModifiers.CTRL);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.ENTER, KeyModifiers.CTRL);
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(
@@ -98,10 +99,10 @@ class CommitDialogTest {
                     .addGlobalHandler(event -> event instanceof KeyEvent key && key.code() == KeyCode.ESCAPE
                             ? EventResult.HANDLED
                             : EventResult.UNHANDLED);
-            runner.pilot().press(KeyCode.ESCAPE);
-            runner.pilot().press(KeyCode.TAB);
-            runner.pilot().press(KeyCode.ESCAPE);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).press(KeyCode.TAB);
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(java.util.List.of(new CommitMsg.Cancelled(), new CommitMsg.Cancelled()), dispatched);
@@ -119,12 +120,12 @@ class CommitDialogTest {
 
         try (ToolkitTestRunner runner =
                 ToolkitTestRunner.runTest(() -> reword.render(rewording).get())) {
-            runner.runner().focusManager().setFocus(CommitDialog.REWORD_ID);
+            SettledPilot.focus(runner, CommitDialog.REWORD_ID);
             String screen =
                     RenderedText.ofLarge(runner, () -> reword.render(rewording).get());
             assertTrue(screen.contains(last.message()), screen);
-            runner.pilot().press(KeyCode.ENTER);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(
@@ -143,11 +144,11 @@ class CommitDialogTest {
 
         try (ToolkitTestRunner runner =
                 ToolkitTestRunner.runTest(() -> reword.render(rewording).get())) {
-            runner.runner().focusManager().setFocus(CommitDialog.REWORD_ID);
+            SettledPilot.focus(runner, CommitDialog.REWORD_ID);
             RenderedText.ofLarge(runner, () -> reword.render(rewording).get());
-            runner.pilot().press('!');
-            runner.pilot().press(KeyCode.ENTER);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press('!');
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(
@@ -158,7 +159,7 @@ class CommitDialogTest {
     private ToolkitTestRunner start() throws Exception {
         assertTrue(open.popup(CommitPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        runner.runner().focusManager().setFocus(CommitDialog.ID);
+        SettledPilot.focus(runner, CommitDialog.ID);
         RenderedText.of(runner, this::view);
         return runner;
     }

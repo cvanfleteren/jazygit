@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
+import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import org.junit.jupiter.api.Test;
 
@@ -62,8 +63,8 @@ class FixupDialogTest {
         assertEquals(List.of(new FixupMsg.Cancelled()), pressing('c'));
         dispatched.clear();
         try (ToolkitTestRunner runner = start()) {
-            runner.pilot().press(KeyCode.ESCAPE);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).pause();
         }
         assertEquals(java.util.List.of(new FixupMsg.Cancelled()), dispatched);
     }
@@ -71,8 +72,8 @@ class FixupDialogTest {
     private List<Msg> pressing(char key) throws Exception {
         dispatched.clear();
         try (ToolkitTestRunner runner = start()) {
-            runner.pilot().press(key);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(key);
+            SettledPilot.of(runner).pause();
         }
         return List.ofAll(dispatched);
     }
@@ -80,7 +81,7 @@ class FixupDialogTest {
     private ToolkitTestRunner start() throws Exception {
         assertTrue(open.popup(FixupPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        runner.runner().focusManager().setFocus(CommitDialogs.FIXUP.id());
+        SettledPilot.focus(runner, CommitDialogs.FIXUP.id());
         RenderedText.of(runner, this::view);
         return runner;
     }

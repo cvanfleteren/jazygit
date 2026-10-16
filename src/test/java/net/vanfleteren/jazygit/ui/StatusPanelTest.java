@@ -36,7 +36,7 @@ class StatusPanelTest {
             String loading = RenderedText.of(testRunner, () -> StatusPanel.render(TestModels.loading("jazygit")));
             assertTrue(loading.contains("jazygit → " + Placeholders.loading()), loading);
 
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).quit();
         }
     }
 
@@ -55,7 +55,7 @@ class StatusPanelTest {
             assertTrue(screen.contains("jazygit → main"), screen);
             assertFalse(screen.contains("Checkout of foo failed: boom"), screen);
 
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).quit();
         }
     }
 
@@ -103,7 +103,7 @@ class StatusPanelTest {
                 .model();
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> StatusPanel.render(model))) {
             String screen = RenderedText.ofLarge(testRunner, () -> StatusPanel.render(model));
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).quit();
             return List.of(screen.split("\n"))
                     .map(line -> line.replaceAll("^[│ ]+|[│ ]+$", ""))
                     .find(line -> line.startsWith("repo →"))

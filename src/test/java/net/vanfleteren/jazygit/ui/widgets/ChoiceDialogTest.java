@@ -12,6 +12,7 @@ import io.vavr.collection.List;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
+import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 import org.junit.jupiter.api.Test;
 
@@ -57,14 +58,14 @@ class ChoiceDialogTest {
     @Test
     void anOptionIsChosenByItsLetterOrByArrowsAndEnter() throws Exception {
         try (ToolkitTestRunner runner = start(true)) {
-            runner.pilot().press('b');
-            runner.pilot().pause();
-            runner.pilot().press(KeyCode.ENTER);
-            runner.pilot().pause();
-            runner.pilot().press(KeyCode.DOWN);
-            runner.pilot().press(KeyCode.DOWN);
-            runner.pilot().press(KeyCode.ENTER);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press('b');
+            SettledPilot.of(runner).pause();
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(java.util.List.of(new Picked("b"), new Picked("a"), new Picked("cancel")), dispatched);
@@ -73,10 +74,10 @@ class ChoiceDialogTest {
     @Test
     void escapeAndTheCancelLetterCancel() throws Exception {
         try (ToolkitTestRunner runner = start(true)) {
-            runner.pilot().press(KeyCode.ESCAPE);
-            runner.pilot().pause();
-            runner.pilot().press('c');
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).pause();
+            SettledPilot.of(runner).press('c');
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(java.util.List.of(new Picked("cancel"), new Picked("cancel")), dispatched);
@@ -85,8 +86,8 @@ class ChoiceDialogTest {
     @Test
     void aDisabledOptionCannotBeChosen() throws Exception {
         try (ToolkitTestRunner runner = start(false)) {
-            runner.pilot().press('b');
-            runner.pilot().pause();
+            SettledPilot.of(runner).press('b');
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(java.util.List.of(), dispatched);
@@ -94,7 +95,7 @@ class ChoiceDialogTest {
 
     private ToolkitTestRunner start(boolean second) throws Exception {
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(second));
-        runner.runner().focusManager().setFocus("pick");
+        SettledPilot.focus(runner, "pick");
         RenderedText.of(runner, () -> view(second));
         return runner;
     }

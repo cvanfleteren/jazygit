@@ -95,15 +95,15 @@ class PanePositionTest {
             assertTrue(screen.contains(Placeholders.loading()), screen);
             assertFalse(screen.contains("1/1"), screen);
 
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).quit();
         }
     }
 
     private static void assertPositions(Supplier<Element> render, String id, KeyCode key, String before, String after)
             throws Exception {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(render)) {
-            testRunner.runner().focusManager().setFocus(id);
-            Pilot pilot = testRunner.pilot();
+            SettledPilot.focus(testRunner, id);
+            Pilot pilot = SettledPilot.of(testRunner);
             pilot.pause();
 
             String initial = RenderedText.of(testRunner, render);

@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
+import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -34,21 +35,21 @@ class DeleteBranchDialogTest {
     void lettersChooseAnOption() throws Exception {
         assertEquals(
                 List.of(new DeleteBranchMsg.Chosen(DeleteScope.LOCAL)),
-                pressing(r -> r.pilot().press('d')));
+                pressing(r -> SettledPilot.of(r).press('d')));
     }
 
     @Test
     void bDeletesLocalAndRemote() throws Exception {
         assertEquals(
                 List.of(new DeleteBranchMsg.Chosen(DeleteScope.BOTH)),
-                pressing(r -> r.pilot().press('b')));
+                pressing(r -> SettledPilot.of(r).press('b')));
     }
 
     @Test
     void arrowsAndEnterChooseTheSelectedLine() throws Exception {
         assertEquals(List.of(new DeleteBranchMsg.Chosen(DeleteScope.REMOTE)), pressing(r -> {
-            r.pilot().press(KeyCode.DOWN);
-            r.pilot().press(KeyCode.ENTER);
+            SettledPilot.of(r).press(KeyCode.DOWN);
+            SettledPilot.of(r).press(KeyCode.ENTER);
         }));
     }
 
@@ -56,11 +57,11 @@ class DeleteBranchDialogTest {
     void escapeAndCCancel() throws Exception {
         assertEquals(
                 List.of(new DeleteBranchMsg.Cancelled()),
-                pressing(r -> r.pilot().press(KeyCode.ESCAPE)));
+                pressing(r -> SettledPilot.of(r).press(KeyCode.ESCAPE)));
         dispatched.clear();
         assertEquals(
                 List.of(new DeleteBranchMsg.Cancelled()),
-                pressing(r -> r.pilot().press('c')));
+                pressing(r -> SettledPilot.of(r).press('c')));
     }
 
     @Test
@@ -71,17 +72,17 @@ class DeleteBranchDialogTest {
                 .model();
 
         assertEquals(List.of(), pressing(localOnly, r -> {
-            r.pilot().press('r');
-            r.pilot().press('b');
-            r.pilot().press(KeyCode.DOWN);
-            r.pilot().press(KeyCode.ENTER);
-            r.pilot().press(KeyCode.DOWN);
-            r.pilot().press(KeyCode.ENTER);
+            SettledPilot.of(r).press('r');
+            SettledPilot.of(r).press('b');
+            SettledPilot.of(r).press(KeyCode.DOWN);
+            SettledPilot.of(r).press(KeyCode.ENTER);
+            SettledPilot.of(r).press(KeyCode.DOWN);
+            SettledPilot.of(r).press(KeyCode.ENTER);
         }));
         dispatched.clear();
         assertEquals(
                 List.of(new DeleteBranchMsg.Chosen(DeleteScope.LOCAL)),
-                pressing(localOnly, r -> r.pilot().press('d')));
+                pressing(localOnly, r -> SettledPilot.of(r).press('d')));
     }
 
     @Test
@@ -102,8 +103,8 @@ class DeleteBranchDialogTest {
                 .model();
 
         assertEquals(List.of(), pressing(open, r -> {
-            r.pilot().press('r');
-            r.pilot().press('b');
+            SettledPilot.of(r).press('r');
+            SettledPilot.of(r).press('b');
         }));
     }
 
@@ -124,10 +125,10 @@ class DeleteBranchDialogTest {
 
     private List<Msg> pressing(Model model, Keys keys) throws Exception {
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(model))) {
-            runner.runner().focusManager().setFocus(BranchDialogs.DELETE_BRANCH.id());
+            SettledPilot.focus(runner, BranchDialogs.DELETE_BRANCH.id());
             RenderedText.of(runner, () -> view(model));
             keys.press(runner);
-            runner.pilot().pause();
+            SettledPilot.of(runner).pause();
         }
         return List.ofAll(dispatched);
     }

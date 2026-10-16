@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.git.model.ResetTarget;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
+import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
 import org.junit.jupiter.api.Test;
@@ -102,10 +103,10 @@ class ResetDialogTest {
     private List<Msg> pressing(char key) throws Exception {
         dispatched.clear();
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view)) {
-            runner.runner().focusManager().setFocus(CommitDialogs.RESET.id());
+            SettledPilot.focus(runner, CommitDialogs.RESET.id());
             RenderedText.of(runner, this::view);
-            runner.pilot().press(key);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(key);
+            SettledPilot.of(runner).pause();
         }
         return List.ofAll(dispatched);
     }

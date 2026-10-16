@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
+import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import org.junit.jupiter.api.Test;
 
@@ -35,19 +36,27 @@ class RebaseDialogTest {
 
     @Test
     void sChoosesASimpleRebase() throws Exception {
-        assertEquals(List.of(new RebaseMsg.Chosen()), pressing(r -> r.pilot().press('s')));
+        assertEquals(
+                List.of(new RebaseMsg.Chosen()),
+                pressing(r -> SettledPilot.of(r).press('s')));
     }
 
     @Test
     void enterChoosesTheFirstLine() throws Exception {
-        assertEquals(List.of(new RebaseMsg.Chosen()), pressing(r -> r.pilot().press(KeyCode.ENTER)));
+        assertEquals(
+                List.of(new RebaseMsg.Chosen()),
+                pressing(r -> SettledPilot.of(r).press(KeyCode.ENTER)));
     }
 
     @Test
     void escapeAndCCancel() throws Exception {
-        assertEquals(List.of(new RebaseMsg.Cancelled()), pressing(r -> r.pilot().press(KeyCode.ESCAPE)));
+        assertEquals(
+                List.of(new RebaseMsg.Cancelled()),
+                pressing(r -> SettledPilot.of(r).press(KeyCode.ESCAPE)));
         dispatched.clear();
-        assertEquals(List.of(new RebaseMsg.Cancelled()), pressing(r -> r.pilot().press('c')));
+        assertEquals(
+                List.of(new RebaseMsg.Cancelled()),
+                pressing(r -> SettledPilot.of(r).press('c')));
     }
 
     @Test
@@ -62,10 +71,10 @@ class RebaseDialogTest {
 
     private List<Msg> pressing(Keys keys) throws Exception {
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view())) {
-            runner.runner().focusManager().setFocus(BranchDialogs.REBASE.id());
+            SettledPilot.focus(runner, BranchDialogs.REBASE.id());
             RenderedText.of(runner, () -> view());
             keys.press(runner);
-            runner.pilot().pause();
+            SettledPilot.of(runner).pause();
         }
         return List.ofAll(dispatched);
     }

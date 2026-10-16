@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
+import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -57,8 +58,8 @@ class MergeDialogTest {
         assertEquals(List.of(new MergeMsg.Cancelled()), pressing('c'));
         dispatched.clear();
         try (ToolkitTestRunner runner = start()) {
-            runner.pilot().press(KeyCode.ESCAPE);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).pause();
         }
         assertEquals(java.util.List.of(new MergeMsg.Cancelled()), dispatched);
     }
@@ -66,8 +67,8 @@ class MergeDialogTest {
     private List<Msg> pressing(char key) throws Exception {
         dispatched.clear();
         try (ToolkitTestRunner runner = start()) {
-            runner.pilot().press(key);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(key);
+            SettledPilot.of(runner).pause();
         }
         return List.ofAll(dispatched);
     }
@@ -75,7 +76,7 @@ class MergeDialogTest {
     private ToolkitTestRunner start() throws Exception {
         assertTrue(open.popup(MergePopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        runner.runner().focusManager().setFocus(BranchDialogs.MERGE.id());
+        SettledPilot.focus(runner, BranchDialogs.MERGE.id());
         RenderedText.of(runner, this::view);
         return runner;
     }

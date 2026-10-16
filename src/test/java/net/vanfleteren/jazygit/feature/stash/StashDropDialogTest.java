@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
+import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -35,8 +36,8 @@ class StashDropDialogTest {
     @Test
     void enterConfirms() throws Exception {
         try (ToolkitTestRunner runner = start()) {
-            runner.pilot().press(KeyCode.ENTER);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(java.util.List.of(new StashMsg.DropConfirmed()), dispatched);
@@ -45,8 +46,8 @@ class StashDropDialogTest {
     @Test
     void escapeCancels() throws Exception {
         try (ToolkitTestRunner runner = start()) {
-            runner.pilot().press(KeyCode.ESCAPE);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(java.util.List.of(new StashMsg.DropCancelled()), dispatched);
@@ -70,7 +71,7 @@ class StashDropDialogTest {
     private ToolkitTestRunner start() throws Exception {
         assertTrue(open.popup(StashDropPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        runner.runner().focusManager().setFocus(StashDialogs.DROP.id());
+        SettledPilot.focus(runner, StashDialogs.DROP.id());
         RenderedText.of(runner, this::view);
         return runner;
     }

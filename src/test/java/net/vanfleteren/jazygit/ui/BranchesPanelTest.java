@@ -279,12 +279,12 @@ class BranchesPanelTest {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
-            testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
             RenderedText.of(testRunner, () -> panel.render(before, BranchesPanel.ID));
-            testRunner.pilot().press(KeyCode.DOWN);
-            testRunner.pilot().press('R');
-            testRunner.pilot().pause();
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner).press('R');
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).quit();
         }
 
         assertEquals(
@@ -298,12 +298,12 @@ class BranchesPanelTest {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
-            testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
             RenderedText.of(testRunner, () -> panel.render(before, BranchesPanel.ID));
-            testRunner.pilot().press(KeyCode.DOWN);
-            testRunner.pilot().press('n');
-            testRunner.pilot().pause();
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner).press('n');
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).quit();
         }
 
         assertEquals(java.util.List.of(new NewBranchMsg.Requested(new Branch.Name("feature"))), dispatched);
@@ -314,12 +314,12 @@ class BranchesPanelTest {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
-            testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
             RenderedText.of(testRunner, () -> panel.render(before, BranchesPanel.ID));
-            testRunner.pilot().press(KeyCode.DOWN);
-            testRunner.pilot().press('P');
-            testRunner.pilot().pause();
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner).press('P');
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).quit();
         }
 
         assertEquals(
@@ -333,12 +333,12 @@ class BranchesPanelTest {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
-            testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
             RenderedText.of(testRunner, () -> panel.render(before, BranchesPanel.ID));
-            testRunner.pilot().press(KeyCode.DOWN);
-            testRunner.pilot().press('p');
-            testRunner.pilot().pause();
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner).press('p');
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).quit();
         }
 
         assertEquals(
@@ -352,11 +352,11 @@ class BranchesPanelTest {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
-            testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
             RenderedText.of(testRunner, () -> panel.render(before, BranchesPanel.ID));
-            testRunner.pilot().press('?');
-            testRunner.pilot().pause();
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).press('?');
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).quit();
         }
 
         assertEquals(1, dispatched.size());
@@ -374,7 +374,7 @@ class BranchesPanelTest {
         Model remote = withRemotes(before);
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(remote, BranchesPanel.ID))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(remote, BranchesPanel.ID));
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).quit();
 
             assertTrue(screen.contains("Branches │ Remotes"), screen);
             assertTrue(screen.contains("origin/feature"), screen);
@@ -394,14 +394,14 @@ class BranchesPanelTest {
         Model worktrees = withWorktrees(before);
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(worktrees, BranchesPanel.ID))) {
-            testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
             String screen = RenderedText.of(testRunner, () -> panel.render(worktrees, BranchesPanel.ID));
-            testRunner.pilot().press(KeyCode.DOWN);
-            testRunner.pilot().press(' ');
-            testRunner.pilot().press('d');
-            testRunner.pilot().press(']');
-            testRunner.pilot().pause();
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner).press(' ');
+            SettledPilot.of(testRunner).press('d');
+            SettledPilot.of(testRunner).press(']');
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).quit();
 
             assertTrue(screen.contains("Branches │ Remotes │ Worktrees"), screen);
             assertTrue(screen.contains("* app main (main)"), screen);
@@ -447,12 +447,12 @@ class BranchesPanelTest {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
-            testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
             RenderedText.of(testRunner, () -> panel.render(before, BranchesPanel.ID));
-            testRunner.pilot().press(KeyCode.DOWN);
-            testRunner.pilot().press('w');
-            testRunner.pilot().pause();
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner).press('w');
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).quit();
         }
 
         assertEquals(java.util.List.of(new WorktreeMsg.NewRequested(new Branch.Name("feature"))), dispatched);
@@ -463,7 +463,7 @@ class BranchesPanelTest {
         Model none = before.withBranchesTab(BranchesTab.REMOTE).withRemoteBranches(new Loadable.Loaded<>(List.empty()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(none, BranchesPanel.ID))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(none, BranchesPanel.ID));
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).quit();
 
             assertTrue(screen.contains("No remote branches"), screen);
         }
@@ -476,15 +476,15 @@ class BranchesPanelTest {
         BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
         Model remote = withRemotes(before);
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(remote, BranchesPanel.ID))) {
-            testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
             RenderedText.of(testRunner, () -> panel.render(remote, BranchesPanel.ID));
-            testRunner.pilot().press(KeyCode.DOWN);
-            testRunner.pilot().press(' ');
-            testRunner.pilot().press('n');
-            testRunner.pilot().press('[');
-            testRunner.pilot().press('P');
-            testRunner.pilot().pause();
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner).press(' ');
+            SettledPilot.of(testRunner).press('n');
+            SettledPilot.of(testRunner).press('[');
+            SettledPilot.of(testRunner).press('P');
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).quit();
         }
 
         RemoteBranch upstreamMain = new RemoteBranch("upstream", new Branch.Name("main"));
@@ -502,11 +502,11 @@ class BranchesPanelTest {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
-            testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
             RenderedText.of(testRunner, () -> panel.render(before, BranchesPanel.ID));
-            testRunner.pilot().press(']');
-            testRunner.pilot().pause();
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).press(']');
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).quit();
         }
 
         assertEquals(java.util.List.of(new BranchesTabMsg.Switched(1)), dispatched);
@@ -520,10 +520,10 @@ class BranchesPanelTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, null))) {
             RenderedText.of(testRunner, () -> panel.render(before, null));
             // The title starts after the corner of the border.
-            testRunner.pilot().click(local + 4, 0);
-            testRunner.pilot().click(1, 0);
-            testRunner.pilot().pause();
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).click(local + 4, 0);
+            SettledPilot.of(testRunner).click(1, 0);
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).quit();
         }
 
         assertEquals(java.util.List.of(BranchesTab.REMOTE, BranchesTab.LOCAL), clicked);
@@ -565,16 +565,16 @@ class BranchesPanelTest {
 
     private String highlightedAfterMovingTo(int index, Model after) throws Exception {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
-            testRunner.runner().focusManager().setFocus(BranchesPanel.ID);
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
             RenderedText.of(testRunner, () -> panel.render(before, BranchesPanel.ID));
             for (int i = 0; i < index; i++) {
-                testRunner.pilot().press(KeyCode.DOWN);
+                SettledPilot.of(testRunner).press(KeyCode.DOWN);
             }
-            testRunner.pilot().pause();
+            SettledPilot.of(testRunner).pause();
             assertEquals(index, panel.selectedIndex());
 
             RenderedText.of(testRunner, () -> panel.render(after, BranchesPanel.ID));
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).quit();
             return panel.selectedBranch().get().value();
         }
     }

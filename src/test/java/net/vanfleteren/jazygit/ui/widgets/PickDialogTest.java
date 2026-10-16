@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
+import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
 
 class PickDialogTest {
@@ -50,14 +51,14 @@ class PickDialogTest {
     @Test
     void aNameIsPickedWithTheArrowsAndEnterAndEscapeCancels() throws Exception {
         try (ToolkitTestRunner runner = start()) {
-            runner.pilot().press(KeyCode.ENTER);
-            runner.pilot().pause();
-            runner.pilot().press(KeyCode.DOWN);
-            runner.pilot().press(KeyCode.DOWN);
-            runner.pilot().press(KeyCode.ENTER);
-            runner.pilot().pause();
-            runner.pilot().press(KeyCode.ESCAPE);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(java.util.List.of(new Picked("main"), new Picked("release"), new Picked("cancel")), dispatched);
@@ -81,13 +82,13 @@ class PickDialogTest {
                         .get());
 
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
-            runner.runner().focusManager().setFocus("pick");
+            SettledPilot.focus(runner, "pick");
             String screen = RenderedText.ofLarge(runner, view);
             assertTrue(screen.contains("No other recent repositories"), screen);
-            runner.pilot().press(KeyCode.ENTER);
-            runner.pilot().pause();
-            runner.pilot().press(KeyCode.ESCAPE);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(java.util.List.of(new Picked("cancel")), dispatched);
@@ -126,17 +127,17 @@ class PickDialogTest {
                         .get());
 
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
-            runner.runner().focusManager().setFocus("pick");
+            SettledPilot.focus(runner, "pick");
             String first = RenderedText.ofLarge(runner, view);
             assertTrue(first.contains("short     ~/repos"), first);
             assertTrue(first.contains("a-very-…  ~/repos"), first);
             assertFalse(first.contains("a-very-long-name"), first);
-            runner.pilot().press(KeyCode.DOWN);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).pause();
             String second = RenderedText.ofLarge(runner, view);
             assertTrue(second.contains("a-very-long-name"), second);
-            runner.pilot().press(KeyCode.ENTER);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(java.util.List.of(new Picked("a-very-long-name")), dispatched);
@@ -144,7 +145,7 @@ class PickDialogTest {
 
     private ToolkitTestRunner start() throws Exception {
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        runner.runner().focusManager().setFocus("pick");
+        SettledPilot.focus(runner, "pick");
         RenderedText.of(runner, this::view);
         return runner;
     }

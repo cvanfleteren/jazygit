@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.*;
+import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -48,9 +49,9 @@ class JazygitAppPilotTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
             FocusManager focusManager = testRunner.runner().focusManager();
             fixture.focusManagerRef().set(focusManager);
-            focusManager.setFocus(FilesPanel.ID);
+            SettledPilot.focus(testRunner, FilesPanel.ID);
 
-            Pilot pilot = testRunner.pilot();
+            Pilot pilot = SettledPilot.of(testRunner);
             pilot.pause();
             assertEquals(FilesPanel.ID, focusManager.focusedId());
 
@@ -108,16 +109,16 @@ class JazygitAppPilotTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
             FocusManager focusManager = testRunner.runner().focusManager();
             fixture.focusManagerRef().set(focusManager);
-            focusManager.setFocus(StashPanel.ID);
+            SettledPilot.focus(testRunner, StashPanel.ID);
 
-            Pilot pilot = testRunner.pilot();
+            Pilot pilot = SettledPilot.of(testRunner);
             pilot.pause();
             pilot.press(KeyCode.TAB);
             pilot.pause();
             assertEquals(FilesPanel.ID, focusManager.focusedId(), "Tab from the last pane should skip the diffs");
 
             // As Enter on a file does; the key after it renders the diffs with the focus.
-            focusManager.setFocus("diff-staged");
+            SettledPilot.focus(testRunner, "diff-staged");
             pilot.press(KeyCode.DOWN);
             pilot.pause();
             pilot.press(KeyCode.TAB);
@@ -151,9 +152,9 @@ class JazygitAppPilotTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
             FocusManager focusManager = testRunner.runner().focusManager();
             fixture.focusManagerRef().set(focusManager);
-            focusManager.setFocus(FilesPanel.ID);
+            SettledPilot.focus(testRunner, FilesPanel.ID);
 
-            Pilot pilot = testRunner.pilot();
+            Pilot pilot = SettledPilot.of(testRunner);
             pilot.press(KeyCode.TAB);
             pilot.pause();
             assertEquals(BranchesPanel.ID, focusManager.focusedId());
@@ -178,9 +179,9 @@ class JazygitAppPilotTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
             FocusManager focusManager = testRunner.runner().focusManager();
             fixture.focusManagerRef().set(focusManager);
-            focusManager.setFocus(BranchesPanel.ID);
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
 
-            Pilot pilot = testRunner.pilot();
+            Pilot pilot = SettledPilot.of(testRunner);
             pilot.pause();
             assertEquals(0, fixture.branches().selectedIndex());
 
@@ -213,9 +214,9 @@ class JazygitAppPilotTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
             FocusManager focusManager = testRunner.runner().focusManager();
             fixture.focusManagerRef().set(focusManager);
-            focusManager.setFocus(BranchesPanel.ID);
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
 
-            Pilot pilot = testRunner.pilot();
+            Pilot pilot = SettledPilot.of(testRunner);
             pilot.pause();
             assertEquals(
                     new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("main"))),
@@ -238,9 +239,9 @@ class JazygitAppPilotTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
             FocusManager focusManager = testRunner.runner().focusManager();
             fixture.focusManagerRef().set(focusManager);
-            focusManager.setFocus(BranchesPanel.ID);
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
 
-            Pilot pilot = testRunner.pilot();
+            Pilot pilot = SettledPilot.of(testRunner);
             pilot.pause();
             pilot.press(KeyCode.DOWN);
             pilot.press(' ');
@@ -249,7 +250,7 @@ class JazygitAppPilotTest {
                     java.util.List.of(new CheckoutMsg.Requested(new Branch.Name("feature/initial-layout"))),
                     fixture.dispatched());
 
-            focusManager.setFocus(CommitsPanel.ID);
+            SettledPilot.focus(testRunner, CommitsPanel.ID);
             pilot.pause();
             pilot.press(' ');
             pilot.pause();
@@ -266,9 +267,9 @@ class JazygitAppPilotTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
             FocusManager focusManager = testRunner.runner().focusManager();
             fixture.focusManagerRef().set(focusManager);
-            focusManager.setFocus(CommitsPanel.ID);
+            SettledPilot.focus(testRunner, CommitsPanel.ID);
 
-            Pilot pilot = testRunner.pilot();
+            Pilot pilot = SettledPilot.of(testRunner);
             pilot.pause();
             // Moving re-renders, which is how the panel learns it has focus.
             pilot.press(KeyCode.DOWN);
@@ -292,9 +293,9 @@ class JazygitAppPilotTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
             FocusManager focusManager = testRunner.runner().focusManager();
             fixture.focusManagerRef().set(focusManager);
-            focusManager.setFocus(FilesPanel.ID);
+            SettledPilot.focus(testRunner, FilesPanel.ID);
 
-            Pilot pilot = testRunner.pilot();
+            Pilot pilot = SettledPilot.of(testRunner);
             pilot.pause();
             // Moving re-renders, which is how the panel learns it has focus.
             pilot.press(KeyCode.DOWN);
@@ -316,9 +317,9 @@ class JazygitAppPilotTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
             FocusManager focusManager = testRunner.runner().focusManager();
             fixture.focusManagerRef().set(focusManager);
-            focusManager.setFocus(FilesPanel.ID);
+            SettledPilot.focus(testRunner, FilesPanel.ID);
 
-            Pilot pilot = testRunner.pilot();
+            Pilot pilot = SettledPilot.of(testRunner);
             pilot.pause();
             // Moving re-renders, which is how the panel learns it has focus.
             pilot.press(KeyCode.DOWN);

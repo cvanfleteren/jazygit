@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
+import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import org.junit.jupiter.api.Test;
 
@@ -112,16 +113,16 @@ class SettingsPanelDialogsTest {
                 dialog.render(TestModels.loaded().openPopup(popup)).get());
 
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view)) {
-            runner.runner().focusManager().setFocus(SettingsPanelDialogs.PANEL.id());
+            SettledPilot.focus(runner, SettingsPanelDialogs.PANEL.id());
             RenderedText.of(runner, () -> view);
-            runner.pilot().press(KeyCode.DOWN);
-            runner.pilot().press(KeyCode.DOWN);
-            runner.pilot().press(KeyCode.ENTER);
-            runner.pilot().press(KeyCode.UP);
-            runner.pilot().press(KeyCode.UP);
-            runner.pilot().press(KeyCode.UP);
-            runner.pilot().press(KeyCode.ENTER);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).press(KeyCode.UP);
+            SettledPilot.of(runner).press(KeyCode.UP);
+            SettledPilot.of(runner).press(KeyCode.UP);
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(

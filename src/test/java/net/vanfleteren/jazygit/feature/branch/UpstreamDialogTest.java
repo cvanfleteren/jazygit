@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
+import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import org.junit.jupiter.api.Test;
 
@@ -68,10 +69,10 @@ class UpstreamDialogTest {
     void gChoosesTheReset() throws Exception {
         Model open = TestModels.loaded().openPopup(new UpstreamPopup(Option.of(TRACKING)));
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(open))) {
-            runner.runner().focusManager().setFocus(BranchDialogs.UPSTREAM.id());
+            SettledPilot.focus(runner, BranchDialogs.UPSTREAM.id());
             RenderedText.of(runner, () -> view(open));
-            runner.pilot().press('g');
-            runner.pilot().pause();
+            SettledPilot.of(runner).press('g');
+            SettledPilot.of(runner).pause();
         }
         assertEquals(List.of(new UpstreamMsg.ResetChosen()), List.ofAll(dispatched));
     }

@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
+import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import org.junit.jupiter.api.Test;
 
@@ -36,35 +37,35 @@ class ThemeDialogTest {
     void lettersChooseATheme() throws Exception {
         assertEquals(
                 List.of(new ThemeMsg.Chosen(ThemeName.DARK)),
-                pressing(r -> r.pilot().press('d')));
+                pressing(r -> SettledPilot.of(r).press('d')));
         dispatched.clear();
         assertEquals(
                 List.of(new ThemeMsg.Chosen(ThemeName.LIGHT)),
-                pressing(r -> r.pilot().press('l')));
+                pressing(r -> SettledPilot.of(r).press('l')));
         dispatched.clear();
         assertEquals(
                 List.of(new ThemeMsg.Chosen(ThemeName.DARCULA)),
-                pressing(r -> r.pilot().press('a')));
+                pressing(r -> SettledPilot.of(r).press('a')));
         dispatched.clear();
         assertEquals(
                 List.of(new ThemeMsg.Chosen(ThemeName.DARK_COLORBLIND)),
-                pressing(r -> r.pilot().press('b')));
+                pressing(r -> SettledPilot.of(r).press('b')));
         dispatched.clear();
         assertEquals(
                 List.of(new ThemeMsg.Chosen(ThemeName.MONO)),
-                pressing(r -> r.pilot().press('m')));
+                pressing(r -> SettledPilot.of(r).press('m')));
         dispatched.clear();
         assertEquals(
                 List.of(new ThemeMsg.Chosen(ThemeName.EMBER)),
-                pressing(r -> r.pilot().press('e')));
+                pressing(r -> SettledPilot.of(r).press('e')));
     }
 
     @Test
     void arrowsAndEnterChooseTheSelectedLine() throws Exception {
         assertEquals(
                 List.of(new ThemeMsg.Previewed(ThemeName.LIGHT), new ThemeMsg.Chosen(ThemeName.LIGHT)), pressing(r -> {
-                    r.pilot().press(KeyCode.DOWN);
-                    r.pilot().press(KeyCode.ENTER);
+                    SettledPilot.of(r).press(KeyCode.DOWN);
+                    SettledPilot.of(r).press(KeyCode.ENTER);
                 }));
     }
 
@@ -76,9 +77,9 @@ class ThemeDialogTest {
                         new ThemeMsg.Previewed(ThemeName.DARCULA),
                         new ThemeMsg.Previewed(ThemeName.LIGHT)),
                 pressing(r -> {
-                    r.pilot().press(KeyCode.DOWN);
-                    r.pilot().press(KeyCode.DOWN);
-                    r.pilot().press(KeyCode.UP);
+                    SettledPilot.of(r).press(KeyCode.DOWN);
+                    SettledPilot.of(r).press(KeyCode.DOWN);
+                    SettledPilot.of(r).press(KeyCode.UP);
                 }));
     }
 
@@ -90,11 +91,11 @@ class ThemeDialogTest {
                 .model();
 
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(light))) {
-            runner.runner().focusManager().setFocus(ThemeDialog.SPEC.id());
+            SettledPilot.focus(runner, ThemeDialog.SPEC.id());
             RenderedText.of(runner, () -> view(light));
-            runner.pilot().press(KeyCode.DOWN);
-            runner.pilot().press(KeyCode.ENTER);
-            runner.pilot().pause();
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
         }
 
         assertEquals(
@@ -104,9 +105,13 @@ class ThemeDialogTest {
 
     @Test
     void escapeAndCCancel() throws Exception {
-        assertEquals(List.of(new ThemeMsg.Cancelled()), pressing(r -> r.pilot().press(KeyCode.ESCAPE)));
+        assertEquals(
+                List.of(new ThemeMsg.Cancelled()),
+                pressing(r -> SettledPilot.of(r).press(KeyCode.ESCAPE)));
         dispatched.clear();
-        assertEquals(List.of(new ThemeMsg.Cancelled()), pressing(r -> r.pilot().press('c')));
+        assertEquals(
+                List.of(new ThemeMsg.Cancelled()),
+                pressing(r -> SettledPilot.of(r).press('c')));
     }
 
     @Test
@@ -123,10 +128,10 @@ class ThemeDialogTest {
 
     private List<Msg> pressing(Keys keys) throws Exception {
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view())) {
-            runner.runner().focusManager().setFocus(ThemeDialog.SPEC.id());
+            SettledPilot.focus(runner, ThemeDialog.SPEC.id());
             RenderedText.of(runner, () -> view());
             keys.press(runner);
-            runner.pilot().pause();
+            SettledPilot.of(runner).pause();
         }
         return List.ofAll(dispatched);
     }

@@ -38,7 +38,7 @@ class FilesPanelTest {
             assertTrue(other.contains("UD theirs-deleted.txt"), other);
             assertTrue(other.contains("DU ours-deleted.txt"), other);
 
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).quit();
         }
     }
 
@@ -55,7 +55,7 @@ class FilesPanelTest {
             assertFalse(inactive.contains(">"), inactive);
             assertTrue(inactive.contains("UU both.txt"), inactive);
 
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).quit();
         }
     }
 
@@ -75,7 +75,7 @@ class FilesPanelTest {
             String other = RenderedText.of(testRunner, () -> panel.render(otherDirectory, FilesPanel.ID));
             assertTrue(other.contains("R  src/m.txt -> m.txt"), other);
 
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).quit();
         }
     }
 
@@ -106,7 +106,7 @@ class FilesPanelTest {
             assertTrue(screen.contains("A  a.txt"), screen);
             assertFalse(screen.contains("?? a.txt"), screen);
 
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).quit();
         }
     }
 
@@ -121,7 +121,7 @@ class FilesPanelTest {
             // Apart from the position, there is no "/" root row.
             assertFalse(screen.replace("0/0", "").contains("/"), screen);
 
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).quit();
         }
     }
 
@@ -143,7 +143,7 @@ class FilesPanelTest {
             FileTree selected = panel.tree().selectedNode().data();
             assertEquals(b, ((FileTree.File) selected).entry());
 
-            testRunner.pilot().quit();
+            SettledPilot.of(testRunner).quit();
         }
     }
 
