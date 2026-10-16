@@ -21,7 +21,11 @@ public enum ThemeName {
     /**
      * Saturated blues and oranges on deep navy.
      */
-    EMBER("ember");
+    EMBER("ember"),
+    /**
+     * The green, teal, blue and yellow of powerlevel10k's prompt segments on near-black.
+     */
+    POWERLINE("powerline");
 
     private final String id;
 

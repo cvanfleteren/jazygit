@@ -25,7 +25,9 @@ public final class ThemeDialog {
             'm',
             ThemeName.MONO,
             'e',
-            ThemeName.EMBER);
+            ThemeName.EMBER,
+            'p',
+            ThemeName.POWERLINE);
 
     /**
      * The themes, opening at the one in use, so the arrow keys preview the others from there.

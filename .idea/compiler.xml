@@ -21,7 +21,7 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <option name="project" value="net.vanfleteren/jazygit" />
+        <option name="project" value="net.vanfleteren/jazygit-app" />
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.46/lombok-1.18.46.jar" />
           <entry name="$MAVEN_REPOSITORY$/info/picocli/picocli-codegen/4.7.7/picocli-codegen-4.7.7.jar" />
@@ -34,7 +34,7 @@
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="jazygit" options="" />
-      <module name="jazygit (1)" options="-Aproject=net.vanfleteren/jazygit" />
+      <module name="jazygit (1)" options="-Aproject=net.vanfleteren/jazygit-app" />
     </option>
   </component>
 </project>
