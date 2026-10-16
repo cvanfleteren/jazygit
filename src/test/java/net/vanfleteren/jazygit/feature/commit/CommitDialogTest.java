@@ -7,7 +7,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
 import io.vavr.collection.List;
 import java.util.ArrayList;
@@ -90,6 +92,12 @@ class CommitDialogTest {
     @Test
     void escapeCancelsFromEitherField() throws Exception {
         try (ToolkitTestRunner runner = start()) {
+            // The app has a global Escape, which gets the key before the dialog around the fields does.
+            runner.runner()
+                    .eventRouter()
+                    .addGlobalHandler(event -> event instanceof KeyEvent key && key.code() == KeyCode.ESCAPE
+                            ? EventResult.HANDLED
+                            : EventResult.UNHANDLED);
             runner.pilot().press(KeyCode.ESCAPE);
             runner.pilot().press(KeyCode.TAB);
             runner.pilot().press(KeyCode.ESCAPE);

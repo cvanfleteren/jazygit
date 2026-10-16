@@ -3,6 +3,9 @@ package net.vanfleteren.jazygit.feature.commit;
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.widgets.block.BorderType;
 import dev.tamboui.widgets.input.TextAreaState;
 import dev.tamboui.widgets.input.TextInputState;
@@ -138,14 +141,16 @@ public final class CommitDialog implements PopupView {
                                 .title(Messages.get("dialog.commit.summary.title"))
                                 .placeholder(Messages.get("dialog.commit.summary.placeholder"))
                                 .length(INPUT_HEIGHT)
-                                .onSubmit(this::confirm),
+                                .onSubmit(this::confirm)
+                                .onKeyEvent(this::escape),
                         new SubmittableTextArea(
                                         textArea(description)
                                                 .title(Messages.get("dialog.commit.description.title"))
                                                 .placeholder(Messages.get("dialog.commit.description.placeholder")),
                                         descriptionId,
                                         this::confirm)
-                                .rows(DESCRIPTION_HEIGHT))
+                                .rows(DESCRIPTION_HEIGHT)
+                                .onKeyEvent(this::escape))
                 .borderType(BorderType.NONE)
                 .width(WIDTH)
                 .onCancel(this::cancel));
@@ -159,6 +164,18 @@ public final class CommitDialog implements PopupView {
             clear();
         }
         dispatch.accept(confirmed.apply(new CommitMessage(message, details)));
+    }
+
+    /**
+     * Cancels on Escape in a field. The dialog around the fields only gets keys after the global handlers, and
+     * one of those takes Escape too.
+     */
+    private EventResult escape(KeyEvent event) {
+        if (event.code() != KeyCode.ESCAPE) {
+            return EventResult.UNHANDLED;
+        }
+        cancel();
+        return EventResult.HANDLED;
     }
 
     private void cancel() {
