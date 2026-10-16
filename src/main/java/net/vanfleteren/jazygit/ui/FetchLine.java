@@ -9,9 +9,9 @@ import net.vanfleteren.jazygit.state.Fetching;
 import net.vanfleteren.jazygit.state.Model;
 
 /**
- * The line under everything else saying what is being read in the background: the remote being fetched from,
- * or the pull requests being read from GitHub. It is always there, blank while nothing is read, so the panes
- * above it do not move.
+ * The line under everything else saying which commit is copied to cherry-pick, else what is being read in the
+ * background: the remote being fetched from, or the pull requests being read from GitHub. It is always there,
+ * blank while there is nothing to say, so the panes above it do not move.
  */
 public final class FetchLine {
 
@@ -23,6 +23,12 @@ public final class FetchLine {
     private FetchLine() {}
 
     public static TextElement render(Model model) {
+        return model.cherryPick()
+                .map(commit -> text(Messages.get("status.cherryPick", commit.shortSha())))
+                .getOrElse(() -> background(model));
+    }
+
+    private static TextElement background(Model model) {
         return text(model.fetching()
                         .flatMap(Fetching::remote)
                         .map(remote -> Messages.get("status.fetching", remote))

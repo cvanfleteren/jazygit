@@ -95,6 +95,16 @@ public interface GitInfoProvider {
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> merge(Branch.Name branch, MergeMode mode);
 
+    // Copying commits onto the checked out branch, as git cherry-pick does.
+
+    /**
+     * Commits the changes of the commit {@code sha} on top of the checked out branch. A cherry-pick that stops,
+     * on conflicts or because it changes nothing, is undone again, so the repository is left as it was.
+     *
+     * @param sha the full object id of a commit that is not a merge
+     */
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> cherryPick(Sha sha);
+
     // Rebasing the checked out branch, as git rebase does.
 
     /**

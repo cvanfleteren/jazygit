@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.keys;
 import io.vavr.collection.List;
 import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.feature.branch.BranchKeys;
+import net.vanfleteren.jazygit.feature.cherrypick.CherryPickKeys;
 import net.vanfleteren.jazygit.feature.commit.CommitKeys;
 import net.vanfleteren.jazygit.feature.discard.DiscardKeys;
 import net.vanfleteren.jazygit.feature.github.BrowseKeys;
@@ -18,6 +19,7 @@ final class Standard {
     static final Keymap KEYMAP = List.<UnaryOperator<Keymap>>of(
                     StageKeys::register,
                     CommitKeys::register,
+                    CherryPickKeys::register,
                     DiscardKeys::register,
                     StashKeys::register,
                     BranchKeys::register,

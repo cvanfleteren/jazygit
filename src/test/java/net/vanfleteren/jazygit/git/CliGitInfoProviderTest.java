@@ -374,6 +374,67 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void cherryPickCopiesACommitOntoTheCheckedOutBranch() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Feature work");
+        Sha picked = provider.commits().get().head().sha();
+        git("checkout", "-q", "main");
+
+        List<String> executed = provider.cherryPick(picked).get().map(ExecutedCommand::line);
+
+        assertEquals(List.of("git cherry-pick " + picked.value()), executed);
+        assertEquals(
+                List.of("Feature work", "Initial commit"),
+                provider.commits().get().map(Commit::message).toList());
+        assertEquals("f\n", Files.readString(repo.resolve("f.txt")));
+    }
+
+    @Test
+    void aConflictingCherryPickIsAbortedAndLeavesTheBranchAsItWas() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("README.md"), "feature\n");
+        git("commit", "-q", "-am", "Feature edit");
+        Sha picked = provider.commits().get().head().sha();
+        git("checkout", "-q", "main");
+        Files.writeString(repo.resolve("README.md"), "main\n");
+        git("commit", "-q", "-am", "Main edit");
+
+        GitFailure<?> failure = provider.cherryPick(picked).getLeft();
+
+        assertInstanceOf(GitError.CommandFailed.class, failure.error());
+        assertEquals(
+                List.of("git cherry-pick " + picked.value(), "git cherry-pick --abort"),
+                failure.commands().map(ExecutedCommand::line));
+        assertEquals(
+                List.of("Main edit", "Initial commit"),
+                provider.commits().get().map(Commit::message).toList());
+        assertEquals("main\n", Files.readString(repo.resolve("README.md")));
+        assertTrue(!gitSucceedsIn(repo, "rev-parse", "--verify", "--quiet", "CHERRY_PICK_HEAD"));
+    }
+
+    @Test
+    void aCherryPickThatChangesNothingIsAborted() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Feature work");
+        Sha picked = provider.commits().get().head().sha();
+        git("checkout", "-q", "main");
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Same work");
+
+        assertTrue(provider.cherryPick(picked).isLeft());
+
+        assertEquals(
+                List.of("Same work", "Initial commit"),
+                provider.commits().get().map(Commit::message).toList());
+        assertTrue(!gitSucceedsIn(repo, "rev-parse", "--verify", "--quiet", "CHERRY_PICK_HEAD"));
+    }
+
+    @Test
     void squashFoldsACommitIntoItsParentAndKeepsBothMessages() throws Exception {
         Files.writeString(repo.resolve("a.txt"), "a\n");
         git("add", "a.txt");

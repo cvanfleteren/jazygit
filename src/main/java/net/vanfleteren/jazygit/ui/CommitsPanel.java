@@ -7,6 +7,7 @@ import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
@@ -23,6 +24,8 @@ public class CommitsPanel {
 
     private final LoadableList<List<Commit>> list;
     private final Keymap keymap = Keymap.standard();
+    // The commit copied to cherry-pick, as the last render's model had it.
+    private Option<Sha> copied = Option.none();
 
     /**
      * @param dispatch   receives the messages for the user's actions, on the render thread
@@ -39,7 +42,7 @@ public class CommitsPanel {
         list = new LoadableList<>(
                 Messages.get("panel.commits.title"),
                 ID,
-                commits -> rows(CommitGraph.layout(commits)),
+                commits -> rows(CommitGraph.layout(commits), copied),
                 CommitsPanel::reselect,
                 highlights);
         list.onKey(event -> event.code() == KeyCode.ENTER && selectedCommit().isDefined()
@@ -56,8 +59,17 @@ public class CommitsPanel {
     }
 
     static List<LoadableList.Row> rows(List<CommitGraph.Node> nodes) {
+        return rows(nodes, Option.none());
+    }
+
+    /**
+     * @param copied the commit copied to cherry-pick, whose sha stands out
+     */
+    static List<LoadableList.Row> rows(List<CommitGraph.Node> nodes, Option<Sha> copied) {
         // Each commit joins the branch that the commit before it closes.
-        return nodes.zipWith(nodes.map(CommitGraph.Node::closesBranch).prepend(false), CommitsPanel::row);
+        return nodes.zipWith(
+                nodes.map(CommitGraph.Node::closesBranch).prepend(false),
+                (node, joins) -> row(node, joins, copied.contains(node.commit().sha())));
     }
 
     /**
@@ -67,14 +79,23 @@ public class CommitsPanel {
      * @param joins whether the branch before this commit joins the main line at it
      */
     static LoadableList.Row row(CommitGraph.Node node, boolean joins) {
+        return row(node, joins, false);
+    }
+
+    /**
+     * @param copied whether the commit is copied to cherry-pick, which shows in its sha
+     */
+    static LoadableList.Row row(CommitGraph.Node node, boolean joins, boolean copied) {
         Commit commit = node.commit();
         String rails = "│ ".repeat(node.depth());
         String graph = commit.isMerge() ? rails + "◎─╮ " : joins ? rails + "○─╯ " : rails + "○ ";
-        LoadableList.Seg prefix =
-                LoadableList.Seg.of(commit.shortSha() + " " + initials(commit.authorName()) + " " + graph);
+        String author = " " + initials(commit.authorName()) + " " + graph;
+        List<LoadableList.Seg> prefix = copied
+                ? List.of(LoadableList.Seg.styled(commit.shortSha(), Theme.Classes.COPIED), LoadableList.Seg.of(author))
+                : List.of(LoadableList.Seg.of(commit.shortSha() + author));
         List<LoadableList.Seg> tags =
                 commit.tags().map(tag -> LoadableList.Seg.styled("[" + tag.name() + "] ", Theme.Classes.TAG));
-        return new LoadableList.Row(tags.prepend(prefix).append(LoadableList.Seg.of(commit.message())));
+        return new LoadableList.Row(prefix.appendAll(tags).append(LoadableList.Seg.of(commit.message())));
     }
 
     /**
@@ -104,6 +125,7 @@ public class CommitsPanel {
      * @param activeId the id of the left pane in use, whose highlighted row shows
      */
     public Panel render(Model model, String focusedId, String activeId) {
+        copied = model.cherryPick().map(Commit::sha);
         return list.render(model.commits(), ID.equals(focusedId), ID.equals(activeId));
     }
 

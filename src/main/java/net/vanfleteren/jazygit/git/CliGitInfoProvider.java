@@ -175,6 +175,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> cherryPick(Sha sha) {
+        return CliCherryPick.cherryPick(workTree, sha);
+    }
+
+    @Override
     public Either<ProcessError, List<String>> remotes() {
         return CliRemote.remotes(workTree);
     }

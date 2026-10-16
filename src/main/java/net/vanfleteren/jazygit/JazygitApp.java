@@ -33,6 +33,7 @@ import net.vanfleteren.jazygit.cli.StartupCli;
 import net.vanfleteren.jazygit.cli.StartupOptions;
 import net.vanfleteren.jazygit.feature.branch.BranchDialogs;
 import net.vanfleteren.jazygit.feature.branch.BranchesTabMsg;
+import net.vanfleteren.jazygit.feature.cherrypick.CherryPickDialogs;
 import net.vanfleteren.jazygit.feature.commit.CommitDialog;
 import net.vanfleteren.jazygit.feature.commit.CommitDialogs;
 import net.vanfleteren.jazygit.feature.discard.DiscardDialog;
@@ -124,6 +125,7 @@ public class JazygitApp extends ToolkitApp {
             new PopupSlot(new ChoiceDialog<>(CommitDialogs.RESET, dispatch), model -> CommitsPanel.ID),
             new PopupSlot(new ConfirmDialog<>(CommitDialogs.HARD_RESET, dispatch), model -> CommitsPanel.ID),
             new PopupSlot(CommitDialog.reword(dispatch), model -> CommitsPanel.ID),
+            new PopupSlot(new ConfirmDialog<>(CherryPickDialogs.PICK, dispatch), model -> CommitsPanel.ID),
             // Help is opened from a pane, which has the focus then.
             new PopupSlot(new HelpDialog(dispatch), JazygitApp::focusedPane),
             // Errors come up wherever the user is.

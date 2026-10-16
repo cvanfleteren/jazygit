@@ -69,4 +69,5 @@ Span.diff-hunk { color: $hunk; }
 Span.current-branch { color: yellow; }
 Span.sha { color: yellow; }
 Span.tag { color: $good; }
+Span.copied { color: cyan; text-style: bold; }
 Span.bold { text-style: bold; }

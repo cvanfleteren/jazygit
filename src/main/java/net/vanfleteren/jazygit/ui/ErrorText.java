@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.settings.SettingsProblem;
 import net.vanfleteren.jazygit.state.AppError;
@@ -26,6 +27,7 @@ public final class ErrorText {
             case AppError.NothingToCommit() -> Messages.get("error.commit.nothing");
             case AppError.NothingToAmend() -> Messages.get("error.amend.nothing");
             case AppError.NothingToStash() -> Messages.get("error.stash.nothing");
+            case AppError.AlreadyPicked(Sha sha) -> Messages.get("error.cherryPick.already", sha.shortSha());
             case AppError.InvalidUpstream(String text) -> Messages.get("error.upstream.invalid", text.strip());
             case AppError.NoUpstream(Branch.Name branch) -> Messages.get("error.pull.noUpstream", branch.value());
             case AppError.UpstreamGone(Branch.Name branch, String upstream) ->

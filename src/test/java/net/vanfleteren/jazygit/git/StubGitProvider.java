@@ -248,6 +248,11 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> cherryPick(Sha sha) {
+        return ran();
+    }
+
+    @Override
     default Either<GitFailure<ProcessError>, List<ExecutedCommand>> stash(Option<String> message) {
         return ran();
     }

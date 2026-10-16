@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.keys;
 
+import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
+import net.vanfleteren.jazygit.feature.cherrypick.CherryPickMsg;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.feature.repos.RecentReposMsg;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelMsg;
@@ -24,7 +26,17 @@ final class GlobalKeys {
                         RecentReposMsg.Requested::new))
                 .global(new Keymap.Global.Dispatching(
                         "ctrl+s", "help.global.settings", GlobalKeys::isSettingsKey, SettingsPanelMsg.Requested::new))
+                // Escape only gets here when nothing else, like a dialog, took it.
+                .global(new Keymap.Global.Dispatching(
+                        "esc", "help.global.cherryPickDrop", GlobalKeys::isEscape, CherryPickMsg.Dropped::new))
                 .global(new Keymap.Global.Dispatching("q", "help.global.quit", GlobalKeys::isQuitKey, Msg.Quit::new));
+    }
+
+    /**
+     * Whether {@code event} is Escape, which lets go of the commit copied to cherry-pick.
+     */
+    static boolean isEscape(KeyEvent event) {
+        return event.code() == KeyCode.ESCAPE;
     }
 
     /**

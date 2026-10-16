@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.settings.SettingsProblem;
 
 /**
@@ -30,6 +31,11 @@ public sealed interface AppError {
      * A stash was asked for, but nothing has changed.
      */
     record NothingToStash() implements AppError {}
+
+    /**
+     * The copied commit was asked to be cherry-picked, but the checked out branch already has it.
+     */
+    record AlreadyPicked(Sha sha) implements AppError {}
 
     /**
      * The upstream entered for a push is not {@code <remote> <branch>}.
