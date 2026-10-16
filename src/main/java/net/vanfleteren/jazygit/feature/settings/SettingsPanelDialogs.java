@@ -29,12 +29,12 @@ public final class SettingsPanelDialogs {
      * Asks which account the repository uses: gh's active one, or one of the others gh is logged in to on the
      * repository's host.
      */
-    public static final PickDialog.Spec<GitHubAccountPopup> ACCOUNT = new PickDialog.Spec<>(
+    public static final PickDialog.Spec<GitHubAccountPopup, String> ACCOUNT = new PickDialog.Spec<>(
             "settings-account",
             GitHubAccountPopup.class,
             popup ->
                     Messages.get("dialog.settings.account.title", popup.gitHub().host()),
-            popup -> accounts(popup.gitHub()),
+            popup -> accounts(popup.gitHub()).map(PickDialog.Row::of),
             shown -> new SettingsPanelMsg.AccountChosen(user(shown)),
             SettingsPanelMsg.AccountCancelled::new);
     // Wide enough for the usual gh executable and account, so it does not grow once they are read.

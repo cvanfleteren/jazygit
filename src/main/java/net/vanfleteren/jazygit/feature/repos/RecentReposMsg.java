@@ -19,9 +19,9 @@ public sealed interface RecentReposMsg extends Msg {
     record Requested() implements RecentReposMsg {}
 
     /**
-     * The recent repositories that can be switched to, by the root of their working tree.
+     * The recent repositories that can be switched to, the last one opened first.
      */
-    record Listed(List<String> directories) implements RecentReposMsg {}
+    record Listed(List<RecentRepo> repos) implements RecentReposMsg {}
 
     record Cancelled() implements RecentReposMsg {}
 

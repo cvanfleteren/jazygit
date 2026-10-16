@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.repos;
 import io.vavr.collection.List;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import net.vanfleteren.jazygit.git.HeadFile;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
@@ -15,7 +16,8 @@ import net.vanfleteren.jazygit.state.Msg;
 public sealed interface RecentReposCmd extends Cmd {
 
     /**
-     * Reads the recent repositories but the one shown. The ones whose directory is gone are not kept anymore.
+     * Reads the recent repositories but the one shown, with what their HEAD points to. The ones whose directory
+     * is gone are not kept anymore.
      */
     record ListRecent() implements RecentReposCmd {
 
@@ -26,8 +28,9 @@ public sealed interface RecentReposCmd extends Cmd {
             if (gone.nonEmpty()) {
                 env.recent().forget(gone);
             }
-            return new RecentReposMsg.Listed(
-                    recent.removeAll(gone).remove(env.git().workTree()).map(Path::toString));
+            return new RecentReposMsg.Listed(recent.removeAll(gone)
+                    .remove(env.git().workTree())
+                    .map(directory -> new RecentRepo(directory.toString(), HeadFile.read(directory))));
         }
 
         @Override

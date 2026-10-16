@@ -16,8 +16,7 @@ public final class RecentReposUpdate {
             // The key works everywhere, but does not take away a dialog that is open.
             case RecentReposMsg.Requested() ->
                 model.popup().isDefined() ? Next.of(model) : Next.of(model, new RecentReposCmd.ListRecent());
-            case RecentReposMsg.Listed(var directories) ->
-                Next.of(model.openPopupIfFree(new RecentReposPopup(directories)));
+            case RecentReposMsg.Listed(var repos) -> Next.of(model.openPopupIfFree(new RecentReposPopup(repos)));
             case RecentReposMsg.Cancelled() -> Next.of(model.withoutPopup(RecentReposPopup.class));
             case RecentReposMsg.Chosen(String directory) ->
                 model.popup(RecentReposPopup.class).isDefined()

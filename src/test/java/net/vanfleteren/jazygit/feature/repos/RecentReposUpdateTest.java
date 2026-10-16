@@ -14,6 +14,8 @@ import net.vanfleteren.jazygit.feature.commit.CommitPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.settings.RecentRepositories;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.*;
@@ -22,6 +24,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class RecentReposUpdateTest {
+
+    private static final RecentRepo A = new RecentRepo("/repos/a", Option.none());
 
     @TempDir
     Path dir;
@@ -64,15 +68,15 @@ class RecentReposUpdateTest {
 
     @Test
     void theListedRepositoriesOpenThePopup() {
-        Model model = Update.update(TestModels.loaded(), new RecentReposMsg.Listed(List.of("/repos/a")))
+        Model model = Update.update(TestModels.loaded(), new RecentReposMsg.Listed(List.of(A)))
                 .model();
 
-        assertEquals(Option.of(new RecentReposPopup(List.of("/repos/a"))), model.popup(RecentReposPopup.class));
+        assertEquals(Option.of(new RecentReposPopup(List.of(A))), model.popup(RecentReposPopup.class));
     }
 
     @Test
     void cancellingClosesThePopup() {
-        Model open = TestModels.loaded().openPopup(new RecentReposPopup(List.of("/repos/a")));
+        Model open = TestModels.loaded().openPopup(new RecentReposPopup(List.of(A)));
 
         assertEquals(
                 Option.none(),
@@ -81,7 +85,7 @@ class RecentReposUpdateTest {
 
     @Test
     void choosingClosesThePopupAndSwitches() {
-        Model open = TestModels.loaded().openPopup(new RecentReposPopup(List.of("/repos/a")));
+        Model open = TestModels.loaded().openPopup(new RecentReposPopup(List.of(A)));
 
         Next next = Update.update(open, new RecentReposMsg.Chosen("/repos/a"));
 
@@ -110,8 +114,24 @@ class RecentReposUpdateTest {
 
         Object listed = new RecentReposCmd.ListRecent().run(env(current, recent, Repositories.NONE));
 
-        assertEquals(new RecentReposMsg.Listed(List.of(other.toString())), listed);
+        assertEquals(new RecentReposMsg.Listed(List.of(new RecentRepo(other.toString(), Option.none()))), listed);
         assertEquals(List.of(current, other), recent.load());
+    }
+
+    @Test
+    void listingReadsWhatTheirHeadPointsTo() throws Exception {
+        Path current = repo("current");
+        Path other = repo("other");
+        Files.createDirectories(other.resolve(".git"));
+        Files.writeString(other.resolve(".git/HEAD"), "ref: refs/heads/develop\n");
+
+        Object listed =
+                new RecentReposCmd.ListRecent().run(env(current, new InMemory(current, other), Repositories.NONE));
+
+        assertEquals(
+                new RecentReposMsg.Listed(List.of(new RecentRepo(
+                        other.toString(), Option.of(new Head.OnBranch(new Branch.Name("develop"), Option.none()))))),
+                listed);
     }
 
     @Test

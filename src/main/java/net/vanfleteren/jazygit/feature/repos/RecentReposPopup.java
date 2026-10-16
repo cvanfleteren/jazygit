@@ -6,6 +6,6 @@ import net.vanfleteren.jazygit.state.Popup;
 /**
  * Asking which of the recent repositories to open instead of this one.
  *
- * @param directories the roots of their working trees, the last one opened first
+ * @param repos the last one opened first
  */
-public record RecentReposPopup(List<String> directories) implements Popup {}
+public record RecentReposPopup(List<RecentRepo> repos) implements Popup {}

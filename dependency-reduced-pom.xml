@@ -64,6 +64,11 @@
               <shadedArtifactAttached>true</shadedArtifactAttached>
               <shadedClassifierName>fat</shadedClassifierName>
               <outputFile>${project.build.directory}/${project.build.finalName}-${project.version}-fat.jar</outputFile>
+              <artifactSet>
+                <excludes>
+                  <exclude>org.jspecify:jspecify</exclude>
+                </excludes>
+              </artifactSet>
               <transformers>
                 <transformer>
                   <mainClass>${main.class}</mainClass>
@@ -173,21 +178,21 @@
     <dependency>
       <groupId>dev.tamboui</groupId>
       <artifactId>tamboui-toolkit</artifactId>
-      <version>0.6.0-SNAPSHOT</version>
+      <version>0.6.0</version>
       <classifier>test-fixtures</classifier>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>dev.tamboui</groupId>
       <artifactId>tamboui-tui</artifactId>
-      <version>0.6.0-SNAPSHOT</version>
+      <version>0.6.0</version>
       <classifier>test-fixtures</classifier>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>dev.tamboui</groupId>
       <artifactId>tamboui-core</artifactId>
-      <version>0.6.0-SNAPSHOT</version>
+      <version>0.6.0</version>
       <classifier>test-fixtures</classifier>
       <scope>test</scope>
     </dependency>
@@ -230,6 +235,6 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <archunit.version>1.4.1</archunit.version>
     <junit.version>5.14.4</junit.version>
-    <tamboui.version>0.6.0-SNAPSHOT</tamboui.version>
+    <tamboui.version>0.6.0</tamboui.version>
   </properties>
 </project>

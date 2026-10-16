@@ -62,6 +62,8 @@ ListElement-item:selected, TreeElement-node:selected, .selection {
 .checks-running { color: $warn; }
 .review-approved { color: $added; }
 .review-changes { color: $removed; }
+.repo-branch { color: $accent; }
+.repo-location { color: #8250df; }
 
 Span.diff-header { text-style: bold; }
 Span.diff-added { color: $added; }

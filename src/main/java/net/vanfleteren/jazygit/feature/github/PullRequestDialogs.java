@@ -12,11 +12,11 @@ public final class PullRequestDialogs {
     /**
      * Asks which branch a new pull request merges into.
      */
-    public static final PickDialog.Spec<BasePopup> BASE = new PickDialog.Spec<>(
+    public static final PickDialog.Spec<BasePopup, String> BASE = new PickDialog.Spec<>(
             "pull-request-base",
             BasePopup.class,
             popup -> Messages.get("dialog.pullRequestBase.title", popup.branch().value()),
-            popup -> popup.bases().map(Branch.Name::value),
+            popup -> popup.bases().map(Branch.Name::value).map(PickDialog.Row::of),
             base -> new PullRequestMsg.BaseChosen(new Branch.Name(base)),
             PullRequestMsg.BaseCancelled::new);
 

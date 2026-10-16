@@ -167,6 +167,8 @@ public final class Theme {
         public static final String TAG = "tag";
         public static final String COPIED = "copied";
         public static final String IN_PROGRESS = "in-progress";
+        public static final String REPO_BRANCH = "repo-branch";
+        public static final String REPO_LOCATION = "repo-location";
         /**
          * The highlighted row of the left pane that is in use.
          */
