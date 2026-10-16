@@ -53,6 +53,10 @@ class ThemeDialogTest {
         assertEquals(
                 List.of(new ThemeMsg.Chosen(ThemeName.MONO)),
                 pressing(r -> r.pilot().press('m')));
+        dispatched.clear();
+        assertEquals(
+                List.of(new ThemeMsg.Chosen(ThemeName.EMBER)),
+                pressing(r -> r.pilot().press('e')));
     }
 
     @Test

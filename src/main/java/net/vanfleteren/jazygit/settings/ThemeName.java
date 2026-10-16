@@ -17,7 +17,11 @@ public enum ThemeName {
     /**
      * Mostly black and white, with muted colours only where they tell things apart.
      */
-    MONO("mono");
+    MONO("mono"),
+    /**
+     * Saturated blues and oranges on deep navy.
+     */
+    EMBER("ember");
 
     private final String id;
 

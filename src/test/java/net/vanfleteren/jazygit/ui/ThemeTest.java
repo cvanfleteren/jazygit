@@ -101,8 +101,8 @@ class ThemeTest {
 
     @Test
     void theDarkThemesBrightenPlainTextOnTheHighlightedRow() {
-        for (ThemeName name :
-                java.util.List.of(ThemeName.DARK, ThemeName.DARK_COLORBLIND, ThemeName.DARCULA, ThemeName.MONO)) {
+        for (ThemeName name : java.util.List.of(
+                ThemeName.DARK, ThemeName.DARK_COLORBLIND, ThemeName.DARCULA, ThemeName.MONO, ThemeName.EMBER)) {
             var engine = Theme.createEngine().get();
             Theme.activate(engine, name);
             Theme.SelectedText selectedText = Theme.selectedText(engine);

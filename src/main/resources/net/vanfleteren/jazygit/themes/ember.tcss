@@ -1,0 +1,82 @@
+/* Saturated blues and oranges on deep navy. */
+$fg: #d6e4ff;
+$bg: #0a1430;
+$border: #1e4db7;
+$accent: #ff7a00;
+$muted: #5a78b8;
+$selection: #1440a8;
+$added: #29b6ff;
+$removed: #ff4f1f;
+$hunk: #6f8cff;
+$meta: #a6c8ff;
+$warn: #ffb300;
+
+* {
+    color: $fg;
+    background: $bg;
+}
+
+Panel, TextInputElement, TextAreaElement, RichTextAreaElement {
+    border-type: rounded;
+    border-color: $border;
+}
+
+Panel.focused {
+    border-color: $accent;
+}
+
+/* Popups, which otherwise take the terminal's own colour. */
+DialogElement {
+    border-color: $accent;
+}
+
+/*
+ * The highlighted row: in the left pane in use, and in popups; in the other left panes it is hidden, as the
+ * empty rule says. Only what these rules declare themselves is laid over the row.
+ */
+ListElement-item:selected, TreeElement-node:selected, .selection {
+    background: $selection;
+}
+
+.inactive-selection {
+}
+
+/* Plain text on the highlighted row; the coloured pieces of the row keep their colours. */
+.selected-text { color: #ffffff; }
+
+/*
+ * Behind an open popup, text in the plain colour takes this one; the rest is dimmed by the terminal, which
+ * not every terminal does for its default colour.
+ */
+.backdrop { color: $muted; }
+
+.bold { text-style: bold; }
+.dim { color: $muted; }
+.error { color: $removed; }
+.notice { color: $warn; }
+.in-progress { color: $removed; text-style: bold; }
+.disabled { color: $muted; text-style: crossed-out; }
+.staged { color: $added; }
+.unstaged { color: $removed; }
+.spinner { color: $accent; }
+.ahead { color: $added; }
+.behind { color: $removed; }
+.gone { color: $removed; }
+.pull-request { color: $hunk; }
+.checks-passed { color: $added; }
+.checks-failed { color: $removed; }
+.checks-running { color: $warn; }
+.review-approved { color: $added; }
+.review-changes { color: $removed; }
+.repo-branch { color: $accent; }
+.repo-location { color: $hunk; }
+
+Span.diff-header { color: $meta; text-style: bold; }
+Span.diff-added { color: $added; }
+Span.diff-removed { color: $removed; }
+Span.diff-hunk { color: $hunk; }
+Span.current-branch { color: $accent; text-style: bold; }
+Span.sha { color: $warn; }
+Span.tag { color: #00e5ff; }
+Span.copied { color: $accent; text-style: bold; }
+Span.bold { text-style: bold; }

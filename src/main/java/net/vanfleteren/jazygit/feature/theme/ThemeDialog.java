@@ -23,7 +23,9 @@ public final class ThemeDialog {
             'b',
             ThemeName.DARK_COLORBLIND,
             'm',
-            ThemeName.MONO);
+            ThemeName.MONO,
+            'e',
+            ThemeName.EMBER);
 
     /**
      * The themes, opening at the one in use, so the arrow keys preview the others from there.
