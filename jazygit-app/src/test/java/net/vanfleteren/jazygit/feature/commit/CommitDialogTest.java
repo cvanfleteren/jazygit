@@ -63,6 +63,14 @@ class CommitDialogTest {
     }
 
     @Test
+    void theEditorKeyIsShownInTheBottomBorderOfTheDescription() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            String screen = RenderedText.ofLarge(runner, this::view);
+            assertTrue(screen.lines().anyMatch(line -> line.contains("─ctrl+o: open in editor")), screen);
+        }
+    }
+
+    @Test
     void enterInTheSummaryCommits() throws Exception {
         try (ToolkitTestRunner runner = start()) {
             type(runner, "fix it");
@@ -154,6 +162,45 @@ class CommitDialogTest {
         assertEquals(
                 java.util.List.of(new RewordMsg.Confirmed(new CommitMessage(last.message() + "!", last.body()))),
                 dispatched);
+    }
+
+    @Test
+    void ctrlOOpensTheMessageInTheEditorFromEitherField() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            type(runner, "fix it");
+            SettledPilot.of(runner).press('o', KeyModifiers.CTRL);
+            SettledPilot.of(runner).press(KeyCode.TAB);
+            type(runner, "because");
+            SettledPilot.of(runner).press('o', KeyModifiers.CTRL);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(
+                java.util.List.of(
+                        new MessageEditorMsg.Requested(new CommitMessage("fix it", "")),
+                        new MessageEditorMsg.Requested(new CommitMessage("fix it", "because"))),
+                dispatched);
+    }
+
+    @Test
+    void theMessageFromTheEditorReplacesWhatWasTyped() throws Exception {
+        Model[] model = {open};
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(
+                () -> stack(text("background"), dialog.render(model[0]).get()))) {
+            SettledPilot.focus(runner, CommitDialog.ID);
+            RenderedText.of(runner, () -> dialog.render(model[0]).get());
+            type(runner, "draft");
+            model[0] = Update.update(
+                            model[0], new MessageEditorMsg.Edited(new CommitMessage("edited", "at length"), List.of()))
+                    .model();
+            String screen =
+                    RenderedText.ofLarge(runner, () -> dialog.render(model[0]).get());
+            assertTrue(screen.contains("at length"), screen);
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new CommitMsg.Confirmed(new CommitMessage("edited", "at length"))), dispatched);
     }
 
     private ToolkitTestRunner start() throws Exception {

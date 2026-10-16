@@ -4,9 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -75,6 +77,28 @@ class CliEditorTest {
         assertInstanceOf(
                 GitError.EditorNotStarted.class,
                 CliEditor.open(repo, "no-such-editor-for-jazygit", List.of("a.txt"))
+                        .getLeft()
+                        .error());
+    }
+
+    @Test
+    void aMessageIsEditedInTheEditor() {
+        Tuple2<CommitMessage, List<ExecutedCommand>> edited = CliEditor.editMessage(
+                        repo,
+                        "sh -c 'test \"$(basename \"$1\")\" = COMMIT_EDITMSG && "
+                                + "printf \"%s\\n\\nbody of %s\\n\" \"$(head -n 1 \"$1\")!\" \"$(tail -n 1 \"$1\")\" > \"$1\"' -",
+                        new CommitMessage("summary", "details"))
+                .get();
+
+        assertEquals(new CommitMessage("summary!", "body of details"), edited._1);
+        assertEquals(1, edited._2.size());
+    }
+
+    @Test
+    void anEditorThatFailsLeavesTheMessage() {
+        assertEquals(
+                new GitError.EditorFailed("false", 1),
+                CliEditor.editMessage(repo, "false", new CommitMessage("summary", ""))
                         .getLeft()
                         .error());
     }

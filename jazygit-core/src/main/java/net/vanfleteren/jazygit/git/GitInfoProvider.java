@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
@@ -341,4 +342,11 @@ public interface GitInfoProvider {
      * editor.
      */
     Either<GitFailure<GitError>, List<ExecutedCommand>> edit(List<String> files);
+
+    /**
+     * Opens {@code message} in the editor git uses for commit messages, and gives the message it was saved as once
+     * the editor is closed, with the command that ran. It runs on the terminal, which the caller must have handed
+     * over. Fails as {@link #edit} does, or with a {@link GitError.TempFileFailed}.
+     */
+    Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(CommitMessage message);
 }

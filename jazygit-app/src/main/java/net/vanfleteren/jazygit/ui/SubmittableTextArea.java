@@ -24,6 +24,8 @@ public final class SubmittableTextArea extends StyledElement<SubmittableTextArea
     private final Runnable onSubmit;
     // The rows the text area takes, borders included, if it is told.
     private Option<Integer> height = Option.none();
+    // Shown in the bottom border, if any.
+    private Option<String> bottomTitle = Option.none();
 
     /**
      * @param area     the text area; it gets the id
@@ -41,6 +43,14 @@ public final class SubmittableTextArea extends StyledElement<SubmittableTextArea
     public SubmittableTextArea rows(int rows) {
         this.height = Option.of(rows);
         return length(rows);
+    }
+
+    /**
+     * Shows {@code title} in the bottom border, on the right, as the title is shown in the top one.
+     */
+    public SubmittableTextArea bottomTitle(String title) {
+        this.bottomTitle = Option.of(title);
+        return this;
     }
 
     @Override
@@ -66,5 +76,23 @@ public final class SubmittableTextArea extends StyledElement<SubmittableTextArea
             rendering.registerElement(this, area);
         }
         this.area.render(frame, area, context);
+        bottomTitle.forEach(title -> drawBottomTitle(frame, area, title));
+    }
+
+    /**
+     * Draws {@code title} on the bottom border of {@code area}, styled as the title in its top border, which the
+     * text area drew just now; a title that does not fit is left out.
+     */
+    private static void drawBottomTitle(Frame frame, Rect area, String title) {
+        int x = area.right() - 1 - title.length();
+        int y = area.bottom() - 1;
+        if (area.height() >= 2 && x > area.x()) {
+            frame.buffer()
+                    .setString(
+                            x,
+                            y,
+                            title,
+                            frame.buffer().get(area.x() + 1, area.y()).style());
+        }
     }
 }

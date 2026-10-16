@@ -182,9 +182,17 @@ does: the program itself when it is a plain name, else through `sh -c '<editor> 
 is an `Operation.EDIT` like any other: the command log shows it, an editor that exits with an error is shown as a
 failure, and the repository is read again once it is closed.
 
+Ctrl+O in the commit and reword dialogs opens the message typed so far in the same editor (`MessageEditorMsg`,
+`MessageEditorCmd`). `CliEditor.editMessage` writes it to a file named `COMMIT_EDITMSG` in a temporary directory, so
+editors treat it as a commit message, and reads it back once the editor is closed. No comments are added to it, so
+lines starting with `#` are kept. The text being typed lives in the dialog's widgets, not in the model, so the
+message comes back as the popup's `draft` (`MessagePopup`): a popup that changed counts as newly opened for
+`CommitDialog`, which then fills its fields from the draft. The dialog stays open meanwhile, and a failing editor
+leaves it as it was.
+
 The editor needs the terminal, which the TUI owns. `Env.terminal()` (`state.Terminal`) hands it over: `EditCmd`
-runs the editor inside `terminal().handOver(...)`, on the `git-io` thread. `JazygitApp` implements it with
-`HandOverBackend`, the TamboUI backend it gives the runner:
+and `MessageEditorCmd` run the editor inside `terminal().handOver(...)`, on the `git-io` thread. `JazygitApp`
+implements it with `HandOverBackend`, the TamboUI backend it gives the runner:
 
 - **Leaving**, on the render thread between two frames: it stops reading keys, then puts the terminal back as it
   was before the app started (no mouse capture or bracketed paste, cursor shown, main screen, cooked mode), and

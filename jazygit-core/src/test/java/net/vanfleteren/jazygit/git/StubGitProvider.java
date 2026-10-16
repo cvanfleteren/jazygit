@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
@@ -106,6 +108,15 @@ public interface StubGitProvider extends GitInfoProvider {
     @Override
     default Either<GitFailure<GitError>, List<ExecutedCommand>> edit(List<String> files) {
         return ran();
+    }
+
+    /**
+     * Saves the message as it is.
+     */
+    @Override
+    default Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
+            CommitMessage message) {
+        return Either.right(Tuple.of(message, List.empty()));
     }
 
     @Override

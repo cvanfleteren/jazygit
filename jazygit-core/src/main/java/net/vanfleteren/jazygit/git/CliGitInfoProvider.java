@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.Tuple2;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
@@ -107,6 +108,12 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> edit(List<String> files) {
         return CliEditor.edit(workTree, files);
+    }
+
+    @Override
+    public Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
+            CommitMessage message) {
+        return CliEditor.editMessage(workTree, message);
     }
 
     @Override

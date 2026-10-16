@@ -15,7 +15,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
@@ -43,6 +42,8 @@ public final class CommitDialog implements PopupView {
     public static final String REWORD_ID = "reword-summary";
     public static final String REWORD_DESCRIPTION_ID = "reword-description";
 
+    // With Ctrl held, opens the message in the editor.
+    private static final char EDITOR_KEY = 'o';
     private static final int WIDTH = 110;
     private static final int INPUT_HEIGHT = 3;
     private static final int DESCRIPTION_HEIGHT = 10;
@@ -51,8 +52,8 @@ public final class CommitDialog implements PopupView {
     private final TextAreaState description = new TextAreaState();
     private final String summaryId;
     private final String descriptionId;
-    // The commit whose message the popup starts out with, while it is open.
-    private final Function<Model, Option<Commit>> current;
+    // The message the popup shows when it opens, or comes back from the editor, if not an empty one.
+    private final Function<Model, Option<CommitMessage>> current;
     private final Predicate<Model> open;
     private final Function<CommitMessage, Msg> confirmed;
     private final Supplier<Msg> cancelled;
@@ -63,7 +64,7 @@ public final class CommitDialog implements PopupView {
             String summaryId,
             String descriptionId,
             Predicate<Model> open,
-            Function<Model, Option<Commit>> current,
+            Function<Model, Option<CommitMessage>> current,
             Function<CommitMessage, Msg> confirmed,
             Supplier<Msg> cancelled,
             Consumer<Msg> dispatch) {
@@ -86,7 +87,7 @@ public final class CommitDialog implements PopupView {
                 ID,
                 DESCRIPTION_ID,
                 model -> model.popup(CommitPopup.class).isDefined(),
-                model -> Option.none(),
+                model -> model.popup(CommitPopup.class).flatMap(CommitPopup::draft),
                 CommitMsg.Confirmed::new,
                 CommitMsg.Cancelled::new,
                 dispatch);
@@ -102,7 +103,7 @@ public final class CommitDialog implements PopupView {
                 REWORD_ID,
                 REWORD_DESCRIPTION_ID,
                 model -> model.popup(RewordPopup.class).isDefined(),
-                model -> model.popup(RewordPopup.class).map(RewordPopup::commit),
+                model -> model.popup(RewordPopup.class).map(RewordPopup::message),
                 RewordMsg.Confirmed::new,
                 RewordMsg.Cancelled::new,
                 dispatch);
@@ -128,10 +129,10 @@ public final class CommitDialog implements PopupView {
             return Option.none();
         }
         if (opened) {
-            current.apply(model).forEach(commit -> {
-                summary.setText(commit.message());
+            current.apply(model).forEach(message -> {
+                summary.setText(message.summary());
                 summary.moveCursorToEnd();
-                description.setText(commit.body());
+                description.setText(message.description());
                 description.moveCursorToEnd();
             });
         }
@@ -142,7 +143,7 @@ public final class CommitDialog implements PopupView {
                                 .placeholder(Messages.get("dialog.commit.summary.placeholder"))
                                 .length(INPUT_HEIGHT)
                                 .onSubmit(this::confirm)
-                                .onKeyEvent(this::escape),
+                                .onKeyEvent(this::keys),
                         new SubmittableTextArea(
                                         textArea(description)
                                                 .title(Messages.get("dialog.commit.description.title"))
@@ -150,7 +151,8 @@ public final class CommitDialog implements PopupView {
                                         descriptionId,
                                         this::confirm)
                                 .rows(DESCRIPTION_HEIGHT)
-                                .onKeyEvent(this::escape))
+                                .bottomTitle(Messages.get("dialog.commit.hint"))
+                                .onKeyEvent(this::keys))
                 .borderType(BorderType.NONE)
                 .width(WIDTH)
                 .onCancel(this::cancel));
@@ -167,15 +169,19 @@ public final class CommitDialog implements PopupView {
     }
 
     /**
-     * Cancels on Escape in a field. The dialog around the fields only gets keys after the global handlers, and
-     * one of those takes Escape too.
+     * Cancels on Escape in a field, and opens the message in the editor on {@link #EDITOR_KEY}. The dialog around the
+     * fields only gets keys after the global handlers, and one of those takes Escape too.
      */
-    private EventResult escape(KeyEvent event) {
-        if (event.code() != KeyCode.ESCAPE) {
-            return EventResult.UNHANDLED;
+    private EventResult keys(KeyEvent event) {
+        if (event.code() == KeyCode.ESCAPE) {
+            cancel();
+            return EventResult.HANDLED;
         }
-        cancel();
-        return EventResult.HANDLED;
+        if (event.hasCtrl() && event.isChar(EDITOR_KEY)) {
+            dispatch.accept(new MessageEditorMsg.Requested(new CommitMessage(summary.text(), description.text())));
+            return EventResult.HANDLED;
+        }
+        return EventResult.UNHANDLED;
     }
 
     private void cancel() {

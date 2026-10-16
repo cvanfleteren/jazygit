@@ -11,7 +11,7 @@ Features to consider, roughly most valuable first.
    resolution and longer commit messages both need it, and it works around the missing word-editing keys in text
    fields.
    - [x] Open the selected file (`e` in the files pane).
-   - [ ] Edit the commit message in the editor from the commit dialog.
+   - [x] Edit the commit message in the editor from the commit and reword dialogs (Ctrl+O).
 4. **Interactive rebase.** Move a commit up or down, and mark several commits for squash, fixup or drop in one pass.
    The single-commit versions exist; the next step is a batch "edit todo" view.
 5. **Undo with the reflog.** A reflog view with "reset to here", plus an `undo` key that reverts the last operation
