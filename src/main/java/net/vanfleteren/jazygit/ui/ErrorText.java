@@ -116,6 +116,8 @@ public final class ErrorText {
             case GitError.WorktreeHasChanges(String explanation) -> explanation;
             case GitError.StashNotRestored(var cause) -> Messages.get("git.stashPopFailed", of(cause));
             case GitError.StashGone(String message) -> Messages.get("git.stashGone", message);
+            case GitError.StoppedOnConflicts(var inProgress, int conflicts) ->
+                Messages.get("git.stoppedOnConflicts", conflicts);
             case GitError.TempFileFailed(Throwable cause) -> Messages.get("git.tempFileFailed", reason(cause));
             case GitError.RefusedPath(String path) -> Messages.get("git.refusedPath", path);
         };

@@ -17,8 +17,11 @@ import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.InProgress;
+import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadStashes;
@@ -28,6 +31,10 @@ import org.junit.jupiter.api.Test;
 
 class OperationUpdateTest {
 
+    private static final BranchCmd.Merge MERGE =
+            new BranchCmd.Merge(new Branch.Name("feature"), MergeMode.MERGE_COMMIT);
+    private static final InProgress MERGING =
+            new InProgress.Merging(new Sha("0123456789012345678901234567890123456789"));
     private static final BranchCmd.Push PUSH = new BranchCmd.Push(
             new Branch.Name("feature"), new RemoteBranch("origin", new Branch.Name("feature")), PushMode.FAST_FORWARD);
 
@@ -147,5 +154,61 @@ class OperationUpdateTest {
         assertEquals(
                 Option.of("Pushing branch feature failed: boom"),
                 errorText(Update.update(loaded(), failed(PUSH, "boom")).model()));
+    }
+
+    @Test
+    void anOperationThatStopsOnConflictsIsReportedAsStoppedNotAsFailed() {
+        GitInfoProvider stopping = new StubGitProvider() {
+            @Override
+            public Either<GitFailure<GitError>, List<ExecutedCommand>> merge(Branch.Name branch, MergeMode mode) {
+                return Either.left(new GitFailure<>(
+                        new GitError.StoppedOnConflicts(Option.of(MERGING), 2), executed("git merge feature")));
+            }
+        };
+
+        Msg msg = Program.perform(new Env(stopping, StubGitHub.empty()), MERGE);
+
+        assertEquals(
+                new OperationMsg.Stopped(
+                        MERGE, executed("git merge feature"), new Notice.StoppedOnConflicts(Option.of(MERGING), 2)),
+                msg);
+    }
+
+    @Test
+    void aStopOnConflictsLogsItsCommandsShowsANoticeInsteadOfTheErrorAndReadsTheRepositoryAgain() {
+        Notice.StoppedOnConflicts notice = new Notice.StoppedOnConflicts(Option.of(MERGING), 2);
+
+        Next next = Update.update(
+                TestModels.withCheckoutError(loaded(), "foo", "boom"),
+                new OperationMsg.Stopped(MERGE, executed("git merge feature"), notice));
+
+        assertEquals(
+                List.of(new LogEntry(Operation.MERGE, executed("git merge feature"))),
+                next.model().commandLog());
+        assertEquals(Option.none(), next.model().error());
+        assertEquals(Option.of(notice), next.model().notice());
+        assertEquals(
+                List.of(
+                        new LoadStatus(),
+                        new LoadBranches(),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(),
+                        new LoadStashes()),
+                next.cmds());
+    }
+
+    @Test
+    void theNextOperationClearsTheNotice() {
+        Model stopped = Update.update(
+                        loaded(),
+                        new OperationMsg.Stopped(
+                                MERGE, executed("git merge feature"), new Notice.StoppedOnConflicts(Option.none(), 1)))
+                .model();
+
+        assertEquals(
+                Option.none(),
+                Update.update(stopped, succeeded(PUSH, "git push")).model().notice());
+        assertEquals(
+                Option.none(),
+                Update.update(stopped, failed(PUSH, "boom")).model().notice());
     }
 }

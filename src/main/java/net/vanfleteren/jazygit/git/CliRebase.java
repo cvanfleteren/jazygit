@@ -18,9 +18,9 @@ import net.vanfleteren.jazygit.process.CommandLine;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
- * Rewrites history through {@code git rebase}, driven without an interactive editor. When a rebase
- * stops half-way, it is aborted again, so the repository is left as it was; a rebase that was already
- * running is left alone.
+ * Rewrites history through {@code git rebase}, driven without an interactive editor. A rebase that stops on
+ * conflicts is left so, for the user to resolve them and go on; one that stops half-way otherwise is aborted again,
+ * so the repository is left as it was. A rebase that was already running is left alone.
  */
 final class CliRebase {
 
@@ -47,7 +47,7 @@ final class CliRebase {
                 "jazygit-message",
                 file -> Files.writeString(file, message.text()),
                 failed -> new GitFailure<GitError>(failed, List.empty()),
-                file -> GitFailure.widen(base(workTree, sha.value())
+                file -> GitFailure.<GitError, String>widen(base(workTree, sha.value()))
                         .flatMap(base -> rebase(
                                 workTree,
                                 interactive(
@@ -56,7 +56,7 @@ final class CliRebase {
                                                 CommandLine.format(List.of("cp", file.toString())))
                                         // The message is taken as it was entered: git would strip lines starting with
                                         // "#", like "#123", from a message that comes from an editor.
-                                        .withConfig("commit.cleanup", "whitespace")))));
+                                        .withConfig("commit.cleanup", "whitespace"))));
     }
 
     /**
@@ -66,7 +66,7 @@ final class CliRebase {
      *
      * @return the command lines that were run
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> onto(Path workTree, Branch.Name onto) {
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> onto(Path workTree, Branch.Name onto) {
         return rebase(workTree, git(REBASE.append("--no-autosquash").append(onto.value())));
     }
 
@@ -79,9 +79,9 @@ final class CliRebase {
      * @param sha the object id of a commit that has exactly one parent
      * @return the command lines that were run
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Path workTree, Sha sha, SquashMode mode) {
-        return GitProcess.run(workTree, git("rev-parse", sha.value() + "^"))
-                .flatMap(parent -> base(workTree, parent.stdout().strip()))
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Path workTree, Sha sha, SquashMode mode) {
+        return GitFailure.<GitError, String>widen(GitProcess.run(workTree, git("rev-parse", sha.value() + "^"))
+                        .flatMap(parent -> base(workTree, parent.stdout().strip())))
                 .flatMap(base -> rebase(
                         workTree,
                         interactive(
@@ -98,8 +98,8 @@ final class CliRebase {
      * @param sha the object id of a commit that is not a merge
      * @return the command lines that were run
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> drop(Path workTree, Sha sha) {
-        return base(workTree, sha.value())
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Path workTree, Sha sha) {
+        return GitFailure.<GitError, String>widen(base(workTree, sha.value()))
                 .flatMap(base -> rebase(
                         workTree,
                         interactive(
@@ -137,9 +137,9 @@ final class CliRebase {
     }
 
     /**
-     * Runs {@code rebase}, and aborts it again when it stopped half-way.
+     * Runs {@code rebase}, and aborts it again when it stopped half-way, other than on conflicts.
      */
-    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> rebase(Path workTree, GitCommand rebase) {
+    private static Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(Path workTree, GitCommand rebase) {
         return Unfinished.runOrUndo(workTree, rebase, left -> Option.when(left.rebasing(), ABORT));
     }
 

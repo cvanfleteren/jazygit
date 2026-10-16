@@ -298,9 +298,10 @@ classDiagram
   load, so `LoadUpdate` marks it as no longer running in one place.
 - **`OperationCmd`** changes the repository. It names its `Operation` (which holds the command log title
   and the error message), the branch it is done to, and the branch it keeps busy. Its outcome is an
-  `OperationMsg.Succeeded` or `OperationMsg.Failed`, which `OperationUpdate` handles the same way for every
-  operation: it logs the commands, releases the busy branch, stores an `AppError.OperationFailed` or clears
-  the error, and reads the repository again. A feature only adds its own messages for outcomes that really
+  `OperationMsg.Succeeded`, `OperationMsg.Stopped` (it stopped on conflicts, left for the user) or
+  `OperationMsg.Failed`, which `OperationUpdate` handles the same way for every operation: it logs the
+  commands, releases the busy branch, stores an `AppError.OperationFailed`, a `Notice` or neither, and reads
+  the repository again. A feature only adds its own messages for outcomes that really
   are special, like `CheckoutMsg.NeedsStash`; `OperationUpdate.succeeded` is what any success does, which
   such a message adds to. A `GitOperationCmd` is one done through git alone: it only implements
   `perform(GitInfoProvider)`. The others, like creating a pull request, implement `run(Env)` themselves.
@@ -482,6 +483,7 @@ classDiagram
     UnknownBranch --|> GitError
     RefusedPath --|> GitError
     StashGone --|> GitError
+    StoppedOnConflicts --|> GitError
     NotARepository --|> GitError
     NoWorkTree --|> GitError
 ```
@@ -495,11 +497,16 @@ Some helpers combine these results:
   `cleanupFailed` why it failed, if it did.
 - `GitProcess.log`, `read` and `ask` run a command for its effect, to read something, or to ask a question
   git answers "no" to by exiting with 1 silently.
-- `Unfinished.runOrUndo` runs a merge, rebase or pull and, when it stops half-way, undoes what it left: the
-  conflicts of a merge, or a rebase that is still going.
+- `Unfinished.runOrUndo` runs a merge, rebase, pull or cherry-pick and looks at what it left when it fails.
   - It first reads whether the repository is already in the middle of something: a merge, rebase,
     cherry-pick or revert, or unresolved conflicts.
   - If it is, git refuses to start the command, and nothing is undone. What is unfinished is the user's.
+  - If the command stopped on conflicts, it is left so, for the user to resolve them (in the app or outside
+    it) and continue or abort (M). The failure becomes a `StoppedOnConflicts`, saying what is in progress and
+    how many files conflict. `GitOperationCmd` reports that as `OperationMsg.Stopped`, not as a failure, and
+    `OperationUpdate` shows it as a `Notice` in the command log instead of an error.
+  - If it stopped half-way otherwise, like a cherry-pick that turns out empty, it is undone: a rebase or
+    cherry-pick that is still going is aborted. `runOrStop` is the variant with nothing to undo, for merges.
 
 Parsing never throws: the parsers in `GitOutput` and the `Cli*` classes return
 `Either<UnexpectedOutput, T>`, so output git was not expected to print is a `ProcessError` like any other.
@@ -601,14 +608,18 @@ sequenceDiagram
           it fails, so the rebase stops instead of reporting success for a commit it never touched.
         - `GIT_EDITOR` is `cp <message file>`.
         - `-c commit.cleanup=whitespace` keeps lines starting with `#`.
-     4. If the rebase stops half-way, `Unfinished.runOrUndo` runs `git rebase --abort`, and that line joins
-        the failure's command log. If the abort fails too, the failure records why. The repository is left
-        as it was, unless it was already in the middle of a rebase: then git refused, and the user's rebase
-        is left alone.
+     4. If the rebase stops on the conflicts of a later commit, it is left so, and the failure becomes a
+        `StoppedOnConflicts` (see above). If it stops half-way otherwise, `Unfinished.runOrUndo` runs
+        `git rebase --abort`, and that line joins the failure's command log. If the abort fails too, the
+        failure records why. The repository is left as it was, unless it was already in the middle of a
+        rebase: then git refused, and the user's rebase is left alone.
 
 7. **Report.** The `Either` becomes one of two messages, which `OperationUpdate` handles:
    - **Success:** `OperationMsg.Succeeded(reword, commands)`. The commands are logged under
      `Operation.REWORD`, the error is cleared and `Update.refresh` reads the repository again.
+   - **Stopped on conflicts:** `OperationMsg.Stopped(reword, commands, notice)`. As for a success, but the
+     command log shows the `Notice`, which `NoticeText` turns into text, and the status panel shows the
+     rebase in progress.
    - **Failure:** `OperationMsg.Failed(reword, Failure.Git(error, commands, cleanupFailed))`. The commands
      that ran, including the abort, are logged; `Model.error` becomes
      `AppError.OperationFailed(REWORD, none, failure)`, which `ErrorText` shows as `"Reword failed: …"`;

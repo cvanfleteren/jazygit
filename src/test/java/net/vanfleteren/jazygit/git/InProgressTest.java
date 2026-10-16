@@ -107,7 +107,7 @@ class InProgressTest {
     }
 
     @Test
-    void continuingARebaseThatStopsOnTheNextConflictIsNoFailure() throws Exception {
+    void continuingARebaseThatStopsOnTheNextConflictReportsTheStop() throws Exception {
         git("checkout", "-q", "conflicting");
         write("a.txt", "again\n");
         git("commit", "-qam", "changes a again");
@@ -116,13 +116,13 @@ class InProgressTest {
         write("a.txt", "resolved\n");
         git("add", "a.txt");
 
-        assertEquals(
-                List.of("git rebase --continue"),
-                git.continueOrAbort(rebasing, InProgressAction.CONTINUE).get().map(ExecutedCommand::line));
+        GitFailure<GitError> failure =
+                git.continueOrAbort(rebasing, InProgressAction.CONTINUE).getLeft();
 
-        assertEquals(
-                Option.of(new InProgress.Rebasing(Option.of(new Branch.Name("conflicting")), sha("main"), 2, 2)),
-                git.status().get().inProgress());
+        InProgress next = new InProgress.Rebasing(Option.of(new Branch.Name("conflicting")), sha("main"), 2, 2);
+        assertEquals(new GitError.StoppedOnConflicts(Option.of(next), 1), failure.error());
+        assertEquals(List.of("git rebase --continue"), failure.commands().map(ExecutedCommand::line));
+        assertEquals(Option.of(next), git.status().get().inProgress());
     }
 
     @Test
@@ -130,7 +130,7 @@ class InProgressTest {
         gitAnyExit("merge", "conflicting");
         InProgress merging = git.status().get().inProgress().get();
 
-        GitFailure<GitError.ProcessError> failure =
+        GitFailure<GitError> failure =
                 git.continueOrAbort(merging, InProgressAction.CONTINUE).getLeft();
 
         assertEquals(List.of("git merge --continue"), failure.commands().map(ExecutedCommand::line));

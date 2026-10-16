@@ -4,6 +4,7 @@ import io.vavr.control.Option;
 import java.io.IOException;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.InProgress;
 
 /**
  * Why a git operation failed, as data. Turning it into text is up to the caller.
@@ -101,6 +102,16 @@ public sealed interface GitError {
      * @param explanation git's explanation
      */
     record WorktreeHasChanges(String explanation) implements GitError {}
+
+    /**
+     * The operation stopped on conflicts, and is left so for the user to resolve them and go on. It did not
+     * finish, but it did not fail either: it waits for the user.
+     *
+     * @param inProgress what the repository is in the middle of now; none when git keeps no track of it, as for a
+     *                   squash merge, which is finished by committing
+     * @param conflicts  how many files have conflicts
+     */
+    record StoppedOnConflicts(Option<InProgress> inProgress, int conflicts) implements GitError {}
 
     /**
      * The branch was checked out, but the stashed changes could not be applied on it, so they stay in

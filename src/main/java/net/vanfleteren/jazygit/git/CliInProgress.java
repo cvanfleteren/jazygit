@@ -46,32 +46,18 @@ final class CliInProgress {
     /**
      * {@code git <operation> --continue}, {@code --abort} or {@code --skip}. Continuing takes the message git
      * prepared, as the editor it would open is told to keep it. Going on can stop again, on the conflicts of a
-     * next commit: git then fails, but that is where the user goes on from, so it is no failure here. Git refusing
-     * to go on, as conflicts remain where it was, is.
+     * next commit: that is where the user goes on from, so it is reported as {@link GitError.StoppedOnConflicts}.
+     * Git refusing to go on, as conflicts remain where it was, is a failure.
      *
      * @return the command lines that were run
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> continueOrAbort(
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> continueOrAbort(
             Path workTree, InProgress inProgress, InProgressAction action) {
         GitCommand command = git(subcommand(inProgress), option(action));
         return action == InProgressAction.ABORT
-                ? GitProcess.log(workTree, command)
+                ? GitFailure.widen(GitProcess.log(workTree, command))
                 : GitProcess.log(workTree, command.withEnvironment(HashMap.of("GIT_EDITOR", "true")))
-                        .fold(failure -> stoppedAgain(workTree, inProgress, failure), Either::right);
-    }
-
-    /**
-     * The commands of {@code failure}, when it got past {@code from} and stopped on conflicts again; else the
-     * failure.
-     */
-    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> stoppedAgain(
-            Path workTree, InProgress from, GitFailure<ProcessError> failure) {
-        return Unfinished.read(workTree)
-                .fold(
-                        error -> Either.left(failure),
-                        left -> left.conflicted() && left.inProgress().exists(now -> !now.equals(from))
-                                ? Either.right(failure.commands())
-                                : Either.left(failure));
+                        .mapLeft(failure -> Unfinished.stoppedAgain(workTree, inProgress, failure));
     }
 
     private static String subcommand(InProgress inProgress) {

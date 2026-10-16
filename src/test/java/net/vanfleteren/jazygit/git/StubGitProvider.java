@@ -168,7 +168,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> merge(Branch.Name branch, MergeMode mode) {
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> merge(Branch.Name branch, MergeMode mode) {
         return ran();
     }
 
@@ -198,7 +198,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> rebase(Branch.Name onto) {
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(Branch.Name onto) {
         return ran();
     }
 
@@ -215,7 +215,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> pull() {
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> pull() {
         return ran();
     }
 
@@ -261,12 +261,12 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode) {
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> dropCommit(Sha sha) {
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> dropCommit(Sha sha) {
         return ran();
     }
 
@@ -276,12 +276,12 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> cherryPick(Sha sha) {
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> cherryPick(Sha sha) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> continueOrAbort(
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> continueOrAbort(
             InProgress inProgress, InProgressAction action) {
         return ran();
     }

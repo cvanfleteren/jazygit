@@ -91,36 +91,39 @@ public interface GitInfoProvider {
 
     /**
      * Merges {@code branch} into the checked out branch, as {@code mode} says. A merge that stops on conflicts is
-     * undone again, so the repository is left as it was.
+     * left so, for the user to resolve them, and fails with {@link GitError.StoppedOnConflicts}; a squash merge is
+     * then not committed.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> merge(Branch.Name branch, MergeMode mode);
+    Either<GitFailure<GitError>, List<ExecutedCommand>> merge(Branch.Name branch, MergeMode mode);
 
     // Copying commits onto the checked out branch, as git cherry-pick does.
 
     /**
-     * Commits the changes of the commit {@code sha} on top of the checked out branch. A cherry-pick that stops,
-     * on conflicts or because it changes nothing, is undone again, so the repository is left as it was.
+     * Commits the changes of the commit {@code sha} on top of the checked out branch. A cherry-pick that stops on
+     * conflicts is left so, and fails with {@link GitError.StoppedOnConflicts}; one that stops because it changes
+     * nothing is undone again, so the repository is left as it was.
      *
      * @param sha the full object id of a commit that is not a merge
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> cherryPick(Sha sha);
+    Either<GitFailure<GitError>, List<ExecutedCommand>> cherryPick(Sha sha);
 
     // Going on with what the repository is in the middle of, as git merge, rebase, cherry-pick and revert do.
 
     /**
      * Does {@code action} to {@code inProgress}, the operation the repository stopped in the middle of. Continuing
-     * takes the commit message git prepared, without asking.
+     * takes the commit message git prepared, without asking; when it stops on the conflicts of a next commit, it
+     * fails with {@link GitError.StoppedOnConflicts}.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> continueOrAbort(
-            InProgress inProgress, InProgressAction action);
+    Either<GitFailure<GitError>, List<ExecutedCommand>> continueOrAbort(InProgress inProgress, InProgressAction action);
 
     // Rebasing the checked out branch, as git rebase does.
 
     /**
-     * Rebases the checked out branch onto {@code onto}, bringing uncommitted changes along. When the rebase fails,
-     * it is aborted again, so the repository is left as it was.
+     * Rebases the checked out branch onto {@code onto}, bringing uncommitted changes along. A rebase that stops on
+     * conflicts is left so, and fails with {@link GitError.StoppedOnConflicts}; when it fails otherwise, it is
+     * aborted again, so the repository is left as it was.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> rebase(Branch.Name onto);
+    Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(Branch.Name onto);
 
     // Pushing branches, as git push does.
 
@@ -141,10 +144,10 @@ public interface GitInfoProvider {
 
     /**
      * Pulls the checked out branch from its upstream, as git's {@code pull.rebase} and {@code pull.ff} say, without
-     * asking for a merge message. A pull that stops on conflicts is undone again, so the repository is left as it
-     * was.
+     * asking for a merge message. A pull that stops on conflicts is left so, and fails with
+     * {@link GitError.StoppedOnConflicts}.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> pull();
+    Either<GitFailure<GitError>, List<ExecutedCommand>> pull();
 
     // Fetching from the remotes, as git fetch does.
 
@@ -246,8 +249,8 @@ public interface GitInfoProvider {
 
     /**
      * Replaces the message of the commit {@code sha}, leaving its content alone. Other than for the last commit,
-     * this rebases the commits after it, uncommitted changes being stashed meanwhile; the rebase is aborted
-     * when it fails.
+     * this rebases the commits after it, uncommitted changes being stashed meanwhile; the rebase is left
+     * as it stopped on conflicts, see {@link #rebase}, and aborted when it fails otherwise.
      *
      * @param sha the full object id of the commit
      */
@@ -255,19 +258,21 @@ public interface GitInfoProvider {
 
     /**
      * Folds the commit {@code sha} into its parent, keeping the messages {@code mode} says. This rebases the
-     * commits after it, uncommitted changes being stashed meanwhile; the rebase is aborted when it fails.
+     * commits after it, uncommitted changes being stashed meanwhile; the rebase is left as it stopped on
+     * conflicts, see {@link #rebase}, and aborted when it fails otherwise.
      *
      * @param sha the full object id of a commit that has exactly one parent
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode);
+    Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode);
 
     /**
      * Removes the commit {@code sha} from the history of the checked out branch. This rebases the commits after
-     * it, uncommitted changes being stashed meanwhile; the rebase is aborted when it fails.
+     * it, uncommitted changes being stashed meanwhile; the rebase is left as it stopped on conflicts, see
+     * {@link #rebase}, and aborted when it fails otherwise.
      *
      * @param sha the full object id of a commit that is not a merge
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> dropCommit(Sha sha);
+    Either<GitFailure<GitError>, List<ExecutedCommand>> dropCommit(Sha sha);
 
     // Moving the checked out branch, as git reset does.
 

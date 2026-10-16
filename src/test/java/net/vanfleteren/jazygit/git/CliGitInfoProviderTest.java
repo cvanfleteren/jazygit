@@ -392,7 +392,7 @@ class CliGitInfoProviderTest {
     }
 
     @Test
-    void aConflictingRebaseIsAbortedAndLeavesTheBranchAsItWas() throws Exception {
+    void aConflictingRebaseIsLeftForTheUserToResolve() throws Exception {
         git("checkout", "-q", "-b", "feature");
         Files.writeString(repo.resolve("README.md"), "feature\n");
         git("commit", "-q", "-am", "Feature edit");
@@ -401,14 +401,14 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "-am", "Main edit");
         git("checkout", "-q", "feature");
 
-        assertInstanceOf(
-                GitError.CommandFailed.class,
-                provider.rebase(new Branch.Name("main")).getLeft().error());
+        GitFailure<GitError> failure = provider.rebase(new Branch.Name("main")).getLeft();
 
-        assertEquals(
-                List.of("Feature edit", "Initial commit"),
-                provider.commits().get().map(Commit::message).toList());
-        assertEquals("feature\n", Files.readString(repo.resolve("README.md")));
+        GitError.StoppedOnConflicts stopped = assertInstanceOf(GitError.StoppedOnConflicts.class, failure.error());
+        assertInstanceOf(InProgress.Rebasing.class, stopped.inProgress().get());
+        assertEquals(1, stopped.conflicts());
+        assertTrue(failure.commands().forAll(command -> !command.line().contains("--abort")));
+        assertTrue(Files.exists(repo.resolve(".git/rebase-merge")));
+        assertTrue(Files.readString(repo.resolve("README.md")).contains("<<<<<<<"));
     }
 
     @Test
@@ -430,7 +430,7 @@ class CliGitInfoProviderTest {
     }
 
     @Test
-    void aConflictingCherryPickIsAbortedAndLeavesTheBranchAsItWas() throws Exception {
+    void aConflictingCherryPickIsLeftForTheUserToResolve() throws Exception {
         git("checkout", "-q", "-b", "feature");
         Files.writeString(repo.resolve("README.md"), "feature\n");
         git("commit", "-q", "-am", "Feature edit");
@@ -441,15 +441,11 @@ class CliGitInfoProviderTest {
 
         GitFailure<?> failure = provider.cherryPick(picked).getLeft();
 
-        assertInstanceOf(GitError.CommandFailed.class, failure.error());
         assertEquals(
-                List.of("git cherry-pick " + picked.value(), "git cherry-pick --abort"),
-                failure.commands().map(ExecutedCommand::line));
+                new GitError.StoppedOnConflicts(Option.of(new InProgress.CherryPicking(picked)), 1), failure.error());
         assertEquals(
-                List.of("Main edit", "Initial commit"),
-                provider.commits().get().map(Commit::message).toList());
-        assertEquals("main\n", Files.readString(repo.resolve("README.md")));
-        assertTrue(!gitSucceedsIn(repo, "rev-parse", "--verify", "--quiet", "CHERRY_PICK_HEAD"));
+                List.of("git cherry-pick " + picked.value()), failure.commands().map(ExecutedCommand::line));
+        assertTrue(gitSucceedsIn(repo, "rev-parse", "--verify", "--quiet", "CHERRY_PICK_HEAD"));
     }
 
     @Test
@@ -464,7 +460,9 @@ class CliGitInfoProviderTest {
         git("add", "f.txt");
         git("commit", "-q", "-m", "Same work");
 
-        assertTrue(provider.cherryPick(picked).isLeft());
+        assertInstanceOf(
+                GitError.CommandFailed.class,
+                provider.cherryPick(picked).getLeft().error());
 
         assertEquals(
                 List.of("Same work", "Initial commit"),
@@ -736,20 +734,19 @@ class CliGitInfoProviderTest {
     }
 
     @Test
-    void aConflictingDropIsAbortedAndLeavesTheBranchAsItWas() throws Exception {
+    void aConflictingDropIsLeftForTheUserToResolve() throws Exception {
         Files.writeString(repo.resolve("README.md"), "second\n");
         git("commit", "-q", "-am", "Second");
         Files.writeString(repo.resolve("README.md"), "third\n");
         git("commit", "-q", "-am", "Third");
         Sha second = provider.commits().get().get(1).sha();
 
-        assertTrue(provider.dropCommit(second).isLeft());
+        assertInstanceOf(
+                GitError.StoppedOnConflicts.class,
+                provider.dropCommit(second).getLeft().error());
 
-        assertEquals(
-                List.of("Third", "Second", "Initial commit"),
-                provider.commits().get().map(Commit::message).toList());
-        assertEquals("third\n", Files.readString(repo.resolve("README.md")));
-        assertTrue(Files.notExists(repo.resolve(".git/rebase-merge")));
+        assertTrue(Files.exists(repo.resolve(".git/rebase-merge")));
+        assertTrue(Files.readString(repo.resolve("README.md")).contains("<<<<<<<"));
     }
 
     @Test
@@ -780,8 +777,7 @@ class CliGitInfoProviderTest {
         git("branch", "other");
         gitWithEnvironment("GIT_SEQUENCE_EDITOR", "sed -i -e 's/^pick/edit/'", "rebase", "-i", "--root");
 
-        GitFailure<GitError.ProcessError> failure =
-                provider.rebase(new Branch.Name("other")).getLeft();
+        GitFailure<GitError> failure = provider.rebase(new Branch.Name("other")).getLeft();
 
         assertTrue(
                 failure.commands().forAll(command -> !command.line().contains("--abort")),
@@ -1167,38 +1163,32 @@ class CliGitInfoProviderTest {
     }
 
     @Test
-    void aPullThatConflictsIsUndone() throws Exception {
+    void aPullThatConflictsIsLeftForTheUserToResolve() throws Exception {
         remoteWithTheirCommitOn("main");
         git("config", "pull.rebase", "false");
         git("config", "pull.ff", "true");
         Files.writeString(repo.resolve("README.md"), "ours\n");
         git("commit", "-q", "-am", "ours");
 
-        GitFailure<GitError.ProcessError> failure = provider.pull().getLeft();
+        GitFailure<GitError> failure = provider.pull().getLeft();
 
-        assertEquals(
-                List.of("git pull --no-edit", "git merge --abort"),
-                failure.commands().map(ExecutedCommand::line));
-        assertEquals(Option.none(), failure.cleanupFailed());
-        assertEquals("ours\n", Files.readString(repo.resolve("README.md")));
-        assertFalse(gitSucceedsIn(repo, "rev-parse", "--verify", "--quiet", "MERGE_HEAD"));
+        assertInstanceOf(GitError.StoppedOnConflicts.class, failure.error());
+        assertEquals(List.of("git pull --no-edit"), failure.commands().map(ExecutedCommand::line));
+        assertTrue(gitSucceedsIn(repo, "rev-parse", "--verify", "--quiet", "MERGE_HEAD"));
     }
 
     @Test
-    void aRebasingPullThatConflictsIsUndone() throws Exception {
+    void aRebasingPullThatConflictsIsLeftForTheUserToResolve() throws Exception {
         remoteWithTheirCommitOn("main");
         git("config", "pull.rebase", "true");
         Files.writeString(repo.resolve("README.md"), "ours\n");
         git("commit", "-q", "-am", "ours");
 
-        GitFailure<GitError.ProcessError> failure = provider.pull().getLeft();
+        GitFailure<GitError> failure = provider.pull().getLeft();
 
-        assertEquals(
-                List.of("git pull --no-edit", "git rebase --abort"),
-                failure.commands().map(ExecutedCommand::line));
-        assertEquals(Option.none(), failure.cleanupFailed());
-        assertEquals("ours\n", Files.readString(repo.resolve("README.md")));
-        assertEquals(List.of(1, 1), counts("main"));
+        assertInstanceOf(GitError.StoppedOnConflicts.class, failure.error());
+        assertEquals(List.of("git pull --no-edit"), failure.commands().map(ExecutedCommand::line));
+        assertTrue(Files.exists(repo.resolve(".git/rebase-merge")));
     }
 
     @Test

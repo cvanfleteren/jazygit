@@ -161,7 +161,7 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> rebase(Branch.Name onto) {
+        public Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(Branch.Name onto) {
             return StubGitProvider.ran("git rebase");
         }
 
@@ -183,7 +183,7 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode) {
+        public Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode) {
             return StubGitProvider.ran("git squash");
         }
 

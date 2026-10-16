@@ -52,7 +52,7 @@ final class CliCommit {
      * @param sha the object id of a commit that has exactly one parent
      * @return the command lines that were run
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Path workTree, Sha sha, SquashMode mode) {
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Path workTree, Sha sha, SquashMode mode) {
         return CliRebase.squash(workTree, sha, mode);
     }
 

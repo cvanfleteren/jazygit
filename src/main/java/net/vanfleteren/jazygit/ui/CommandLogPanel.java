@@ -7,13 +7,14 @@ import dev.tamboui.style.Overflow;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Panel;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 
 /**
  * Right-hand panel under the content panel, logging the mutating git commands that were executed, each
- * under a title, followed by why the last operation failed, when it did. It is display-only and does not
- * take part in focus cycling.
+ * under a title, followed by why the last operation failed, when it did, or by a notice about it. It is
+ * display-only and does not take part in focus cycling.
  */
 public final class CommandLogPanel {
 
@@ -33,13 +34,14 @@ public final class CommandLogPanel {
                                         .addClass(Theme.Classes.BOLD))
                         .appendAll(entry.commands()
                                 .map(command -> text(INDENT + command.line()).addClass(Theme.Classes.DIM))));
-        // The error may wrap, so it is kept out of the tail cut and always shown.
-        int room = Math.max(0, VISIBLE_LINES - (model.error().isDefined() ? 1 : 0));
-        List<Element> shown = lines.takeRight(room)
-                .appendAll(model.error()
-                        .map(error -> text(ErrorText.of(error))
-                                .addClass(Theme.Classes.ERROR)
-                                .overflow(Overflow.WRAP_WORD)));
+        Option<Element> outcome = model.error()
+                .map(error -> text(ErrorText.of(error)).addClass(Theme.Classes.ERROR))
+                .orElse(() ->
+                        model.notice().map(notice -> text(NoticeText.of(notice)).addClass(Theme.Classes.NOTICE)))
+                .map(line -> line.overflow(Overflow.WRAP_WORD));
+        // The error or notice may wrap, so it is kept out of the tail cut and always shown.
+        int room = Math.max(0, VISIBLE_LINES - (outcome.isDefined() ? 1 : 0));
+        List<Element> shown = lines.takeRight(room).appendAll(outcome);
         return panel(Messages.get("panel.commandLog.title"), shown.toJavaArray(Element[]::new));
     }
 }

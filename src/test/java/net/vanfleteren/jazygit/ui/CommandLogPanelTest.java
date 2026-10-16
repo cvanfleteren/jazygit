@@ -5,15 +5,17 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.LogEntry;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Notice;
 import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.TestModels;
 import org.junit.jupiter.api.Test;
 
 /**
- * The command log panel shows why the last operation failed.
+ * The command log panel shows why the last operation failed, or a notice about it.
  */
 class CommandLogPanelTest {
 
@@ -25,6 +27,18 @@ class CommandLogPanelTest {
             String screen = RenderedText.of(testRunner, () -> CommandLogPanel.render(model));
             assertTrue(screen.contains("Command log"), screen);
             assertTrue(screen.contains("Checkout of foo failed: boom"), screen);
+
+            testRunner.pilot().quit();
+        }
+    }
+
+    @Test
+    void showsANoticeWhenTheLastOperationStoppedOnConflicts() throws Exception {
+        Model model = TestModels.loaded(new SampleData()).inform(new Notice.StoppedOnConflicts(Option.none(), 2));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> CommandLogPanel.render(model))) {
+            String screen = RenderedText.of(testRunner, () -> CommandLogPanel.render(model));
+            assertTrue(screen.contains("The merge stopped on 2 conflicts"), screen);
 
             testRunner.pilot().quit();
         }

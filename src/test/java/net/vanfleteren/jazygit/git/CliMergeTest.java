@@ -3,10 +3,13 @@ package net.vanfleteren.jazygit.git;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.MergeMode;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -112,40 +115,51 @@ class CliMergeTest {
     }
 
     @Test
-    void aConflictingMergeIsAbortedAndKeepsUnrelatedChanges() throws Exception {
+    void aConflictingMergeIsLeftForTheUserToResolveAndKeepsUnrelatedChanges() throws Exception {
         conflict();
+        git("checkout", "-q", "conflicting");
+        write("b.txt", "conflicting\n");
+        git("add", "b.txt");
+        git("commit", "-qm", "conflicting changes b");
+        git("checkout", "-q", "main");
         write("a.txt", "main\n");
-        git("commit", "-qam", "main changes a");
+        write("b.txt", "main\n");
+        git("add", ".");
+        git("commit", "-qm", "main changes a and b");
         write("unrelated.txt", "keep\n");
 
-        GitFailure<GitError.ProcessError> failure = CliMerge.merge(
-                        repo, new Branch.Name("conflicting"), MergeMode.MERGE_COMMIT)
+        GitFailure<GitError> failure = CliMerge.merge(repo, new Branch.Name("conflicting"), MergeMode.MERGE_COMMIT)
                 .getLeft();
 
-        assertInstanceOf(GitError.CommandFailed.class, failure.error());
         assertEquals(
-                List.of("git merge --no-ff --no-edit conflicting", "git merge --abort"),
+                new GitError.StoppedOnConflicts(
+                        Option.of(new InProgress.Merging(
+                                new Sha(git("rev-parse", "conflicting").strip()))),
+                        2),
+                failure.error());
+        assertEquals(
+                List.of("git merge --no-ff --no-edit conflicting"),
                 failure.commands().map(ExecutedCommand::line));
-        assertFalse(Files.exists(repo.resolve(".git/MERGE_HEAD")));
-        assertEquals("main\n", Files.readString(repo.resolve("a.txt")));
+        assertTrue(Files.exists(repo.resolve(".git/MERGE_HEAD")));
+        assertTrue(Files.readString(repo.resolve("a.txt")).contains("<<<<<<<"));
         assertEquals("keep\n", Files.readString(repo.resolve("unrelated.txt")));
     }
 
     @Test
-    void aConflictingSquashIsUndone() throws Exception {
+    void aConflictingSquashIsLeftUncommitted() throws Exception {
         conflict();
         write("a.txt", "main\n");
         git("commit", "-qam", "main changes a");
+        String head = git("rev-parse", "HEAD");
 
-        GitFailure<GitError.ProcessError> failure = CliMerge.merge(
-                        repo, new Branch.Name("conflicting"), MergeMode.SQUASH_AND_COMMIT)
+        GitFailure<GitError> failure = CliMerge.merge(repo, new Branch.Name("conflicting"), MergeMode.SQUASH_AND_COMMIT)
                 .getLeft();
 
+        assertEquals(new GitError.StoppedOnConflicts(Option.none(), 1), failure.error());
         assertEquals(
-                List.of("git merge --squash conflicting", "git reset --merge"),
-                failure.commands().map(ExecutedCommand::line));
-        assertEquals("", git("status", "--porcelain"));
-        assertEquals("main\n", Files.readString(repo.resolve("a.txt")));
+                List.of("git merge --squash conflicting"), failure.commands().map(ExecutedCommand::line));
+        assertTrue(git("status", "--porcelain").contains("UU a.txt"));
+        assertEquals(head, git("rev-parse", "HEAD"));
     }
 
     @Test
@@ -153,8 +167,7 @@ class CliMergeTest {
         write("b.txt", "local\n");
         git("add", "b.txt");
 
-        GitFailure<GitError.ProcessError> failure = CliMerge.merge(
-                        repo, new Branch.Name("feature"), MergeMode.FAST_FORWARD)
+        GitFailure<GitError> failure = CliMerge.merge(repo, new Branch.Name("feature"), MergeMode.FAST_FORWARD)
                 .getLeft();
 
         // Nothing was started, so nothing is undone.
@@ -171,8 +184,7 @@ class CliMergeTest {
         gitAnyExit("merge", "conflicting");
         write("a.txt", "resolved\n");
 
-        GitFailure<GitError.ProcessError> failure = CliMerge.merge(
-                        repo, new Branch.Name("feature"), MergeMode.MERGE_COMMIT)
+        GitFailure<GitError> failure = CliMerge.merge(repo, new Branch.Name("feature"), MergeMode.MERGE_COMMIT)
                 .getLeft();
 
         assertEquals(
@@ -191,7 +203,7 @@ class CliMergeTest {
         gitAnyExit("merge", "conflicting");
         Files.delete(repo.resolve(".git/MERGE_HEAD"));
 
-        GitFailure<GitError.ProcessError> failure = CliMerge.merge(repo, new Branch.Name("feature"), MergeMode.SQUASH)
+        GitFailure<GitError> failure = CliMerge.merge(repo, new Branch.Name("feature"), MergeMode.SQUASH)
                 .getLeft();
 
         assertEquals(List.of("git merge --squash feature"), failure.commands().map(ExecutedCommand::line));

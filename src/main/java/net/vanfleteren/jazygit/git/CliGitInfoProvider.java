@@ -174,7 +174,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pull() {
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> pull() {
         return CliPull.pull(workTree, credentials.get());
     }
 
@@ -185,17 +185,17 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> merge(Branch.Name branch, MergeMode mode) {
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> merge(Branch.Name branch, MergeMode mode) {
         return CliMerge.merge(workTree, branch, mode);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> cherryPick(Sha sha) {
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> cherryPick(Sha sha) {
         return CliCherryPick.cherryPick(workTree, sha);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> continueOrAbort(
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> continueOrAbort(
             InProgress inProgress, InProgressAction action) {
         return CliInProgress.continueOrAbort(workTree, inProgress, action);
     }
@@ -226,7 +226,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> rebase(Branch.Name onto) {
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(Branch.Name onto) {
         return CliRebase.onto(workTree, onto);
     }
 
@@ -277,12 +277,12 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode) {
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode) {
         return CliCommit.squash(workTree, sha, mode);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> dropCommit(Sha sha) {
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> dropCommit(Sha sha) {
         return CliRebase.drop(workTree, sha);
     }
 

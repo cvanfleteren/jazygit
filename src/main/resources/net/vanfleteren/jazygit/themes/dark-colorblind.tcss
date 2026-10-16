@@ -48,6 +48,7 @@ ListElement-item:selected, TreeElement-node:selected, .selection {
 .bold { text-style: bold; }
 .dim { text-style: dim; }
 .error { color: $bad; }
+.notice { color: $running; }
 .in-progress { color: $bad; text-style: bold; }
 .disabled { text-style: crossed-out dim; }
 .staged { color: $good; }

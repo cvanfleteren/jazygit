@@ -29,6 +29,8 @@ import net.vanfleteren.jazygit.settings.ThemeName;
  * @param refreshing          periodic loads that have been started and not finished yet, so a tick does
  *                            not queue them again
  * @param error               why the last operation failed, until the next one is started
+ * @param notice              what the user is told about the last operation when it did not fail, but still needs
+ *                            their attention, until the next one is started
  * @param busy                the branches a git operation runs on right now, like a push or a delete, and that
  *                            operation: they show a
  *                            spinner, and take no other operation until it is done
@@ -64,6 +66,7 @@ public record Model(
         Option<Preview<List<FileEntry>, Diffs>> fileDiff,
         Set<Cmd.Load> refreshing,
         Option<AppError> error,
+        Option<Notice> notice,
         Map<BranchRef, Operation> busy,
         Option<Fetching> fetching,
         Option<Map<Branch.Name, PullRequest>> pullRequests,
@@ -92,6 +95,7 @@ public record Model(
                 Option.none(),
                 Option.none(),
                 HashSet.empty(),
+                Option.none(),
                 Option.none(),
                 HashMap.empty(),
                 Option.none(),
@@ -234,18 +238,26 @@ public record Model(
     }
 
     /**
-     * This model without an error shown.
+     * This model without an error shown, nor a notice.
      */
     public Model clearError() {
-        return withError(Option.none());
+        return withError(Option.none()).withNotice(Option.none());
     }
 
     /**
-     * This model showing {@code error}, in the command log and in an error popup. A popup that is open stays
-     * open instead, so what the user entered in it is not lost; the command log still shows the error.
+     * This model showing {@code notice} in the command log, instead of an error.
+     */
+    public Model inform(Notice notice) {
+        return withError(Option.none()).withNotice(Option.of(notice));
+    }
+
+    /**
+     * This model showing {@code error}, in the command log and in an error popup, instead of a notice. A popup
+     * that is open stays open instead, so what the user entered in it is not lost; the command log still shows the
+     * error.
      */
     public Model fail(AppError error) {
-        Model failed = withError(Option.of(error));
+        Model failed = withError(Option.of(error)).withNotice(Option.none());
         return popup.isDefined() ? failed : failed.openPopup(new ErrorPopup(error));
     }
 

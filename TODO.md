@@ -43,6 +43,14 @@ Refactorings that were left out of the functional/immutable cleanup, and why.
   the single-line inputs and the commit summary; the description area needs rows and wrapping. How terminals
   send Ctrl+Backspace and Ctrl+arrows varies. Worth contributing to TamboUI later.
 - [ ] **Resolve conflicts in the app.** A merge, rebase, cherry-pick or revert in progress is shown in the status
-  panel, and can be continued, aborted or skipped (M); but the conflicts themselves are resolved outside the app.
-  Picking ours or theirs per file, and opening a file in `$EDITOR` (suspending the TUI), would make that possible
-  here. Once it is, operations started in the app can stop on conflicts instead of being undone right away.
+  panel, and can be continued, aborted or skipped (M); operations started in the app that stop on conflicts are left
+  so. But the conflicts themselves are resolved outside the app. Picking ours or theirs per file, and opening a file
+  in `$EDITOR` (suspending the TUI), would make that possible here.
+- [ ] **Commit with the message git prepared.** After resolving a squash merge, or a merge that is committed instead
+  of continued, git keeps a message in `.git/SQUASH_MSG` or `.git/MERGE_MSG` (listing the squashed commits, or naming
+  the merged branch). The commit dialog starts empty instead; it could start from that message, without git's `#`
+  comment lines.
+- [ ] **Back out of a squash merge that stopped on conflicts.** Git keeps no merge in progress for it, so M offers
+  nothing; `git reset --merge`, which keeps unrelated uncommitted changes, is run outside the app. Discarding all
+  changes in the app would throw those away too. M could offer "abort" (`reset --merge`) when files have conflicts
+  but nothing is in progress.

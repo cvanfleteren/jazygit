@@ -15,5 +15,11 @@ public sealed interface OperationMsg extends Msg {
 
     record Succeeded(OperationCmd cmd, List<ExecutedCommand> commands) implements OperationMsg {}
 
+    /**
+     * The operation ran {@code commands}, and stopped on conflicts for the user to resolve.
+     */
+    record Stopped(OperationCmd cmd, List<ExecutedCommand> commands, Notice.StoppedOnConflicts notice)
+            implements OperationMsg {}
+
     record Failed(OperationCmd cmd, Failure failure) implements OperationMsg {}
 }

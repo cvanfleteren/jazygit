@@ -145,6 +145,7 @@ public final class Theme {
         public static final String BOLD = "bold";
         public static final String DIM = "dim";
         public static final String ERROR = "error";
+        public static final String NOTICE = "notice";
         public static final String DISABLED = "disabled";
         public static final String STAGED = "staged";
         public static final String UNSTAGED = "unstaged";
