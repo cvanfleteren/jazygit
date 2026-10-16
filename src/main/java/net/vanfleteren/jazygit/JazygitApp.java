@@ -109,6 +109,7 @@ public class JazygitApp extends ToolkitApp {
             new PopupSlot(new ChoiceDialog<>(BranchDialogs.REBASE, dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new ChoiceDialog<>(BranchDialogs.MERGE, dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new ChoiceDialog<>(BranchDialogs.DELETE_BRANCH, dispatch), model -> BranchesPanel.ID),
+            new PopupSlot(new ChoiceDialog<>(BranchDialogs.UPSTREAM, dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new ConfirmDialog<>(BranchDialogs.DELETE_REMOTE_BRANCH, dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new ConfirmDialog<>(BranchDialogs.FORCE_PUSH, dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new TextInputDialog<>(BranchDialogs.RENAME_BRANCH, dispatch), model -> BranchesPanel.ID),
@@ -128,8 +129,9 @@ public class JazygitApp extends ToolkitApp {
             new PopupSlot(new CommitDialog(dispatch), model -> FilesPanel.ID),
             new PopupSlot(new ConfirmDialog<>(CommitDialogs.SQUASH, dispatch), model -> CommitsPanel.ID),
             new PopupSlot(new ChoiceDialog<>(CommitDialogs.FIXUP, dispatch), model -> CommitsPanel.ID),
-            new PopupSlot(new ChoiceDialog<>(CommitDialogs.RESET, dispatch), model -> CommitsPanel.ID),
-            new PopupSlot(new ConfirmDialog<>(CommitDialogs.HARD_RESET, dispatch), model -> CommitsPanel.ID),
+            // A reset is asked about from the commits, or from the upstream options of the branches.
+            new PopupSlot(new ChoiceDialog<>(CommitDialogs.RESET, dispatch), JazygitApp::focusedPane),
+            new PopupSlot(new ConfirmDialog<>(CommitDialogs.HARD_RESET, dispatch), JazygitApp::focusedPane),
             new PopupSlot(CommitDialog.reword(dispatch), model -> CommitsPanel.ID),
             new PopupSlot(new ConfirmDialog<>(CherryPickDialogs.PICK, dispatch), model -> CommitsPanel.ID),
             // Help is opened from a pane, which has the focus then.

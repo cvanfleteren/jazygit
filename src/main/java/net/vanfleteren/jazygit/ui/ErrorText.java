@@ -29,9 +29,10 @@ public final class ErrorText {
             case AppError.NothingToStash() -> Messages.get("error.stash.nothing");
             case AppError.AlreadyPicked(Sha sha) -> Messages.get("error.cherryPick.already", sha.shortSha());
             case AppError.InvalidUpstream(String text) -> Messages.get("error.upstream.invalid", text.strip());
-            case AppError.NoUpstream(Branch.Name branch) -> Messages.get("error.pull.noUpstream", branch.value());
+            case AppError.NoUpstream(Branch.Name branch) -> Messages.get("error.upstream.none", branch.value());
             case AppError.UpstreamGone(Branch.Name branch, String upstream) ->
-                Messages.get("error.pull.upstreamGone", branch.value(), upstream);
+                Messages.get("error.upstream.gone", branch.value(), upstream);
+            case AppError.NoBranchCheckedOut() -> Messages.get("error.detached");
             case AppError.UnpushedCommits(Branch.Name branch) ->
                 Messages.get("error.fastForward.unpushed", branch.value());
             case AppError.CheckedOutElsewhere(var operation, Branch.Name branch, var worktree) ->

@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.branch;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -157,6 +158,28 @@ public final class BranchDialogs {
                     popup -> Messages.get("dialog.rebase.simple", popup.onto().value()),
                     RebaseMsg.Chosen::new)),
             RebaseMsg.Cancelled::new);
+
+    /**
+     * Asks what to do with the upstream of the checked out branch. Its options are offered also when there is
+     * none, to tell why they cannot be done.
+     */
+    public static final ChoiceDialog.Spec<UpstreamPopup> UPSTREAM = new ChoiceDialog.Spec<>(
+            "upstream",
+            UpstreamPopup.class,
+            popup -> popup.branch()
+                    .map(branch ->
+                            Messages.get("dialog.upstream.title", branch.name().value()))
+                    .getOrElse(() -> Messages.get("dialog.upstream.titleDetached")),
+            List.of(new Choice<UpstreamPopup>(
+                    'g',
+                    popup -> Messages.get(
+                            "dialog.upstream.reset",
+                            popup.branch()
+                                    .flatMap(Branch::upstream)
+                                    .map(upstream -> upstream.branch().shortName())
+                                    .getOrElse(() -> Messages.get("dialog.upstream.unknown"))),
+                    UpstreamMsg.ResetChosen::new)),
+            UpstreamMsg.Cancelled::new);
 
     private BranchDialogs() {}
 

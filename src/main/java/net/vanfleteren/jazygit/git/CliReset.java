@@ -7,7 +7,7 @@ import io.vavr.control.Either;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.ResetMode;
-import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.ResetTarget;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -18,11 +18,12 @@ final class CliReset {
     private CliReset() {}
 
     /**
-     * {@code git reset --quiet <mode> <sha>}: moves the checked out branch to {@code sha}.
+     * {@code git reset --quiet <mode> <revision>}: moves the checked out branch to {@code target}.
      *
      * @return the command lines that were run
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> reset(Path workTree, Sha sha, ResetMode mode) {
-        return GitProcess.log(workTree, git("reset", "--quiet", mode.option(), sha.value()));
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> reset(
+            Path workTree, ResetTarget target, ResetMode mode) {
+        return GitProcess.log(workTree, git("reset", "--quiet", mode.option(), target.revision()));
     }
 }

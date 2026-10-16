@@ -29,7 +29,7 @@ class ErrorDialogTest {
         try (ToolkitTestRunner runner = start()) {
             String screen = RenderedText.ofLarge(runner, this::view);
             assertTrue(screen.contains("Error"), screen);
-            assertTrue(screen.contains("Cannot pull branch feature: it has no upstream"), screen);
+            assertTrue(screen.contains("Branch feature has no upstream"), screen);
             assertTrue(screen.contains("(enter/esc) close"), screen);
         }
     }

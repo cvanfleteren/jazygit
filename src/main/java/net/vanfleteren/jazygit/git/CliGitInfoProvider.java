@@ -276,8 +276,8 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> reset(Sha sha, ResetMode mode) {
-        return CliReset.reset(workTree, sha, mode);
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> reset(ResetTarget target, ResetMode mode) {
+        return CliReset.reset(workTree, target, mode);
     }
 
     @Override

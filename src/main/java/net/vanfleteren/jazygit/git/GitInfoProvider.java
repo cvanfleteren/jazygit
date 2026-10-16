@@ -255,11 +255,9 @@ public interface GitInfoProvider {
     // Moving the checked out branch, as git reset does.
 
     /**
-     * Moves the checked out branch to the commit {@code sha}, doing with the changes {@code mode} says.
-     *
-     * @param sha the full object id of the commit
+     * Moves the checked out branch to {@code target}, doing with the changes {@code mode} says.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> reset(Sha sha, ResetMode mode);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> reset(ResetTarget target, ResetMode mode);
 
     // Operations on the index.
 

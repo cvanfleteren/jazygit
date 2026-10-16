@@ -5,13 +5,14 @@ import net.vanfleteren.jazygit.feature.commit.CommitCmd.Reset;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.ResetMode;
+import net.vanfleteren.jazygit.git.model.ResetTarget;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
- * Resetting the checked out branch to a commit. A hard reset that would discard uncommitted changes is
+ * Resetting the checked out branch to a commit or its upstream. A hard reset that would discard uncommitted changes is
  * confirmed first.
  */
 public final class ResetUpdate {
@@ -21,14 +22,13 @@ public final class ResetUpdate {
     public static Next update(Model model, ResetMsg msg) {
         return switch (msg) {
             case ResetMsg.Requested(Sha sha) ->
-                Update.ask(model, model.commit(sha).map(ResetPopup::new));
+                Update.ask(
+                        model, model.commit(sha).map(commit -> new ResetPopup(new ResetTarget.ToCommit(commit.sha()))));
             case ResetMsg.Cancelled() -> Next.of(model.withoutPopup(ResetPopup.class));
             case ResetMsg.Chosen(ResetMode mode) -> chosen(model, mode);
             case ResetMsg.HardConfirmed() ->
                 Update.confirm(
-                        model,
-                        HardResetPopup.class,
-                        popup -> Option.of(new Reset(popup.target().sha(), ResetMode.HARD)));
+                        model, HardResetPopup.class, popup -> Option.of(new Reset(popup.target(), ResetMode.HARD)));
             case ResetMsg.HardCancelled() -> Next.of(model.withoutPopup(HardResetPopup.class));
         };
     }
@@ -44,10 +44,7 @@ public final class ResetUpdate {
                         .map(popup -> Update.ask(
                                 model.withoutPopup(ResetPopup.class), new HardResetPopup(popup.target(), discarded)))
                         .getOrElse(() -> Next.of(model))
-                : Update.confirm(
-                        model,
-                        ResetPopup.class,
-                        popup -> Option.of(new Reset(popup.target().sha(), mode)));
+                : Update.confirm(model, ResetPopup.class, popup -> Option.of(new Reset(popup.target(), mode)));
     }
 
     /**

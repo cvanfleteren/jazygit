@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.ResetMode;
+import net.vanfleteren.jazygit.git.model.ResetTarget;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -102,9 +103,9 @@ public sealed interface CommitCmd extends GitOperationCmd {
     }
 
     /**
-     * Moves the checked out branch to a commit, doing with the changes {@code mode} says.
+     * Moves the checked out branch to {@code target}, doing with the changes {@code mode} says.
      */
-    record Reset(Sha sha, ResetMode mode) implements CommitCmd {
+    record Reset(ResetTarget target, ResetMode mode) implements CommitCmd {
 
         @Override
         public Operation operation() {
@@ -113,12 +114,12 @@ public sealed interface CommitCmd extends GitOperationCmd {
 
         @Override
         public Option<String> subject() {
-            return Option.of(sha.shortSha());
+            return Option.of(target.label());
         }
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return git.reset(sha, mode);
+            return git.reset(target, mode);
         }
     }
 }

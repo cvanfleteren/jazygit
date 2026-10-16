@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.commit;
 import static dev.tamboui.toolkit.Toolkit.stack;
 import static dev.tamboui.toolkit.Toolkit.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
@@ -11,8 +12,11 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.ArrayList;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.ResetMode;
+import net.vanfleteren.jazygit.git.model.ResetTarget;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
@@ -71,9 +75,27 @@ class ResetDialogTest {
                 .contains("Hard reset to " + TARGET.sha().shortSha()));
     }
 
+    @Test
+    void aResetOntoTheUpstreamSaysHowManyLocalCommitsItDrops() throws Exception {
+        RemoteBranch upstream = new RemoteBranch("origin", new Branch.Name("main"));
+
+        String one = choice(new ResetPopup(new ResetTarget.ToUpstream(upstream), 1));
+        assertTrue(one.contains("Reset to origin/main (drops 1 local commit)"), one);
+        assertTrue(choice(new ResetPopup(new ResetTarget.ToUpstream(upstream), 3))
+                .contains("Reset to origin/main (drops 3 local commits)"));
+        String none = choice(new ResetPopup(new ResetTarget.ToUpstream(upstream), 0));
+        assertTrue(none.contains("Reset to origin/main"), none);
+        assertFalse(none.contains("drops"), none);
+    }
+
+    private String choice(ResetPopup popup) throws Exception {
+        Model asking = TestModels.loaded().openPopup(popup);
+        return render(() -> stack(text("background"), dialog.render(asking).get()));
+    }
+
     private String confirmation(Option<Integer> files) throws Exception {
         ConfirmDialog<HardResetPopup> confirm = new ConfirmDialog<>(CommitDialogs.HARD_RESET, dispatched::add);
-        Model asking = TestModels.loaded().openPopup(new HardResetPopup(TARGET, files));
+        Model asking = TestModels.loaded().openPopup(new HardResetPopup(new ResetTarget.ToCommit(TARGET.sha()), files));
         return render(() -> stack(text("background"), confirm.render(asking).get()));
     }
 

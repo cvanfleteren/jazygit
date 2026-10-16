@@ -49,6 +49,13 @@ public record RemoteBranch(String remote, Branch.Name branch) {
     }
 
     /**
+     * The ref it is read from: its remote-tracking ref, or the branch itself for one of this repository.
+     */
+    public String ref() {
+        return local() ? "refs/heads/" + branch.value() : trackingRef();
+    }
+
+    /**
      * The name git shows for it, e.g. {@code origin/main}; just the branch for one of this repository, whose
      * remote is {@code .}.
      */

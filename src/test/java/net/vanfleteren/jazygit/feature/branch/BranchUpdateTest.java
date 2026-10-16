@@ -467,7 +467,7 @@ class BranchUpdateTest {
     void aBranchWithoutUpstreamIsNotPulled() {
         Next current = Update.update(loaded(), new PullMsg.Requested(new Branch.Name("main")));
         assertEquals(List.of(), current.cmds());
-        assertEquals(Option.of("Cannot pull branch main: it has no upstream"), errorText(current.model()));
+        assertEquals(Option.of("Branch main has no upstream"), errorText(current.model()));
 
         assertEquals(
                 List.of(),
@@ -496,7 +496,7 @@ class BranchUpdateTest {
 
         assertEquals(List.of(), pulled.cmds());
         assertEquals(
-                Option.of("Cannot pull branch old: its upstream origin/old was deleted on the remote"),
+                Option.of("Branch old has no upstream anymore: origin/old was deleted on the remote"),
                 errorText(pulled.model()));
         // Like a branch without an upstream, it asks where to push.
         assertEquals(

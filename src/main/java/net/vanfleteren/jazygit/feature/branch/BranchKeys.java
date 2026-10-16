@@ -22,6 +22,7 @@ public final class BranchKeys {
                         Binding.onSelected("r", "help.branches.rebase", RebaseMsg.Requested::new),
                         Binding.onSelected("R", "help.branches.rename", RenameBranchMsg.Requested::new),
                         Binding.onSelected("d", "help.branches.delete", DeleteBranchMsg.Requested::new),
+                        Binding.always("u", "help.branches.upstream", UpstreamMsg.Requested::new),
                         Binding.always("[", "help.branches.previousTab", () -> new BranchesTabMsg.Switched(-1)),
                         Binding.always("]", "help.branches.nextTab", () -> new BranchesTabMsg.Switched(1)))
                 .add(

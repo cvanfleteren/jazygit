@@ -43,16 +43,22 @@ public sealed interface AppError {
     record InvalidUpstream(String text) implements AppError {}
 
     /**
-     * A pull was asked for, but the branch has no upstream to pull from.
+     * A pull, or a reset onto the upstream, was asked for, but the branch has no upstream.
      */
     record NoUpstream(Branch.Name branch) implements AppError {}
 
     /**
-     * A pull was asked for, but the upstream of the branch was deleted on the remote.
+     * A pull, or a reset onto the upstream, was asked for, but the upstream of the branch was deleted on the
+     * remote.
      *
      * @param upstream the short name the upstream had, e.g. {@code origin/feature}
      */
     record UpstreamGone(Branch.Name branch, String upstream) implements AppError {}
+
+    /**
+     * An operation on the checked out branch was asked for, but HEAD is detached.
+     */
+    record NoBranchCheckedOut() implements AppError {}
 
     /**
      * A pull of a branch that is not checked out was asked for, but its commits not yet pushed keep it from

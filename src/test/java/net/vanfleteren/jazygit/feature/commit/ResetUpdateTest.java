@@ -50,7 +50,9 @@ class ResetUpdateTest {
     void requestOpensTheChoiceWithTheTarget() {
         Next next = Update.update(withFiles(), new ResetMsg.Requested(ROOT.sha()));
 
-        assertEquals(Option.of(new ResetPopup(ROOT)), next.model().popup(ResetPopup.class));
+        assertEquals(
+                Option.of(new ResetPopup(new ResetTarget.ToCommit(ROOT.sha()))),
+                next.model().popup(ResetPopup.class));
         assertEquals(List.of(), next.cmds());
     }
 
@@ -58,7 +60,9 @@ class ResetUpdateTest {
     void theTipCanBeResetTo() {
         Next next = Update.update(withFiles(), new ResetMsg.Requested(TIP.sha()));
 
-        assertEquals(Option.of(new ResetPopup(TIP)), next.model().popup(ResetPopup.class));
+        assertEquals(
+                Option.of(new ResetPopup(new ResetTarget.ToCommit(TIP.sha()))),
+                next.model().popup(ResetPopup.class));
     }
 
     @Test
@@ -73,7 +77,7 @@ class ResetUpdateTest {
         for (ResetMode mode : List.of(ResetMode.MIXED, ResetMode.SOFT)) {
             Next next = Update.update(opened(withFiles(MODIFIED)), new ResetMsg.Chosen(mode));
 
-            assertEquals(List.of(new CommitCmd.Reset(ROOT.sha(), mode)), next.cmds());
+            assertEquals(List.of(new CommitCmd.Reset(new ResetTarget.ToCommit(ROOT.sha()), mode)), next.cmds());
             assertEquals(Option.none(), next.model().popup());
         }
     }
@@ -82,7 +86,7 @@ class ResetUpdateTest {
     void aHardResetOfACleanTreeResetsRightAway() {
         Next next = Update.update(opened(withFiles()), new ResetMsg.Chosen(ResetMode.HARD));
 
-        assertEquals(List.of(new CommitCmd.Reset(ROOT.sha(), ResetMode.HARD)), next.cmds());
+        assertEquals(List.of(new CommitCmd.Reset(new ResetTarget.ToCommit(ROOT.sha()), ResetMode.HARD)), next.cmds());
         assertEquals(Option.none(), next.model().popup());
     }
 
@@ -90,7 +94,7 @@ class ResetUpdateTest {
     void untrackedFilesAreLeftAloneSoTheyNeedNoConfirmation() {
         Next next = Update.update(opened(withFiles(UNTRACKED)), new ResetMsg.Chosen(ResetMode.HARD));
 
-        assertEquals(List.of(new CommitCmd.Reset(ROOT.sha(), ResetMode.HARD)), next.cmds());
+        assertEquals(List.of(new CommitCmd.Reset(new ResetTarget.ToCommit(ROOT.sha()), ResetMode.HARD)), next.cmds());
     }
 
     @Test
@@ -100,7 +104,8 @@ class ResetUpdateTest {
         assertEquals(List.of(), next.cmds());
         assertEquals(Option.none(), next.model().popup(ResetPopup.class));
         assertEquals(
-                Option.of(new HardResetPopup(ROOT, Option.of(2))), next.model().popup(HardResetPopup.class));
+                Option.of(new HardResetPopup(new ResetTarget.ToCommit(ROOT.sha()), Option.of(2))),
+                next.model().popup(HardResetPopup.class));
     }
 
     @Test
@@ -112,7 +117,8 @@ class ResetUpdateTest {
 
         assertEquals(List.of(), next.cmds());
         assertEquals(
-                Option.of(new HardResetPopup(ROOT, Option.none())), next.model().popup(HardResetPopup.class));
+                Option.of(new HardResetPopup(new ResetTarget.ToCommit(ROOT.sha()), Option.none())),
+                next.model().popup(HardResetPopup.class));
     }
 
     @Test
@@ -122,7 +128,7 @@ class ResetUpdateTest {
 
         Next next = Update.update(asking, new ResetMsg.HardConfirmed());
 
-        assertEquals(List.of(new CommitCmd.Reset(ROOT.sha(), ResetMode.HARD)), next.cmds());
+        assertEquals(List.of(new CommitCmd.Reset(new ResetTarget.ToCommit(ROOT.sha()), ResetMode.HARD)), next.cmds());
         assertEquals(Option.none(), next.model().popup());
     }
 
@@ -147,7 +153,8 @@ class ResetUpdateTest {
 
     @Test
     void aFailedResetNamesItsTarget() {
-        CommitCmd.Reset reset = new CommitCmd.Reset(new Sha("abcdef0123456789"), ResetMode.HARD);
+        CommitCmd.Reset reset =
+                new CommitCmd.Reset(new ResetTarget.ToCommit(new Sha("abcdef0123456789")), ResetMode.HARD);
         assertEquals(Operation.RESET, reset.operation());
 
         Next next = Update.update(TestModels.loaded(), failed(reset, "locked"));

@@ -49,11 +49,10 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
         shownFor = open;
         return open.map(popup -> {
             StyledElement<?> rows = list.render(model, popup);
-            return DialogFrame.withHint(
-                    spec.title().apply(popup),
-                    Math.max(spec.minWidth(), list.width() + DialogFrame.FRAME),
-                    "dialog.hint.selectCancel",
-                    List.of(rows));
+            String title = spec.title().apply(popup);
+            // The title sits in the top border, between its corners, and is cut off where it does not fit.
+            int width = Math.max(spec.minWidth(), Math.max(list.width() + DialogFrame.FRAME, title.length() + 2));
+            return DialogFrame.withHint(title, width, "dialog.hint.selectCancel", List.of(rows));
         });
     }
 

@@ -52,12 +52,15 @@ public final class CommitDialogs {
             FixupMsg.Cancelled::new);
 
     /**
-     * Asks how to reset the checked out branch to a commit.
+     * Asks how to reset the checked out branch to a commit or its upstream, warning about the commits it leaves
+     * behind.
      */
     public static final ChoiceDialog.Spec<ResetPopup> RESET = new ChoiceDialog.Spec<>(
             "reset-commit",
             ResetPopup.class,
-            popup -> Messages.get("dialog.reset.title", popup.target().sha().shortSha()),
+            popup -> popup.dropped() > 0
+                    ? Messages.get("dialog.reset.titleDropping", popup.target().label(), popup.dropped())
+                    : Messages.get("dialog.reset.title", popup.target().label()),
             List.of(
                     new Choice<>('m', "dialog.reset.mixed", () -> new ResetMsg.Chosen(ResetMode.MIXED)),
                     new Choice<>('s', "dialog.reset.soft", () -> new ResetMsg.Chosen(ResetMode.SOFT)),
@@ -70,7 +73,7 @@ public final class CommitDialogs {
     public static final ConfirmDialog.Spec<HardResetPopup> HARD_RESET = new ConfirmDialog.Spec<>(
             "hard-reset",
             HardResetPopup.class,
-            popup -> Messages.get("dialog.hardReset.title", popup.target().sha().shortSha()),
+            popup -> Messages.get("dialog.hardReset.title", popup.target().label()),
             popup -> popup.files()
                     .map(files -> Messages.get("dialog.hardReset.message", files))
                     .getOrElse(() -> Messages.get("dialog.hardReset.messageUnknown")),

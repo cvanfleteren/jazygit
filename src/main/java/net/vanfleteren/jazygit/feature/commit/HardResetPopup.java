@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.commit;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.ResetTarget;
 import net.vanfleteren.jazygit.state.Popup;
 
 /**
@@ -9,4 +9,4 @@ import net.vanfleteren.jazygit.state.Popup;
  *
  * @param files how many files have changes that are discarded; none when the status is not known
  */
-public record HardResetPopup(Commit target, Option<Integer> files) implements Popup {}
+public record HardResetPopup(ResetTarget target, Option<Integer> files) implements Popup {}
