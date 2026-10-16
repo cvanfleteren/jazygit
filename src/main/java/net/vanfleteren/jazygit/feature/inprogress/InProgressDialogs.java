@@ -1,0 +1,61 @@
+package net.vanfleteren.jazygit.feature.inprogress;
+
+import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.InProgressAction;
+import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.ui.InProgressText;
+import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
+import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
+import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
+
+/**
+ * The choice of what to do with the operation the repository is in the middle of, and the confirmation of
+ * aborting or skipping it.
+ */
+public final class InProgressDialogs {
+
+    /**
+     * Asks whether to continue, abort or skip. Continuing is offered while conflicts remain too, to tell how many
+     * are left; skipping is not possible for a merge.
+     */
+    public static final ChoiceDialog.Spec<InProgressPopup> CHOICE = new ChoiceDialog.Spec<>(
+            "in-progress",
+            InProgressPopup.class,
+            popup -> Messages.get("dialog.inProgress.title", InProgressText.kind(popup.inProgress())),
+            List.of(
+                    new Choice<InProgressPopup>(
+                            'c',
+                            popup -> popup.conflicts() > 0
+                                    ? Messages.get("dialog.inProgress.continueConflicts", popup.conflicts())
+                                    : Messages.get("dialog.inProgress.continue"),
+                            () -> new InProgressMsg.Chosen(InProgressAction.CONTINUE)),
+                    new Choice<>(
+                            'a', "dialog.inProgress.abort", () -> new InProgressMsg.Chosen(InProgressAction.ABORT)),
+                    new Choice<>(
+                            's',
+                            "dialog.inProgress.skip",
+                            () -> new InProgressMsg.Chosen(InProgressAction.SKIP),
+                            (model, popup) -> popup.inProgress().skippable())),
+            InProgressMsg.Cancelled::new);
+
+    /**
+     * Asks to confirm aborting or skipping, which throws work away.
+     */
+    public static final ConfirmDialog.Spec<InProgressConfirmPopup> CONFIRM = new ConfirmDialog.Spec<>(
+            "in-progress-confirm",
+            InProgressConfirmPopup.class,
+            popup -> Messages.get(
+                    popup.action() == InProgressAction.SKIP
+                            ? "dialog.inProgress.skipTitle"
+                            : "dialog.inProgress.abortTitle",
+                    InProgressText.kind(popup.inProgress())),
+            popup -> Messages.get(
+                    popup.action() == InProgressAction.SKIP
+                            ? "dialog.inProgress.skipMessage"
+                            : "dialog.inProgress.abortMessage",
+                    InProgressText.kind(popup.inProgress())),
+            InProgressMsg.Confirmed::new,
+            InProgressMsg.Cancelled::new);
+
+    private InProgressDialogs() {}
+}

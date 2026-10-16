@@ -42,6 +42,7 @@ import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
 import net.vanfleteren.jazygit.feature.github.PullRequestDialog;
 import net.vanfleteren.jazygit.feature.github.PullRequestDialogs;
 import net.vanfleteren.jazygit.feature.help.HelpDialog;
+import net.vanfleteren.jazygit.feature.inprogress.InProgressDialogs;
 import net.vanfleteren.jazygit.feature.repos.RecentReposDialog;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelDialogs;
 import net.vanfleteren.jazygit.feature.stash.StashDialogs;
@@ -135,6 +136,9 @@ public class JazygitApp extends ToolkitApp {
             new PopupSlot(new ConfirmDialog<>(CommitDialogs.HARD_RESET, dispatch), JazygitApp::focusedPane),
             new PopupSlot(CommitDialog.reword(dispatch), model -> CommitsPanel.ID),
             new PopupSlot(new ConfirmDialog<>(CherryPickDialogs.PICK, dispatch), model -> CommitsPanel.ID),
+            // What is in progress is asked about from anywhere.
+            new PopupSlot(new ChoiceDialog<>(InProgressDialogs.CHOICE, dispatch), JazygitApp::focusedPane),
+            new PopupSlot(new ConfirmDialog<>(InProgressDialogs.CONFIRM, dispatch), JazygitApp::focusedPane),
             // Help is opened from a pane, which has the focus then.
             new PopupSlot(new HelpDialog(dispatch), JazygitApp::focusedPane),
             // Errors come up wherever the user is.

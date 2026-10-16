@@ -1,16 +1,13 @@
 package net.vanfleteren.jazygit.git;
 
-import static net.vanfleteren.jazygit.git.GitCommand.reading;
-
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
+import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -18,39 +15,39 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
  * resolve. A command that fails half-way leaves such a state behind, which is then undone; one that was there
  * before belongs to the user, and is left alone.
  *
- * @param merging    a merge stopped, waiting to be committed or aborted
- * @param rebasing   a rebase stopped, waiting to be continued or aborted
- * @param picking    a cherry-pick or revert stopped
+ * @param inProgress the operation that stopped, waiting to be continued or aborted, if any
  * @param conflicted the index holds conflicted files
  */
-record Unfinished(boolean merging, boolean rebasing, boolean picking, boolean conflicted) {
-
-    // Where git keeps what it is in the middle of; --git-path finds them in a linked worktree too.
-    private static final List<String> MARKERS =
-            List.of("MERGE_HEAD", "rebase-merge", "rebase-apply", "CHERRY_PICK_HEAD", "REVERT_HEAD");
+record Unfinished(Option<InProgress> inProgress, boolean conflicted) {
 
     /**
      * Reads what the repository in {@code workTree} is in the middle of. Only asked, so not logged.
      */
     static Either<ProcessError, Unfinished> read(Path workTree) {
-        return GitProcess.read(
-                        workTree,
-                        reading(MARKERS.flatMap(marker -> List.of("--git-path", marker))
-                                .prepend("rev-parse")),
-                        raw -> paths(raw, workTree))
-                .flatMap(markers -> CliMerge.conflicted(workTree)
-                        .map(conflicted -> new Unfinished(
-                                markers.get(0),
-                                markers.get(1) || markers.get(2),
-                                markers.get(3) || markers.get(4),
-                                conflicted)));
+        return CliInProgress.read(workTree)
+                .flatMap(inProgress ->
+                        CliMerge.conflicted(workTree).map(conflicted -> new Unfinished(inProgress, conflicted)));
     }
 
-    private static Either<UnexpectedOutput, List<Boolean>> paths(String raw, Path workTree) {
-        List<String> lines = List.of(raw.split("\n")).filter(line -> !line.isEmpty());
-        return lines.size() == MARKERS.size()
-                ? Either.right(lines.map(line -> Files.exists(workTree.resolve(line))))
-                : Either.left(new UnexpectedOutput(raw));
+    /**
+     * Whether a merge stopped, waiting to be committed or aborted.
+     */
+    boolean merging() {
+        return inProgress.exists(InProgress.Merging.class::isInstance);
+    }
+
+    /**
+     * Whether a rebase stopped, waiting to be continued or aborted.
+     */
+    boolean rebasing() {
+        return inProgress.exists(InProgress.Rebasing.class::isInstance);
+    }
+
+    /**
+     * Whether a cherry-pick or revert stopped.
+     */
+    boolean picking() {
+        return inProgress.exists(op -> op instanceof InProgress.CherryPicking || op instanceof InProgress.Reverting);
     }
 
     /**
@@ -95,6 +92,6 @@ record Unfinished(boolean merging, boolean rebasing, boolean picking, boolean co
      * Whether anything is unfinished.
      */
     boolean any() {
-        return merging || rebasing || picking || conflicted;
+        return inProgress.isDefined() || conflicted;
     }
 }

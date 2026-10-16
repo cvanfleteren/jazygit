@@ -105,6 +105,15 @@ public interface GitInfoProvider {
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> cherryPick(Sha sha);
 
+    // Going on with what the repository is in the middle of, as git merge, rebase, cherry-pick and revert do.
+
+    /**
+     * Does {@code action} to {@code inProgress}, the operation the repository stopped in the middle of. Continuing
+     * takes the commit message git prepared, without asking.
+     */
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> continueOrAbort(
+            InProgress inProgress, InProgressAction action);
+
     // Rebasing the checked out branch, as git rebase does.
 
     /**

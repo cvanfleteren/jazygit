@@ -3,12 +3,20 @@ package net.vanfleteren.jazygit.ui;
 import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.Conflict;
+import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.InProgress;
+import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.model.SampleData;
+import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.Update;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -48,6 +56,58 @@ class StatusPanelTest {
             assertFalse(screen.contains("Checkout of foo failed: boom"), screen);
 
             testRunner.pilot().quit();
+        }
+    }
+
+    @Test
+    void showsWhatTheRepositoryIsInTheMiddleOfAndItsConflicts() throws Exception {
+        FileEntry conflicted =
+                FileEntry.conflicted("a.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
+        FileEntry alsoConflicted =
+                FileEntry.conflicted("b.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.DELETED));
+        Head main = Head.onBranch(new Branch.Name("main"), new Sha("aaaa"));
+
+        assertEquals(
+                "repo → REBASING feature 1/2 onto main · 2 conflicts",
+                statusLine(new RepoStatus(
+                        new Head.Detached(new Sha("bbbb")),
+                        List.of(conflicted, alsoConflicted),
+                        Option.of(new InProgress.Rebasing(
+                                Option.of(new Branch.Name("feature")), new Sha("aaaa"), 1, 2)))));
+        assertEquals(
+                "repo → REBASING 1/2 onto 0123456",
+                statusLine(new RepoStatus(
+                        new Head.Detached(new Sha("bbbb")),
+                        List.of(),
+                        Option.of(new InProgress.Rebasing(Option.none(), new Sha("0123456789"), 1, 2)))));
+        assertEquals(
+                "repo → main · MERGING feature · 1 conflict",
+                statusLine(
+                        new RepoStatus(main, List.of(conflicted), Option.of(new InProgress.Merging(new Sha("ffff"))))));
+        assertEquals(
+                "repo → main · CHERRY-PICKING 0123456",
+                statusLine(new RepoStatus(
+                        main, List.of(), Option.of(new InProgress.CherryPicking(new Sha("0123456789"))))));
+        assertEquals(
+                "repo → main · REVERTING 0123456",
+                statusLine(
+                        new RepoStatus(main, List.of(), Option.of(new InProgress.Reverting(new Sha("0123456789"))))));
+        assertEquals("repo → main · CONFLICTS (1)", statusLine(new RepoStatus(main, List.of(conflicted))));
+    }
+
+    /**
+     * The line the status panel shows for {@code status}, with the sample branches main and feature.
+     */
+    private static String statusLine(RepoStatus status) throws Exception {
+        Model model = Update.update(TestModels.loaded(), new LoadMsg.StatusLoaded(status))
+                .model();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> StatusPanel.render(model))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> StatusPanel.render(model));
+            testRunner.pilot().quit();
+            return List.of(screen.split("\n"))
+                    .map(line -> line.replaceAll("^[│ ]+|[│ ]+$", ""))
+                    .find(line -> line.startsWith("repo →"))
+                    .getOrElse(screen);
         }
     }
 }

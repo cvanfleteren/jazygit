@@ -31,6 +31,9 @@ public enum Operation {
     FAST_FORWARD("log.title.fastForward", "error.fastForward.failed"),
     REBASE("log.title.rebase", "error.rebase.failed"),
     MERGE("log.title.merge", "error.merge.failed"),
+    CONTINUE("log.title.continue", "error.continue.failed"),
+    ABORT("log.title.abort", "error.abort.failed"),
+    SKIP("log.title.skip", "error.skip.failed"),
     CREATE_PR("log.title.createPr", "error.createPr.failed"),
     OPEN_PR("log.title.openPr", "error.openPr.failed"),
     MERGE_PR("log.title.mergePr", "error.mergePr.failed"),
@@ -54,5 +57,16 @@ public enum Operation {
 
     public String errorKey() {
         return errorKey;
+    }
+
+    /**
+     * Whether it waits until the repository is in the middle of nothing, and has no conflicts: it moves HEAD or
+     * rewrites history, which git refuses then, or which would get mixed up with what is in progress.
+     */
+    public boolean waitsForUnfinished() {
+        return switch (this) {
+            case CHECKOUT, MERGE, REBASE, PULL, CHERRY_PICK, SQUASH, FIXUP, DROP, REWORD -> true;
+            default -> false;
+        };
     }
 }

@@ -42,5 +42,7 @@ Refactorings that were left out of the functional/immutable cleanup, and why.
   `SubmittableTextArea`, can see the keys first and apply pure word functions on (text, cursor). Start with
   the single-line inputs and the commit summary; the description area needs rows and wrapping. How terminals
   send Ctrl+Backspace and Ctrl+arrows varies. Worth contributing to TamboUI later.
-- [ ] **Show what the repository is in the middle of.** A merge or rebase in progress isn't shown. Operations
-  on it are left to git, which refuses most of them, and the app no longer undoes what the user started.
+- [ ] **Resolve conflicts in the app.** A merge, rebase, cherry-pick or revert in progress is shown in the status
+  panel, and can be continued, aborted or skipped (M); but the conflicts themselves are resolved outside the app.
+  Picking ours or theirs per file, and opening a file in `$EDITOR` (suspending the TUI), would make that possible
+  here. Once it is, operations started in the app can stop on conflicts instead of being undone right away.

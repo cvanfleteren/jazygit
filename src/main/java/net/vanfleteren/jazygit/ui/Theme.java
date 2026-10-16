@@ -166,6 +166,7 @@ public final class Theme {
         public static final String SHA = "sha";
         public static final String TAG = "tag";
         public static final String COPIED = "copied";
+        public static final String IN_PROGRESS = "in-progress";
         /**
          * The highlighted row of the left pane that is in use.
          */

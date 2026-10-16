@@ -1,12 +1,16 @@
 package net.vanfleteren.jazygit.ui;
 
 import static dev.tamboui.toolkit.Toolkit.panel;
+import static dev.tamboui.toolkit.Toolkit.row;
 import static dev.tamboui.toolkit.Toolkit.text;
 
+import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.elements.TextElement;
+import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -16,8 +20,8 @@ import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 
 /**
- * Top-left panel showing the repository name and the current branch. It is display-only and does not
- * take part in focus cycling.
+ * Top-left panel showing the repository name and the current branch, and what the repository is in the middle
+ * of. It is display-only and does not take part in focus cycling.
  */
 public final class StatusPanel {
 
@@ -26,16 +30,73 @@ public final class StatusPanel {
      */
     public static final int HEIGHT = 3;
 
+    private static final String SEPARATOR = " · ";
+
     private StatusPanel() {}
 
     public static Panel render(Model model) {
         String branch = switch (model.status()) {
             case Loadable.Loading<RepoStatus>() -> Placeholders.loading();
             case Loadable.Failed<RepoStatus>(Failure failure) -> Placeholders.error(failure);
-            case Loadable.Loaded<RepoStatus>(RepoStatus status) -> branchLabel(status.head());
+            // A rebase checks out a detached HEAD, which says nothing the rebase does not.
+            case Loadable.Loaded<RepoStatus>(RepoStatus status) ->
+                status.inProgress().exists(InProgress.Rebasing.class::isInstance) ? "" : branchLabel(status.head());
         };
-        TextElement repository = text(Messages.get("status.line", model.repositoryName(), branch));
-        return panel(Messages.get("panel.status.title"), repository).length(HEIGHT);
+        Option<String> unfinished = model.status()
+                .toOption()
+                .flatMap(status ->
+                        unfinishedLabel(status, model.branches().toOption().getOrElse(List.empty())));
+        String line = Messages.get("status.line", model.repositoryName(), branch)
+                + unfinished
+                        .filter(label -> !branch.isEmpty())
+                        .map(label -> SEPARATOR)
+                        .getOrElse("");
+        TextElement repository = text(line);
+        return panel(
+                        Messages.get("panel.status.title"),
+                        unfinished
+                                // The row would share its width out evenly, cutting off what is in progress.
+                                .<StyledElement<?>>map(label -> row(
+                                        repository.length(line.length()),
+                                        text(label).addClass(Theme.Classes.IN_PROGRESS)))
+                                .getOrElse(repository))
+                .length(HEIGHT);
+    }
+
+    /**
+     * What the repository is in the middle of, with how many files still have conflicts; or just those, when
+     * conflicts are left without an operation, as after a stash that did not apply cleanly. Commits are named
+     * by the local branch they are the tip of, if any.
+     */
+    static Option<String> unfinishedLabel(RepoStatus status, List<Branch> branches) {
+        Option<String> conflicts =
+                Option.when(status.conflicts() > 0, () -> Messages.get("status.conflicts", status.conflicts()));
+        return status.inProgress()
+                .map(inProgress -> conflicts
+                        .map(text -> operationLabel(inProgress, branches) + SEPARATOR + text)
+                        .getOrElse(() -> operationLabel(inProgress, branches)))
+                .orElse(() -> Option.when(
+                        status.conflicts() > 0, () -> Messages.get("status.conflictsOnly", status.conflicts())));
+    }
+
+    private static String operationLabel(InProgress inProgress, List<Branch> branches) {
+        return switch (inProgress) {
+            case InProgress.Merging(Sha theirs) -> Messages.get("status.merging", name(theirs, branches));
+            case InProgress.Rebasing(Option<Branch.Name> branch, Sha onto, int step, int total) ->
+                branch.map(name -> Messages.get("status.rebasing", name.value(), step, total, name(onto, branches)))
+                        .getOrElse(() -> Messages.get("status.rebasingDetached", step, total, name(onto, branches)));
+            case InProgress.CherryPicking(Sha commit) -> Messages.get("status.cherryPicking", name(commit, branches));
+            case InProgress.Reverting(Sha commit) -> Messages.get("status.reverting", name(commit, branches));
+        };
+    }
+
+    /**
+     * The local branch {@code commit} is the tip of, or else its short sha.
+     */
+    private static String name(Sha commit, List<Branch> branches) {
+        return branches.find(branch -> branch.tipOid().equals(commit))
+                .map(branch -> branch.name().value())
+                .getOrElse(commit::shortSha);
     }
 
     /**

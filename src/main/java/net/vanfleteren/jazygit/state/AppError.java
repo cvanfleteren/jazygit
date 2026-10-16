@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.settings.SettingsProblem;
 
@@ -36,6 +37,22 @@ public sealed interface AppError {
      * The copied commit was asked to be cherry-picked, but the checked out branch already has it.
      */
     record AlreadyPicked(Sha sha) implements AppError {}
+
+    /**
+     * Continuing what the repository is in the middle of was asked for, but {@code files} files still have
+     * conflicts.
+     */
+    record ConflictsRemain(int files) implements AppError {}
+
+    /**
+     * An operation was asked for that waits until the repository is in the middle of nothing, see
+     * {@link Operation#waitsForUnfinished()}, but it is in the middle of {@code inProgress}, or {@code conflicts}
+     * files still have conflicts.
+     *
+     * @param subject what it was to be done to, as for {@link OperationFailed}
+     */
+    record Unfinished(Operation operation, Option<String> subject, Option<InProgress> inProgress, int conflicts)
+            implements AppError {}
 
     /**
      * The upstream entered for a push is not {@code <remote> <branch>}.

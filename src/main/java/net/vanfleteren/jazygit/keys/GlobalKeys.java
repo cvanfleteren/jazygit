@@ -4,6 +4,7 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import net.vanfleteren.jazygit.feature.cherrypick.CherryPickMsg;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
+import net.vanfleteren.jazygit.feature.inprogress.InProgressMsg;
 import net.vanfleteren.jazygit.feature.repos.RecentReposMsg;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelMsg;
 import net.vanfleteren.jazygit.state.Msg;
@@ -29,6 +30,8 @@ final class GlobalKeys {
                 // Escape only gets here when nothing else, like a dialog, took it.
                 .global(new Keymap.Global.Dispatching(
                         "esc", "help.global.cherryPickDrop", GlobalKeys::isEscape, CherryPickMsg.Dropped::new))
+                .global(new Keymap.Global.Dispatching(
+                        "M", "help.global.inProgress", GlobalKeys::isInProgressKey, InProgressMsg.Requested::new))
                 .global(new Keymap.Global.Dispatching("q", "help.global.quit", GlobalKeys::isQuitKey, Msg.Quit::new));
     }
 
@@ -44,6 +47,14 @@ final class GlobalKeys {
      */
     static boolean isQuitKey(KeyEvent event) {
         return event.isChar('q') && !event.hasCtrl() && !event.hasAlt();
+    }
+
+    /**
+     * Whether {@code event} is the key that asks what to do with the merge, rebase, cherry-pick or revert the
+     * repository is in the middle of.
+     */
+    static boolean isInProgressKey(KeyEvent event) {
+        return event.isChar('M') && !event.hasCtrl() && !event.hasAlt();
     }
 
     /**

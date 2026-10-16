@@ -57,14 +57,27 @@ public final class Update {
     }
 
     /**
-     * Starts {@code cmd}: its branch, if it has one, is busy until it is done.
+     * Starts {@code cmd}: its branch, if it has one, is busy until it is done. One that waits until the repository
+     * is in the middle of nothing is not started while it is, which the user is told instead.
      */
     public static Next start(Model model, OperationCmd cmd) {
-        return Next.of(
-                cmd.busyBranch()
-                        .map(branch -> model.withBusyBranch(branch, cmd.operation()))
-                        .getOrElse(model),
-                cmd);
+        return unfinished(model, cmd)
+                .map(error -> Next.of(model.fail(error)))
+                .getOrElse(() -> Next.of(
+                        cmd.busyBranch()
+                                .map(branch -> model.withBusyBranch(branch, cmd.operation()))
+                                .getOrElse(model),
+                        cmd));
+    }
+
+    private static Option<AppError> unfinished(Model model, OperationCmd cmd) {
+        return Option.when(
+                        cmd.operation().waitsForUnfinished(),
+                        () -> model.status().toOption())
+                .flatMap(status -> status)
+                .filter(status -> status.inProgress().isDefined() || status.conflicts() > 0)
+                .map(status -> new AppError.Unfinished(
+                        cmd.operation(), cmd.subject(), status.inProgress(), status.conflicts()));
     }
 
     /**

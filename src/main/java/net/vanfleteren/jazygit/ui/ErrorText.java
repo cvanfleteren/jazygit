@@ -28,6 +28,16 @@ public final class ErrorText {
             case AppError.NothingToAmend() -> Messages.get("error.amend.nothing");
             case AppError.NothingToStash() -> Messages.get("error.stash.nothing");
             case AppError.AlreadyPicked(Sha sha) -> Messages.get("error.cherryPick.already", sha.shortSha());
+            case AppError.ConflictsRemain(int files) -> Messages.get("error.conflictsRemain", files);
+            case AppError.Unfinished(var operation, Option<String> subject, var inProgress, int conflicts) ->
+                Messages.get(
+                        operation.errorKey(),
+                        subject.toList()
+                                .<Object>map(s -> s)
+                                .append(inProgress
+                                        .map(op -> Messages.get("error.inProgress", InProgressText.kind(op)))
+                                        .getOrElse(() -> Messages.get("error.conflictsRemain", conflicts)))
+                                .toJavaArray());
             case AppError.InvalidUpstream(String text) -> Messages.get("error.upstream.invalid", text.strip());
             case AppError.NoUpstream(Branch.Name branch) -> Messages.get("error.upstream.none", branch.value());
             case AppError.UpstreamGone(Branch.Name branch, String upstream) ->

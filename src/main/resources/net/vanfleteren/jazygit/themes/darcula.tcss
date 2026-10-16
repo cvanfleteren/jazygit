@@ -53,6 +53,7 @@ ListElement-item:selected, TreeElement-node:selected, .selection {
 .bold { text-style: bold; }
 .dim { color: $muted; }
 .error { color: $removed; }
+.in-progress { color: $removed; text-style: bold; }
 .disabled { color: $muted; text-style: crossed-out; }
 .staged { color: $added; }
 .unstaged { color: $removed; }

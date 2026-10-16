@@ -195,6 +195,12 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> continueOrAbort(
+            InProgress inProgress, InProgressAction action) {
+        return CliInProgress.continueOrAbort(workTree, inProgress, action);
+    }
+
+    @Override
     public Either<ProcessError, List<String>> remotes() {
         return CliRemote.remotes(workTree);
     }

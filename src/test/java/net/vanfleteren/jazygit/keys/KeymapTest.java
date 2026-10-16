@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg;
 import net.vanfleteren.jazygit.feature.github.BrowseMsg;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
+import net.vanfleteren.jazygit.feature.inprogress.InProgressMsg;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelMsg;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -26,6 +27,13 @@ class KeymapTest {
         assertEquals(
                 Option.of(new SettingsPanelMsg.Requested()),
                 keymap.handleGlobal(KeyEvent.ofChar('s', dev.tamboui.tui.event.KeyModifiers.CTRL)));
+    }
+
+    @Test
+    void shiftMAsksWhatToDoWithTheOperationInProgressFromAnywhere() {
+        assertEquals(Option.of(new InProgressMsg.Requested()), keymap.handleGlobal(KeyEvent.ofChar('M')));
+        assertEquals(Option.none(), keymap.handleGlobal(KeyEvent.ofChar('m')));
+        assertTrue(keymap.globals().exists(global -> global.label().equals("M")));
     }
 
     @Test
