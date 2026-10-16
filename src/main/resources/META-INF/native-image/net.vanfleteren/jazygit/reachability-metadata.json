@@ -1,0 +1,9 @@
+{
+  "resources": [
+    { "glob": "net/vanfleteren/jazygit/themes/*.tcss" },
+    { "glob": "dev/tamboui/tui/bindings/*.properties" }
+  ],
+  "bundles": [
+    { "name": "net.vanfleteren.jazygit.messages" }
+  ]
+}

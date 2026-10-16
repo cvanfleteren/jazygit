@@ -19,7 +19,15 @@
               <artifactId>lombok</artifactId>
               <version>${lombok.version}</version>
             </path>
+            <path>
+              <groupId>info.picocli</groupId>
+              <artifactId>picocli-codegen</artifactId>
+              <version>${picocli.version}</version>
+            </path>
           </annotationProcessorPaths>
+          <compilerArgs>
+            <arg>-Aproject=${project.groupId}/${project.artifactId}</arg>
+          </compilerArgs>
         </configuration>
       </plugin>
       <plugin>
@@ -137,6 +145,41 @@
       </plugin>
     </plugins>
   </build>
+  <profiles>
+    <profile>
+      <id>native</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.graalvm.buildtools</groupId>
+            <artifactId>native-maven-plugin</artifactId>
+            <version>${native-maven-plugin.version}</version>
+            <extensions>true</extensions>
+            <executions>
+              <execution>
+                <id>build-native</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>compile-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <imageName>${project.build.finalName}</imageName>
+              <mainClass>${main.class}</mainClass>
+              <metadataRepository>
+                <enabled>true</enabled>
+              </metadataRepository>
+              <buildArgs>
+                <buildArg>-march=compatibility</buildArg>
+                <buildArg>--enable-native-access=ALL-UNNAMED</buildArg>
+              </buildArgs>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
   <repositories>
     <repository>
       <releases>
@@ -237,6 +280,7 @@
     <spotless.version>3.10.4</spotless.version>
     <night-config.version>3.9.0</night-config.version>
     <lombok.version>1.18.46</lombok.version>
+    <native-maven-plugin.version>0.11.1</native-maven-plugin.version>
     <zt-exec.version>1.13.0</zt-exec.version>
     <checkstyle.version>14.3.0</checkstyle.version>
     <picocli.version>4.7.7</picocli.version>

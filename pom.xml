@@ -27,6 +27,7 @@
         <palantir-java-format.version>2.102.0</palantir-java-format.version>
         <checkstyle.version>14.3.0</checkstyle.version>
         <main.class>net.vanfleteren.jazygit.JazygitApp</main.class>
+        <native-maven-plugin.version>0.11.1</native-maven-plugin.version>
     </properties>
 
     <repositories>
@@ -156,7 +157,16 @@
                             <artifactId>lombok</artifactId>
                             <version>${lombok.version}</version>
                         </path>
+                        <!-- Writes the reflection metadata picocli needs in a native image. -->
+                        <path>
+                            <groupId>info.picocli</groupId>
+                            <artifactId>picocli-codegen</artifactId>
+                            <version>${picocli.version}</version>
+                        </path>
                     </annotationProcessorPaths>
+                    <compilerArgs>
+                        <arg>-Aproject=${project.groupId}/${project.artifactId}</arg>
+                    </compilerArgs>
                 </configuration>
             </plugin>
             <plugin>
@@ -280,4 +290,42 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- mvn -Pnative package builds target/jazygit, a native executable; it needs GraalVM as JAVA_HOME. -->
+        <profile>
+            <id>native</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.graalvm.buildtools</groupId>
+                        <artifactId>native-maven-plugin</artifactId>
+                        <version>${native-maven-plugin.version}</version>
+                        <extensions>true</extensions>
+                        <executions>
+                            <execution>
+                                <id>build-native</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>compile-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <imageName>${project.build.finalName}</imageName>
+                            <mainClass>${main.class}</mainClass>
+                            <metadataRepository>
+                                <enabled>true</enabled>
+                            </metadataRepository>
+                            <buildArgs>
+                                <buildArg>-march=compatibility</buildArg>
+                                <!-- jline loads its terminal library itself; without this it warns on every start. -->
+                                <buildArg>--enable-native-access=ALL-UNNAMED</buildArg>
+                            </buildArgs>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
