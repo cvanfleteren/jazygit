@@ -706,7 +706,7 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "dirty\n");
         List<Commit> before = provider.commits().get();
 
-        List<String> executed = provider.drop(before.get(1).sha()).get().map(ExecutedCommand::line);
+        List<String> executed = provider.dropCommit(before.get(1).sha()).get().map(ExecutedCommand::line);
 
         assertTrue(
                 executed.head()
@@ -728,7 +728,7 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "-m", "Second");
         Sha root = provider.commits().get().last().sha();
 
-        provider.drop(root).get();
+        provider.dropCommit(root).get();
 
         assertEquals(
                 List.of("Second"), provider.commits().get().map(Commit::message).toList());
@@ -743,7 +743,7 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "-am", "Third");
         Sha second = provider.commits().get().get(1).sha();
 
-        assertTrue(provider.drop(second).isLeft());
+        assertTrue(provider.dropCommit(second).isLeft());
 
         assertEquals(
                 List.of("Third", "Second", "Initial commit"),

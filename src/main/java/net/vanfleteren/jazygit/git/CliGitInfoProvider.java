@@ -276,7 +276,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> drop(Sha sha) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> dropCommit(Sha sha) {
         return CliRebase.drop(workTree, sha);
     }
 

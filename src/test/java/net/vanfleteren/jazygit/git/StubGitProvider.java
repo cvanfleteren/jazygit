@@ -264,7 +264,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> drop(Sha sha) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> dropCommit(Sha sha) {
         return ran();
     }
 

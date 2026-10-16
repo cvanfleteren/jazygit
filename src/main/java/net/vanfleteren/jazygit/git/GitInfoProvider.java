@@ -258,7 +258,7 @@ public interface GitInfoProvider {
      *
      * @param sha the full object id of a commit that is not a merge
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> drop(Sha sha);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> dropCommit(Sha sha);
 
     // Moving the checked out branch, as git reset does.
 

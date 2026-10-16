@@ -98,7 +98,7 @@ public sealed interface CommitCmd extends GitOperationCmd {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return git.drop(sha);
+            return git.dropCommit(sha);
         }
     }
 
