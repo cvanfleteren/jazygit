@@ -28,14 +28,16 @@ import net.vanfleteren.jazygit.ui.Theme;
  * picked with the arrow keys and Enter; Escape cancels. A row can have several cells, shown in columns as wide as
  * their widest cell; a cell longer than its cap is cut, and when one of the highlighted row is, the row shows in
  * full in a box under the popup. When there are no rows, it can say so in a dimmed line, which cannot be picked.
- * Whether the popup is open lives in the {@link Model}, as a popup of type {@code P}.
+ * {@code /} opens a {@link ListFilter}: then only the rows with a cell that contains it stay shown, and Escape
+ * closes it instead of cancelling. Whether the popup is open lives in the {@link Model}, as a popup of type {@code P}.
  *
  * @param <P> the popup that makes this dialog show
  * @param <T> what a row stands for, which picking it sends
  */
 public final class PickDialog<P extends Popup, T> implements PopupView {
 
-    private static final String HINT = "dialog.hint.pickCancel";
+    private static final String HINT = "dialog.hint.pickFilter";
+    private static final String FILTERING_HINT = "dialog.hint.pickFiltering";
     // The columns between two cells of a row.
     private static final int GAP = 2;
     private static final String CUT = "…";
@@ -45,8 +47,15 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
     // Shown instead of the list when there are no rows: the same id, so it takes the focus and Escape the same
     // way, but its one line is not highlighted.
     private final Option<ListElement<?>> empty;
-    // The rows shown, as of the last render.
+    // Shown instead of the list when no row contains the filter.
+    private final ListElement<?> noMatches;
+    private final ListFilter filter = new ListFilter();
+    // The rows of the popup, as of the last render.
+    private List<Row<T>> all = List.empty();
+    // The rows shown, which contain the filter.
     private List<Row<T>> shown = List.empty();
+    // The widths of the columns, as of the last render.
+    private List<Integer> widths = List.empty();
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
@@ -61,6 +70,12 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
                         .highlightStyle(Style.EMPTY)
                         .onKeyEvent(this::handleKey)
                         .elements(text(Messages.get(key)).addClass(Theme.Classes.DIM)));
+        this.noMatches = list().id(spec.id())
+                .focusable()
+                .highlightSymbol("")
+                .highlightStyle(Style.EMPTY)
+                .onKeyEvent(this::handleKey)
+                .elements(ListFilter.noMatches());
     }
 
     @Override
@@ -75,23 +90,26 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
     @Override
     public Option<Element> render(Model model) {
         return model.popup(spec.popupType()).map(popup -> {
-            List<Integer> widths = widths(spec.rows().apply(popup));
-            show(spec.rows().apply(popup), widths);
+            show(spec.rows().apply(popup));
             int width = widths.sum().intValue() + GAP * Math.max(0, widths.size() - 1);
-            ListElement<?> rows = empty.filter(none -> shown.isEmpty()).getOrElse(list);
+            ListElement<?> rows = all.isEmpty() ? empty.getOrElse(list) : shown.isEmpty() ? noMatches : list;
             // Wide enough for the hint, which would wrap otherwise.
-            int hint = Messages.get(HINT).length();
+            int hint = Math.max(
+                    Messages.get(HINT).length(), Messages.get(FILTERING_HINT).length());
             Element frame = DialogFrame.withHint(
                             spec.title().apply(popup),
                             Math.max(DialogFrame.LIST_WIDTH, Math.max(width, hint) + DialogFrame.FRAME),
-                            HINT,
-                            List.of(rows.constraint(Constraint.fill())))
-                    // The rows, the blank line and the hint, plus the border.
-                    .length(Math.max(1, shown.size()) + 2 + 2);
+                            filter.isOpen() ? FILTERING_HINT : HINT,
+                            filter.isOpen()
+                                    ? List.of(filter.field(), rows.constraint(Constraint.fill()))
+                                    : List.of(rows.constraint(Constraint.fill())))
+                    // The filter, the rows of the popup whatever the filter, the blank line and the hint, plus the
+                    // border.
+                    .length((filter.isOpen() ? 1 : 0) + Math.max(1, all.size()) + 2 + 2);
             return new WithDetails(
                     frame,
                     shown.lift().apply(list.selected()).flatMap(PickDialog::details),
-                    shown.flatMap(PickDialog::details));
+                    all.flatMap(PickDialog::details));
         });
     }
 
@@ -119,12 +137,26 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
                         .mkString("\n"));
     }
 
-    private void show(List<Row<T>> rows, List<Integer> widths) {
-        if (!rows.equals(shown)) {
-            shown = rows;
+    private void show(List<Row<T>> rows) {
+        if (!rows.equals(all)) {
+            all = rows;
+            widths = widths(rows);
             list.selected(0);
-            list.elements(rows.map(row -> element(row, widths)).toJavaArray(StyledElement[]::new));
+            refilter();
         }
+    }
+
+    /**
+     * Shows the rows that contain the filter, keeping the highlighted one when it does, else highlighting the first.
+     */
+    private void refilter() {
+        Option<T> before = shown.lift().apply(list.selected()).map(Row::value);
+        shown = all.filter(row -> row.cells().exists(cell -> filter.matches(cell.text())));
+        list.elements(shown.map(row -> element(row, widths)).toJavaArray(StyledElement[]::new));
+        list.selected(Math.max(
+                0,
+                before.map(value -> shown.indexWhere(row -> row.value().equals(value)))
+                        .getOrElse(0)));
     }
 
     private static StyledElement<?> element(Row<?> row, List<Integer> widths) {
@@ -145,6 +177,19 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
     }
 
     private EventResult handleKey(KeyEvent event) {
+        if (filter.isOpen() && event.code() == KeyCode.ESCAPE) {
+            filter.close();
+            refilter();
+            return EventResult.HANDLED;
+        }
+        if (!filter.isOpen() && !all.isEmpty() && ListFilter.opens(event)) {
+            filter.open();
+            return EventResult.HANDLED;
+        }
+        if (filter.edit(event)) {
+            refilter();
+            return EventResult.HANDLED;
+        }
         Option<Msg> msg = event.code() == KeyCode.ESCAPE
                 ? Option.of(spec.onCancel().get())
                 : event.isConfirm()
@@ -155,7 +200,9 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
     }
 
     private void send(Msg msg) {
-        // The next time it opens, it starts at the top again.
+        // The next time it opens, it starts at the top again, without a filter.
+        filter.close();
+        all = List.empty();
         shown = List.empty();
         dispatch.accept(msg);
     }

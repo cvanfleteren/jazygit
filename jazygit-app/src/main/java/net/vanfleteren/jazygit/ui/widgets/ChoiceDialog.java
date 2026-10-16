@@ -14,8 +14,8 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
 
 /**
- * The standard popup offering a choice between several options, as a {@link ChoiceList}. Whether the popup is
- * open lives in the {@link Model}, as a popup of type {@code P}.
+ * The standard popup offering a choice between several options, as a {@link ChoiceList} that {@code /} filters.
+ * Whether the popup is open lives in the {@link Model}, as a popup of type {@code P}.
  *
  * @param <P> the popup that makes this dialog show
  */
@@ -30,7 +30,7 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
      */
     public ChoiceDialog(Spec<P> spec, Consumer<Msg> dispatch) {
         this.spec = spec;
-        this.list = new ChoiceList<>(spec.id(), spec.choices(), spec.onCancel(), dispatch);
+        this.list = new ChoiceList<>(spec.id(), spec.choices(), spec.onCancel(), dispatch, true);
     }
 
     @Override
@@ -50,9 +50,15 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
         return open.map(popup -> {
             StyledElement<?> rows = list.render(model, popup);
             String title = spec.title().apply(popup);
-            // The title sits in the top border, between its corners, and is cut off where it does not fit.
-            int width = Math.max(spec.minWidth(), Math.max(list.width() + DialogFrame.FRAME, title.length() + 2));
-            return DialogFrame.withHint(title, width, "dialog.hint.selectCancel", List.of(rows));
+            // The title sits in the top border, between its corners, and is cut off where it does not fit. It is
+            // wide enough for the hint, which would wrap otherwise.
+            int width = Math.max(
+                    spec.minWidth(),
+                    Math.max(Math.max(list.width(), list.hintWidth()) + DialogFrame.FRAME, title.length() + 2));
+            List<StyledElement<?>> filter = list.filterField().toList();
+            return DialogFrame.withHint(title, width, list.hintKey(), filter.append(rows))
+                    // The filter, the options whatever the filter, the blank line and the hint, plus the border.
+                    .length(filter.size() + list.height() + 2 + 2);
         });
     }
 

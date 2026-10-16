@@ -143,6 +143,75 @@ class PickDialogTest {
         assertEquals(java.util.List.of(new Picked("a-very-long-name")), dispatched);
     }
 
+    @Test
+    void slashFiltersTheRowsOnAnyCellKeepingTheHighlightedRowWhileItMatches() throws Exception {
+        PickDialog<BranchPopup, String> columns = new PickDialog<>(
+                new PickDialog.Spec<>(
+                        "pick",
+                        BranchPopup.class,
+                        popup -> "Repositories",
+                        popup -> popup.branches()
+                                .map(name -> new PickDialog.Row<>(
+                                        name,
+                                        List.of(PickDialog.Cell.of(name), PickDialog.Cell.of("~/" + name + "-dir")))),
+                        Picked::new,
+                        () -> new Picked("cancel")),
+                dispatched::add);
+        Supplier<Element> view = () -> stack(
+                text("background"),
+                columns.render(TestModels.loaded().openPopup(new BranchPopup(List.of("main", "develop", "release"))))
+                        .get());
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
+            SettledPilot.focus(runner, "pick");
+            RenderedText.of(runner, view);
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            type(runner, "/e");
+            String screen = RenderedText.ofLarge(runner, view);
+            assertTrue(screen.contains("/ e"), screen);
+            assertFalse(screen.contains("main"), screen);
+            assertTrue(screen.contains("develop"), screen);
+            assertTrue(screen.contains("(esc) clear filter"), screen);
+            type(runner, "-dir");
+            String cell = RenderedText.ofLarge(runner, view);
+            assertTrue(cell.contains("release"), cell);
+            assertFalse(cell.contains("develop"), cell);
+            type(runner, "x");
+            String none = RenderedText.ofLarge(runner, view);
+            assertTrue(none.contains("No matches"), none);
+            SettledPilot.of(runner).press(KeyCode.BACKSPACE);
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new Picked("release")), dispatched);
+    }
+
+    @Test
+    void escapeClosesTheFilterBeforeItCancels() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            type(runner, "/rel");
+            String filtered = RenderedText.ofLarge(runner, this::view);
+            assertFalse(filtered.contains("develop"), filtered);
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).pause();
+            String screen = RenderedText.ofLarge(runner, this::view);
+            assertTrue(screen.contains("develop"), screen);
+            assertTrue(screen.contains("(/) filter"), screen);
+            assertEquals(java.util.List.of(), dispatched);
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new Picked("cancel")), dispatched);
+    }
+
+    private static void type(ToolkitTestRunner runner, String keys) {
+        keys.chars().forEach(key -> SettledPilot.of(runner).press((char) key));
+        SettledPilot.of(runner).pause();
+    }
+
     private ToolkitTestRunner start() throws Exception {
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
         SettledPilot.focus(runner, "pick");
