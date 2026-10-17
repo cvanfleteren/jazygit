@@ -77,6 +77,25 @@ final class CliLog {
                                                         new Divergence(ahead, counts._1, behind, counts._2)))))));
     }
 
+    /**
+     * The subject of the oldest commit on {@code branch} that is not on {@code base}; none when there is none.
+     */
+    static Either<GitError, Option<String>> firstSubject(Path workTree, BranchRef branch, BranchRef base) {
+        return tip(workTree, branch)
+                .flatMap(ours -> tip(workTree, base)
+                        .flatMap(theirs -> Either.narrow(GitProcess.read(
+                                workTree,
+                                GitCommand.reading(
+                                        "log",
+                                        "--no-color",
+                                        "--reverse",
+                                        "--format=%s",
+                                        ours.value(),
+                                        "^" + theirs.value(),
+                                        "--"),
+                                raw -> Either.right(GitOutput.nonBlankLines(raw).headOption())))));
+    }
+
     private static Either<GitError, Sha> tip(Path workTree, BranchRef branch) {
         return Either.<GitError, Option<Sha>>narrow(
                         resolve(workTree, Refs.of(branch)).mapLeft(GitFailure::error))

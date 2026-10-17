@@ -16,7 +16,14 @@ public interface PopupView {
     Option<Element> render(Model model);
 
     /**
-     * The ids of the dialog's focusable parts; the first one gets the focus when it opens.
+     * The ids of the dialog's focusable parts, in the order Tab goes through them.
      */
     List<String> ids();
+
+    /**
+     * The id that gets the focus when the dialog opens: the first one, unless the dialog says otherwise.
+     */
+    default Option<String> initialFocus() {
+        return ids().headOption();
+    }
 }

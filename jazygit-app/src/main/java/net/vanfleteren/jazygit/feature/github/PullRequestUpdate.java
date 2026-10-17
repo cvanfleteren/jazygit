@@ -6,8 +6,10 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.fetch.FetchUpdate;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.*;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
+import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -22,14 +24,35 @@ public final class PullRequestUpdate {
         return switch (msg) {
             case PullRequestMsg.Requested(Branch.Name branch) -> requested(model, branch);
             case PullRequestMsg.BaseChosen(Branch.Name base) ->
-                Update.confirm(
-                        model,
-                        BasePopup.class,
+                model.popup(BasePopup.class)
+                        .flatMap(popup -> model.branch(popup.branch()))
                         // The branch can have another name on its remote; gh needs that one.
-                        popup -> model.branch(popup.branch())
-                                .map(known -> new CreatePullRequest(
-                                        known.name(), known.pushTarget().branch(), base)));
+                        .map(known -> Next.of(
+                                model.withoutPopup(BasePopup.class),
+                                new ReadTitle(known.name(), known.pushTarget().branch(), base, baseRef(model, base))))
+                        .getOrElse(() -> Next.of(model.withoutPopup(BasePopup.class)));
             case PullRequestMsg.BaseCancelled() -> Next.of(model.withoutPopup(BasePopup.class));
+            // Without a commit of its own to name it after, it is named after the branch, as gh would.
+            case PullRequestMsg.TitleRead(var branch, var head, var base, var subject) ->
+                Next.of(model.openPopupIfFree(
+                        new NewPullRequestPopup(branch, head, base, subject.getOrElse(branch::value))));
+            // A blank title keeps the popup open, as GitHub needs one.
+            case PullRequestMsg.CreateConfirmed(NewPullRequest pullRequest) ->
+                pullRequest.title().isBlank()
+                        ? Next.of(model)
+                        : Update.confirm(
+                                model,
+                                NewPullRequestPopup.class,
+                                popup -> model.branch(popup.branch())
+                                        .map(known -> new CreatePullRequest(
+                                                popup.branch(),
+                                                popup.head(),
+                                                popup.base(),
+                                                new NewPullRequest(
+                                                        pullRequest.title().strip(),
+                                                        pullRequest.body(),
+                                                        pullRequest.draft()))));
+            case PullRequestMsg.CreateCancelled() -> Next.of(model.withoutPopup(NewPullRequestPopup.class));
             case PullRequestMsg.Created(CreatePullRequest cmd, var pullRequest, var commands) -> {
                 // Done like any operation. The new pull request shows at once, as GitHub may not list it yet;
                 // reading the pull requests then gives its checks and review.
@@ -119,6 +142,17 @@ public final class PullRequestUpdate {
                                         ? Next.of(model.fail(new AppError.NotPushed(branch)))
                                         : Update.ask(model, new BasePopup(branch, bases(model, branch)))))
                 .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * The branch {@code base} is on its remote, which a pull request merges into; the local one when it has no
+     * upstream there.
+     */
+    private static BranchRef baseRef(Model model, Branch.Name base) {
+        return model.branch(base)
+                .flatMap(Branch::remoteUpstream)
+                .map(upstream -> BranchRef.of(upstream.branch()))
+                .getOrElse(() -> new BranchRef.Local(base));
     }
 
     /**

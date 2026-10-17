@@ -141,6 +141,11 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
+    default Either<GitError, Option<String>> firstSubject(BranchRef branch, BranchRef base) {
+        return Either.right(Option.none());
+    }
+
+    @Override
     default Either<ProcessError, DiffText> commitChanges(Sha sha) {
         return Either.right(DiffText.of(""));
     }

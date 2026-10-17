@@ -73,10 +73,10 @@ public interface StubGitHub extends GitHub {
     }
 
     @Override
-    default Either<GhFailure, Created> createPullRequest(String head, String base) {
+    default Either<GhFailure, Created> createPullRequest(String head, String base, NewPullRequest pullRequest) {
         return Either.right(new Created(
                 Option.none(),
-                List.of(ExecutedCommand.of("gh", "pr", "create", "--head", head, "--base", base, "--fill"))));
+                List.of(CliGitHub.createCommand(head, base, pullRequest).executed())));
     }
 
     @Override

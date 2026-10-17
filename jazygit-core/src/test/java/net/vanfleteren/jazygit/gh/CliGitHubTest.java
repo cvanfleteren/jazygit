@@ -9,6 +9,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.BranchChecks;
 import net.vanfleteren.jazygit.gh.model.GhLogin;
+import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -82,6 +83,43 @@ class CliGitHubTest {
         assertEquals(
                 List.of("gh", "browse", "--branch", "feature/login"),
                 CliGitHub.browseCommand("feature/login").commandLine("gh"));
+    }
+
+    @Test
+    void aPullRequestIsCreatedWithItsTitleAndBodyAndAsADraftWhenAsked() {
+        assertEquals(
+                List.of(
+                        "gh",
+                        "pr",
+                        "create",
+                        "--head",
+                        "feature",
+                        "--base",
+                        "main",
+                        "--title",
+                        "Add login",
+                        "--body",
+                        ""),
+                CliGitHub.createCommand("feature", "main", new NewPullRequest("Add login", "", false))
+                        .executed()
+                        .commandLine());
+        assertEquals(
+                List.of(
+                        "gh",
+                        "pr",
+                        "create",
+                        "--head",
+                        "feature",
+                        "--base",
+                        "main",
+                        "--title",
+                        "Add login",
+                        "--body",
+                        "Why",
+                        "--draft"),
+                CliGitHub.createCommand("feature", "main", new NewPullRequest("Add login", "Why", true))
+                        .executed()
+                        .commandLine());
     }
 
     @Test

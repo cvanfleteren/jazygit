@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.github;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
+import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -43,10 +44,37 @@ public sealed interface PullRequestCmd extends Cmd {
     }
 
     /**
-     * Creates a pull request from {@code branch}, as it is on its remote under the name {@code head}, into
-     * {@code base}.
+     * Reads the title a new pull request of {@code branch} into {@code base} starts out with: the subject of its
+     * oldest commit that is not on {@code baseRef}, the branch {@code base} is on its remote. Without it, the
+     * user still gets to enter one.
+     *
+     * @param head the name the branch has on its remote
      */
-    record CreatePullRequest(Branch.Name branch, Branch.Name head, Branch.Name base)
+    record ReadTitle(Branch.Name branch, Branch.Name head, Branch.Name base, BranchRef baseRef)
+            implements PullRequestCmd {
+
+        @Override
+        public Msg run(Env env) {
+            return env.git()
+                    .firstSubject(new BranchRef.Local(branch), baseRef)
+                    .fold(error -> read(Option.none()), this::read);
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return read(Option.none());
+        }
+
+        private Msg read(Option<String> subject) {
+            return new PullRequestMsg.TitleRead(branch, head, base, subject);
+        }
+    }
+
+    /**
+     * Creates a pull request from {@code branch}, as it is on its remote under the name {@code head}, into
+     * {@code base}, as {@code pullRequest} says.
+     */
+    record CreatePullRequest(Branch.Name branch, Branch.Name head, Branch.Name base, NewPullRequest pullRequest)
             implements PullRequestCmd, OperationCmd {
 
         @Override
@@ -67,14 +95,18 @@ public sealed interface PullRequestCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return env.gitHub()
-                    .createPullRequest(head.value(), base.value())
+                    .createPullRequest(head.value(), base.value(), pullRequest)
                     .fold(
                             this::failedWith,
                             created -> new PullRequestMsg.Created(
                                     this,
                                     created.number()
                                             .map(number -> new PullRequest(
-                                                    number, head.value(), false, Checks.NONE, Review.NONE)),
+                                                    number,
+                                                    head.value(),
+                                                    pullRequest.draft(),
+                                                    Checks.NONE,
+                                                    Review.NONE)),
                                     created.commands()));
         }
     }

@@ -157,6 +157,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<GitError, Option<String>> firstSubject(BranchRef branch, BranchRef base) {
+        return CliLog.firstSubject(workTree, branch, base);
+    }
+
+    @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> checkout(Branch.Name branch) {
         return CliCheckout.checkout(workTree, branch);
     }

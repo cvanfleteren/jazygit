@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
+import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -60,6 +61,7 @@ class PullRequestUpdateTest {
             true,
             false,
             Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("ahead")), 2, 0)));
+    private static final Branch.Name FEATURE = PUSHED.name();
     private static final PullRequest FEATURE_PR =
             new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED);
 
@@ -108,20 +110,81 @@ class PullRequestUpdateTest {
     }
 
     @Test
-    void choosingTheBaseCreatesThePullRequestAndKeepsTheBranchBusy() {
+    void choosingTheBaseReadsTheTitleFromTheFirstCommitNotOnTheBaseOnItsRemote() {
         Model asked = Update.update(model(), new PullRequestMsg.Requested(new Branch.Name("feature")))
                 .model();
 
-        Next created = Update.update(asked, new PullRequestMsg.BaseChosen(new Branch.Name("main")));
+        Next reading = Update.update(asked, new PullRequestMsg.BaseChosen(new Branch.Name("main")));
+
+        assertEquals(
+                List.of(new ReadTitle(
+                        FEATURE,
+                        FEATURE,
+                        new Branch.Name("main"),
+                        new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main"))))),
+                reading.cmds());
+        assertEquals(Option.none(), reading.model().popup());
+    }
+
+    @Test
+    void theTitleReadIsOfferedToEdit() {
+        Next asking = Update.update(
+                model(), new PullRequestMsg.TitleRead(FEATURE, FEATURE, MAIN.name(), Option.of("Add login")));
+
+        assertEquals(
+                Option.of(new NewPullRequestPopup(FEATURE, FEATURE, MAIN.name(), "Add login")),
+                asking.model().popup());
+        assertEquals(List.empty(), asking.cmds());
+    }
+
+    @Test
+    void withoutACommitOfItsOwnTheTitleIsTheBranch() {
+        Next asking =
+                Update.update(model(), new PullRequestMsg.TitleRead(FEATURE, FEATURE, MAIN.name(), Option.none()));
+
+        assertEquals(
+                Option.of(new NewPullRequestPopup(FEATURE, FEATURE, MAIN.name(), "feature")),
+                asking.model().popup());
+    }
+
+    @Test
+    void confirmingCreatesThePullRequestAsEnteredAndKeepsTheBranchBusy() {
+        NewPullRequest entered = new NewPullRequest(" Add login ", "Why", true);
+
+        Next created = Update.update(creating(), new PullRequestMsg.CreateConfirmed(entered));
 
         assertEquals(
                 List.of(new CreatePullRequest(
-                        new Branch.Name("feature"), new Branch.Name("feature"), new Branch.Name("main"))),
+                        FEATURE, FEATURE, MAIN.name(), new NewPullRequest("Add login", "Why", true))),
                 created.cmds());
         assertEquals(Option.none(), created.model().popup());
+        assertEquals(Option.of(Operation.CREATE_PR), created.model().busy().get(new BranchRef.Local(FEATURE)));
+    }
+
+    @Test
+    void aBlankTitleKeepsThePopupOpen() {
+        Next next = Update.update(creating(), new PullRequestMsg.CreateConfirmed(new NewPullRequest(" ", "", false)));
+
+        assertEquals(List.empty(), next.cmds());
+        assertTrue(next.model().popup(NewPullRequestPopup.class).isDefined());
+    }
+
+    @Test
+    void cancellingTheNewPullRequestClosesThePopup() {
         assertEquals(
-                Option.of(Operation.CREATE_PR),
-                created.model().busy().get(new BranchRef.Local(new Branch.Name("feature"))));
+                Option.none(),
+                Update.update(creating(), new PullRequestMsg.CreateCancelled())
+                        .model()
+                        .popup());
+    }
+
+    /**
+     * Asking what the new pull request of the feature branch into main says.
+     */
+    private static Model creating() {
+        return Update.update(
+                        model(), new PullRequestMsg.TitleRead(FEATURE, FEATURE, MAIN.name(), Option.of("Add login")))
+                .model();
     }
 
     @Test
@@ -373,12 +436,10 @@ class PullRequestUpdateTest {
 
     @Test
     void aCreatedPullRequestIsLoggedAndThePullRequestsAreReadAgain() {
-        Model asked = Update.update(model(), new PullRequestMsg.Requested(new Branch.Name("feature")))
-                .model();
-        Model creating = Update.update(asked, new PullRequestMsg.BaseChosen(new Branch.Name("main")))
-                .model();
         CreatePullRequest cmd =
-                new CreatePullRequest(new Branch.Name("feature"), new Branch.Name("feature"), new Branch.Name("main"));
+                new CreatePullRequest(FEATURE, FEATURE, MAIN.name(), new NewPullRequest("Login", "", true));
+        Model creating = Update.update(creating(), new PullRequestMsg.CreateConfirmed(cmd.pullRequest()))
+                .model();
 
         Next done = Update.update(creating, cmd.run(new Env(new StubGitProvider() {}, StubGitHub.empty())));
 
@@ -386,19 +447,16 @@ class PullRequestUpdateTest {
         assertEquals(Option.none(), done.model().busy().get(new BranchRef.Local(new Branch.Name("feature"))));
         assertTrue(done.cmds().contains(new FetchCmd.ListRemotes()), done.cmds().toString());
         assertEquals(
-                "gh pr create --head feature --base main --fill",
+                "gh pr create --head feature --base main --title Login --body '' --draft",
                 done.model().commandLog().last().commands().last().line());
     }
 
     @Test
     void aCreatedPullRequestShowsAtOnceEvenIfGitHubDoesNotListItYet() {
         CreatePullRequest cmd =
-                new CreatePullRequest(new Branch.Name("feature"), new Branch.Name("feature"), new Branch.Name("main"));
+                new CreatePullRequest(FEATURE, FEATURE, MAIN.name(), new NewPullRequest("Login", "", false));
         PullRequest created = new PullRequest(43, "feature", false, Checks.NONE, Review.NONE);
-        Model creating = Update.update(
-                        Update.update(model(), new PullRequestMsg.Requested(new Branch.Name("feature")))
-                                .model(),
-                        new PullRequestMsg.BaseChosen(new Branch.Name("main")))
+        Model creating = Update.update(creating(), new PullRequestMsg.CreateConfirmed(cmd.pullRequest()))
                 .model();
 
         Next done = Update.update(creating, new PullRequestMsg.Created(cmd, Option.of(created), List.empty()));

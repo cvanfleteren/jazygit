@@ -37,10 +37,9 @@ public interface GitHub {
     Either<GhError, PullRequestDetails> pullRequestDetails(int number);
 
     /**
-     * Creates a pull request from the remote branch {@code head} into {@code base}; its title and description
-     * are taken from the commits.
+     * Creates a pull request from the remote branch {@code head} into {@code base}, as {@code pullRequest} says.
      */
-    Either<GhFailure, Created> createPullRequest(String head, String base);
+    Either<GhFailure, Created> createPullRequest(String head, String base, NewPullRequest pullRequest);
 
     /**
      * Opens pull request {@code number} in the browser.

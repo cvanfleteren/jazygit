@@ -205,6 +205,11 @@ public interface GitInfoProvider {
      */
     Either<GitError, Divergence> divergence(BranchRef branch, BranchRef other);
 
+    /**
+     * The subject of the oldest commit on {@code branch} that is not on {@code base}; none when there is none.
+     */
+    Either<GitError, Option<String>> firstSubject(BranchRef branch, BranchRef base);
+
     // A single commit, as git show shows it.
 
     /**

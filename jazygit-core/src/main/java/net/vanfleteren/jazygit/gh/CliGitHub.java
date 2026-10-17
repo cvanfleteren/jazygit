@@ -151,6 +151,26 @@ public final class CliGitHub implements GitHub {
         return Option.when(url.find(), () -> Integer.parseInt(url.group(1)));
     }
 
+    /**
+     * The command that creates a pull request from {@code head} into {@code base}: with the title and the body
+     * given, so gh does not ask for them, and as a draft if asked.
+     */
+    static GhCommand createCommand(String head, String base, NewPullRequest pullRequest) {
+        return gh(List.of(
+                        "pr",
+                        "create",
+                        "--head",
+                        head,
+                        "--base",
+                        base,
+                        "--title",
+                        pullRequest.title(),
+                        "--body",
+                        pullRequest.body())
+                .appendAll(Option.when(pullRequest.draft(), "--draft"))
+                .toJavaArray(String[]::new));
+    }
+
     static GhCommand browseCommand(String branch) {
         return gh("browse", "--branch", branch);
     }
@@ -369,8 +389,8 @@ public final class CliGitHub implements GitHub {
     }
 
     @Override
-    public Either<GhFailure, Created> createPullRequest(String head, String base) {
-        return process.run(gh("pr", "create", "--head", head, "--base", base, "--fill"))
+    public Either<GhFailure, Created> createPullRequest(String head, String base, NewPullRequest pullRequest) {
+        return process.run(createCommand(head, base, pullRequest))
                 .map(output -> new Created(createdNumber(output.stdout()), output.log()));
     }
 

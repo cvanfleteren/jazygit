@@ -41,6 +41,7 @@ import net.vanfleteren.jazygit.feature.commit.CommitDialogs;
 import net.vanfleteren.jazygit.feature.discard.DiscardDialog;
 import net.vanfleteren.jazygit.feature.error.ErrorDialog;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
+import net.vanfleteren.jazygit.feature.github.NewPullRequestDialog;
 import net.vanfleteren.jazygit.feature.github.PullRequestDialog;
 import net.vanfleteren.jazygit.feature.github.PullRequestDialogs;
 import net.vanfleteren.jazygit.feature.help.HelpDialog;
@@ -125,6 +126,7 @@ public class JazygitApp extends ToolkitApp {
                     new ConfirmDialog<>(WorktreeDialogs.FORCE_REMOVE_WORKTREE, dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new PickDialog<>(PullRequestDialogs.BASE, dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new PullRequestDialog(dispatch), model -> BranchesPanel.ID),
+            new PopupSlot(new NewPullRequestDialog(dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new ConfirmDialog<>(CommitDialogs.AMEND, dispatch), model -> FilesPanel.ID),
             new PopupSlot(new ConfirmDialog<>(StashDialogs.DROP, dispatch), model -> StashPanel.ID),
             new PopupSlot(new TextInputDialog<>(StashDialogs.STASH, dispatch), model -> FilesPanel.ID),
@@ -153,6 +155,8 @@ public class JazygitApp extends ToolkitApp {
     // How the terminal is set up, and the backend that hands it over to an editor, once the app is started.
     private TuiConfig config = TuiConfig.defaults();
     private Option<HandOverBackend> backend = Option.none();
+    // Where the focus was at the end of the last render, which tells which field of a popup Tab left.
+    private Option<String> lastFocus = Option.none();
 
     /**
      * @param env           what the repository the app starts in is read with; it opens other repositories in
@@ -459,7 +463,10 @@ public class JazygitApp extends ToolkitApp {
         Element layout = column(panes.fill(), FetchLine.render(model).length(FetchLine.HEIGHT));
         // The open popup takes the focus, and gives it back to where it was opened from.
         List<Shown> shown = popups.map(slot -> new Shown(
-                slot.view().render(model), slot.view().ids(), slot.returnTo().apply(model)));
+                slot.view().render(model),
+                slot.view().ids(),
+                slot.view().initialFocus(),
+                slot.returnTo().apply(model)));
         // The framework knows no focus before the first render. Where the focus is outside the popups is kept
         // in the model, as a closing popup gives it back there.
         Option<String> focus = Option.of(focusedId);
@@ -471,16 +478,29 @@ public class JazygitApp extends ToolkitApp {
         open.fold(
                         // A popup that just closed gives the focus back.
                         () -> shown.find(p -> focus.exists(p.ids()::contains)).map(Shown::returnTo),
-                        // A popup that just opened takes the focus.
-                        p -> focus.exists(p.ids()::contains)
-                                ? Option.<String>none()
-                                : p.ids().headOption())
+                        p -> popupFocus(p.ids(), p.initialFocus(), focus, lastFocus))
                 .forEach(runner().focusManager()::setFocus);
+        lastFocus = Option.of(runner().focusManager().focusedId());
         // What is behind an open popup is dimmed, so the popup stands out.
         Element screen = open.flatMap(Shown::element)
                 .<Element>map(d -> stack(new Dimmed(layout, Theme.backdrop(styleEngine)), d))
                 .getOrElse(layout);
         return new SelectedTextColoured(screen, Theme.selectedText(styleEngine));
+    }
+
+    /**
+     * Where the focus goes in an open popup with the fields {@code ids}, in tab order, when it is at {@code focus}
+     * and was at {@code last} at the end of the last render: nowhere while it is in the popup. Tab or Shift+Tab out
+     * of its last or first field takes it to the panes behind, so it goes round to the other end instead. Else the
+     * popup just opened, and it goes to {@code initial}.
+     */
+    static Option<String> popupFocus(
+            List<String> ids, Option<String> initial, Option<String> focus, Option<String> last) {
+        return focus.exists(ids::contains)
+                ? Option.none()
+                : last.filter(ids::contains)
+                        .map(left -> left.equals(ids.last()) ? ids.head() : ids.last())
+                        .orElse(initial);
     }
 
     /**
@@ -516,5 +536,5 @@ public class JazygitApp extends ToolkitApp {
     /**
      * A popup as rendered: its dialog while it is open.
      */
-    private record Shown(Option<Element> element, List<String> ids, String returnTo) {}
+    private record Shown(Option<Element> element, List<String> ids, Option<String> initialFocus, String returnTo) {}
 }

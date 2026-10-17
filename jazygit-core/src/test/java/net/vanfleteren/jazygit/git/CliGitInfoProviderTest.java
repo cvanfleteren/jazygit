@@ -259,6 +259,18 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void theFirstSubjectIsThatOfTheOldestCommitNotOnTheBase() throws Exception {
+        git("checkout", "-q", "-b", "side");
+        git("commit", "-q", "--allow-empty", "-m", "Side one", "-m", "Its body");
+        git("commit", "-q", "--allow-empty", "-m", "Side two");
+        BranchRef side = new BranchRef.Local(new Branch.Name("side"));
+        BranchRef main = new BranchRef.Local(new Branch.Name("main"));
+
+        assertEquals(Option.of("Side one"), provider.firstSubject(side, main).get());
+        assertEquals(Option.none(), provider.firstSubject(main, side).get());
+    }
+
+    @Test
     void reportsRepositoryNameAndCurrentBranch() throws Exception {
         assertEquals(repo.getFileName().toString(), provider.repositoryName());
         assertEquals(

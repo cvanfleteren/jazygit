@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.github;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
+import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -59,6 +60,22 @@ public sealed interface PullRequestMsg extends Msg {
     record BaseChosen(Branch.Name base) implements PullRequestMsg {}
 
     record BaseCancelled() implements PullRequestMsg {}
+
+    /**
+     * The title a new pull request of {@code branch} into {@code base} starts out with was read: the subject of
+     * its oldest commit, if one was found.
+     *
+     * @param head the name the branch has on its remote
+     */
+    record TitleRead(Branch.Name branch, Branch.Name head, Branch.Name base, Option<String> subject)
+            implements PullRequestMsg {}
+
+    /**
+     * The user confirmed what the new pull request says.
+     */
+    record CreateConfirmed(NewPullRequest pullRequest) implements PullRequestMsg {}
+
+    record CreateCancelled() implements PullRequestMsg {}
 
     /**
      * The pull request was created by running {@code commands}.

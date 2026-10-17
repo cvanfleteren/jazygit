@@ -7,7 +7,7 @@ Panel, TextInputElement, TextAreaElement, RichTextAreaElement {
     border-color: $border;
 }
 
-Panel.focused {
+Panel.focused, Panel.checkbox:focus {
     border-color: $accent;
 }
 
