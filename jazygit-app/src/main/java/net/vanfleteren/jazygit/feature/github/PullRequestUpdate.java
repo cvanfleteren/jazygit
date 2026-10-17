@@ -95,6 +95,29 @@ public final class PullRequestUpdate {
                                 popup.open(),
                                 () -> new ClosePullRequest(
                                         popup.branch(), popup.pullRequest().number())));
+            // The dialog stays open, to show the pull request as it now is.
+            case PullRequestMsg.DraftChosen() ->
+                model.popup(PullRequestPopup.class)
+                        .filter(popup -> draftChangeable(model, popup))
+                        .flatMap(popup -> popup.draft()
+                                .map(draft -> Update.start(
+                                        model.clearError(),
+                                        new SetDraft(
+                                                popup.branch(),
+                                                popup.pullRequest().number(),
+                                                !draft))))
+                        .getOrElse(() -> Next.of(model));
+            // Done like any operation, which reads the pull requests again. The dialog shows the change at once.
+            case PullRequestMsg.DraftSet(SetDraft cmd, var commands) -> {
+                Next done = OperationUpdate.succeeded(model, cmd, commands);
+                yield new Next(
+                        done.model()
+                                .popup(PullRequestPopup.class)
+                                .filter(popup -> popup.pullRequest().number() == cmd.number())
+                                .map(popup -> done.model().openPopup(popup.withDraft(cmd.draft())))
+                                .getOrElse(done.model()),
+                        done.cmds());
+            }
             case PullRequestMsg.Ended(ChangingCmd cmd, var commands) -> {
                 // Done like any operation. The pull request is no longer open, which reading them again confirms;
                 // a merge changed the base branch on the remote, which a fetch brings in.
@@ -108,6 +131,14 @@ public final class PullRequestUpdate {
             }
             case PullRequestMsg.InfoClosed() -> Next.of(model.withoutPopup(PullRequestPopup.class));
         };
+    }
+
+    /**
+     * Whether the pull request {@code popup} shows can be turned into a draft, or marked ready for review: it is
+     * open, and its branch is not busy, e.g. with doing that already.
+     */
+    static boolean draftChangeable(Model model, PullRequestPopup popup) {
+        return popup.open() && !model.busy().containsKey(new BranchRef.Local(popup.branch()));
     }
 
     /**

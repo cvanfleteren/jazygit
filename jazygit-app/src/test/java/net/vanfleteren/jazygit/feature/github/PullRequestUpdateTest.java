@@ -303,6 +303,64 @@ class PullRequestUpdateTest {
     }
 
     @Test
+    void choosingDraftTogglesItOnceTheDetailsAreReadAndKeepsTheDialogOpen() {
+        Model shown =
+                Update.update(withPr(), new PullRequestMsg.Requested(FEATURE)).model();
+        assertEquals(
+                List.empty(),
+                Update.update(shown, new PullRequestMsg.DraftChosen()).cmds());
+
+        Model read = Update.update(
+                        shown,
+                        new PullRequestMsg.DetailsLoaded(
+                                42, StubGitHub.empty().pullRequestDetails(42).get()))
+                .model();
+        Next drafting = Update.update(read, new PullRequestMsg.DraftChosen());
+
+        assertEquals(List.of(new SetDraft(FEATURE, 42, true)), drafting.cmds());
+        assertTrue(drafting.model().popup(PullRequestPopup.class).isDefined());
+        assertEquals(Option.of(Operation.DRAFT_PR), drafting.model().busy().get(new BranchRef.Local(FEATURE)));
+        // While it runs, it is not started again.
+        assertEquals(
+                List.empty(),
+                Update.update(drafting.model(), new PullRequestMsg.DraftChosen())
+                        .cmds());
+    }
+
+    @Test
+    void aPullRequestThatBecameADraftShowsAsOneAndThePullRequestsAreReadAgain() {
+        Model read = Update.update(
+                        Update.update(withPr(), new PullRequestMsg.Requested(FEATURE))
+                                .model(),
+                        new PullRequestMsg.DetailsLoaded(
+                                42, StubGitHub.empty().pullRequestDetails(42).get()))
+                .model();
+        Next drafting = Update.update(read, new PullRequestMsg.DraftChosen());
+        SetDraft cmd = (SetDraft) drafting.cmds().head();
+
+        Next done = Update.update(drafting.model(), cmd.run(env()));
+
+        assertEquals(Option.of(true), done.model().popup(PullRequestPopup.class).flatMap(PullRequestPopup::draft));
+        assertEquals(Option.none(), done.model().busy().get(new BranchRef.Local(FEATURE)));
+        assertTrue(done.cmds().contains(new LoadPullRequests()), done.cmds().toString());
+        assertEquals(
+                "gh pr ready 42 --undo",
+                done.model().commandLog().last().commands().last().line());
+    }
+
+    @Test
+    void markingADraftReadyRunsGhPrReady() {
+        SetDraft cmd = new SetDraft(FEATURE, 42, false);
+        Model marking = withPr().withBusyBranch(new BranchRef.Local(FEATURE), Operation.READY_PR);
+
+        Next done = Update.update(marking, cmd.run(env()));
+
+        assertEquals(
+                "gh pr ready 42",
+                done.model().commandLog().last().commands().last().line());
+    }
+
+    @Test
     void aMergedPullRequestIsReadAgainEvenWhileAnEarlierReadRuns() {
         MergePullRequest cmd = new MergePullRequest(new Branch.Name("feature"), 42, MergeMethod.MERGE);
         // The running read started before the merge, and would list the pull request as still open.

@@ -203,6 +203,7 @@ class PullRequestDialogTest {
                 PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(READY)));
 
         assertTrue(screen.contains("(o) Open in browser"), screen);
+        assertTrue(screen.contains("(d) Convert to draft"), screen);
         assertTrue(screen.contains("(m) Merge"), screen);
         assertTrue(screen.contains("(s) Squash and merge"), screen);
         assertTrue(screen.contains("(r) Rebase and merge"), screen);
@@ -216,7 +217,7 @@ class PullRequestDialogTest {
                 .openPopup(PullRequestPopup.loading(new Branch.Name("support_rename"), PR)
                         .with(Either.right(READY)));
         try (ToolkitTestRunner runner = start(model)) {
-            for (char key : new char[] {'m', 's', 'r', 'x', 'o'}) {
+            for (char key : new char[] {'d', 'm', 's', 'r', 'x', 'o'}) {
                 SettledPilot.of(runner).press(key);
                 SettledPilot.of(runner).pause();
             }
@@ -224,6 +225,7 @@ class PullRequestDialogTest {
 
         assertEquals(
                 java.util.List.of(
+                        new PullRequestMsg.DraftChosen(),
                         new PullRequestMsg.MergeChosen(MergeMethod.MERGE),
                         new PullRequestMsg.MergeChosen(MergeMethod.SQUASH),
                         new PullRequestMsg.MergeChosen(MergeMethod.REBASE),
@@ -233,19 +235,27 @@ class PullRequestDialogTest {
     }
 
     @Test
-    void aDraftCanBeClosedButNotMergedAndNothingIsDoneBeforeTheDetailsAreRead() throws Exception {
+    void aDraftCanBeMarkedReadyOrClosedButNotMergedAndNothingIsDoneBeforeTheDetailsAreRead() throws Exception {
         PullRequestPopup loading = PullRequestPopup.loading(new Branch.Name("support_rename"), PR);
         for (PullRequestPopup popup : List.of(loading, loading.with(Either.right(DETAILS)))) {
             try (ToolkitTestRunner runner = start(TestModels.loaded().openPopup(popup))) {
-                SettledPilot.of(runner).press('m');
-                SettledPilot.of(runner).pause();
-                SettledPilot.of(runner).press('x');
-                SettledPilot.of(runner).pause();
+                for (char key : new char[] {'d', 'm', 'x'}) {
+                    SettledPilot.of(runner).press(key);
+                    SettledPilot.of(runner).pause();
+                }
             }
         }
 
         // DETAILS is a draft.
-        assertEquals(java.util.List.of(new PullRequestMsg.CloseChosen()), dispatched);
+        assertEquals(java.util.List.of(new PullRequestMsg.DraftChosen(), new PullRequestMsg.CloseChosen()), dispatched);
+    }
+
+    @Test
+    void aDraftOffersToMarkItReadyForReview() throws Exception {
+        String screen = screen(
+                PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(DETAILS)));
+
+        assertTrue(screen.contains("(d) Mark ready for review"), screen);
     }
 
     @Test

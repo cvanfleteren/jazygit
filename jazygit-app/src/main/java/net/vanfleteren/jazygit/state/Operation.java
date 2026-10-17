@@ -41,6 +41,8 @@ public enum Operation {
     OPEN_PR("log.title.openPr", "error.openPr.failed"),
     MERGE_PR("log.title.mergePr", "error.mergePr.failed"),
     CLOSE_PR("log.title.closePr", "error.closePr.failed"),
+    READY_PR("log.title.readyPr", "error.readyPr.failed"),
+    DRAFT_PR("log.title.draftPr", "error.draftPr.failed"),
     BROWSE("log.title.browse", "error.browse.failed"),
     STASH("log.title.stash", "error.stash.failed"),
     STASH_POP("log.title.stashPop", "error.stashPop.failed"),

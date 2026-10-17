@@ -30,6 +30,20 @@ public record PullRequestPopup(
     }
 
     /**
+     * The popup once the pull request became a draft when {@code draft}, else ready for review.
+     */
+    PullRequestPopup withDraft(boolean draft) {
+        return new PullRequestPopup(branch, pullRequest, details.map(read -> read.map(pr -> pr.withDraft(draft))));
+    }
+
+    /**
+     * Whether it is a draft, once its details are read.
+     */
+    public Option<Boolean> draft() {
+        return readDetails().map(PullRequestDetails::draft);
+    }
+
+    /**
      * Whether it is known to be open, so it can be closed: once its details are read.
      */
     public boolean open() {

@@ -48,6 +48,16 @@ public sealed interface PullRequestMsg extends Msg {
     record CloseChosen() implements PullRequestMsg {}
 
     /**
+     * The user asked to turn the pull request that is shown into a draft, or to mark it ready for review.
+     */
+    record DraftChosen() implements PullRequestMsg {}
+
+    /**
+     * The pull request became a draft, or ready for review, as {@code cmd} says, by running {@code commands}.
+     */
+    record DraftSet(PullRequestCmd.SetDraft cmd, List<ExecutedCommand> commands) implements PullRequestMsg {}
+
+    /**
      * The pull request was merged or closed by running {@code commands}.
      */
     record Ended(PullRequestCmd.ChangingCmd cmd, List<ExecutedCommand> commands) implements PullRequestMsg {}

@@ -413,4 +413,13 @@ public final class CliGitHub implements GitHub {
     public Either<GhFailure, List<ExecutedCommand>> closePullRequest(int number) {
         return process.log(gh("pr", "close", String.valueOf(number)));
     }
+
+    @Override
+    public Either<GhFailure, List<ExecutedCommand>> setDraft(int number, boolean draft) {
+        return process.log(draftCommand(number, draft));
+    }
+
+    static GhCommand draftCommand(int number, boolean draft) {
+        return draft ? gh("pr", "ready", String.valueOf(number), "--undo") : gh("pr", "ready", String.valueOf(number));
+    }
 }

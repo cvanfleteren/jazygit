@@ -45,6 +45,30 @@ public record PullRequestDetails(
         List<Reviewer> reviewers,
         List<Check> checks) {
 
+    /**
+     * This pull request, as a draft when {@code draft}, else as ready for review.
+     */
+    public PullRequestDetails withDraft(boolean draft) {
+        return new PullRequestDetails(
+                number,
+                title,
+                author,
+                state,
+                draft,
+                headBranch,
+                baseBranch,
+                createdAt,
+                additions,
+                deletions,
+                changedFiles,
+                mergeable,
+                review,
+                comments,
+                labels,
+                reviewers,
+                checks);
+    }
+
     public enum State {
         OPEN,
         CLOSED,

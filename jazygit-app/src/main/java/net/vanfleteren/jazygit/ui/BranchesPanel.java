@@ -226,6 +226,8 @@ public class BranchesPanel {
             case CREATE_PR -> Option.of(Messages.get("branches.busy.pullRequest"));
             case MERGE_PR -> Option.of(Messages.get("branches.busy.mergePr"));
             case CLOSE_PR -> Option.of(Messages.get("branches.busy.closePr"));
+            case READY_PR -> Option.of(Messages.get("branches.busy.readyPr"));
+            case DRAFT_PR -> Option.of(Messages.get("branches.busy.draftPr"));
             default -> Option.none();
         };
     }
