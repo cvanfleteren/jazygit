@@ -69,6 +69,25 @@ class DimmedTest {
     }
 
     @Test
+    void boldTextLosesItsBoldAsMostTerminalsLetItWinOverDim() {
+        Buffer buffer = render(new Dimmed(text("bold").red().bold(), TERMINAL_DEFAULT));
+
+        assertFalse(buffer.get(0, 0).style().effectiveModifiers().contains(Modifier.BOLD));
+        assertTrue(buffer.get(0, 0).style().effectiveModifiers().contains(Modifier.DIM));
+    }
+
+    @Test
+    void rgbTextOnAnRgbBackgroundIsBlendedHalfwayIntoIt() {
+        Buffer buffer = render(new Dimmed(
+                text("orange").fg(Color.rgb(0xff, 0x7a, 0x00)).bg(Color.rgb(0x0a, 0x14, 0x30)), TERMINAL_DEFAULT));
+
+        assertEquals(
+                Optional.of(Color.rgb(0x84, 0x47, 0x18)),
+                buffer.get(0, 0).style().fg());
+        assertTrue(dim(buffer, 0, 0));
+    }
+
+    @Test
     void textInTheThemesPlainColourCountsAsPlain() {
         Color themeFg = Color.rgb(0xa9, 0xb7, 0xc6);
         Backdrop backdrop = new Backdrop(Option.of(themeFg), Style.EMPTY.fg(MUTED));

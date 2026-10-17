@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.ui;
 import dev.tamboui.css.Styleable;
 import dev.tamboui.css.engine.StyleEngine;
 import dev.tamboui.style.Color;
+import dev.tamboui.style.Modifier;
 import dev.tamboui.style.Style;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
@@ -196,8 +197,10 @@ public final class Theme {
     public record LoadFailed(String theme, Throwable cause) {}
 
     /**
-     * How what is behind an open popup is dimmed: every cell gets the terminal's dim attribute, and plain text
-     * gets {@code plain} on top, as terminals do not always dim their default colour.
+     * How what is behind an open popup is dimmed: every cell gets the terminal's dim attribute and loses bold, which
+     * most terminals let win over dim. Plain text gets {@code plain} on top, as terminals do not always dim their
+     * default colour, and text in an RGB colour on an RGB background is blended halfway into it, as terminals do
+     * not always dim RGB colours either.
      *
      * @param plainFg the colour of plain text, none when it is the terminal's default
      */
@@ -208,14 +211,28 @@ public final class Theme {
          */
         public static final Backdrop DIM_ONLY = new Backdrop(Option.none(), Style.EMPTY);
 
-        private static final Style DIM = Style.EMPTY.dim();
+        private static final Style DIM = Style.EMPTY.dim().removeModifier(Modifier.BOLD);
 
         /**
          * {@code style} dimmed.
          */
         public Style dim(Style style) {
             boolean isPlain = Option.ofOptional(style.fg()).equals(plainFg);
-            return (isPlain ? style.patch(plain) : style).patch(DIM);
+            return (isPlain ? style.patch(plain) : faded(style)).patch(DIM);
+        }
+
+        private static Style faded(Style style) {
+            return Option.ofOptional(style.fg())
+                    .filter(Color.Rgb.class::isInstance)
+                    .map(Color.Rgb.class::cast)
+                    .flatMap(fg -> Option.ofOptional(style.bg())
+                            .filter(Color.Rgb.class::isInstance)
+                            .map(bg -> style.fg(halfway(fg, (Color.Rgb) bg))))
+                    .getOrElse(style);
+        }
+
+        private static Color halfway(Color.Rgb from, Color.Rgb to) {
+            return Color.rgb((from.r() + to.r()) / 2, (from.g() + to.g()) / 2, (from.b() + to.b()) / 2);
         }
     }
 
