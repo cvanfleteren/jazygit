@@ -25,7 +25,15 @@ public enum ThemeName {
     /**
      * The green, teal, blue and yellow of powerlevel10k's prompt segments on near-black.
      */
-    POWERLINE("powerline");
+    POWERLINE("powerline"),
+    /**
+     * The purples, lavenders and cyan of Liantis on white.
+     */
+    LIANTIS("liantis"),
+    /**
+     * The liantis theme turned over: white and lavender on the deep purple of Liantis.
+     */
+    LIANTIS_DARK("liantis-dark");
 
     private final String id;
 

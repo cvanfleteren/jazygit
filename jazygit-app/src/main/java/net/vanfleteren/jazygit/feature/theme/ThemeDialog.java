@@ -27,7 +27,11 @@ public final class ThemeDialog {
             'e',
             ThemeName.EMBER,
             'p',
-            ThemeName.POWERLINE);
+            ThemeName.POWERLINE,
+            'i',
+            ThemeName.LIANTIS,
+            'n',
+            ThemeName.LIANTIS_DARK);
 
     /**
      * The themes, opening at the one in use, so the arrow keys preview the others from there.

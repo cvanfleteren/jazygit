@@ -1,0 +1,85 @@
+/* The liantis theme turned over: white and lavender on the deep purple of Liantis. */
+$fg: #f9f2ff;
+$bg: #29004d;
+$border: #7843a5;
+$accent: #e1c1ff;
+$muted: #a68bc4;
+$selection: #532778;
+$added: #57bdab;
+$removed: #ff6b81;
+$hunk: #00b2ff;
+$meta: #cea9ef;
+$warn: #f2b84b;
+
+* {
+    color: $fg;
+    background: $bg;
+}
+
+Panel, TextInputElement, TextAreaElement, RichTextAreaElement {
+    border-type: rounded;
+    border-color: $border;
+}
+
+Panel.focused {
+    border-color: $accent;
+}
+
+/* Popups, which otherwise take the terminal's own colour. */
+DialogElement {
+    border-color: $accent;
+}
+
+/*
+ * The highlighted row: in the left pane in use, and in popups; in the other left panes it is hidden, as the
+ * empty rule says. Only what these rules declare themselves is laid over the row.
+ */
+ListElement-item:selected, TreeElement-node:selected, .selection {
+    background: $selection;
+}
+
+.inactive-selection {
+}
+
+/* Plain text on the highlighted row; the coloured pieces of the row keep their colours. */
+.selected-text { color: #ffffff; }
+
+/*
+ * Behind an open popup, text in the plain colour takes this one; the rest is dimmed by the terminal, which
+ * not every terminal does for its default colour.
+ */
+.backdrop { color: $muted; }
+
+.bold { text-style: bold; }
+.dim { color: $muted; }
+.error { color: $removed; }
+.notice { color: $warn; }
+.in-progress { color: $removed; text-style: bold; }
+.disabled { color: $muted; text-style: crossed-out; }
+.staged { color: $added; }
+.unstaged { color: $removed; }
+.spinner { color: $accent; }
+.ahead { color: $added; }
+.behind { color: $removed; }
+.gone { color: $removed; }
+.pull-request { color: $hunk; }
+.checks-passed { color: $added; }
+.checks-failed { color: $removed; }
+.checks-running { color: $warn; }
+.review-approved { color: $added; }
+.review-changes { color: $removed; }
+.repo-branch { color: $accent; }
+.repo-location { color: $hunk; }
+
+Span.diff-header { color: $meta; text-style: bold; }
+Span.diff-added { color: $added; }
+Span.diff-removed { color: $removed; }
+Span.diff-hunk { color: $hunk; }
+Span.current-branch { color: $accent; text-style: bold; }
+Span.sha { color: $warn; }
+Span.tag { color: $added; }
+Span.copied { color: $accent; text-style: bold; }
+Span.bold { text-style: bold; }
+
+/* The draft box of a new pull request, when it has the focus: reversed, as a cursor. */
+.checkbox:focus { text-style: reversed; }

@@ -107,7 +107,8 @@ class ThemeTest {
                 ThemeName.DARCULA,
                 ThemeName.MONO,
                 ThemeName.EMBER,
-                ThemeName.POWERLINE)) {
+                ThemeName.POWERLINE,
+                ThemeName.LIANTIS_DARK)) {
             var engine = Theme.createEngine().get();
             Theme.activate(engine, name);
             Theme.SelectedText selectedText = Theme.selectedText(engine);
