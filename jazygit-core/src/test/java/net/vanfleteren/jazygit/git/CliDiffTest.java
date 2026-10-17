@@ -6,6 +6,7 @@ import io.vavr.collection.List;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -23,7 +24,7 @@ class CliDiffTest {
         git("init", "-q");
         Files.writeString(repo.resolve("new.txt"), "first\n");
 
-        Diffs diffs = CliDiff.diff(repo, List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)))
+        Diffs diffs = CliDiff.diff(repo, List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)), DiffOptions.DEFAULT)
                 .get();
 
         assertTrue(diffs.unstaged().text().contains("+first"), diffs.unstaged().text());
@@ -48,7 +49,8 @@ class CliDiffTest {
                         List.of(
                                 new FileEntry("a.txt", ChangeType.MODIFIED),
                                 new FileEntry("new1.txt", ChangeType.UNTRACKED),
-                                new FileEntry("new2.txt", ChangeType.UNTRACKED)))
+                                new FileEntry("new2.txt", ChangeType.UNTRACKED)),
+                        DiffOptions.DEFAULT)
                 .get();
 
         assertEquals("", diffs.staged().text());
@@ -57,6 +59,47 @@ class CliDiffTest {
         assertTrue(diffs.unstaged().text().contains("+second"));
         assertEquals(indexBefore, git("ls-files", "--stage"));
         assertFalse(git("status", "--porcelain").contains("A  new1.txt"));
+    }
+
+    @Test
+    void ignoringWhitespaceLeavesOutChangesToWhitespaceOnly() throws Exception {
+        git("init", "-q");
+        git("config", "user.email", "t@t");
+        git("config", "user.name", "t");
+        Files.writeString(repo.resolve("spaced.txt"), "one\n");
+        Files.writeString(repo.resolve("staged.txt"), "one\n");
+        Files.writeString(repo.resolve("changed.txt"), "one\n");
+        git("add", ".");
+        git("commit", "-qm", "init");
+        Files.writeString(repo.resolve("spaced.txt"), "one  \n");
+        Files.writeString(repo.resolve("staged.txt"), "\tone\n");
+        git("add", "staged.txt");
+        Files.writeString(repo.resolve("changed.txt"), "one \ntwo\n");
+        Files.writeString(repo.resolve("new.txt"), "first\n");
+        List<FileEntry> files = List.of(
+                new FileEntry("spaced.txt", ChangeType.MODIFIED),
+                new FileEntry("staged.txt", ChangeType.MODIFIED, true, false),
+                new FileEntry("changed.txt", ChangeType.MODIFIED),
+                new FileEntry("new.txt", ChangeType.UNTRACKED));
+
+        Diffs shown = CliDiff.diff(repo, files, DiffOptions.DEFAULT).get();
+        Diffs ignoring = CliDiff.diff(repo, files, DiffOptions.DEFAULT.withIgnoreWhitespace(true))
+                .get();
+
+        assertTrue(shown.staged().text().contains("staged.txt"), shown.staged().text());
+        assertTrue(
+                shown.unstaged().text().contains("spaced.txt"), shown.unstaged().text());
+        assertEquals("", ignoring.staged().text());
+        assertFalse(
+                ignoring.unstaged().text().contains("spaced.txt"),
+                ignoring.unstaged().text());
+        assertTrue(
+                ignoring.unstaged().text().contains("+two"), ignoring.unstaged().text());
+        assertFalse(
+                ignoring.unstaged().text().contains("-one"), ignoring.unstaged().text());
+        assertTrue(
+                ignoring.unstaged().text().contains("+first"),
+                ignoring.unstaged().text());
     }
 
     @Test

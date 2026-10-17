@@ -1514,7 +1514,7 @@ class CliGitInfoProviderTest {
         List<FileEntry> files = provider.status().get().files();
         assertEquals(List.of(FileEntry.renamed("READ.md", "README.md", true, false)), files);
 
-        Diffs diffs = provider.diff(files).get();
+        Diffs diffs = provider.diff(files, DiffOptions.DEFAULT).get();
         assertTrue(diffs.staged().text().contains("rename from README.md"), diffs.toString());
 
         provider.unstageNew(List.of("READ.md")).get();
@@ -1536,7 +1536,8 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "unstaged\n");
         Files.writeString(repo.resolve("new.txt"), "brand new\n");
 
-        Diffs diffs = provider.diff(provider.status().get().files()).get();
+        Diffs diffs = provider.diff(provider.status().get().files(), DiffOptions.DEFAULT)
+                .get();
 
         assertTrue(diffs.staged().text().contains("-hello"), diffs.toString());
         assertTrue(diffs.staged().text().contains("+staged"), diffs.toString());
@@ -1544,7 +1545,8 @@ class CliGitInfoProviderTest {
         assertTrue(diffs.unstaged().text().contains("-staged"), diffs.toString());
         assertTrue(diffs.unstaged().text().contains("+unstaged"), diffs.toString());
         assertTrue(diffs.unstaged().text().contains("+brand new"), diffs.toString());
-        assertEquals(new Diffs("", ""), provider.diff(List.of()).get());
+        assertEquals(
+                new Diffs("", ""), provider.diff(List.of(), DiffOptions.DEFAULT).get());
     }
 
     @Test
@@ -1552,7 +1554,7 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "changed\n");
         Files.writeString(repo.resolve("new.txt"), "new\n");
 
-        Diffs diffs = provider.diff(List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)))
+        Diffs diffs = provider.diff(List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)), DiffOptions.DEFAULT)
                 .get();
 
         assertEquals("", diffs.staged().text());

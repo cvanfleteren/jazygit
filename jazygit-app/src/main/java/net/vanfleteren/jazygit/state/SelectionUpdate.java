@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.control.Option;
 import java.util.function.Function;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
 import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
@@ -23,7 +24,7 @@ public final class SelectionUpdate {
             case BranchSelected(var branch) ->
                 selected(model, branch, model.branchLog(), model::withBranchLog, LoadBranchLog::new);
             case CommitSelected(var sha) ->
-                selected(model, sha, model.commitDetail(), model::withCommitDetail, LoadCommitDetail::new);
+                selected(model, sha, model.commitDetail(), model::withCommitDetail, detail(model));
             case DivergenceCommitSelected(var sha) ->
                 model.divergence()
                         .map(view -> selected(
@@ -31,11 +32,20 @@ public final class SelectionUpdate {
                                 sha,
                                 view.detail(),
                                 detail -> model.withDivergence(Option.of(view.withDetail(detail))),
-                                LoadCommitDetail::new))
+                                detail(model)))
                         .getOrElse(() -> Next.of(model));
             case FilesSelected(var files) ->
-                selected(model, files, model.fileDiff(), model::withFileDiff, LoadFileDiff::new);
+                selected(
+                        model,
+                        files,
+                        model.fileDiff(),
+                        model::withFileDiff,
+                        entries -> new LoadFileDiff(entries, model.diffOptions()));
         };
+    }
+
+    private static Function<Sha, Cmd.Load> detail(Model model) {
+        return sha -> new LoadCommitDetail(sha, model.diffOptions());
     }
 
     /**

@@ -5,7 +5,9 @@ Features to consider, roughly most valuable first.
 ## High impact (daily-driver gaps)
 
 1. **Stage hunks and lines.** Only whole files can be staged today. Add a mode in the diff pane to stage or unstage
-   one hunk or a range of lines using `git apply --cached`.
+   one hunk or a range of lines using `git apply --cached`. A patch made from a diff that ignores whitespace (Ctrl+W)
+   does not apply: stage from a diff read without `--ignore-all-space`, or refuse while whitespace is ignored, as
+   lazygit does.
 2. **Resolve conflicts in the app.** Pick ours or theirs per file, or open the file in `$EDITOR` (see TODO.md).
 3. **Open in `$EDITOR`.** Suspend the TUI and open the file, or the commit message, in your editor. Conflict
    resolution and longer commit messages both need it, and it works around the missing word-editing keys in text
@@ -26,8 +28,9 @@ Features to consider, roughly most valuable first.
    to the commit.
 9. **Search commits.** Filter by message, author or path (`-S` for pickaxe), possibly reusing `ListFilter`.
 10. **Commit graph.** `CommitGraph` exists in the model; draw the lanes in the commits panel if it doesn't yet.
-11. **Diff options.** Toggle ignore-whitespace, change the amount of context, and switch between word diff and
-    side-by-side.
+11. **Diff options.** Ignoring whitespace is done (Ctrl+W, `DiffOptions`). Still to do: change the amount of context,
+    and switch between word diff and side-by-side, as more fields of `DiffOptions`. The pull request diff
+    (`gh pr diff`) shows all whitespace; it could be filtered, or read with git when the branches are fetched.
 12. **Start from git's prepared message.** Fill the commit dialog from `MERGE_MSG` or `SQUASH_MSG` (see TODO.md).
 
 ## GitHub

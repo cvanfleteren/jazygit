@@ -27,6 +27,7 @@ import net.vanfleteren.jazygit.state.prs.PrOverview;
  *                            diff), once one is highlighted
  * @param fileDiff            the diff of the node highlighted in the files pane, keyed by the changed files under
  *                            it, once one is highlighted
+ * @param diffOptions         how the diffs of the files and the commits are read, for this session only
  * @param refreshing          periodic loads that have been started and not finished yet, so a tick does
  *                            not queue them again
  * @param error               why the last operation failed, until the next one is started
@@ -70,6 +71,7 @@ public record Model(
         Option<Preview<BranchRef, List<Commit>>> branchLog,
         Option<Preview<Sha, DiffText>> commitDetail,
         Option<Preview<List<FileEntry>, Diffs>> fileDiff,
+        DiffOptions diffOptions,
         Set<Cmd.Load> refreshing,
         Option<AppError> error,
         Option<Notice> notice,
@@ -104,6 +106,7 @@ public record Model(
                 Option.none(),
                 Option.none(),
                 Option.none(),
+                DiffOptions.DEFAULT,
                 HashSet.empty(),
                 Option.none(),
                 Option.none(),

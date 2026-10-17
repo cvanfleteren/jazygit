@@ -46,7 +46,7 @@ class SelectionUpdateTest {
         assertEquals(
                 Option.of(new Preview<>(new Sha("aaaa"), new Loading<>())),
                 next.model().commitDetail());
-        assertEquals(List.of(new LoadCommitDetail(new Sha("aaaa"))), next.cmds());
+        assertEquals(List.of(new LoadCommitDetail(new Sha("aaaa"), DiffOptions.DEFAULT)), next.cmds());
 
         Next again = Update.update(next.model(), new SelectionMsg.CommitSelected(new Sha("aaaa")));
         assertSame(next.model(), again.model());
@@ -58,7 +58,7 @@ class SelectionUpdateTest {
         Model first = Update.update(
                         Update.update(loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa")))
                                 .model(),
-                        new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffText.of("changes")))
+                        new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffOptions.DEFAULT, DiffText.of("changes")))
                 .model();
         Preview<Sha, DiffText> firstDetail = new Preview<>(new Sha("aaaa"), new Loaded<>(DiffText.of("changes")));
         assertEquals(Option.of(firstDetail), first.commitDetail());
@@ -79,12 +79,18 @@ class SelectionUpdateTest {
 
         assertEquals(
                 model.commitDetail(),
-                Update.update(model, new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffText.of("changes")))
+                Update.update(
+                                model,
+                                new LoadMsg.CommitDetailLoaded(
+                                        new Sha("aaaa"), DiffOptions.DEFAULT, DiffText.of("changes")))
                         .model()
                         .commitDetail());
         assertEquals(
                 model.commitDetail(),
-                Update.update(model, new LoadMsg.Failed(new LoadCommitDetail(new Sha("aaaa")), refused("boom")))
+                Update.update(
+                                model,
+                                new LoadMsg.Failed(
+                                        new LoadCommitDetail(new Sha("aaaa"), DiffOptions.DEFAULT), refused("boom")))
                         .model()
                         .commitDetail());
     }
@@ -94,11 +100,13 @@ class SelectionUpdateTest {
         Model model = Update.update(
                         Update.update(loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa")))
                                 .model(),
-                        new LoadMsg.Failed(new LoadCommitDetail(new Sha("aaaa")), refused("boom")))
+                        new LoadMsg.Failed(new LoadCommitDetail(new Sha("aaaa"), DiffOptions.DEFAULT), refused("boom")))
                 .model();
         assertEquals(Option.of(new Preview<>(new Sha("aaaa"), new Failed<>(refused("boom")))), model.commitDetail());
 
-        assertTrue(Update.update(model, new Tick()).cmds().contains(new LoadCommitDetail(new Sha("aaaa"))));
+        assertTrue(Update.update(model, new Tick())
+                .cmds()
+                .contains(new LoadCommitDetail(new Sha("aaaa"), DiffOptions.DEFAULT)));
     }
 
     @Test
@@ -239,7 +247,7 @@ class SelectionUpdateTest {
         List<FileEntry> files = DIRTY.files();
 
         Next next = Update.update(model, new SelectionMsg.FilesSelected(files));
-        assertEquals(List.of(new Cmd.LoadFileDiff(files)), next.cmds());
+        assertEquals(List.of(new Cmd.LoadFileDiff(files, DiffOptions.DEFAULT)), next.cmds());
         assertEquals(
                 Option.of(new Preview<>(files, new Loading<>())), next.model().fileDiff());
 
@@ -257,12 +265,14 @@ class SelectionUpdateTest {
 
         assertEquals(
                 model.fileDiff(),
-                Update.update(model, new LoadMsg.FileDiffLoaded(other, new Diffs("", "x")))
+                Update.update(model, new LoadMsg.FileDiffLoaded(other, DiffOptions.DEFAULT, new Diffs("", "x")))
                         .model()
                         .fileDiff());
         assertEquals(
                 Option.of(new Preview<>(DIRTY.files(), new Loaded<>(new Diffs("", "+a")))),
-                Update.update(model, new LoadMsg.FileDiffLoaded(DIRTY.files(), new Diffs("", "+a")))
+                Update.update(
+                                model,
+                                new LoadMsg.FileDiffLoaded(DIRTY.files(), DiffOptions.DEFAULT, new Diffs("", "+a")))
                         .model()
                         .fileDiff());
     }
@@ -271,13 +281,14 @@ class SelectionUpdateTest {
     void ticksReloadTheDiffAndKeepTheOldOneVisibleWhileLoading() {
         Model model = Update.update(loaded(), new SelectionMsg.FilesSelected(DIRTY.files()))
                 .model();
-        model = Update.update(model, new LoadMsg.FileDiffLoaded(DIRTY.files(), new Diffs("", "+a")))
+        model = Update.update(
+                        model, new LoadMsg.FileDiffLoaded(DIRTY.files(), DiffOptions.DEFAULT, new Diffs("", "+a")))
                 .model();
 
         // The diff is read again once the status confirms that its files are still as they were.
         Model refreshed = Update.update(model, new Tick()).model();
         Next statusLoaded = Update.update(refreshed, new LoadMsg.StatusLoaded(DIRTY));
-        assertTrue(statusLoaded.cmds().contains(new Cmd.LoadFileDiff(DIRTY.files())));
+        assertTrue(statusLoaded.cmds().contains(new Cmd.LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT)));
 
         List<FileEntry> next = List.of(new FileEntry("b.txt", ChangeType.UNTRACKED));
         Preview<List<FileEntry>, Diffs> loading = Update.update(model, new SelectionMsg.FilesSelected(next))
@@ -291,7 +302,8 @@ class SelectionUpdateTest {
     void aDiffIsNotReloadedForFilesWhoseStatusChanged() {
         Model model = Update.update(loaded(), new SelectionMsg.FilesSelected(DIRTY.files()))
                 .model();
-        model = Update.update(model, new LoadMsg.FileDiffLoaded(DIRTY.files(), new Diffs("", "+a")))
+        model = Update.update(
+                        model, new LoadMsg.FileDiffLoaded(DIRTY.files(), DiffOptions.DEFAULT, new Diffs("", "+a")))
                 .model();
         List<FileEntry> restaged =
                 DIRTY.files().map(f -> new FileEntry(f.path(), f.type(), !f.staged(), !f.unstaged()));
@@ -301,14 +313,14 @@ class SelectionUpdateTest {
                 new LoadMsg.StatusLoaded(
                         new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), restaged)));
 
-        assertFalse(statusLoaded.cmds().contains(new Cmd.LoadFileDiff(DIRTY.files())));
+        assertFalse(statusLoaded.cmds().contains(new Cmd.LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT)));
     }
 
     @Test
     void aFailedDiffLoadIsShown() {
         Model model = Update.update(loaded(), new SelectionMsg.FilesSelected(DIRTY.files()))
                 .model();
-        Cmd.LoadFileDiff cmd = new Cmd.LoadFileDiff(DIRTY.files());
+        Cmd.LoadFileDiff cmd = new Cmd.LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT);
 
         assertEquals(
                 Option.of(new Preview<>(DIRTY.files(), new Failed<>(refused("boom")))),

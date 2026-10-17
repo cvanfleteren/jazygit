@@ -121,14 +121,14 @@ public final class Update {
                         .map(log -> new LoadBranchLog(log.key())))
                 .appendAll(model.commitDetail()
                         .filter(detail -> detail.value() instanceof Failed)
-                        .map(detail -> new LoadCommitDetail(detail.key())))
+                        .map(detail -> new LoadCommitDetail(detail.key(), model.diffOptions())))
                 .appendAll(model.divergence()
                         .filter(view -> view.commits() instanceof Failed)
                         .map(DivergenceView::load))
                 .appendAll(model.divergence()
                         .flatMap(DivergenceView::detail)
                         .filter(detail -> detail.value() instanceof Failed)
-                        .map(detail -> new LoadCommitDetail(detail.key())));
+                        .map(detail -> new LoadCommitDetail(detail.key(), model.diffOptions())));
         List<Cmd.Load> loads =
                 PERIODIC.appendAll(retries).filter(cmd -> !model.refreshing().contains(cmd));
         return new Next(model.withRefreshing(model.refreshing().addAll(loads)), List.narrow(loads));
@@ -144,7 +144,7 @@ public final class Update {
                 .filter(d -> model.status()
                         .toOption()
                         .exists(status -> status.files().containsAll(d.key())))
-                .map(d -> new LoadFileDiff(d.key()))
+                .map(d -> new LoadFileDiff(d.key(), model.diffOptions()))
                 .filter(cmd -> !model.refreshing().contains(cmd))
                 .map(cmd -> new Next(model.withRefreshing(model.refreshing().add(cmd)), cmds.append(cmd)))
                 .getOrElse(() -> new Next(model, cmds));

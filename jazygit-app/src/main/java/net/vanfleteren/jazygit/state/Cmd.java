@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.settings.Settings;
@@ -165,21 +166,23 @@ public interface Cmd {
         }
     }
 
-    record LoadCommitDetail(Sha sha) implements Load {
+    record LoadCommitDetail(Sha sha, DiffOptions options) implements Load {
 
         @Override
         public Msg run(Env env) {
             return env.git()
-                    .commitChanges(sha)
-                    .fold(this::failedWith, changes -> new LoadMsg.CommitDetailLoaded(sha, changes));
+                    .commitChanges(sha, options)
+                    .fold(this::failedWith, changes -> new LoadMsg.CommitDetailLoaded(sha, options, changes));
         }
     }
 
-    record LoadFileDiff(List<FileEntry> files) implements Load {
+    record LoadFileDiff(List<FileEntry> files, DiffOptions options) implements Load {
 
         @Override
         public Msg run(Env env) {
-            return env.git().diff(files).fold(this::failedWith, diff -> new LoadMsg.FileDiffLoaded(files, diff));
+            return env.git()
+                    .diff(files, options)
+                    .fold(this::failedWith, diff -> new LoadMsg.FileDiffLoaded(files, options, diff));
         }
     }
 }

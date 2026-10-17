@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import org.junit.jupiter.api.BeforeEach;
@@ -103,7 +104,7 @@ class LinkedWorktreeTest {
         CliGitInfoProvider provider = CliGitInfoProvider.open(linked).get();
 
         List<FileEntry> files = provider.status().get().files();
-        Diffs diffs = provider.diff(files).get();
+        Diffs diffs = provider.diff(files, DiffOptions.DEFAULT).get();
 
         assertEquals(List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)), files);
         assertTrue(diffs.unstaged().text().contains("+brand new"), diffs.toString());

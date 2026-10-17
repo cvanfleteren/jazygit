@@ -324,12 +324,12 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<ProcessError, DiffText> commitChanges(Sha sha) {
-        return CliShow.changes(workTree, sha);
+    public Either<ProcessError, DiffText> commitChanges(Sha sha, DiffOptions options) {
+        return CliShow.changes(workTree, sha, options);
     }
 
     @Override
-    public Either<GitError, Diffs> diff(List<FileEntry> files) {
-        return CliDiff.diff(workTree, files);
+    public Either<GitError, Diffs> diff(List<FileEntry> files, DiffOptions options) {
+        return CliDiff.diff(workTree, files, options);
     }
 }

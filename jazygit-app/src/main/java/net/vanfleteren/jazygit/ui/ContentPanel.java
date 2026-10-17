@@ -104,6 +104,23 @@ public final class ContentPanel {
     }
 
     /**
+     * What a commit changed as it is shown: when changes to whitespace only are left out and nothing else
+     * changed, a line that says so.
+     */
+    static String shownChanges(DiffText changes, DiffOptions options) {
+        return changes.isBlank() && options.ignoreWhitespace()
+                ? Messages.get("content.onlyWhitespace") + "\n"
+                : shown(changes);
+    }
+
+    /**
+     * {@code title}, saying that changes to whitespace only are left out when they are.
+     */
+    static String titled(String title, DiffOptions options) {
+        return options.ignoreWhitespace() ? Messages.get("panel.ignoringWhitespace", title) : title;
+    }
+
+    /**
      * The unified diff as one styled text, so it is a single element to lay out however long the diff is.
      */
     static Text diffText(String diff, Theme.SpanStyles styles) {
@@ -287,7 +304,7 @@ public final class ContentPanel {
         if (BranchesPanel.ID.equals(pane) || DIVERGENCE_AREA_ID.equals(pane)) {
             return model.divergence()
                     .filter(view -> model.branchesTab() == BranchesTab.LOCAL)
-                    .map(this::divergenceCommitView)
+                    .<StyledElement<?>>map(view -> divergenceCommitView(view, model.diffOptions()))
                     .getOrElse(() -> branchLogView(model));
         }
         if (CommitsPanel.ID.equals(pane) || COMMIT_AREA_ID.equals(pane)) {
@@ -362,24 +379,30 @@ public final class ContentPanel {
      * One panel for the staged changes and one for the unstaged changes, one above the other when both exist.
      */
     private StyledElement<?> fileDiffView(Model model) {
-        String title = Messages.get("panel.diff.title");
+        DiffOptions options = model.diffOptions();
+        String title = titled(Messages.get("panel.diff.title"), options);
         // With no files there is nothing to highlight, so no diff is ever requested.
         return model.status().toOption().exists(status -> status.files().isEmpty())
                 ? dimPanel(title, Messages.get("content.noChangedFiles"))
                 : model.fileDiff()
                         .map(Preview::shown)
                         .<StyledElement<?>>map(
-                                diff -> whenLoaded(title, diff.value(), diffs -> diffPanels(title, diffs)))
+                                diff -> whenLoaded(title, diff.value(), diffs -> diffPanels(title, diffs, options)))
                         .getOrElse(() -> loadingPanel(title));
     }
 
-    private StyledElement<?> diffPanels(String title, Diffs diffs) {
+    private StyledElement<?> diffPanels(String title, Diffs diffs, DiffOptions options) {
         if (diffs.isEmpty()) {
-            return dimPanel(title, Messages.get("content.noChanges"));
+            return dimPanel(
+                    title, Messages.get(options.ignoreWhitespace() ? "content.onlyWhitespace" : "content.noChanges"));
         }
         List<Element> panels = List.of(
-                        Tuple.of(Messages.get("content.staged"), stagedArea.with(shown(diffs.staged()))),
-                        Tuple.of(Messages.get("content.unstaged"), unstagedArea.with(shown(diffs.unstaged()))))
+                        Tuple.of(
+                                titled(Messages.get("content.staged"), options),
+                                stagedArea.with(shown(diffs.staged()))),
+                        Tuple.of(
+                                titled(Messages.get("content.unstaged"), options),
+                                unstagedArea.with(shown(diffs.unstaged()))))
                 .filter(e -> e._2.hasContent())
                 .map(e -> e._2.show(e._1));
         return column(panels.toJavaArray(Element[]::new));
@@ -403,7 +426,7 @@ public final class ContentPanel {
     /**
      * The commit highlighted in the divergence {@code view}, as the commits pane shows its commits.
      */
-    private StyledElement<?> divergenceCommitView(DivergenceView view) {
+    private StyledElement<?> divergenceCommitView(DivergenceView view, DiffOptions options) {
         String title = Messages.get("panel.commit.title");
         return view.detail()
                 .map(Preview::shown)
@@ -414,8 +437,9 @@ public final class ContentPanel {
                                 .<StyledElement<?>>map(commit -> divergenceArea
                                         .with(
                                                 new CommitContent(commit, changes),
-                                                () -> commitText(commit, shown(changes), styles))
-                                        .show(Messages.get("panel.commit.titleFor", commit.shortSha())))
+                                                () -> commitText(commit, shownChanges(changes, options), styles))
+                                        .show(titled(
+                                                Messages.get("panel.commit.titleFor", commit.shortSha()), options)))
                                 .getOrElse(() -> loadingPanel(title))))
                 .getOrElse(() -> view.commits()
                                 .toOption()
@@ -426,6 +450,7 @@ public final class ContentPanel {
     }
 
     private StyledElement<?> commitDiffView(Model model) {
+        DiffOptions options = model.diffOptions();
         String title = Messages.get("panel.commit.title");
         return model.commitDetail()
                 .map(Preview::shown)
@@ -436,8 +461,9 @@ public final class ContentPanel {
                                 .<StyledElement<?>>map(commit -> commitArea
                                         .with(
                                                 new CommitContent(commit, changes),
-                                                () -> commitText(commit, shown(changes), styles))
-                                        .show(Messages.get("panel.commit.titleFor", commit.shortSha())))
+                                                () -> commitText(commit, shownChanges(changes, options), styles))
+                                        .show(titled(
+                                                Messages.get("panel.commit.titleFor", commit.shortSha()), options)))
                                 .getOrElse(() -> loadingPanel(title))))
                 .getOrElse(() -> model.commits().toOption().exists(List::isEmpty)
                         ? panel(title, text(Messages.get("content.noCommits")))

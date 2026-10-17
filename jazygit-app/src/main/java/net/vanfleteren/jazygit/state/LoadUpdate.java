@@ -37,7 +37,7 @@ public final class LoadUpdate {
                 Next.of(done.withWorktrees(model.worktrees().reload(worktrees)));
             case CommitsLoaded(var commits) ->
                 Next.of(done.withCommits(model.commits().reload(commits)));
-            // What arrives after another item was highlighted is dropped.
+            // What arrives after another item was highlighted, or after the diff options changed, is dropped.
             case BranchLogLoaded(var branch, var commits) ->
                 Next.of(done.withBranchLog(Preview.updated(done.branchLog(), branch, log -> log.reload(commits))));
             case DivergenceLoaded(var branch, var other, var divergence) ->
@@ -45,12 +45,16 @@ public final class LoadUpdate {
                         .map(view -> view.load().equals(msg.cmd())
                                 ? view.withCommits(view.commits().reload(divergence))
                                 : view)));
-            case CommitDetailLoaded(Sha sha, DiffText changes) ->
+            case CommitDetailLoaded(Sha sha, var options, DiffText changes)
+            when !options.equals(done.diffOptions()) -> Next.of(done);
+            case CommitDetailLoaded(Sha sha, var options, DiffText changes) ->
                 Next.of(withDetail(
                         done.withCommitDetail(Preview.updated(done.commitDetail(), sha, d -> d.reload(changes))),
                         sha,
                         d -> d.reload(changes)));
-            case FileDiffLoaded(var files, var diff) ->
+            case FileDiffLoaded(var files, var options, var diff)
+            when !options.equals(done.diffOptions()) -> Next.of(done);
+            case FileDiffLoaded(var files, var options, var diff) ->
                 Next.of(done.withFileDiff(Preview.updated(done.fileDiff(), files, d -> d.reload(diff))));
             case LoadMsg.Failed(Cmd.Load cmd, Failure failure) -> Next.of(failed(done, cmd, failure));
         };
@@ -178,13 +182,15 @@ public final class LoadUpdate {
 
     private static Model failed(Model model, Cmd.Load cmd, Failure failure) {
         return switch (cmd) {
+            case LoadCommitDetail(Sha sha, var options) when !options.equals(model.diffOptions()) -> model;
+            case LoadFileDiff(var files, var options) when !options.equals(model.diffOptions()) -> model;
             case Cmd.LoadStatus() -> model.withStatus(new Failed<>(failure));
             case Cmd.LoadBranches() -> model.withBranches(new Failed<>(failure));
             case Cmd.LoadRemoteBranches() -> model.withRemoteBranches(new Failed<>(failure));
             case Cmd.LoadStashes() -> model.withStashes(new Failed<>(failure));
             case Cmd.LoadWorktrees() -> model.withWorktrees(new Failed<>(failure));
             case LoadCommits() -> model.withCommits(new Failed<>(failure));
-            case LoadCommitDetail(Sha sha) ->
+            case LoadCommitDetail(Sha sha, var options) ->
                 withDetail(
                         model.withCommitDetail(Preview.updated(model.commitDetail(), sha, d -> d.failed(failure))),
                         sha,
@@ -192,7 +198,7 @@ public final class LoadUpdate {
             case Cmd.LoadDivergence load ->
                 model.withDivergence(model.divergence()
                         .map(view -> view.load().equals(load) ? view.withCommits(new Failed<>(failure)) : view));
-            case LoadFileDiff(var files) ->
+            case LoadFileDiff(var files, var options) ->
                 model.withFileDiff(Preview.updated(model.fileDiff(), files, d -> d.failed(failure)));
             case LoadBranchLog(var branch) ->
                 model.withBranchLog(Preview.updated(model.branchLog(), branch, log -> log.failed(failure)));

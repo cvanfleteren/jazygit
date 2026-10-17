@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.keys;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import net.vanfleteren.jazygit.feature.cherrypick.CherryPickMsg;
+import net.vanfleteren.jazygit.feature.diff.DiffOptionsMsg;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.feature.inprogress.InProgressMsg;
 import net.vanfleteren.jazygit.feature.repos.RecentReposMsg;
@@ -28,6 +29,11 @@ final class GlobalKeys {
                         RecentReposMsg.Requested::new))
                 .global(new Keymap.Global.Dispatching(
                         "ctrl+s", "help.global.settings", GlobalKeys::isSettingsKey, SettingsPanelMsg.Requested::new))
+                .global(new Keymap.Global.Dispatching(
+                        "ctrl+w",
+                        "help.global.ignoreWhitespace",
+                        GlobalKeys::isWhitespaceKey,
+                        DiffOptionsMsg.WhitespaceToggled::new))
                 .global(new Keymap.Global.Dispatching(
                         "ctrl+p", "help.global.screen", GlobalKeys::isScreenKey, PrOverviewMsg.Toggled::new))
                 // Escape only gets here when nothing else, like a dialog, took it.
@@ -72,6 +78,13 @@ final class GlobalKeys {
      */
     static boolean isScreenKey(KeyEvent event) {
         return event.hasCtrl() && event.isCharIgnoreCase('p');
+    }
+
+    /**
+     * Whether {@code event} is the shortcut that shows changes to whitespace only in the diffs, or leaves them out.
+     */
+    static boolean isWhitespaceKey(KeyEvent event) {
+        return event.hasCtrl() && event.isCharIgnoreCase('w');
     }
 
     /**

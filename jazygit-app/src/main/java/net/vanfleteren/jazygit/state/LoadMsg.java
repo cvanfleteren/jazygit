@@ -82,19 +82,19 @@ public sealed interface LoadMsg extends Msg {
         }
     }
 
-    record CommitDetailLoaded(Sha sha, DiffText changes) implements LoadMsg {
+    record CommitDetailLoaded(Sha sha, DiffOptions options, DiffText changes) implements LoadMsg {
 
         @Override
         public Cmd.Load cmd() {
-            return new Cmd.LoadCommitDetail(sha);
+            return new Cmd.LoadCommitDetail(sha, options);
         }
     }
 
-    record FileDiffLoaded(List<FileEntry> files, Diffs diff) implements LoadMsg {
+    record FileDiffLoaded(List<FileEntry> files, DiffOptions options, Diffs diff) implements LoadMsg {
 
         @Override
         public Cmd.Load cmd() {
-            return new Cmd.LoadFileDiff(files);
+            return new Cmd.LoadFileDiff(files, options);
         }
     }
 

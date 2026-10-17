@@ -229,6 +229,25 @@ request. The design and the steps still to come are in `prs.md`.
 - Each screen keeps where its focus was: `Msg.Focused` goes to `Model.focusedPane` or `PrOverview.focusedPane`,
   whichever screen is shown (`Model.shownPane`), and `JazygitApp` gives it back when the screen is shown again.
 
+## Diff options
+
+How the diffs of the files and the commits are read is a `DiffOptions` (in `git.model`), kept in
+`Model.diffOptions` for the session only. For now it says whether changes to whitespace only are left out, which
+Ctrl+W toggles anywhere outside a dialog (`feature.diff`); the context and word or side-by-side diffs are to
+follow it there.
+
+- `GitInfoProvider.diff` and `commitChanges` take the options, which `CliDiff.flags` turns into git's
+  (`--ignore-all-space`). A file whose changes are all whitespace is then left out of the diff entirely, also from
+  the files `git show --stat` lists.
+- `Cmd.LoadFileDiff` and `Cmd.LoadCommitDetail` carry the options, and so do the messages they send back. What
+  was read with other options than the model's arrives too late and is dropped, as what was read for another
+  highlighted item is.
+- Toggling reads the diffs shown again (the files, the commit and the commit of a divergence), which keep showing
+  as they were until they are read.
+- The titles of the diffs say when whitespace is ignored, and a diff that comes back blank says that only
+  whitespace changed.
+- The diff of a pull request is read with `gh pr diff`, which has no such option, so it shows all changes.
+
 ## The editor
 
 `e` on a file in the files pane opens it in git's editor (`feature.edit`): the one `git var GIT_EDITOR` names, so
@@ -455,7 +474,7 @@ classDiagram
         <<interface>>
         status() Either of ProcessError or RepoStatus
         log(branch) Either of GitError or commits
-        diff(files) Either of GitError or Diffs
+        diff(files, DiffOptions) Either of GitError or Diffs
         checkout(branch) Either of GitFailure of GitError or commands
         reword(Sha, CommitMessage) Either of GitFailure of GitError or commands
         pop(Stash) Either of GitFailure of GitError or commands

@@ -135,13 +135,13 @@ public final class SampleData implements StubGitProvider {
     }
 
     @Override
-    public Either<ProcessError, DiffText> commitChanges(Sha sha) {
+    public Either<ProcessError, DiffText> commitChanges(Sha sha, DiffOptions options) {
         return Either.right(DiffText.of(
                 "1 file changed, 1 insertion(+)\n\ndiff --git a/" + sha.value() + " b/" + sha.value() + "\n"));
     }
 
     @Override
-    public Either<GitError, Diffs> diff(List<FileEntry> files) {
+    public Either<GitError, Diffs> diff(List<FileEntry> files, DiffOptions options) {
         return Either.right(new Diffs(sample(files, FileEntry::staged), sample(files, FileEntry::unstaged)));
     }
 }

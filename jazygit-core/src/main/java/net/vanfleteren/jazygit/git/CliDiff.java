@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -22,25 +23,35 @@ import net.vanfleteren.jazygit.git.model.FileEntry;
 final class CliDiff {
 
     static final int MAX_LINES = 5000;
-    private static final List<String> STAGED = List.of("diff", "--cached", "--no-color", "--no-ext-diff", "--");
-    private static final List<String> UNSTAGED = List.of("diff", "--no-color", "--no-ext-diff", "--");
+    private static final List<String> STAGED = List.of("diff", "--cached", "--no-color", "--no-ext-diff");
+    private static final List<String> UNSTAGED = List.of("diff", "--no-color", "--no-ext-diff");
 
     private CliDiff() {}
 
     /**
      * The staged changes of the files (index against HEAD), and their unstaged changes (working tree
-     * against the index). Untracked files are shown as entirely added. Long diffs are cut off.
+     * against the index), read with {@code options}. Untracked files are shown as entirely added. Long diffs
+     * are cut off.
      */
-    static Either<GitError, Diffs> diff(Path workTree, List<FileEntry> files) {
+    static Either<GitError, Diffs> diff(Path workTree, List<FileEntry> files, DiffOptions options) {
         // A rename only shows as one when both of its paths are diffed.
         List<String> staged = files.filter(f -> f.staged() && f.type() != ChangeType.UNTRACKED)
                 .flatMap(f -> f.paths(true));
         List<String> unstaged = files.filter(f -> f.unstaged() && f.type() != ChangeType.UNTRACKED)
                 .flatMap(f -> f.paths(false));
         List<String> untracked = FileEntry.paths(files, f -> f.type() == ChangeType.UNTRACKED);
-        return Either.<GitError, String>narrow(tracked(workTree, STAGED, staged, HashMap.empty()))
-                .flatMap(stagedDiff -> unstagedAndUntracked(workTree, unstaged, untracked)
-                        .map(unstagedDiff -> new Diffs(truncated(stagedDiff), truncated(unstagedDiff))));
+        List<String> unstagedDiff = UNSTAGED.appendAll(flags(options)).append("--");
+        return Either.<GitError, String>narrow(
+                        tracked(workTree, STAGED.appendAll(flags(options)).append("--"), staged, HashMap.empty()))
+                .flatMap(stagedDiff -> unstagedAndUntracked(workTree, unstagedDiff, unstaged, untracked)
+                        .map(unstagedText -> new Diffs(truncated(stagedDiff), truncated(unstagedText))));
+    }
+
+    /**
+     * The flags of {@code git diff} and {@code git show} that read diffs with {@code options}.
+     */
+    static List<String> flags(DiffOptions options) {
+        return options.ignoreWhitespace() ? List.of("--ignore-all-space") : List.empty();
     }
 
     /**
@@ -48,9 +59,9 @@ final class CliDiff {
      * shows them as entirely added next to the unstaged changes. The real index is left untouched.
      */
     private static Either<GitError, String> unstagedAndUntracked(
-            Path workTree, List<String> unstaged, List<String> untracked) {
+            Path workTree, List<String> subcommand, List<String> unstaged, List<String> untracked) {
         return untracked.isEmpty()
-                ? Either.narrow(tracked(workTree, UNSTAGED, unstaged, HashMap.empty()))
+                ? Either.narrow(tracked(workTree, subcommand, unstaged, HashMap.empty()))
                 : Either.<GitError, String>narrow(
                                 run(workTree, List.of("rev-parse", "--git-path", "index"), HashMap.empty()))
                         .map(index -> workTree.resolve(index.strip()))
@@ -59,7 +70,11 @@ final class CliDiff {
                                 copy -> copyIndex(index, copy),
                                 failed -> failed,
                                 copy -> withUntracked(
-                                        workTree, unstaged, untracked, HashMap.of("GIT_INDEX_FILE", copy.toString()))));
+                                        workTree,
+                                        subcommand,
+                                        unstaged,
+                                        untracked,
+                                        HashMap.of("GIT_INDEX_FILE", copy.toString()))));
     }
 
     /**
@@ -76,9 +91,13 @@ final class CliDiff {
     }
 
     private static Either<ProcessError, String> withUntracked(
-            Path workTree, List<String> unstaged, List<String> untracked, Map<String, String> env) {
+            Path workTree,
+            List<String> subcommand,
+            List<String> unstaged,
+            List<String> untracked,
+            Map<String, String> env) {
         return run(workTree, List.of("add", "--intent-to-add", "--").appendAll(untracked), env)
-                .flatMap(added -> tracked(workTree, UNSTAGED, unstaged.appendAll(untracked), env));
+                .flatMap(added -> tracked(workTree, subcommand, unstaged.appendAll(untracked), env));
     }
 
     private static Either<ProcessError, String> tracked(

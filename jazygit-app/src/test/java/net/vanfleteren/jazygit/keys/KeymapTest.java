@@ -7,6 +7,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchMsg;
+import net.vanfleteren.jazygit.feature.diff.DiffOptionsMsg;
 import net.vanfleteren.jazygit.feature.github.BrowseMsg;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.feature.inprogress.InProgressMsg;
@@ -27,6 +28,15 @@ class KeymapTest {
         assertEquals(
                 Option.of(new SettingsPanelMsg.Requested()),
                 keymap.handleGlobal(KeyEvent.ofChar('s', dev.tamboui.tui.event.KeyModifiers.CTRL)));
+    }
+
+    @Test
+    void ctrlWTogglesWhetherChangesToWhitespaceOnlyAreShown() {
+        assertEquals(
+                Option.of(new DiffOptionsMsg.WhitespaceToggled()),
+                keymap.handleGlobal(KeyEvent.ofChar('w', dev.tamboui.tui.event.KeyModifiers.CTRL)));
+        assertEquals(Option.none(), keymap.handleGlobal(KeyEvent.ofChar('w')));
+        assertTrue(keymap.globals().exists(global -> global.label().equals("ctrl+w")));
     }
 
     @Test

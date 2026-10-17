@@ -214,16 +214,16 @@ public interface GitInfoProvider {
 
     /**
      * What the commit {@code sha} changed, like {@code git show}: the changed files, a summary of the
-     * changes, a blank line and the diff. Long output is cut off.
+     * changes, a blank line and the diff, read with {@code options}. Long output is cut off.
      */
-    Either<ProcessError, DiffText> commitChanges(Sha sha);
+    Either<ProcessError, DiffText> commitChanges(Sha sha, DiffOptions options);
 
     // The changes in the working tree and the index, as git diff shows them.
 
     /**
-     * The staged and the unstaged diff of {@code files}.
+     * The staged and the unstaged diff of {@code files}, read with {@code options}.
      */
-    Either<GitError, Diffs> diff(List<FileEntry> files);
+    Either<GitError, Diffs> diff(List<FileEntry> files, DiffOptions options);
 
     // Listing and changing stashes, as git stash does.
 

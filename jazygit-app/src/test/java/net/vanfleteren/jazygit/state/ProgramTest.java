@@ -32,6 +32,7 @@ import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
+import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
@@ -223,12 +224,12 @@ class ProgramTest {
         }
 
         @Override
-        public Either<ProcessError, DiffText> commitChanges(Sha sha) {
+        public Either<ProcessError, DiffText> commitChanges(Sha sha, DiffOptions options) {
             return Either.right(DiffText.of("changes of " + sha.value()));
         }
 
         @Override
-        public Either<GitError, Diffs> diff(List<FileEntry> files) {
+        public Either<GitError, Diffs> diff(List<FileEntry> files, DiffOptions options) {
             return Either.right(new Diffs("", "diff of " + files.size()));
         }
 

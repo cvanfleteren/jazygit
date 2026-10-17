@@ -146,7 +146,7 @@ class ContentPanelTest {
         Model selected = Update.update(
                         Update.update(TestModels.loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa")))
                                 .model(),
-                        new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffText.of("changes")))
+                        new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffOptions.DEFAULT, DiffText.of("changes")))
                 .model();
 
         // Rendering gives the area its content; the commits pane has the focus while doing so.
@@ -155,6 +155,49 @@ class ContentPanelTest {
         String area = content.areaOfPane(CommitsPanel.ID).get();
         assertEquals(io.vavr.control.Option.of(CommitsPanel.ID), content.paneOfArea(area));
         assertNotNull(content.render(selected, area));
+    }
+
+    @Test
+    void ignoringWhitespaceSaysSoAndThatOnlyWhitespaceChanged() throws Exception {
+        DiffOptions ignoring = DiffOptions.DEFAULT.withIgnoreWhitespace(true);
+        Model dirty = Update.update(TestModels.loaded(), new LoadMsg.StatusLoaded(TestModels.DIRTY))
+                .model()
+                .withDiffOptions(ignoring);
+        List<FileEntry> files = TestModels.DIRTY.files();
+        Model selected =
+                Update.update(dirty, new SelectionMsg.FilesSelected(files)).model();
+        Model blank = Update.update(selected, new LoadMsg.FileDiffLoaded(files, ignoring, new Diffs("", "")))
+                .model();
+        Model changed = Update.update(selected, new LoadMsg.FileDiffLoaded(files, ignoring, new Diffs("", "+a\n")))
+                .model();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(blank, FilesPanel.ID))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> content.render(blank, FilesPanel.ID));
+            assertTrue(screen.contains("Diff · ignoring whitespace"), screen);
+            assertTrue(screen.contains("No changes besides whitespace"), screen);
+
+            String diff = RenderedText.ofLarge(testRunner, () -> content.render(changed, FilesPanel.ID));
+            assertTrue(diff.contains("Unstaged changes · ignoring whitespace"), diff);
+        }
+    }
+
+    @Test
+    void aCommitThatOnlyChangedWhitespaceSaysSoWhileIgnoringIt() throws Exception {
+        DiffOptions ignoring = DiffOptions.DEFAULT.withIgnoreWhitespace(true);
+        Model selected = Update.update(
+                        Update.update(
+                                        TestModels.loaded().withDiffOptions(ignoring),
+                                        new SelectionMsg.CommitSelected(new Sha("aaaa")))
+                                .model(),
+                        new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), ignoring, DiffText.of("")))
+                .model();
+
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> content.render(selected, CommitsPanel.ID))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> content.render(selected, CommitsPanel.ID));
+            assertTrue(screen.contains("Commit: aaaa · ignoring whitespace"), screen);
+            assertTrue(screen.contains("No changes besides whitespace"), screen);
+        }
     }
 
     @Test
@@ -170,7 +213,8 @@ class ContentPanelTest {
         Model selected = Update.update(
                         Update.update(diverged, new SelectionMsg.DivergenceCommitSelected(new Sha("cccc")))
                                 .model(),
-                        new LoadMsg.CommitDetailLoaded(new Sha("cccc"), DiffText.of("+added line")))
+                        new LoadMsg.CommitDetailLoaded(
+                                new Sha("cccc"), DiffOptions.DEFAULT, DiffText.of("+added line")))
                 .model();
 
         try (ToolkitTestRunner testRunner =

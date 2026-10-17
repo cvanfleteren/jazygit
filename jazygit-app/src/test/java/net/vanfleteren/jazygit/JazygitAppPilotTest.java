@@ -92,7 +92,7 @@ class JazygitAppPilotTest {
         Model model = Update.update(
                         Update.update(loaded, new SelectionMsg.FilesSelected(files))
                                 .model(),
-                        new LoadMsg.FileDiffLoaded(files, new Diffs("+staged\n", "+unstaged\n")))
+                        new LoadMsg.FileDiffLoaded(files, DiffOptions.DEFAULT, new Diffs("+staged\n", "+unstaged\n")))
                 .model();
         java.util.List<Msg> dispatched = new ArrayList<>();
         Fixture fixture = new Fixture(

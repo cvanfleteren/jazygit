@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
+import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
@@ -146,12 +147,12 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<ProcessError, DiffText> commitChanges(Sha sha) {
+    default Either<ProcessError, DiffText> commitChanges(Sha sha, DiffOptions options) {
         return Either.right(DiffText.of(""));
     }
 
     @Override
-    default Either<GitError, Diffs> diff(List<FileEntry> files) {
+    default Either<GitError, Diffs> diff(List<FileEntry> files, DiffOptions options) {
         return Either.right(new Diffs("", ""));
     }
 
