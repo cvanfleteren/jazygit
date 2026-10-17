@@ -31,7 +31,8 @@ public final class CheckoutUpdate {
                 Update.refresh(OperationUpdate.done(model, cmd, commands)
                         .openPopupIfFree(new StashCheckoutPopup(cmd.branch())));
             case CheckedOut(var cmd, var commands) ->
-                OperationUpdate.succeeded(model.withBranchesTab(BranchesTab.LOCAL), cmd, commands);
+                OperationUpdate.succeeded(
+                        model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.LOCAL)), cmd, commands);
             case StashCancelled() -> Next.of(model.withoutPopup(StashCheckoutPopup.class));
             case StashConfirmed() ->
                 Update.confirm(
@@ -51,12 +52,14 @@ public final class CheckoutUpdate {
      * a local branch that follows something else already has that name, asks for another.
      */
     private static Next remoteRequested(Model model, RemoteBranch remote) {
-        if (model.remoteBranch(remote).isEmpty() || model.busy().containsKey(new BranchRef.Remote(remote))) {
+        if (model.repo().remoteBranch(remote).isEmpty()
+                || model.jobs().busy().containsKey(new BranchRef.Remote(remote))) {
             return Next.of(model);
         }
-        return model.trackingBranch(remote)
+        return model.repo()
+                .trackingBranch(remote)
                 .map(local -> requested(model, local.name()))
-                .getOrElse(() -> model.branch(remote.branch()).isDefined()
+                .getOrElse(() -> model.repo().branch(remote.branch()).isDefined()
                         ? Update.ask(model, NewBranchPopup.following(remote))
                         : Update.start(model.clearError(), new CheckoutRemote(remote.branch(), remote)));
     }

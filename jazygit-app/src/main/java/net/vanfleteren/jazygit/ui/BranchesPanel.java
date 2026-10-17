@@ -437,14 +437,17 @@ public class BranchesPanel {
      * @param activeId the id of the left pane in use, whose highlighted row shows
      */
     public Panel render(Model model, String focusedId, String activeId) {
-        busy = model.busy();
-        gitHub = branch -> gitHub(model.pullRequest(branch), model.checks(branch));
-        remoteGitHub = remote -> gitHub(model.pullRequest(remote), model.checks(remote));
-        tab = model.branchesTab();
-        tracked = remote -> model.trackingBranch(remote).isDefined();
+        busy = model.jobs().busy();
+        gitHub = branch ->
+                gitHub(model.gitHub().pullRequest(branch), model.gitHub().checks(branch));
+        remoteGitHub = remote ->
+                gitHub(model.gitHub().pullRequest(remote), model.gitHub().checks(remote));
+        tab = model.repoView().branchesTab();
+        tracked = remote -> model.repo().trackingBranch(remote).isDefined();
         boolean focused = ID.equals(focusedId);
         boolean active = ID.equals(activeId);
-        divergence = Option.when(tab == BranchesTab.LOCAL, model::divergence).flatMap(open -> open);
+        divergence = Option.when(tab == BranchesTab.LOCAL, model.repoView()::divergence)
+                .flatMap(open -> open);
         if (divergence.isDefined()) {
             DivergenceView view = divergence.get();
             if (!divergenceShown.contains(view.load())) {
@@ -466,9 +469,9 @@ public class BranchesPanel {
         }
         divergenceShown = Option.none();
         Panel panel = switch (tab) {
-            case LOCAL -> list.render(model.branches(), focused, active, title(tab));
-            case REMOTE -> remoteList.render(model.remoteBranches(), focused, active, title(tab));
-            case WORKTREES -> worktreeList.render(model.worktrees(), focused, active, title(tab));
+            case LOCAL -> list.render(model.repo().branches(), focused, active, title(tab));
+            case REMOTE -> remoteList.render(model.repo().remoteBranches(), focused, active, title(tab));
+            case WORKTREES -> worktreeList.render(model.repo().worktrees(), focused, active, title(tab));
         };
         return panel.onMouseEvent(event -> titleClick(panel.renderedArea(), event));
     }
@@ -568,19 +571,20 @@ public class BranchesPanel {
      * holds.
      */
     public Option<Msg> selectionChange(Model model) {
-        if (model.branchesTab() == BranchesTab.LOCAL && model.divergence().isDefined()) {
+        if (model.repoView().branchesTab() == BranchesTab.LOCAL
+                && model.repoView().divergence().isDefined()) {
             return PaneKeys.selectionChange(
                     selectedDivergenceCommit().map(Commit::sha),
-                    model.divergence().flatMap(DivergenceView::detail),
+                    model.repoView().divergence().flatMap(DivergenceView::detail),
                     SelectionMsg.DivergenceCommitSelected::new);
         }
-        Option<BranchRef> selected = switch (model.branchesTab()) {
+        Option<BranchRef> selected = switch (model.repoView().branchesTab()) {
             case LOCAL -> selectedBranch().map(BranchRef.Local::new);
             case REMOTE -> selectedRemoteBranch().map(BranchRef.Remote::new);
             // The log of the branch the worktree has checked out; a detached one leaves the log as it is.
             case WORKTREES -> selectedWorktree().flatMap(Worktree::branch).map(BranchRef.Local::new);
         };
-        return PaneKeys.selectionChange(selected, model.branchLog(), SelectionMsg.BranchSelected::new);
+        return PaneKeys.selectionChange(selected, model.repoView().branchLog(), SelectionMsg.BranchSelected::new);
     }
 
     /**

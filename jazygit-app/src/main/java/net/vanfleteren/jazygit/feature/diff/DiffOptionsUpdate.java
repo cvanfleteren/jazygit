@@ -25,26 +25,30 @@ public final class DiffOptionsUpdate {
                         ? Next.of(model)
                         : changed(
                                 model,
-                                model.diffOptions()
-                                        .withIgnoreWhitespace(
-                                                !model.diffOptions().ignoreWhitespace()));
+                                model.preferences()
+                                        .diffOptions()
+                                        .withIgnoreWhitespace(!model.preferences()
+                                                .diffOptions()
+                                                .ignoreWhitespace()));
         };
     }
 
     private static Next changed(Model model, DiffOptions options) {
-        Option<DivergenceView> divergence = model.divergence().map(view -> view.withDetail(reloading(view.detail())));
+        Option<DivergenceView> divergence =
+                model.repoView().divergence().map(view -> view.withDetail(reloading(view.detail())));
         List<Cmd> loads = List.<Cmd>empty()
-                .appendAll(model.fileDiff().map(diff -> new Cmd.LoadFileDiff(diff.key(), options)))
-                .appendAll(model.commitDetail()
+                .appendAll(model.repoView().fileDiff().map(diff -> new Cmd.LoadFileDiff(diff.key(), options)))
+                .appendAll(model.repoView()
+                        .commitDetail()
                         .toList()
-                        .appendAll(model.divergence().flatMap(DivergenceView::detail))
+                        .appendAll(model.repoView().divergence().flatMap(DivergenceView::detail))
                         .map(detail -> new Cmd.LoadCommitDetail(detail.key(), options)))
                 .distinct();
         return new Next(
-                model.withDiffOptions(options)
-                        .withFileDiff(reloading(model.fileDiff()))
-                        .withCommitDetail(reloading(model.commitDetail()))
-                        .withDivergence(divergence),
+                model.mapPreferences(preferences -> preferences.withDiffOptions(options))
+                        .mapRepoView(repoView -> repoView.withFileDiff(reloading(repoView.fileDiff()))
+                                .withCommitDetail(reloading(repoView.commitDetail()))
+                                .withDivergence(divergence)),
                 loads);
     }
 

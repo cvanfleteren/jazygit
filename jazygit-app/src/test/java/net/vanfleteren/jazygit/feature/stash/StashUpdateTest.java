@@ -26,7 +26,8 @@ class StashUpdateTest {
 
     private static Model withChanges() {
         Model model = loaded();
-        Head head = ((net.vanfleteren.jazygit.state.Loadable.Loaded<RepoStatus>) model.status())
+        Head head = ((net.vanfleteren.jazygit.state.Loadable.Loaded<RepoStatus>)
+                        model.repo().status())
                 .value()
                 .head();
         return Update.update(
@@ -86,7 +87,7 @@ class StashUpdateTest {
                 Update.update(loaded(), succeeded(new StashCmd.Stash(Option.of("x")), "git stash push --message x"));
         assertEquals(
                 List.of(new LogEntry(Operation.STASH, executed("git stash push --message x"))),
-                done.model().commandLog());
+                done.model().outcome().commandLog());
 
         Next failed = Update.update(loaded(), failed(new StashCmd.Stash(Option.of("x")), "boom"));
         assertEquals(Option.of("Stash failed: boom"), errorText(failed.model()));
@@ -144,7 +145,7 @@ class StashUpdateTest {
         Next dropped = Update.update(loaded(), succeeded(new StashCmd.Drop(STASH), "git stash drop stash@{0}"));
         assertEquals(
                 List.of(new LogEntry(Operation.STASH_DROP, executed("git stash drop stash@{0}"))),
-                dropped.model().commandLog());
+                dropped.model().outcome().commandLog());
 
         Next failed = Update.update(loaded(), failed(new StashCmd.Drop(STASH), "no such stash"));
         assertEquals(Option.of("Dropping the stash failed: no such stash"), errorText(failed.model()));
@@ -155,7 +156,7 @@ class StashUpdateTest {
         Next popped = Update.update(loaded(), succeeded(new StashCmd.Pop(STASH), "git stash pop stash@{0}"));
         assertEquals(
                 List.of(new LogEntry(Operation.STASH_POP, executed("git stash pop stash@{0}"))),
-                popped.model().commandLog());
+                popped.model().outcome().commandLog());
 
         Next failed = Update.update(loaded(), failed(new StashCmd.Pop(STASH), "conflict"));
         assertEquals(Option.of("Unstash failed: conflict"), errorText(failed.model()));

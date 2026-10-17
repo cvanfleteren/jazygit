@@ -22,48 +22,59 @@ public final class LoadUpdate {
     private LoadUpdate() {}
 
     public static Next update(Model model, LoadMsg msg) {
-        Model done = model.withRefreshing(model.refreshing().remove(msg.cmd()));
+        Model done = model.mapJobs(jobs -> jobs.withRefreshing(jobs.refreshing().remove(msg.cmd())));
         return switch (msg) {
             case StatusLoaded(RepoStatus status) ->
-                statusLoaded(model, done.withStatus(model.status().reload(status)));
+                statusLoaded(
+                        model,
+                        done.mapRepo(repo -> repo.withStatus(repo.status().reload(status))));
             case BranchesLoaded(var branches) ->
-                branchesLoaded(model, done.withBranches(model.branches().reload(branches)));
+                branchesLoaded(
+                        model,
+                        done.mapRepo(repo -> repo.withBranches(repo.branches().reload(branches))));
             case RemoteBranchesLoaded(var branches) ->
                 remoteBranchesLoaded(
-                        model, done.withRemoteBranches(model.remoteBranches().reload(branches)));
+                        model,
+                        done.mapRepo(repo ->
+                                repo.withRemoteBranches(repo.remoteBranches().reload(branches))));
             case StashesLoaded(var stashes) ->
-                Next.of(done.withStashes(model.stashes().reload(stashes)));
+                Next.of(done.mapRepo(repo -> repo.withStashes(repo.stashes().reload(stashes))));
             case LoadMsg.WorktreesLoaded(var worktrees) ->
-                Next.of(done.withWorktrees(model.worktrees().reload(worktrees)));
+                Next.of(done.mapRepo(repo -> repo.withWorktrees(repo.worktrees().reload(worktrees))));
             case CommitsLoaded(var commits) ->
-                Next.of(done.withCommits(model.commits().reload(commits)));
+                Next.of(done.mapRepo(repo -> repo.withCommits(repo.commits().reload(commits))));
             // What arrives after another item was highlighted, or after the diff options changed, is dropped.
             case BranchLogLoaded(var branch, var commits) ->
-                Next.of(done.withBranchLog(Preview.updated(done.branchLog(), branch, log -> log.reload(commits))));
+                Next.of(done.mapRepoView(repoView -> repoView.withBranchLog(
+                        Preview.updated(repoView.branchLog(), branch, log -> log.reload(commits)))));
             case DivergenceLoaded(var branch, var other, var divergence) ->
-                Next.of(done.withDivergence(done.divergence()
+                Next.of(done.mapRepoView(repoView -> repoView.withDivergence(repoView.divergence()
                         .map(view -> view.load().equals(msg.cmd())
                                 ? view.withCommits(view.commits().reload(divergence))
-                                : view)));
+                                : view))));
             case CommitDetailLoaded(Sha sha, var options, DiffText changes)
-            when !options.equals(done.diffOptions()) -> Next.of(done);
+            when !options.equals(done.preferences().diffOptions()) -> Next.of(done);
             case CommitDetailLoaded(Sha sha, var options, DiffText changes) ->
                 Next.of(withDetail(
-                        done.withCommitDetail(Preview.updated(done.commitDetail(), sha, d -> d.reload(changes))),
+                        done.mapRepoView(repoView -> repoView.withCommitDetail(
+                                Preview.updated(repoView.commitDetail(), sha, d -> d.reload(changes)))),
                         sha,
                         d -> d.reload(changes)));
             case FileDiffLoaded(var files, var options, var diff)
-            when !options.equals(done.diffOptions()) -> Next.of(done);
+            when !options.equals(done.preferences().diffOptions()) -> Next.of(done);
             case FileDiffLoaded(var files, var options, var diff) ->
-                Next.of(done.withFileDiff(Preview.updated(done.fileDiff(), files, d -> d.reload(diff))));
+                Next.of(done.mapRepoView(repoView ->
+                        repoView.withFileDiff(Preview.updated(repoView.fileDiff(), files, d -> d.reload(diff)))));
             case LoadMsg.Failed(Cmd.Load cmd, Failure failure) -> Next.of(failed(done, cmd, failure));
         };
     }
 
     private static Next statusLoaded(Model before, Model next) {
-        boolean headMoved = !before.status()
+        boolean headMoved = !before.repo()
+                .status()
                 .toOption()
-                .exists(previous -> next.status()
+                .exists(previous -> next.repo()
+                        .status()
                         .toOption()
                         .exists(status -> previous.headCommit().equals(status.headCommit())));
         // Commit loads are not deduplicated: one queued after HEAD moved must still run, even if
@@ -78,8 +89,8 @@ public final class LoadUpdate {
                 reloadMovedLog(
                         next,
                         branch -> branch instanceof BranchRef.Local(Branch.Name name)
-                                ? Option.of(tip(before.branches(), name, Branch::name, Branch::tipOid)
-                                        .equals(tip(next.branches(), name, Branch::name, Branch::tipOid)))
+                                ? Option.of(tip(before.repo().branches(), name, Branch::name, Branch::tipOid)
+                                        .equals(tip(next.repo().branches(), name, Branch::name, Branch::tipOid)))
                                 : Option.none()));
     }
 
@@ -89,9 +100,16 @@ public final class LoadUpdate {
                 reloadMovedLog(
                         next,
                         branch -> branch instanceof BranchRef.Remote(RemoteBranch remote)
-                                ? Option.of(tip(before.remoteBranches(), remote, RemoteRef::branch, RemoteRef::tipOid)
+                                ? Option.of(tip(
+                                                before.repo().remoteBranches(),
+                                                remote,
+                                                RemoteRef::branch,
+                                                RemoteRef::tipOid)
                                         .equals(tip(
-                                                next.remoteBranches(), remote, RemoteRef::branch, RemoteRef::tipOid)))
+                                                next.repo().remoteBranches(),
+                                                remote,
+                                                RemoteRef::branch,
+                                                RemoteRef::tipOid)))
                                 : Option.none()));
     }
 
@@ -102,12 +120,13 @@ public final class LoadUpdate {
      */
     private static Next reloadDivergence(Model before, Next next) {
         Model model = next.model();
-        return model.divergence()
+        return model.repoView()
+                .divergence()
                 .map(view -> invalid(model, view)
-                        .map(error -> new Next(
-                                error.map(model.withDivergence(Option.none())::fail)
-                                        .getOrElse(() -> model.withDivergence(Option.none())),
-                                next.cmds()))
+                        .map(error -> {
+                            Model closed = model.mapRepoView(repoView -> repoView.withDivergence(Option.none()));
+                            return new Next(error.map(closed::fail).getOrElse(closed), next.cmds());
+                        })
                         .getOrElse(() ->
                                 view.refs().exists(ref -> !tipOf(before, ref).equals(tipOf(model, ref)))
                                         ? new Next(model, next.cmds().append(view.load()))
@@ -120,7 +139,8 @@ public final class LoadUpdate {
      * nothing to tell.
      */
     private static Option<Option<AppError>> invalid(Model model, DivergenceView view) {
-        Option<Option<Branch>> branch = model.branches().toOption().map(loaded -> model.branch(view.branch()));
+        Option<Option<Branch>> branch =
+                model.repo().branches().toOption().map(loaded -> model.repo().branch(view.branch()));
         if (branch.contains(Option.none())) {
             return Option.of(Option.none());
         }
@@ -143,11 +163,15 @@ public final class LoadUpdate {
     private static Option<Option<Sha>> tipOf(Model model, BranchRef branch) {
         return switch (branch) {
             case BranchRef.Local(Branch.Name name) ->
-                model.branches().toOption().map(loaded -> model.branch(name).map(Branch::tipOid));
-            case BranchRef.Remote(RemoteBranch remote) ->
-                model.remoteBranches()
+                model.repo()
+                        .branches()
                         .toOption()
-                        .map(loaded -> model.remoteBranch(remote).map(RemoteRef::tipOid));
+                        .map(loaded -> model.repo().branch(name).map(Branch::tipOid));
+            case BranchRef.Remote(RemoteBranch remote) ->
+                model.repo()
+                        .remoteBranches()
+                        .toOption()
+                        .map(loaded -> model.repo().remoteBranch(remote).map(RemoteRef::tipOid));
         };
     }
 
@@ -155,8 +179,8 @@ public final class LoadUpdate {
      * Applies {@code f} to the detail of the divergence that is open, if it is the one of {@code sha}.
      */
     private static Model withDetail(Model model, Sha sha, UnaryOperator<Preview<Sha, DiffText>> f) {
-        return model.withDivergence(
-                model.divergence().map(view -> view.withDetail(Preview.updated(view.detail(), sha, f))));
+        return model.mapRepoView(repoView -> repoView.withDivergence(
+                repoView.divergence().map(view -> view.withDetail(Preview.updated(view.detail(), sha, f)))));
     }
 
     /**
@@ -166,7 +190,8 @@ public final class LoadUpdate {
      *                not include it
      */
     private static Next reloadMovedLog(Model next, Function<BranchRef, Option<Boolean>> unmoved) {
-        return next.branchLog()
+        return next.repoView()
+                .branchLog()
                 .map(Preview::key)
                 .filter(branch -> unmoved.apply(branch).contains(false))
                 .map(branch -> Next.of(next, new LoadBranchLog(branch)))
@@ -182,26 +207,31 @@ public final class LoadUpdate {
 
     private static Model failed(Model model, Cmd.Load cmd, Failure failure) {
         return switch (cmd) {
-            case LoadCommitDetail(Sha sha, var options) when !options.equals(model.diffOptions()) -> model;
-            case LoadFileDiff(var files, var options) when !options.equals(model.diffOptions()) -> model;
-            case Cmd.LoadStatus() -> model.withStatus(new Failed<>(failure));
-            case Cmd.LoadBranches() -> model.withBranches(new Failed<>(failure));
-            case Cmd.LoadRemoteBranches() -> model.withRemoteBranches(new Failed<>(failure));
-            case Cmd.LoadStashes() -> model.withStashes(new Failed<>(failure));
-            case Cmd.LoadWorktrees() -> model.withWorktrees(new Failed<>(failure));
-            case LoadCommits() -> model.withCommits(new Failed<>(failure));
+            case LoadCommitDetail(Sha sha, var options)
+            when !options.equals(model.preferences().diffOptions()) -> model;
+            case LoadFileDiff(var files, var options)
+            when !options.equals(model.preferences().diffOptions()) -> model;
+            case Cmd.LoadStatus() -> model.mapRepo(repo -> repo.withStatus(new Failed<>(failure)));
+            case Cmd.LoadBranches() -> model.mapRepo(repo -> repo.withBranches(new Failed<>(failure)));
+            case Cmd.LoadRemoteBranches() -> model.mapRepo(repo -> repo.withRemoteBranches(new Failed<>(failure)));
+            case Cmd.LoadStashes() -> model.mapRepo(repo -> repo.withStashes(new Failed<>(failure)));
+            case Cmd.LoadWorktrees() -> model.mapRepo(repo -> repo.withWorktrees(new Failed<>(failure)));
+            case LoadCommits() -> model.mapRepo(repo -> repo.withCommits(new Failed<>(failure)));
             case LoadCommitDetail(Sha sha, var options) ->
                 withDetail(
-                        model.withCommitDetail(Preview.updated(model.commitDetail(), sha, d -> d.failed(failure))),
+                        model.mapRepoView(repoView -> repoView.withCommitDetail(
+                                Preview.updated(repoView.commitDetail(), sha, d -> d.failed(failure)))),
                         sha,
                         d -> d.failed(failure));
             case Cmd.LoadDivergence load ->
-                model.withDivergence(model.divergence()
-                        .map(view -> view.load().equals(load) ? view.withCommits(new Failed<>(failure)) : view));
+                model.mapRepoView(repoView -> repoView.withDivergence(repoView.divergence()
+                        .map(view -> view.load().equals(load) ? view.withCommits(new Failed<>(failure)) : view)));
             case LoadFileDiff(var files, var options) ->
-                model.withFileDiff(Preview.updated(model.fileDiff(), files, d -> d.failed(failure)));
+                model.mapRepoView(repoView ->
+                        repoView.withFileDiff(Preview.updated(repoView.fileDiff(), files, d -> d.failed(failure))));
             case LoadBranchLog(var branch) ->
-                model.withBranchLog(Preview.updated(model.branchLog(), branch, log -> log.failed(failure)));
+                model.mapRepoView(repoView -> repoView.withBranchLog(
+                        Preview.updated(repoView.branchLog(), branch, log -> log.failed(failure))));
         };
     }
 }

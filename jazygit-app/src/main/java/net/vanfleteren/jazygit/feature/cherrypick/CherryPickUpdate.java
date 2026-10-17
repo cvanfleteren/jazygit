@@ -23,7 +23,8 @@ public final class CherryPickUpdate {
     public static Next update(Model model, CherryPickMsg msg) {
         return switch (msg) {
             case CherryPickMsg.Copied(Sha sha) -> copied(model, sha);
-            case CherryPickMsg.Dropped() -> Next.of(model.withCherryPick(Option.none()));
+            case CherryPickMsg.Dropped() ->
+                Next.of(model.mapRepoView(repoView -> repoView.withCherryPick(Option.none())));
             case CherryPickMsg.Requested() -> requested(model);
             case CherryPickMsg.Cancelled() -> Next.of(model.withoutPopup(CherryPickPopup.class));
             case CherryPickMsg.Confirmed() ->
@@ -40,9 +41,10 @@ public final class CherryPickUpdate {
      * A merge cannot be copied: which of its parents to pick it against is not asked.
      */
     private static Next copied(Model model, Sha sha) {
-        return Next.of(model.commit(sha)
+        return Next.of(model.repo()
+                .commit(sha)
                 .filter(commit -> !commit.isMerge())
-                .map(commit -> model.withCherryPick(Option.of(commit)))
+                .map(commit -> model.mapRepoView(repoView -> repoView.withCherryPick(Option.of(commit))))
                 .getOrElse(model));
     }
 
@@ -50,23 +52,24 @@ public final class CherryPickUpdate {
      * Without a copied commit, nothing happens; a commit the checked out branch already has is not picked again.
      */
     private static Next requested(Model model) {
-        return model.cherryPick()
-                .map(commit -> model.commit(commit.sha()).isDefined()
+        return model.repoView()
+                .cherryPick()
+                .map(commit -> model.repo().commit(commit.sha()).isDefined()
                         ? Next.of(model.fail(new AppError.AlreadyPicked(commit.sha())))
                         : Update.ask(model, popup(model, commit)))
                 .getOrElse(() -> Next.of(model));
     }
 
     private static CherryPickPopup popup(Model model, Commit commit) {
-        return new CherryPickPopup(commit, model.currentBranch().map(Branch::name));
+        return new CherryPickPopup(commit, model.repo().currentBranch().map(Branch::name));
     }
 
     /**
      * The copy is done with once it is picked; one copied meanwhile stays.
      */
     private static Model picked(Model model, Sha sha) {
-        return model.cherryPick().exists(commit -> commit.sha().equals(sha))
-                ? model.withCherryPick(Option.none())
+        return model.repoView().cherryPick().exists(commit -> commit.sha().equals(sha))
+                ? model.mapRepoView(repoView -> repoView.withCherryPick(Option.none()))
                 : model;
     }
 }

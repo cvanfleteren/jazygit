@@ -117,7 +117,7 @@ class SettingsPanelUpdateTest {
                 TestModels.loaded(),
                 new SettingsPanelMsg.GhExecutableChecked(Option.of("/opt/gh/bin/gh"), Either.right("2.102.0")));
 
-        assertEquals(chosen, next.model().settings());
+        assertEquals(chosen, next.model().preferences().settings());
         assertEquals(
                 List.of(new Cmd.SaveSettings(Settings.DEFAULT, chosen), new SettingsPanelCmd.Reopen()), next.cmds());
     }
@@ -130,7 +130,7 @@ class SettingsPanelUpdateTest {
                 TestModels.loaded(),
                 new SettingsPanelMsg.GhExecutableChecked(Option.of("/nowhere/gh"), Either.left(failure)));
 
-        assertEquals(Settings.DEFAULT, next.model().settings());
+        assertEquals(Settings.DEFAULT, next.model().preferences().settings());
         assertEquals(List.empty(), next.cmds());
         assertEquals(
                 Option.of(new ErrorPopup(new AppError.GhExecutableUnusable(Option.of("/nowhere/gh"), failure))),

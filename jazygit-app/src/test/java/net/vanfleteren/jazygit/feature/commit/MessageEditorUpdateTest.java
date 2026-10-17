@@ -67,7 +67,8 @@ class MessageEditorUpdateTest {
                 .model();
 
         assertEquals(Option.of(new CommitPopup(Option.of(EDITED))), edited.popup());
-        assertEquals(Operation.EDIT_MESSAGE, edited.commandLog().last().operation());
+        assertEquals(
+                Operation.EDIT_MESSAGE, edited.outcome().commandLog().last().operation());
     }
 
     @Test
@@ -130,8 +131,8 @@ class MessageEditorUpdateTest {
                 .model();
 
         assertEquals(Option.of(new CommitPopup()), failed.popup());
-        AppError.OperationFailed error =
-                assertInstanceOf(AppError.OperationFailed.class, failed.error().get());
+        AppError.OperationFailed error = assertInstanceOf(
+                AppError.OperationFailed.class, failed.outcome().error().get());
         assertEquals(Operation.EDIT_MESSAGE, error.operation());
     }
 

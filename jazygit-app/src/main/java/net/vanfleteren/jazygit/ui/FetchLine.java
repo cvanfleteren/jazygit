@@ -13,6 +13,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Fetching;
 import net.vanfleteren.jazygit.state.Freshness;
+import net.vanfleteren.jazygit.state.LoadPullRequests;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Screen;
 
@@ -41,7 +42,8 @@ public final class FetchLine {
      * @param now the time to tell how long ago things were read from
      */
     public static StyledElement<?> render(Model model, Instant now) {
-        TextElement left = model.cherryPick()
+        TextElement left = model.repoView()
+                .cherryPick()
                 .map(commit -> text(Messages.get("status.cherryPick", commit.shortSha())))
                 .getOrElse(() -> background(model));
         String fresh = freshness(model, now);
@@ -55,10 +57,13 @@ public final class FetchLine {
     }
 
     private static TextElement background(Model model) {
-        return text(model.fetching()
+        return text(model.jobs()
+                        .fetching()
                         .flatMap(Fetching::remote)
                         .map(remote -> Messages.get("status.fetching", remote))
-                        .orElse(Option.when(model.readingPullRequests() > 0, () -> Messages.get("status.pullRequests")))
+                        .orElse(Option.when(
+                                model.gitHub().reading().contains(new LoadPullRequests()),
+                                () -> Messages.get("status.pullRequests")))
                         .getOrElse(""))
                 .addClass(Theme.Classes.DIM);
     }
@@ -70,7 +75,8 @@ public final class FetchLine {
      */
     static String freshness(Model model, Instant now) {
         boolean pullRequests = model.screen() == Screen.PULL_REQUESTS;
-        Freshness freshness = pullRequests ? model.prOverview().freshness() : model.lastFetch();
+        Freshness freshness =
+                pullRequests ? model.prOverview().freshness() : model.jobs().lastFetch();
         String kind = pullRequests ? "read" : "fetch";
         return List.of(
                         freshness

@@ -35,7 +35,7 @@ public final class PullRequestUpdate {
                         : Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
             case PullRequestMsg.BaseChosen(Branch.Name base) ->
                 model.popup(BasePopup.class)
-                        .flatMap(popup -> model.branch(popup.branch()))
+                        .flatMap(popup -> model.repo().branch(popup.branch()))
                         // The branch can have another name on its remote; gh needs that one.
                         .map(known -> Next.of(
                                 model.withoutPopup(BasePopup.class),
@@ -53,7 +53,8 @@ public final class PullRequestUpdate {
                         : Update.confirm(
                                 model,
                                 NewPullRequestPopup.class,
-                                popup -> model.branch(popup.branch())
+                                popup -> model.repo()
+                                        .branch(popup.branch())
                                         .map(known -> new CreatePullRequest(
                                                 popup.branch(),
                                                 popup.head(),
@@ -69,9 +70,8 @@ public final class PullRequestUpdate {
                 Next done = OperationUpdate.succeeded(model, cmd, commands);
                 Model shown = pullRequest
                         .map(pr -> done.model()
-                                .withPullRequests(done.model()
-                                        .pullRequests()
-                                        .map(open -> open.put(new Branch.Name(pr.headBranch()), pr))))
+                                .mapGitHub(gitHub -> gitHub.withPullRequests(gitHub.pullRequests()
+                                        .map(open -> open.put(new Branch.Name(pr.headBranch()), pr)))))
                         .getOrElse(done.model());
                 // A read that is still running may have missed it, so this one is started anyway. GitHub may have
                 // changed the remote too, which a fetch brings in.
@@ -134,9 +134,8 @@ public final class PullRequestUpdate {
                 // a merge changed the base branch on the remote, which a fetch brings in.
                 Next done = OperationUpdate.succeeded(model, cmd, commands);
                 Model ended = done.model()
-                        .withPullRequests(done.model()
-                                .pullRequests()
-                                .map(open -> open.filterValues(pr -> pr.number() != cmd.number())));
+                        .mapGitHub(gitHub -> gitHub.withPullRequests(gitHub.pullRequests()
+                                .map(open -> open.filterValues(pr -> pr.number() != cmd.number()))));
                 // A read that is still running may have missed it, and would show it open again.
                 yield PrOverviewUpdate.reloadIfShown(
                         FetchUpdate.requested(PullRequestsUpdate.loadAnyway(new Next(ended, done.cmds()))));
@@ -150,7 +149,7 @@ public final class PullRequestUpdate {
      * open, and its branch is not busy, e.g. with doing that already.
      */
     static boolean draftChangeable(Model model, PullRequestPopup popup) {
-        return popup.open() && !model.busy().containsKey(new BranchRef.Local(popup.branch()));
+        return popup.open() && !model.jobs().busy().containsKey(new BranchRef.Local(popup.branch()));
     }
 
     /**
@@ -170,12 +169,14 @@ public final class PullRequestUpdate {
      */
     private static Next requested(Model model, Branch.Name branch) {
         return model.idleBranch(branch)
-                .map(known -> model.pullRequest(known)
+                .map(known -> model.gitHub()
+                        .pullRequest(known)
                         .map(pr -> show(model, branch, pr))
                         // Without the pull requests it is unknown whether there is one to open.
-                        .getOrElse(() -> model.pullRequestsFailure().isDefined()
-                                        || model.pullRequests().isEmpty()
-                                ? Next.of(model.fail(model.pullRequestsFailure()
+                        .getOrElse(() -> model.gitHub().pullRequestsFailure().isDefined()
+                                        || model.gitHub().pullRequests().isEmpty()
+                                ? Next.of(model.fail(model.gitHub()
+                                        .pullRequestsFailure()
                                         .<AppError>map(AppError.PullRequestsUnavailable::new)
                                         .getOrElse(AppError.PullRequestsNotRead::new)))
                                 : known.remoteUpstream().isEmpty() || known.ahead() > 0
@@ -217,7 +218,8 @@ public final class PullRequestUpdate {
      * upstream there.
      */
     private static BranchRef baseRef(Model model, Branch.Name base) {
-        return model.branch(base)
+        return model.repo()
+                .branch(base)
                 .flatMap(Branch::remoteUpstream)
                 .map(upstream -> BranchRef.of(upstream.branch()))
                 .getOrElse(() -> new BranchRef.Local(base));
@@ -228,7 +230,8 @@ public final class PullRequestUpdate {
      * default branch first.
      */
     static List<Branch.Name> bases(Model model, Branch.Name branch) {
-        return model.branches()
+        return model.repo()
+                .branches()
                 .toOption()
                 .getOrElse(List.empty())
                 .filter(b -> b.hasRemote() && !b.name().equals(branch))

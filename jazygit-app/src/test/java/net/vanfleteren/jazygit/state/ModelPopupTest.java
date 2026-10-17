@@ -33,15 +33,16 @@ class ModelPopupTest {
 
     @Test
     void theFocusOutsideThePopupsIsKeptThroughAPopup() {
-        assertEquals(Option.none(), closed.focusedPane());
+        assertEquals(Option.none(), closed.repoView().focusedPane());
 
         Model focused = Update.update(closed, new Msg.Focused("branches")).model();
 
-        assertEquals(Option.of("branches"), focused.focusedPane());
+        assertEquals(Option.of("branches"), focused.repoView().focusedPane());
         assertEquals(
                 Option.of("branches"),
                 focused.openPopup(new AmendPopup())
                         .withoutPopup(AmendPopup.class)
+                        .repoView()
                         .focusedPane());
     }
 }

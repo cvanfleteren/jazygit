@@ -45,7 +45,8 @@ public final class StashUpdate {
      * Only a stash that is listed is unstashed or deleted.
      */
     private static boolean listed(Model model, net.vanfleteren.jazygit.git.model.Stash stash) {
-        return model.stashes()
+        return model.repo()
+                .stashes()
                 .getOrElse(List.empty())
                 .exists(listed -> listed.sha().equals(stash.sha()));
     }

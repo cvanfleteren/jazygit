@@ -17,12 +17,14 @@ public final class BranchesTabUpdate {
 
     public static Next update(Model model, BranchesTabMsg msg) {
         return switch (msg) {
-            case Switched(int by) -> switched(model, model.branchesTab().shifted(by));
+            case Switched(int by) ->
+                switched(model, model.repoView().branchesTab().shifted(by));
             case Chosen(BranchesTab tab) -> switched(model, tab);
         };
     }
 
     private static Next switched(Model model, BranchesTab tab) {
-        return Next.of(model.withBranchesTab(tab).withDivergence(Option.none()));
+        return Next.of(
+                model.mapRepoView(repoView -> repoView.withBranchesTab(tab).withDivergence(Option.none())));
     }
 }

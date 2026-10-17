@@ -8,6 +8,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.state.Fetching;
 import net.vanfleteren.jazygit.state.Freshness;
+import net.vanfleteren.jazygit.state.LoadPullRequests;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -29,23 +30,26 @@ class FetchLineTest {
     void showsTheRemoteBeingFetchedFrom() throws Exception {
         assertEquals(
                 "Fetching origin",
-                rendered(TestModels.loaded().withFetching(Option.of(new Fetching(Option.of("origin"), List.empty())))));
+                rendered(TestModels.loaded()
+                        .mapJobs(jobs ->
+                                jobs.withFetching(Option.of(new Fetching(Option.of("origin"), List.empty()))))));
     }
 
     @Test
     void showsThePullRequestsBeingReadWhenNoRemoteIsBeingFetchedFrom() throws Exception {
-        Model reading = TestModels.loaded().withReadingPullRequests(1);
+        Model reading = TestModels.loaded().mapGitHub(gitHub -> gitHub.withReading(List.of(new LoadPullRequests())));
 
         assertEquals("Reading pull requests from GitHub", rendered(reading));
         assertEquals(
                 "Fetching origin",
-                rendered(reading.withFetching(Option.of(new Fetching(Option.of("origin"), List.empty())))));
+                rendered(reading.mapJobs(
+                        jobs -> jobs.withFetching(Option.of(new Fetching(Option.of("origin"), List.empty()))))));
     }
 
     @Test
     void isBlankWhileNoRemoteIsBeingFetchedFrom() throws Exception {
         assertEquals("", rendered(TestModels.loaded()));
-        assertEquals("", rendered(TestModels.loaded().withFetching(Option.of(Fetching.LISTING))));
+        assertEquals("", rendered(TestModels.loaded().mapJobs(jobs -> jobs.withFetching(Option.of(Fetching.LISTING)))));
     }
 
     private static final Instant NOW = Instant.parse("2026-10-17T12:00:00Z");
@@ -55,26 +59,32 @@ class FetchLineTest {
         Freshness fetched = Freshness.NEVER.succeeded("origin", NOW.minusSeconds(120));
 
         assertEquals("", FetchLine.freshness(TestModels.loaded(), NOW));
-        assertEquals("fetched 2m ago", FetchLine.freshness(TestModels.loaded().withLastFetch(fetched), NOW));
+        assertEquals(
+                "fetched 2m ago",
+                FetchLine.freshness(TestModels.loaded().mapJobs(jobs -> jobs.withLastFetch(fetched)), NOW));
         assertEquals(
                 "fetched 2m ago · last fetch failed",
-                FetchLine.freshness(TestModels.loaded().withLastFetch(fetched.failed("upstream")), NOW));
+                FetchLine.freshness(
+                        TestModels.loaded().mapJobs(jobs -> jobs.withLastFetch(fetched.failed("upstream"))), NOW));
         assertEquals(
                 "fetched 2m ago",
                 FetchLine.freshness(
                         TestModels.loaded()
-                                .withLastFetch(fetched.failed("upstream").succeeded("upstream", NOW.minusSeconds(120))),
+                                .mapJobs(jobs -> jobs.withLastFetch(
+                                        fetched.failed("upstream").succeeded("upstream", NOW.minusSeconds(120)))),
                         NOW));
         assertEquals(
                 "last fetch failed",
-                FetchLine.freshness(TestModels.loaded().withLastFetch(Freshness.NEVER.failed("origin")), NOW));
+                FetchLine.freshness(
+                        TestModels.loaded().mapJobs(jobs -> jobs.withLastFetch(Freshness.NEVER.failed("origin"))),
+                        NOW));
     }
 
     @Test
     void onThePullRequestsScreenSaysHowLongAgoTheyWereRead() {
         Model prs = TestModels.loaded()
                 .withScreen(Screen.PULL_REQUESTS)
-                .withLastFetch(Freshness.NEVER.succeeded("origin", NOW))
+                .mapJobs(jobs -> jobs.withLastFetch(Freshness.NEVER.succeeded("origin", NOW)))
                 .withPrOverview(PrOverview.INITIAL.withFreshness(Freshness.NEVER
                         .succeeded("mine", NOW.minusSeconds(3 * 3600))
                         .failed("repository")));

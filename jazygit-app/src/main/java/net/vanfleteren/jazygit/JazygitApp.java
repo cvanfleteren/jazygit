@@ -381,9 +381,15 @@ public class JazygitApp extends ToolkitApp {
             // repository, and its outcome goes to the old program, which nobody looks at anymore.
             stop(running);
             startRuntime(
-                    env(git, last.settings(), env.settings(), env.recent(), env.repositories(), env.terminal()),
-                    new SettingsStore.Loaded(last.settings(), Option.none()),
-                    last.themeOverride());
+                    env(
+                            git,
+                            last.preferences().settings(),
+                            env.settings(),
+                            env.recent(),
+                            env.repositories(),
+                            env.terminal()),
+                    new SettingsStore.Loaded(last.preferences().settings(), Option.none()),
+                    last.preferences().themeOverride());
         });
     }
 
@@ -439,7 +445,7 @@ public class JazygitApp extends ToolkitApp {
     protected Element render() {
         Model model = runtime.map(running -> running.program().model())
                 .getOrElse(() -> Model.initial(env.git().repositoryName()));
-        Theme.activate(styleEngine, model.theme());
+        Theme.activate(styleEngine, model.preferences().theme());
         if (model.screen() != shownScreen) {
             shownScreen = model.screen();
             runner().focusManager().setFocus(focusedPane(model));
@@ -531,7 +537,7 @@ public class JazygitApp extends ToolkitApp {
      * Empty when the terminal size is not known.
      */
     private Option<Integer> stashHeight(Model model) {
-        int rows = Math.max(1, model.stashes().getOrElse(List.empty()).size());
+        int rows = Math.max(1, model.repo().stashes().getOrElse(List.empty()).size());
         // The left column is the screen without the fetch line.
         return Try.of(() -> runner().tuiRunner().backend().size().height() - FetchLine.HEIGHT)
                 .toOption()

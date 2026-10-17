@@ -45,7 +45,8 @@ public final class DeleteBranchUpdate {
      * either, that is said.
      */
     private static Next requested(Model model, Branch.Name branch) {
-        return model.branch(branch)
+        return model.repo()
+                .branch(branch)
                 .filter(known -> !known.remoteDeletable())
                 .flatMap(known -> Branches.checkedOutElsewhere(model, Operation.DELETE_BRANCH, branch))
                 .map(error -> Next.of(model.fail(error)))
@@ -60,7 +61,8 @@ public final class DeleteBranchUpdate {
         return Update.confirm(
                 model,
                 DeleteBranchPopup.class,
-                popup -> model.branch(popup.branch())
+                popup -> model.repo()
+                        .branch(popup.branch())
                         .filter(branch -> scope == DeleteScope.LOCAL || branch.remoteDeletable())
                         .filter(branch -> scope == DeleteScope.REMOTE || !branch.checkedOutElsewhere())
                         .map(branch -> new DeleteBranch(branch.name(), branch.pushTarget(), scope)));
@@ -78,20 +80,20 @@ public final class DeleteBranchUpdate {
     }
 
     private static boolean remoteDeletable(Model model, RemoteBranch branch) {
-        return model.remoteBranch(branch).isDefined()
-                && !model.busy().containsKey(new BranchRef.Remote(branch))
+        return model.repo().remoteBranch(branch).isDefined()
+                && !model.jobs().busy().containsKey(new BranchRef.Remote(branch))
                 && !isDefault(model, branch);
     }
 
     static boolean remoteDeletable(Model model, Branch.Name branch) {
-        return model.branch(branch).exists(Branch::remoteDeletable);
+        return model.repo().branch(branch).exists(Branch::remoteDeletable);
     }
 
     /**
      * Whether {@code branch} can be deleted here: not while another worktree has it checked out.
      */
     static boolean localDeletable(Model model, Branch.Name branch) {
-        return model.branch(branch).exists(known -> !known.checkedOutElsewhere());
+        return model.repo().branch(branch).exists(known -> !known.checkedOutElsewhere());
     }
 
     /**
@@ -99,6 +101,6 @@ public final class DeleteBranchUpdate {
      */
     private static boolean isDefault(Model model, RemoteBranch branch) {
         return branch.remote().equals(RemoteBranch.DEFAULT_REMOTE)
-                && model.branch(branch.branch()).exists(Branch::isDefault);
+                && model.repo().branch(branch.branch()).exists(Branch::isDefault);
     }
 }

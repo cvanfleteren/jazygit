@@ -20,7 +20,8 @@ final class Branches {
      * one: what merging and rebasing work with.
      */
     static Option<Tuple2<Branch.Name, Branch.Name>> checkedOutAnd(Model model, Branch.Name other) {
-        return model.currentBranch()
+        return model.repo()
+                .currentBranch()
                 .filter(current -> !current.name().equals(other))
                 .flatMap(current -> model.idleBranch(current.name()))
                 .flatMap(current -> model.idleBranch(other).map(found -> Tuple.of(current.name(), found.name())));
@@ -31,7 +32,8 @@ final class Branches {
      * worktree.
      */
     static Option<AppError> checkedOutElsewhere(Model model, Operation operation, Branch.Name name) {
-        return model.branch(name)
+        return model.repo()
+                .branch(name)
                 .flatMap(Branch::worktreeLocation)
                 .map(worktree -> new AppError.CheckedOutElsewhere(operation, name, worktree));
     }

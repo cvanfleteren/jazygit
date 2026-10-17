@@ -23,7 +23,8 @@ public final class ResetUpdate {
         return switch (msg) {
             case ResetMsg.Requested(Sha sha) ->
                 Update.ask(
-                        model, model.commit(sha).map(commit -> new ResetPopup(new ResetTarget.ToCommit(commit.sha()))));
+                        model,
+                        model.repo().commit(sha).map(commit -> new ResetPopup(new ResetTarget.ToCommit(commit.sha()))));
             case ResetMsg.Cancelled() -> Next.of(model.withoutPopup(ResetPopup.class));
             case ResetMsg.Chosen(ResetMode mode) -> chosen(model, mode);
             case ResetMsg.HardConfirmed() ->
@@ -52,7 +53,8 @@ public final class ResetUpdate {
      * when the status is not known.
      */
     private static Option<Integer> discarded(Model model) {
-        return model.status()
+        return model.repo()
+                .status()
                 .toOption()
                 .map(RepoStatus::files)
                 .map(files -> files.count(file -> file.type() != ChangeType.UNTRACKED));

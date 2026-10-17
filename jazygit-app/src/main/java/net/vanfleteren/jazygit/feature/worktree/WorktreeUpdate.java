@@ -30,12 +30,14 @@ public final class WorktreeUpdate {
                                 .map(text -> new WorktreeCmd.Add(popup.branch(), text)));
             // The worktrees are shown, the new one among them, to switch to.
             case Added(var cmd, var commands) ->
-                OperationUpdate.succeeded(model.withBranchesTab(BranchesTab.WORKTREES), cmd, commands);
+                OperationUpdate.succeeded(
+                        model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.WORKTREES)), cmd, commands);
             case SwitchRequested(String location) -> switchRequested(model, location);
             case RemoveRequested(String location) ->
                 Update.ask(
                         model,
-                        model.worktree(location)
+                        model.repo()
+                                .worktree(location)
                                 .filter(WorktreeUpdate::removable)
                                 .map(worktree -> new RemoveWorktreePopup(worktree.location(), worktree.name())));
             case RemoveCancelled() -> Next.of(model.withoutPopup(RemoveWorktreePopup.class));
@@ -43,7 +45,8 @@ public final class WorktreeUpdate {
                 Update.confirm(
                         model,
                         RemoveWorktreePopup.class,
-                        popup -> model.worktree(popup.location())
+                        popup -> model.repo()
+                                .worktree(popup.location())
                                 .filter(WorktreeUpdate::removable)
                                 .map(worktree -> new WorktreeCmd.Remove(popup.location(), false)));
             // The removal ran, and failed; removing it anyway is offered instead of the failure.
@@ -51,7 +54,8 @@ public final class WorktreeUpdate {
                 Update.refresh(OperationUpdate.done(model, cmd, commands)
                         .openPopupIfFree(new ForceRemoveWorktreePopup(
                                 cmd.location(),
-                                model.worktree(cmd.location())
+                                model.repo()
+                                        .worktree(cmd.location())
                                         .map(Worktree::name)
                                         .getOrElse(cmd.location()))));
             case ForceCancelled() -> Next.of(model.withoutPopup(ForceRemoveWorktreePopup.class));
@@ -78,7 +82,8 @@ public final class WorktreeUpdate {
                                 model,
                                 new NewWorktreePopup(
                                         branch,
-                                        model.mainWorktree()
+                                        model.repo()
+                                                .mainWorktree()
                                                 .map(main -> main.siblingFor(branch))
                                                 .getOrElse("")))))
                 .getOrElse(() -> Next.of(model));
@@ -89,7 +94,8 @@ public final class WorktreeUpdate {
      * one shown already stays.
      */
     private static Next switchRequested(Model model, String location) {
-        return model.worktree(location)
+        return model.repo()
+                .worktree(location)
                 .filter(worktree -> !worktree.current())
                 .map(worktree -> Next.of(model.clearError(), new RecentReposCmd.SwitchTo(location)))
                 .getOrElse(() -> Next.of(model));

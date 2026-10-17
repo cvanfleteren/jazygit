@@ -19,8 +19,8 @@ public final class CommandLog {
     public static Model append(Model model, Operation operation, List<ExecutedCommand> commands) {
         return commands.isEmpty()
                 ? model
-                : model.withCommandLog(model.commandLog()
+                : model.mapOutcome(outcome -> outcome.withCommandLog(outcome.commandLog()
                         .append(new LogEntry(operation, commands))
-                        .takeRight(MAX_ENTRIES));
+                        .takeRight(MAX_ENTRIES)));
     }
 }

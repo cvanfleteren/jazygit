@@ -31,25 +31,25 @@ class CommitUpdateTest {
 
     @Test
     void nothingIsSaidToBeUnchangedBeforeTheStatusIsRead() {
-        Model starting = loaded().withStatus(net.vanfleteren.jazygit.state.Loadable.loading());
+        Model starting = loaded().mapRepo(repo -> repo.withStatus(net.vanfleteren.jazygit.state.Loadable.loading()));
 
         for (net.vanfleteren.jazygit.state.Msg msg : List.<net.vanfleteren.jazygit.state.Msg>of(
                 new CommitMsg.Requested(),
                 new AmendMsg.Requested(),
                 new net.vanfleteren.jazygit.feature.stash.StashMsg.Requested())) {
             Model next = Update.update(starting, msg).model();
-            assertEquals(Option.none(), next.error(), msg.toString());
+            assertEquals(Option.none(), next.outcome().error(), msg.toString());
             assertEquals(Option.none(), next.popup(), msg.toString());
         }
     }
 
     private Model withFiles(FileEntry... files) {
-        return loaded().withStatus(new Loaded<>(
-                new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), List.of(files))));
+        return loaded().mapRepo(repo -> repo.withStatus(
+                new Loaded<>(new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), List.of(files)))));
     }
 
     private Model withCommits(Commit... commits) {
-        return loaded().withCommits(new Loaded<>(List.of(commits)));
+        return loaded().mapRepo(repo -> repo.withCommits(new Loaded<>(List.of(commits))));
     }
 
     @Test
@@ -156,7 +156,10 @@ class CommitUpdateTest {
     void amendWithoutChangesIsAnError() {
         assertEquals(
                 Option.of(new AppError.NothingToAmend()),
-                Update.update(withFiles(), new AmendMsg.Requested()).model().error());
+                Update.update(withFiles(), new AmendMsg.Requested())
+                        .model()
+                        .outcome()
+                        .error());
     }
 
     @Test

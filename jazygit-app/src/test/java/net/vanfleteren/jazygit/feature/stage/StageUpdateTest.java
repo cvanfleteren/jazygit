@@ -122,19 +122,20 @@ class StageUpdateTest {
         Next staged = Update.update(loaded(), succeeded(new StageCmd.Stage(List.of()), "git add -- a.txt"));
         assertEquals(
                 List.of(new LogEntry(Operation.STAGE, executed("git add -- a.txt"))),
-                staged.model().commandLog());
+                staged.model().outcome().commandLog());
 
         Next unstaged = Update.update(
                 staged.model(),
                 succeeded(new StageCmd.Unstage(List.of(), List.of()), "git reset --quiet HEAD -- a.txt"));
         assertEquals(
                 List.of(Operation.STAGE, Operation.UNSTAGE),
-                unstaged.model().commandLog().map(LogEntry::operation).toList());
+                unstaged.model().outcome().commandLog().map(LogEntry::operation).toList());
 
         assertEquals(
                 List.of(),
                 Update.update(loaded(), succeeded(new StageCmd.Stage(List.of())))
                         .model()
+                        .outcome()
                         .commandLog());
     }
 

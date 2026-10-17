@@ -34,7 +34,7 @@ class AmendCommitDialogTest {
 
     private static Model openModel() {
         Model loaded = TestModels.loaded(new SampleData());
-        Commit commit = loaded.commits().toOption().get().head();
+        Commit commit = loaded.repo().commits().toOption().get().head();
         Model unstaged = Update.update(
                         loaded,
                         new LoadMsg.StatusLoaded(new RepoStatus(

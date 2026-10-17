@@ -21,16 +21,16 @@ public final class PullRequestsUpdate {
             case PullRequestsMsg.Refresh() -> load(Next.of(model));
             case PullRequestsMsg.Loaded(List<PullRequest> pullRequests) ->
                 Next.of(read(model)
-                        .withPullRequests(Option.of(byHeadBranch(pullRequests)))
-                        .withPullRequestsFailure(Option.none()));
+                        .mapGitHub(gitHub -> gitHub.withPullRequests(Option.of(byHeadBranch(pullRequests)))
+                                .withPullRequestsFailure(Option.none())));
             // gh can be missing, logged out or offline, or the remote not on GitHub: then no pull requests show.
             // That is no reason to bother the user until they ask for a pull request. The account they chose for
             // the repository not being available is, once: gh is not run as another one.
             case PullRequestsMsg.LoadFailed(var failure) -> {
-                Model failed = read(model).withPullRequestsFailure(Option.of(failure));
+                Model failed = read(model).mapGitHub(gitHub -> gitHub.withPullRequestsFailure(Option.of(failure)));
                 yield Next.of(
                         failure.accountUnavailable()
-                                        && !model.pullRequestsFailure().contains(failure)
+                                        && !model.gitHub().pullRequestsFailure().contains(failure)
                                 ? failed.fail(new AppError.PullRequestsUnavailable(failure))
                                 : failed);
             }
@@ -42,7 +42,8 @@ public final class PullRequestsUpdate {
      * running, which gets the latest state already.
      */
     public static Next load(Next next) {
-        return BranchChecksUpdate.load(next.model().readingPullRequests() > 0 ? next : loadPullRequests(next));
+        return BranchChecksUpdate.load(
+                next.model().gitHub().reading().contains(new LoadPullRequests()) ? next : loadPullRequests(next));
     }
 
     /**
@@ -59,11 +60,11 @@ public final class PullRequestsUpdate {
     }
 
     private static Model reading(Model model) {
-        return model.withReadingPullRequests(model.readingPullRequests() + 1);
+        return model.mapGitHub(gitHub -> gitHub.withReading(gitHub.reading().append(new LoadPullRequests())));
     }
 
     private static Model read(Model model) {
-        return model.withReadingPullRequests(Math.max(0, model.readingPullRequests() - 1));
+        return model.mapGitHub(gitHub -> gitHub.withReading(gitHub.reading().remove(new LoadPullRequests())));
     }
 
     /**

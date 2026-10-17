@@ -60,7 +60,7 @@ public final class StashPanel {
      * @param activeId the id of the left pane in use, whose highlighted row shows
      */
     public Panel render(Model model, String focusedId, String activeId) {
-        return list.render(model.stashes(), ID.equals(focusedId), ID.equals(activeId));
+        return list.render(model.repo().stashes(), ID.equals(focusedId), ID.equals(activeId));
     }
 
     /**

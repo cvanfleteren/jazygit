@@ -24,7 +24,7 @@ class ErrorUpdateTest {
         Model failed = Update.update(loaded(), failed(new BranchCmd.Pull(new Branch.Name("main")), "boom"))
                 .model();
 
-        assertEquals(failed.error().map(ErrorPopup::new), failed.popup());
+        assertEquals(failed.outcome().error().map(ErrorPopup::new), failed.popup());
     }
 
     @Test
@@ -40,7 +40,8 @@ class ErrorUpdateTest {
                 .fail(new AppError.InvalidUpstream("x"));
 
         assertEquals(Option.of(new SetUpstreamPopup(new Branch.Name("feature"))), failed.popup());
-        assertEquals(Option.of(new AppError.InvalidUpstream("x")), failed.error());
+        assertEquals(
+                Option.of(new AppError.InvalidUpstream("x")), failed.outcome().error());
     }
 
     @Test
@@ -50,6 +51,7 @@ class ErrorUpdateTest {
         Model dismissed = Update.update(failed, new ErrorMsg.Dismissed()).model();
 
         assertEquals(Option.none(), dismissed.popup());
-        assertEquals(Option.of(new AppError.NothingToCommit()), dismissed.error());
+        assertEquals(
+                Option.of(new AppError.NothingToCommit()), dismissed.outcome().error());
     }
 }

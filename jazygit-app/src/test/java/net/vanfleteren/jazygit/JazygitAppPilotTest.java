@@ -88,7 +88,7 @@ class JazygitAppPilotTest {
         SampleData data = new SampleData();
         Model loaded = TestModels.loaded(data);
         io.vavr.collection.List<FileEntry> files =
-                loaded.status().toOption().get().files();
+                loaded.repo().status().toOption().get().files();
         Model model = Update.update(
                         Update.update(loaded, new SelectionMsg.FilesSelected(files))
                                 .model(),
@@ -135,9 +135,9 @@ class JazygitAppPilotTest {
         java.util.List<Msg> dispatched = new ArrayList<>();
         RemoteBranch feature = new RemoteBranch("origin", new Branch.Name("feature"));
         Model remote = TestModels.loaded(data)
-                .withBranchesTab(BranchesTab.REMOTE)
-                .withRemoteBranches(new Loadable.Loaded<>(List.of(
-                        new RemoteRef(feature, new Sha("0a1b2c3d4e5f60718293a4b5c6d7e8f901234567"), Instant.EPOCH))));
+                .mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.REMOTE))
+                .mapRepo(repo -> repo.withRemoteBranches(new Loadable.Loaded<>(List.of(
+                        new RemoteRef(feature, new Sha("0a1b2c3d4e5f60718293a4b5c6d7e8f901234567"), Instant.EPOCH)))));
         Fixture fixture = new Fixture(
                 data,
                 remote,

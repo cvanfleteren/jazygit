@@ -26,8 +26,11 @@ public final class SettingsPanelUpdate {
                         ? Next.of(model)
                         : Next.of(
                                 model.openPopup(new SettingsPanelPopup(
-                                        model.theme(), model.settings().ghExecutable(), Option.none())),
-                                new SettingsPanelCmd.ReadGitHub(model.settings().gh()));
+                                        model.preferences().theme(),
+                                        model.preferences().settings().ghExecutable(),
+                                        Option.none())),
+                                new SettingsPanelCmd.ReadGitHub(
+                                        model.preferences().settings().gh()));
             // Read for a panel that may be closed already, or open on another gh executable.
             case SettingsPanelMsg.GitHubRead(GitHubSetup gitHub) ->
                 Next.of(model.popup(SettingsPanelPopup.class)
@@ -83,11 +86,13 @@ public final class SettingsPanelUpdate {
      * Runs the gh at {@code executable} from now on, keeping it for the next session.
      */
     private static Next useGhExecutable(Model model, Option<String> executable) {
-        Settings chosen = model.settings().withGhExecutable(executable);
-        return chosen.equals(model.settings())
+        Settings chosen = model.preferences().settings().withGhExecutable(executable);
+        return chosen.equals(model.preferences().settings())
                 ? Next.of(model)
                 : new Next(
-                        model.withSettings(chosen),
-                        List.of(new Cmd.SaveSettings(model.settings(), chosen), new SettingsPanelCmd.Reopen()));
+                        model.mapPreferences(preferences -> preferences.withSettings(chosen)),
+                        List.of(
+                                new Cmd.SaveSettings(model.preferences().settings(), chosen),
+                                new SettingsPanelCmd.Reopen()));
     }
 }

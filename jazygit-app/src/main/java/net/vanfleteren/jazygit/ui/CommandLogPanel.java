@@ -28,16 +28,19 @@ public final class CommandLogPanel {
     private CommandLogPanel() {}
 
     public static Panel render(Model model) {
-        List<Element> lines = model.commandLog()
+        List<Element> lines = model.outcome()
+                .commandLog()
                 .flatMap(entry -> List.<Element>of(
                                 text(Messages.get(entry.operation().logTitleKey()))
                                         .addClass(Theme.Classes.BOLD))
                         .appendAll(entry.commands()
                                 .map(command -> text(INDENT + command.line()).addClass(Theme.Classes.DIM))));
-        Option<Element> outcome = model.error()
+        Option<Element> outcome = model.outcome()
+                .error()
                 .map(error -> text(ErrorText.of(error)).addClass(Theme.Classes.ERROR))
-                .orElse(() ->
-                        model.notice().map(notice -> text(NoticeText.of(notice)).addClass(Theme.Classes.NOTICE)))
+                .orElse(() -> model.outcome()
+                        .notice()
+                        .map(notice -> text(NoticeText.of(notice)).addClass(Theme.Classes.NOTICE)))
                 .map(line -> line.overflow(Overflow.WRAP_WORD));
         // The error or notice may wrap, so it is kept out of the tail cut and always shown.
         int room = Math.max(0, VISIBLE_LINES - (outcome.isDefined() ? 1 : 0));

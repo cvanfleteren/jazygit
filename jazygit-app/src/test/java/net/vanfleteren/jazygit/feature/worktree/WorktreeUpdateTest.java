@@ -115,7 +115,9 @@ class WorktreeUpdateTest {
 
         assertEquals(List.of(new WorktreeCmd.Add(FEATURE, "~/elsewhere")), confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());
-        assertEquals(Option.of(Operation.ADD_WORKTREE), confirmed.model().busy().get(new BranchRef.Local(FEATURE)));
+        assertEquals(
+                Option.of(Operation.ADD_WORKTREE),
+                confirmed.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
     }
 
     @Test
@@ -126,8 +128,8 @@ class WorktreeUpdateTest {
         Next next = Update.update(
                 adding, add.succeeded(StubGitProvider.executed("git worktree add --quiet /repos/app-feature feature")));
 
-        assertEquals(BranchesTab.WORKTREES, next.model().branchesTab());
-        assertEquals(Option.none(), next.model().busy().get(new BranchRef.Local(FEATURE)));
+        assertEquals(BranchesTab.WORKTREES, next.model().repoView().branchesTab());
+        assertEquals(Option.none(), next.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
         assertTrue(next.cmds().contains(new Cmd.LoadWorktrees()), next.cmds().toString());
     }
 
@@ -183,7 +185,11 @@ class WorktreeUpdateTest {
         // The removal that ran is logged like any other.
         assertEquals(
                 List.of("git worktree remove /repos/app-taken"),
-                refused.model().commandLog().flatMap(entry -> entry.commands()).map(command -> command.line()));
+                refused.model()
+                        .outcome()
+                        .commandLog()
+                        .flatMap(entry -> entry.commands())
+                        .map(command -> command.line()));
         assertEquals(
                 List.of(new WorktreeCmd.Remove("/repos/app-taken", true)),
                 Update.update(refused.model(), new WorktreeMsg.ForceConfirmed()).cmds());

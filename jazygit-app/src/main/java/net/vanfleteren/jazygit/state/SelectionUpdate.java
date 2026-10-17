@@ -22,30 +22,42 @@ public final class SelectionUpdate {
     public static Next update(Model model, SelectionMsg msg) {
         return switch (msg) {
             case BranchSelected(var branch) ->
-                selected(model, branch, model.branchLog(), model::withBranchLog, LoadBranchLog::new);
+                selected(
+                        model,
+                        branch,
+                        model.repoView().branchLog(),
+                        log -> model.mapRepoView(repoView -> repoView.withBranchLog(log)),
+                        LoadBranchLog::new);
             case CommitSelected(var sha) ->
-                selected(model, sha, model.commitDetail(), model::withCommitDetail, detail(model));
+                selected(
+                        model,
+                        sha,
+                        model.repoView().commitDetail(),
+                        detail -> model.mapRepoView(repoView -> repoView.withCommitDetail(detail)),
+                        detail(model));
             case DivergenceCommitSelected(var sha) ->
-                model.divergence()
+                model.repoView()
+                        .divergence()
                         .map(view -> selected(
                                 model,
                                 sha,
                                 view.detail(),
-                                detail -> model.withDivergence(Option.of(view.withDetail(detail))),
+                                detail -> model.mapRepoView(
+                                        repoView -> repoView.withDivergence(Option.of(view.withDetail(detail)))),
                                 detail(model)))
                         .getOrElse(() -> Next.of(model));
             case FilesSelected(var files) ->
                 selected(
                         model,
                         files,
-                        model.fileDiff(),
-                        model::withFileDiff,
-                        entries -> new LoadFileDiff(entries, model.diffOptions()));
+                        model.repoView().fileDiff(),
+                        diff -> model.mapRepoView(repoView -> repoView.withFileDiff(diff)),
+                        entries -> new LoadFileDiff(entries, model.preferences().diffOptions()));
         };
     }
 
     private static Function<Sha, Cmd.Load> detail(Model model) {
-        return sha -> new LoadCommitDetail(sha, model.diffOptions());
+        return sha -> new LoadCommitDetail(sha, model.preferences().diffOptions());
     }
 
     /**

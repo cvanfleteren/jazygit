@@ -34,21 +34,23 @@ class DiffOptionsUpdateTest {
 
         Next next = Update.update(model, new DiffOptionsMsg.WhitespaceToggled());
 
-        assertEquals(IGNORING, next.model().diffOptions());
+        assertEquals(IGNORING, next.model().preferences().diffOptions());
         assertEquals(
                 List.of(new Cmd.LoadFileDiff(DIRTY.files(), IGNORING), new Cmd.LoadCommitDetail(SHA, IGNORING)),
                 next.cmds());
-        Preview<List<FileEntry>, Diffs> diff = next.model().fileDiff().get();
+        Preview<List<FileEntry>, Diffs> diff =
+                next.model().repoView().fileDiff().get();
         assertEquals(new Loading<>(), diff.value());
         assertEquals(new Loaded<>(new Diffs("", "+a ")), diff.shown().value());
         assertEquals(
                 new Loaded<>(DiffText.of("changes")),
-                next.model().commitDetail().get().shown().value());
+                next.model().repoView().commitDetail().get().shown().value());
 
         assertEquals(
                 DiffOptions.DEFAULT,
                 Update.update(next.model(), new DiffOptionsMsg.WhitespaceToggled())
                         .model()
+                        .preferences()
                         .diffOptions());
     }
 
@@ -60,11 +62,13 @@ class DiffOptionsUpdateTest {
         Model stale = Update.update(
                         toggled, new LoadMsg.FileDiffLoaded(DIRTY.files(), DiffOptions.DEFAULT, new Diffs("", "+b ")))
                 .model();
-        assertEquals(new Loading<>(), stale.fileDiff().get().value());
+        assertEquals(new Loading<>(), stale.repoView().fileDiff().get().value());
 
         Model read = Update.update(toggled, new LoadMsg.FileDiffLoaded(DIRTY.files(), IGNORING, new Diffs("", "")))
                 .model();
-        assertEquals(Option.of(new Preview<>(DIRTY.files(), new Loaded<>(new Diffs("", "")))), read.fileDiff());
+        assertEquals(
+                Option.of(new Preview<>(DIRTY.files(), new Loaded<>(new Diffs("", "")))),
+                read.repoView().fileDiff());
     }
 
     @Test

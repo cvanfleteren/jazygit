@@ -27,16 +27,20 @@ public final class UpstreamUpdate {
     public static Next update(Model model, UpstreamMsg msg) {
         return switch (msg) {
             case UpstreamMsg.Requested(Option<Branch.Name> branch) -> {
-                Option<Branch> highlighted = branch.flatMap(model::branch);
+                Option<Branch> highlighted = branch.flatMap(model.repo()::branch);
                 yield Update.ask(
                         model,
-                        new UpstreamPopup(highlighted, highlighted.flatMap(b -> base(model)), model.currentBranch()));
+                        new UpstreamPopup(
+                                highlighted,
+                                highlighted.flatMap(b -> base(model)),
+                                model.repo().currentBranch()));
             }
             case UpstreamMsg.Cancelled() -> Next.of(model.withoutPopup(UpstreamPopup.class));
             case UpstreamMsg.ResetChosen() -> chosen(model, UpstreamUpdate::resetChosen);
             case UpstreamMsg.UpstreamDivergenceChosen() -> chosen(model, UpstreamUpdate::upstreamDivergence);
             case UpstreamMsg.BaseDivergenceChosen() -> chosen(model, UpstreamUpdate::baseDivergence);
-            case UpstreamMsg.DivergenceClosed() -> Next.of(model.withDivergence(Option.none()));
+            case UpstreamMsg.DivergenceClosed() ->
+                Next.of(model.mapRepoView(repoView -> repoView.withDivergence(Option.none())));
         };
     }
 
@@ -44,10 +48,12 @@ public final class UpstreamUpdate {
      * The main branch as this repository last fetched it, else as it is here; none when there is no main branch.
      */
     static Option<BranchRef> base(Model model) {
-        return model.branches()
+        return model.repo()
+                .branches()
                 .toOption()
                 .flatMap(branches -> branches.find(Branch::isDefault))
-                .map(main -> model.remoteBranch(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, main.name()))
+                .map(main -> model.repo()
+                        .remoteBranch(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, main.name()))
                         .<BranchRef>map(remote -> new BranchRef.Remote(remote.branch()))
                         .getOrElse(() -> new BranchRef.Local(main.name())));
     }
@@ -86,7 +92,8 @@ public final class UpstreamUpdate {
 
     private static Next open(Model model, Branch branch, BranchRef other, Against against) {
         DivergenceView view = DivergenceView.loading(branch.name(), other, against);
-        return Next.of(model.clearError().withDivergence(Option.of(view)), view.load());
+        return Next.of(
+                model.clearError().mapRepoView(repoView -> repoView.withDivergence(Option.of(view))), view.load());
     }
 
     /**
@@ -105,6 +112,6 @@ public final class UpstreamUpdate {
     }
 
     private static boolean detached(Model model) {
-        return model.status().toOption().exists(status -> status.head() instanceof Head.Detached);
+        return model.repo().status().toOption().exists(status -> status.head() instanceof Head.Detached);
     }
 }

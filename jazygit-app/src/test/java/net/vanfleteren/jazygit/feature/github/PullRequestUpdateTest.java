@@ -94,7 +94,8 @@ class PullRequestUpdateTest {
         Next asked = Update.update(starting, new PullRequestMsg.Requested(new Branch.Name("feature")));
 
         assertEquals(
-                Option.of(new AppError.PullRequestsNotRead()), asked.model().error());
+                Option.of(new AppError.PullRequestsNotRead()),
+                asked.model().outcome().error());
         assertEquals(List.empty(), asked.cmds());
     }
 
@@ -159,7 +160,8 @@ class PullRequestUpdateTest {
                         FEATURE, FEATURE, MAIN.name(), new NewPullRequest("Add login", "Why", true))),
                 created.cmds());
         assertEquals(Option.none(), created.model().popup());
-        assertEquals(Option.of(Operation.CREATE_PR), created.model().busy().get(new BranchRef.Local(FEATURE)));
+        assertEquals(
+                Option.of(Operation.CREATE_PR), created.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
     }
 
     @Test
@@ -204,11 +206,13 @@ class PullRequestUpdateTest {
                 Option.of(new AppError.NotPushed(new Branch.Name("local"))),
                 Update.update(model(), new PullRequestMsg.Requested(new Branch.Name("local")))
                         .model()
+                        .outcome()
                         .error());
         assertEquals(
                 Option.of(new AppError.NotPushed(new Branch.Name("ahead"))),
                 Update.update(model(), new PullRequestMsg.Requested(new Branch.Name("ahead")))
                         .model()
+                        .outcome()
                         .error());
     }
 
@@ -250,7 +254,7 @@ class PullRequestUpdateTest {
                 Option.of(PullRequestPopup.loading(new Branch.Name("feature"), FEATURE_PR)
                         .with(Either.left(failure))),
                 failed.popup());
-        assertEquals(Option.none(), failed.error());
+        assertEquals(Option.none(), failed.outcome().error());
     }
 
     @Test
@@ -296,11 +300,11 @@ class PullRequestUpdateTest {
         assertEquals(Option.none(), merging.model().popup());
         assertEquals(
                 Option.of(Operation.MERGE_PR),
-                merging.model().busy().get(new BranchRef.Local(new Branch.Name("feature"))));
+                merging.model().jobs().busy().get(new BranchRef.Local(new Branch.Name("feature"))));
         assertEquals(List.of(new ClosePullRequest(new Branch.Name("feature"), 42)), closing.cmds());
         assertEquals(
                 Option.of(Operation.CLOSE_PR),
-                closing.model().busy().get(new BranchRef.Local(new Branch.Name("feature"))));
+                closing.model().jobs().busy().get(new BranchRef.Local(new Branch.Name("feature"))));
     }
 
     @Test
@@ -320,7 +324,8 @@ class PullRequestUpdateTest {
 
         assertEquals(List.of(new SetDraft(FEATURE, 42, true)), drafting.cmds());
         assertTrue(drafting.model().popup(PullRequestPopup.class).isDefined());
-        assertEquals(Option.of(Operation.DRAFT_PR), drafting.model().busy().get(new BranchRef.Local(FEATURE)));
+        assertEquals(
+                Option.of(Operation.DRAFT_PR), drafting.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
         // While it runs, it is not started again.
         assertEquals(
                 List.empty(),
@@ -342,11 +347,11 @@ class PullRequestUpdateTest {
         Next done = Update.update(drafting.model(), cmd.run(env()));
 
         assertEquals(Option.of(true), done.model().popup(PullRequestPopup.class).flatMap(PullRequestPopup::draft));
-        assertEquals(Option.none(), done.model().busy().get(new BranchRef.Local(FEATURE)));
+        assertEquals(Option.none(), done.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
         assertTrue(done.cmds().contains(new LoadPullRequests()), done.cmds().toString());
         assertEquals(
                 "gh pr ready 42 --undo",
-                done.model().commandLog().last().commands().last().line());
+                done.model().outcome().commandLog().last().commands().last().line());
     }
 
     @Test
@@ -358,7 +363,7 @@ class PullRequestUpdateTest {
 
         assertEquals(
                 "gh pr ready 42",
-                done.model().commandLog().last().commands().last().line());
+                done.model().outcome().commandLog().last().commands().last().line());
     }
 
     @Test
@@ -366,7 +371,7 @@ class PullRequestUpdateTest {
         MergePullRequest cmd = new MergePullRequest(new Branch.Name("feature"), 42, MergeMethod.MERGE);
         // The running read started before the merge, and would list the pull request as still open.
         Model merging = withPr().withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), Operation.MERGE_PR)
-                .withReadingPullRequests(1);
+                .mapGitHub(gitHub -> gitHub.withReading(List.of(new LoadPullRequests())));
 
         Next done = Update.update(merging, cmd.run(new Env(new StubGitProvider() {}, StubGitHub.empty())));
 
@@ -380,14 +385,16 @@ class PullRequestUpdateTest {
 
         Next done = Update.update(merging, cmd.run(new Env(new StubGitProvider() {}, StubGitHub.empty())));
 
-        assertEquals(Option.none(), done.model().pullRequests().flatMap(open -> open.get(new Branch.Name("feature"))));
-        assertEquals(Option.none(), done.model().busy().get(new BranchRef.Local(new Branch.Name("feature"))));
+        assertEquals(
+                Option.none(),
+                done.model().gitHub().pullRequests().flatMap(open -> open.get(new Branch.Name("feature"))));
+        assertEquals(Option.none(), done.model().jobs().busy().get(new BranchRef.Local(new Branch.Name("feature"))));
         assertTrue(done.cmds().contains(new LoadPullRequests()), done.cmds().toString());
         // The merge changed the base branch on the remote.
         assertTrue(done.cmds().contains(new FetchCmd.ListRemotes()), done.cmds().toString());
         assertEquals(
                 "gh pr merge 42 --merge",
-                done.model().commandLog().last().commands().last().line());
+                done.model().outcome().commandLog().last().commands().last().line());
     }
 
     @Test
@@ -425,10 +432,10 @@ class PullRequestUpdateTest {
                 Option.of("Merging the pull request of feature failed: Pull request #42 is not mergeable: "
                         + "the base branch policy prohibits the merge."),
                 errorText(failed.model()));
-        assertEquals(Option.none(), failed.model().busy().get(new BranchRef.Local(new Branch.Name("feature"))));
+        assertEquals(Option.none(), failed.model().jobs().busy().get(new BranchRef.Local(new Branch.Name("feature"))));
         assertEquals(
                 Option.of(FEATURE_PR),
-                failed.model().pullRequests().flatMap(open -> open.get(new Branch.Name("feature"))));
+                failed.model().gitHub().pullRequests().flatMap(open -> open.get(new Branch.Name("feature"))));
     }
 
     @Test
@@ -459,8 +466,8 @@ class PullRequestUpdateTest {
         Model withPr = Update.update(model(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
                 .model();
 
-        assertEquals(Option.of(FEATURE_PR), withPr.pullRequest(renamed));
-        assertEquals(Option.none(), withPr.pullRequest(UNPUSHED));
+        assertEquals(Option.of(FEATURE_PR), withPr.gitHub().pullRequest(renamed));
+        assertEquals(Option.none(), withPr.gitHub().pullRequest(UNPUSHED));
     }
 
     @Test
@@ -476,7 +483,7 @@ class PullRequestUpdateTest {
         Model withPr = Update.update(model(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
                 .model();
 
-        assertEquals(Option.of(FEATURE_PR), withPr.pullRequest(onFork));
+        assertEquals(Option.of(FEATURE_PR), withPr.gitHub().pullRequest(onFork));
     }
 
     @Test
@@ -489,7 +496,7 @@ class PullRequestUpdateTest {
 
         assertEquals(
                 Option.of(new AppError.PullRequestsUnavailable(failure)),
-                asked.model().error());
+                asked.model().outcome().error());
         assertEquals(List.empty(), asked.cmds());
     }
 
@@ -503,11 +510,11 @@ class PullRequestUpdateTest {
         Next done = Update.update(creating, cmd.run(new Env(new StubGitProvider() {}, StubGitHub.empty())));
 
         assertTrue(done.cmds().contains(new LoadPullRequests()), done.cmds().toString());
-        assertEquals(Option.none(), done.model().busy().get(new BranchRef.Local(new Branch.Name("feature"))));
+        assertEquals(Option.none(), done.model().jobs().busy().get(new BranchRef.Local(new Branch.Name("feature"))));
         assertTrue(done.cmds().contains(new FetchCmd.ListRemotes()), done.cmds().toString());
         assertEquals(
                 "gh pr create --head feature --base main --title Login --body '' --draft",
-                done.model().commandLog().last().commands().last().line());
+                done.model().outcome().commandLog().last().commands().last().line());
     }
 
     @Test
@@ -521,7 +528,8 @@ class PullRequestUpdateTest {
         Next done = Update.update(creating, new PullRequestMsg.Created(cmd, Option.of(created), List.empty()));
 
         assertEquals(
-                Option.of(created), done.model().pullRequests().flatMap(open -> open.get(new Branch.Name("feature"))));
+                Option.of(created),
+                done.model().gitHub().pullRequests().flatMap(open -> open.get(new Branch.Name("feature"))));
         assertTrue(done.cmds().contains(new LoadPullRequests()));
     }
 
@@ -608,7 +616,7 @@ class PullRequestUpdateTest {
         Next checkingOut = Update.update(ofOwnerRepo(DIRTY), new PullRequestMsg.CheckoutRequested(pr));
 
         assertEquals(List.of(new CheckoutPullRequestCmd(pr)), checkingOut.cmds());
-        assertEquals(Option.none(), checkingOut.model().error());
+        assertEquals(Option.none(), checkingOut.model().outcome().error());
     }
 
     @Test
@@ -622,7 +630,7 @@ class PullRequestUpdateTest {
         assertEquals(List.empty(), refused.cmds());
         assertEquals(
                 Option.of(new AppError.ChangesBeforeCheckout("owner/repo#9")),
-                refused.model().error());
+                refused.model().outcome().error());
     }
 
     @Test
@@ -632,7 +640,7 @@ class PullRequestUpdateTest {
         assertEquals(List.empty(), refused.cmds());
         assertEquals(
                 Option.of(new AppError.OtherRepository("other/repo#9")),
-                refused.model().error());
+                refused.model().outcome().error());
     }
 
     @Test
@@ -643,6 +651,7 @@ class PullRequestUpdateTest {
 
         assertEquals(List.empty(), refused.cmds());
         assertEquals(
-                Option.of(new AppError.PullRequestsNotRead()), refused.model().error());
+                Option.of(new AppError.PullRequestsNotRead()),
+                refused.model().outcome().error());
     }
 }

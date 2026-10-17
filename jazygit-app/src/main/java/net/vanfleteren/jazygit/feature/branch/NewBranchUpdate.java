@@ -26,7 +26,8 @@ public final class NewBranchUpdate {
             case NewBranchMsg.RequestedAtRemote(var remote) ->
                 Update.ask(
                         model,
-                        model.remoteBranch(remote)
+                        model.repo()
+                                .remoteBranch(remote)
                                 .map(known -> new NewBranchPopup(remote.trackingRef(), remote.shortName())));
             case Cancelled() -> Next.of(model.withoutPopup(NewBranchPopup.class));
             case Confirmed(String name) -> confirmed(model, name);
@@ -36,7 +37,9 @@ public final class NewBranchUpdate {
     private static Next atCommit(Model model, Sha sha) {
         return Update.ask(
                 model,
-                model.commit(sha).map(commit -> new NewBranchPopup(commit.sha().value(), commit.shortSha())));
+                model.repo()
+                        .commit(sha)
+                        .map(commit -> new NewBranchPopup(commit.sha().value(), commit.shortSha())));
     }
 
     private static Next confirmed(Model model, String name) {

@@ -19,7 +19,8 @@ public final class BrowseUpdate {
     public static Next update(Model model, BrowseMsg msg) {
         return switch (msg) {
             case BrowseMsg.Requested(Branch.Name name) ->
-                model.branch(name)
+                model.repo()
+                        .branch(name)
                         .map(branch -> onRemote(branch)
                                 .map(remote -> Update.start(model.clearError(), new BrowseCmd(remote)))
                                 .getOrElse(() -> Next.of(model.fail(new AppError.NotOnRemote(name)))))

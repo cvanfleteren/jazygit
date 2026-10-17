@@ -43,8 +43,8 @@ class SettingsUpdateTest {
         Model model = Update.init("repo", new SettingsStore.Loaded(DARCULA, Option.none()))
                 .model();
 
-        assertEquals(DARCULA, model.settings());
-        assertEquals(Option.none(), model.error());
+        assertEquals(DARCULA, model.preferences().settings());
+        assertEquals(Option.none(), model.outcome().error());
     }
 
     @Test
@@ -52,8 +52,8 @@ class SettingsUpdateTest {
         Model model = Update.init("repo", new SettingsStore.Loaded(DARCULA, Option.none()), Option.of(ThemeName.LIGHT))
                 .model();
 
-        assertEquals(ThemeName.LIGHT, model.theme());
-        assertEquals(DARCULA, model.settings());
+        assertEquals(ThemeName.LIGHT, model.preferences().theme());
+        assertEquals(DARCULA, model.preferences().settings());
     }
 
     @Test
@@ -61,7 +61,7 @@ class SettingsUpdateTest {
         Model model = Update.init("repo", new SettingsStore.Loaded(DARCULA, Option.none()), Option.none())
                 .model();
 
-        assertEquals(ThemeName.DARCULA, model.theme());
+        assertEquals(ThemeName.DARCULA, model.preferences().theme());
     }
 
     @Test
@@ -71,13 +71,15 @@ class SettingsUpdateTest {
         Model model = Update.init("repo", new SettingsStore.Loaded(Settings.DEFAULT, Option.of(invalid)))
                 .model();
 
-        assertEquals(Option.of(new AppError.SettingsNotLoaded(invalid)), model.error());
+        assertEquals(
+                Option.of(new AppError.SettingsNotLoaded(invalid)),
+                model.outcome().error());
         assertEquals(Option.none(), model.popup());
     }
 
     @Test
     void savingChangesNothingWhenItWorks() {
-        Model model = TestModels.loaded().withSettings(DARCULA);
+        Model model = TestModels.loaded().mapPreferences(preferences -> preferences.withSettings(DARCULA));
 
         Msg saved = Program.perform(env(saving(Either.right(DARCULA))), SAVE);
 
@@ -87,15 +89,15 @@ class SettingsUpdateTest {
 
     @Test
     void savingThatFailsKeepsTheSettingAndShowsTheError() {
-        Model model = TestModels.loaded().withSettings(DARCULA);
+        Model model = TestModels.loaded().mapPreferences(preferences -> preferences.withSettings(DARCULA));
         SettingsProblem unwritable = new SettingsProblem.Unwritable(FILE, "read-only");
 
         Model after = Update.update(model, Program.perform(env(saving(Either.left(unwritable))), SAVE))
                 .model();
 
         AppError error = new AppError.SettingsNotSaved(new Failure.Settings(unwritable));
-        assertEquals(DARCULA, after.settings());
-        assertEquals(Option.of(error), after.error());
+        assertEquals(DARCULA, after.preferences().settings());
+        assertEquals(Option.of(error), after.outcome().error());
         assertEquals(Option.of(new ErrorPopup(error)), after.popup());
     }
 }

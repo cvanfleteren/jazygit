@@ -210,7 +210,7 @@ public final class ContentPanel {
     }
 
     private static Option<Commit> commit(Model model, Sha sha) {
-        return model.commits().getOrElse(List.empty()).find(c -> c.sha().equals(sha));
+        return model.repo().commits().getOrElse(List.empty()).find(c -> c.sha().equals(sha));
     }
 
     /**
@@ -293,18 +293,20 @@ public final class ContentPanel {
      */
     public StyledElement<?> render(Model model, String focusedId) {
         List.of(stagedArea, unstagedArea, commitArea, divergenceArea, logArea, pullRequestArea)
-                .forEach(area -> area.restyle(model.theme()));
+                .forEach(area -> area.restyle(model.preferences().theme()));
         boolean inContent = focusableAreas.exists(area -> area.id().equals(focusedId));
         focusableAreas.forEach(area -> area.tabbable(inContent));
         if (model.screen() == Screen.PULL_REQUESTS) {
             return pullRequestView(model, focusedId);
         }
         boolean onPane = inContent || LEFT_PANES.contains(focusedId);
-        String pane = onPane ? focusedId : model.focusedPane().getOrElse(focusedId);
+        String pane = onPane ? focusedId : model.repoView().focusedPane().getOrElse(focusedId);
         if (BranchesPanel.ID.equals(pane) || DIVERGENCE_AREA_ID.equals(pane)) {
-            return model.divergence()
-                    .filter(view -> model.branchesTab() == BranchesTab.LOCAL)
-                    .<StyledElement<?>>map(view -> divergenceCommitView(view, model.diffOptions()))
+            return model.repoView()
+                    .divergence()
+                    .filter(view -> model.repoView().branchesTab() == BranchesTab.LOCAL)
+                    .<StyledElement<?>>map(view ->
+                            divergenceCommitView(view, model.preferences().diffOptions()))
                     .getOrElse(() -> branchLogView(model));
         }
         if (CommitsPanel.ID.equals(pane) || COMMIT_AREA_ID.equals(pane)) {
@@ -379,12 +381,13 @@ public final class ContentPanel {
      * One panel for the staged changes and one for the unstaged changes, one above the other when both exist.
      */
     private StyledElement<?> fileDiffView(Model model) {
-        DiffOptions options = model.diffOptions();
+        DiffOptions options = model.preferences().diffOptions();
         String title = titled(Messages.get("panel.diff.title"), options);
         // With no files there is nothing to highlight, so no diff is ever requested.
-        return model.status().toOption().exists(status -> status.files().isEmpty())
+        return model.repo().status().toOption().exists(status -> status.files().isEmpty())
                 ? dimPanel(title, Messages.get("content.noChangedFiles"))
-                : model.fileDiff()
+                : model.repoView()
+                        .fileDiff()
                         .map(Preview::shown)
                         .<StyledElement<?>>map(
                                 diff -> whenLoaded(title, diff.value(), diffs -> diffPanels(title, diffs, options)))
@@ -409,7 +412,8 @@ public final class ContentPanel {
     }
 
     private StyledElement<?> branchLogView(Model model) {
-        return model.branchLog()
+        return model.repoView()
+                .branchLog()
                 .map(Preview::shown)
                 .<StyledElement<?>>map(log -> {
                     String title = Messages.get("panel.log.titleFor", log.key().name());
@@ -450,9 +454,10 @@ public final class ContentPanel {
     }
 
     private StyledElement<?> commitDiffView(Model model) {
-        DiffOptions options = model.diffOptions();
+        DiffOptions options = model.preferences().diffOptions();
         String title = Messages.get("panel.commit.title");
-        return model.commitDetail()
+        return model.repoView()
+                .commitDetail()
                 .map(Preview::shown)
                 .<StyledElement<?>>map(detail -> whenLoaded(
                         title,
@@ -465,7 +470,7 @@ public final class ContentPanel {
                                         .show(titled(
                                                 Messages.get("panel.commit.titleFor", commit.shortSha()), options)))
                                 .getOrElse(() -> loadingPanel(title))))
-                .getOrElse(() -> model.commits().toOption().exists(List::isEmpty)
+                .getOrElse(() -> model.repo().commits().toOption().exists(List::isEmpty)
                         ? panel(title, text(Messages.get("content.noCommits")))
                         : loadingPanel(title));
     }

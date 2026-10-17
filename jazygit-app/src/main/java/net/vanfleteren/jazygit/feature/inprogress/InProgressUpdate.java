@@ -35,7 +35,8 @@ public final class InProgressUpdate {
     private static Next requested(Model model) {
         return Update.ask(
                 model,
-                model.status()
+                model.repo()
+                        .status()
                         .toOption()
                         .flatMap(status -> status.inProgress()
                                 .map(inProgress -> new InProgressPopup(inProgress, status.conflicts()))));

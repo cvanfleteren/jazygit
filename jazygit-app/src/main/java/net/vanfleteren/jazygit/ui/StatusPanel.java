@@ -39,17 +39,18 @@ public final class StatusPanel {
     private StatusPanel() {}
 
     public static Panel render(Model model) {
-        String branch = switch (model.status()) {
+        String branch = switch (model.repo().status()) {
             case Loadable.Loading<RepoStatus>() -> Placeholders.loading();
             case Loadable.Failed<RepoStatus>(Failure failure) -> Placeholders.error(failure);
             // A rebase checks out a detached HEAD, which says nothing the rebase does not.
             case Loadable.Loaded<RepoStatus>(RepoStatus status) ->
                 status.inProgress().exists(InProgress.Rebasing.class::isInstance) ? "" : branchLabel(status.head());
         };
-        Option<String> unfinished = model.status()
+        Option<String> unfinished = model.repo()
+                .status()
                 .toOption()
-                .flatMap(status ->
-                        unfinishedLabel(status, model.branches().toOption().getOrElse(List.empty())));
+                .flatMap(status -> unfinishedLabel(
+                        status, model.repo().branches().toOption().getOrElse(List.empty())));
         String line = Messages.get("status.line", model.repositoryName(), branch)
                 + unfinished
                         .filter(label -> !branch.isEmpty())

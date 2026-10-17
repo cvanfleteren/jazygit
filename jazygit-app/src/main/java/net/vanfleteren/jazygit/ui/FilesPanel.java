@@ -166,7 +166,7 @@ public class FilesPanel {
      */
     public Option<Msg> selectionChange(Model model) {
         return PaneKeys.selectionChange(
-                selected().map(FileTree::directEntries), model.fileDiff(), SelectionMsg.FilesSelected::new);
+                selected().map(FileTree::directEntries), model.repoView().fileDiff(), SelectionMsg.FilesSelected::new);
     }
 
     /**
@@ -186,14 +186,14 @@ public class FilesPanel {
         boolean active = ID.equals(activeId);
         tree.highlightStyle(highlights.of(active))
                 .highlightSymbol(active ? HIGHLIGHT_SYMBOL : " ".repeat(HIGHLIGHT_SYMBOL.length()));
-        if (!shown.contains(model.status())) {
-            shown = Option.of(model.status());
-            rebuild(model.status());
+        if (!shown.contains(model.repo().status())) {
+            shown = Option.of(model.repo().status());
+            rebuild(model.repo().status());
         }
         // Counted on every render: expanding or collapsing a directory changes the visible rows
         // without a rebuild.
         Option<Integer> count =
-                model.status().toOption().map(status -> visible(roots).size());
+                model.repo().status().toOption().map(status -> visible(roots).size());
         return Pane.bordered(Messages.get("panel.files.title"), tree, focused, Math.max(0, tree.selected()), count);
     }
 

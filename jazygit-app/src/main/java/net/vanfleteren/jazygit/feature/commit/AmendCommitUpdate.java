@@ -36,7 +36,8 @@ public final class AmendCommitUpdate {
      * Asks for confirmation, when the commit can be amended and there is something to amend it with.
      */
     private static Next requested(Model model, Sha sha) {
-        return model.commit(sha)
+        return model.repo()
+                .commit(sha)
                 .map(commit -> commit.isMerge()
                         ? Next.of(model.fail(new AppError.MergeNotAmendable()))
                         : Update.withFiles(

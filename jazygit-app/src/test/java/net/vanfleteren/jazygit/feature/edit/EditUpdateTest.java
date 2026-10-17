@@ -80,9 +80,9 @@ class EditUpdateTest {
         Next next = Update.update(loaded(), cmd.run(env(git, Terminal.NONE)));
 
         AppError.OperationFailed failed = assertInstanceOf(
-                AppError.OperationFailed.class, next.model().error().get());
+                AppError.OperationFailed.class, next.model().outcome().error().get());
         assertEquals(Operation.EDIT, failed.operation());
-        assertTrue(next.model().commandLog().nonEmpty());
+        assertTrue(next.model().outcome().commandLog().nonEmpty());
     }
 
     private static Env env(StubGitProvider git, Terminal terminal) {

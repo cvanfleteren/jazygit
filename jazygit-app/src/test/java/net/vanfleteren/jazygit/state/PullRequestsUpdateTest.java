@@ -34,12 +34,14 @@ class PullRequestsUpdateTest {
                 Option.of(FEATURE_PR),
                 Update.update(loaded(), new PullRequestsMsg.Loaded(List.of(older, FEATURE_PR)))
                         .model()
+                        .gitHub()
                         .pullRequests()
                         .flatMap(open -> open.get(new Branch.Name("feature"))));
         assertEquals(
                 Option.of(FEATURE_PR),
                 Update.update(loaded(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR, older)))
                         .model()
+                        .gitHub()
                         .pullRequests()
                         .flatMap(open -> open.get(new Branch.Name("feature"))));
     }
@@ -52,8 +54,8 @@ class PullRequestsUpdateTest {
         Model failed = Update.update(withPr, new PullRequestsMsg.LoadFailed(refused("gh: not logged in")))
                 .model();
 
-        assertEquals(withPr.pullRequests(), failed.pullRequests());
-        assertEquals(Option.none(), failed.error());
+        assertEquals(withPr.gitHub().pullRequests(), failed.gitHub().pullRequests());
+        assertEquals(Option.none(), failed.outcome().error());
         assertEquals(Option.none(), failed.popup());
     }
 
@@ -71,8 +73,10 @@ class PullRequestsUpdateTest {
                         failed.clearError().withoutPopup(ErrorPopup.class), new PullRequestsMsg.LoadFailed(unavailable))
                 .model();
 
-        assertEquals(Option.of(new AppError.PullRequestsUnavailable(unavailable)), failed.error());
-        assertEquals(Option.none(), again.error());
+        assertEquals(
+                Option.of(new AppError.PullRequestsUnavailable(unavailable)),
+                failed.outcome().error());
+        assertEquals(Option.none(), again.outcome().error());
         assertEquals(Option.none(), again.popup());
     }
 
@@ -84,28 +88,34 @@ class PullRequestsUpdateTest {
         Model loaded =
                 Update.update(failed, new PullRequestsMsg.Loaded(List.empty())).model();
 
-        assertEquals(Option.none(), loaded.pullRequestsFailure());
+        assertEquals(Option.none(), loaded.gitHub().pullRequestsFailure());
     }
 
     @Test
-    void aReadOfThePullRequestsIsCountedWhileItRunsAndNotStartedTwice() {
+    void aReadOfThePullRequestsIsKeptWhileItRunsAndNotStartedTwice() {
         Next reading = Update.update(loaded(), new PullRequestsMsg.Refresh());
-        assertEquals(1, reading.model().readingPullRequests());
+        assertEquals(
+                List.of(new LoadPullRequests(), new LoadBranchChecks()),
+                reading.model().gitHub().reading());
 
         Next again = Update.update(reading.model(), new PullRequestsMsg.Refresh());
         assertEquals(List.empty(), again.cmds());
-        assertEquals(1, again.model().readingPullRequests());
+        assertEquals(
+                List.of(new LoadPullRequests(), new LoadBranchChecks()),
+                again.model().gitHub().reading());
 
         assertEquals(
-                0,
+                List.of(new LoadBranchChecks()),
                 Update.update(reading.model(), new PullRequestsMsg.Loaded(List.empty()))
                         .model()
-                        .readingPullRequests());
+                        .gitHub()
+                        .reading());
         assertEquals(
-                0,
+                List.of(new LoadBranchChecks()),
                 Update.update(reading.model(), new PullRequestsMsg.LoadFailed(refused("offline")))
                         .model()
-                        .readingPullRequests());
+                        .gitHub()
+                        .reading());
     }
 
     @Test
@@ -125,7 +135,14 @@ class PullRequestsUpdateTest {
         Next again = PullRequestsUpdate.loadAnyway(Next.of(reading.model()));
 
         assertEquals(List.of(new LoadPullRequests(), new LoadBranchChecks()), again.cmds());
-        assertEquals(2, again.model().readingPullRequests());
-        assertEquals(2, again.model().readingBranchChecks());
+        assertEquals(
+                List.of(new LoadPullRequests(), new LoadBranchChecks(), new LoadPullRequests(), new LoadBranchChecks()),
+                again.model().gitHub().reading());
+
+        Model oneRead = Update.update(again.model(), new PullRequestsMsg.Loaded(List.empty()))
+                .model();
+        assertEquals(
+                List.of(new LoadBranchChecks(), new LoadPullRequests(), new LoadBranchChecks()),
+                oneRead.gitHub().reading());
     }
 }

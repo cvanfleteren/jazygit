@@ -90,12 +90,12 @@ class BranchChecksUpdateTest {
         Model failed = Update.update(withChecks(), new BranchChecksMsg.LoadFailed(refused("offline")))
                 .model();
 
-        assertEquals(Option.of(ON_ORIGIN), failed.branchChecks());
-        assertEquals(Option.none(), failed.error());
+        assertEquals(Option.of(ON_ORIGIN), failed.gitHub().branchChecks());
+        assertEquals(Option.none(), failed.outcome().error());
     }
 
     @Test
-    void aReadOfTheChecksIsCountedWhileItRunsAndNotStartedTwice() {
+    void aReadOfTheChecksIsKeptWhileItRunsAndNotStartedTwice() {
         Next reading = BranchChecksUpdate.load(Next.of(loaded()));
         assertEquals(List.of(new LoadBranchChecks()), reading.cmds());
 
@@ -103,26 +103,28 @@ class BranchChecksUpdateTest {
         assertEquals(List.empty(), again.cmds());
 
         assertEquals(
-                0,
+                List.empty(),
                 Update.update(reading.model(), new BranchChecksMsg.Loaded(ON_ORIGIN))
                         .model()
-                        .readingBranchChecks());
+                        .gitHub()
+                        .reading());
         assertEquals(
-                0,
+                List.empty(),
                 Update.update(reading.model(), new BranchChecksMsg.LoadFailed(refused("offline")))
                         .model()
-                        .readingBranchChecks());
+                        .gitHub()
+                        .reading());
     }
 
     @Test
     void aBranchOnGitHubShowsItsChecksAndALocalBranchThoseOfItsUpstream() {
         Model model = withChecks();
 
-        assertEquals(Option.of(Checks.FAILING), model.checks(remote("origin", "feature")));
-        assertEquals(Option.of(Checks.FAILING), model.checks(following("mine", remote("origin", "feature"))));
-        assertEquals(Option.none(), model.checks(remote("fork", "feature")));
-        assertEquals(Option.none(), model.checks(following("feature", remote("fork", "feature"))));
-        assertEquals(Option.none(), model.checks(remote("origin", "unknown")));
+        assertEquals(Option.of(Checks.FAILING), model.gitHub().checks(remote("origin", "feature")));
+        assertEquals(Option.of(Checks.FAILING), model.gitHub().checks(following("mine", remote("origin", "feature"))));
+        assertEquals(Option.none(), model.gitHub().checks(remote("fork", "feature")));
+        assertEquals(Option.none(), model.gitHub().checks(following("feature", remote("fork", "feature"))));
+        assertEquals(Option.none(), model.gitHub().checks(remote("origin", "unknown")));
     }
 
     @Test
@@ -130,10 +132,11 @@ class BranchChecksUpdateTest {
         Model model = Update.update(withChecks(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
                 .model();
 
-        assertEquals(Option.of(FEATURE_PR), model.pullRequest(remote("origin", "feature")));
-        assertEquals(Option.none(), model.pullRequest(remote("fork", "feature")));
-        assertEquals(Option.of(FEATURE_PR), model.pullRequest(following("feature", remote("origin", "feature"))));
-        assertEquals(Option.none(), model.pullRequest(following("feature", remote("fork", "feature"))));
+        assertEquals(Option.of(FEATURE_PR), model.gitHub().pullRequest(remote("origin", "feature")));
+        assertEquals(Option.none(), model.gitHub().pullRequest(remote("fork", "feature")));
+        assertEquals(
+                Option.of(FEATURE_PR), model.gitHub().pullRequest(following("feature", remote("origin", "feature"))));
+        assertEquals(Option.none(), model.gitHub().pullRequest(following("feature", remote("fork", "feature"))));
     }
 
     @Test
@@ -141,7 +144,8 @@ class BranchChecksUpdateTest {
         Model model = Update.update(loaded(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
                 .model();
 
-        assertEquals(Option.of(FEATURE_PR), model.pullRequest(following("feature", remote("fork", "feature"))));
-        assertEquals(Option.none(), model.pullRequest(remote("origin", "feature")));
+        assertEquals(
+                Option.of(FEATURE_PR), model.gitHub().pullRequest(following("feature", remote("fork", "feature"))));
+        assertEquals(Option.none(), model.gitHub().pullRequest(remote("origin", "feature")));
     }
 }

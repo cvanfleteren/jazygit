@@ -28,7 +28,8 @@ public final class DropUpdate {
     }
 
     private static Next requested(Model model, Sha sha) {
-        return model.commit(sha)
+        return model.repo()
+                .commit(sha)
                 .filter(commit -> droppable(model, commit))
                 .map(DropPopup::new)
                 .transform(popup -> Update.ask(model, popup));
@@ -41,7 +42,8 @@ public final class DropUpdate {
     private static boolean droppable(Model model, Commit commit) {
         return switch (commit.parents().size()) {
             case 0 ->
-                model.commits()
+                model.repo()
+                        .commits()
                         .toOption()
                         .exists(log -> log.exists(other -> other.parents().contains(commit.sha())));
             case 1 -> true;

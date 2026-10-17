@@ -28,7 +28,8 @@ public final class PushUpdate {
                 Update.confirm(
                         model,
                         ForcePushPopup.class,
-                        popup -> model.branch(popup.branch())
+                        popup -> model.repo()
+                                .branch(popup.branch())
                                 .flatMap(Branch::remoteUpstream)
                                 .map(upstream ->
                                         new Push(popup.branch(), upstream.branch(), PushMode.FORCE_WITH_LEASE)));

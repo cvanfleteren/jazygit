@@ -30,7 +30,7 @@ class SelectionUpdateTest {
 
         assertEquals(
                 Option.of(new Preview<>(new BranchRef.Local(new Branch.Name("feature")), new Loading<>())),
-                next.model().branchLog());
+                next.model().repoView().branchLog());
         assertEquals(List.of(new LoadBranchLog(new BranchRef.Local(new Branch.Name("feature")))), next.cmds());
 
         Next again = Update.update(
@@ -45,7 +45,7 @@ class SelectionUpdateTest {
 
         assertEquals(
                 Option.of(new Preview<>(new Sha("aaaa"), new Loading<>())),
-                next.model().commitDetail());
+                next.model().repoView().commitDetail());
         assertEquals(List.of(new LoadCommitDetail(new Sha("aaaa"), DiffOptions.DEFAULT)), next.cmds());
 
         Next again = Update.update(next.model(), new SelectionMsg.CommitSelected(new Sha("aaaa")));
@@ -61,13 +61,13 @@ class SelectionUpdateTest {
                         new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffOptions.DEFAULT, DiffText.of("changes")))
                 .model();
         Preview<Sha, DiffText> firstDetail = new Preview<>(new Sha("aaaa"), new Loaded<>(DiffText.of("changes")));
-        assertEquals(Option.of(firstDetail), first.commitDetail());
+        assertEquals(Option.of(firstDetail), first.repoView().commitDetail());
 
         Model second = Update.update(first, new SelectionMsg.CommitSelected(new Sha("ffff")))
                 .model();
         assertEquals(
                 Option.of(new Preview<>(new Sha("ffff"), new Loading<>(), Option.of(firstDetail))),
-                second.commitDetail());
+                second.repoView().commitDetail());
     }
 
     @Test
@@ -78,20 +78,22 @@ class SelectionUpdateTest {
                 .model();
 
         assertEquals(
-                model.commitDetail(),
+                model.repoView().commitDetail(),
                 Update.update(
                                 model,
                                 new LoadMsg.CommitDetailLoaded(
                                         new Sha("aaaa"), DiffOptions.DEFAULT, DiffText.of("changes")))
                         .model()
+                        .repoView()
                         .commitDetail());
         assertEquals(
-                model.commitDetail(),
+                model.repoView().commitDetail(),
                 Update.update(
                                 model,
                                 new LoadMsg.Failed(
                                         new LoadCommitDetail(new Sha("aaaa"), DiffOptions.DEFAULT), refused("boom")))
                         .model()
+                        .repoView()
                         .commitDetail());
     }
 
@@ -102,7 +104,9 @@ class SelectionUpdateTest {
                                 .model(),
                         new LoadMsg.Failed(new LoadCommitDetail(new Sha("aaaa"), DiffOptions.DEFAULT), refused("boom")))
                 .model();
-        assertEquals(Option.of(new Preview<>(new Sha("aaaa"), new Failed<>(refused("boom")))), model.commitDetail());
+        assertEquals(
+                Option.of(new Preview<>(new Sha("aaaa"), new Failed<>(refused("boom")))),
+                model.repoView().commitDetail());
 
         assertTrue(Update.update(model, new Tick())
                 .cmds()
@@ -119,7 +123,8 @@ class SelectionUpdateTest {
                                 .model(),
                         new LoadMsg.BranchLogLoaded(new BranchRef.Local(new Branch.Name("feature")), FEATURE_COMMITS))
                 .model();
-        Preview<BranchRef, List<Commit>> featureLog = feature.branchLog().get();
+        Preview<BranchRef, List<Commit>> featureLog =
+                feature.repoView().branchLog().get();
 
         Model main = Update.update(
                         feature, new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("main"))))
@@ -127,18 +132,18 @@ class SelectionUpdateTest {
         assertEquals(
                 Option.of(new Preview<BranchRef, List<Commit>>(
                         new BranchRef.Local(new Branch.Name("main")), new Loading<>(), Option.of(featureLog))),
-                main.branchLog());
+                main.repoView().branchLog());
 
         Model other = Update.update(
                         main, new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("other"))))
                 .model();
-        assertEquals(Option.of(featureLog), other.branchLog().get().previous());
+        assertEquals(Option.of(featureLog), other.repoView().branchLog().get().previous());
 
         Model done = Update.update(
                         other,
                         new LoadMsg.BranchLogLoaded(new BranchRef.Local(new Branch.Name("other")), FEATURE_COMMITS))
                 .model();
-        assertEquals(Option.none(), done.branchLog().get().previous());
+        assertEquals(Option.none(), done.repoView().branchLog().get().previous());
     }
 
     @Test
@@ -155,7 +160,7 @@ class SelectionUpdateTest {
         assertEquals(
                 Option.of(
                         new Preview<>(new BranchRef.Local(new Branch.Name("feature")), new Loaded<>(FEATURE_COMMITS))),
-                next.branchLog());
+                next.repoView().branchLog());
     }
 
     @Test
@@ -167,21 +172,23 @@ class SelectionUpdateTest {
                 .model();
 
         assertEquals(
-                model.branchLog(),
+                model.repoView().branchLog(),
                 Update.update(
                                 model,
                                 new LoadMsg.BranchLogLoaded(
                                         new BranchRef.Local(new Branch.Name("feature")), FEATURE_COMMITS))
                         .model()
+                        .repoView()
                         .branchLog());
         assertEquals(
-                model.branchLog(),
+                model.repoView().branchLog(),
                 Update.update(
                                 model,
                                 new LoadMsg.Failed(
                                         new LoadBranchLog(new BranchRef.Local(new Branch.Name("feature"))),
                                         refused("boom")))
                         .model()
+                        .repoView()
                         .branchLog());
     }
 
@@ -199,7 +206,7 @@ class SelectionUpdateTest {
         assertEquals(
                 Option.of(
                         new Preview<>(new BranchRef.Local(new Branch.Name("feature")), new Failed<>(refused("boom")))),
-                model.branchLog());
+                model.repoView().branchLog());
         assertEquals(
                 List.of(
                         new LoadStatus(),
@@ -249,7 +256,8 @@ class SelectionUpdateTest {
         Next next = Update.update(model, new SelectionMsg.FilesSelected(files));
         assertEquals(List.of(new Cmd.LoadFileDiff(files, DiffOptions.DEFAULT)), next.cmds());
         assertEquals(
-                Option.of(new Preview<>(files, new Loading<>())), next.model().fileDiff());
+                Option.of(new Preview<>(files, new Loading<>())),
+                next.model().repoView().fileDiff());
 
         assertEquals(
                 List.of(),
@@ -264,9 +272,10 @@ class SelectionUpdateTest {
         List<FileEntry> other = List.of(new FileEntry("b.txt", ChangeType.UNTRACKED));
 
         assertEquals(
-                model.fileDiff(),
+                model.repoView().fileDiff(),
                 Update.update(model, new LoadMsg.FileDiffLoaded(other, DiffOptions.DEFAULT, new Diffs("", "x")))
                         .model()
+                        .repoView()
                         .fileDiff());
         assertEquals(
                 Option.of(new Preview<>(DIRTY.files(), new Loaded<>(new Diffs("", "+a")))),
@@ -274,6 +283,7 @@ class SelectionUpdateTest {
                                 model,
                                 new LoadMsg.FileDiffLoaded(DIRTY.files(), DiffOptions.DEFAULT, new Diffs("", "+a")))
                         .model()
+                        .repoView()
                         .fileDiff());
     }
 
@@ -293,6 +303,7 @@ class SelectionUpdateTest {
         List<FileEntry> next = List.of(new FileEntry("b.txt", ChangeType.UNTRACKED));
         Preview<List<FileEntry>, Diffs> loading = Update.update(model, new SelectionMsg.FilesSelected(next))
                 .model()
+                .repoView()
                 .fileDiff()
                 .get();
         assertEquals(Option.of(new Preview<>(DIRTY.files(), new Loaded<>(new Diffs("", "+a")))), loading.previous());
@@ -326,6 +337,7 @@ class SelectionUpdateTest {
                 Option.of(new Preview<>(DIRTY.files(), new Failed<>(refused("boom")))),
                 Update.update(model, new LoadMsg.Failed(cmd, refused("boom")))
                         .model()
+                        .repoView()
                         .fileDiff());
     }
 }

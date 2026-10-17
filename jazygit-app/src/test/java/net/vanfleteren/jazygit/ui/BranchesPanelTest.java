@@ -33,8 +33,8 @@ class BranchesPanelTest {
     private final Model before = with(TestModels.loaded(new SampleData()), List.of(MAIN, FEATURE, OLD));
 
     private static Model withWorktrees(Model model) {
-        return model.withBranchesTab(BranchesTab.WORKTREES)
-                .withWorktrees(new Loadable.Loaded<>(List.of(
+        return model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.WORKTREES))
+                .mapRepo(repo -> repo.withWorktrees(new Loadable.Loaded<>(List.of(
                         new Worktree(
                                 java.nio.file.Path.of("/repos/app"),
                                 Option.of(new Sha("1")),
@@ -50,12 +50,12 @@ class BranchesPanelTest {
                                 false,
                                 false,
                                 false,
-                                false))));
+                                false)))));
     }
 
     private static Model withRemotes(Model model) {
-        return model.withBranchesTab(BranchesTab.REMOTE)
-                .withRemoteBranches(new Loadable.Loaded<>(List.of(
+        return model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.REMOTE))
+                .mapRepo(repo -> repo.withRemoteBranches(new Loadable.Loaded<>(List.of(
                         new RemoteRef(
                                 new RemoteBranch("origin", new Branch.Name("feature")),
                                 new Sha("2"),
@@ -63,7 +63,7 @@ class BranchesPanelTest {
                         new RemoteRef(
                                 new RemoteBranch("upstream", new Branch.Name("main")),
                                 new Sha("1"),
-                                java.time.Instant.EPOCH))));
+                                java.time.Instant.EPOCH)))));
     }
 
     private static Model with(Model model, List<Branch> branches) {
@@ -461,7 +461,8 @@ class BranchesPanelTest {
 
     @Test
     void theRemoteTabSaysWhenThereAreNoRemoteBranches() throws Exception {
-        Model none = before.withBranchesTab(BranchesTab.REMOTE).withRemoteBranches(new Loadable.Loaded<>(List.empty()));
+        Model none = before.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.REMOTE))
+                .mapRepo(repo -> repo.withRemoteBranches(new Loadable.Loaded<>(List.empty())));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(none, BranchesPanel.ID))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(none, BranchesPanel.ID));
             SettledPilot.of(testRunner).quit();
@@ -570,12 +571,12 @@ class BranchesPanelTest {
         Commit newer = new Commit(new Sha("a2"), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, "Ours two", "");
         Commit older = new Commit(new Sha("a1"), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, "Ours one", "");
         RemoteBranch upstream = new RemoteBranch("origin", new Branch.Name("feature"));
-        Model diverged = before.withDivergence(Option.of(new DivergenceView(
+        Model diverged = before.mapRepoView(repoView -> repoView.withDivergence(Option.of(new DivergenceView(
                 new Branch.Name("feature"),
                 new BranchRef.Remote(upstream),
                 DivergenceView.Against.UPSTREAM,
                 new Loadable.Loaded<>(new Divergence(List.of(newer, older), 2, List.of(behind), 1)),
-                Option.none())));
+                Option.none()))));
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         java.util.List<String> opened = new java.util.ArrayList<>();
         BranchesPanel panel = new BranchesPanel(

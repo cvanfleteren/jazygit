@@ -52,7 +52,7 @@ class BrowseUpdateTest {
         Next next = Update.update(model(), new BrowseMsg.Requested(new Branch.Name("mine")));
 
         assertEquals(List.of(new BrowseCmd(ORIGIN_FEATURE)), next.cmds());
-        assertEquals(Option.none(), next.model().error());
+        assertEquals(Option.none(), next.model().outcome().error());
     }
 
     @Test
@@ -69,13 +69,13 @@ class BrowseUpdateTest {
         assertEquals(List.empty(), local.cmds());
         assertEquals(
                 Option.of(new AppError.NotOnRemote(new Branch.Name("local"))),
-                local.model().error());
+                local.model().outcome().error());
 
         Next gone = Update.update(model(), new BrowseMsg.Requested(new Branch.Name("gone")));
         assertEquals(List.empty(), gone.cmds());
         assertEquals(
                 Option.of(new AppError.NotOnRemote(new Branch.Name("gone"))),
-                gone.model().error());
+                gone.model().outcome().error());
     }
 
     @Test

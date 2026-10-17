@@ -47,9 +47,9 @@ class OperationUpdateTest {
 
         assertEquals(
                 List.of(new LogEntry(Operation.PUSH, executed("git push origin feature"))),
-                next.model().commandLog());
-        assertEquals(HashSet.empty(), next.model().busy().keySet());
-        assertEquals(Option.none(), next.model().error());
+                next.model().outcome().commandLog());
+        assertEquals(HashSet.empty(), next.model().jobs().busy().keySet());
+        assertEquals(Option.none(), next.model().outcome().error());
         assertEquals(
                 List.of(
                         new LoadStatus(),
@@ -87,11 +87,11 @@ class OperationUpdateTest {
 
         assertEquals(
                 List.of(new LogEntry(Operation.PUSH, executed("git push origin feature"))),
-                next.model().commandLog());
-        assertEquals(HashSet.empty(), next.model().busy().keySet());
+                next.model().outcome().commandLog());
+        assertEquals(HashSet.empty(), next.model().jobs().busy().keySet());
         assertEquals(
                 Option.of(new AppError.OperationFailed(Operation.PUSH, Option.of("feature"), failure)),
-                next.model().error());
+                next.model().outcome().error());
         assertEquals(Option.of("Pushing branch feature failed: rejected"), errorText(next.model()));
     }
 
@@ -184,9 +184,9 @@ class OperationUpdateTest {
 
         assertEquals(
                 List.of(new LogEntry(Operation.MERGE, executed("git merge feature"))),
-                next.model().commandLog());
-        assertEquals(Option.none(), next.model().error());
-        assertEquals(Option.of(notice), next.model().notice());
+                next.model().outcome().commandLog());
+        assertEquals(Option.none(), next.model().outcome().error());
+        assertEquals(Option.of(notice), next.model().outcome().notice());
         assertEquals(
                 List.of(
                         new LoadStatus(),
@@ -206,9 +206,12 @@ class OperationUpdateTest {
 
         assertEquals(
                 Option.none(),
-                Update.update(stopped, succeeded(PUSH, "git push")).model().notice());
+                Update.update(stopped, succeeded(PUSH, "git push"))
+                        .model()
+                        .outcome()
+                        .notice());
         assertEquals(
                 Option.none(),
-                Update.update(stopped, failed(PUSH, "boom")).model().notice());
+                Update.update(stopped, failed(PUSH, "boom")).model().outcome().notice());
     }
 }

@@ -2,131 +2,50 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.*;
 import io.vavr.control.Option;
+import java.util.function.UnaryOperator;
 import lombok.With;
-import net.vanfleteren.jazygit.gh.model.PullRequest;
-import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.settings.Settings;
-import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.prs.PrOverview;
 
 /**
  * The complete, immutable state of the repository as shown by the UI.
  *
- * @param repositoryName      the name of the repository
- * @param status              the working tree status and HEAD
- * @param branches            the local branches
- * @param remoteBranches      the remote-tracking branches
- * @param branchesTab         which branches the branches pane lists; it stays when the focus leaves the pane
- * @param commits             the commit log of HEAD
- * @param stashes             the stashes, newest first
- * @param worktrees           the worktrees of the repository, the main one first
- * @param branchLog           the log of the branch, local or remote, highlighted in the branches pane, once one is
- *                            highlighted
- * @param commitDetail        what the commit highlighted in the commits pane changed (its files, a summary and its
- *                            diff), once one is highlighted
- * @param fileDiff            the diff of the node highlighted in the files pane, keyed by the changed files under
- *                            it, once one is highlighted
- * @param diffOptions         how the diffs of the files and the commits are read, for this session only
- * @param refreshing          periodic loads that have been started and not finished yet, so a tick does
- *                            not queue them again
- * @param error               why the last operation failed, until the next one is started
- * @param notice              what the user is told about the last operation when it did not fail, but still needs
- *                            their attention, until the next one is started
- * @param busy                the branches a git operation runs on right now, like a push or a delete, and that
- *                            operation: they show a
- *                            spinner, and take no other operation until it is done
- * @param fetching            the background fetch from the remotes that is running, if any; the next one waits
- * @param lastFetch           when a remote was last fetched from, and the remotes that failed the last time
- * @param pullRequests        the open pull requests on GitHub, by the remote branch they merge from; none until they
- *                            were read once, and the ones read last when reading them again failed
- * @param pullRequestsFailure why the pull requests could not be read the last time, if they could not
- * @param readingPullRequests how many reads of the pull requests are running; the line at the bottom says so
- * @param branchChecks        how the CI checks are doing on the branches on GitHub; none until they were read once,
- *                            and the ones read last when reading them again failed
- * @param readingBranchChecks how many reads of the checks of the branches are running
- * @param commandLog          the mutating git commands that were executed, oldest first
- * @param popup               the popup that is open, if any; only one can be
- * @param settings            what the user chose to keep from one session to the next, like the theme
- * @param themeOverride       the theme asked for at startup, or highlighted in the theme dialog, for this session only,
- *                            until the user chooses one
- * @param focusedPane         the id of the element of the repository screen, outside the popups, that had the focus
- *                            last, which a closing popup gives it back to; none before the view reported one
- * @param cherryPick          the commit copied to be cherry-picked onto the branch checked out later, if one is
- * @param divergence          the commits a local branch and its upstream or base branch do not share, which the
- *                            branches pane lists in place of the local branches while it is open
- * @param screen              what the left of the screen shows
- * @param prOverview          what the pull requests screen shows, and where its focus was
+ * @param repositoryName the name of the repository
+ * @param screen         what the left of the screen shows
+ * @param repo           what git reports about the repository
+ * @param repoView       what the repository screen shows besides what git reports, and where its focus was
+ * @param prOverview     what the pull requests screen shows, and where its focus was
+ * @param gitHub         what GitHub reports about the branches of the repository
+ * @param jobs           what runs in the background, and when the remotes were last fetched from
+ * @param outcome        what the user is told about the operations: how the last one went, and the commands run
+ * @param popup          the popup that is open, if any; only one can be
+ * @param preferences    how the user wants things shown, kept from one session to the next or for this one only
  */
 @With
 public record Model(
         String repositoryName,
-        Loadable<RepoStatus> status,
-        Loadable<List<Branch>> branches,
-        Loadable<List<RemoteRef>> remoteBranches,
-        BranchesTab branchesTab,
-        Loadable<List<Commit>> commits,
-        Loadable<List<Stash>> stashes,
-        Loadable<List<Worktree>> worktrees,
-        Option<Preview<BranchRef, List<Commit>>> branchLog,
-        Option<Preview<Sha, DiffText>> commitDetail,
-        Option<Preview<List<FileEntry>, Diffs>> fileDiff,
-        DiffOptions diffOptions,
-        Set<Cmd.Load> refreshing,
-        Option<AppError> error,
-        Option<Notice> notice,
-        Map<BranchRef, Operation> busy,
-        Option<Fetching> fetching,
-        Freshness lastFetch,
-        Option<Map<Branch.Name, PullRequest>> pullRequests,
-        Option<Failure> pullRequestsFailure,
-        int readingPullRequests,
-        Option<GitHubChecks> branchChecks,
-        int readingBranchChecks,
-        List<LogEntry> commandLog,
-        Option<Popup> popup,
-        Settings settings,
-        Option<ThemeName> themeOverride,
-        Option<String> focusedPane,
-        Option<Commit> cherryPick,
-        Option<DivergenceView> divergence,
         Screen screen,
-        PrOverview prOverview) {
+        Repo repo,
+        RepoView repoView,
+        PrOverview prOverview,
+        GitHubState gitHub,
+        Jobs jobs,
+        Outcome outcome,
+        Option<Popup> popup,
+        Preferences preferences) {
 
     public static Model initial(String repositoryName) {
         return new Model(
                 repositoryName,
-                Loadable.loading(),
-                Loadable.loading(),
-                Loadable.loading(),
-                BranchesTab.LOCAL,
-                Loadable.loading(),
-                Loadable.loading(),
-                Loadable.loading(),
-                Option.none(),
-                Option.none(),
-                Option.none(),
-                DiffOptions.DEFAULT,
-                HashSet.empty(),
-                Option.none(),
-                Option.none(),
-                HashMap.empty(),
-                Option.none(),
-                Freshness.NEVER,
-                Option.none(),
-                Option.none(),
-                0,
-                Option.none(),
-                0,
-                List.empty(),
-                Option.none(),
-                Settings.DEFAULT,
-                Option.none(),
-                Option.none(),
-                Option.none(),
-                Option.none(),
                 Screen.REPOSITORY,
-                PrOverview.INITIAL);
+                Repo.LOADING,
+                RepoView.INITIAL,
+                PrOverview.INITIAL,
+                GitHubState.NOT_READ,
+                Jobs.IDLE,
+                Outcome.NONE,
+                Option.none(),
+                Preferences.DEFAULT);
     }
 
     /**
@@ -134,23 +53,20 @@ public record Model(
      * gives it back to; none before one had it.
      */
     public Option<String> shownPane() {
-        return screen == Screen.PULL_REQUESTS ? prOverview.focusedPane() : focusedPane;
+        return switch (screen) {
+            case REPOSITORY -> repoView.focusedPane();
+            case PULL_REQUESTS -> prOverview.focusedPane();
+        };
     }
 
     /**
      * This model with {@code id} as the element of the screen shown that had the focus last.
      */
     public Model withShownPane(String id) {
-        return screen == Screen.PULL_REQUESTS
-                ? withPrOverview(prOverview.withFocusedPane(Option.of(id)))
-                : withFocusedPane(Option.of(id));
-    }
-
-    /**
-     * The theme the UI is drawn in: the one asked for at startup, else the saved one.
-     */
-    public ThemeName theme() {
-        return themeOverride.getOrElse(settings.theme());
+        return switch (screen) {
+            case REPOSITORY -> withRepoView(repoView.withFocusedPane(Option.of(id)));
+            case PULL_REQUESTS -> withPrOverview(prOverview.withFocusedPane(Option.of(id)));
+        };
     }
 
     /**
@@ -161,19 +77,45 @@ public record Model(
     }
 
     /**
-     * The commit {@code sha} in the log of HEAD, if the log is loaded and has it.
+     * This model with {@code f} applied to what git reports about the repository.
      */
-    public Option<Commit> commit(Sha sha) {
-        return commits.toOption()
-                .flatMap(loaded -> loaded.find(commit -> commit.sha().equals(sha)));
+    public Model mapRepo(UnaryOperator<Repo> f) {
+        return withRepo(f.apply(repo));
     }
 
     /**
-     * The local branch {@code name}, if the branches are loaded and it is one of them.
+     * This model with {@code f} applied to what the repository screen shows.
      */
-    public Option<Branch> branch(Branch.Name name) {
-        return branches.toOption()
-                .flatMap(loaded -> loaded.find(branch -> branch.name().equals(name)));
+    public Model mapRepoView(UnaryOperator<RepoView> f) {
+        return withRepoView(f.apply(repoView));
+    }
+
+    /**
+     * This model with {@code f} applied to what GitHub reports about the branches of the repository.
+     */
+    public Model mapGitHub(UnaryOperator<GitHubState> f) {
+        return withGitHub(f.apply(gitHub));
+    }
+
+    /**
+     * This model with {@code f} applied to what the user is told about the operations: how the last one went, and the commands run.
+     */
+    public Model mapOutcome(UnaryOperator<Outcome> f) {
+        return withOutcome(f.apply(outcome));
+    }
+
+    /**
+     * This model with {@code f} applied to what runs in the background, and when the remotes were last fetched from.
+     */
+    public Model mapJobs(UnaryOperator<Jobs> f) {
+        return withJobs(f.apply(jobs));
+    }
+
+    /**
+     * This model with {@code f} applied to how the user wants things shown, kept from one session to the next or for this one only.
+     */
+    public Model mapPreferences(UnaryOperator<Preferences> f) {
+        return withPreferences(f.apply(preferences));
     }
 
     /**
@@ -181,108 +123,21 @@ public record Model(
      * pulled or deleted takes no other operation meanwhile.
      */
     public Option<Branch> idleBranch(Branch.Name name) {
-        return branch(name).filter(known -> !busy.containsKey(new BranchRef.Local(name)));
-    }
-
-    /**
-     * The remote-tracking branch of {@code branch}, if the remote branches are loaded and it is one of them.
-     */
-    public Option<RemoteRef> remoteBranch(RemoteBranch branch) {
-        return remoteBranches
-                .toOption()
-                .flatMap(loaded -> loaded.find(ref -> ref.branch().equals(branch)));
-    }
-
-    /**
-     * The local branch that follows {@code upstream}, if the branches are loaded and one does.
-     */
-    public Option<Branch> trackingBranch(RemoteBranch upstream) {
-        return branches.toOption()
-                .flatMap(loaded -> loaded.find(branch ->
-                        branch.upstream().exists(followed -> followed.branch().equals(upstream))));
-    }
-
-    /**
-     * The checked out branch, if the branches are loaded and one is checked out.
-     */
-    public Option<Branch> currentBranch() {
-        return branches.toOption().flatMap(loaded -> loaded.find(Branch::current));
-    }
-
-    /**
-     * The worktree at {@code location}, if the worktrees are loaded and it is one of them.
-     */
-    public Option<Worktree> worktree(String location) {
-        return worktrees
-                .toOption()
-                .flatMap(loaded -> loaded.find(worktree -> worktree.location().equals(location)));
-    }
-
-    /**
-     * The main worktree, if the worktrees are loaded and the repository has one.
-     */
-    public Option<Worktree> mainWorktree() {
-        return worktrees.toOption().flatMap(loaded -> loaded.find(Worktree::main));
-    }
-
-    /**
-     * The open pull request from {@code branch}: the one from the branch it follows on the remote, else from
-     * the branch of the same name; none when it follows a branch on a remote other than GitHub.
-     */
-    public Option<PullRequest> pullRequest(Branch branch) {
-        Option<RemoteBranch> upstream = branch.remoteUpstream().map(Upstream::branch);
-        return upstream.exists(followed -> !mayBeOnGitHub(followed))
-                ? Option.none()
-                : pullRequests.flatMap(open ->
-                        upstream.map(RemoteBranch::branch).flatMap(open::get).orElse(() -> open.get(branch.name())));
-    }
-
-    /**
-     * The open pull request from {@code remote}, if it is a branch on GitHub.
-     */
-    public Option<PullRequest> pullRequest(RemoteBranch remote) {
-        return onGitHub(remote) ? pullRequests.flatMap(open -> open.get(remote.branch())) : Option.none();
-    }
-
-    /**
-     * How the CI checks are doing on the branch {@code branch} follows on GitHub, if it follows one.
-     */
-    public Option<Checks> checks(Branch branch) {
-        return branch.remoteUpstream().flatMap(upstream -> checks(upstream.branch()));
-    }
-
-    /**
-     * How the CI checks are doing on {@code remote}, if it is a branch on GitHub.
-     */
-    public Option<Checks> checks(RemoteBranch remote) {
-        return branchChecks
-                .filter(checks -> checks.remotes().contains(remote.remote()))
-                .flatMap(checks -> checks.byBranch().get(remote.branch()));
-    }
-
-    private boolean onGitHub(RemoteBranch remote) {
-        return branchChecks.exists(checks -> checks.remotes().contains(remote.remote()));
-    }
-
-    /**
-     * Whether {@code remote} is on GitHub, or could be, as which remotes are is not known yet.
-     */
-    private boolean mayBeOnGitHub(RemoteBranch remote) {
-        return branchChecks.isEmpty() || onGitHub(remote);
+        return repo.branch(name).filter(known -> !jobs.busy().containsKey(new BranchRef.Local(name)));
     }
 
     /**
      * This model without an error shown, nor a notice.
      */
     public Model clearError() {
-        return withError(Option.none()).withNotice(Option.none());
+        return mapOutcome(Outcome::cleared);
     }
 
     /**
      * This model showing {@code notice} in the command log, instead of an error.
      */
     public Model inform(Notice notice) {
-        return withError(Option.none()).withNotice(Option.of(notice));
+        return mapOutcome(outcome -> outcome.informing(notice));
     }
 
     /**
@@ -291,7 +146,7 @@ public record Model(
      * error.
      */
     public Model fail(AppError error) {
-        Model failed = withError(Option.of(error)).withNotice(Option.none());
+        Model failed = mapOutcome(outcome -> outcome.failing(error));
         return popup.isDefined() ? failed : failed.openPopup(new ErrorPopup(error));
     }
 
@@ -299,14 +154,14 @@ public record Model(
      * This model with {@code operation} running on {@code branch}.
      */
     public Model withBusyBranch(BranchRef branch, Operation operation) {
-        return withBusy(busy.put(branch, operation));
+        return mapJobs(jobs -> jobs.withBusyBranch(branch, operation));
     }
 
     /**
      * This model with the operation on {@code branch} done.
      */
     public Model withoutBusyBranch(BranchRef branch) {
-        return withBusy(busy.remove(branch));
+        return mapJobs(jobs -> jobs.withoutBusyBranch(branch));
     }
 
     /**

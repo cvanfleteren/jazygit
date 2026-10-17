@@ -255,12 +255,12 @@ class ProgramTest {
         settle();
 
         Model model = program.model();
-        assertEquals(new Loaded<>(provider.status), model.status());
+        assertEquals(new Loaded<>(provider.status), model.repo().status());
         assertEquals(
                 new Loaded<>(List.of(
                         new Branch(new Branch.Name("main"), true, new Sha("main-tip")),
                         new Branch(new Branch.Name("other"), false, new Sha("other-tip"), Instant.EPOCH, true))),
-                model.branches());
+                model.repo().branches());
         assertEquals(1, provider.commitLoads);
     }
 
@@ -274,7 +274,7 @@ class ProgramTest {
         program.dispatch(new Msg.Tick());
         settle();
 
-        assertEquals(new Loaded<>(provider.status), program.model().status());
+        assertEquals(new Loaded<>(provider.status), program.model().repo().status());
         assertEquals(1, provider.commitLoads);
     }
 
@@ -289,7 +289,7 @@ class ProgramTest {
         assertEquals(2, provider.commitLoads);
         assertEquals(
                 "bbbb",
-                ((Loaded<List<Commit>>) program.model().commits())
+                ((Loaded<List<Commit>>) program.model().repo().commits())
                         .value()
                         .get(0)
                         .shortSha());
@@ -300,12 +300,14 @@ class ProgramTest {
         provider.statusError = "git status failed";
         settle();
 
-        assertEquals(new Failed<>(refused("git status failed")), program.model().status());
+        assertEquals(
+                new Failed<>(refused("git status failed")),
+                program.model().repo().status());
 
         provider.statusError = null;
         program.dispatch(new Msg.Tick());
         settle();
-        assertEquals(new Loaded<>(provider.status), program.model().status());
+        assertEquals(new Loaded<>(provider.status), program.model().repo().status());
     }
 
     @Test
@@ -316,16 +318,20 @@ class ProgramTest {
         settle();
 
         Model model = program.model();
-        assertEquals(new Loaded<>(provider.status), model.status());
+        assertEquals(new Loaded<>(provider.status), model.repo().status());
         assertEquals(
                 new Loaded<>(List.of(
                         new Branch(new Branch.Name("main"), false, new Sha("main-tip")),
                         new Branch(new Branch.Name("other"), true, new Sha("other-tip"), Instant.EPOCH, true))),
-                model.branches());
+                model.repo().branches());
         assertEquals(
                 "other-head",
-                ((Loaded<List<Commit>>) model.commits()).value().get(0).sha().value());
-        assertEquals(Option.none(), model.error());
+                ((Loaded<List<Commit>>) model.repo().commits())
+                        .value()
+                        .get(0)
+                        .sha()
+                        .value());
+        assertEquals(Option.none(), model.outcome().error());
     }
 
     @Test
@@ -339,13 +345,13 @@ class ProgramTest {
         Model model = program.model();
         assertEquals(
                 new Branch.Name("topic"),
-                ((Loaded<RepoStatus>) model.status())
+                ((Loaded<RepoStatus>) model.repo().status())
                         .value()
                         .head()
                         .branchName()
                         .get());
         assertEquals(Option.none(), model.popup());
-        assertEquals(Option.none(), model.error());
+        assertEquals(Option.none(), model.outcome().error());
     }
 
     @Test
@@ -370,7 +376,7 @@ class ProgramTest {
 
         assertEquals(java.util.List.of("other local remote"), provider.deleted);
         assertEquals(Option.none(), program.model().popup());
-        assertEquals(Option.none(), program.model().error());
+        assertEquals(Option.none(), program.model().outcome().error());
     }
 
     @Test
@@ -384,7 +390,7 @@ class ProgramTest {
         settle();
 
         assertEquals(java.util.List.of("stage[a.txt]", "unstageNew[b.txt]", "unstage[c.txt]"), provider.indexCalls);
-        assertEquals(Option.none(), program.model().error());
+        assertEquals(Option.none(), program.model().outcome().error());
     }
 
     @Test
@@ -406,7 +412,7 @@ class ProgramTest {
 
         assertEquals(java.util.List.of("summary|more"), provider.commits);
         assertEquals(false, program.model().popup(CommitPopup.class).isDefined());
-        assertEquals(Option.none(), program.model().error());
+        assertEquals(Option.none(), program.model().outcome().error());
     }
 
     @Test
@@ -422,7 +428,7 @@ class ProgramTest {
 
         assertEquals(java.util.List.of("stage[a.txt]", "amend[]"), provider.indexCalls);
         assertEquals(false, program.model().popup(AmendPopup.class).isDefined());
-        assertEquals(Option.none(), program.model().error());
+        assertEquals(Option.none(), program.model().outcome().error());
     }
 
     @Test
@@ -430,13 +436,13 @@ class ProgramTest {
         settle();
 
         program.dispatch(new RewordMsg.Requested(
-                program.model().commits().toOption().get().head().sha()));
+                program.model().repo().commits().toOption().get().head().sha()));
         program.dispatch(new RewordMsg.Confirmed(new CommitMessage("new summary", "new body")));
         settle();
 
         assertEquals(java.util.List.of("reword new summary|new body"), provider.commits);
         assertEquals(Option.none(), program.model().popup());
-        assertEquals(Option.none(), program.model().error());
+        assertEquals(Option.none(), program.model().outcome().error());
     }
 
     @Test
@@ -464,7 +470,7 @@ class ProgramTest {
 
         assertEquals(
                 new Loaded<>(new Diffs("", "diff of 1")),
-                program.model().fileDiff().get().value());
+                program.model().repoView().fileDiff().get().value());
     }
 
     @Test
@@ -490,7 +496,7 @@ class ProgramTest {
                 errorText(program.model()));
         assertEquals(
                 new Branch.Name("main"),
-                ((Loaded<RepoStatus>) program.model().status())
+                ((Loaded<RepoStatus>) program.model().repo().status())
                         .value()
                         .head()
                         .branchName()
@@ -499,10 +505,10 @@ class ProgramTest {
         provider.checkoutError = null;
         program.dispatch(new CheckoutMsg.Requested(new Branch.Name("other")));
         settle();
-        assertEquals(Option.none(), program.model().error());
+        assertEquals(Option.none(), program.model().outcome().error());
         assertEquals(
                 new Branch.Name("other"),
-                ((Loaded<RepoStatus>) program.model().status())
+                ((Loaded<RepoStatus>) program.model().repo().status())
                         .value()
                         .head()
                         .branchName()
@@ -520,7 +526,7 @@ class ProgramTest {
                 Option.of(new Preview<>(
                         new BranchRef.Local(new Branch.Name("other")),
                         new Loaded<>(List.of(FakeProvider.commit("other-tip"))))),
-                program.model().branchLog());
+                program.model().repoView().branchLog());
         assertEquals(java.util.List.of("other"), provider.logLoads);
     }
 
@@ -539,9 +545,9 @@ class ProgramTest {
         assertEquals(true, io.isEmpty());
         settle();
         assertEquals(2, provider.fetches);
-        assertEquals(Option.none(), program.model().fetching());
+        assertEquals(Option.none(), program.model().jobs().fetching());
         // Not logged: it runs every few seconds.
-        assertEquals(List.of(), program.model().commandLog());
+        assertEquals(List.of(), program.model().outcome().commandLog());
     }
 
     private void settle() {

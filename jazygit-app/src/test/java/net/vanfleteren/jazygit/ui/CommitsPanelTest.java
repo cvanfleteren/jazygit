@@ -86,7 +86,7 @@ class CommitsPanelTest {
     void theSelectionFollowsItsCommitWhenANewOneComesOnTop() throws Exception {
         List<Commit> log = List.of(commit("s1"), commit("s0"));
         java.util.concurrent.atomic.AtomicReference<Model> model = new java.util.concurrent.atomic.AtomicReference<>(
-                TestModels.loaded(new SampleData()).withCommits(new Loadable.Loaded<>(log)));
+                TestModels.loaded(new SampleData()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log))));
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
         try (ToolkitTestRunner testRunner =
@@ -95,7 +95,7 @@ class CommitsPanelTest {
             SettledPilot.of(testRunner).pause();
             SettledPilot.of(testRunner).press(KeyCode.DOWN);
             SettledPilot.of(testRunner).pause();
-            model.set(model.get().withCommits(new Loadable.Loaded<>(log.prepend(commit("s2")))));
+            model.set(model.get().mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log.prepend(commit("s2"))))));
             RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), CommitsPanel.ID));
 
             assertEquals(commit("s0").sha(), panel.selectedCommit().get().sha());
@@ -108,14 +108,14 @@ class CommitsPanelTest {
     void theNewestCommitStaysSelectedWhenANewOneComesOnTop() throws Exception {
         List<Commit> log = List.of(commit("s1"), commit("s0"));
         java.util.concurrent.atomic.AtomicReference<Model> model = new java.util.concurrent.atomic.AtomicReference<>(
-                TestModels.loaded(new SampleData()).withCommits(new Loadable.Loaded<>(log)));
+                TestModels.loaded(new SampleData()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log))));
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(model.get(), CommitsPanel.ID))) {
             SettledPilot.focus(testRunner, CommitsPanel.ID);
             SettledPilot.of(testRunner).pause();
-            model.set(model.get().withCommits(new Loadable.Loaded<>(log.prepend(commit("s2")))));
+            model.set(model.get().mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log.prepend(commit("s2"))))));
             RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), CommitsPanel.ID));
 
             assertEquals(commit("s2").sha(), panel.selectedCommit().get().sha());
@@ -127,7 +127,7 @@ class CommitsPanelTest {
     @Test
     void theListScrollsAlongWithTheSelection() throws Exception {
         List<Commit> log = List.range(0, 80).map(i -> commit("s" + i));
-        Model model = TestModels.loaded(new SampleData()).withCommits(new Loadable.Loaded<>(log));
+        Model model = TestModels.loaded(new SampleData()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log)));
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.ID))) {

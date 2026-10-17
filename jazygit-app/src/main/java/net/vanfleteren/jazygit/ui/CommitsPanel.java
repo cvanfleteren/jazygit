@@ -125,8 +125,8 @@ public class CommitsPanel {
      * @param activeId the id of the left pane in use, whose highlighted row shows
      */
     public Panel render(Model model, String focusedId, String activeId) {
-        copied = model.cherryPick().map(Commit::sha);
-        return list.render(model.commits(), ID.equals(focusedId), ID.equals(activeId));
+        copied = model.repoView().cherryPick().map(Commit::sha);
+        return list.render(model.repo().commits(), ID.equals(focusedId), ID.equals(activeId));
     }
 
     /**
@@ -148,6 +148,6 @@ public class CommitsPanel {
      */
     public Option<Msg> selectionChange(Model model) {
         return PaneKeys.selectionChange(
-                selectedCommit().map(Commit::sha), model.commitDetail(), SelectionMsg.CommitSelected::new);
+                selectedCommit().map(Commit::sha), model.repoView().commitDetail(), SelectionMsg.CommitSelected::new);
     }
 }

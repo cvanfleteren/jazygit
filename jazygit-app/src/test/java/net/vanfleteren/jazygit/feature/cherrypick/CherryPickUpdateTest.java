@@ -58,7 +58,7 @@ class CherryPickUpdateTest {
 
     @Test
     void copyingKeepsTheCommit() {
-        assertEquals(Option.of(FIRST), copied().cherryPick());
+        assertEquals(Option.of(FIRST), copied().repoView().cherryPick());
     }
 
     @Test
@@ -72,7 +72,8 @@ class CherryPickUpdateTest {
         Model next =
                 Update.update(model, new CherryPickMsg.Copied(new Sha("ffff"))).model();
 
-        assertEquals(Option.of(TestModels.FEATURE_COMMITS.head()), next.cherryPick());
+        assertEquals(
+                Option.of(TestModels.FEATURE_COMMITS.head()), next.repoView().cherryPick());
     }
 
     @Test
@@ -84,6 +85,7 @@ class CherryPickUpdateTest {
                 Option.none(),
                 Update.update(model, new CherryPickMsg.Copied(MERGE.sha()))
                         .model()
+                        .repoView()
                         .cherryPick());
     }
 
@@ -91,12 +93,15 @@ class CherryPickUpdateTest {
     void droppingLetsGoOfTheCopy() {
         assertEquals(
                 Option.none(),
-                Update.update(copied(), new CherryPickMsg.Dropped()).model().cherryPick());
+                Update.update(copied(), new CherryPickMsg.Dropped())
+                        .model()
+                        .repoView()
+                        .cherryPick());
     }
 
     @Test
     void theCopyStaysWhenAnotherBranchIsCheckedOut() {
-        assertEquals(Option.of(FIRST), onFeature(copied()).cherryPick());
+        assertEquals(Option.of(FIRST), onFeature(copied()).repoView().cherryPick());
     }
 
     @Test
@@ -134,7 +139,7 @@ class CherryPickUpdateTest {
         Next next = Update.update(asked(), new CherryPickMsg.Cancelled());
 
         assertEquals(Option.none(), next.model().popup(CherryPickPopup.class));
-        assertEquals(Option.of(FIRST), next.model().cherryPick());
+        assertEquals(Option.of(FIRST), next.model().repoView().cherryPick());
         assertEquals(List.of(), next.cmds());
     }
 
@@ -146,7 +151,7 @@ class CherryPickUpdateTest {
         Model next = Update.update(running, cmd.succeeded(StubGitProvider.executed("git cherry-pick aaaa")))
                 .model();
 
-        assertEquals(Option.none(), next.cherryPick());
+        assertEquals(Option.none(), next.repoView().cherryPick());
     }
 
     @Test
@@ -157,6 +162,6 @@ class CherryPickUpdateTest {
                 .model();
 
         assertEquals(Option.of("Cherry-pick of aaaa failed: conflict"), errorText(next));
-        assertEquals(Option.of(FIRST), next.cherryPick());
+        assertEquals(Option.of(FIRST), next.repoView().cherryPick());
     }
 }

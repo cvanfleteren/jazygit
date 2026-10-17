@@ -87,7 +87,7 @@ public final class TestModels {
      * {@code model} with {@code entries} in its command log.
      */
     public static Model withLog(Model model, LogEntry... entries) {
-        return model.withCommandLog(List.of(entries));
+        return model.mapOutcome(outcome -> outcome.withCommandLog(List.of(entries)));
     }
 
     /**
@@ -122,14 +122,14 @@ public final class TestModels {
      * The error {@code model} shows, as the user sees it.
      */
     public static Option<String> errorText(Model model) {
-        return model.error().map(ErrorText::of);
+        return model.outcome().error().map(ErrorText::of);
     }
 
     /**
      * {@code model} with the log of {@code branch} still loading, while the log it replaced stays visible.
      */
     public static Model switchingBranch(Model model, String branch) {
-        return model.withBranchLog(
-                Option.of(Preview.loading(new BranchRef.Local(new Branch.Name(branch)), model.branchLog())));
+        return model.mapRepoView(repoView -> repoView.withBranchLog(Option.of(Preview.loading(
+                new BranchRef.Local(new Branch.Name(branch)), model.repoView().branchLog()))));
     }
 }

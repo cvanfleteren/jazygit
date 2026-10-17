@@ -24,17 +24,17 @@ public final class FetchUpdate {
     public static Next update(Model model, FetchMsg msg) {
         return switch (msg) {
             // A fetch that is still running is not started again.
-            case FetchMsg.Tick() -> model.fetching().isDefined() ? Next.of(model) : start(Next.of(model));
+            case FetchMsg.Tick() -> model.jobs().fetching().isDefined() ? Next.of(model) : start(Next.of(model));
             case FetchMsg.RemotesListed(List<String> remotes) -> next(model, remotes);
             case FetchMsg.ListingFailed(var failure) -> {
-                Next stopped = Next.of(model.withFetching(Option.none())
-                        .withLastFetch(model.lastFetch().failed(LISTING)));
-                yield model.fetching().exists(Fetching::again) ? start(stopped) : stopped;
+                Next stopped = Next.of(model.mapJobs(jobs -> jobs.withFetching(Option.none())
+                        .withLastFetch(jobs.lastFetch().failed(LISTING))));
+                yield model.jobs().fetching().exists(Fetching::again) ? start(stopped) : stopped;
             }
             case FetchMsg.Fetched(String remote, var at) ->
-                next(model.withLastFetch(model.lastFetch().succeeded(remote, at)), queued(model));
+                next(model.mapJobs(jobs -> jobs.withLastFetch(jobs.lastFetch().succeeded(remote, at))), queued(model));
             case FetchMsg.FetchFailed(String remote, var failure) ->
-                next(model.withLastFetch(model.lastFetch().failed(remote)), queued(model));
+                next(model.mapJobs(jobs -> jobs.withLastFetch(jobs.lastFetch().failed(remote))), queued(model));
         };
     }
 
@@ -44,19 +44,21 @@ public final class FetchUpdate {
      */
     public static Next requested(Next next) {
         return next.model()
+                .jobs()
                 .fetching()
-                .map(running -> new Next(next.model().withFetching(Option.of(running.thenAgain())), next.cmds()))
+                .map(running -> new Next(
+                        next.model().mapJobs(jobs -> jobs.withFetching(Option.of(running.thenAgain()))), next.cmds()))
                 .getOrElse(() -> start(next));
     }
 
     private static Next start(Next next) {
         return new Next(
-                next.model().withFetching(Option.of(Fetching.LISTING)),
+                next.model().mapJobs(jobs -> jobs.withFetching(Option.of(Fetching.LISTING))),
                 next.cmds().append(new FetchCmd.ListRemotes()));
     }
 
     private static List<String> queued(Model model) {
-        return model.fetching().map(Fetching::queued).getOrElse(List.empty());
+        return model.jobs().fetching().map(Fetching::queued).getOrElse(List.empty());
     }
 
     /**
@@ -64,10 +66,11 @@ public final class FetchUpdate {
      * came in, and how their pull requests are doing now.
      */
     private static Next next(Model model, List<String> remotes) {
-        boolean again = model.fetching().exists(Fetching::again);
+        boolean again = model.jobs().fetching().exists(Fetching::again);
         return remotes.pop2Option()
                 .map(next -> Next.of(
-                        model.withFetching(Option.of(new Fetching(Option.of(next._1), next._2, again))),
+                        model.mapJobs(
+                                jobs -> jobs.withFetching(Option.of(new Fetching(Option.of(next._1), next._2, again)))),
                         new FetchCmd.Fetch(next._1)))
                 .getOrElse(() -> done(model));
     }
@@ -76,8 +79,8 @@ public final class FetchUpdate {
      * The fetch is done; one that was asked for meanwhile starts right away.
      */
     private static Next done(Model model) {
-        boolean again = model.fetching().exists(Fetching::again);
-        Next done = PullRequestsUpdate.load(Update.refresh(model.withFetching(Option.none())));
+        boolean again = model.jobs().fetching().exists(Fetching::again);
+        Next done = PullRequestsUpdate.load(Update.refresh(model.mapJobs(jobs -> jobs.withFetching(Option.none()))));
         return again ? start(done) : done;
     }
 }

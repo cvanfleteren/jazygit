@@ -28,8 +28,8 @@ class UpdateTest {
         Next next = Update.init("repo");
 
         assertEquals("repo", next.model().repositoryName());
-        assertInstanceOf(Loading.class, next.model().status());
-        assertInstanceOf(Loading.class, next.model().commits());
+        assertInstanceOf(Loading.class, next.model().repo().status());
+        assertInstanceOf(Loading.class, next.model().repo().commits());
         assertEquals(
                 List.of(
                         new LoadStatus(),
@@ -44,7 +44,7 @@ class UpdateTest {
     void firstStatusLoadsCommits() {
         Next next = Update.update(Update.init("repo").model(), new LoadMsg.StatusLoaded(CLEAN));
 
-        assertEquals(new Loaded<>(CLEAN), next.model().status());
+        assertEquals(new Loaded<>(CLEAN), next.model().repo().status());
         assertEquals(List.of(new LoadCommits()), next.cmds());
     }
 
@@ -68,7 +68,7 @@ class UpdateTest {
                 new LoadMsg.StatusLoaded(
                         new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), List.of())));
 
-        assertSame(model.status(), next.model().status());
+        assertSame(model.repo().status(), next.model().repo().status());
         assertEquals(List.of(), next.cmds());
     }
 
@@ -78,8 +78,8 @@ class UpdateTest {
 
         Next next = Update.update(model, new LoadMsg.StatusLoaded(DIRTY));
 
-        assertEquals(new Loaded<>(DIRTY), next.model().status());
-        assertSame(model.commits(), next.model().commits());
+        assertEquals(new Loaded<>(DIRTY), next.model().repo().status());
+        assertSame(model.repo().commits(), next.model().repo().commits());
         assertEquals(List.of(), next.cmds());
     }
 
@@ -95,20 +95,24 @@ class UpdateTest {
         Model model = loaded();
 
         assertSame(
-                model.branches(),
+                model.repo().branches(),
                 Update.update(model, new LoadMsg.BranchesLoaded(BRANCHES))
                         .model()
+                        .repo()
                         .branches());
         assertSame(
-                model.commits(),
-                Update.update(model, new LoadMsg.CommitsLoaded(COMMITS)).model().commits());
+                model.repo().commits(),
+                Update.update(model, new LoadMsg.CommitsLoaded(COMMITS))
+                        .model()
+                        .repo()
+                        .commits());
     }
 
     @Test
     void failuresAreStoredAndRetriedOnTheNextTick() {
         Model model = Update.update(loaded(), new LoadMsg.Failed(new LoadCommits(), refused("boom")))
                 .model();
-        assertEquals(new Failed<>(refused("boom")), model.commits());
+        assertEquals(new Failed<>(refused("boom")), model.repo().commits());
         assertEquals(
                 List.of(
                         new LoadStatus(),
@@ -121,7 +125,7 @@ class UpdateTest {
         Model statusFailed = Update.update(
                         Update.init("repo").model(), new LoadMsg.Failed(new LoadStatus(), refused("no git")))
                 .model();
-        assertEquals(new Failed<>(refused("no git")), statusFailed.status());
+        assertEquals(new Failed<>(refused("no git")), statusFailed.repo().status());
         assertEquals(
                 List.of(new LoadStatus()),
                 Update.update(statusFailed, new Tick()).cmds());
@@ -136,6 +140,6 @@ class UpdateTest {
         assertFalse(Update.update(retrying, new Tick()).cmds().contains(new LoadCommits()));
         Model retried =
                 Update.update(retrying, new LoadMsg.CommitsLoaded(COMMITS)).model();
-        assertFalse(retried.refreshing().contains(new LoadCommits()));
+        assertFalse(retried.jobs().refreshing().contains(new LoadCommits()));
     }
 }

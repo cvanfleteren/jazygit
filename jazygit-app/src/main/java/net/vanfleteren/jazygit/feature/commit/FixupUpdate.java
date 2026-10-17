@@ -31,9 +31,10 @@ public final class FixupUpdate {
      * Only a commit that can be squashed can be fixed up: one with exactly one parent.
      */
     private static Next requested(Model model, Sha sha) {
-        return model.commit(sha)
+        return model.repo()
+                .commit(sha)
                 .flatMap(commit -> SquashUpdate.onlyParent(commit)
-                        .flatMap(model::commit)
+                        .flatMap(model.repo()::commit)
                         .map(into -> new FixupPopup(commit, into)))
                 .transform(popup -> Update.ask(model, popup));
     }

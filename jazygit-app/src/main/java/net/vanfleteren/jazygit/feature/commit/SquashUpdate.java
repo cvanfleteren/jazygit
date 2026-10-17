@@ -33,8 +33,10 @@ public final class SquashUpdate {
      * a merge has no single commit below it.
      */
     private static Next requested(Model model, Sha sha) {
-        return model.commit(sha)
-                .flatMap(commit -> onlyParent(commit).flatMap(model::commit).map(into -> new SquashPopup(commit, into)))
+        return model.repo()
+                .commit(sha)
+                .flatMap(commit ->
+                        onlyParent(commit).flatMap(model.repo()::commit).map(into -> new SquashPopup(commit, into)))
                 .transform(popup -> Update.ask(model, popup));
     }
 

@@ -47,9 +47,9 @@ public final class Update {
     public static Next init(String repositoryName, SettingsStore.Loaded settings, Option<ThemeName> themeOverride) {
         // Commits are loaded once the first status tells us where HEAD is.
         return refresh(Model.initial(repositoryName)
-                .withSettings(settings.settings())
-                .withThemeOverride(themeOverride)
-                .withError(settings.problem().map(AppError.SettingsNotLoaded::new)));
+                .mapPreferences(preferences ->
+                        preferences.withSettings(settings.settings()).withThemeOverride(themeOverride))
+                .mapOutcome(outcome -> outcome.withError(settings.problem().map(AppError.SettingsNotLoaded::new))));
     }
 
     public static Next update(Model model, Msg msg) {
@@ -73,7 +73,7 @@ public final class Update {
     private static Option<AppError> unfinished(Model model, OperationCmd cmd) {
         return Option.when(
                         cmd.operation().waitsForUnfinished(),
-                        () -> model.status().toOption())
+                        () -> model.repo().status().toOption())
                 .flatMap(status -> status)
                 .filter(status -> status.inProgress().isDefined() || status.conflicts() > 0)
                 .map(status -> new AppError.Unfinished(
@@ -115,23 +115,30 @@ public final class Update {
      */
     public static Next refresh(Model model) {
         List<Cmd.Load> retries = List.<Cmd.Load>empty()
-                .appendAll(Option.when(model.commits() instanceof Failed, LoadCommits::new))
-                .appendAll(model.branchLog()
+                .appendAll(Option.when(model.repo().commits() instanceof Failed, LoadCommits::new))
+                .appendAll(model.repoView()
+                        .branchLog()
                         .filter(log -> log.value() instanceof Failed)
                         .map(log -> new LoadBranchLog(log.key())))
-                .appendAll(model.commitDetail()
+                .appendAll(model.repoView()
+                        .commitDetail()
                         .filter(detail -> detail.value() instanceof Failed)
-                        .map(detail -> new LoadCommitDetail(detail.key(), model.diffOptions())))
-                .appendAll(model.divergence()
+                        .map(detail -> new LoadCommitDetail(
+                                detail.key(), model.preferences().diffOptions())))
+                .appendAll(model.repoView()
+                        .divergence()
                         .filter(view -> view.commits() instanceof Failed)
                         .map(DivergenceView::load))
-                .appendAll(model.divergence()
+                .appendAll(model.repoView()
+                        .divergence()
                         .flatMap(DivergenceView::detail)
                         .filter(detail -> detail.value() instanceof Failed)
-                        .map(detail -> new LoadCommitDetail(detail.key(), model.diffOptions())));
-        List<Cmd.Load> loads =
-                PERIODIC.appendAll(retries).filter(cmd -> !model.refreshing().contains(cmd));
-        return new Next(model.withRefreshing(model.refreshing().addAll(loads)), List.narrow(loads));
+                        .map(detail -> new LoadCommitDetail(
+                                detail.key(), model.preferences().diffOptions())));
+        List<Cmd.Load> loads = PERIODIC.appendAll(retries)
+                .filter(cmd -> !model.jobs().refreshing().contains(cmd));
+        return new Next(
+                model.mapJobs(jobs -> jobs.withRefreshing(jobs.refreshing().addAll(loads))), List.narrow(loads));
     }
 
     /**
@@ -140,13 +147,18 @@ public final class Update {
      * them again would show their changes as gone for as long as the new status takes to arrive.
      */
     static Next reloadDiff(Model model, List<Cmd> cmds) {
-        return model.fileDiff()
-                .filter(d -> model.status()
+        return model.repoView()
+                .fileDiff()
+                .filter(d -> model.repo()
+                        .status()
                         .toOption()
                         .exists(status -> status.files().containsAll(d.key())))
-                .map(d -> new LoadFileDiff(d.key(), model.diffOptions()))
-                .filter(cmd -> !model.refreshing().contains(cmd))
-                .map(cmd -> new Next(model.withRefreshing(model.refreshing().add(cmd)), cmds.append(cmd)))
+                .map(d -> new LoadFileDiff(d.key(), model.preferences().diffOptions()))
+                .filter(cmd -> !model.jobs().refreshing().contains(cmd))
+                .map(cmd -> new Next(
+                        model.mapJobs(
+                                jobs -> jobs.withRefreshing(jobs.refreshing().add(cmd))),
+                        cmds.append(cmd)))
                 .getOrElse(() -> new Next(model, cmds));
     }
 
@@ -155,11 +167,11 @@ public final class Update {
      * load, nothing happens, as it is unknown what changed.
      */
     public static Next withFiles(Model model, Function<List<FileEntry>, Next> then) {
-        return model.status().toOption().map(RepoStatus::files).map(then).getOrElse(() -> Next.of(model));
+        return model.repo().status().toOption().map(RepoStatus::files).map(then).getOrElse(() -> Next.of(model));
     }
 
     public static List<FileEntry> files(Model model) {
-        return model.status().toOption().map(RepoStatus::files).getOrElse(List.empty());
+        return model.repo().status().toOption().map(RepoStatus::files).getOrElse(List.empty());
     }
 
     /**

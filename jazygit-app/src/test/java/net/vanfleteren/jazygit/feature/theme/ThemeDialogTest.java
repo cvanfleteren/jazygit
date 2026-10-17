@@ -86,7 +86,9 @@ class ThemeDialogTest {
     @Test
     void opensAtTheThemeInUse() throws Exception {
         Model light = Update.update(
-                        TestModels.loaded(new SampleData()).withThemeOverride(Option.of(ThemeName.LIGHT)),
+                        TestModels.loaded(new SampleData())
+                                .mapPreferences(
+                                        preferences -> preferences.withThemeOverride(Option.of(ThemeName.LIGHT))),
                         new ThemeMsg.Requested())
                 .model();
 

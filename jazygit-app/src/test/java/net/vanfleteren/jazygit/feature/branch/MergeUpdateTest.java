@@ -29,7 +29,7 @@ class MergeUpdateTest {
         assertEquals(
                 Option.of(new MergePopup(new Branch.Name("main"), new Branch.Name("feature"))),
                 asked.model().popup());
-        assertEquals(Option.none(), asked.model().error());
+        assertEquals(Option.none(), asked.model().outcome().error());
         assertEquals(List.of(), asked.cmds());
     }
 
@@ -81,7 +81,7 @@ class MergeUpdateTest {
                 done.cmds());
         assertEquals(
                 executed("git merge --ff --no-edit feature"),
-                done.model().commandLog().last().commands());
+                done.model().outcome().commandLog().last().commands());
 
         Next failed = Update.update(
                 loaded(),

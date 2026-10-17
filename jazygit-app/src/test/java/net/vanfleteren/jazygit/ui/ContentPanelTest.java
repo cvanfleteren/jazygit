@@ -81,7 +81,8 @@ class ContentPanelTest {
     @Test
     void aPopupThatJustClosedKeepsShowingTheBranchLogUntilTheFocusIsBack() throws Exception {
         // The popup is gone from the model, but has the focus until the render gives it back.
-        Model closed = model.withFocusedPane(io.vavr.control.Option.of(BranchesPanel.ID));
+        Model closed =
+                model.mapRepoView(repoView -> repoView.withFocusedPane(io.vavr.control.Option.of(BranchesPanel.ID)));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(closed, "new-branch"))) {
             String screen = RenderedText.ofLarge(testRunner, () -> content.render(closed, "new-branch"));
             assertTrue(screen.contains("Log: feature/initial-layout"), screen);
@@ -90,7 +91,8 @@ class ContentPanelTest {
 
     @Test
     void aPopupOpenedFromTheBranchesKeepsShowingTheBranchLog() throws Exception {
-        Model withPopup = model.withFocusedPane(io.vavr.control.Option.of(BranchesPanel.ID))
+        Model withPopup = model.mapRepoView(
+                        repoView -> repoView.withFocusedPane(io.vavr.control.Option.of(BranchesPanel.ID)))
                 .openPopup(new net.vanfleteren.jazygit.feature.help.HelpPopup(
                         BranchesPanel.ID, io.vavr.collection.List.empty()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(withPopup, "help"))) {
@@ -162,7 +164,7 @@ class ContentPanelTest {
         DiffOptions ignoring = DiffOptions.DEFAULT.withIgnoreWhitespace(true);
         Model dirty = Update.update(TestModels.loaded(), new LoadMsg.StatusLoaded(TestModels.DIRTY))
                 .model()
-                .withDiffOptions(ignoring);
+                .mapPreferences(preferences -> preferences.withDiffOptions(ignoring));
         List<FileEntry> files = TestModels.DIRTY.files();
         Model selected =
                 Update.update(dirty, new SelectionMsg.FilesSelected(files)).model();
@@ -186,7 +188,8 @@ class ContentPanelTest {
         DiffOptions ignoring = DiffOptions.DEFAULT.withIgnoreWhitespace(true);
         Model selected = Update.update(
                         Update.update(
-                                        TestModels.loaded().withDiffOptions(ignoring),
+                                        TestModels.loaded()
+                                                .mapPreferences(preferences -> preferences.withDiffOptions(ignoring)),
                                         new SelectionMsg.CommitSelected(new Sha("aaaa")))
                                 .model(),
                         new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), ignoring, DiffText.of("")))
@@ -204,12 +207,12 @@ class ContentPanelTest {
     void withADivergenceOpenTheBranchesShowItsHighlightedCommitWhichCanBeFocused() throws Exception {
         Commit ours = plain("cccc");
         Model diverged = TestModels.loaded()
-                .withDivergence(io.vavr.control.Option.of(new DivergenceView(
+                .mapRepoView(repoView -> repoView.withDivergence(io.vavr.control.Option.of(new DivergenceView(
                         new Branch.Name("main"),
                         new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main"))),
                         DivergenceView.Against.UPSTREAM,
                         new Loadable.Loaded<>(new Divergence(List.of(ours), 1, List.of(), 0)),
-                        io.vavr.control.Option.none())));
+                        io.vavr.control.Option.none()))));
         Model selected = Update.update(
                         Update.update(diverged, new SelectionMsg.DivergenceCommitSelected(new Sha("cccc")))
                                 .model(),
@@ -232,12 +235,12 @@ class ContentPanelTest {
     @Test
     void aDivergenceWithoutCommitsSaysTheBranchesHaveNotDiverged() throws Exception {
         Model diverged = TestModels.loaded()
-                .withDivergence(io.vavr.control.Option.of(new DivergenceView(
+                .mapRepoView(repoView -> repoView.withDivergence(io.vavr.control.Option.of(new DivergenceView(
                         new Branch.Name("main"),
                         new BranchRef.Local(new Branch.Name("feature")),
                         DivergenceView.Against.BASE,
                         new Loadable.Loaded<>(new Divergence(List.of(), 0, List.of(), 0)),
-                        io.vavr.control.Option.none())));
+                        io.vavr.control.Option.none()))));
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> content.render(diverged, BranchesPanel.ID))) {
