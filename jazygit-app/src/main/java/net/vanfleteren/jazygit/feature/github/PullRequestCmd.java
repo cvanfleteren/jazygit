@@ -165,6 +165,43 @@ public sealed interface PullRequestCmd extends Cmd {
     }
 
     /**
+     * Turns pull request {@code number}, from {@code branch}, into a draft when {@code draft}, else marks it
+     * ready for review.
+     */
+    record SetDraft(Branch.Name branch, int number, boolean draft) implements PullRequestCmd, OperationCmd {
+
+        @Override
+        public Operation operation() {
+            return draft ? Operation.DRAFT_PR : Operation.READY_PR;
+        }
+
+        @Override
+        public Option<String> subject() {
+            return Option.of(branch.value());
+        }
+
+        @Override
+        public Option<BranchRef> busyBranch() {
+            return Option.of(new BranchRef.Local(branch));
+        }
+
+        @Override
+        public boolean changesGitHub() {
+            return true;
+        }
+
+        @Override
+        public Msg run(Env env) {
+            return env.gitHub().setDraft(number, draft).fold(this::failedWith, this::succeeded);
+        }
+
+        @Override
+        public Msg succeeded(List<ExecutedCommand> commands) {
+            return new PullRequestMsg.DraftSet(this, commands);
+        }
+    }
+
+    /**
      * Reads the details of pull request {@code number}, which the user is waiting for.
      */
     record LoadPullRequestDetails(int number) implements PullRequestCmd {

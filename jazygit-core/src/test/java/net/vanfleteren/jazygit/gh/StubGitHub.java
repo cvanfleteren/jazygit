@@ -99,4 +99,9 @@ public interface StubGitHub extends GitHub {
     default Either<GhFailure, List<ExecutedCommand>> closePullRequest(int number) {
         return Either.right(List.of(ExecutedCommand.of("gh", "pr", "close", String.valueOf(number))));
     }
+
+    @Override
+    default Either<GhFailure, List<ExecutedCommand>> setDraft(int number, boolean draft) {
+        return Either.right(List.of(CliGitHub.draftCommand(number, draft).executed()));
+    }
 }

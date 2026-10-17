@@ -32,7 +32,8 @@ import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
 /**
  * Popup showing the pull request of a branch: its title, state, branches, review and checks, as labelled
- * rows, and under them what can be done with it: open it in the browser, merge it or close it. Whether it is
+ * rows, and under them what can be done with it: open it in the browser, mark it ready for review or turn it
+ * into a draft, merge it or close it. Whether it is
  * open lives in the {@link Model}.
  */
 public final class PullRequestDialog implements PopupView {
@@ -75,6 +76,15 @@ public final class PullRequestDialog implements PopupView {
                 ID,
                 List.of(
                         new Choice<>('o', "dialog.pullRequest.open", PullRequestMsg.OpenConfirmed::new),
+                        // Before merging, which a draft has to wait for.
+                        new Choice<>(
+                                'd',
+                                popup -> Messages.get(
+                                        popup.draft().getOrElse(false)
+                                                ? "dialog.pullRequest.ready"
+                                                : "dialog.pullRequest.toDraft"),
+                                PullRequestMsg.DraftChosen::new,
+                                PullRequestUpdate::draftChangeable),
                         merge('m', "dialog.pullRequest.merge", MergeMethod.MERGE),
                         merge('s', "dialog.pullRequest.squash", MergeMethod.SQUASH),
                         merge('r', "dialog.pullRequest.rebase", MergeMethod.REBASE),

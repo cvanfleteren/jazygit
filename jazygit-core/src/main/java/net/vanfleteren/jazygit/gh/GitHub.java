@@ -62,6 +62,11 @@ public interface GitHub {
     Either<GhFailure, List<ExecutedCommand>> closePullRequest(int number);
 
     /**
+     * Turns pull request {@code number} into a draft when {@code draft}, else marks it ready for review.
+     */
+    Either<GhFailure, List<ExecutedCommand>> setDraft(int number, boolean draft);
+
+    /**
      * A pull request that was created.
      *
      * @param number   its number, if gh said where it is
