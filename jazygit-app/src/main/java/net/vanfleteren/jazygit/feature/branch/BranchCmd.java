@@ -18,6 +18,28 @@ import net.vanfleteren.jazygit.state.Operation;
  */
 public sealed interface BranchCmd extends GitOperationCmd {
 
+    Operation CHECKOUT =
+            Operation.of("log.title.checkout", "error.checkout.failed").waitingForUnfinished();
+
+    Operation NEW_BRANCH = Operation.of("log.title.newBranch", "error.newBranch.failed");
+
+    Operation RENAME_BRANCH = Operation.of("log.title.renameBranch", "error.renameBranch.failed");
+
+    Operation DELETE_BRANCH = Operation.of("log.title.deleteBranch", "error.deleteBranch.failed");
+
+    Operation PUSH = Operation.of("log.title.push", "error.push.failed").labelledWhenBusy("branches.busy.push");
+
+    Operation PULL = Operation.of("log.title.pull", "error.pull.failed")
+            .waitingForUnfinished()
+            .labelledWhenBusy("branches.busy.pull");
+
+    Operation FAST_FORWARD =
+            Operation.of("log.title.fastForward", "error.fastForward.failed").labelledWhenBusy("branches.busy.pull");
+
+    Operation REBASE = Operation.of("log.title.rebase", "error.rebase.failed").waitingForUnfinished();
+
+    Operation MERGE = Operation.of("log.title.merge", "error.merge.failed").waitingForUnfinished();
+
     /**
      * The branch the command acts on.
      */
@@ -68,7 +90,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.DELETE_BRANCH;
+            return DELETE_BRANCH;
         }
 
         @Override
@@ -89,7 +111,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.NEW_BRANCH;
+            return NEW_BRANCH;
         }
 
         @Override
@@ -105,7 +127,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.RENAME_BRANCH;
+            return RENAME_BRANCH;
         }
 
         @Override
@@ -121,7 +143,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.DELETE_BRANCH;
+            return DELETE_BRANCH;
         }
 
         @Override
@@ -137,7 +159,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.MERGE;
+            return MERGE;
         }
 
         @Override
@@ -153,7 +175,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.REBASE;
+            return REBASE;
         }
 
         @Override
@@ -170,7 +192,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.CHECKOUT;
+            return CHECKOUT;
         }
 
         @Override
@@ -198,7 +220,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.CHECKOUT;
+            return CHECKOUT;
         }
 
         @Override
@@ -219,7 +241,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.CHECKOUT;
+            return CHECKOUT;
         }
 
         @Override
@@ -240,7 +262,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.PUSH;
+            return PUSH;
         }
 
         @Override
@@ -261,7 +283,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.PUSH;
+            return PUSH;
         }
 
         @Override
@@ -277,7 +299,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.PULL;
+            return PULL;
         }
 
         @Override
@@ -293,7 +315,7 @@ public sealed interface BranchCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.FAST_FORWARD;
+            return FAST_FORWARD;
         }
 
         @Override

@@ -12,9 +12,11 @@ import net.vanfleteren.jazygit.state.OperationCmd;
  */
 public record BrowseCmd(RemoteBranch branch) implements OperationCmd {
 
+    public static final Operation BROWSE = Operation.of("log.title.browse", "error.browse.failed");
+
     @Override
     public Operation operation() {
-        return Operation.BROWSE;
+        return BROWSE;
     }
 
     @Override

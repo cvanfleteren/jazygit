@@ -13,11 +13,15 @@ import net.vanfleteren.jazygit.state.Operation;
  */
 public sealed interface StageCmd extends GitOperationCmd {
 
+    Operation STAGE = Operation.of("log.title.stage", "error.staging.failed");
+
+    Operation UNSTAGE = Operation.of("log.title.unstage", "error.staging.failed");
+
     record Stage(List<String> paths) implements StageCmd {
 
         @Override
         public Operation operation() {
-            return Operation.STAGE;
+            return STAGE;
         }
 
         @Override
@@ -34,7 +38,7 @@ public sealed interface StageCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.UNSTAGE;
+            return UNSTAGE;
         }
 
         @Override

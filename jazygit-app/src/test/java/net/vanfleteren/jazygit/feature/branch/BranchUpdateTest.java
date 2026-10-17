@@ -122,9 +122,7 @@ class BranchUpdateTest {
 
     @Test
     void aBusyBranchIsNotCheckedOutMergedRebasedOrBranchedFrom() {
-        Model pushing = tracking()
-                .withBusyBranch(
-                        new BranchRef.Local(new Branch.Name("feature")), net.vanfleteren.jazygit.state.Operation.PUSH);
+        Model pushing = tracking().withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), BranchCmd.PUSH);
 
         assertEquals(
                 List.of(),
@@ -438,8 +436,7 @@ class BranchUpdateTest {
         assertEquals(List.of(new BranchCmd.Pull(new Branch.Name("main"))), next.cmds());
         assertEquals(Option.none(), next.model().outcome().error());
         assertEquals(
-                io.vavr.collection.HashMap.of(
-                        new BranchRef.Local(new Branch.Name("main")), net.vanfleteren.jazygit.state.Operation.PULL),
+                io.vavr.collection.HashMap.of(new BranchRef.Local(new Branch.Name("main")), BranchCmd.PULL),
                 next.model().jobs().busy());
         // Not pulled again while it is being pulled.
         assertEquals(
@@ -606,8 +603,7 @@ class BranchUpdateTest {
 
     @Test
     void theCheckedOutBranchCanBeRenamedButNotABusyOrUnknownOne() {
-        Model pushing = loaded().withBusyBranch(
-                        new BranchRef.Local(new Branch.Name("feature")), net.vanfleteren.jazygit.state.Operation.PUSH);
+        Model pushing = loaded().withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), BranchCmd.PUSH);
 
         assertEquals(
                 Option.of(new RenameBranchPopup(new Branch.Name("main"))),

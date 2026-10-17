@@ -9,6 +9,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
+import net.vanfleteren.jazygit.feature.branch.BranchCmd;
 import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
@@ -74,7 +75,7 @@ class WorktreeUpdateTest {
 
     @Test
     void theCheckedOutBranchAndUnknownOrBusyBranchesGetNoWorktree() {
-        Model busy = model().withBusyBranch(new BranchRef.Local(FEATURE), Operation.PUSH);
+        Model busy = model().withBusyBranch(new BranchRef.Local(FEATURE), BranchCmd.PUSH);
 
         assertEquals(
                 Option.none(),
@@ -116,7 +117,7 @@ class WorktreeUpdateTest {
         assertEquals(List.of(new WorktreeCmd.Add(FEATURE, "~/elsewhere")), confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());
         assertEquals(
-                Option.of(Operation.ADD_WORKTREE),
+                Option.of(WorktreeCmd.ADD_WORKTREE),
                 confirmed.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
     }
 

@@ -76,8 +76,8 @@ public final class WorktreeUpdate {
         return model.idleBranch(branch)
                 .filter(known -> !known.current())
                 .map(known -> known.worktreeLocation()
-                        .map(worktree -> Next.of(
-                                model.fail(new AppError.CheckedOutElsewhere(Operation.ADD_WORKTREE, branch, worktree))))
+                        .map(worktree -> Next.of(model.fail(
+                                new AppError.CheckedOutElsewhere(WorktreeCmd.ADD_WORKTREE, branch, worktree))))
                         .getOrElse(() -> Update.ask(
                                 model,
                                 new NewWorktreePopup(

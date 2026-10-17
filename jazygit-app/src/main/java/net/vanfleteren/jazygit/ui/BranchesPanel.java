@@ -220,16 +220,7 @@ public class BranchesPanel {
      * talk to its remote.
      */
     static Option<String> busyLabel(Operation operation) {
-        return switch (operation) {
-            case PUSH -> Option.of(Messages.get("branches.busy.push"));
-            case PULL, FAST_FORWARD -> Option.of(Messages.get("branches.busy.pull"));
-            case CREATE_PR -> Option.of(Messages.get("branches.busy.pullRequest"));
-            case MERGE_PR -> Option.of(Messages.get("branches.busy.mergePr"));
-            case CLOSE_PR -> Option.of(Messages.get("branches.busy.closePr"));
-            case READY_PR -> Option.of(Messages.get("branches.busy.readyPr"));
-            case DRAFT_PR -> Option.of(Messages.get("branches.busy.draftPr"));
-            default -> Option.none();
-        };
+        return operation.busyKey().map(Messages::get);
     }
 
     /**

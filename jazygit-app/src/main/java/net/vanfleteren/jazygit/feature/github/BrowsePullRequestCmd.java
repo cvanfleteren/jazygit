@@ -14,7 +14,7 @@ public record BrowsePullRequestCmd(PullRequestSummary pullRequest) implements Op
 
     @Override
     public Operation operation() {
-        return Operation.OPEN_PR;
+        return PullRequestCmd.OPEN_PR;
     }
 
     @Override

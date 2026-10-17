@@ -11,11 +11,29 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.Operation;
 
 /**
  * Commands that talk to GitHub, through gh.
  */
 public sealed interface PullRequestCmd extends Cmd {
+
+    Operation CREATE_PR =
+            Operation.of("log.title.createPr", "error.createPr.failed").labelledWhenBusy("branches.busy.pullRequest");
+
+    Operation OPEN_PR = Operation.of("log.title.openPr", "error.openPr.failed");
+
+    Operation MERGE_PR =
+            Operation.of("log.title.mergePr", "error.mergePr.failed").labelledWhenBusy("branches.busy.mergePr");
+
+    Operation CLOSE_PR =
+            Operation.of("log.title.closePr", "error.closePr.failed").labelledWhenBusy("branches.busy.closePr");
+
+    Operation READY_PR =
+            Operation.of("log.title.readyPr", "error.readyPr.failed").labelledWhenBusy("branches.busy.readyPr");
+
+    Operation DRAFT_PR =
+            Operation.of("log.title.draftPr", "error.draftPr.failed").labelledWhenBusy("branches.busy.draftPr");
 
     /**
      * An operation that ends pull request {@code number} of {@code branch}: its branch is busy meanwhile, and
@@ -79,7 +97,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Operation operation() {
-            return Operation.CREATE_PR;
+            return CREATE_PR;
         }
 
         @Override
@@ -118,7 +136,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Operation operation() {
-            return Operation.OPEN_PR;
+            return OPEN_PR;
         }
 
         @Override
@@ -139,7 +157,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Operation operation() {
-            return Operation.MERGE_PR;
+            return MERGE_PR;
         }
 
         @Override
@@ -155,7 +173,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Operation operation() {
-            return Operation.CLOSE_PR;
+            return CLOSE_PR;
         }
 
         @Override
@@ -172,7 +190,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Operation operation() {
-            return draft ? Operation.DRAFT_PR : Operation.READY_PR;
+            return draft ? DRAFT_PR : READY_PR;
         }
 
         @Override

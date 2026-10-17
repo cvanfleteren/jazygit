@@ -19,7 +19,6 @@ import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.OperationMsg;
 import net.vanfleteren.jazygit.state.Repositories;
 import net.vanfleteren.jazygit.state.Terminal;
@@ -81,7 +80,7 @@ class EditUpdateTest {
 
         AppError.OperationFailed failed = assertInstanceOf(
                 AppError.OperationFailed.class, next.model().outcome().error().get());
-        assertEquals(Operation.EDIT, failed.operation());
+        assertEquals(EditCmd.EDIT, failed.operation());
         assertTrue(next.model().outcome().commandLog().nonEmpty());
     }
 

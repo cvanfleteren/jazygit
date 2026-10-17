@@ -104,8 +104,8 @@ class FixupUpdateTest {
 
     @Test
     void aFixupIsLoggedAndReportedAsOne() {
-        assertEquals(Operation.FIXUP, new CommitCmd.Squash(new Sha("aaaa"), SquashMode.FIXUP).operation());
-        assertEquals(Operation.FIXUP, new CommitCmd.Squash(new Sha("aaaa"), SquashMode.FIXUP_KEEP_MESSAGE).operation());
+        assertEquals(CommitCmd.FIXUP, new CommitCmd.Squash(new Sha("aaaa"), SquashMode.FIXUP).operation());
+        assertEquals(CommitCmd.FIXUP, new CommitCmd.Squash(new Sha("aaaa"), SquashMode.FIXUP_KEEP_MESSAGE).operation());
 
         Next next = Update.update(
                 TestModels.loaded(), failed(new CommitCmd.Squash(new Sha("aaaa"), SquashMode.FIXUP), "conflict"));

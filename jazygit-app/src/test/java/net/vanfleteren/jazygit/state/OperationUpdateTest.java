@@ -41,12 +41,12 @@ class OperationUpdateTest {
     @Test
     void aSuccessLogsItsCommandsReleasesItsBranchClearsTheErrorAndReadsTheRepositoryAgain() {
         Model pushing = TestModels.withCheckoutError(loaded(), "foo", "boom")
-                .withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), Operation.PUSH);
+                .withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), BranchCmd.PUSH);
 
         Next next = Update.update(pushing, succeeded(PUSH, "git push origin feature"));
 
         assertEquals(
-                List.of(new LogEntry(Operation.PUSH, executed("git push origin feature"))),
+                List.of(new LogEntry(BranchCmd.PUSH, executed("git push origin feature"))),
                 next.model().outcome().commandLog());
         assertEquals(HashSet.empty(), next.model().jobs().busy().keySet());
         assertEquals(Option.none(), next.model().outcome().error());
@@ -82,15 +82,15 @@ class OperationUpdateTest {
                 new GitError.CommandFailed("rejected", 1), executed("git push origin feature"), Option.none());
 
         Next next = Update.update(
-                loaded().withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), Operation.PUSH),
+                loaded().withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), BranchCmd.PUSH),
                 new OperationMsg.Failed(PUSH, failure));
 
         assertEquals(
-                List.of(new LogEntry(Operation.PUSH, executed("git push origin feature"))),
+                List.of(new LogEntry(BranchCmd.PUSH, executed("git push origin feature"))),
                 next.model().outcome().commandLog());
         assertEquals(HashSet.empty(), next.model().jobs().busy().keySet());
         assertEquals(
-                Option.of(new AppError.OperationFailed(Operation.PUSH, Option.of("feature"), failure)),
+                Option.of(new AppError.OperationFailed(BranchCmd.PUSH, Option.of("feature"), failure)),
                 next.model().outcome().error());
         assertEquals(Option.of("Pushing branch feature failed: rejected"), errorText(next.model()));
     }
@@ -183,7 +183,7 @@ class OperationUpdateTest {
                 new OperationMsg.Stopped(MERGE, executed("git merge feature"), notice));
 
         assertEquals(
-                List.of(new LogEntry(Operation.MERGE, executed("git merge feature"))),
+                List.of(new LogEntry(BranchCmd.MERGE, executed("git merge feature"))),
                 next.model().outcome().commandLog());
         assertEquals(Option.none(), next.model().outcome().error());
         assertEquals(Option.of(notice), next.model().outcome().notice());

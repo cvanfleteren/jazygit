@@ -59,7 +59,7 @@ class DeleteRemoteBranchUpdateTest {
         assertEquals(List.of(new DeleteRemoteBranch(ORIGIN_FEATURE)), confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());
         assertEquals(
-                Option.of(Operation.DELETE_BRANCH),
+                Option.of(BranchCmd.DELETE_BRANCH),
                 confirmed.model().jobs().busy().get(new BranchRef.Remote(ORIGIN_FEATURE)));
         assertEquals(
                 Option.none(),

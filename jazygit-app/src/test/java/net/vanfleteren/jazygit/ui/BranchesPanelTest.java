@@ -6,6 +6,7 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.branch.BranchCmd;
 import net.vanfleteren.jazygit.feature.branch.BranchesTabMsg;
 import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.NewBranchMsg;
@@ -224,8 +225,8 @@ class BranchesPanelTest {
 
     @Test
     void aBranchBeingPushedOrPulledShowsWhatIsDoneLeftOfTheSpinner() throws Exception {
-        Model busy = before.withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), Operation.PUSH)
-                .withBusyBranch(new BranchRef.Local(new Branch.Name("main")), Operation.PULL);
+        Model busy = before.withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), BranchCmd.PUSH)
+                .withBusyBranch(new BranchRef.Local(new Branch.Name("main")), BranchCmd.PULL);
         String frame = net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(java.time.Instant.EPOCH);
         BranchesPanel panel = new BranchesPanel(
                 msg -> {}, tab -> {}, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
@@ -239,7 +240,7 @@ class BranchesPanelTest {
     @Test
     void aBranchBeingDeletedShowsOnlyTheSpinner() throws Exception {
         Model deleting =
-                before.withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), Operation.DELETE_BRANCH);
+                before.withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), BranchCmd.DELETE_BRANCH);
         String frame = net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(java.time.Instant.EPOCH);
         BranchesPanel panel = new BranchesPanel(
                 msg -> {}, tab -> {}, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
@@ -252,7 +253,7 @@ class BranchesPanelTest {
 
     @Test
     void aFastForwardIsShownAsAPull() {
-        assertEquals(BranchesPanel.busyLabel(Operation.PULL), BranchesPanel.busyLabel(Operation.FAST_FORWARD));
+        assertEquals(BranchesPanel.busyLabel(BranchCmd.PULL), BranchesPanel.busyLabel(BranchCmd.FAST_FORWARD));
     }
 
     @Test
