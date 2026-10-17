@@ -1,0 +1,43 @@
+package net.vanfleteren.jazygit.state.prs;
+
+import io.vavr.collection.List;
+import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Update;
+
+/**
+ * What happens on the pull requests screen.
+ */
+public sealed interface PrOverviewMsg extends Msg {
+
+    @Override
+    default Update.Next apply(Model model) {
+        return PrOverviewUpdate.update(model, this);
+    }
+
+    /**
+     * The user asked to show the other screen.
+     */
+    record Toggled() implements PrOverviewMsg {}
+
+    /**
+     * Periodic prompt to read the pull requests again, while they are shown.
+     */
+    record Tick() implements PrOverviewMsg {}
+
+    /**
+     * The user asked to read the pull requests again.
+     */
+    record Refresh() implements PrOverviewMsg {}
+
+    record RepositoryLoaded(List<PullRequestSummary> pullRequests) implements PrOverviewMsg {}
+
+    record RepositoryLoadFailed(Failure failure) implements PrOverviewMsg {}
+
+    /**
+     * The user highlighted {@code pullRequest}.
+     */
+    record Highlighted(PullRequestSummary pullRequest) implements PrOverviewMsg {}
+}

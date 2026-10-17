@@ -7,6 +7,7 @@ import dev.tamboui.style.Style;
 import dev.tamboui.toolkit.app.ToolkitApp;
 import dev.tamboui.toolkit.app.ToolkitRunner;
 import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.toolkit.elements.Column;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.TuiConfig;
@@ -59,6 +60,7 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.settings.*;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.ui.*;
 import net.vanfleteren.jazygit.ui.widgets.*;
 
@@ -101,6 +103,8 @@ public class JazygitApp extends ToolkitApp {
     private final CommitsPanel commitsPanel =
             new CommitsPanel(dispatch, () -> openContent(CommitsPanel.ID), this::highlight);
     private final StashPanel stashPanel = new StashPanel(dispatch, this::highlight);
+    private final PullRequestsPanel pullRequestsPanel =
+            new PullRequestsPanel(dispatch, Clock.systemUTC(), this::highlight);
     // Every popup, with where the focus goes when it closes. At most one is open.
     private final List<PopupSlot> popups = List.of(
             new PopupSlot(new TextInputDialog<>(BranchDialogs.NEW_BRANCH, dispatch), JazygitApp::focusedPane),
@@ -125,7 +129,8 @@ public class JazygitApp extends ToolkitApp {
             new PopupSlot(
                     new ConfirmDialog<>(WorktreeDialogs.FORCE_REMOVE_WORKTREE, dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new PickDialog<>(PullRequestDialogs.BASE, dispatch), model -> BranchesPanel.ID),
-            new PopupSlot(new PullRequestDialog(dispatch), model -> BranchesPanel.ID),
+            // A pull request is shown from the branches, or from the pull requests screen.
+            new PopupSlot(new PullRequestDialog(dispatch), JazygitApp::focusedPane),
             new PopupSlot(new NewPullRequestDialog(dispatch), model -> BranchesPanel.ID),
             new PopupSlot(new ConfirmDialog<>(CommitDialogs.AMEND, dispatch), model -> FilesPanel.ID),
             new PopupSlot(new ConfirmDialog<>(StashDialogs.DROP, dispatch), model -> StashPanel.ID),
@@ -155,6 +160,8 @@ public class JazygitApp extends ToolkitApp {
     // How the terminal is set up, and the backend that hands it over to an editor, once the app is started.
     private TuiConfig config = TuiConfig.defaults();
     private Option<HandOverBackend> backend = Option.none();
+    // The screen the last frame showed; when the model shows another one, its pane gets the focus back.
+    private Screen shownScreen = Screen.REPOSITORY;
 
     /**
      * @param env           what the repository the app starts in is read with; it opens other repositories in
@@ -230,10 +237,13 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
-     * Where the focus was outside the popups, which a popup opened from anywhere gives it back to.
+     * Where the focus was outside the popups on the screen shown, which a popup opened from anywhere gives it back
+     * to, and which the screen gets back when it is shown again.
      */
     private static String focusedPane(Model model) {
-        return model.focusedPane().getOrElse(FilesPanel.ID);
+        return model.shownPane()
+                .getOrElse(
+                        () -> model.screen() == Screen.PULL_REQUESTS ? PullRequestsPanel.REPOSITORY_ID : FilesPanel.ID);
     }
 
     /**
@@ -282,7 +292,7 @@ public class JazygitApp extends ToolkitApp {
     private String activePane(Model model, String focusedId) {
         return Option.of(focusedId)
                 .filter(id -> popups.forAll(slot -> !slot.view().ids().contains(id)))
-                .orElse(model.focusedPane())
+                .orElse(model.shownPane())
                 .map(id -> contentPanel.paneOfArea(id).getOrElse(id))
                 .getOrNull();
     }
@@ -329,6 +339,8 @@ public class JazygitApp extends ToolkitApp {
                 () -> runner.runOnRenderThread(() -> dispatch.accept(new Msg.Tick())), REFRESH_INTERVAL);
         runner.scheduleRepeating(
                 () -> runner.runOnRenderThread(() -> dispatch.accept(new FetchMsg.Tick())), FETCH_INTERVAL);
+        runner.scheduleRepeating(
+                () -> runner.runOnRenderThread(() -> dispatch.accept(new PrOverviewMsg.Tick())), FETCH_INTERVAL);
     }
 
     /**
@@ -427,31 +439,16 @@ public class JazygitApp extends ToolkitApp {
         Model model = runtime.map(running -> running.program().model())
                 .getOrElse(() -> Model.initial(env.git().repositoryName()));
         Theme.activate(styleEngine, model.theme());
+        if (model.screen() != shownScreen) {
+            shownScreen = model.screen();
+            runner().focusManager().setFocus(focusedPane(model));
+        }
         String focusedId = runner().focusManager().focusedId();
         String activeId = activePane(model, focusedId);
-        Panel branches = branchesPanel.render(model, focusedId, activeId);
-        // The highlighted branch lives in the list widget, which knows it once rendered; the
-        // content panel then shows the log of that branch.
-        branchesPanel.selectionChange(model).forEach(dispatch);
-        commitsPanel.selectionChange(model).forEach(dispatch);
-        filesPanel.selectionChange(model).forEach(dispatch);
-        Panel stash = stashPanel.render(model, focusedId, activeId);
-        Option<Integer> stashHeight = stashHeight(model);
         var panes = row(
-                column(
-                                StatusPanel.render(model),
-                                filesPanel.render(model, focusedId, activeId).percent(FILES_PERCENT),
-                                branches.percent(BRANCHES_PERCENT),
-                                // With the stash sized to its content, the commits take what is left, which is
-                                // their share when the stash is as tall as it may get.
-                                stashHeight.isDefined()
-                                        ? commitsPanel
-                                                .render(model, focusedId, activeId)
-                                                .fill()
-                                        : commitsPanel
-                                                .render(model, focusedId, activeId)
-                                                .percent(COMMITS_PERCENT),
-                                stashHeight.map(stash::length).getOrElse(stash::fill))
+                (model.screen() == Screen.PULL_REQUESTS
+                                ? pullRequestPanes(model, focusedId, activeId)
+                                : repositoryPanes(model, focusedId, activeId))
                         .percent(30),
                 column(
                                 contentPanel.render(model, focusedId).fill(),
@@ -466,7 +463,7 @@ public class JazygitApp extends ToolkitApp {
         // in the model, as a closing popup gives it back there.
         Option<String> focus = Option.of(focusedId);
         focus.filter(id -> shown.forAll(p -> !p.ids().contains(id)))
-                .filter(id -> !model.focusedPane().contains(id))
+                .filter(id -> !model.shownPane().contains(id))
                 .map(Msg.Focused::new)
                 .forEach(dispatch);
         Option<Shown> open = shown.find(p -> p.element().isDefined());
@@ -483,6 +480,39 @@ public class JazygitApp extends ToolkitApp {
                 .<Element>map(d -> stack(new Dimmed(layout, Theme.backdrop(styleEngine)), d))
                 .getOrElse(layout);
         return new SelectedTextColoured(screen, Theme.selectedText(styleEngine));
+    }
+
+    /**
+     * The left column of the repository screen: the status, the files, the branches, the commits and the stashes.
+     */
+    private Column repositoryPanes(Model model, String focusedId, String activeId) {
+        Panel branches = branchesPanel.render(model, focusedId, activeId);
+        // The highlighted branch lives in the list widget, which knows it once rendered; the
+        // content panel then shows the log of that branch.
+        branchesPanel.selectionChange(model).forEach(dispatch);
+        commitsPanel.selectionChange(model).forEach(dispatch);
+        filesPanel.selectionChange(model).forEach(dispatch);
+        Panel stash = stashPanel.render(model, focusedId, activeId);
+        Option<Integer> stashHeight = stashHeight(model);
+        return column(
+                StatusPanel.render(model),
+                filesPanel.render(model, focusedId, activeId).percent(FILES_PERCENT),
+                branches.percent(BRANCHES_PERCENT),
+                // With the stash sized to its content, the commits take what is left, which is
+                // their share when the stash is as tall as it may get.
+                stashHeight.isDefined()
+                        ? commitsPanel.render(model, focusedId, activeId).fill()
+                        : commitsPanel.render(model, focusedId, activeId).percent(COMMITS_PERCENT),
+                stashHeight.map(stash::length).getOrElse(stash::fill));
+    }
+
+    /**
+     * The left column of the pull requests screen: the status, and the pull requests of the repository.
+     */
+    private Column pullRequestPanes(Model model, String focusedId, String activeId) {
+        Panel repository = pullRequestsPanel.render(model, focusedId, activeId);
+        pullRequestsPanel.selectionChange(model).forEach(dispatch);
+        return column(StatusPanel.render(model), repository.fill());
     }
 
     /**

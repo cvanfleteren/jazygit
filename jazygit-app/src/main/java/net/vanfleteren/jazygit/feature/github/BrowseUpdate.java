@@ -26,6 +26,8 @@ public final class BrowseUpdate {
                         .getOrElse(() -> Next.of(model));
             case BrowseMsg.RemoteRequested(RemoteBranch branch) ->
                 Update.start(model.clearError(), new BrowseCmd(branch));
+            case BrowseMsg.PullRequestRequested(var pullRequest) ->
+                Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
         };
     }
 

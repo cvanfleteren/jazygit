@@ -4,6 +4,8 @@ import static dev.tamboui.toolkit.Toolkit.panel;
 import static dev.tamboui.toolkit.Toolkit.row;
 import static dev.tamboui.toolkit.Toolkit.text;
 
+import dev.tamboui.text.Line;
+import dev.tamboui.text.Span;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.elements.TextElement;
@@ -18,10 +20,11 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Screen;
 
 /**
  * Top-left panel showing the repository name and the current branch, and what the repository is in the middle
- * of. It is display-only and does not take part in focus cycling.
+ * of, under the names of the screens. It is display-only and does not take part in focus cycling.
  */
 public final class StatusPanel {
 
@@ -31,6 +34,7 @@ public final class StatusPanel {
     public static final int HEIGHT = 3;
 
     private static final String SEPARATOR = " · ";
+    private static final String TITLE_SEPARATOR = " │ ";
 
     private StatusPanel() {}
 
@@ -52,15 +56,33 @@ public final class StatusPanel {
                         .map(label -> SEPARATOR)
                         .getOrElse("");
         TextElement repository = text(line);
-        return panel(
-                        Messages.get("panel.status.title"),
-                        unfinished
-                                // The row would share its width out evenly, cutting off what is in progress.
-                                .<StyledElement<?>>map(label -> row(
-                                        repository.length(line.length()),
-                                        text(label).addClass(Theme.Classes.IN_PROGRESS)))
-                                .getOrElse(repository))
+        return panel(unfinished
+                        // The row would share its width out evenly, cutting off what is in progress.
+                        .<StyledElement<?>>map(label -> row(
+                                repository.length(line.length()), text(label).addClass(Theme.Classes.IN_PROGRESS)))
+                        .getOrElse(repository))
+                .title(title(model.screen()))
                 .length(HEIGHT);
+    }
+
+    /**
+     * The title of the panel: the names of the screens, the one shown in bold and underlined, the others dimmed,
+     * as the lists in the title of the branches pane.
+     */
+    static Line title(Screen shown) {
+        List<Span> names = List.of(Screen.values())
+                .map(screen -> screen == shown
+                        ? screenName(screen).bold().underlined()
+                        : screenName(screen).dim());
+        return Line.from(names.intersperse(Span.raw(TITLE_SEPARATOR)).toJavaList());
+    }
+
+    private static Span screenName(Screen screen) {
+        return Span.raw(Messages.get(
+                switch (screen) {
+                    case REPOSITORY -> "screen.repository";
+                    case PULL_REQUESTS -> "screen.pullRequests";
+                }));
     }
 
     /**

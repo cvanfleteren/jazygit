@@ -30,10 +30,12 @@ import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Preview;
+import net.vanfleteren.jazygit.state.Screen;
 
 /**
  * The right-hand content panel: it always mirrors whichever left pane currently has focus,
- * showing the file diff, the branch log, or the commit diff/body.
+ * showing the file diff, the branch log, or the commit diff/body; on the pull requests screen, the highlighted
+ * pull request.
  */
 public final class ContentPanel {
 
@@ -264,6 +266,9 @@ public final class ContentPanel {
                 .forEach(area -> area.restyle(model.theme()));
         boolean inContent = focusableAreas.exists(area -> area.id().equals(focusedId));
         focusableAreas.forEach(area -> area.tabbable(inContent));
+        if (model.screen() == Screen.PULL_REQUESTS) {
+            return pullRequestView(model);
+        }
         boolean onPane = inContent || LEFT_PANES.contains(focusedId);
         String pane = onPane ? focusedId : model.focusedPane().getOrElse(focusedId);
         if (BranchesPanel.ID.equals(pane) || DIVERGENCE_AREA_ID.equals(pane)) {
@@ -276,6 +281,32 @@ public final class ContentPanel {
             return commitDiffView(model);
         }
         return fileDiffView(model);
+    }
+
+    /**
+     * The pull request highlighted on the pull requests screen: its number and title, who opened it and the
+     * branch it merges from.
+     */
+    private static StyledElement<?> pullRequestView(Model model) {
+        String title = Messages.get("panel.pullRequest.title");
+        return model.prOverview()
+                .highlighted()
+                .<StyledElement<?>>map(pr -> panel(
+                        title,
+                        column(
+                                text(Messages.get("content.pullRequest.title", String.valueOf(pr.number()), pr.title()))
+                                        .bold()
+                                        .length(1),
+                                text(Messages.get("content.pullRequest.author", pr.author()))
+                                        .length(1),
+                                text(Messages.get(
+                                                pr.fromFork()
+                                                        ? "content.pullRequest.fork"
+                                                        : "content.pullRequest.branch",
+                                                pr.headBranch()))
+                                        .length(1),
+                                text(pr.url()).addClass(Theme.Classes.DIM).length(1))))
+                .getOrElse(() -> dimPanel(title, Messages.get("content.noPullRequest")));
     }
 
     /**

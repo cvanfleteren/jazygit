@@ -7,11 +7,13 @@ import net.vanfleteren.jazygit.feature.fetch.FetchUpdate;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.*;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
+import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.prs.PrOverviewUpdate;
 
 /**
  * Creating, opening and showing the pull requests of the branches.
@@ -23,6 +25,8 @@ public final class PullRequestUpdate {
     public static Next update(Model model, PullRequestMsg msg) {
         return switch (msg) {
             case PullRequestMsg.Requested(Branch.Name branch) -> requested(model, branch);
+            case PullRequestMsg.SummaryRequested(var pullRequest) ->
+                show(model, new Branch.Name(pullRequest.headBranch()), pullRequest.pullRequest());
             case PullRequestMsg.BaseChosen(Branch.Name base) ->
                 model.popup(BasePopup.class)
                         .flatMap(popup -> model.branch(popup.branch()))
@@ -110,13 +114,13 @@ public final class PullRequestUpdate {
             // Done like any operation, which reads the pull requests again. The dialog shows the change at once.
             case PullRequestMsg.DraftSet(SetDraft cmd, var commands) -> {
                 Next done = OperationUpdate.succeeded(model, cmd, commands);
-                yield new Next(
+                yield PrOverviewUpdate.reloadIfShown(new Next(
                         done.model()
                                 .popup(PullRequestPopup.class)
                                 .filter(popup -> popup.pullRequest().number() == cmd.number())
                                 .map(popup -> done.model().openPopup(popup.withDraft(cmd.draft())))
                                 .getOrElse(done.model()),
-                        done.cmds());
+                        done.cmds()));
             }
             case PullRequestMsg.Ended(ChangingCmd cmd, var commands) -> {
                 // Done like any operation. The pull request is no longer open, which reading them again confirms;
@@ -127,7 +131,8 @@ public final class PullRequestUpdate {
                                 .pullRequests()
                                 .map(open -> open.filterValues(pr -> pr.number() != cmd.number())));
                 // A read that is still running may have missed it, and would show it open again.
-                yield FetchUpdate.requested(PullRequestsUpdate.loadAnyway(new Next(ended, done.cmds())));
+                yield PrOverviewUpdate.reloadIfShown(
+                        FetchUpdate.requested(PullRequestsUpdate.loadAnyway(new Next(ended, done.cmds()))));
             }
             case PullRequestMsg.InfoClosed() -> Next.of(model.withoutPopup(PullRequestPopup.class));
         };
@@ -159,10 +164,7 @@ public final class PullRequestUpdate {
     private static Next requested(Model model, Branch.Name branch) {
         return model.idleBranch(branch)
                 .map(known -> model.pullRequest(known)
-                        .map(pr -> Next.of(
-                                Update.ask(model, PullRequestPopup.loading(branch, pr))
-                                        .model(),
-                                new LoadPullRequestDetails(pr.number())))
+                        .map(pr -> show(model, branch, pr))
                         // Without the pull requests it is unknown whether there is one to open.
                         .getOrElse(() -> model.pullRequestsFailure().isDefined()
                                         || model.pullRequests().isEmpty()
@@ -173,6 +175,15 @@ public final class PullRequestUpdate {
                                         ? Next.of(model.fail(new AppError.NotPushed(branch)))
                                         : Update.ask(model, new BasePopup(branch, bases(model, branch)))))
                 .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * Shows {@code pullRequest}, from {@code branch}, reading what there is to know about it.
+     */
+    private static Next show(Model model, Branch.Name branch, PullRequest pullRequest) {
+        return Next.of(
+                Update.ask(model, PullRequestPopup.loading(branch, pullRequest)).model(),
+                new LoadPullRequestDetails(pullRequest.number()));
     }
 
     /**

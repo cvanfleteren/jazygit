@@ -39,6 +39,11 @@ public interface StubGitHub extends GitHub {
         return Either.right(List.empty());
     }
 
+    @Override
+    default Either<GhError, List<PullRequestSummary>> repositoryPullRequests() {
+        return Either.right(List.empty());
+    }
+
     /**
      * A repository {@code owner/repo} without branches.
      */
@@ -82,6 +87,11 @@ public interface StubGitHub extends GitHub {
     @Override
     default Either<GhFailure, List<ExecutedCommand>> openPullRequest(int number) {
         return Either.right(List.of(ExecutedCommand.of("gh", "pr", "view", String.valueOf(number), "--web")));
+    }
+
+    @Override
+    default Either<GhFailure, List<ExecutedCommand>> openPullRequest(String url) {
+        return Either.right(List.of(ExecutedCommand.of("gh", "pr", "view", url, "--web")));
     }
 
     @Override
