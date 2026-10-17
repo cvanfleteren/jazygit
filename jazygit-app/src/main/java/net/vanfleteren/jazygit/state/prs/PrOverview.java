@@ -2,12 +2,15 @@ package net.vanfleteren.jazygit.state.prs;
 
 import io.vavr.collection.HashSet;
 import io.vavr.collection.Set;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Cmd;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Preview;
 
@@ -48,10 +51,16 @@ public record PrOverview(
             Option.none());
 
     /**
-     * Whether {@code pullRequest} is of the repository, wherever it is listed; unknown until the pull requests of
-     * the repository were read.
+     * Whether {@code pullRequest} is of the repository, wherever it is listed, once that is known: it is known once
+     * the pull requests of the repository were read, and why it is not known otherwise, as they are still being
+     * read or could not be.
      */
-    public boolean ofThisRepository(PullRequestSummary pullRequest) {
-        return repositoryName.exists(name -> name.equalsIgnoreCase(pullRequest.repository()));
+    public Either<AppError, Boolean> ofThisRepository(PullRequestSummary pullRequest) {
+        return repositoryName
+                .map(name -> Either.<AppError, Boolean>right(name.equalsIgnoreCase(pullRequest.repository())))
+                .getOrElse(() -> Either.left(
+                        repository instanceof Loadable.Failed<PullRequestList>(Failure failure)
+                                ? new AppError.PullRequestsUnavailable(failure)
+                                : new AppError.PullRequestsNotRead()));
     }
 }

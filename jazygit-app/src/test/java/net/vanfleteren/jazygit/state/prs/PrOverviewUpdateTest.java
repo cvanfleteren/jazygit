@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.MyPullRequests;
@@ -15,6 +16,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.model.RepositoryPullRequests;
+import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -99,9 +101,20 @@ class PrOverviewUpdateTest {
 
         assertEquals(new Loadable.Loaded<>(new PullRequestList(List.of(NEW, OLD), 2)), read.repository());
         assertEquals(HashSet.of(new LoadMyPullRequests()), read.reading());
-        assertTrue(read.ofThisRepository(NEW));
-        assertFalse(read.ofThisRepository(ELSEWHERE));
-        assertFalse(PrOverview.INITIAL.ofThisRepository(NEW));
+        assertEquals(Either.right(true), read.ofThisRepository(NEW));
+        assertEquals(Either.right(false), read.ofThisRepository(ELSEWHERE));
+    }
+
+    @Test
+    void whetherAPullRequestIsOfTheRepositoryIsNotKnownWhileItsPullRequestsAreReadOrWhenThatFailed() {
+        var failure = refused("gh: not logged in");
+
+        assertEquals(Either.left(new AppError.PullRequestsNotRead()), PrOverview.INITIAL.ofThisRepository(NEW));
+        assertEquals(
+                Either.left(new AppError.PullRequestsUnavailable(failure)),
+                PrOverview.INITIAL
+                        .withRepository(new Loadable.Failed<>(failure))
+                        .ofThisRepository(NEW));
     }
 
     @Test

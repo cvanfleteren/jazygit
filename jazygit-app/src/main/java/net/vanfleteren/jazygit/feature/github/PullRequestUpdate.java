@@ -27,9 +27,10 @@ public final class PullRequestUpdate {
     public static Next update(Model model, PullRequestMsg msg) {
         return switch (msg) {
             case PullRequestMsg.Requested(Branch.Name branch) -> requested(model, branch);
-            // A pull request of another repository is opened in the browser, as gh acts on this one.
+            // A pull request of another repository is opened in the browser, as gh acts on this one; so is one
+            // while it is not known yet which repository this is, which does no harm.
             case PullRequestMsg.SummaryRequested(var pullRequest) ->
-                model.prOverview().ofThisRepository(pullRequest)
+                model.prOverview().ofThisRepository(pullRequest).getOrElse(false)
                         ? show(model, new Branch.Name(pullRequest.headBranch()), pullRequest.pullRequest())
                         : Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
             case PullRequestMsg.BaseChosen(Branch.Name base) ->
@@ -185,16 +186,21 @@ public final class PullRequestUpdate {
 
     /**
      * Checks out {@code pullRequest} in place, if it is of the repository and the working tree has no changes to
-     * bring along; untracked files do not count, as git only stops for those that are in the way.
+     * bring along; untracked files do not count, as git only stops for those that are in the way. Until it is
+     * known which repository this is, the user is told why it is not known yet.
      */
     private static Next checkout(Model model, PullRequestSummary pullRequest) {
         String name = pullRequest.repository() + "#" + pullRequest.number();
         boolean changed = Update.files(model).exists(file -> file.type() != ChangeType.UNTRACKED);
-        return !model.prOverview().ofThisRepository(pullRequest)
-                ? Next.of(model.fail(new AppError.OtherRepository(name)))
-                : changed
-                        ? Next.of(model.fail(new AppError.ChangesBeforeCheckout(name)))
-                        : Update.start(model.clearError(), new CheckoutPullRequestCmd(pullRequest));
+        return model.prOverview()
+                .ofThisRepository(pullRequest)
+                .fold(
+                        unknown -> Next.of(model.fail(unknown)),
+                        ofThis -> !ofThis
+                                ? Next.of(model.fail(new AppError.OtherRepository(name)))
+                                : changed
+                                        ? Next.of(model.fail(new AppError.ChangesBeforeCheckout(name)))
+                                        : Update.start(model.clearError(), new CheckoutPullRequestCmd(pullRequest)));
     }
 
     /**
