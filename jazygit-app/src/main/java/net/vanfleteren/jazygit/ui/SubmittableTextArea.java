@@ -11,6 +11,7 @@ import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.ui.widgets.BottomTitle;
 
 /**
  * A text area where Ctrl+Enter submits instead of inserting a newline, where the terminal tells it from Enter; most
@@ -77,23 +78,6 @@ public final class SubmittableTextArea extends StyledElement<SubmittableTextArea
             rendering.registerElement(this, area);
         }
         this.area.render(frame, area, context);
-        bottomTitle.forEach(title -> drawBottomTitle(frame, area, title));
-    }
-
-    /**
-     * Draws {@code title} on the bottom border of {@code area}, styled as the title in its top border, which the
-     * text area drew just now; a title that does not fit is left out.
-     */
-    private static void drawBottomTitle(Frame frame, Rect area, String title) {
-        int x = area.right() - 1 - title.length();
-        int y = area.bottom() - 1;
-        if (area.height() >= 2 && x > area.x()) {
-            frame.buffer()
-                    .setString(
-                            x,
-                            y,
-                            title,
-                            frame.buffer().get(area.x() + 1, area.y()).style());
-        }
+        bottomTitle.forEach(title -> BottomTitle.draw(frame, area, title));
     }
 }

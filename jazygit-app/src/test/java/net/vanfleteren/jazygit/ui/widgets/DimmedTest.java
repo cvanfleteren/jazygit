@@ -9,10 +9,12 @@ import dev.tamboui.style.Color;
 import dev.tamboui.style.Modifier;
 import dev.tamboui.style.Style;
 import dev.tamboui.terminal.Frame;
+import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.RenderContext;
 import io.vavr.control.Option;
 import java.util.Optional;
+import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.Theme.Backdrop;
 import org.junit.jupiter.api.Test;
 
@@ -33,6 +35,20 @@ class DimmedTest {
 
     private static boolean dim(Buffer buffer, int x, int y) {
         return buffer.get(x, y).style().addModifiers().contains(Modifier.DIM);
+    }
+
+    @Test
+    void whatIsBehindTakesNoFocus() throws Exception {
+        Element screen = stack(
+                new Dimmed(panel(text("files")).id("files").focusable(), TERMINAL_DEFAULT),
+                panel(text("popup")).id("popup").focusable());
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> screen)) {
+            SettledPilot.of(runner).pause();
+
+            assertEquals(
+                    java.util.List.of("popup"), runner.runner().focusManager().focusOrder());
+        }
     }
 
     @Test

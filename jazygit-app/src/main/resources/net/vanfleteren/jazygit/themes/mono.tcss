@@ -25,7 +25,7 @@ Panel, TextInputElement, TextAreaElement, RichTextAreaElement {
     border-color: $border;
 }
 
-Panel.focused, Panel.checkbox:focus {
+Panel.focused {
     border-color: $accent;
 }
 
@@ -84,3 +84,6 @@ Span.sha { color: $sha; }
 Span.tag { color: $good; }
 Span.copied { color: $bright; text-style: bold; }
 Span.bold { color: $bright; text-style: bold; }
+
+/* The draft box of a new pull request, when it has the focus: reversed, as a cursor. */
+.checkbox:focus { text-style: reversed; }
