@@ -634,4 +634,15 @@ class PullRequestUpdateTest {
                 Option.of(new AppError.OtherRepository("other/repo#9")),
                 refused.model().error());
     }
+
+    @Test
+    void aPullRequestIsNotCheckedOutWhileItIsNotKnownWhichRepositoryThisIs() {
+        Model reading = Update.update(loaded(), new LoadMsg.StatusLoaded(CLEAN)).model();
+
+        Next refused = Update.update(reading, new PullRequestMsg.CheckoutRequested(summary("owner/repo")));
+
+        assertEquals(List.empty(), refused.cmds());
+        assertEquals(
+                Option.of(new AppError.PullRequestsNotRead()), refused.model().error());
+    }
 }

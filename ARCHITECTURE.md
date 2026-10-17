@@ -223,7 +223,8 @@ request. The design and the steps still to come are in `prs.md`.
 - **Checking out**: space checks out a pull request of the repository in place, from a fork too, with
   `gh pr checkout <n>` (`Operation.CHECKOUT_PR`), which waits until the repository is in the middle of nothing. It is
   refused up front when the working tree has changes, untracked files apart (`AppError.ChangesBeforeCheckout`), and
-  for a pull request of another repository (`AppError.OtherRepository`).
+  for a pull request of another repository (`AppError.OtherRepository`). Which repository this is is known once its
+  pull requests were read; until then, checking out says they are still being read, or why they could not be.
 - Each screen keeps where its focus was: `Msg.Focused` goes to `Model.focusedPane` or `PrOverview.focusedPane`,
   whichever screen is shown (`Model.shownPane`), and `JazygitApp` gives it back when the screen is shown again.
 
