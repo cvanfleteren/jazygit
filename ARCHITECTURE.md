@@ -204,11 +204,17 @@ alone (`PrOverviewMsg`, `PrOverviewUpdate`); only switching screens, and whether
 It lives in `state`, next to the other reads of GitHub, so the GitHub feature can read it again after changing a pull
 request. The design and the steps still to come are in `prs.md`.
 
-- **This repo** lists the open pull requests of the repository, forks included, the most recently updated first:
-  `gh pr list --json ...`, a read of its own, apart from the one for the branches pane. They are read when the screen
-  is shown, every minute while it is shown (`PrOverviewMsg.Tick`, from `JazygitApp`), with `r`, and after a pull
-  request was merged, closed or turned into a draft. Failing to read them again keeps the ones read.
-- `o` shows the pull request dialog, as for a branch; `O` opens it in the browser (`gh pr view <url> --web`).
+- **Review requested** and **My PRs** list the open pull requests that ask for the user's review and the ones they
+  opened, in any repository: one `gh api graphql` with two searches (`review-requested:@me`, `author:@me`), at most
+  50 each; the title says how many match when there are more. **This repo** lists the open pull requests of the
+  repository, forks included, at most 100: another `gh api graphql`, apart from the read for the branches pane, which
+  also tells which repository it is (`PrOverview.repositoryName`). The three share one fragment and one parser
+  (`CliGitHub.parseLists`), with the checks of the last commit of each.
+- They are read when the screen is shown, every minute while it is shown (`PrOverviewMsg.Tick`, from `JazygitApp`),
+  with `r`, and after a pull request was merged, closed or turned into a draft. Failing to read them again keeps the
+  ones read. gh runs as the account of the repository, so the lists are that account's.
+- `o` shows the pull request dialog, as for a branch, for a pull request of the repository, wherever it is listed;
+  one of another repository opens in the browser, as `O` does for any (`gh pr view <url> --web`).
 - Each screen keeps where its focus was: `Msg.Focused` goes to `Model.focusedPane` or `PrOverview.focusedPane`,
   whichever screen is shown (`Model.shownPane`), and `JazygitApp` gives it back when the screen is shown again.
 

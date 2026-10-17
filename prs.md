@@ -17,8 +17,8 @@ attention now?") and browsing the repo's PRs second.
 
 ## Data
 
-- **This repo**: its own `gh pr list` call, with title, author and update time, keeping PRs from forks. It is
-  separate from the call that feeds the PR symbols in the branches pane.
+- **This repo**: its own `gh api graphql` call (at most 100), keeping PRs from forks, which also tells the
+  repository's owner/name. It is separate from the call that feeds the PR symbols in the branches pane.
 - **Review requested** and **My PRs**: one `gh api graphql` search, which also gives the checks and review state.
   At most 50 per list, with a dimmed "showing 50 of N" line when there are more.
 - Loaded when the tab is shown, again on the one-minute fetch tick while it is shown, and with a refresh key.
@@ -62,7 +62,7 @@ The tab is always there. Each pane says why it is empty: no `gh`, not logged in,
 Each its own commit, with tests.
 
 1. [x] The tab, `ctrl+p`, the layout, and "This repo" with the PR dialog and the browser.
-2. [ ] The two cross-repo lists, from the graphql search.
+2. [x] The two cross-repo lists, from the graphql search.
 3. [ ] The preview: description plus diff.
 4. [ ] Checkout.
 

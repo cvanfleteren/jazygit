@@ -540,7 +540,11 @@ class PullRequestUpdateTest {
                 Instant.EPOCH,
                 "https://github.com/owner/repo/pull/9");
 
-        Next shown = Update.update(loaded(), new PullRequestMsg.SummaryRequested(summary));
+        Model ofOwnerRepo = loaded().withPrOverview(
+                        net.vanfleteren.jazygit.state.prs.PrOverview.INITIAL.withRepositoryName(
+                                Option.of("owner/repo")));
+
+        Next shown = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryRequested(summary));
 
         assertEquals(
                 Option.of(new PullRequestPopup(
@@ -549,5 +553,29 @@ class PullRequestUpdateTest {
                         Option.none())),
                 shown.model().popup(PullRequestPopup.class));
         assertEquals(List.of(new LoadPullRequestDetails(9)), shown.cmds());
+    }
+
+    @Test
+    void aPullRequestOfAnotherRepositoryOpensInTheBrowser() {
+        PullRequestSummary elsewhere = new PullRequestSummary(
+                "other/repo",
+                3,
+                "Elsewhere",
+                "carol",
+                "fix",
+                false,
+                false,
+                Checks.NONE,
+                Review.NONE,
+                Instant.EPOCH,
+                "https://github.com/other/repo/pull/3");
+        Model ofOwnerRepo = loaded().withPrOverview(
+                        net.vanfleteren.jazygit.state.prs.PrOverview.INITIAL.withRepositoryName(
+                                Option.of("owner/repo")));
+
+        Next opened = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryRequested(elsewhere));
+
+        assertEquals(Option.none(), opened.model().popup());
+        assertEquals(List.of(new BrowsePullRequestCmd(elsewhere)), opened.cmds());
     }
 }

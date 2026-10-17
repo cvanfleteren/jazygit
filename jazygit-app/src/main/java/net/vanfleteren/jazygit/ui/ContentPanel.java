@@ -294,7 +294,11 @@ public final class ContentPanel {
                 .<StyledElement<?>>map(pr -> panel(
                         title,
                         column(
-                                text(Messages.get("content.pullRequest.title", String.valueOf(pr.number()), pr.title()))
+                                text(Messages.get(
+                                                "content.pullRequest.title",
+                                                pr.repository(),
+                                                String.valueOf(pr.number()),
+                                                pr.title()))
                                         .bold()
                                         .length(1),
                                 text(Messages.get("content.pullRequest.author", pr.author()))

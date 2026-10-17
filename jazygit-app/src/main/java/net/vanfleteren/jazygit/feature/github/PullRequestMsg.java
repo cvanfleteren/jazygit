@@ -27,7 +27,8 @@ public sealed interface PullRequestMsg extends Msg {
     record Requested(Branch.Name branch) implements PullRequestMsg {}
 
     /**
-     * The user asked for a pull request of the repository listed on the pull requests screen, to show it.
+     * The user asked for a pull request listed on the pull requests screen: to show it when it is of the
+     * repository, else to open it in the browser.
      */
     record SummaryRequested(PullRequestSummary pullRequest) implements PullRequestMsg {}
 

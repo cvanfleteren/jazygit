@@ -7,68 +7,113 @@ import io.vavr.control.Option;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import net.vanfleteren.jazygit.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
+import net.vanfleteren.jazygit.keys.Keymap.Scope;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.prs.PrOverview;
 import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
+import net.vanfleteren.jazygit.ui.widgets.Pane;
 
 /**
- * A pane of the pull requests screen, listing pull requests: how long ago each changed, its number, title and
- * author, and how its checks and review are doing. Drafts are dimmed.
+ * A pane of the pull requests screen, listing pull requests: how long ago each changed, the name of its repository
+ * when the list is of any, its number, how its checks and review are doing, its title and its author. Drafts are dimmed.
+ * When more match than were read, the title says how many.
  */
 public final class PullRequestsPanel {
 
     /**
-     * The id of the pane listing the pull requests of the repository.
+     * The id of the pane listing the pull requests that ask for the user's review, the first one.
      */
-    public static final String REPOSITORY_ID = Scopes.PR_REPOSITORY.id();
+    public static final String REVIEW_REQUESTED_ID = Scopes.PR_REVIEW_REQUESTED.id();
 
-    private final LoadableList<List<PullRequestSummary>> list;
+    private final Scope<PullRequestSummary> scope;
+    private final Function<PrOverview, Loadable<PullRequestList>> pullRequests;
+    private final LoadableList<PullRequestList> list;
     private final Keymap keymap = Keymap.standard();
     private final Clock clock;
 
     /**
-     * @param dispatch receives the messages for the user's actions, on the render thread
-     * @param clock    tells how long ago the pull requests changed
+     * @param scope        the pane, whose id and keys it has
+     * @param pullRequests what it lists
+     * @param dispatch     receives the messages for the user's actions, on the render thread
+     * @param clock        tells how long ago the pull requests changed
+     * @param highlights   how the highlighted pull request is shown, also when the pane is not in use
      */
-    public PullRequestsPanel(Consumer<Msg> dispatch, Clock clock) {
-        this(dispatch, clock, Theme.Highlights.DEFAULT);
-    }
-
-    /**
-     * @param highlights how the highlighted pull request is shown, also when the pane is not in use
-     */
-    public PullRequestsPanel(Consumer<Msg> dispatch, Clock clock, Theme.Highlights highlights) {
+    private PullRequestsPanel(
+            Scope<PullRequestSummary> scope,
+            Function<PrOverview, Loadable<PullRequestList>> pullRequests,
+            boolean anyRepository,
+            Consumer<Msg> dispatch,
+            Clock clock,
+            Theme.Highlights highlights) {
+        this.scope = scope;
+        this.pullRequests = pullRequests;
         this.clock = clock;
         list = new LoadableList<>(
-                Messages.get(Scopes.PR_REPOSITORY.titleKey()),
-                REPOSITORY_ID,
-                pullRequests -> pullRequests.map(this::row),
-                LoadableList.Reselect.following(pr -> pr.repository() + "#" + pr.number()),
+                Messages.get(scope.titleKey()),
+                scope.id(),
+                read -> read.pullRequests().map(pr -> row(pr, since(pr), anyRepository)),
+                (previous, next, selected) -> LoadableList.Reselect.<PullRequestSummary, String>following(
+                                pr -> pr.repository() + "#" + pr.number())
+                        .apply(previous.pullRequests(), next.pullRequests(), selected),
                 highlights);
         list.whenEmpty(Messages.get("prs.empty"));
         list.onKey(event -> event.code() == KeyCode.ENTER
                 ? Option.none()
-                : PaneKeys.sending(keymap.handle(Scopes.PR_REPOSITORY, event, selected()), dispatch));
+                : PaneKeys.sending(keymap.handle(scope, event, selected()), dispatch));
     }
 
-    private LoadableList.Row row(PullRequestSummary pr) {
-        return row(pr, Duration.between(pr.updatedAt(), clock.instant()));
+    /**
+     * The panes of the pull requests screen, top to bottom: the ones that ask for the user's review, the ones they
+     * opened, and the ones of the repository.
+     */
+    public static List<PullRequestsPanel> all(Consumer<Msg> dispatch, Clock clock, Theme.Highlights highlights) {
+        return List.of(
+                new PullRequestsPanel(
+                        Scopes.PR_REVIEW_REQUESTED, PrOverview::reviewRequested, true, dispatch, clock, highlights),
+                new PullRequestsPanel(Scopes.PR_AUTHORED, PrOverview::authored, true, dispatch, clock, highlights),
+                new PullRequestsPanel(
+                        Scopes.PR_REPOSITORY, PrOverview::repository, false, dispatch, clock, highlights));
+    }
+
+    /**
+     * The pane that gets the focus when the screen is shown the first time: the first one that lists any.
+     */
+    public static String firstPane(PrOverview overview) {
+        return List.of(Scopes.PR_REVIEW_REQUESTED.id(), Scopes.PR_AUTHORED.id(), Scopes.PR_REPOSITORY.id())
+                .zip(List.of(overview.reviewRequested(), overview.authored(), overview.repository()))
+                .find(pane ->
+                        pane._2.toOption().exists(read -> !read.pullRequests().isEmpty()))
+                .map(pane -> pane._1)
+                .getOrElse(REVIEW_REQUESTED_ID);
+    }
+
+    private Duration since(PullRequestSummary pr) {
+        return Duration.between(pr.updatedAt(), clock.instant());
     }
 
     /**
      * The row of {@code pr}, which changed {@code since} ago.
+     *
+     * @param anyRepository whether the list is of any repository, so the row names the one of {@code pr}, without its
+     *                      owner to keep the row short; the content panel shows it in full
      */
-    static LoadableList.Row row(PullRequestSummary pr, Duration since) {
+    static LoadableList.Row row(PullRequestSummary pr, Duration since, boolean anyRepository) {
         String plain = pr.draft() ? Theme.Classes.DIM : "";
+        String repository =
+                anyRepository ? pr.repository().substring(pr.repository().indexOf('/') + 1) : "";
         return new LoadableList.Row(List.of(
                         Option.of(LoadableList.Seg.of("%4s ".formatted(TimeText.age(since)))),
                         Option.of(LoadableList.Seg.styled(
-                                "#" + pr.number(), pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST)),
+                                repository + "#" + pr.number(),
+                                pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST)),
                         PullRequestSymbols.checks(pr.checks()).map(PullRequestsPanel::symbol),
                         PullRequestSymbols.review(pr.review()).map(PullRequestsPanel::symbol),
                         Option.of(seg(" " + pr.title(), plain)),
@@ -85,22 +130,42 @@ public final class PullRequestsPanel {
     }
 
     /**
+     * The title of the pane: its name, and how many were read of how many match when that is not all of them.
+     */
+    static String title(String name, Loadable<PullRequestList> pullRequests) {
+        return pullRequests
+                .toOption()
+                .filter(PullRequestList::truncated)
+                .map(read -> Messages.get(
+                        "prs.truncated",
+                        name,
+                        String.valueOf(read.pullRequests().size()),
+                        String.valueOf(read.total())))
+                .getOrElse(name);
+    }
+
+    public String id() {
+        return scope.id();
+    }
+
+    /**
      * @param focusedId the id of the element that has the focus
      * @param activeId  the id of the left pane in use, whose highlighted row shows
      */
     public Panel render(Model model, String focusedId, String activeId) {
-        return render(model.prOverview().repository(), focusedId, activeId);
-    }
-
-    Panel render(Loadable<List<PullRequestSummary>> pullRequests, String focusedId, String activeId) {
-        return list.render(pullRequests, REPOSITORY_ID.equals(focusedId), REPOSITORY_ID.equals(activeId));
+        Loadable<PullRequestList> shown = pullRequests.apply(model.prOverview());
+        return list.render(
+                shown,
+                id().equals(focusedId),
+                id().equals(activeId),
+                Pane.title(title(Messages.get(scope.titleKey()), shown)));
     }
 
     /**
      * The highlighted pull request, once they are shown.
      */
     public Option<PullRequestSummary> selected() {
-        return list.selected(pullRequests -> pullRequests);
+        return list.selected(PullRequestList::pullRequests);
     }
 
     /**

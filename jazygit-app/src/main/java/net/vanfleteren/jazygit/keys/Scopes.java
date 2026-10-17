@@ -40,10 +40,24 @@ public final class Scopes {
     public static final Scope<Stash> STASH = new Scope<>("stash", "panel.stash.title");
 
     /**
+     * The selected pull request that asks for the user's review, on the pull requests screen.
+     */
+    public static final Scope<PullRequestSummary> PR_REVIEW_REQUESTED =
+            new Scope<>("prReviewRequested", "panel.prReviewRequested.title");
+    /**
+     * The selected pull request the user opened, on the pull requests screen.
+     */
+    public static final Scope<PullRequestSummary> PR_AUTHORED = new Scope<>("prAuthored", "panel.prAuthored.title");
+    /**
      * The selected pull request of the repository, on the pull requests screen.
      */
     public static final Scope<PullRequestSummary> PR_REPOSITORY =
             new Scope<>("prRepository", "panel.prRepository.title");
+    /**
+     * The panes of the pull requests screen, top to bottom.
+     */
+    public static final io.vavr.collection.List<Scope<PullRequestSummary>> PULL_REQUESTS =
+            io.vavr.collection.List.of(PR_REVIEW_REQUESTED, PR_AUTHORED, PR_REPOSITORY);
 
     private Scopes() {}
 }

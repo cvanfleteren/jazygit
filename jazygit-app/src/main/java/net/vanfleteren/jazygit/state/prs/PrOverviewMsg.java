@@ -1,7 +1,8 @@
 package net.vanfleteren.jazygit.state.prs;
 
-import io.vavr.collection.List;
+import net.vanfleteren.jazygit.gh.model.MyPullRequests;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.gh.model.RepositoryPullRequests;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -32,9 +33,13 @@ public sealed interface PrOverviewMsg extends Msg {
      */
     record Refresh() implements PrOverviewMsg {}
 
-    record RepositoryLoaded(List<PullRequestSummary> pullRequests) implements PrOverviewMsg {}
+    record RepositoryLoaded(RepositoryPullRequests pullRequests) implements PrOverviewMsg {}
 
     record RepositoryLoadFailed(Failure failure) implements PrOverviewMsg {}
+
+    record MineLoaded(MyPullRequests pullRequests) implements PrOverviewMsg {}
+
+    record MineLoadFailed(Failure failure) implements PrOverviewMsg {}
 
     /**
      * The user highlighted {@code pullRequest}.

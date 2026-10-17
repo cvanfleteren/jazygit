@@ -2,8 +2,11 @@ package net.vanfleteren.jazygit.gh;
 
 import static net.vanfleteren.jazygit.gh.GhCommand.gh;
 
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -47,20 +50,50 @@ public final class CliGitHub implements GitHub {
             ([.statusCheckRollup[]? | %s] | join(","))] | @tsv""".formatted(CHECK_STATE);
     private static final int FIELD_COUNT = 5;
 
-    private static final String SUMMARY_FIELDS = "number,title,author,headRefName,isDraft,isCrossRepository,"
-            + "reviewDecision,statusCheckRollup,updatedAt,url";
     /*
-     * One line per pull request, forks included: number, title, author, head branch, whether it is a draft and
-     * from a fork, its review decision, the states of its checks, when it was updated and its URL, separated by
-     * tabs.
+     * What a list of pull requests shows of each, in GraphQL. The checks are those on its last commit.
      */
-    private static final String SUMMARY_JQ = """
-            .[] | [(.number | tostring), .title, (.author.login // ""), .headRefName, (.isDraft | tostring), \
-            (.isCrossRepository | tostring), (.reviewDecision // ""), \
-            ([.statusCheckRollup[]? | %s] | join(",")), .updatedAt, .url] | @tsv""".formatted(CHECK_STATE);
-    private static final int SUMMARY_FIELD_COUNT = 10;
-    // The repository in the URL of a pull request, as owner/name.
-    private static final Pattern PULL_REQUEST_URL = Pattern.compile("^https?://[^/]+/([^/]+/[^/]+)/pull/\\d+$");
+    private static final String SUMMARY_FRAGMENT = """
+            fragment summary on PullRequest { number title url updatedAt isDraft isCrossRepository headRefName \
+            author { login } repository { nameWithOwner } reviewDecision \
+            commits(last: 1) { nodes { commit { statusCheckRollup { state } } } } }""";
+    /*
+     * The open pull requests of the repository, the most recently updated first. gh fills in the repository of the
+     * working tree for {owner} and {repo}.
+     */
+    private static final String REPOSITORY_PRS_QUERY = """
+            query($owner: String!, $name: String!) { repository(owner: $owner, name: $name) { nameWithOwner \
+            pullRequests(states: OPEN, first: 100, orderBy: {field: UPDATED_AT, direction: DESC}) \
+            { totalCount nodes { ...summary } } } } """ + SUMMARY_FRAGMENT;
+    private static final String MY_PRS_LIMIT = "50";
+    private static final String MY_PRS_SEARCH = "is:pr is:open archived:false sort:updated-desc ";
+    /*
+     * The open pull requests that ask for the review of the account gh runs as, and the ones it opened, in any
+     * repository, the most recently updated first.
+     */
+    private static final String MY_PRS_QUERY = """
+            query($reviewRequested: String!, $authored: String!, $limit: Int!) { \
+            reviewRequested: search(type: ISSUE, query: $reviewRequested, first: $limit) \
+            { issueCount nodes { ...summary } } \
+            authored: search(type: ISSUE, query: $authored, first: $limit) { issueCount nodes { ...summary } } } \
+            """ + SUMMARY_FRAGMENT;
+    // A pull request of SUMMARY_FRAGMENT as the fields of a line, in jq.
+    private static final String SUMMARY_FIELDS_JQ = """
+            def summary: [.repository.nameWithOwner, (.number | tostring), .title, (.author.login // ""), \
+            .headRefName, (.isDraft | tostring), (.isCrossRepository | tostring), (.reviewDecision // ""), \
+            (.commits.nodes[0].commit.statusCheckRollup.state // ""), .updatedAt, .url]; """;
+    /*
+     * Tab separated lines, each starting with what it is: a "list" line per list, with its name, the repository
+     * it is of (empty for a search) and how many match, and a "pr" line per pull request, with the name of its
+     * list and the fields of SUMMARY_FIELDS_JQ.
+     */
+    private static final String REPOSITORY_PRS_JQ = SUMMARY_FIELDS_JQ + """
+            .data.repository | (["list", "repository", .nameWithOwner, (.pullRequests.totalCount | tostring)] \
+            | @tsv), (.pullRequests.nodes[] | (["pr", "repository"] + summary) | @tsv)""";
+    private static final String MY_PRS_JQ = SUMMARY_FIELDS_JQ + """
+            .data | to_entries[] | .key as $list | (["list", $list, "", (.value.issueCount | tostring)] | @tsv), \
+            (.value.nodes[] | select(.number != null) | (["pr", $list] + summary) | @tsv)""";
+    private static final int SUMMARY_LINE_FIELDS = 13;
 
     private static final String DETAIL_FIELDS = """
             number,title,author,state,isDraft,headRefName,baseRefName,createdAt,\
@@ -226,41 +259,50 @@ public final class CliGitHub implements GitHub {
     }
 
     /**
-     * Parses the lines the jq filter of {@link #repositoryPullRequests()} prints.
+     * Parses the lines {@link #REPOSITORY_PRS_JQ} and {@link #MY_PRS_JQ} print: the lists by their names, each with
+     * the repository it is of, empty for a search.
      */
-    static Either<UnexpectedOutput, List<PullRequestSummary>> parseSummaries(String raw) {
-        return List.of(raw.split("\\R"))
+    static Either<UnexpectedOutput, Map<String, Tuple2<String, PullRequestList>>> parseLists(String raw) {
+        List<List<String>> lines = List.of(raw.split("\\R"))
                 .filter(line -> !line.isBlank())
-                .map(line -> summary(List.of(line.split("\t", -1)).map(CliGitHub::unescape))
-                        .toEither(() -> new UnexpectedOutput(line)))
-                .transform(Either::sequenceRight)
-                .map(List::ofAll);
+                .map(line -> List.of(line.split("\t", -1)).map(CliGitHub::unescape));
+        Option<List<String>> unknown = lines.find(fields -> !(fields.size() == 4
+                        && fields.head().equals("list")
+                        && Try.of(() -> Integer.parseInt(fields.get(3))).isSuccess()
+                || fields.size() == SUMMARY_LINE_FIELDS
+                        && fields.head().equals("pr")
+                        && summary(fields.drop(2)).isDefined()));
+        if (unknown.isDefined()) {
+            return Either.left(new UnexpectedOutput(unknown.get().mkString("\t")));
+        }
+        Map<String, List<PullRequestSummary>> byList = lines.filter(
+                        fields -> fields.head().equals("pr"))
+                .groupBy(fields -> fields.get(1))
+                .mapValues(prs -> prs.flatMap(fields -> summary(fields.drop(2))));
+        return Either.right(lines.filter(fields -> fields.head().equals("list"))
+                .toLinkedMap(fields -> Tuple.of(
+                        fields.get(1),
+                        Tuple.of(
+                                fields.get(2),
+                                new PullRequestList(
+                                        byList.get(fields.get(1)).getOrElse(List.empty()),
+                                        Integer.parseInt(fields.get(3)))))));
     }
 
     private static Option<PullRequestSummary> summary(List<String> f) {
-        return Option.when(f.size() == SUMMARY_FIELD_COUNT, f)
-                .flatMap(fields -> repository(fields.get(9))
-                        .flatMap(repository -> Try.of(() -> new PullRequestSummary(
-                                        repository,
-                                        Integer.parseInt(fields.get(0)),
-                                        fields.get(1),
-                                        fields.get(2),
-                                        fields.get(3),
-                                        fields.get(4).equals("true"),
-                                        fields.get(5).equals("true"),
-                                        checks(List.of(fields.get(7).split(",")).filter(state -> !state.isEmpty())),
-                                        review(fields.get(6)),
-                                        Instant.parse(fields.get(8)),
-                                        fields.get(9)))
-                                .toOption()));
-    }
-
-    /**
-     * The repository of the pull request at {@code url}, as {@code owner/name}.
-     */
-    static Option<String> repository(String url) {
-        Matcher matcher = PULL_REQUEST_URL.matcher(url);
-        return Option.when(matcher.matches(), () -> matcher.group(1));
+        return Try.of(() -> new PullRequestSummary(
+                        f.get(0),
+                        Integer.parseInt(f.get(1)),
+                        f.get(2),
+                        f.get(3),
+                        f.get(4),
+                        f.get(5).equals("true"),
+                        f.get(6).equals("true"),
+                        checks(List.of(f.get(8)).filter(state -> !state.isEmpty())),
+                        review(f.get(7)),
+                        Instant.parse(f.get(9)),
+                        f.get(10)))
+                .toOption();
     }
 
     /**
@@ -417,10 +459,46 @@ public final class CliGitHub implements GitHub {
     }
 
     @Override
-    public Either<GhError, List<PullRequestSummary>> repositoryPullRequests() {
+    public Either<GhError, RepositoryPullRequests> repositoryPullRequests() {
         return process.read(
-                gh("pr", "list", "--state", "open", "--limit", LIMIT, "--json", SUMMARY_FIELDS, "--jq", SUMMARY_JQ),
-                CliGitHub::parseSummaries);
+                gh(
+                        "api",
+                        "graphql",
+                        "-F",
+                        "owner={owner}",
+                        "-F",
+                        "name={repo}",
+                        "-f",
+                        "query=" + REPOSITORY_PRS_QUERY,
+                        "--jq",
+                        REPOSITORY_PRS_JQ),
+                raw -> parseLists(raw)
+                        .flatMap(lists -> lists.get("repository")
+                                .map(list -> new RepositoryPullRequests(list._1, list._2))
+                                .toEither(() -> new UnexpectedOutput(raw))));
+    }
+
+    @Override
+    public Either<GhError, MyPullRequests> myPullRequests() {
+        return process.read(
+                gh(
+                        "api",
+                        "graphql",
+                        "-f",
+                        "reviewRequested=" + MY_PRS_SEARCH + "review-requested:@me",
+                        "-f",
+                        "authored=" + MY_PRS_SEARCH + "author:@me",
+                        "-F",
+                        "limit=" + MY_PRS_LIMIT,
+                        "-f",
+                        "query=" + MY_PRS_QUERY,
+                        "--jq",
+                        MY_PRS_JQ),
+                raw -> parseLists(raw)
+                        .flatMap(lists -> lists.get("reviewRequested")
+                                .flatMap(review -> lists.get("authored")
+                                        .map(authored -> new MyPullRequests(review._2, authored._2)))
+                                .toEither(() -> new UnexpectedOutput(raw))));
     }
 
     @Override

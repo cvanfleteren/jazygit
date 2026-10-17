@@ -12,12 +12,12 @@ public final class BrowseKeys {
     private BrowseKeys() {}
 
     public static Keymap register(Keymap keys) {
-        return keys.add(Scopes.BRANCHES, Binding.onSelected("O", "help.branches.browse", BrowseMsg.Requested::new))
-                .add(
-                        Scopes.REMOTE_BRANCHES,
-                        Binding.onSelected("O", "help.branches.browse", BrowseMsg.RemoteRequested::new))
-                .add(
-                        Scopes.PR_REPOSITORY,
-                        Binding.onSelected("O", "help.prs.browse", BrowseMsg.PullRequestRequested::new));
+        return Scopes.PULL_REQUESTS.foldLeft(
+                keys.add(Scopes.BRANCHES, Binding.onSelected("O", "help.branches.browse", BrowseMsg.Requested::new))
+                        .add(
+                                Scopes.REMOTE_BRANCHES,
+                                Binding.onSelected("O", "help.branches.browse", BrowseMsg.RemoteRequested::new)),
+                (added, scope) -> added.add(
+                        scope, Binding.onSelected("O", "help.prs.browse", BrowseMsg.PullRequestRequested::new)));
     }
 }

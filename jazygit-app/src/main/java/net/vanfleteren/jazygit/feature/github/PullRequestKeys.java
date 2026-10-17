@@ -13,12 +13,13 @@ public final class PullRequestKeys {
     private PullRequestKeys() {}
 
     public static Keymap register(Keymap keys) {
-        return keys.add(
+        return Scopes.PULL_REQUESTS.foldLeft(
+                keys.add(
                         Scopes.BRANCHES,
-                        Binding.onSelected("o", "help.branches.pullRequest", PullRequestMsg.Requested::new))
-                .add(
-                        Scopes.PR_REPOSITORY,
+                        Binding.onSelected("o", "help.branches.pullRequest", PullRequestMsg.Requested::new)),
+                (added, scope) -> added.add(
+                        scope,
                         Binding.onSelected("o", "help.prs.show", PullRequestMsg.SummaryRequested::new),
-                        Binding.always("r", "help.prs.refresh", PrOverviewMsg.Refresh::new));
+                        Binding.always("r", "help.prs.refresh", PrOverviewMsg.Refresh::new)));
     }
 }
