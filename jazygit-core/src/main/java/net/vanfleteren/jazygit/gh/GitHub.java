@@ -38,6 +38,11 @@ public interface GitHub {
     Either<GhError, MyPullRequests> myPullRequests();
 
     /**
+     * What the pull request at {@code url}, of any repository, says and changes.
+     */
+    Either<GhError, PullRequestPreview> pullRequestPreview(String url);
+
+    /**
      * How the CI checks are doing on the tip of each branch of the repository.
      */
     Either<GhError, BranchChecks> branchChecks();

@@ -5,9 +5,11 @@ import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.PullRequestList;
+import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Loadable;
+import net.vanfleteren.jazygit.state.Preview;
 
 /**
  * What the pull requests screen shows: everything of it, apart from the rest of the {@code Model}. The lists are
@@ -20,6 +22,7 @@ import net.vanfleteren.jazygit.state.Loadable;
  * @param repositoryName  the repository on GitHub, as {@code owner/name}, once its pull requests were read
  * @param reading         the reads that are running, so a tick does not start them again
  * @param highlighted     the pull request highlighted in the pane in use, once one is
+ * @param preview         what the highlighted pull request says and changes, once one is highlighted
  * @param focusedPane     the id of the pane of the screen that had the focus last, which it gets back when the
  *                        screen is shown again; none before one had it
  */
@@ -31,6 +34,7 @@ public record PrOverview(
         Option<String> repositoryName,
         Set<Cmd> reading,
         Option<PullRequestSummary> highlighted,
+        Option<Preview<PullRequestSummary, PullRequestPreview>> preview,
         Option<String> focusedPane) {
 
     public static final PrOverview INITIAL = new PrOverview(
@@ -39,6 +43,7 @@ public record PrOverview(
             Loadable.loading(),
             Option.none(),
             HashSet.empty(),
+            Option.none(),
             Option.none(),
             Option.none());
 

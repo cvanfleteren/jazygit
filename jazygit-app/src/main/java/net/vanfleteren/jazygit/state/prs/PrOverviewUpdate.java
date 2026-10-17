@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Preview;
 import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -41,7 +42,14 @@ public final class PrOverviewUpdate {
      */
     static Step update(PrOverview overview, PrOverviewMsg msg) {
         return switch (msg) {
-            case PrOverviewMsg.Refresh() -> load(overview);
+            // What failed to read before is read again too.
+            case PrOverviewMsg.Refresh() -> {
+                Step loaded = load(overview);
+                yield overview.preview()
+                        .filter(preview -> preview.value() instanceof Loadable.Failed)
+                        .map(preview -> preview(loaded.overview(), preview.key(), loaded.cmds()))
+                        .getOrElse(loaded);
+            }
             case PrOverviewMsg.RepositoryLoaded(var read) ->
                 Step.of(done(overview, new LoadRepositoryPullRequests())
                         .withRepository(overview.repository().reload(newestFirst(read.open())))
@@ -57,8 +65,17 @@ public final class PrOverviewUpdate {
                 Step.of(done(overview, new LoadMyPullRequests())
                         .withReviewRequested(failed(overview.reviewRequested(), failure))
                         .withAuthored(failed(overview.authored(), failure)));
-            case PrOverviewMsg.Highlighted(PullRequestSummary pullRequest) ->
-                Step.of(overview.withHighlighted(Option.of(pullRequest)));
+            case PrOverviewMsg.Highlighted(PullRequestSummary pullRequest) -> {
+                PrOverview highlighted = overview.withHighlighted(Option.of(pullRequest));
+                // A pull request that changed since its preview was read is read again.
+                yield overview.preview().exists(preview -> preview.key().equals(pullRequest))
+                        ? Step.of(highlighted)
+                        : preview(highlighted, pullRequest, List.empty());
+            }
+            case PrOverviewMsg.PreviewLoaded(PullRequestSummary key, var preview) ->
+                Step.of(overview.withPreview(Preview.updated(overview.preview(), key, shown -> shown.reload(preview))));
+            case PrOverviewMsg.PreviewLoadFailed(PullRequestSummary key, Failure failure) ->
+                Step.of(overview.withPreview(Preview.updated(overview.preview(), key, shown -> shown.failed(failure))));
             case PrOverviewMsg.Toggled(), PrOverviewMsg.Tick() -> Step.of(overview);
         };
     }
@@ -83,6 +100,16 @@ public final class PrOverviewUpdate {
     private static Step load(PrOverview overview) {
         List<Cmd> loads = LOADS.filter(load -> !overview.reading().contains(load));
         return new Step(overview.withReading(overview.reading().addAll(loads)), loads);
+    }
+
+    /**
+     * {@code overview} reading the preview of the pull request {@code key}, after {@code cmds}; the one shown before stays until it
+     * is read.
+     */
+    private static Step preview(PrOverview overview, PullRequestSummary key, List<Cmd> cmds) {
+        return new Step(
+                overview.withPreview(Option.of(Preview.loading(key, overview.preview()))),
+                cmds.append(new LoadPullRequestPreview(key)));
     }
 
     private static PrOverview done(PrOverview overview, Cmd load) {

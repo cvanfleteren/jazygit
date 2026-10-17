@@ -10,6 +10,9 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.stream.Collectors;
+import net.vanfleteren.jazygit.gh.model.PullRequest;
+import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
+import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.*;
@@ -239,6 +242,38 @@ class ContentPanelTest {
                         "",
                         "+added"),
                 lines.drop(3));
+    }
+
+    @Test
+    void aPullRequestShowsLikeACommitWithItsBranchesItsDescriptionAndItsDiff() {
+        PullRequestSummary pr = new PullRequestSummary(
+                "owner/repo",
+                12,
+                "Fix the login",
+                "alice",
+                "fix/login",
+                false,
+                true,
+                PullRequest.Checks.NONE,
+                PullRequest.Review.NONE,
+                Instant.parse("2026-10-09T12:30:00Z"),
+                "https://github.com/owner/repo/pull/12");
+
+        List<String> lines = ContentPanel.pullRequestText(
+                        pr,
+                        new PullRequestPreview("main", "Why:\r\n\r\nit broke", "+fixed\n", false),
+                        Theme.SpanStyles.NONE)
+                .lines()
+                .stream()
+                .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
+                .collect(List.collector());
+
+        assertEquals("pull request owner/repo#12", lines.get(0));
+        assertEquals("Opened by alice", lines.get(1));
+        assertEquals("From fix/login, in a fork, into main", lines.get(2));
+        assertTrue(lines.get(3).startsWith("Updated "), lines.get(3));
+        assertEquals(
+                List.of("", "    Fix the login", "", "    Why:", "", "    it broke", "---", "+fixed"), lines.drop(4));
     }
 
     @Test

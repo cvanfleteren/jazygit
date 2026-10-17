@@ -53,6 +53,14 @@ public interface StubGitHub extends GitHub {
     }
 
     /**
+     * A pull request into {@code main} without a description or changes.
+     */
+    @Override
+    default Either<GhError, PullRequestPreview> pullRequestPreview(String url) {
+        return Either.right(new PullRequestPreview("main", "", "", false));
+    }
+
+    /**
      * A repository {@code owner/repo} without branches.
      */
     @Override
