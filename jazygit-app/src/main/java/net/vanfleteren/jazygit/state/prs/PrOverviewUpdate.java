@@ -23,6 +23,10 @@ public final class PrOverviewUpdate {
      */
     private static final List<Cmd> LOADS = List.of(new LoadMyPullRequests(), new LoadRepositoryPullRequests());
 
+    // The reads, as the freshness of the pull requests names them.
+    private static final String REPOSITORY = "repository";
+    private static final String MINE = "mine";
+
     private PrOverviewUpdate() {}
 
     public static Next update(Model model, PrOverviewMsg msg) {
@@ -50,19 +54,23 @@ public final class PrOverviewUpdate {
                         .map(preview -> preview(loaded.overview(), preview.key(), loaded.cmds()))
                         .getOrElse(loaded);
             }
-            case PrOverviewMsg.RepositoryLoaded(var read) ->
+            case PrOverviewMsg.RepositoryLoaded(var read, var at) ->
                 Step.of(done(overview, new LoadRepositoryPullRequests())
+                        .withFreshness(overview.freshness().succeeded(REPOSITORY, at))
                         .withRepository(overview.repository().reload(newestFirst(read.open())))
                         .withRepositoryName(Option.of(read.repository())));
             case PrOverviewMsg.RepositoryLoadFailed(Failure failure) ->
                 Step.of(done(overview, new LoadRepositoryPullRequests())
+                        .withFreshness(overview.freshness().failed(REPOSITORY))
                         .withRepository(failed(overview.repository(), failure)));
-            case PrOverviewMsg.MineLoaded(var read) ->
+            case PrOverviewMsg.MineLoaded(var read, var at) ->
                 Step.of(done(overview, new LoadMyPullRequests())
+                        .withFreshness(overview.freshness().succeeded(MINE, at))
                         .withReviewRequested(overview.reviewRequested().reload(newestFirst(read.reviewRequested())))
                         .withAuthored(overview.authored().reload(newestFirst(read.authored()))));
             case PrOverviewMsg.MineLoadFailed(Failure failure) ->
                 Step.of(done(overview, new LoadMyPullRequests())
+                        .withFreshness(overview.freshness().failed(MINE))
                         .withReviewRequested(failed(overview.reviewRequested(), failure))
                         .withAuthored(failed(overview.authored(), failure)));
             case PrOverviewMsg.Highlighted(PullRequestSummary pullRequest) -> {

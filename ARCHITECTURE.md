@@ -212,7 +212,8 @@ request. The design and the steps still to come are in `prs.md`.
   (`CliGitHub.parseLists`), with the checks of the last commit of each.
 - They are read when the screen is shown, every minute while it is shown (`PrOverviewMsg.Tick`, from `JazygitApp`),
   with `r`, and after a pull request was merged, closed or turned into a draft. Failing to read them again keeps the
-  ones read. gh runs as the account of the repository, so the lists are that account's.
+  ones read; `PrOverview.freshness` keeps when they were last read and which read failed since, which the line at the
+  bottom says on this screen ("read 2m ago · last read failed"). gh runs as the account of the repository, so the lists are that account's.
 - `o` shows the pull request dialog, as for a branch, for a pull request of the repository, wherever it is listed;
   one of another repository opens in the browser, as `O` does for any (`gh pr view <url> --web`).
 - **The preview**: the content panel shows the pull request highlighted in the pane in use like a commit: a header,
@@ -308,6 +309,9 @@ still running. `FetchUpdate` lists the remotes (those `git fetch --all` would fe
 the other with `git fetch --prune <remote>`, so branches deleted on the remote show as gone, whatever
 `fetch.prune` says. `Model.fetching` holds the remote being fetched from, which the line at
 the bottom of the screen shows, and the remotes still queued. When the queue is empty, the branches reload.
+`Model.lastFetch` (a `Freshness`) holds when a remote was last fetched from, as `FetchCmd.Fetch` timed it, and the
+remotes that failed the last time; the right of the line at the bottom says it, as "fetched 2m ago", with "last fetch
+failed" when one did.
 Neither the commands nor the failures are shown, since fetching also runs while offline, and a failing remote
 doesn't stop the others. Once the fetch is done, the open pull requests are read again with `gh` (also once at
 startup), into `Model.pullRequests`, which is none until they were read once. That read lives in `state` (`PullRequestsUpdate`, `LoadPullRequests`),

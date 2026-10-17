@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.state.prs;
 
+import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.MyPullRequests;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
@@ -34,11 +35,17 @@ public sealed interface PrOverviewMsg extends Msg {
      */
     record Refresh() implements PrOverviewMsg {}
 
-    record RepositoryLoaded(RepositoryPullRequests pullRequests) implements PrOverviewMsg {}
+    /**
+     * The pull requests of the repository were read, at {@code at}.
+     */
+    record RepositoryLoaded(RepositoryPullRequests pullRequests, Instant at) implements PrOverviewMsg {}
 
     record RepositoryLoadFailed(Failure failure) implements PrOverviewMsg {}
 
-    record MineLoaded(MyPullRequests pullRequests) implements PrOverviewMsg {}
+    /**
+     * The pull requests of the user were read, at {@code at}.
+     */
+    record MineLoaded(MyPullRequests pullRequests, Instant at) implements PrOverviewMsg {}
 
     record MineLoadFailed(Failure failure) implements PrOverviewMsg {}
 
