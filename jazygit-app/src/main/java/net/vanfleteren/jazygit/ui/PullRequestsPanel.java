@@ -43,6 +43,8 @@ public final class PullRequestsPanel {
      * @param scope        the pane, whose id and keys it has
      * @param pullRequests what it lists
      * @param dispatch     receives the messages for the user's actions, on the render thread
+     * @param openPullRequest called with the id of the pane when Enter is pressed on a pull request, to move the
+     *                     focus to its content
      * @param clock        tells how long ago the pull requests changed
      * @param highlights   how the highlighted pull request is shown, also when the pane is not in use
      */
@@ -51,6 +53,7 @@ public final class PullRequestsPanel {
             Function<PrOverview, Loadable<PullRequestList>> pullRequests,
             boolean anyRepository,
             Consumer<Msg> dispatch,
+            Consumer<String> openPullRequest,
             Clock clock,
             Theme.Highlights highlights) {
         this.scope = scope;
@@ -66,7 +69,7 @@ public final class PullRequestsPanel {
                 highlights);
         list.whenEmpty(Messages.get("prs.empty"));
         list.onKey(event -> event.code() == KeyCode.ENTER
-                ? Option.none()
+                ? selected().map(pr -> () -> openPullRequest.accept(scope.id()))
                 : PaneKeys.sending(keymap.handle(scope, event, selected()), dispatch));
     }
 
@@ -74,13 +77,27 @@ public final class PullRequestsPanel {
      * The panes of the pull requests screen, top to bottom: the ones that ask for the user's review, the ones they
      * opened, and the ones of the repository.
      */
-    public static List<PullRequestsPanel> all(Consumer<Msg> dispatch, Clock clock, Theme.Highlights highlights) {
+    public static List<PullRequestsPanel> all(
+            Consumer<Msg> dispatch, Consumer<String> openPullRequest, Clock clock, Theme.Highlights highlights) {
         return List.of(
                 new PullRequestsPanel(
-                        Scopes.PR_REVIEW_REQUESTED, PrOverview::reviewRequested, true, dispatch, clock, highlights),
-                new PullRequestsPanel(Scopes.PR_AUTHORED, PrOverview::authored, true, dispatch, clock, highlights),
+                        Scopes.PR_REVIEW_REQUESTED,
+                        PrOverview::reviewRequested,
+                        true,
+                        dispatch,
+                        openPullRequest,
+                        clock,
+                        highlights),
                 new PullRequestsPanel(
-                        Scopes.PR_REPOSITORY, PrOverview::repository, false, dispatch, clock, highlights));
+                        Scopes.PR_AUTHORED, PrOverview::authored, true, dispatch, openPullRequest, clock, highlights),
+                new PullRequestsPanel(
+                        Scopes.PR_REPOSITORY,
+                        PrOverview::repository,
+                        false,
+                        dispatch,
+                        openPullRequest,
+                        clock,
+                        highlights));
     }
 
     /**

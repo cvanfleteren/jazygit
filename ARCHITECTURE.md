@@ -215,6 +215,11 @@ request. The design and the steps still to come are in `prs.md`.
   ones read. gh runs as the account of the repository, so the lists are that account's.
 - `o` shows the pull request dialog, as for a branch, for a pull request of the repository, wherever it is listed;
   one of another repository opens in the browser, as `O` does for any (`gh pr view <url> --web`).
+- **The preview**: the content panel shows the pull request highlighted in the pane in use like a commit: a header,
+  its title and description, `---`, and its diff, read with `gh pr view <url> --json baseRefName,body` and
+  `gh pr diff <url>`, so also for repositories that are not cloned; the diff is cut off after 5000 lines. It is read
+  again when the pull request changed (`PrOverview.preview` is keyed by its summary), and the one shown before
+  stays while it is read. Enter moves the focus into it, Escape back to the pane it shows.
 - Each screen keeps where its focus was: `Msg.Focused` goes to `Model.focusedPane` or `PrOverview.focusedPane`,
   whichever screen is shown (`Model.shownPane`), and `JazygitApp` gives it back when the screen is shown again.
 

@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.gh.model.MyPullRequests;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestList;
+import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.model.RepositoryPullRequests;
 import net.vanfleteren.jazygit.state.Loadable;
@@ -156,5 +157,50 @@ class PrOverviewUpdateTest {
                         .model()
                         .prOverview()
                         .highlighted());
+    }
+
+    @Test
+    void highlightingAPullRequestReadsItsPreviewOnceUntilItChanges() {
+        Next highlighted = Update.update(loaded(), new PrOverviewMsg.Highlighted(NEW));
+
+        assertEquals(List.of(new LoadPullRequestPreview(NEW)), highlighted.cmds());
+        assertEquals(
+                List.empty(),
+                Update.update(highlighted.model(), new PrOverviewMsg.Highlighted(NEW))
+                        .cmds());
+
+        PullRequestSummary changed = pr("owner/repo", 2, Instant.parse("2026-10-17T00:00:00Z"));
+        assertEquals(
+                List.of(new LoadPullRequestPreview(changed)),
+                Update.update(highlighted.model(), new PrOverviewMsg.Highlighted(changed))
+                        .cmds());
+    }
+
+    @Test
+    void theReadPreviewIsShownAndTheOneBeforeStaysWhileTheNextIsRead() {
+        PullRequestPreview preview = new PullRequestPreview("main", "Body", "+a\n", false);
+        Model read = Update.update(
+                        Update.update(loaded(), new PrOverviewMsg.Highlighted(NEW))
+                                .model(),
+                        new PrOverviewMsg.PreviewLoaded(NEW, preview))
+                .model();
+
+        assertEquals(
+                new Loadable.Loaded<>(preview),
+                read.prOverview().preview().get().value());
+
+        Model next = Update.update(read, new PrOverviewMsg.Highlighted(OLD)).model();
+        assertEquals(NEW, next.prOverview().preview().get().shown().key());
+    }
+
+    @Test
+    void refreshingReadsAPreviewThatFailedAgain() {
+        Model failed = Update.update(
+                        Update.update(loaded(), new PrOverviewMsg.Highlighted(NEW))
+                                .model(),
+                        new PrOverviewMsg.PreviewLoadFailed(NEW, refused("offline")))
+                .model();
+
+        assertTrue(Update.update(failed, new PrOverviewMsg.Refresh()).cmds().contains(new LoadPullRequestPreview(NEW)));
     }
 }

@@ -104,7 +104,7 @@ public class JazygitApp extends ToolkitApp {
             new CommitsPanel(dispatch, () -> openContent(CommitsPanel.ID), this::highlight);
     private final StashPanel stashPanel = new StashPanel(dispatch, this::highlight);
     private final List<PullRequestsPanel> pullRequestsPanels =
-            PullRequestsPanel.all(dispatch, Clock.systemUTC(), this::highlight);
+            PullRequestsPanel.all(dispatch, this::openContent, Clock.systemUTC(), this::highlight);
     // Every popup, with where the focus goes when it closes. At most one is open.
     private final List<PopupSlot> popups = List.of(
             new PopupSlot(new TextInputDialog<>(BranchDialogs.NEW_BRANCH, dispatch), JazygitApp::focusedPane),

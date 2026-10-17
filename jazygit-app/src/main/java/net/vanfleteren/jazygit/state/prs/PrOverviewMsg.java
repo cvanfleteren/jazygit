@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state.prs;
 
 import net.vanfleteren.jazygit.gh.model.MyPullRequests;
+import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.model.RepositoryPullRequests;
 import net.vanfleteren.jazygit.state.Failure;
@@ -45,4 +46,8 @@ public sealed interface PrOverviewMsg extends Msg {
      * The user highlighted {@code pullRequest}.
      */
     record Highlighted(PullRequestSummary pullRequest) implements PrOverviewMsg {}
+
+    record PreviewLoaded(PullRequestSummary key, PullRequestPreview preview) implements PrOverviewMsg {}
+
+    record PreviewLoadFailed(PullRequestSummary key, Failure failure) implements PrOverviewMsg {}
 }

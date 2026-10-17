@@ -21,8 +21,12 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
+import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.keys.Keymap;
+import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.DivergenceView;
@@ -41,6 +45,7 @@ public final class ContentPanel {
 
     private static final String COMMIT_AREA_ID = "commit-changes";
     private static final String DIVERGENCE_AREA_ID = "divergence-commit";
+    private static final String PULL_REQUEST_AREA_ID = "pull-request-preview";
     private static final List<String> LEFT_PANES =
             List.of(FilesPanel.ID, BranchesPanel.ID, CommitsPanel.ID, StashPanel.ID);
     private static final String MESSAGE_INDENT = "    ";
@@ -55,6 +60,7 @@ public final class ContentPanel {
     private final ScrollArea divergenceArea;
     // Not focusable: clicking the log must not take the focus from the branches pane it mirrors.
     private final ScrollArea logArea;
+    private final ScrollArea pullRequestArea;
     private final List<ScrollArea> focusableAreas;
 
     /**
@@ -80,7 +86,14 @@ public final class ContentPanel {
         divergenceArea = new ScrollArea(
                 DIVERGENCE_AREA_ID, Option.of(BranchesPanel.ID), ContentPanel::plainText, leaveScrollArea, focus);
         logArea = new ScrollArea("branch-log", Option.none(), text -> logText(text, styles), leaveScrollArea, focus);
-        focusableAreas = List.of(stagedArea, unstagedArea, commitArea, divergenceArea);
+        // It shows the pull request highlighted in whichever pane of the pull requests screen is in use.
+        pullRequestArea = new ScrollArea(
+                PULL_REQUEST_AREA_ID,
+                Option.of(PullRequestsPanel.REVIEW_REQUESTED_ID),
+                ContentPanel::plainText,
+                leaveScrollArea,
+                focus);
+        focusableAreas = List.of(stagedArea, unstagedArea, commitArea, divergenceArea, pullRequestArea);
     }
 
     /**
@@ -262,12 +275,12 @@ public final class ContentPanel {
      * until the focus is given back.
      */
     public StyledElement<?> render(Model model, String focusedId) {
-        List.of(stagedArea, unstagedArea, commitArea, divergenceArea, logArea)
+        List.of(stagedArea, unstagedArea, commitArea, divergenceArea, logArea, pullRequestArea)
                 .forEach(area -> area.restyle(model.theme()));
         boolean inContent = focusableAreas.exists(area -> area.id().equals(focusedId));
         focusableAreas.forEach(area -> area.tabbable(inContent));
         if (model.screen() == Screen.PULL_REQUESTS) {
-            return pullRequestView(model);
+            return pullRequestView(model, focusedId);
         }
         boolean onPane = inContent || LEFT_PANES.contains(focusedId);
         String pane = onPane ? focusedId : model.focusedPane().getOrElse(focusedId);
@@ -284,33 +297,65 @@ public final class ContentPanel {
     }
 
     /**
-     * The pull request highlighted on the pull requests screen: its number and title, who opened it and the
-     * branch it merges from.
+     * The pull request highlighted in the pane of the pull requests screen in use, as {@link #pullRequestText}
+     * shows it; the one shown before stays while it is read.
      */
-    private static StyledElement<?> pullRequestView(Model model) {
+    private StyledElement<?> pullRequestView(Model model, String focusedId) {
+        Scopes.PULL_REQUESTS.map(Keymap.Scope::id).find(focusedId::equals).forEach(pullRequestArea::showsPane);
         String title = Messages.get("panel.pullRequest.title");
         return model.prOverview()
-                .highlighted()
-                .<StyledElement<?>>map(pr -> panel(
+                .preview()
+                .map(Preview::shown)
+                .<StyledElement<?>>map(preview -> whenLoaded(
                         title,
-                        column(
-                                text(Messages.get(
-                                                "content.pullRequest.title",
-                                                pr.repository(),
-                                                String.valueOf(pr.number()),
-                                                pr.title()))
-                                        .bold()
-                                        .length(1),
-                                text(Messages.get("content.pullRequest.author", pr.author()))
-                                        .length(1),
-                                text(Messages.get(
-                                                pr.fromFork()
-                                                        ? "content.pullRequest.fork"
-                                                        : "content.pullRequest.branch",
-                                                pr.headBranch()))
-                                        .length(1),
-                                text(pr.url()).addClass(Theme.Classes.DIM).length(1))))
+                        preview.value(),
+                        read -> pullRequestArea
+                                .with(
+                                        new PullRequestContent(preview.key(), read),
+                                        () -> pullRequestText(preview.key(), read, styles))
+                                .show(Messages.get(
+                                        "panel.pullRequest.titleFor",
+                                        preview.key().repository(),
+                                        String.valueOf(preview.key().number())))))
                 .getOrElse(() -> dimPanel(title, Messages.get("content.noPullRequest")));
+    }
+
+    /**
+     * Like a commit: a header with the pull request, who opened it, the branches it merges and when it changed,
+     * then its indented title and description, a {@code ---} line, and what it changes.
+     */
+    static Text pullRequestText(PullRequestSummary pr, PullRequestPreview preview, Theme.SpanStyles styles) {
+        DateTimeFormatter updated =
+                DateTimeFormatter.ofPattern(Messages.get("content.commitDatePattern"), Locale.ENGLISH);
+        List<String> body = lines(preview.body());
+        return styledText(List.of(
+                        styled(
+                                Messages.get(
+                                        "content.pullRequest.header", pr.repository(), String.valueOf(pr.number())),
+                                Theme.Classes.SHA,
+                                styles),
+                        Span.raw(Messages.get("content.pullRequest.author", pr.author())),
+                        Span.raw(Messages.get(
+                                pr.fromFork() ? "content.pullRequest.forkBranches" : "content.pullRequest.branches",
+                                pr.headBranch(),
+                                preview.base())),
+                        Span.raw(Messages.get(
+                                "content.pullRequest.updated",
+                                updated.format(pr.updatedAt().atZone(ZoneId.systemDefault())))),
+                        Span.raw(""),
+                        styled(MESSAGE_INDENT + pr.title(), Theme.Classes.BOLD, styles))
+                .map(Line::from)
+                .appendAll((body.isEmpty()
+                                ? List.<String>empty()
+                                : body.map(line -> line.isBlank() ? "" : MESSAGE_INDENT + line)
+                                        .prepend(""))
+                        .map(line -> Line.from(Span.raw(line))))
+                .append(Line.from(Span.raw("---")))
+                .appendAll(lines(
+                                preview.truncated()
+                                        ? preview.diff() + Messages.get("git.diff.truncated") + "\n"
+                                        : preview.diff())
+                        .map(line -> diffLine(line, styles))));
     }
 
     /**
@@ -403,7 +448,7 @@ public final class ContentPanel {
         private final String id;
         // The pane this area shows the content of, which gets the focus back from it; none if the area
         // cannot be focused.
-        private final Option<String> pane;
+        private Option<String> pane;
         private final RichTextAreaElement element;
         private final Function<String, Text> styling;
         // What is shown, which only changes the text and the scroll position when it changes.
@@ -443,6 +488,13 @@ public final class ContentPanel {
 
         String id() {
             return id;
+        }
+
+        /**
+         * Makes the area show the content of the pane {@code paneId}, which gets the focus back from it.
+         */
+        void showsPane(String paneId) {
+            pane = Option.of(paneId);
         }
 
         /**
@@ -498,4 +550,9 @@ public final class ContentPanel {
      * What the commit area shows: the commit, and what it changed.
      */
     private record CommitContent(Commit commit, DiffText changes) {}
+
+    /**
+     * What the pull request area shows: the pull request, and what it says and changes.
+     */
+    private record PullRequestContent(PullRequestSummary pullRequest, PullRequestPreview preview) {}
 }

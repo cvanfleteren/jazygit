@@ -31,6 +31,9 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
  */
 public final class CliGitHub implements GitHub {
 
+    // The most lines of a diff of a pull request that are shown, as for the diffs of git.
+    static final int MAX_DIFF_LINES = 5000;
+
     private static final String LIMIT = "200";
     private static final String FIELDS =
             "number,headRefName,isDraft,isCrossRepository,reviewDecision,statusCheckRollup";
@@ -94,6 +97,8 @@ public final class CliGitHub implements GitHub {
             .data | to_entries[] | .key as $list | (["list", $list, "", (.value.issueCount | tostring)] | @tsv), \
             (.value.nodes[] | select(.number != null) | (["pr", $list] + summary) | @tsv)""";
     private static final int SUMMARY_LINE_FIELDS = 13;
+    // The base branch of a pull request on the first line, its body after it.
+    private static final String PREVIEW_JQ = ".baseRefName + \"\\n\" + .body";
 
     private static final String DETAIL_FIELDS = """
             number,title,author,state,isDraft,headRefName,baseRefName,createdAt,\
@@ -499,6 +504,27 @@ public final class CliGitHub implements GitHub {
                                 .flatMap(review -> lists.get("authored")
                                         .map(authored -> new MyPullRequests(review._2, authored._2)))
                                 .toEither(() -> new UnexpectedOutput(raw))));
+    }
+
+    @Override
+    public Either<GhError, PullRequestPreview> pullRequestPreview(String url) {
+        return process.read(gh("pr", "view", url, "--json", "baseRefName,body", "--jq", PREVIEW_JQ), Either::right)
+                .flatMap(described -> process.read(gh("pr", "diff", url, "--color", "never"), Either::right)
+                        .map(diff -> preview(described, diff)));
+    }
+
+    /**
+     * The preview of a pull request, from what {@link #PREVIEW_JQ} prints and its diff, cut off after
+     * {@link #MAX_DIFF_LINES} lines.
+     */
+    static PullRequestPreview preview(String described, String diff) {
+        int newline = described.indexOf('\n');
+        String base = newline < 0 ? described.strip() : described.substring(0, newline);
+        String body = newline < 0 ? "" : described.substring(newline + 1).stripTrailing();
+        List<String> lines = List.of(diff.split("\n", -1));
+        return lines.size() <= MAX_DIFF_LINES
+                ? new PullRequestPreview(base, body, diff, false)
+                : new PullRequestPreview(base, body, lines.take(MAX_DIFF_LINES).mkString("", "\n", "\n"), true);
     }
 
     @Override

@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.*;
 import net.vanfleteren.jazygit.gh.model.PullRequestList;
+import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import org.junit.jupiter.api.Test;
 
@@ -85,6 +86,24 @@ class CliGitHubTest {
                                         "https://github.com/owner/repo/pull/7")),
                                 1)),
                 lists.get("repository").get());
+    }
+
+    @Test
+    void thePreviewHasTheBaseOnTheFirstLineAndTheBodyAfterIt() {
+        assertEquals(
+                new PullRequestPreview("main", "Fixes the login.\n\nSee #3.", "+a\n", false),
+                CliGitHub.preview("main\nFixes the login.\n\nSee #3.\n", "+a\n"));
+        assertEquals(new PullRequestPreview("main", "", "", false), CliGitHub.preview("main\n", ""));
+    }
+
+    @Test
+    void aLongDiffIsCutOff() {
+        String diff = "+line\n".repeat(CliGitHub.MAX_DIFF_LINES + 10);
+
+        PullRequestPreview preview = CliGitHub.preview("main\n", diff);
+
+        assertTrue(preview.truncated());
+        assertEquals(CliGitHub.MAX_DIFF_LINES, preview.diff().lines().count());
     }
 
     @Test
