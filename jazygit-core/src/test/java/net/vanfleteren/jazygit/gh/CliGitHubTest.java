@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.gh;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
@@ -15,6 +16,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.*;
+import net.vanfleteren.jazygit.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import org.junit.jupiter.api.Test;
 
@@ -35,44 +37,59 @@ class CliGitHubTest {
     }
 
     @Test
-    void parsesTheSummaryOfEachPullRequestForksIncluded() {
-        String raw = "9\tFix the\\tlogin\talice\tfeature/login\tfalse\tfalse\tAPPROVED\tSUCCESS"
-                + "\t2026-10-16T21:39:59Z\thttps://github.com/owner/repo/pull/9\n"
-                + "7\tWIP\t\tpatch-1\ttrue\ttrue\t\t\t2026-10-15T08:00:00Z\thttps://github.com/owner/repo/pull/7\n";
+    void parsesTheListsOfPullRequestsWithTheirRepositoryAndHowManyMatch() {
+        String raw = "list\treviewRequested\t\t52\n"
+                + "pr\treviewRequested\tother/repo\t9\tFix the\\tlogin\talice\tfeature/login\tfalse\tfalse"
+                + "\tAPPROVED\tSUCCESS\t2026-10-16T21:39:59Z\thttps://github.com/other/repo/pull/9\n"
+                + "list\tauthored\t\t0\n"
+                + "list\trepository\towner/repo\t1\n"
+                + "pr\trepository\towner/repo\t7\tWIP\t\tpatch-1\ttrue\ttrue\t\t\t2026-10-15T08:00:00Z"
+                + "\thttps://github.com/owner/repo/pull/7\n";
+
+        var lists = CliGitHub.parseLists(raw).get();
 
         assertEquals(
-                Either.right(List.of(
-                        new PullRequestSummary(
-                                "owner/repo",
-                                9,
-                                "Fix the\tlogin",
-                                "alice",
-                                "feature/login",
-                                false,
-                                false,
-                                Checks.PASSING,
-                                Review.APPROVED,
-                                Instant.parse("2026-10-16T21:39:59Z"),
-                                "https://github.com/owner/repo/pull/9"),
-                        new PullRequestSummary(
-                                "owner/repo",
-                                7,
-                                "WIP",
-                                "",
-                                "patch-1",
-                                true,
-                                true,
-                                Checks.NONE,
-                                Review.NONE,
-                                Instant.parse("2026-10-15T08:00:00Z"),
-                                "https://github.com/owner/repo/pull/7"))),
-                CliGitHub.parseSummaries(raw));
+                Tuple.of(
+                        "",
+                        new PullRequestList(
+                                List.of(new PullRequestSummary(
+                                        "other/repo",
+                                        9,
+                                        "Fix the\tlogin",
+                                        "alice",
+                                        "feature/login",
+                                        false,
+                                        false,
+                                        Checks.PASSING,
+                                        Review.APPROVED,
+                                        Instant.parse("2026-10-16T21:39:59Z"),
+                                        "https://github.com/other/repo/pull/9")),
+                                52)),
+                lists.get("reviewRequested").get());
+        assertEquals(Tuple.of("", PullRequestList.EMPTY), lists.get("authored").get());
+        assertEquals(
+                Tuple.of(
+                        "owner/repo",
+                        new PullRequestList(
+                                List.of(new PullRequestSummary(
+                                        "owner/repo",
+                                        7,
+                                        "WIP",
+                                        "",
+                                        "patch-1",
+                                        true,
+                                        true,
+                                        Checks.NONE,
+                                        Review.NONE,
+                                        Instant.parse("2026-10-15T08:00:00Z"),
+                                        "https://github.com/owner/repo/pull/7")),
+                                1)),
+                lists.get("repository").get());
     }
 
     @Test
-    void aSummaryWithoutTheUrlOfAPullRequestIsUnexpected() {
-        assertTrue(CliGitHub.parseSummaries(
-                        "9\tT\talice\tb\tfalse\tfalse\t\t\t2026-10-16T21:39:59Z\thttps://github.com/owner/repo\n")
+    void aPullRequestLineThatCannotBeReadIsUnexpected() {
+        assertTrue(CliGitHub.parseLists("list\tauthored\t\t1\npr\tauthored\towner/repo\tnine\n")
                 .isLeft());
     }
 

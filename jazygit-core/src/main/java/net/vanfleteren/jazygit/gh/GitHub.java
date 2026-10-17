@@ -27,9 +27,15 @@ public interface GitHub {
     Either<GhError, List<PullRequest>> pullRequests();
 
     /**
-     * The open pull requests of the repository, also the ones from forks.
+     * The open pull requests of the repository, also the ones from forks, the most recently updated first.
      */
-    Either<GhError, List<PullRequestSummary>> repositoryPullRequests();
+    Either<GhError, RepositoryPullRequests> repositoryPullRequests();
+
+    /**
+     * The open pull requests that ask for the review of the account gh runs as, and the ones it opened, in any
+     * repository, the most recently updated first.
+     */
+    Either<GhError, MyPullRequests> myPullRequests();
 
     /**
      * How the CI checks are doing on the tip of each branch of the repository.

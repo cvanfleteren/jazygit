@@ -103,8 +103,8 @@ public class JazygitApp extends ToolkitApp {
     private final CommitsPanel commitsPanel =
             new CommitsPanel(dispatch, () -> openContent(CommitsPanel.ID), this::highlight);
     private final StashPanel stashPanel = new StashPanel(dispatch, this::highlight);
-    private final PullRequestsPanel pullRequestsPanel =
-            new PullRequestsPanel(dispatch, Clock.systemUTC(), this::highlight);
+    private final List<PullRequestsPanel> pullRequestsPanels =
+            PullRequestsPanel.all(dispatch, Clock.systemUTC(), this::highlight);
     // Every popup, with where the focus goes when it closes. At most one is open.
     private final List<PopupSlot> popups = List.of(
             new PopupSlot(new TextInputDialog<>(BranchDialogs.NEW_BRANCH, dispatch), JazygitApp::focusedPane),
@@ -242,8 +242,9 @@ public class JazygitApp extends ToolkitApp {
      */
     private static String focusedPane(Model model) {
         return model.shownPane()
-                .getOrElse(
-                        () -> model.screen() == Screen.PULL_REQUESTS ? PullRequestsPanel.REPOSITORY_ID : FilesPanel.ID);
+                .getOrElse(() -> model.screen() == Screen.PULL_REQUESTS
+                        ? PullRequestsPanel.firstPane(model.prOverview())
+                        : FilesPanel.ID);
     }
 
     /**
@@ -507,12 +508,20 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
-     * The left column of the pull requests screen: the status, and the pull requests of the repository.
+     * The left column of the pull requests screen: the status, the pull requests that ask for the user's review,
+     * the ones they opened, and the ones of the repository, sharing the height.
      */
     private Column pullRequestPanes(Model model, String focusedId, String activeId) {
-        Panel repository = pullRequestsPanel.render(model, focusedId, activeId);
-        pullRequestsPanel.selectionChange(model).forEach(dispatch);
-        return column(StatusPanel.render(model), repository.fill());
+        List<Panel> panes = pullRequestsPanels.map(
+                pane -> pane.render(model, focusedId, activeId).fill());
+        // The content panel shows the pull request highlighted in the pane in use.
+        pullRequestsPanels
+                .filter(pane -> pane.id().equals(activeId))
+                .flatMap(pane -> pane.selectionChange(model))
+                .forEach(dispatch);
+        return column(panes.<Element>map(pane -> pane)
+                .prepend(StatusPanel.render(model))
+                .toJavaArray(Element[]::new));
     }
 
     /**

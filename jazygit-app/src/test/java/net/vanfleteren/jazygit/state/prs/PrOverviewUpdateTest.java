@@ -4,12 +4,16 @@ import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static net.vanfleteren.jazygit.state.TestModels.refused;
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.MyPullRequests;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.gh.model.RepositoryPullRequests;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -23,9 +27,9 @@ import org.junit.jupiter.api.Test;
  */
 class PrOverviewUpdateTest {
 
-    static PullRequestSummary pr(int number, Instant updatedAt) {
+    static PullRequestSummary pr(String repository, int number, Instant updatedAt) {
         return new PullRequestSummary(
-                "owner/repo",
+                repository,
                 number,
                 "Pull request " + number,
                 "alice",
@@ -35,14 +39,21 @@ class PrOverviewUpdateTest {
                 Checks.NONE,
                 Review.NONE,
                 updatedAt,
-                "https://github.com/owner/repo/pull/" + number);
+                "https://github.com/" + repository + "/pull/" + number);
     }
 
-    private static final PullRequestSummary OLD = pr(1, Instant.parse("2026-10-01T00:00:00Z"));
-    private static final PullRequestSummary NEW = pr(2, Instant.parse("2026-10-16T00:00:00Z"));
+    private static final PullRequestSummary OLD = pr("owner/repo", 1, Instant.parse("2026-10-01T00:00:00Z"));
+    private static final PullRequestSummary NEW = pr("owner/repo", 2, Instant.parse("2026-10-16T00:00:00Z"));
+    private static final PullRequestSummary ELSEWHERE = pr("other/repo", 3, Instant.parse("2026-10-10T00:00:00Z"));
+    private static final List<Object> BOTH_READS = List.of(new LoadMyPullRequests(), new LoadRepositoryPullRequests());
 
     private static Next toggled(Model model) {
         return Update.update(model, new PrOverviewMsg.Toggled());
+    }
+
+    private static PrOverviewMsg repositoryRead(PullRequestSummary... pullRequests) {
+        return new PrOverviewMsg.RepositoryLoaded(new RepositoryPullRequests(
+                "Owner/Repo", new PullRequestList(List.of(pullRequests), pullRequests.length)));
     }
 
     @Test
@@ -55,11 +66,11 @@ class PrOverviewUpdateTest {
     }
 
     @Test
-    void showingThePullRequestsReadsThemAndShowingTheRepositoryAgainDoesNot() {
+    void showingThePullRequestsReadsThemAllAndShowingTheRepositoryAgainDoesNot() {
         Next shown = toggled(loaded());
 
         assertEquals(Screen.PULL_REQUESTS, shown.model().screen());
-        assertEquals(List.of(new LoadRepositoryPullRequests()), shown.cmds());
+        assertEquals(BOTH_READS, shown.cmds());
 
         Next back = toggled(shown.model());
         assertEquals(Screen.REPOSITORY, back.model().screen());
@@ -67,26 +78,42 @@ class PrOverviewUpdateTest {
     }
 
     @Test
-    void aTickReadsThemAgainWhileShownUnlessAReadIsStillRunning() {
+    void aTickReadsAgainWhatIsNotStillBeingRead() {
         Model shown = toggled(loaded()).model();
 
         assertEquals(
                 List.empty(), Update.update(shown, new PrOverviewMsg.Tick()).cmds());
 
-        Model read = Update.update(shown, new PrOverviewMsg.RepositoryLoaded(List.of(OLD)))
-                .model();
+        Model read = Update.update(shown, repositoryRead(OLD)).model();
         assertEquals(
                 List.of(new LoadRepositoryPullRequests()),
                 Update.update(read, new PrOverviewMsg.Tick()).cmds());
     }
 
     @Test
-    void theMostRecentlyUpdatedComeFirst() {
-        Model read = Update.update(toggled(loaded()).model(), new PrOverviewMsg.RepositoryLoaded(List.of(OLD, NEW)))
-                .model();
+    void theMostRecentlyUpdatedComeFirstAndTheRepositoryIsKnownOnceItsPullRequestsWereRead() {
+        PrOverview read = Update.update(toggled(loaded()).model(), repositoryRead(OLD, NEW))
+                .model()
+                .prOverview();
 
-        assertEquals(new Loadable.Loaded<>(List.of(NEW, OLD)), read.prOverview().repository());
-        assertEquals(0, read.prOverview().reading());
+        assertEquals(new Loadable.Loaded<>(new PullRequestList(List.of(NEW, OLD), 2)), read.repository());
+        assertEquals(HashSet.of(new LoadMyPullRequests()), read.reading());
+        assertTrue(read.ofThisRepository(NEW));
+        assertFalse(read.ofThisRepository(ELSEWHERE));
+        assertFalse(PrOverview.INITIAL.ofThisRepository(NEW));
+    }
+
+    @Test
+    void myPullRequestsFillBothListsWithHowManyMatch() {
+        PrOverview read = Update.update(
+                        toggled(loaded()).model(),
+                        new PrOverviewMsg.MineLoaded(new MyPullRequests(
+                                new PullRequestList(List.of(ELSEWHERE), 52), new PullRequestList(List.of(NEW), 1))))
+                .model()
+                .prOverview();
+
+        assertEquals(new Loadable.Loaded<>(new PullRequestList(List.of(ELSEWHERE), 52)), read.reviewRequested());
+        assertEquals(new Loadable.Loaded<>(new PullRequestList(List.of(NEW), 1)), read.authored());
     }
 
     @Test
@@ -94,17 +121,15 @@ class PrOverviewUpdateTest {
         Model shown = toggled(loaded()).model();
         var failure = refused("gh: not logged in");
 
-        assertInstanceOf(
-                Loadable.Failed.class,
-                Update.update(shown, new PrOverviewMsg.RepositoryLoadFailed(failure))
-                        .model()
-                        .prOverview()
-                        .repository());
+        PrOverview failed = Update.update(shown, new PrOverviewMsg.MineLoadFailed(failure))
+                .model()
+                .prOverview();
+        assertInstanceOf(Loadable.Failed.class, failed.reviewRequested());
+        assertInstanceOf(Loadable.Failed.class, failed.authored());
 
-        Model read = Update.update(shown, new PrOverviewMsg.RepositoryLoaded(List.of(OLD)))
-                .model();
+        Model read = Update.update(shown, repositoryRead(OLD)).model();
         assertEquals(
-                new Loadable.Loaded<>(List.of(OLD)),
+                read.prOverview().repository(),
                 Update.update(read, new PrOverviewMsg.RepositoryLoadFailed(failure))
                         .model()
                         .prOverview()
@@ -114,13 +139,13 @@ class PrOverviewUpdateTest {
     @Test
     void eachScreenKeepsWhereItsFocusWas() {
         Model files = Update.update(loaded(), new Msg.Focused("files")).model();
-        Model prs = Update.update(toggled(files).model(), new Msg.Focused("prRepository"))
+        Model prs = Update.update(toggled(files).model(), new Msg.Focused("prAuthored"))
                 .model();
 
-        assertEquals(Option.of("prRepository"), prs.shownPane());
+        assertEquals(Option.of("prAuthored"), prs.shownPane());
         Model back = toggled(prs).model();
         assertEquals(Option.of("files"), back.shownPane());
-        assertEquals(Option.of("prRepository"), toggled(back).model().shownPane());
+        assertEquals(Option.of("prAuthored"), toggled(back).model().shownPane());
     }
 
     @Test

@@ -25,8 +25,11 @@ public final class PullRequestUpdate {
     public static Next update(Model model, PullRequestMsg msg) {
         return switch (msg) {
             case PullRequestMsg.Requested(Branch.Name branch) -> requested(model, branch);
+            // A pull request of another repository is opened in the browser, as gh acts on this one.
             case PullRequestMsg.SummaryRequested(var pullRequest) ->
-                show(model, new Branch.Name(pullRequest.headBranch()), pullRequest.pullRequest());
+                model.prOverview().ofThisRepository(pullRequest)
+                        ? show(model, new Branch.Name(pullRequest.headBranch()), pullRequest.pullRequest())
+                        : Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
             case PullRequestMsg.BaseChosen(Branch.Name base) ->
                 model.popup(BasePopup.class)
                         .flatMap(popup -> model.branch(popup.branch()))
