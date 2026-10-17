@@ -64,7 +64,7 @@ Each its own commit, with tests.
 1. [x] The tab, `ctrl+p`, the layout, and "This repo" with the PR dialog and the browser.
 2. [x] The two cross-repo lists, from the graphql search.
 3. [x] The preview: description plus diff.
-4. [ ] Checkout.
+4. [x] Checkout.
 
 ## Later
 

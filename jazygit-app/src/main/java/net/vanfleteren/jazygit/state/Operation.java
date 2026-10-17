@@ -44,6 +44,7 @@ public enum Operation {
     READY_PR("log.title.readyPr", "error.readyPr.failed"),
     DRAFT_PR("log.title.draftPr", "error.draftPr.failed"),
     BROWSE("log.title.browse", "error.browse.failed"),
+    CHECKOUT_PR("log.title.checkoutPr", "error.checkoutPr.failed"),
     STASH("log.title.stash", "error.stash.failed"),
     STASH_POP("log.title.stashPop", "error.stashPop.failed"),
     STASH_DROP("log.title.stashDrop", "error.stashDrop.failed");
@@ -70,7 +71,8 @@ public enum Operation {
      */
     public boolean waitsForUnfinished() {
         return switch (this) {
-            case CHECKOUT, MERGE, REBASE, PULL, CHERRY_PICK, SQUASH, FIXUP, DROP, REWORD, AMEND_COMMIT -> true;
+            case CHECKOUT, CHECKOUT_PR, MERGE, REBASE, PULL, CHERRY_PICK, SQUASH, FIXUP, DROP, REWORD, AMEND_COMMIT ->
+                true;
             default -> false;
         };
     }

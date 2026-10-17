@@ -574,6 +574,11 @@ public final class CliGitHub implements GitHub {
     }
 
     @Override
+    public Either<GhFailure, List<ExecutedCommand>> checkoutPullRequest(int number) {
+        return process.log(gh("pr", "checkout", String.valueOf(number)));
+    }
+
+    @Override
     public Either<GhFailure, List<ExecutedCommand>> mergePullRequest(int number, MergeMethod method) {
         return process.log(gh("pr", "merge", String.valueOf(number), mergeFlag(method)));
     }

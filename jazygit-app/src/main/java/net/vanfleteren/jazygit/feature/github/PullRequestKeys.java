@@ -20,6 +20,7 @@ public final class PullRequestKeys {
                 (added, scope) -> added.add(
                         scope,
                         Binding.onSelected("o", "help.prs.show", PullRequestMsg.SummaryRequested::new),
+                        Binding.onSelected(" ", "help.prs.checkout", PullRequestMsg.CheckoutRequested::new),
                         Binding.always("r", "help.prs.refresh", PrOverviewMsg.Refresh::new)));
     }
 }

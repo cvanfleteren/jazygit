@@ -116,6 +116,11 @@ public interface StubGitHub extends GitHub {
     }
 
     @Override
+    default Either<GhFailure, List<ExecutedCommand>> checkoutPullRequest(int number) {
+        return Either.right(List.of(ExecutedCommand.of("gh", "pr", "checkout", String.valueOf(number))));
+    }
+
+    @Override
     default Either<GhFailure, List<ExecutedCommand>> mergePullRequest(int number, MergeMethod method) {
         return Either.right(
                 List.of(ExecutedCommand.of("gh", "pr", "merge", String.valueOf(number), CliGitHub.mergeFlag(method))));

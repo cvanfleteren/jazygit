@@ -220,6 +220,10 @@ request. The design and the steps still to come are in `prs.md`.
   `gh pr diff <url>`, so also for repositories that are not cloned; the diff is cut off after 5000 lines. It is read
   again when the pull request changed (`PrOverview.preview` is keyed by its summary), and the one shown before
   stays while it is read. Enter moves the focus into it, Escape back to the pane it shows.
+- **Checking out**: space checks out a pull request of the repository in place, from a fork too, with
+  `gh pr checkout <n>` (`Operation.CHECKOUT_PR`), which waits until the repository is in the middle of nothing. It is
+  refused up front when the working tree has changes, untracked files apart (`AppError.ChangesBeforeCheckout`), and
+  for a pull request of another repository (`AppError.OtherRepository`).
 - Each screen keeps where its focus was: `Msg.Focused` goes to `Model.focusedPane` or `PrOverview.focusedPane`,
   whichever screen is shown (`Model.shownPane`), and `JazygitApp` gives it back when the screen is shown again.
 

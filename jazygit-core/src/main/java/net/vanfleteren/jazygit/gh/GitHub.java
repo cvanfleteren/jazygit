@@ -73,6 +73,12 @@ public interface GitHub {
     Either<GhFailure, List<ExecutedCommand>> browse(String branch);
 
     /**
+     * Checks out pull request {@code number} of the repository in the working tree, from a fork too, as gh does:
+     * on a local branch of its own, which follows the branch it comes from.
+     */
+    Either<GhFailure, List<ExecutedCommand>> checkoutPullRequest(int number);
+
+    /**
      * Merges pull request {@code number} as {@code method} says, keeping its branch.
      */
     Either<GhFailure, List<ExecutedCommand>> mergePullRequest(int number, MergeMethod method);
