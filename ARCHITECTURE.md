@@ -222,7 +222,7 @@ request. The design and the steps still to come are in `prs.md`.
   again when the pull request changed (`PrOverview.preview` is keyed by its summary), and the one shown before
   stays while it is read. Enter moves the focus into it, Escape back to the pane it shows.
 - **Checking out**: space checks out a pull request of the repository in place, from a fork too, with
-  `gh pr checkout <n>` (`Operation.CHECKOUT_PR`), which waits until the repository is in the middle of nothing. It is
+  `gh pr checkout <n>` (`CheckoutPullRequestCmd.CHECKOUT_PR`), which waits until the repository is in the middle of nothing. It is
   refused up front when the working tree has changes, untracked files apart (`AppError.ChangesBeforeCheckout`), and
   for a pull request of another repository (`AppError.OtherRepository`). Which repository this is is known once its
   pull requests were read; until then, checking out says they are still being read, or why they could not be.
@@ -253,7 +253,7 @@ follow it there.
 `e` on a file in the files pane opens it in git's editor (`feature.edit`): the one `git var GIT_EDITOR` names, so
 `$GIT_EDITOR`, `core.editor`, `$VISUAL`, `$EDITOR`, else `vi`, as for a commit message. `CliEditor` runs it as git
 does: the program itself when it is a plain name, else through `sh -c '<editor> "$@"'`, so `code --wait` works. It
-is an `Operation.EDIT` like any other: the command log shows it, an editor that exits with an error is shown as a
+is an `EditCmd.EDIT` like any other: the command log shows it, an editor that exits with an error is shown as a
 failure, and the repository is read again once it is closed.
 
 Ctrl+O in the commit and reword dialogs opens the message typed so far in the same editor (`MessageEditorMsg`,
@@ -425,8 +425,10 @@ classDiagram
     and the commands that ran) or `Failure.Bug` (the command threw, which `Program.perform` catches).
 - **`Cmd.Load`** reads part of the repository into the model, as a `Loadable`. Every `LoadMsg` names its
   load, so `LoadUpdate` marks it as no longer running in one place.
-- **`OperationCmd`** changes the repository. It names its `Operation` (which holds the command log title
-  and the error message), the branch it is done to, and the branch it keeps busy. Its outcome is an
+- **`OperationCmd`** changes the repository. It names its `Operation`, the branch it is done to, and the branch
+  it keeps busy. An `Operation` is a record that the feature declares next to its commands (`CommitCmd.DROP`,
+  ...): the command log title, the error message, whether it waits until nothing is unfinished, and what a
+  branch it keeps busy shows next to its spinner. Its outcome is an
   `OperationMsg.Succeeded`, `OperationMsg.Stopped` (it stopped on conflicts, left for the user) or
   `OperationMsg.Failed`, which `OperationUpdate` handles the same way for every operation: it logs the
   commands, releases the busy branch, stores an `AppError.OperationFailed`, a `Notice` or neither, and reads
@@ -745,7 +747,7 @@ sequenceDiagram
 
 7. **Report.** The `Either` becomes one of two messages, which `OperationUpdate` handles:
    - **Success:** `OperationMsg.Succeeded(reword, commands)`. The commands are logged under
-     `Operation.REWORD`, the error is cleared and `Update.refresh` reads the repository again.
+     `CommitCmd.REWORD`, the error is cleared and `Update.refresh` reads the repository again.
    - **Stopped on conflicts:** `OperationMsg.Stopped(reword, commands, notice)`. As for a success, but the
      command log shows the `Notice`, which `NoticeText` turns into text, and the status panel shows the
      rebase in progress.

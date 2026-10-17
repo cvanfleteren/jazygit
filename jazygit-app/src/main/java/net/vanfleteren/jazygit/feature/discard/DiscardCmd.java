@@ -14,11 +14,13 @@ import net.vanfleteren.jazygit.state.Operation;
  */
 public sealed interface DiscardCmd extends GitOperationCmd {
 
+    Operation DISCARD = Operation.of("log.title.discard", "error.discard.failed");
+
     record Discard(DiscardPlan plan) implements DiscardCmd {
 
         @Override
         public Operation operation() {
-            return Operation.DISCARD;
+            return DISCARD;
         }
 
         @Override

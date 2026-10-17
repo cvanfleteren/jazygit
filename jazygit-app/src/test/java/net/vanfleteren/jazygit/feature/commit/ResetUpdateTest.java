@@ -155,7 +155,7 @@ class ResetUpdateTest {
     void aFailedResetNamesItsTarget() {
         CommitCmd.Reset reset =
                 new CommitCmd.Reset(new ResetTarget.ToCommit(new Sha("abcdef0123456789")), ResetMode.HARD);
-        assertEquals(Operation.RESET, reset.operation());
+        assertEquals(CommitCmd.RESET, reset.operation());
 
         Next next = Update.update(TestModels.loaded(), failed(reset, "locked"));
 

@@ -14,6 +14,12 @@ import net.vanfleteren.jazygit.state.Operation;
  */
 public sealed interface StashCmd extends GitOperationCmd {
 
+    Operation STASH = Operation.of("log.title.stash", "error.stash.failed");
+
+    Operation STASH_POP = Operation.of("log.title.stashPop", "error.stashPop.failed");
+
+    Operation STASH_DROP = Operation.of("log.title.stashDrop", "error.stashDrop.failed");
+
     /**
      * Stashes the changes under {@code name}.
      */
@@ -21,7 +27,7 @@ public sealed interface StashCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.STASH;
+            return STASH;
         }
 
         @Override
@@ -37,7 +43,7 @@ public sealed interface StashCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.STASH_DROP;
+            return STASH_DROP;
         }
 
         @Override
@@ -53,7 +59,7 @@ public sealed interface StashCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.STASH_POP;
+            return STASH_POP;
         }
 
         @Override

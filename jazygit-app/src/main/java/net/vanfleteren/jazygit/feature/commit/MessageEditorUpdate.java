@@ -8,7 +8,6 @@ import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -28,15 +27,15 @@ public final class MessageEditorUpdate {
                                 model.clearError().openPopup(popup.withDraft(message)), new MessageEditorCmd(message)))
                         .getOrElse(() -> Next.of(model));
             case MessageEditorMsg.Edited(CommitMessage message, List<ExecutedCommand> commands) -> {
-                Model logged = CommandLog.append(model, Operation.EDIT_MESSAGE, commands);
+                Model logged = CommandLog.append(model, MessageEditorCmd.EDIT_MESSAGE, commands);
                 // Cancelled meanwhile, the dialog stays closed.
                 yield Next.of(messagePopup(logged)
                         .map(popup -> logged.openPopup(popup.withDraft(message)))
                         .getOrElse(logged));
             }
             case MessageEditorMsg.Failed(Failure failure) ->
-                Next.of(CommandLog.append(model, Operation.EDIT_MESSAGE, failure.commands())
-                        .fail(new AppError.OperationFailed(Operation.EDIT_MESSAGE, Option.none(), failure)));
+                Next.of(CommandLog.append(model, MessageEditorCmd.EDIT_MESSAGE, failure.commands())
+                        .fail(new AppError.OperationFailed(MessageEditorCmd.EDIT_MESSAGE, Option.none(), failure)));
         };
     }
 

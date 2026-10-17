@@ -88,7 +88,7 @@ class RemoteBranchUpdateTest {
 
         assertEquals(List.of(new CheckoutRemote(new Branch.Name("new"), ORIGIN_NEW)), next.cmds());
         // The remote branch shows as busy, as the local one is not there yet.
-        assertEquals(Option.of(Operation.CHECKOUT), next.model().jobs().busy().get(new BranchRef.Remote(ORIGIN_NEW)));
+        assertEquals(Option.of(BranchCmd.CHECKOUT), next.model().jobs().busy().get(new BranchRef.Remote(ORIGIN_NEW)));
         assertEquals(
                 List.of(),
                 Update.update(next.model(), new CheckoutMsg.RemoteRequested(ORIGIN_NEW))

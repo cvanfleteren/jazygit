@@ -12,7 +12,6 @@ import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -48,7 +47,7 @@ public final class DeleteBranchUpdate {
         return model.repo()
                 .branch(branch)
                 .filter(known -> !known.remoteDeletable())
-                .flatMap(known -> Branches.checkedOutElsewhere(model, Operation.DELETE_BRANCH, branch))
+                .flatMap(known -> Branches.checkedOutElsewhere(model, BranchCmd.DELETE_BRANCH, branch))
                 .map(error -> Next.of(model.fail(error)))
                 .getOrElse(() -> Update.ask(
                         model,

@@ -161,7 +161,8 @@ class PullRequestUpdateTest {
                 created.cmds());
         assertEquals(Option.none(), created.model().popup());
         assertEquals(
-                Option.of(Operation.CREATE_PR), created.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
+                Option.of(PullRequestCmd.CREATE_PR),
+                created.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
     }
 
     @Test
@@ -299,11 +300,11 @@ class PullRequestUpdateTest {
         assertEquals(List.of(new MergePullRequest(new Branch.Name("feature"), 42, MergeMethod.SQUASH)), merging.cmds());
         assertEquals(Option.none(), merging.model().popup());
         assertEquals(
-                Option.of(Operation.MERGE_PR),
+                Option.of(PullRequestCmd.MERGE_PR),
                 merging.model().jobs().busy().get(new BranchRef.Local(new Branch.Name("feature"))));
         assertEquals(List.of(new ClosePullRequest(new Branch.Name("feature"), 42)), closing.cmds());
         assertEquals(
-                Option.of(Operation.CLOSE_PR),
+                Option.of(PullRequestCmd.CLOSE_PR),
                 closing.model().jobs().busy().get(new BranchRef.Local(new Branch.Name("feature"))));
     }
 
@@ -325,7 +326,8 @@ class PullRequestUpdateTest {
         assertEquals(List.of(new SetDraft(FEATURE, 42, true)), drafting.cmds());
         assertTrue(drafting.model().popup(PullRequestPopup.class).isDefined());
         assertEquals(
-                Option.of(Operation.DRAFT_PR), drafting.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
+                Option.of(PullRequestCmd.DRAFT_PR),
+                drafting.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
         // While it runs, it is not started again.
         assertEquals(
                 List.empty(),
@@ -357,7 +359,7 @@ class PullRequestUpdateTest {
     @Test
     void markingADraftReadyRunsGhPrReady() {
         SetDraft cmd = new SetDraft(FEATURE, 42, false);
-        Model marking = withPr().withBusyBranch(new BranchRef.Local(FEATURE), Operation.READY_PR);
+        Model marking = withPr().withBusyBranch(new BranchRef.Local(FEATURE), PullRequestCmd.READY_PR);
 
         Next done = Update.update(marking, cmd.run(env()));
 
@@ -370,7 +372,8 @@ class PullRequestUpdateTest {
     void aMergedPullRequestIsReadAgainEvenWhileAnEarlierReadRuns() {
         MergePullRequest cmd = new MergePullRequest(new Branch.Name("feature"), 42, MergeMethod.MERGE);
         // The running read started before the merge, and would list the pull request as still open.
-        Model merging = withPr().withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), Operation.MERGE_PR)
+        Model merging = withPr().withBusyBranch(
+                        new BranchRef.Local(new Branch.Name("feature")), PullRequestCmd.MERGE_PR)
                 .mapGitHub(gitHub -> gitHub.withReading(List.of(new LoadPullRequests())));
 
         Next done = Update.update(merging, cmd.run(new Env(new StubGitProvider() {}, StubGitHub.empty())));
@@ -381,7 +384,8 @@ class PullRequestUpdateTest {
     @Test
     void aMergedPullRequestIsNoLongerListedAndThePullRequestsAreReadAgain() {
         MergePullRequest cmd = new MergePullRequest(new Branch.Name("feature"), 42, MergeMethod.MERGE);
-        Model merging = withPr().withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), Operation.MERGE_PR);
+        Model merging =
+                withPr().withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), PullRequestCmd.MERGE_PR);
 
         Next done = Update.update(merging, cmd.run(new Env(new StubGitProvider() {}, StubGitHub.empty())));
 

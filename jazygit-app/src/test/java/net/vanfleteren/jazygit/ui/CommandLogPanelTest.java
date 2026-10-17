@@ -6,11 +6,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.branch.BranchCmd;
+import net.vanfleteren.jazygit.feature.commit.CommitCmd;
+import net.vanfleteren.jazygit.feature.stage.StageCmd;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.LogEntry;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Notice;
-import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.TestModels;
 import org.junit.jupiter.api.Test;
 
@@ -47,7 +49,7 @@ class CommandLogPanelTest {
     @Test
     void showsExecutedCommandsUnderTheirTitle() throws Exception {
         Model model = TestModels.withLog(
-                TestModels.loaded(new SampleData()), new LogEntry(Operation.PUSH, executed("git push origin main")));
+                TestModels.loaded(new SampleData()), new LogEntry(BranchCmd.PUSH, executed("git push origin main")));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> CommandLogPanel.render(model))) {
             String screen = RenderedText.of(testRunner, () -> CommandLogPanel.render(model));
@@ -62,9 +64,9 @@ class CommandLogPanelTest {
     void keepsTheNewestLinesWhenTheyDoNotAllFit() throws Exception {
         Model model = TestModels.withLog(
                 TestModels.loaded(new SampleData()),
-                new LogEntry(Operation.STAGE, executed("git add -- old.txt")),
+                new LogEntry(StageCmd.STAGE, executed("git add -- old.txt")),
                 new LogEntry(
-                        Operation.COMMIT,
+                        CommitCmd.COMMIT,
                         executed(
                                 "git commit -m a",
                                 "git commit -m b",

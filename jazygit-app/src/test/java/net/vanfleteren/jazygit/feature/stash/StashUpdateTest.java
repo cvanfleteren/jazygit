@@ -86,7 +86,7 @@ class StashUpdateTest {
         Next done =
                 Update.update(loaded(), succeeded(new StashCmd.Stash(Option.of("x")), "git stash push --message x"));
         assertEquals(
-                List.of(new LogEntry(Operation.STASH, executed("git stash push --message x"))),
+                List.of(new LogEntry(StashCmd.STASH, executed("git stash push --message x"))),
                 done.model().outcome().commandLog());
 
         Next failed = Update.update(loaded(), failed(new StashCmd.Stash(Option.of("x")), "boom"));
@@ -144,7 +144,7 @@ class StashUpdateTest {
     void droppedLogsTheCommandsAndFailureIsReported() {
         Next dropped = Update.update(loaded(), succeeded(new StashCmd.Drop(STASH), "git stash drop stash@{0}"));
         assertEquals(
-                List.of(new LogEntry(Operation.STASH_DROP, executed("git stash drop stash@{0}"))),
+                List.of(new LogEntry(StashCmd.STASH_DROP, executed("git stash drop stash@{0}"))),
                 dropped.model().outcome().commandLog());
 
         Next failed = Update.update(loaded(), failed(new StashCmd.Drop(STASH), "no such stash"));
@@ -155,7 +155,7 @@ class StashUpdateTest {
     void poppedLogsTheCommandsAndFailureIsReported() {
         Next popped = Update.update(loaded(), succeeded(new StashCmd.Pop(STASH), "git stash pop stash@{0}"));
         assertEquals(
-                List.of(new LogEntry(Operation.STASH_POP, executed("git stash pop stash@{0}"))),
+                List.of(new LogEntry(StashCmd.STASH_POP, executed("git stash pop stash@{0}"))),
                 popped.model().outcome().commandLog());
 
         Next failed = Update.update(loaded(), failed(new StashCmd.Pop(STASH), "conflict"));

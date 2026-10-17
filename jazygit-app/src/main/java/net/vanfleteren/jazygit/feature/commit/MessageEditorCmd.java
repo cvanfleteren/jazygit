@@ -5,11 +5,14 @@ import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Operation;
 
 /**
  * Opens {@code message} in git's editor, with the terminal handed over to it, and reports how it was saved.
  */
 public record MessageEditorCmd(CommitMessage message) implements Cmd {
+
+    public static final Operation EDIT_MESSAGE = Operation.of("log.title.editMessage", "error.editMessage.failed");
 
     @Override
     public Msg run(Env env) {

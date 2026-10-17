@@ -13,7 +13,6 @@ import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.LogEntry;
-import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -121,14 +120,14 @@ class StageUpdateTest {
     void doneLogsTheExecutedCommands() {
         Next staged = Update.update(loaded(), succeeded(new StageCmd.Stage(List.of()), "git add -- a.txt"));
         assertEquals(
-                List.of(new LogEntry(Operation.STAGE, executed("git add -- a.txt"))),
+                List.of(new LogEntry(StageCmd.STAGE, executed("git add -- a.txt"))),
                 staged.model().outcome().commandLog());
 
         Next unstaged = Update.update(
                 staged.model(),
                 succeeded(new StageCmd.Unstage(List.of(), List.of()), "git reset --quiet HEAD -- a.txt"));
         assertEquals(
-                List.of(Operation.STAGE, Operation.UNSTAGE),
+                List.of(StageCmd.STAGE, StageCmd.UNSTAGE),
                 unstaged.model().outcome().commandLog().map(LogEntry::operation).toList());
 
         assertEquals(

@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.commit;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.stage.StageCmd;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
@@ -21,6 +22,23 @@ import net.vanfleteren.jazygit.state.Operation;
  */
 public sealed interface CommitCmd extends GitOperationCmd {
 
+    Operation COMMIT = Operation.of("log.title.commit", "error.commit.failed");
+
+    Operation AMEND = Operation.of("log.title.amend", "error.amend.failed");
+
+    Operation AMEND_COMMIT =
+            Operation.of("log.title.amendCommit", "error.amendCommit.failed").waitingForUnfinished();
+
+    Operation REWORD = Operation.of("log.title.reword", "error.reword.failed").waitingForUnfinished();
+
+    Operation SQUASH = Operation.of("log.title.squash", "error.squash.failed").waitingForUnfinished();
+
+    Operation FIXUP = Operation.of("log.title.fixup", "error.fixup.failed").waitingForUnfinished();
+
+    Operation DROP = Operation.of("log.title.drop", "error.drop.failed").waitingForUnfinished();
+
+    Operation RESET = Operation.of("log.title.reset", "error.reset.failed");
+
     /**
      * Stages the paths so they can be committed; the commit dialog opens afterwards.
      */
@@ -28,7 +46,7 @@ public sealed interface CommitCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.STAGE;
+            return StageCmd.STAGE;
         }
 
         @Override
@@ -46,7 +64,7 @@ public sealed interface CommitCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.COMMIT;
+            return COMMIT;
         }
 
         @Override
@@ -62,7 +80,7 @@ public sealed interface CommitCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.AMEND;
+            return AMEND;
         }
 
         @Override
@@ -78,7 +96,7 @@ public sealed interface CommitCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.AMEND_COMMIT;
+            return AMEND_COMMIT;
         }
 
         @Override
@@ -94,7 +112,7 @@ public sealed interface CommitCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return mode == SquashMode.SQUASH ? Operation.SQUASH : Operation.FIXUP;
+            return mode == SquashMode.SQUASH ? SQUASH : FIXUP;
         }
 
         @Override
@@ -110,7 +128,7 @@ public sealed interface CommitCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.DROP;
+            return DROP;
         }
 
         @Override
@@ -126,7 +144,7 @@ public sealed interface CommitCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.REWORD;
+            return REWORD;
         }
 
         @Override
@@ -142,7 +160,7 @@ public sealed interface CommitCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.RESET;
+            return RESET;
         }
 
         @Override

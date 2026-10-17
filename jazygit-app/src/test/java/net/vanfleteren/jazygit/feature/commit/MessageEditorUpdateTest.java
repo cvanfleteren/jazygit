@@ -23,7 +23,6 @@ import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.Repositories;
 import net.vanfleteren.jazygit.state.Terminal;
 import net.vanfleteren.jazygit.state.Update;
@@ -68,7 +67,8 @@ class MessageEditorUpdateTest {
 
         assertEquals(Option.of(new CommitPopup(Option.of(EDITED))), edited.popup());
         assertEquals(
-                Operation.EDIT_MESSAGE, edited.outcome().commandLog().last().operation());
+                MessageEditorCmd.EDIT_MESSAGE,
+                edited.outcome().commandLog().last().operation());
     }
 
     @Test
@@ -133,7 +133,7 @@ class MessageEditorUpdateTest {
         assertEquals(Option.of(new CommitPopup()), failed.popup());
         AppError.OperationFailed error = assertInstanceOf(
                 AppError.OperationFailed.class, failed.outcome().error().get());
-        assertEquals(Operation.EDIT_MESSAGE, error.operation());
+        assertEquals(MessageEditorCmd.EDIT_MESSAGE, error.operation());
     }
 
     private static Env env(StubGitProvider git, Terminal terminal) {

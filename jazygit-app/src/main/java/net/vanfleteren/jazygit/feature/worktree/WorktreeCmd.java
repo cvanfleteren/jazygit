@@ -20,6 +20,10 @@ import net.vanfleteren.jazygit.state.Operation;
  */
 public sealed interface WorktreeCmd extends GitOperationCmd {
 
+    Operation ADD_WORKTREE = Operation.of("log.title.addWorktree", "error.addWorktree.failed");
+
+    Operation REMOVE_WORKTREE = Operation.of("log.title.removeWorktree", "error.removeWorktree.failed");
+
     /**
      * The path {@code location} names: a leading {@code ~} is the home directory, as in a shell.
      */
@@ -36,7 +40,7 @@ public sealed interface WorktreeCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.ADD_WORKTREE;
+            return ADD_WORKTREE;
         }
 
         @Override
@@ -68,7 +72,7 @@ public sealed interface WorktreeCmd extends GitOperationCmd {
 
         @Override
         public Operation operation() {
-            return Operation.REMOVE_WORKTREE;
+            return REMOVE_WORKTREE;
         }
 
         @Override
