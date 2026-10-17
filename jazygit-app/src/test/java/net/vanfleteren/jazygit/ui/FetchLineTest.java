@@ -5,9 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.Instant;
 import net.vanfleteren.jazygit.state.Fetching;
+import net.vanfleteren.jazygit.state.Freshness;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.prs.PrOverview;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -42,5 +46,39 @@ class FetchLineTest {
     void isBlankWhileNoRemoteIsBeingFetchedFrom() throws Exception {
         assertEquals("", rendered(TestModels.loaded()));
         assertEquals("", rendered(TestModels.loaded().withFetching(Option.of(Fetching.LISTING))));
+    }
+
+    private static final Instant NOW = Instant.parse("2026-10-17T12:00:00Z");
+
+    @Test
+    void sayHowLongAgoTheRemotesWereFetchedFromAndWhetherTheLastFetchFailed() {
+        Freshness fetched = Freshness.NEVER.succeeded("origin", NOW.minusSeconds(120));
+
+        assertEquals("", FetchLine.freshness(TestModels.loaded(), NOW));
+        assertEquals("fetched 2m ago", FetchLine.freshness(TestModels.loaded().withLastFetch(fetched), NOW));
+        assertEquals(
+                "fetched 2m ago · last fetch failed",
+                FetchLine.freshness(TestModels.loaded().withLastFetch(fetched.failed("upstream")), NOW));
+        assertEquals(
+                "fetched 2m ago",
+                FetchLine.freshness(
+                        TestModels.loaded()
+                                .withLastFetch(fetched.failed("upstream").succeeded("upstream", NOW.minusSeconds(120))),
+                        NOW));
+        assertEquals(
+                "last fetch failed",
+                FetchLine.freshness(TestModels.loaded().withLastFetch(Freshness.NEVER.failed("origin")), NOW));
+    }
+
+    @Test
+    void onThePullRequestsScreenSaysHowLongAgoTheyWereRead() {
+        Model prs = TestModels.loaded()
+                .withScreen(Screen.PULL_REQUESTS)
+                .withLastFetch(Freshness.NEVER.succeeded("origin", NOW))
+                .withPrOverview(PrOverview.INITIAL.withFreshness(Freshness.NEVER
+                        .succeeded("mine", NOW.minusSeconds(3 * 3600))
+                        .failed("repository")));
+
+        assertEquals("read 3h ago · last read failed", FetchLine.freshness(prs, NOW));
     }
 }

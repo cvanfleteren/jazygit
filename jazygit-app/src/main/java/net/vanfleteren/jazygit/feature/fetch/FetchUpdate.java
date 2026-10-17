@@ -11,9 +11,13 @@ import net.vanfleteren.jazygit.state.Update.Next;
 /**
  * Fetching from the remotes in the background, one after the other, so the remote being fetched from can be
  * shown. Neither the commands nor the failures are: it runs every minute, also while offline. A remote
- * that cannot be fetched from does not keep the others from being fetched.
+ * that cannot be fetched from does not keep the others from being fetched. When it last fetched, and whether
+ * it failed since, is kept, as the line at the bottom says.
  */
 public final class FetchUpdate {
+
+    // What failed when the remotes could not be listed, as the last fetch says it.
+    private static final String LISTING = "";
 
     private FetchUpdate() {}
 
@@ -23,11 +27,14 @@ public final class FetchUpdate {
             case FetchMsg.Tick() -> model.fetching().isDefined() ? Next.of(model) : start(Next.of(model));
             case FetchMsg.RemotesListed(List<String> remotes) -> next(model, remotes);
             case FetchMsg.ListingFailed(var failure) -> {
-                Next stopped = Next.of(model.withFetching(Option.none()));
+                Next stopped = Next.of(model.withFetching(Option.none())
+                        .withLastFetch(model.lastFetch().failed(LISTING)));
                 yield model.fetching().exists(Fetching::again) ? start(stopped) : stopped;
             }
-            case FetchMsg.Fetched(String remote) -> next(model, queued(model));
-            case FetchMsg.FetchFailed(String remote, var failure) -> next(model, queued(model));
+            case FetchMsg.Fetched(String remote, var at) ->
+                next(model.withLastFetch(model.lastFetch().succeeded(remote, at)), queued(model));
+            case FetchMsg.FetchFailed(String remote, var failure) ->
+                next(model.withLastFetch(model.lastFetch().failed(remote)), queued(model));
         };
     }
 

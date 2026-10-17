@@ -36,6 +36,7 @@ import net.vanfleteren.jazygit.state.prs.PrOverview;
  *                            operation: they show a
  *                            spinner, and take no other operation until it is done
  * @param fetching            the background fetch from the remotes that is running, if any; the next one waits
+ * @param lastFetch           when a remote was last fetched from, and the remotes that failed the last time
  * @param pullRequests        the open pull requests on GitHub, by the remote branch they merge from; none until they
  *                            were read once, and the ones read last when reading them again failed
  * @param pullRequestsFailure why the pull requests could not be read the last time, if they could not
@@ -74,6 +75,7 @@ public record Model(
         Option<Notice> notice,
         Map<BranchRef, Operation> busy,
         Option<Fetching> fetching,
+        Freshness lastFetch,
         Option<Map<Branch.Name, PullRequest>> pullRequests,
         Option<Failure> pullRequestsFailure,
         int readingPullRequests,
@@ -107,6 +109,7 @@ public record Model(
                 Option.none(),
                 HashMap.empty(),
                 Option.none(),
+                Freshness.NEVER,
                 Option.none(),
                 Option.none(),
                 0,

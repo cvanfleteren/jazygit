@@ -50,13 +50,17 @@ class PrOverviewUpdateTest {
     private static final PullRequestSummary ELSEWHERE = pr("other/repo", 3, Instant.parse("2026-10-10T00:00:00Z"));
     private static final List<Object> BOTH_READS = List.of(new LoadMyPullRequests(), new LoadRepositoryPullRequests());
 
+    private static final Instant READ_AT = Instant.parse("2026-10-17T12:00:00Z");
+
     private static Next toggled(Model model) {
         return Update.update(model, new PrOverviewMsg.Toggled());
     }
 
     private static PrOverviewMsg repositoryRead(PullRequestSummary... pullRequests) {
-        return new PrOverviewMsg.RepositoryLoaded(new RepositoryPullRequests(
-                "Owner/Repo", new PullRequestList(List.of(pullRequests), pullRequests.length)));
+        return new PrOverviewMsg.RepositoryLoaded(
+                new RepositoryPullRequests(
+                        "Owner/Repo", new PullRequestList(List.of(pullRequests), pullRequests.length)),
+                READ_AT);
     }
 
     @Test
@@ -121,8 +125,11 @@ class PrOverviewUpdateTest {
     void myPullRequestsFillBothListsWithHowManyMatch() {
         PrOverview read = Update.update(
                         toggled(loaded()).model(),
-                        new PrOverviewMsg.MineLoaded(new MyPullRequests(
-                                new PullRequestList(List.of(ELSEWHERE), 52), new PullRequestList(List.of(NEW), 1))))
+                        new PrOverviewMsg.MineLoaded(
+                                new MyPullRequests(
+                                        new PullRequestList(List.of(ELSEWHERE), 52),
+                                        new PullRequestList(List.of(NEW), 1)),
+                                READ_AT))
                 .model()
                 .prOverview();
 
@@ -215,5 +222,18 @@ class PrOverviewUpdateTest {
                 .model();
 
         assertTrue(Update.update(failed, new PrOverviewMsg.Refresh()).cmds().contains(new LoadPullRequestPreview(NEW)));
+    }
+
+    @Test
+    void theFreshnessSaysWhenTheyWereReadAndWhichReadFailedSince() {
+        Model read =
+                Update.update(toggled(loaded()).model(), repositoryRead(OLD)).model();
+        assertEquals(Option.of(READ_AT), read.prOverview().freshness().read());
+        assertFalse(read.prOverview().freshness().stale());
+
+        Model failed = Update.update(read, new PrOverviewMsg.MineLoadFailed(refused("offline")))
+                .model();
+        assertEquals(Option.of(READ_AT), failed.prOverview().freshness().read());
+        assertTrue(failed.prOverview().freshness().stale());
     }
 }

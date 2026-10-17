@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.fetch;
 
+import java.time.Instant;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
@@ -38,7 +39,9 @@ public sealed interface FetchCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.git().fetch(remote).fold(this::failedWith, commands -> new FetchMsg.Fetched(remote));
+            return env.git()
+                    .fetch(remote)
+                    .fold(this::failedWith, commands -> new FetchMsg.Fetched(remote, Instant.now()));
         }
 
         @Override

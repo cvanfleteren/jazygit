@@ -3,10 +3,12 @@ package net.vanfleteren.jazygit.feature.fetch;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static net.vanfleteren.jazygit.state.TestModels.refused;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.Instant;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Fetching;
 import net.vanfleteren.jazygit.state.LoadPullRequests;
@@ -48,7 +50,7 @@ class FetchUpdateTest {
                 Option.of(new Fetching(Option.of("upstream"), List.empty())),
                 upstream.model().fetching());
 
-        Next done = Update.update(upstream.model(), new FetchMsg.Fetched("upstream"));
+        Next done = Update.update(upstream.model(), new FetchMsg.Fetched("upstream", Instant.EPOCH));
         assertEquals(Option.none(), done.model().fetching());
         assertTrue(done.cmds().contains(new LoadBranches()));
         assertTrue(done.cmds().contains(new LoadPullRequests()));
@@ -94,7 +96,7 @@ class FetchUpdateTest {
         assertEquals(List.of(), requested.cmds());
         assertTrue(requested.model().fetching().exists(Fetching::again));
 
-        Next done = Update.update(requested.model(), new FetchMsg.Fetched("origin"));
+        Next done = Update.update(requested.model(), new FetchMsg.Fetched("origin", Instant.EPOCH));
         assertTrue(done.cmds().contains(new LoadBranches()));
         assertTrue(done.cmds().contains(new FetchCmd.ListRemotes()), done.cmds().toString());
         assertEquals(Option.of(Fetching.LISTING), done.model().fetching());
@@ -104,7 +106,9 @@ class FetchUpdateTest {
                 .model();
         assertEquals(
                 Option.none(),
-                Update.update(listed, new FetchMsg.Fetched("origin")).model().fetching());
+                Update.update(listed, new FetchMsg.Fetched("origin", Instant.EPOCH))
+                        .model()
+                        .fetching());
     }
 
     @Test
@@ -117,5 +121,24 @@ class FetchUpdateTest {
 
         assertEquals(List.of(new FetchCmd.ListRemotes()), failed.cmds());
         assertEquals(Option.of(Fetching.LISTING), failed.model().fetching());
+    }
+
+    @Test
+    void theLastFetchSaysWhenARemoteWasFetchedFromAndWhichFailedSince() {
+        Instant at = Instant.parse("2026-10-17T12:00:00Z");
+        Model listed = Update.update(
+                        Update.update(loaded(), new FetchMsg.Tick()).model(),
+                        new FetchMsg.RemotesListed(List.of("origin", "upstream")))
+                .model();
+
+        Model fetched =
+                Update.update(listed, new FetchMsg.Fetched("origin", at)).model();
+        assertEquals(Option.of(at), fetched.lastFetch().read());
+        assertFalse(fetched.lastFetch().stale());
+
+        Model failed = Update.update(fetched, new FetchMsg.FetchFailed("upstream", refused("offline")))
+                .model();
+        assertEquals(Option.of(at), failed.lastFetch().read());
+        assertTrue(failed.lastFetch().stale());
     }
 }
