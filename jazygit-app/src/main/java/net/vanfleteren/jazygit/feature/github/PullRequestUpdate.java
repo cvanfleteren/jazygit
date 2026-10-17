@@ -9,8 +9,10 @@ import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.prs.PrOverviewUpdate;
@@ -74,6 +76,7 @@ public final class PullRequestUpdate {
                 // changed the remote too, which a fetch brings in.
                 yield FetchUpdate.requested(PullRequestsUpdate.loadAnyway(new Next(shown, done.cmds())));
             }
+            case PullRequestMsg.CheckoutRequested(var pullRequest) -> checkout(model, pullRequest);
             case PullRequestMsg.DetailsLoaded(int number, var details) ->
                 Next.of(shown(model, number, Either.right(details)));
             case PullRequestMsg.DetailsFailed(int number, var failure) ->
@@ -178,6 +181,20 @@ public final class PullRequestUpdate {
                                         ? Next.of(model.fail(new AppError.NotPushed(branch)))
                                         : Update.ask(model, new BasePopup(branch, bases(model, branch)))))
                 .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * Checks out {@code pullRequest} in place, if it is of the repository and the working tree has no changes to
+     * bring along; untracked files do not count, as git only stops for those that are in the way.
+     */
+    private static Next checkout(Model model, PullRequestSummary pullRequest) {
+        String name = pullRequest.repository() + "#" + pullRequest.number();
+        boolean changed = Update.files(model).exists(file -> file.type() != ChangeType.UNTRACKED);
+        return !model.prOverview().ofThisRepository(pullRequest)
+                ? Next.of(model.fail(new AppError.OtherRepository(name)))
+                : changed
+                        ? Next.of(model.fail(new AppError.ChangesBeforeCheckout(name)))
+                        : Update.start(model.clearError(), new CheckoutPullRequestCmd(pullRequest));
     }
 
     /**

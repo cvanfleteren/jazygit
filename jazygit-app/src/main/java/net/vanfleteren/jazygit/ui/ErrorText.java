@@ -51,6 +51,10 @@ public final class ErrorText {
             case AppError.CheckedOutElsewhere(var operation, Branch.Name branch, var worktree) ->
                 Messages.get(operation.errorKey(), branch.value(), Messages.get("error.checkedOutElsewhere", worktree));
             case AppError.NotPushed(Branch.Name branch) -> Messages.get("error.pullRequest.notPushed", branch.value());
+            case AppError.OtherRepository(String pullRequest) ->
+                Messages.get("error.checkoutPr.otherRepository", pullRequest);
+            case AppError.ChangesBeforeCheckout(String pullRequest) ->
+                Messages.get("error.checkoutPr.changes", pullRequest);
             case AppError.DefaultBranch(String branch) -> Messages.get("error.deleteBranch.default", branch);
             case AppError.NotOnRemote(Branch.Name branch) -> Messages.get("error.browse.notOnRemote", branch.value());
             case AppError.PullRequestsNotRead() -> Messages.get("error.pullRequest.notRead");

@@ -121,6 +121,18 @@ public sealed interface AppError {
     record NotPushed(Branch.Name branch) implements AppError {}
 
     /**
+     * The pull request {@code pullRequest}, as {@code owner/name#number}, cannot be checked out, as it is of
+     * another repository.
+     */
+    record OtherRepository(String pullRequest) implements AppError {}
+
+    /**
+     * The pull request {@code pullRequest}, as {@code owner/name#number}, is not checked out while the working tree
+     * has changes, which would come along.
+     */
+    record ChangesBeforeCheckout(String pullRequest) implements AppError {}
+
+    /**
      * Deleting a remote branch was asked for, but it is the default branch of its remote.
      *
      * @param branch the short name of the remote branch, e.g. {@code origin/main}

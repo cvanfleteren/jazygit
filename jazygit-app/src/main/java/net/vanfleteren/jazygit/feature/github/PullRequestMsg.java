@@ -33,6 +33,11 @@ public sealed interface PullRequestMsg extends Msg {
     record SummaryRequested(PullRequestSummary pullRequest) implements PullRequestMsg {}
 
     /**
+     * The user asked to check out a pull request listed on the pull requests screen.
+     */
+    record CheckoutRequested(PullRequestSummary pullRequest) implements PullRequestMsg {}
+
+    /**
      * The details of pull request {@code number} were read.
      */
     record DetailsLoaded(int number, PullRequestDetails details) implements PullRequestMsg {}

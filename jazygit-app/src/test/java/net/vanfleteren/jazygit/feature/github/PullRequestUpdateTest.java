@@ -578,4 +578,60 @@ class PullRequestUpdateTest {
         assertEquals(Option.none(), opened.model().popup());
         assertEquals(List.of(new BrowsePullRequestCmd(elsewhere)), opened.cmds());
     }
+
+    private static PullRequestSummary summary(String repository) {
+        return new PullRequestSummary(
+                repository,
+                9,
+                "From a fork",
+                "bob",
+                "patch-1",
+                false,
+                true,
+                Checks.NONE,
+                Review.NONE,
+                Instant.EPOCH,
+                "https://github.com/" + repository + "/pull/9");
+    }
+
+    private static Model ofOwnerRepo(RepoStatus status) {
+        return Update.update(loaded(), new LoadMsg.StatusLoaded(status))
+                .model()
+                .withPrOverview(net.vanfleteren.jazygit.state.prs.PrOverview.INITIAL.withRepositoryName(
+                        Option.of("owner/repo")));
+    }
+
+    @Test
+    void aPullRequestOfTheRepositoryIsCheckedOutWhenOnlyUntrackedFilesAreAround() {
+        PullRequestSummary pr = summary("owner/repo");
+
+        Next checkingOut = Update.update(ofOwnerRepo(DIRTY), new PullRequestMsg.CheckoutRequested(pr));
+
+        assertEquals(List.of(new CheckoutPullRequestCmd(pr)), checkingOut.cmds());
+        assertEquals(Option.none(), checkingOut.model().error());
+    }
+
+    @Test
+    void aPullRequestIsNotCheckedOutOverChanges() {
+        RepoStatus changed = new RepoStatus(
+                RepoStatus.Head.onBranch(new Branch.Name("main"), new Sha("aaaa")),
+                List.of(new FileEntry("a.txt", ChangeType.MODIFIED)));
+
+        Next refused = Update.update(ofOwnerRepo(changed), new PullRequestMsg.CheckoutRequested(summary("owner/repo")));
+
+        assertEquals(List.empty(), refused.cmds());
+        assertEquals(
+                Option.of(new AppError.ChangesBeforeCheckout("owner/repo#9")),
+                refused.model().error());
+    }
+
+    @Test
+    void aPullRequestOfAnotherRepositoryIsNotCheckedOut() {
+        Next refused = Update.update(ofOwnerRepo(CLEAN), new PullRequestMsg.CheckoutRequested(summary("other/repo")));
+
+        assertEquals(List.empty(), refused.cmds());
+        assertEquals(
+                Option.of(new AppError.OtherRepository("other/repo#9")),
+                refused.model().error());
+    }
 }
