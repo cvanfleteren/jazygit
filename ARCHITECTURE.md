@@ -195,6 +195,23 @@ tabs, closes it.
 It is read again when either branch moves, as the periodic loads of the branches tell. When the branch is gone, it
 closes; when the upstream is gone, or the base branch, it closes with the error that says so.
 
+## The pull requests screen
+
+Ctrl+P switches the left of the screen between the repository and the pull requests (`Model.screen`, `state.Screen`);
+the status panel names both, the one shown in bold. What the pull requests screen shows lives in one part of the
+model, `Model.prOverview` (`state.prs.PrOverview`), with its own messages and its own update, which works on that part
+alone (`PrOverviewMsg`, `PrOverviewUpdate`); only switching screens, and whether the screen is shown, look at the rest.
+It lives in `state`, next to the other reads of GitHub, so the GitHub feature can read it again after changing a pull
+request. The design and the steps still to come are in `prs.md`.
+
+- **This repo** lists the open pull requests of the repository, forks included, the most recently updated first:
+  `gh pr list --json ...`, a read of its own, apart from the one for the branches pane. They are read when the screen
+  is shown, every minute while it is shown (`PrOverviewMsg.Tick`, from `JazygitApp`), with `r`, and after a pull
+  request was merged, closed or turned into a draft. Failing to read them again keeps the ones read.
+- `o` shows the pull request dialog, as for a branch; `O` opens it in the browser (`gh pr view <url> --web`).
+- Each screen keeps where its focus was: `Msg.Focused` goes to `Model.focusedPane` or `PrOverview.focusedPane`,
+  whichever screen is shown (`Model.shownPane`), and `JazygitApp` gives it back when the screen is shown again.
+
 ## The editor
 
 `e` on a file in the files pane opens it in git's editor (`feature.edit`): the one `git var GIT_EDITOR` names, so

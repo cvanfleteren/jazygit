@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -522,5 +523,31 @@ class PullRequestUpdateTest {
         assertEquals(
                 Option.of(created), done.model().pullRequests().flatMap(open -> open.get(new Branch.Name("feature"))));
         assertTrue(done.cmds().contains(new LoadPullRequests()));
+    }
+
+    @Test
+    void aPullRequestFromThePullRequestsScreenIsShownAndItsDetailsRead() {
+        PullRequestSummary summary = new PullRequestSummary(
+                "owner/repo",
+                9,
+                "From a fork",
+                "bob",
+                "patch-1",
+                true,
+                true,
+                Checks.FAILING,
+                Review.REQUIRED,
+                Instant.EPOCH,
+                "https://github.com/owner/repo/pull/9");
+
+        Next shown = Update.update(loaded(), new PullRequestMsg.SummaryRequested(summary));
+
+        assertEquals(
+                Option.of(new PullRequestPopup(
+                        new Branch.Name("patch-1"),
+                        new PullRequest(9, "patch-1", true, Checks.FAILING, Review.REQUIRED),
+                        Option.none())),
+                shown.model().popup(PullRequestPopup.class));
+        assertEquals(List.of(new LoadPullRequestDetails(9)), shown.cmds());
     }
 }

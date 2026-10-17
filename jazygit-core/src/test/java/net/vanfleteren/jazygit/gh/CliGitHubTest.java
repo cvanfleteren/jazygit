@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.*;
+import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import org.junit.jupiter.api.Test;
 
 class CliGitHubTest {
@@ -31,6 +32,48 @@ class CliGitHubTest {
                         new PullRequest(7, "wip", true, Checks.NONE, Review.NONE),
                         new PullRequest(5, "fix/npe", false, Checks.PENDING, Review.CHANGES_REQUESTED))),
                 CliGitHub.parse(raw));
+    }
+
+    @Test
+    void parsesTheSummaryOfEachPullRequestForksIncluded() {
+        String raw = "9\tFix the\\tlogin\talice\tfeature/login\tfalse\tfalse\tAPPROVED\tSUCCESS"
+                + "\t2026-10-16T21:39:59Z\thttps://github.com/owner/repo/pull/9\n"
+                + "7\tWIP\t\tpatch-1\ttrue\ttrue\t\t\t2026-10-15T08:00:00Z\thttps://github.com/owner/repo/pull/7\n";
+
+        assertEquals(
+                Either.right(List.of(
+                        new PullRequestSummary(
+                                "owner/repo",
+                                9,
+                                "Fix the\tlogin",
+                                "alice",
+                                "feature/login",
+                                false,
+                                false,
+                                Checks.PASSING,
+                                Review.APPROVED,
+                                Instant.parse("2026-10-16T21:39:59Z"),
+                                "https://github.com/owner/repo/pull/9"),
+                        new PullRequestSummary(
+                                "owner/repo",
+                                7,
+                                "WIP",
+                                "",
+                                "patch-1",
+                                true,
+                                true,
+                                Checks.NONE,
+                                Review.NONE,
+                                Instant.parse("2026-10-15T08:00:00Z"),
+                                "https://github.com/owner/repo/pull/7"))),
+                CliGitHub.parseSummaries(raw));
+    }
+
+    @Test
+    void aSummaryWithoutTheUrlOfAPullRequestIsUnexpected() {
+        assertTrue(CliGitHub.parseSummaries(
+                        "9\tT\talice\tb\tfalse\tfalse\t\t\t2026-10-16T21:39:59Z\thttps://github.com/owner/repo\n")
+                .isLeft());
     }
 
     @Test

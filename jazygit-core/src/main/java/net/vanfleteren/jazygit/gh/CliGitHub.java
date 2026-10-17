@@ -47,6 +47,21 @@ public final class CliGitHub implements GitHub {
             ([.statusCheckRollup[]? | %s] | join(","))] | @tsv""".formatted(CHECK_STATE);
     private static final int FIELD_COUNT = 5;
 
+    private static final String SUMMARY_FIELDS = "number,title,author,headRefName,isDraft,isCrossRepository,"
+            + "reviewDecision,statusCheckRollup,updatedAt,url";
+    /*
+     * One line per pull request, forks included: number, title, author, head branch, whether it is a draft and
+     * from a fork, its review decision, the states of its checks, when it was updated and its URL, separated by
+     * tabs.
+     */
+    private static final String SUMMARY_JQ = """
+            .[] | [(.number | tostring), .title, (.author.login // ""), .headRefName, (.isDraft | tostring), \
+            (.isCrossRepository | tostring), (.reviewDecision // ""), \
+            ([.statusCheckRollup[]? | %s] | join(",")), .updatedAt, .url] | @tsv""".formatted(CHECK_STATE);
+    private static final int SUMMARY_FIELD_COUNT = 10;
+    // The repository in the URL of a pull request, as owner/name.
+    private static final Pattern PULL_REQUEST_URL = Pattern.compile("^https?://[^/]+/([^/]+/[^/]+)/pull/\\d+$");
+
     private static final String DETAIL_FIELDS = """
             number,title,author,state,isDraft,headRefName,baseRefName,createdAt,\
             additions,deletions,changedFiles,mergeable,reviewDecision,comments,labels,latestReviews,reviewRequests,\
@@ -211,6 +226,44 @@ public final class CliGitHub implements GitHub {
     }
 
     /**
+     * Parses the lines the jq filter of {@link #repositoryPullRequests()} prints.
+     */
+    static Either<UnexpectedOutput, List<PullRequestSummary>> parseSummaries(String raw) {
+        return List.of(raw.split("\\R"))
+                .filter(line -> !line.isBlank())
+                .map(line -> summary(List.of(line.split("\t", -1)).map(CliGitHub::unescape))
+                        .toEither(() -> new UnexpectedOutput(line)))
+                .transform(Either::sequenceRight)
+                .map(List::ofAll);
+    }
+
+    private static Option<PullRequestSummary> summary(List<String> f) {
+        return Option.when(f.size() == SUMMARY_FIELD_COUNT, f)
+                .flatMap(fields -> repository(fields.get(9))
+                        .flatMap(repository -> Try.of(() -> new PullRequestSummary(
+                                        repository,
+                                        Integer.parseInt(fields.get(0)),
+                                        fields.get(1),
+                                        fields.get(2),
+                                        fields.get(3),
+                                        fields.get(4).equals("true"),
+                                        fields.get(5).equals("true"),
+                                        checks(List.of(fields.get(7).split(",")).filter(state -> !state.isEmpty())),
+                                        review(fields.get(6)),
+                                        Instant.parse(fields.get(8)),
+                                        fields.get(9)))
+                                .toOption()));
+    }
+
+    /**
+     * The repository of the pull request at {@code url}, as {@code owner/name}.
+     */
+    static Option<String> repository(String url) {
+        Matcher matcher = PULL_REQUEST_URL.matcher(url);
+        return Option.when(matcher.matches(), () -> matcher.group(1));
+    }
+
+    /**
      * Parses the lines the jq filter of {@link #branchChecks()} prints.
      */
     static Either<UnexpectedOutput, BranchChecks> parseBranchChecks(String raw) {
@@ -364,6 +417,13 @@ public final class CliGitHub implements GitHub {
     }
 
     @Override
+    public Either<GhError, List<PullRequestSummary>> repositoryPullRequests() {
+        return process.read(
+                gh("pr", "list", "--state", "open", "--limit", LIMIT, "--json", SUMMARY_FIELDS, "--jq", SUMMARY_JQ),
+                CliGitHub::parseSummaries);
+    }
+
+    @Override
     public Either<GhError, BranchChecks> branchChecks() {
         return process.read(
                 gh(
@@ -397,6 +457,11 @@ public final class CliGitHub implements GitHub {
     @Override
     public Either<GhFailure, List<ExecutedCommand>> openPullRequest(int number) {
         return process.log(gh("pr", "view", String.valueOf(number), "--web"));
+    }
+
+    @Override
+    public Either<GhFailure, List<ExecutedCommand>> openPullRequest(String url) {
+        return process.log(gh("pr", "view", url, "--web"));
     }
 
     @Override

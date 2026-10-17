@@ -27,6 +27,11 @@ public interface GitHub {
     Either<GhError, List<PullRequest>> pullRequests();
 
     /**
+     * The open pull requests of the repository, also the ones from forks.
+     */
+    Either<GhError, List<PullRequestSummary>> repositoryPullRequests();
+
+    /**
      * How the CI checks are doing on the tip of each branch of the repository.
      */
     Either<GhError, BranchChecks> branchChecks();
@@ -45,6 +50,11 @@ public interface GitHub {
      * Opens pull request {@code number} in the browser.
      */
     Either<GhFailure, List<ExecutedCommand>> openPullRequest(int number);
+
+    /**
+     * Opens the pull request at {@code url}, of any repository, in the browser.
+     */
+    Either<GhFailure, List<ExecutedCommand>> openPullRequest(String url);
 
     /**
      * Opens {@code branch}, as it is named on the remote, in the browser.

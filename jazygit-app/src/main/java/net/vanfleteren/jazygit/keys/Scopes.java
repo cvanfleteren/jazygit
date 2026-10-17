@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.keys;
 
+import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.keys.Keymap.Scope;
 
@@ -37,6 +38,12 @@ public final class Scopes {
      * The selected stash.
      */
     public static final Scope<Stash> STASH = new Scope<>("stash", "panel.stash.title");
+
+    /**
+     * The selected pull request of the repository, on the pull requests screen.
+     */
+    public static final Scope<PullRequestSummary> PR_REPOSITORY =
+            new Scope<>("prRepository", "panel.prRepository.title");
 
     private Scopes() {}
 }

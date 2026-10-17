@@ -15,6 +15,9 @@ public final class BrowseKeys {
         return keys.add(Scopes.BRANCHES, Binding.onSelected("O", "help.branches.browse", BrowseMsg.Requested::new))
                 .add(
                         Scopes.REMOTE_BRANCHES,
-                        Binding.onSelected("O", "help.branches.browse", BrowseMsg.RemoteRequested::new));
+                        Binding.onSelected("O", "help.branches.browse", BrowseMsg.RemoteRequested::new))
+                .add(
+                        Scopes.PR_REPOSITORY,
+                        Binding.onSelected("O", "help.prs.browse", BrowseMsg.PullRequestRequested::new));
     }
 }

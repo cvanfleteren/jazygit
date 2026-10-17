@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.ThemeName;
+import net.vanfleteren.jazygit.state.prs.PrOverview;
 
 /**
  * The complete, immutable state of the repository as shown by the UI.
@@ -47,11 +48,13 @@ import net.vanfleteren.jazygit.settings.ThemeName;
  * @param settings            what the user chose to keep from one session to the next, like the theme
  * @param themeOverride       the theme asked for at startup, or highlighted in the theme dialog, for this session only,
  *                            until the user chooses one
- * @param focusedPane         the id of the element outside the popups that had the focus last, which a closing popup
- *                            gives it back to; none before the view reported one
+ * @param focusedPane         the id of the element of the repository screen, outside the popups, that had the focus
+ *                            last, which a closing popup gives it back to; none before the view reported one
  * @param cherryPick          the commit copied to be cherry-picked onto the branch checked out later, if one is
  * @param divergence          the commits a local branch and its upstream or base branch do not share, which the
  *                            branches pane lists in place of the local branches while it is open
+ * @param screen              what the left of the screen shows
+ * @param prOverview          what the pull requests screen shows, and where its focus was
  */
 @With
 public record Model(
@@ -82,7 +85,9 @@ public record Model(
         Option<ThemeName> themeOverride,
         Option<String> focusedPane,
         Option<Commit> cherryPick,
-        Option<DivergenceView> divergence) {
+        Option<DivergenceView> divergence,
+        Screen screen,
+        PrOverview prOverview) {
 
     public static Model initial(String repositoryName) {
         return new Model(
@@ -113,7 +118,26 @@ public record Model(
                 Option.none(),
                 Option.none(),
                 Option.none(),
-                Option.none());
+                Option.none(),
+                Screen.REPOSITORY,
+                PrOverview.INITIAL);
+    }
+
+    /**
+     * The id of the element of the screen shown, outside the popups, that had the focus last, which a closing popup
+     * gives it back to; none before one had it.
+     */
+    public Option<String> shownPane() {
+        return screen == Screen.PULL_REQUESTS ? prOverview.focusedPane() : focusedPane;
+    }
+
+    /**
+     * This model with {@code id} as the element of the screen shown that had the focus last.
+     */
+    public Model withShownPane(String id) {
+        return screen == Screen.PULL_REQUESTS
+                ? withPrOverview(prOverview.withFocusedPane(Option.of(id)))
+                : withFocusedPane(Option.of(id));
     }
 
     /**

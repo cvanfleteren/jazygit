@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.PullRequest;
+import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.LoadMsg;
@@ -82,5 +84,25 @@ class BrowseUpdateTest {
                 List.of(new BrowseCmd(ORIGIN_FEATURE)),
                 Update.update(model(), new BrowseMsg.RemoteRequested(ORIGIN_FEATURE))
                         .cmds());
+    }
+
+    @Test
+    void aPullRequestOfAnyRepositoryOpensByItsUrl() {
+        PullRequestSummary pr = new PullRequestSummary(
+                "other/repo",
+                3,
+                "Elsewhere",
+                "carol",
+                "fix",
+                false,
+                false,
+                PullRequest.Checks.NONE,
+                PullRequest.Review.NONE,
+                Instant.EPOCH,
+                "https://github.com/other/repo/pull/3");
+
+        assertEquals(
+                List.of(new BrowsePullRequestCmd(pr)),
+                Update.update(loaded(), new BrowseMsg.PullRequestRequested(pr)).cmds());
     }
 }

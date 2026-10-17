@@ -30,7 +30,7 @@ class StatusPanelTest {
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> StatusPanel.render(model))) {
             String screen = RenderedText.of(testRunner, () -> StatusPanel.render(model));
-            assertTrue(screen.contains("Status"), screen);
+            assertTrue(screen.contains("Repo │ PRs"), screen);
             assertTrue(screen.contains("jazygit → main"), screen);
 
             String loading = RenderedText.of(testRunner, () -> StatusPanel.render(TestModels.loading("jazygit")));

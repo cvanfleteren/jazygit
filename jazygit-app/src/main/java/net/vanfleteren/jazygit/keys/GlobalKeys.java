@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.feature.inprogress.InProgressMsg;
 import net.vanfleteren.jazygit.feature.repos.RecentReposMsg;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelMsg;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
 
 /**
  * The keys that work wherever the focus is.
@@ -27,6 +28,8 @@ final class GlobalKeys {
                         RecentReposMsg.Requested::new))
                 .global(new Keymap.Global.Dispatching(
                         "ctrl+s", "help.global.settings", GlobalKeys::isSettingsKey, SettingsPanelMsg.Requested::new))
+                .global(new Keymap.Global.Dispatching(
+                        "ctrl+p", "help.global.screen", GlobalKeys::isScreenKey, PrOverviewMsg.Toggled::new))
                 // Escape only gets here when nothing else, like a dialog, took it.
                 .global(new Keymap.Global.Dispatching(
                         "esc", "help.global.cherryPickDrop", GlobalKeys::isEscape, CherryPickMsg.Dropped::new))
@@ -62,6 +65,13 @@ final class GlobalKeys {
      */
     static boolean isSettingsKey(KeyEvent event) {
         return event.hasCtrl() && event.isCharIgnoreCase('s');
+    }
+
+    /**
+     * Whether {@code event} is the shortcut that switches between the repository and the pull requests.
+     */
+    static boolean isScreenKey(KeyEvent event) {
+        return event.hasCtrl() && event.isCharIgnoreCase('p');
     }
 
     /**
