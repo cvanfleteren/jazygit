@@ -11,6 +11,8 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.ArrayList;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
+import net.vanfleteren.jazygit.feature.commit.reword.RewordPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;

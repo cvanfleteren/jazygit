@@ -10,7 +10,7 @@ import io.vavr.control.Try;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.feature.commit.CommitPopup;
+import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.StubGitProvider;

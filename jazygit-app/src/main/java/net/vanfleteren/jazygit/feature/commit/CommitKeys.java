@@ -1,5 +1,13 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import net.vanfleteren.jazygit.feature.commit.amend.AmendMsg;
+import net.vanfleteren.jazygit.feature.commit.amendcommit.AmendCommitMsg;
+import net.vanfleteren.jazygit.feature.commit.create.CommitMsg;
+import net.vanfleteren.jazygit.feature.commit.drop.DropMsg;
+import net.vanfleteren.jazygit.feature.commit.fixup.FixupMsg;
+import net.vanfleteren.jazygit.feature.commit.reset.ResetMsg;
+import net.vanfleteren.jazygit.feature.commit.reword.RewordMsg;
+import net.vanfleteren.jazygit.feature.commit.squash.SquashMsg;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.keys.Scopes;

@@ -80,7 +80,7 @@ class ThemeUpdateTest {
 
     @Test
     void requestWhileADialogIsOpenLeavesThatDialogOpen() {
-        Model typing = TestModels.loaded().openPopup(new net.vanfleteren.jazygit.feature.commit.CommitPopup());
+        Model typing = TestModels.loaded().openPopup(new net.vanfleteren.jazygit.feature.commit.create.CommitPopup());
 
         Model model = Update.update(typing, new ThemeMsg.Requested()).model();
 

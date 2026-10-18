@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.feature.branch;
 
 import io.vavr.control.Option;
 import java.util.function.BiFunction;
-import net.vanfleteren.jazygit.feature.commit.ResetPopup;
+import net.vanfleteren.jazygit.feature.commit.reset.ResetPopup;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;

@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.commit;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.commit.create.CommitMsg;
 import net.vanfleteren.jazygit.feature.stage.StageCmd;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;

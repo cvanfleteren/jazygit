@@ -10,8 +10,8 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.feature.commit.CommitMsg;
-import net.vanfleteren.jazygit.feature.commit.StageAllPopup;
+import net.vanfleteren.jazygit.feature.commit.create.CommitMsg;
+import net.vanfleteren.jazygit.feature.commit.create.StageAllPopup;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.model.SampleData;
@@ -26,7 +26,8 @@ import org.junit.jupiter.api.Test;
 class StageAllDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<net.vanfleteren.jazygit.feature.commit.StageAllPopup>
+    private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<
+                    net.vanfleteren.jazygit.feature.commit.create.StageAllPopup>
             dialog = new net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<>(
                     net.vanfleteren.jazygit.feature.commit.CommitDialogs.STAGE_ALL, dispatched::add);
     private final Model open = openModel();

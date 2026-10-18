@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchPopup;
-import net.vanfleteren.jazygit.feature.commit.AmendPopup;
+import net.vanfleteren.jazygit.feature.commit.amend.AmendPopup;
 import net.vanfleteren.jazygit.git.model.Branch;
 import org.junit.jupiter.api.Test;
 
