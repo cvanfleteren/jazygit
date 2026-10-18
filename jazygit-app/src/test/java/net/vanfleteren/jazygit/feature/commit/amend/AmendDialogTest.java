@@ -12,7 +12,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.ArrayList;
 import java.util.function.Supplier;
-import net.vanfleteren.jazygit.feature.commit.CommitDialogs;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.model.SampleData;
@@ -29,9 +28,9 @@ import org.junit.jupiter.api.Test;
 class AmendDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final ConfirmDialog<AmendPopup> dialog = new ConfirmDialog<>(CommitDialogs.AMEND, dispatched::add);
+    private final ConfirmDialog<AmendPopup> dialog = new ConfirmDialog<>(AmendDialogs.AMEND, dispatched::add);
     private final ConfirmDialog<AmendStageAllPopup> stageAll =
-            new ConfirmDialog<>(CommitDialogs.AMEND_STAGE_ALL, dispatched::add);
+            new ConfirmDialog<>(AmendDialogs.AMEND_STAGE_ALL, dispatched::add);
     private final Model unstaged = unstagedModel();
 
     /**
@@ -67,7 +66,7 @@ class AmendDialogTest {
 
     @Test
     void enterConfirms() throws Exception {
-        try (ToolkitTestRunner runner = start(CommitDialogs.AMEND.id(), () -> view(asked(Option.none())))) {
+        try (ToolkitTestRunner runner = start(AmendDialogs.AMEND.id(), () -> view(asked(Option.none())))) {
             SettledPilot.of(runner).press(KeyCode.ENTER);
             SettledPilot.of(runner).pause();
         }
@@ -77,7 +76,7 @@ class AmendDialogTest {
 
     @Test
     void escapeCancels() throws Exception {
-        try (ToolkitTestRunner runner = start(CommitDialogs.AMEND.id(), () -> view(asked(Option.none())))) {
+        try (ToolkitTestRunner runner = start(AmendDialogs.AMEND.id(), () -> view(asked(Option.none())))) {
             SettledPilot.of(runner).press(KeyCode.ESCAPE);
             SettledPilot.of(runner).pause();
         }
@@ -88,7 +87,7 @@ class AmendDialogTest {
     @Test
     void theLastCommitShowsTitleAndExplanation() throws Exception {
         Supplier<Element> view = () -> view(asked(Option.none()));
-        try (ToolkitTestRunner runner = start(CommitDialogs.AMEND.id(), view)) {
+        try (ToolkitTestRunner runner = start(AmendDialogs.AMEND.id(), view)) {
             String screen = RenderedText.ofLarge(runner, view::get);
             assertTrue(screen.contains("Amend last commit"), screen);
             assertTrue(screen.contains("Are you sure you want to amend the last commit?"), screen);
@@ -99,7 +98,7 @@ class AmendDialogTest {
     @Test
     void anOlderCommitShowsTitleAndQuestion() throws Exception {
         Supplier<Element> view = () -> view(older());
-        try (ToolkitTestRunner runner = start(CommitDialogs.AMEND.id(), view)) {
+        try (ToolkitTestRunner runner = start(AmendDialogs.AMEND.id(), view)) {
             String screen = RenderedText.ofLarge(runner, view::get);
             assertTrue(screen.contains("Amend commit"), screen);
             assertTrue(screen.contains("Are you sure you want to amend this commit with your"), screen);
@@ -109,11 +108,11 @@ class AmendDialogTest {
 
     @Test
     void stageAllEnterConfirmsAndEscapeCancels() throws Exception {
-        try (ToolkitTestRunner runner = start(CommitDialogs.AMEND_STAGE_ALL.id(), this::stageAllView)) {
+        try (ToolkitTestRunner runner = start(AmendDialogs.AMEND_STAGE_ALL.id(), this::stageAllView)) {
             SettledPilot.of(runner).press(KeyCode.ENTER);
             SettledPilot.of(runner).pause();
         }
-        try (ToolkitTestRunner runner = start(CommitDialogs.AMEND_STAGE_ALL.id(), this::stageAllView)) {
+        try (ToolkitTestRunner runner = start(AmendDialogs.AMEND_STAGE_ALL.id(), this::stageAllView)) {
             SettledPilot.of(runner).press(KeyCode.ESCAPE);
             SettledPilot.of(runner).pause();
         }
@@ -123,7 +122,7 @@ class AmendDialogTest {
 
     @Test
     void stageAllShowsTitleAndQuestion() throws Exception {
-        try (ToolkitTestRunner runner = start(CommitDialogs.AMEND_STAGE_ALL.id(), this::stageAllView)) {
+        try (ToolkitTestRunner runner = start(AmendDialogs.AMEND_STAGE_ALL.id(), this::stageAllView)) {
             String screen = RenderedText.ofLarge(runner, this::stageAllView);
             assertTrue(screen.contains("No files staged"), screen);
             assertTrue(screen.contains("You have not staged any files. Commit all files?"), screen);

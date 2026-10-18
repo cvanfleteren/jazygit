@@ -15,6 +15,7 @@ import io.vavr.collection.List;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.feature.commit.create.CommitMsg;
 import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
+import net.vanfleteren.jazygit.feature.commit.create.CreateCommitCmd;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordMsg;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordPopup;
 import net.vanfleteren.jazygit.git.model.Commit;
@@ -46,7 +47,7 @@ class CommitDialogTest {
                 ? asked
                 : Update.update(
                                 asked,
-                                new CommitMsg.StagedForCommit(new CommitCmd.StageForCommit(List.of()), List.of()))
+                                new CommitMsg.StagedForCommit(new CreateCommitCmd.StageForCommit(List.of()), List.of()))
                         .model();
     }
 

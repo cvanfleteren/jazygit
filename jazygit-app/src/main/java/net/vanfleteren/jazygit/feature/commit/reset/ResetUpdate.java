@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit.reset;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.commit.CommitCmd.Reset;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.ResetMode;
@@ -29,7 +28,7 @@ public final class ResetUpdate {
             case ResetMsg.Chosen(ResetMode mode) -> chosen(model, mode);
             case ResetMsg.HardConfirmed() ->
                 Update.confirm(
-                        model, HardResetPopup.class, popup -> Option.of(new Reset(popup.target(), ResetMode.HARD)));
+                        model, HardResetPopup.class, popup -> Option.of(new ResetCmd(popup.target(), ResetMode.HARD)));
             case ResetMsg.HardCancelled() -> Next.of(model.withoutPopup(HardResetPopup.class));
         };
     }
@@ -45,7 +44,7 @@ public final class ResetUpdate {
                         .map(popup -> Update.ask(
                                 model.withoutPopup(ResetPopup.class), new HardResetPopup(popup.target(), discarded)))
                         .getOrElse(() -> Next.of(model))
-                : Update.confirm(model, ResetPopup.class, popup -> Option.of(new Reset(popup.target(), mode)));
+                : Update.confirm(model, ResetPopup.class, popup -> Option.of(new ResetCmd(popup.target(), mode)));
     }
 
     /**

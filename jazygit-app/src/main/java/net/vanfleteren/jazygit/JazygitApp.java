@@ -37,11 +37,11 @@ import net.vanfleteren.jazygit.cli.StartupOptions;
 import net.vanfleteren.jazygit.feature.branch.BranchDialogs;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.feature.cherrypick.CherryPickDialogs;
-import net.vanfleteren.jazygit.feature.commit.CommitDialogs;
+import net.vanfleteren.jazygit.feature.commit.CommitFeature;
 import net.vanfleteren.jazygit.feature.discard.DiscardDialog;
 import net.vanfleteren.jazygit.feature.error.ErrorDialog;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
-import net.vanfleteren.jazygit.feature.github.PullRequestDialogs;
+import net.vanfleteren.jazygit.feature.github.GitHubDialogs;
 import net.vanfleteren.jazygit.feature.help.HelpDialog;
 import net.vanfleteren.jazygit.feature.inprogress.InProgressDialogs;
 import net.vanfleteren.jazygit.feature.repos.RecentReposDialog;
@@ -106,8 +106,8 @@ public class JazygitApp extends ToolkitApp {
     private final List<PopupSlot> popups = List.of(
                     BranchDialogs.popups(dispatch),
                     WorktreeDialogs.popups(dispatch),
-                    PullRequestDialogs.popups(dispatch),
-                    CommitDialogs.popups(dispatch),
+                    GitHubDialogs.popups(dispatch),
+                    CommitFeature.popups(dispatch),
                     StashDialogs.popups(dispatch),
                     CherryPickDialogs.popups(dispatch),
                     DiscardDialog.popups(dispatch),

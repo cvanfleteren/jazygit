@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit.reword;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.commit.CommitCmd.Reword;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordMsg.Requested;
@@ -39,6 +38,6 @@ public final class RewordUpdate {
                 model,
                 RewordPopup.class,
                 popup -> Option.when(
-                        message.hasSummary(), () -> new Reword(popup.commit().sha(), message)));
+                        message.hasSummary(), () -> new RewordCmd(popup.commit().sha(), message)));
     }
 }

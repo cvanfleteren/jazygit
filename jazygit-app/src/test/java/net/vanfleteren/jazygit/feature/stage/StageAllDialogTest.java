@@ -29,7 +29,7 @@ class StageAllDialogTest {
     private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<
                     net.vanfleteren.jazygit.feature.commit.create.StageAllPopup>
             dialog = new net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<>(
-                    net.vanfleteren.jazygit.feature.commit.CommitDialogs.STAGE_ALL, dispatched::add);
+                    net.vanfleteren.jazygit.feature.commit.create.CreateCommitDialogs.STAGE_ALL, dispatched::add);
     private final Model open = openModel();
 
     private static Model openModel() {
@@ -70,7 +70,7 @@ class StageAllDialogTest {
     private ToolkitTestRunner start() throws Exception {
         assertTrue(open.popup(StageAllPopup.class).isDefined(), "nothing is staged");
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        SettledPilot.focus(runner, net.vanfleteren.jazygit.feature.commit.CommitDialogs.STAGE_ALL.id());
+        SettledPilot.focus(runner, net.vanfleteren.jazygit.feature.commit.create.CreateCommitDialogs.STAGE_ALL.id());
         RenderedText.of(runner, this::view);
         return runner;
     }

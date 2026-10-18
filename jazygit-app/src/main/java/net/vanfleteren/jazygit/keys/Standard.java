@@ -4,11 +4,11 @@ import io.vavr.collection.List;
 import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.feature.branch.BranchKeys;
 import net.vanfleteren.jazygit.feature.cherrypick.CherryPickKeys;
-import net.vanfleteren.jazygit.feature.commit.CommitKeys;
+import net.vanfleteren.jazygit.feature.commit.CommitFeature;
 import net.vanfleteren.jazygit.feature.discard.DiscardKeys;
 import net.vanfleteren.jazygit.feature.edit.EditKeys;
 import net.vanfleteren.jazygit.feature.github.BrowseKeys;
-import net.vanfleteren.jazygit.feature.github.PullRequestKeys;
+import net.vanfleteren.jazygit.feature.github.GitHubKeys;
 import net.vanfleteren.jazygit.feature.stage.StageKeys;
 import net.vanfleteren.jazygit.feature.stash.StashKeys;
 import net.vanfleteren.jazygit.feature.worktree.WorktreeKeys;
@@ -20,13 +20,13 @@ final class Standard {
 
     static final Keymap KEYMAP = List.<UnaryOperator<Keymap>>of(
                     StageKeys::register,
-                    CommitKeys::register,
+                    CommitFeature::register,
                     CherryPickKeys::register,
                     DiscardKeys::register,
                     EditKeys::register,
                     StashKeys::register,
                     BranchKeys::register,
-                    PullRequestKeys::register,
+                    GitHubKeys::register,
                     BrowseKeys::register,
                     WorktreeKeys::register,
                     GlobalKeys::register)

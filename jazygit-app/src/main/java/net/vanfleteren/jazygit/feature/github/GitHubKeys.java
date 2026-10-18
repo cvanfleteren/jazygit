@@ -10,9 +10,9 @@ import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
 /**
  * The keys for working with pull requests.
  */
-public final class PullRequestKeys {
+public final class GitHubKeys {
 
-    private PullRequestKeys() {}
+    private GitHubKeys() {}
 
     public static Keymap register(Keymap keys) {
         return Scopes.PULL_REQUESTS.foldLeft(

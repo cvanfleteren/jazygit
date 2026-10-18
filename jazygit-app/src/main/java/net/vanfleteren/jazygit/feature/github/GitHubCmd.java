@@ -18,7 +18,7 @@ import net.vanfleteren.jazygit.state.Operation;
 /**
  * Commands that talk to GitHub, through gh.
  */
-public sealed interface PullRequestCmd extends Cmd {
+public sealed interface GitHubCmd extends Cmd {
 
     Operation CREATE_PR =
             Operation.of("log.title.createPr", "error.createPr.failed").labelledWhenBusy("branches.busy.pullRequest");
@@ -70,8 +70,7 @@ public sealed interface PullRequestCmd extends Cmd {
      *
      * @param head the name the branch has on its remote
      */
-    record ReadTitle(Branch.Name branch, Branch.Name head, Branch.Name base, BranchRef baseRef)
-            implements PullRequestCmd {
+    record ReadTitle(Branch.Name branch, Branch.Name head, Branch.Name base, BranchRef baseRef) implements GitHubCmd {
 
         @Override
         public Msg run(Env env) {
@@ -95,7 +94,7 @@ public sealed interface PullRequestCmd extends Cmd {
      * {@code base}, as {@code pullRequest} says.
      */
     record CreatePullRequest(Branch.Name branch, Branch.Name head, Branch.Name base, NewPullRequest pullRequest)
-            implements PullRequestCmd, OperationCmd {
+            implements GitHubCmd, OperationCmd {
 
         @Override
         public Operation operation() {
@@ -134,7 +133,7 @@ public sealed interface PullRequestCmd extends Cmd {
     /**
      * Opens pull request {@code number}, from {@code branch}, in the browser.
      */
-    record OpenPullRequest(Branch.Name branch, int number) implements PullRequestCmd, OperationCmd {
+    record OpenPullRequest(Branch.Name branch, int number) implements GitHubCmd, OperationCmd {
 
         @Override
         public Operation operation() {
@@ -155,7 +154,7 @@ public sealed interface PullRequestCmd extends Cmd {
     /**
      * Merges pull request {@code number}, from {@code branch}, as {@code method} says.
      */
-    record MergePullRequest(Branch.Name branch, int number, MergeMethod method) implements PullRequestCmd, ChangingCmd {
+    record MergePullRequest(Branch.Name branch, int number, MergeMethod method) implements GitHubCmd, ChangingCmd {
 
         @Override
         public Operation operation() {
@@ -171,7 +170,7 @@ public sealed interface PullRequestCmd extends Cmd {
     /**
      * Closes pull request {@code number}, from {@code branch}, without merging it.
      */
-    record ClosePullRequest(Branch.Name branch, int number) implements PullRequestCmd, ChangingCmd {
+    record ClosePullRequest(Branch.Name branch, int number) implements GitHubCmd, ChangingCmd {
 
         @Override
         public Operation operation() {
@@ -188,7 +187,7 @@ public sealed interface PullRequestCmd extends Cmd {
      * Turns pull request {@code number}, from {@code branch}, into a draft when {@code draft}, else marks it
      * ready for review.
      */
-    record SetDraft(Branch.Name branch, int number, boolean draft) implements PullRequestCmd, OperationCmd {
+    record SetDraft(Branch.Name branch, int number, boolean draft) implements GitHubCmd, OperationCmd {
 
         @Override
         public Operation operation() {
@@ -224,7 +223,7 @@ public sealed interface PullRequestCmd extends Cmd {
     /**
      * Reads the details of pull request {@code number}, which the user is waiting for.
      */
-    record LoadPullRequestDetails(int number) implements PullRequestCmd {
+    record LoadPullRequestDetails(int number) implements GitHubCmd {
 
         @Override
         public Msg run(Env env) {

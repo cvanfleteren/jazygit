@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit.squash;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.commit.CommitCmd.Squash;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
@@ -24,7 +23,7 @@ public final class SquashUpdate {
                 Update.confirm(
                         model,
                         SquashPopup.class,
-                        popup -> Option.of(new Squash(popup.commit().sha(), SquashMode.SQUASH)));
+                        popup -> Option.of(new SquashCmd(popup.commit().sha(), SquashMode.SQUASH)));
         };
     }
 

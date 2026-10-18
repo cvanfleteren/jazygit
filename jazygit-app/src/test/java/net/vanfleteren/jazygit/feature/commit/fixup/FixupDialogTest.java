@@ -11,7 +11,6 @@ import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import java.time.Instant;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.feature.commit.CommitDialogs;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
@@ -27,7 +26,7 @@ import org.junit.jupiter.api.Test;
 class FixupDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final ChoiceDialog<FixupPopup> dialog = new ChoiceDialog<>(CommitDialogs.FIXUP, dispatched::add);
+    private final ChoiceDialog<FixupPopup> dialog = new ChoiceDialog<>(FixupDialogs.FIXUP, dispatched::add);
     private final Model open = openModel();
 
     private static Model openModel() {
@@ -82,7 +81,7 @@ class FixupDialogTest {
     private ToolkitTestRunner start() throws Exception {
         assertTrue(open.popup(FixupPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        SettledPilot.focus(runner, CommitDialogs.FIXUP.id());
+        SettledPilot.focus(runner, FixupDialogs.FIXUP.id());
         RenderedText.of(runner, this::view);
         return runner;
     }

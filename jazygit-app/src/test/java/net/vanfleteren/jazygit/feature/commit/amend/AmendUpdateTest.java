@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.feature.commit.CommitCmd;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendTarget.LastCommit;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendTarget.Older;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -149,7 +148,7 @@ class AmendUpdateTest {
             Option<Sha> sha = target instanceof Older(Sha older) ? Option.of(older) : Option.none();
             Next next = Update.update(asked(List.of(STAGED, UNSTAGED), sha), new AmendMsg.Confirmed());
 
-            assertEquals(List.of(new CommitCmd.Amend(target, List.empty())), next.cmds());
+            assertEquals(List.of(new AmendCmd(target, List.empty())), next.cmds());
             assertEquals(Option.none(), next.model().popup(AmendPopup.class));
         }
     }
@@ -173,7 +172,7 @@ class AmendUpdateTest {
 
         Next next = Update.update(stageAll, new AmendMsg.StageAllConfirmed());
 
-        assertEquals(List.of(new CommitCmd.Amend(new Older(MIDDLE.sha()), List.of("b.txt", "c.txt"))), next.cmds());
+        assertEquals(List.of(new AmendCmd(new Older(MIDDLE.sha()), List.of("b.txt", "c.txt"))), next.cmds());
         assertEquals(Option.none(), next.model().popup(AmendStageAllPopup.class));
     }
 
@@ -193,19 +192,17 @@ class AmendUpdateTest {
 
     @Test
     void onlyAmendingAnOlderCommitWaitsUntilNothingIsInProgress() {
-        assertFalse(
-                new CommitCmd.Amend(new LastCommit(), List.empty()).operation().waitsForUnfinished());
-        assertTrue(new CommitCmd.Amend(new Older(MIDDLE.sha()), List.empty())
-                .operation()
-                .waitsForUnfinished());
+        assertFalse(new AmendCmd(new LastCommit(), List.empty()).operation().waitsForUnfinished());
+        assertTrue(
+                new AmendCmd(new Older(MIDDLE.sha()), List.empty()).operation().waitsForUnfinished());
     }
 
     @Test
     void aFailureShowsTheError() {
-        Next last = Update.update(
-                TestModels.loaded(), failed(new CommitCmd.Amend(new LastCommit(), List.empty()), "no commit"));
+        Next last =
+                Update.update(TestModels.loaded(), failed(new AmendCmd(new LastCommit(), List.empty()), "no commit"));
         Next older = Update.update(
-                TestModels.loaded(), failed(new CommitCmd.Amend(new Older(new Sha("aaaa")), List.empty()), "conflict"));
+                TestModels.loaded(), failed(new AmendCmd(new Older(new Sha("aaaa")), List.empty()), "conflict"));
 
         assertEquals(Option.of("Amend failed: no commit"), errorText(last.model()));
         assertEquals(Option.of("Amend commit failed: conflict"), errorText(older.model()));

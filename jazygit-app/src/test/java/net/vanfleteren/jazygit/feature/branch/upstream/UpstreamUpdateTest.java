@@ -8,7 +8,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
-import net.vanfleteren.jazygit.feature.commit.CommitCmd;
+import net.vanfleteren.jazygit.feature.commit.reset.ResetCmd;
 import net.vanfleteren.jazygit.feature.commit.reset.ResetMsg;
 import net.vanfleteren.jazygit.feature.commit.reset.ResetPopup;
 import net.vanfleteren.jazygit.git.model.*;
@@ -252,8 +252,7 @@ class UpstreamUpdateTest {
 
         Next next = Update.update(asking, new ResetMsg.Chosen(ResetMode.SOFT));
 
-        assertEquals(
-                List.of(new CommitCmd.Reset(new ResetTarget.ToUpstream(ORIGIN_MAIN), ResetMode.SOFT)), next.cmds());
+        assertEquals(List.of(new ResetCmd(new ResetTarget.ToUpstream(ORIGIN_MAIN), ResetMode.SOFT)), next.cmds());
         assertEquals(Option.none(), next.model().popup());
     }
 

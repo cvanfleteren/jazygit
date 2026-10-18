@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit.drop;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.commit.CommitCmd.Drop;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
@@ -23,7 +22,7 @@ public final class DropUpdate {
                 Update.confirm(
                         model,
                         DropPopup.class,
-                        popup -> Option.of(new Drop(popup.commit().sha())));
+                        popup -> Option.of(new DropCmd(popup.commit().sha())));
         };
     }
 

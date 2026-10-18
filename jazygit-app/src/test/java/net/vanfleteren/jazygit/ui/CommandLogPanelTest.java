@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
-import net.vanfleteren.jazygit.feature.commit.CommitCmd;
+import net.vanfleteren.jazygit.feature.commit.create.CreateCommitCmd;
 import net.vanfleteren.jazygit.feature.stage.StageCmd;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.LogEntry;
@@ -66,7 +66,7 @@ class CommandLogPanelTest {
                 TestModels.loaded(new SampleData()),
                 new LogEntry(StageCmd.STAGE, executed("git add -- old.txt")),
                 new LogEntry(
-                        CommitCmd.COMMIT,
+                        CreateCommitCmd.COMMIT,
                         executed(
                                 "git commit -m a",
                                 "git commit -m b",

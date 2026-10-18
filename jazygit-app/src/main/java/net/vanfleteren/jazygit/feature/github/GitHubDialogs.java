@@ -16,7 +16,7 @@ import net.vanfleteren.jazygit.ui.widgets.PickDialog;
 /**
  * The popups of the pull request operations.
  */
-public final class PullRequestDialogs {
+public final class GitHubDialogs {
 
     /**
      * Asks which branch a new pull request merges into.
@@ -29,7 +29,7 @@ public final class PullRequestDialogs {
             base -> new CreatePullRequestMsg.BaseChosen(new Branch.Name(base)),
             CreatePullRequestMsg.BaseCancelled::new);
 
-    private PullRequestDialogs() {}
+    private GitHubDialogs() {}
 
     /**
      * The popups of this feature, which send what the user does to {@code dispatch}.

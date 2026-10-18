@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.feature.commit.CommitCmd;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.state.*;
@@ -78,7 +77,7 @@ class ResetUpdateTest {
         for (ResetMode mode : List.of(ResetMode.MIXED, ResetMode.SOFT)) {
             Next next = Update.update(opened(withFiles(MODIFIED)), new ResetMsg.Chosen(mode));
 
-            assertEquals(List.of(new CommitCmd.Reset(new ResetTarget.ToCommit(ROOT.sha()), mode)), next.cmds());
+            assertEquals(List.of(new ResetCmd(new ResetTarget.ToCommit(ROOT.sha()), mode)), next.cmds());
             assertEquals(Option.none(), next.model().popup());
         }
     }
@@ -87,7 +86,7 @@ class ResetUpdateTest {
     void aHardResetOfACleanTreeResetsRightAway() {
         Next next = Update.update(opened(withFiles()), new ResetMsg.Chosen(ResetMode.HARD));
 
-        assertEquals(List.of(new CommitCmd.Reset(new ResetTarget.ToCommit(ROOT.sha()), ResetMode.HARD)), next.cmds());
+        assertEquals(List.of(new ResetCmd(new ResetTarget.ToCommit(ROOT.sha()), ResetMode.HARD)), next.cmds());
         assertEquals(Option.none(), next.model().popup());
     }
 
@@ -95,7 +94,7 @@ class ResetUpdateTest {
     void untrackedFilesAreLeftAloneSoTheyNeedNoConfirmation() {
         Next next = Update.update(opened(withFiles(UNTRACKED)), new ResetMsg.Chosen(ResetMode.HARD));
 
-        assertEquals(List.of(new CommitCmd.Reset(new ResetTarget.ToCommit(ROOT.sha()), ResetMode.HARD)), next.cmds());
+        assertEquals(List.of(new ResetCmd(new ResetTarget.ToCommit(ROOT.sha()), ResetMode.HARD)), next.cmds());
     }
 
     @Test
@@ -129,7 +128,7 @@ class ResetUpdateTest {
 
         Next next = Update.update(asking, new ResetMsg.HardConfirmed());
 
-        assertEquals(List.of(new CommitCmd.Reset(new ResetTarget.ToCommit(ROOT.sha()), ResetMode.HARD)), next.cmds());
+        assertEquals(List.of(new ResetCmd(new ResetTarget.ToCommit(ROOT.sha()), ResetMode.HARD)), next.cmds());
         assertEquals(Option.none(), next.model().popup());
     }
 
@@ -154,9 +153,8 @@ class ResetUpdateTest {
 
     @Test
     void aFailedResetNamesItsTarget() {
-        CommitCmd.Reset reset =
-                new CommitCmd.Reset(new ResetTarget.ToCommit(new Sha("abcdef0123456789")), ResetMode.HARD);
-        assertEquals(CommitCmd.RESET, reset.operation());
+        ResetCmd reset = new ResetCmd(new ResetTarget.ToCommit(new Sha("abcdef0123456789")), ResetMode.HARD);
+        assertEquals(ResetCmd.RESET, reset.operation());
 
         Next next = Update.update(TestModels.loaded(), failed(reset, "locked"));
 

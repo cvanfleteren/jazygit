@@ -11,7 +11,6 @@ import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import java.time.Instant;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.feature.commit.CommitDialogs;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.*;
@@ -26,7 +25,7 @@ class SquashDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<SquashPopup> dialog =
-            new net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<>(CommitDialogs.SQUASH, dispatched::add);
+            new net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<>(SquashDialogs.SQUASH, dispatched::add);
     private final Model open = openModel();
 
     private static Model openModel() {
@@ -77,7 +76,7 @@ class SquashDialogTest {
     private ToolkitTestRunner start() throws Exception {
         assertTrue(open.popup(SquashPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        SettledPilot.focus(runner, CommitDialogs.SQUASH.id());
+        SettledPilot.focus(runner, SquashDialogs.SQUASH.id());
         RenderedText.of(runner, this::view);
         return runner;
     }

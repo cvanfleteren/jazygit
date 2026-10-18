@@ -7,8 +7,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.feature.commit.CommitCmd;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendMsg;
+import net.vanfleteren.jazygit.feature.commit.reword.RewordCmd;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordMsg;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordPopup;
 import net.vanfleteren.jazygit.git.model.*;
@@ -89,8 +89,7 @@ class CommitUpdateTest {
 
         Next next = Update.update(open, new RewordMsg.Confirmed(new CommitMessage(" better ", "\nwhy\n")));
 
-        assertEquals(
-                List.of(new CommitCmd.Reword(new Sha("abc1234"), new CommitMessage("better", "why"))), next.cmds());
+        assertEquals(List.of(new RewordCmd(new Sha("abc1234"), new CommitMessage("better", "why"))), next.cmds());
         assertEquals(Option.none(), next.model().popup());
     }
 
@@ -152,10 +151,11 @@ class CommitUpdateTest {
 
         Next next = Update.update(asking, new CommitMsg.StageAllConfirmed());
 
-        assertEquals(List.of(new CommitCmd.StageForCommit(List.of("a.txt", "b.txt"))), next.cmds());
+        assertEquals(List.of(new CreateCommitCmd.StageForCommit(List.of("a.txt", "b.txt"))), next.cmds());
         assertFalse(next.model().popup(StageAllPopup.class).isDefined());
         assertTrue(Update.update(
-                        next.model(), new CommitMsg.StagedForCommit(new CommitCmd.StageForCommit(List.of()), List.of()))
+                        next.model(),
+                        new CommitMsg.StagedForCommit(new CreateCommitCmd.StageForCommit(List.of()), List.of()))
                 .model()
                 .popup(CommitPopup.class)
                 .isDefined());
@@ -179,7 +179,7 @@ class CommitUpdateTest {
 
         Next next = Update.update(open, new CommitMsg.Confirmed(new CommitMessage(" summary ", "\ndetails\n")));
 
-        assertEquals(List.of(new CommitCmd.Commit(new CommitMessage("summary", "details"))), next.cmds());
+        assertEquals(List.of(new CreateCommitCmd.Commit(new CommitMessage("summary", "details"))), next.cmds());
         assertFalse(next.model().popup(CommitPopup.class).isDefined());
     }
 

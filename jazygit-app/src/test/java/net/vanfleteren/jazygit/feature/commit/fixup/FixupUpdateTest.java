@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.feature.commit.CommitCmd;
+import net.vanfleteren.jazygit.feature.commit.squash.SquashCmd;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
@@ -90,7 +90,7 @@ class FixupUpdateTest {
         for (SquashMode mode : List.of(SquashMode.FIXUP, SquashMode.FIXUP_KEEP_MESSAGE)) {
             Next next = Update.update(opened(), new FixupMsg.Chosen(mode));
 
-            assertEquals(List.of(new CommitCmd.Squash(new Sha("c3"), mode)), next.cmds());
+            assertEquals(List.of(new SquashCmd(new Sha("c3"), mode)), next.cmds());
             assertEquals(Option.none(), next.model().popup(FixupPopup.class));
         }
     }
@@ -105,11 +105,11 @@ class FixupUpdateTest {
 
     @Test
     void aFixupIsLoggedAndReportedAsOne() {
-        assertEquals(CommitCmd.FIXUP, new CommitCmd.Squash(new Sha("aaaa"), SquashMode.FIXUP).operation());
-        assertEquals(CommitCmd.FIXUP, new CommitCmd.Squash(new Sha("aaaa"), SquashMode.FIXUP_KEEP_MESSAGE).operation());
+        assertEquals(SquashCmd.FIXUP, new SquashCmd(new Sha("aaaa"), SquashMode.FIXUP).operation());
+        assertEquals(SquashCmd.FIXUP, new SquashCmd(new Sha("aaaa"), SquashMode.FIXUP_KEEP_MESSAGE).operation());
 
         Next next = Update.update(
-                TestModels.loaded(), failed(new CommitCmd.Squash(new Sha("aaaa"), SquashMode.FIXUP), "conflict"));
+                TestModels.loaded(), failed(new SquashCmd(new Sha("aaaa"), SquashMode.FIXUP), "conflict"));
 
         assertEquals(Option.of("Fixup failed: conflict"), errorText(next.model()));
     }

@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.feature.commit.CommitCmd;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.LoadMsg;
@@ -98,7 +97,7 @@ class DropUpdateTest {
 
         Next next = Update.update(open, new DropMsg.Confirmed());
 
-        assertEquals(List.of(new CommitCmd.Drop(new Sha("c2"))), next.cmds());
+        assertEquals(List.of(new DropCmd(new Sha("c2"))), next.cmds());
         assertEquals(Option.none(), next.model().popup(DropPopup.class));
     }
 
@@ -115,7 +114,7 @@ class DropUpdateTest {
 
     @Test
     void aFailureShowsTheError() {
-        Next next = Update.update(TestModels.loaded(), failed(new CommitCmd.Drop(new Sha("aaaa")), "conflict"));
+        Next next = Update.update(TestModels.loaded(), failed(new DropCmd(new Sha("aaaa")), "conflict"));
 
         assertEquals(Option.of("Drop failed: conflict"), errorText(next.model()));
     }

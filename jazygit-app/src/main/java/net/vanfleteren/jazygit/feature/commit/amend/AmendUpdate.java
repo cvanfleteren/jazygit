@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.feature.commit.amend;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.commit.CommitCmd.Amend;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendMsg.Requested;
@@ -64,7 +63,8 @@ public final class AmendUpdate {
      */
     private static Next confirmed(Model model) {
         return Update.files(model).exists(FileEntry::staged)
-                ? Update.confirm(model, AmendPopup.class, popup -> Option.of(new Amend(popup.target(), List.empty())))
+                ? Update.confirm(
+                        model, AmendPopup.class, popup -> Option.of(new AmendCmd(popup.target(), List.empty())))
                 : model.popup(AmendPopup.class)
                         .map(popup -> Update.ask(
                                 model.withoutPopup(AmendPopup.class), new AmendStageAllPopup(popup.target())))
@@ -73,6 +73,6 @@ public final class AmendUpdate {
 
     private static Next stageAllConfirmed(Model model) {
         List<String> paths = FileEntry.paths(Update.files(model), FileEntry::unstaged);
-        return Update.confirm(model, AmendStageAllPopup.class, popup -> Option.of(new Amend(popup.target(), paths)));
+        return Update.confirm(model, AmendStageAllPopup.class, popup -> Option.of(new AmendCmd(popup.target(), paths)));
     }
 }

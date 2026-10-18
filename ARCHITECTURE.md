@@ -426,7 +426,7 @@ classDiagram
 - **`Cmd.Load`** reads part of the repository into the model, as a `Loadable`. Every `LoadMsg` names its
   load, so `LoadUpdate` marks it as no longer running in one place.
 - **`OperationCmd`** changes the repository. It names its `Operation`, the branch it is done to, and the branch
-  it keeps busy. An `Operation` is a record that the feature declares next to its commands (`CommitCmd.DROP`,
+  it keeps busy. An `Operation` is a record that the feature declares next to its commands (`DropCmd.DROP`,
   ...): the command log title, the error message, whether it waits until nothing is unfinished, and what a
   branch it keeps busy shows next to its spinner. Its outcome is an
   `OperationMsg.Succeeded`, `OperationMsg.Stopped` (it stopped on conflicts, left for the user) or
@@ -460,10 +460,11 @@ Each feature package follows the same shape:
 |---|---|---|
 | `XxxMsg` | `RewordMsg` | Sealed set of messages, usually `Requested`, `Confirmed` and `Cancelled`; a feature with several dialogs or outcomes names them after those (`StashMsg.DropRequested`, `PullRequestMsg.MergeChosen`). |
 | `XxxUpdate` | `RewordUpdate` | Pure transitions for those messages; `Update.confirm` closes a popup and starts the operation made of it. |
-| `XxxCmd` | `CommitCmd.Reword` | The operation the feature asks for, an `OperationCmd`. |
+| `XxxCmd` | `RewordCmd` | The operation the feature asks for, an `OperationCmd`. |
 | `XxxPopup` | `RewordPopup` | What the open dialog is about; it lives in the model. |
-| `XxxDialogs` | `CommitDialogs.SQUASH`, `CommitDialog.reword` | The popups, mostly as data (`ConfirmDialog.Spec`, `ChoiceDialog.Spec`, `TextInputDialog.Spec`, `PickDialog.Spec`) that `popups(dispatch)` turns into widgets, as the `PopupSlot`s `JazygitApp` shows; `XxxDialog` for a feature with one, or a dialog of its own. |
-| `XxxKeys` | `CommitKeys` | Adds the feature's keys to the immutable `Keymap`. |
+| `XxxDialogs` | `SquashDialogs.SQUASH`, `CommitDialog.reword` | The popups, mostly as data (`ConfirmDialog.Spec`, `ChoiceDialog.Spec`, `TextInputDialog.Spec`, `PickDialog.Spec`) that `popups(dispatch)` turns into widgets, as the `PopupSlot`s `JazygitApp` shows; `XxxDialog` for a feature with one, or a dialog of its own. |
+| `XxxKeys` | `BranchKeys` | Adds the feature's keys to the immutable `Keymap`. |
+| `XxxAction` | `DropAction` | In the commit feature, an operation's keys and popups together, which `CommitFeature` lists. |
 
 The branch package gives each of its operations a subpackage of its own (`checkout`, `newbranch`, `rename`,
 `delete`, `merge`, `rebase`, `push`, `pull`, `upstream`, and `tabs` for switching between the local branches, the
@@ -471,15 +472,17 @@ remote ones and the worktrees), with its `XxxMsg`, `XxxUpdate` and popups. What 
 `feature.branch`: `BranchCmd`, `BranchDialogs`, `BranchKeys`, and `Branches`, which knows which branches are
 checked out where.
 
-The commit package likewise gives each of its operations a subpackage of its own (`create`, `amend`, `reword`,
-`squash`, `fixup`, `drop`, `reset`), with its `XxxMsg`, `XxxUpdate` and popups. What they share stays in
-`feature.commit`: `CommitCmd`, `CommitDialogs`, `CommitKeys`, and the message dialog that committing and rewording
-both use (`CommitDialog`, `MessagePopup`, `MessageEditor*`). Amending is one operation with an `AmendTarget`: the
-last commit, which is amended in place, also while something is in progress, or an older one, which rebases the
-commits after it and so waits until nothing is.
+The commit package goes further: each of its operations (`create`, `amend`, `reword`, `squash`, `fixup`, `drop`,
+`reset`) is all in its subpackage, its command (`DropCmd`, with its `Operation`), its dialogs (`DropDialogs`) and
+its keys included, which its `XxxAction` (`DropAction.ACTION`, a `CommitAction`) brings together. `CommitFeature`
+lists the actions, and is what `Keymap` and `JazygitApp` know of the feature; adding an operation is adding its
+subpackage and one line there. What the operations share stays in `feature.commit`: the message dialog that
+committing and rewording both use (`CommitDialog`, `MessagePopup`, `MessageEditor*`). Amending is one operation
+with an `AmendTarget`: the last commit, which is amended in place, also while something is in progress, or an older
+one, which rebases the commits after it and so waits until nothing is.
 
 So do the github package (`create`, `show` for the pull request dialog and what is done from it, `checkout`,
-`browse`; `PullRequestCmd`, `PullRequestDialogs`, `PullRequestKeys` and `BrowseKeys` are shared) and the worktree
+`browse`; `GitHubCmd`, `GitHubDialogs`, `PullRequestKeys` and `BrowseKeys` are shared) and the worktree
 package (`add`, `remove`, `switchto`; `WorktreeCmd`, `WorktreeDialogs` and `WorktreeKeys` are shared).
 `ErrorPopup` lives in `state`, as `Model.fail` opens it; the error feature only closes it.
 
@@ -686,7 +689,7 @@ sequenceDiagram
     User->>Dialog: edits the summary and submits
     Dialog->>Program: dispatch(RewordMsg.Confirmed(message))
     Program->>Update: confirmed(model, message)
-    Update-->>Program: Next(model - popup, [CommitCmd.Reword(sha, message)])
+    Update-->>Program: Next(model - popup, [RewordCmd(sha, message)])
     Program->>IO: io.execute(perform(env, cmd))
 
     IO->>Provider: reword(sha, message)
@@ -709,7 +712,7 @@ sequenceDiagram
 ### Step by step
 
 1. **Key press.**
-   - `CommitKeys` registered `Binding.onSelected("r", "help.commits.reword", commit -> new RewordMsg.Requested(commit.sha()))`
+   - `RewordAction` registered `Binding.onSelected("r", "help.commits.reword", commit -> new RewordMsg.Requested(commit.sha()))`
      in the `COMMITS` scope.
    - `CommitsPanel` asks the `Keymap` to handle the key with the selected commit. That yields
      `RewordMsg.Requested(sha)`, which the panel dispatches. It names the commit, not its row, so a log that
@@ -725,7 +728,7 @@ sequenceDiagram
 
 4. **Confirm**, a pure step in `RewordUpdate.confirmed`.
    - A blank summary keeps the dialog open.
-   - Otherwise `Update.confirm` closes the popup and returns one command: `CommitCmd.Reword(sha, message)`.
+   - Otherwise `Update.confirm` closes the popup and returns one command: `RewordCmd(sha, message)`.
 
 5. **Perform**, on the `git-io` thread. `Program.perform` calls `Reword.run(env)`, which `GitOperationCmd`
    implements for every operation done through git alone:
@@ -762,7 +765,7 @@ sequenceDiagram
 
 7. **Report.** The `Either` becomes one of two messages, which `OperationUpdate` handles:
    - **Success:** `OperationMsg.Succeeded(reword, commands)`. The commands are logged under
-     `CommitCmd.REWORD`, the error is cleared and `Update.refresh` reads the repository again.
+     `RewordCmd.REWORD`, the error is cleared and `Update.refresh` reads the repository again.
    - **Stopped on conflicts:** `OperationMsg.Stopped(reword, commands, notice)`. As for a success, but the
      command log shows the `Notice`, which `NoticeText` turns into text, and the status panel shows the
      rebase in progress.

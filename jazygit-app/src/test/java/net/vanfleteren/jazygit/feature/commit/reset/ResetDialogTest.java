@@ -12,7 +12,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.feature.commit.CommitDialogs;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -35,7 +34,7 @@ class ResetDialogTest {
             new Commit(new Sha("1111111111"), "Ada", "ada@example.com", Instant.EPOCH, "Target", "");
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final ChoiceDialog<ResetPopup> dialog = new ChoiceDialog<>(CommitDialogs.RESET, dispatched::add);
+    private final ChoiceDialog<ResetPopup> dialog = new ChoiceDialog<>(ResetDialogs.RESET, dispatched::add);
     private final Model open = Update.update(
                     Update.update(TestModels.loaded(), new LoadMsg.CommitsLoaded(List.of(TARGET)))
                             .model(),
@@ -96,7 +95,7 @@ class ResetDialogTest {
     }
 
     private String confirmation(Option<Integer> files) throws Exception {
-        ConfirmDialog<HardResetPopup> confirm = new ConfirmDialog<>(CommitDialogs.HARD_RESET, dispatched::add);
+        ConfirmDialog<HardResetPopup> confirm = new ConfirmDialog<>(ResetDialogs.HARD_RESET, dispatched::add);
         Model asking = TestModels.loaded().openPopup(new HardResetPopup(new ResetTarget.ToCommit(TARGET.sha()), files));
         return render(() -> stack(text("background"), confirm.render(asking).get()));
     }
@@ -104,7 +103,7 @@ class ResetDialogTest {
     private List<Msg> pressing(char key) throws Exception {
         dispatched.clear();
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view)) {
-            SettledPilot.focus(runner, CommitDialogs.RESET.id());
+            SettledPilot.focus(runner, ResetDialogs.RESET.id());
             RenderedText.of(runner, this::view);
             SettledPilot.of(runner).press(key);
             SettledPilot.of(runner).pause();

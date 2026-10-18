@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.feature.commit.CommitCmd;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
@@ -94,7 +93,7 @@ class SquashUpdateTest {
 
         Next next = Update.update(open, new SquashMsg.Confirmed());
 
-        assertEquals(List.of(new CommitCmd.Squash(new Sha("c3"), SquashMode.SQUASH)), next.cmds());
+        assertEquals(List.of(new SquashCmd(new Sha("c3"), SquashMode.SQUASH)), next.cmds());
         assertEquals(Option.none(), next.model().popup(SquashPopup.class));
     }
 
@@ -112,7 +111,7 @@ class SquashUpdateTest {
     @Test
     void aFailureShowsTheError() {
         Next next = Update.update(
-                TestModels.loaded(), failed(new CommitCmd.Squash(new Sha("aaaa"), SquashMode.SQUASH), "conflict"));
+                TestModels.loaded(), failed(new SquashCmd(new Sha("aaaa"), SquashMode.SQUASH), "conflict"));
 
         assertEquals(Option.of("Squash failed: conflict"), errorText(next.model()));
     }

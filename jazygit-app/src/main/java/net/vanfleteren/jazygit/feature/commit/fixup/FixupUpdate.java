@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.commit.fixup;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.commit.CommitCmd.Squash;
+import net.vanfleteren.jazygit.feature.commit.squash.SquashCmd;
 import net.vanfleteren.jazygit.feature.commit.squash.SquashUpdate;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
@@ -24,7 +24,7 @@ public final class FixupUpdate {
                 Update.confirm(
                         model,
                         FixupPopup.class,
-                        popup -> Option.of(new Squash(popup.commit().sha(), mode)));
+                        popup -> Option.of(new SquashCmd(popup.commit().sha(), mode)));
         };
     }
 

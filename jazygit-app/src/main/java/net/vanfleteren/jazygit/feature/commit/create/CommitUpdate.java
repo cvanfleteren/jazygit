@@ -2,9 +2,9 @@ package net.vanfleteren.jazygit.feature.commit.create;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.commit.CommitCmd.Commit;
-import net.vanfleteren.jazygit.feature.commit.CommitCmd.StageForCommit;
 import net.vanfleteren.jazygit.feature.commit.create.CommitMsg.*;
+import net.vanfleteren.jazygit.feature.commit.create.CreateCommitCmd.Commit;
+import net.vanfleteren.jazygit.feature.commit.create.CreateCommitCmd.StageForCommit;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.process.ExecutedCommand;

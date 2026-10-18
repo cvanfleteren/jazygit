@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.feature.github.create;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.github.PullRequestCmd;
+import net.vanfleteren.jazygit.feature.github.GitHubCmd;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -49,7 +49,6 @@ public sealed interface CreatePullRequestMsg extends Msg {
      *
      * @param pullRequest the new pull request, as far as it is known before it is read from GitHub
      */
-    record Created(
-            PullRequestCmd.CreatePullRequest cmd, Option<PullRequest> pullRequest, List<ExecutedCommand> commands)
+    record Created(GitHubCmd.CreatePullRequest cmd, Option<PullRequest> pullRequest, List<ExecutedCommand> commands)
             implements CreatePullRequestMsg {}
 }
