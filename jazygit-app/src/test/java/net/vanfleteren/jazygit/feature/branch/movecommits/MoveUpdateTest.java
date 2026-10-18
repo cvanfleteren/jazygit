@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -16,6 +17,7 @@ import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.Tracking;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.LoadMsg;
@@ -27,13 +29,14 @@ import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
 /**
- * Moving the newest commits of the checked out branch to a new branch.
+ * Moving the newest commits of the checked out branch to a new or an existing branch.
  */
 class MoveUpdateTest {
 
     private static final Branch.Name FEATURE = new Branch.Name("feature");
     private static final Branch.Name MAIN = new Branch.Name("main");
     private static final Branch.Name TOPIC = new Branch.Name("topic");
+    private static final Branch.Name ELSEWHERE = new Branch.Name("elsewhere");
     private static final RemoteBranch ORIGIN_FEATURE = new RemoteBranch("origin", FEATURE);
     private static final RemoteBranch ORIGIN_MAIN = new RemoteBranch("origin", MAIN);
 
@@ -69,7 +72,16 @@ class MoveUpdateTest {
                         true,
                         false,
                         Option.of(new Upstream(ORIGIN_FEATURE, 1, 0))),
-                new Branch(MAIN, false, ROOT.sha(), Instant.EPOCH, true, true));
+                new Branch(MAIN, false, ROOT.sha(), Instant.EPOCH, true, true),
+                new Branch(
+                        ELSEWHERE,
+                        false,
+                        ROOT.sha(),
+                        Instant.EPOCH,
+                        false,
+                        false,
+                        new Tracking.None(),
+                        Option.of(Path.of("/elsewhere"))));
         Model model = TestModels.loaded();
         model = Update.update(model, new LoadMsg.BranchesLoaded(branches)).model();
         model = Update.update(
@@ -82,10 +94,27 @@ class MoveUpdateTest {
                 .model();
     }
 
-    private static Model named(CommitRange range) {
-        Model read = Update.update(model(true), new MoveMsg.RangeRead(FEATURE, MIDDLE.sha(), range))
+    private static Model read(CommitRange range) {
+        return Update.update(model(true), new MoveMsg.RangeRead(FEATURE, MIDDLE.sha(), range))
                 .model();
-        return Update.update(read, new MoveMsg.NameConfirmed("topic")).model();
+    }
+
+    private static Model newBranch(CommitRange range) {
+        return Update.update(read(range), new MoveMsg.TargetChosen(Option.none()))
+                .model();
+    }
+
+    private static Model named(CommitRange range) {
+        return Update.update(newBranch(range), new MoveMsg.NameConfirmed("topic"))
+                .model();
+    }
+
+    private static MoveCmd.Move toTopic(Option<BranchRef> onto, Option<RemoteBranch> forcePush) {
+        return new MoveCmd.Move(FEATURE, MIDDLE.sha(), new MoveTarget.NewBranch(TOPIC, onto), forcePush);
+    }
+
+    private static MoveCmd.Move toMain(boolean stash) {
+        return new MoveCmd.Move(FEATURE, MIDDLE.sha(), new MoveTarget.Existing(MAIN, stash), Option.none());
     }
 
     @Test
@@ -113,33 +142,37 @@ class MoveUpdateTest {
     }
 
     @Test
-    void theRangeAsksForTheNameWithTheBases() {
-        Model model = Update.update(model(true), new MoveMsg.RangeRead(FEATURE, MIDDLE.sha(), UNPUSHED))
-                .model();
-
+    void theRangeAsksWhereTheCommitsGoAmongTheOtherBranches() {
         assertEquals(
-                Option.of(List.of(PARENT, ONTO_MAIN, ONTO_UPSTREAM)),
-                model.popup(MoveNamePopup.class).map(popup -> popup.request().bases()));
+                Option.of(List.of(MAIN, ELSEWHERE)),
+                read(UNPUSHED)
+                        .popup(MoveTargetPopup.class)
+                        .map(popup -> popup.branches().map(Branch::name)));
     }
 
     @Test
-    void commitsWithAMergeOnlyMoveWhereTheyAre() {
-        Next next = Update.update(
-                Update.update(model(true), new MoveMsg.RangeRead(FEATURE, MIDDLE.sha(), new CommitRange(2, 1, 0)))
-                        .model(),
-                new MoveMsg.NameConfirmed("topic"));
-
+    void aNewBranchAsksForItsNameWithTheBases() {
         assertEquals(
-                List.of(new MoveCmd.Move(FEATURE, MIDDLE.sha(), TOPIC, Option.none(), Option.none())), next.cmds());
+                Option.of(List.of(PARENT, ONTO_MAIN, ONTO_UPSTREAM)),
+                newBranch(UNPUSHED)
+                        .popup(MoveNamePopup.class)
+                        .map(popup -> popup.request().bases()));
+    }
+
+    @Test
+    void commitsWithAMergeOnlyMoveToANewBranchWhereTheyAre() {
+        Model asked = read(new CommitRange(2, 1, 0));
+
+        Next next = Update.update(asked, new MoveMsg.NameConfirmed("topic"));
+
+        assertEquals(Option.none(), asked.popup(MoveTargetPopup.class));
+        assertEquals(List.of(toTopic(Option.none(), Option.none())), next.cmds());
         assertEquals(Option.none(), next.model().popup(MoveBasePopup.class));
     }
 
     @Test
     void theNameOfABranchThatExistsKeepsTheDialogOpen() {
-        Model read = Update.update(model(true), new MoveMsg.RangeRead(FEATURE, MIDDLE.sha(), UNPUSHED))
-                .model();
-
-        Next next = Update.update(read, new MoveMsg.NameConfirmed("main"));
+        Next next = Update.update(newBranch(UNPUSHED), new MoveMsg.NameConfirmed("main"));
 
         assertTrue(next.model().popup(MoveNamePopup.class).isDefined());
         assertEquals(List.of(), next.cmds());
@@ -149,11 +182,38 @@ class MoveUpdateTest {
     void choosingABaseCopiesTheCommitsOntoIt() {
         Next next = Update.update(named(UNPUSHED), new MoveMsg.BaseChosen(ONTO_MAIN));
 
-        assertEquals(
-                List.of(new MoveCmd.Move(
-                        FEATURE, MIDDLE.sha(), TOPIC, Option.of(new BranchRef.Remote(ORIGIN_MAIN)), Option.none())),
-                next.cmds());
+        assertEquals(List.of(toTopic(Option.of(new BranchRef.Remote(ORIGIN_MAIN)), Option.none())), next.cmds());
         assertEquals(Option.none(), next.model().popup(MoveBasePopup.class));
+    }
+
+    @Test
+    void choosingAnExistingBranchCopiesTheCommitsOntoIt() {
+        Next next = Update.update(read(UNPUSHED), new MoveMsg.TargetChosen(Option.of(MAIN)));
+
+        assertEquals(List.of(toMain(false)), next.cmds());
+        assertEquals(Option.none(), next.model().popup(MoveTargetPopup.class));
+    }
+
+    @Test
+    void aBranchCheckedOutInAnotherWorktreeIsRefused() {
+        Next next = Update.update(read(UNPUSHED), new MoveMsg.TargetChosen(Option.of(ELSEWHERE)));
+
+        assertEquals(List.of(), next.cmds());
+        assertEquals(
+                Option.of(new AppError.CheckedOutElsewhere(MoveCmd.MOVE, ELSEWHERE, "/elsewhere")),
+                next.model().outcome().error());
+    }
+
+    @Test
+    void changesInTheWayOfTheCheckoutAreOfferedToBeTakenAlong() {
+        Model asked = Update.update(model(true), new MoveMsg.NeedsStash(toMain(false), List.of()))
+                .model();
+
+        Next next = Update.update(asked, new MoveMsg.StashConfirmed());
+
+        assertEquals(Option.of(new MoveStashPopup(toMain(false))), asked.popup(MoveStashPopup.class));
+        assertEquals(List.of(toMain(true)), next.cmds());
+        assertEquals(Option.none(), next.model().popup(MoveStashPopup.class));
     }
 
     @Test
@@ -163,9 +223,7 @@ class MoveUpdateTest {
 
         Next next = Update.update(asked, new MoveMsg.PushedConfirmed(true));
 
-        assertEquals(
-                List.of(new MoveCmd.Move(FEATURE, MIDDLE.sha(), TOPIC, Option.none(), Option.of(ORIGIN_FEATURE))),
-                next.cmds());
+        assertEquals(List.of(toTopic(Option.none(), Option.of(ORIGIN_FEATURE))), next.cmds());
         assertEquals(Option.none(), next.model().popup(MovePushedPopup.class));
     }
 
@@ -176,27 +234,33 @@ class MoveUpdateTest {
 
         Next next = Update.update(asked, new MoveMsg.PushedConfirmed(false));
 
+        assertEquals(List.of(toTopic(Option.none(), Option.none())), next.cmds());
+    }
+
+    @Test
+    void pushedCommitsMovingToAnExistingBranchAskToo() {
+        Model asked = Update.update(read(PUSHED), new MoveMsg.TargetChosen(Option.of(MAIN)))
+                .model();
+
         assertEquals(
-                List.of(new MoveCmd.Move(FEATURE, MIDDLE.sha(), TOPIC, Option.none(), Option.none())), next.cmds());
+                Option.of(new MoveTarget.Existing(MAIN, false)),
+                asked.popup(MovePushedPopup.class).map(MovePushedPopup::target));
     }
 
     @Test
     void movedCommitsForcePushTheOldBranchWhenAsked() {
-        MoveCmd.Move cmd = new MoveCmd.Move(FEATURE, MIDDLE.sha(), TOPIC, Option.none(), Option.of(ORIGIN_FEATURE));
-
-        Next next = Update.update(model(true), new MoveMsg.Moved(cmd, List.of()));
+        Next next = Update.update(
+                model(true), new MoveMsg.Moved(toTopic(Option.none(), Option.of(ORIGIN_FEATURE)), List.of()));
 
         assertTrue(next.cmds().contains(new PushCmd.Push(FEATURE, ORIGIN_FEATURE, PushMode.FORCE_WITH_LEASE)));
     }
 
     @Test
     void aStopWhileCopyingSaysTheOldBranchStillHasTheCommits() {
-        MoveCmd.Move cmd = new MoveCmd.Move(
-                FEATURE, MIDDLE.sha(), TOPIC, Option.of(new BranchRef.Remote(ORIGIN_MAIN)), Option.none());
         Notice.StoppedOnConflicts stopped =
                 new Notice.StoppedOnConflicts(Option.of(new InProgress.CherryPicking(MIDDLE.sha())), 1);
 
-        Next next = Update.update(model(true), new MoveMsg.Stopped(cmd, List.of(), stopped));
+        Next next = Update.update(model(true), new MoveMsg.Stopped(toMain(false), List.of(), stopped));
 
         assertEquals(
                 Option.of(new Notice.MoveStopped(stopped, FEATURE, MIDDLE.sha())),

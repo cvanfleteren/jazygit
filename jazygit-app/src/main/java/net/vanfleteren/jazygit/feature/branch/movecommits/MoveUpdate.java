@@ -22,9 +22,9 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
- * Moving the newest commits of the checked out branch to a new branch: reading which commits move, asking for the
- * name of the new branch, where it starts and, when some of the commits are pushed already, whether to force-push
- * the branch they are taken off; then moving them.
+ * Moving the newest commits of the checked out branch to another branch: reading which commits move, asking which
+ * branch they move to, or the name of a new branch and where it starts, and, when some of the commits are pushed
+ * already, whether to force-push the branch they are taken off; then moving them.
  */
 public final class MoveUpdate {
 
@@ -36,6 +36,11 @@ public final class MoveUpdate {
             case RangeRead(var from, var oldest, var range) -> rangeRead(model, from, oldest, range);
             case RangeFailed(var from, var failure) ->
                 Next.of(model.fail(new AppError.OperationFailed(MoveCmd.READ, Option.of(from.value()), failure)));
+            case TargetChosen(var branch) ->
+                model.popup(MoveTargetPopup.class)
+                        .map(popup -> targetChosen(model.withoutPopup(MoveTargetPopup.class), popup.request(), branch))
+                        .getOrElse(() -> Next.of(model));
+            case TargetCancelled() -> Next.of(model.withoutPopup(MoveTargetPopup.class));
             case NameConfirmed(String name) -> named(model, name);
             case NameCancelled() -> Next.of(model.withoutPopup(MoveNamePopup.class));
             case BaseChosen(MoveBase base) ->
@@ -48,8 +53,16 @@ public final class MoveUpdate {
                 Update.confirm(
                         model,
                         MovePushedPopup.class,
-                        popup -> Option.of(move(popup.request(), popup.name(), popup.base(), forcePush)));
+                        popup -> Option.of(move(popup.request(), popup.target(), forcePush)));
             case PushedCancelled() -> Next.of(model.withoutPopup(MovePushedPopup.class));
+            case NeedsStash(var cmd, var commands) ->
+                Update.refresh(OperationUpdate.done(model, cmd, commands).openPopupIfFree(new MoveStashPopup(cmd)));
+            case StashConfirmed() ->
+                Update.confirm(
+                        model,
+                        MoveStashPopup.class,
+                        popup -> Option.of(popup.cmd().withStash()));
+            case StashCancelled() -> Next.of(model.withoutPopup(MoveStashPopup.class));
             case Moved(var cmd, var commands) -> moved(model, cmd, commands);
             case Stopped(var cmd, var commands, var notice) ->
                 Update.refresh(OperationUpdate.done(model, cmd, commands)
@@ -76,7 +89,9 @@ public final class MoveUpdate {
     }
 
     /**
-     * Asks for the name of the new branch, unless the branch or the commit changed meanwhile.
+     * Asks where the commits move to, unless the branch or the commit changed meanwhile. Commits that hold a merge
+     * can only move to a new branch where they are, as they do not cherry-pick well, so then its name is asked
+     * straight away.
      */
     private static Next rangeRead(Model model, Branch.Name from, Sha oldest, CommitRange range) {
         return model.repo()
@@ -91,8 +106,40 @@ public final class MoveUpdate {
                                 commit,
                                 range,
                                 bases(model, current, range))))
-                .map(request -> Next.of(model.openPopupIfFree(new MoveNamePopup(request))))
+                .map(request -> Next.of(model.openPopupIfFree(
+                        range.merges() > 0
+                                ? new MoveNamePopup(request)
+                                : new MoveTargetPopup(request, others(model, from)))))
                 .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * The local branches the commits can move to: the ones other than {@code from}.
+     */
+    private static List<Branch> others(Model model, Branch.Name from) {
+        return model.repo()
+                .branches()
+                .toOption()
+                .getOrElse(List.empty())
+                .filter(branch -> !branch.name().equals(from));
+    }
+
+    /**
+     * Asks for the name of a new branch, or moves the commits onto the existing {@code branch}. One that is checked
+     * out in another worktree cannot be checked out here, and one that an operation runs on takes no other.
+     */
+    private static Next targetChosen(Model model, MoveRequest request, Option<Branch.Name> branch) {
+        return branch.fold(
+                () -> Update.ask(model, new MoveNamePopup(request)),
+                name -> model.repo()
+                        .branch(name)
+                        .map(known -> known.worktreeLocation()
+                                .map(worktree -> Next.of(
+                                        model.fail(new AppError.CheckedOutElsewhere(MoveCmd.MOVE, name, worktree))))
+                                .getOrElse(() -> model.idleBranch(name)
+                                        .map(idle -> targeted(model, request, new MoveTarget.Existing(name, false)))
+                                        .getOrElse(() -> Next.of(model))))
+                        .getOrElse(() -> Next.of(model)));
     }
 
     /**
@@ -128,25 +175,32 @@ public final class MoveUpdate {
     }
 
     /**
-     * Moves the commits, after asking about force-pushing when some of them are pushed already.
+     * Moves the commits to the new branch {@code name}, which starts at {@code base}.
      */
     private static Next based(Model model, MoveRequest request, Branch.Name name, MoveBase base) {
-        return request.pushed()
-                ? Update.ask(model, new MovePushedPopup(request, name, base))
-                : Update.start(model.clearError(), move(request, name, base, false));
-    }
-
-    private static MoveCmd.Move move(MoveRequest request, Branch.Name name, MoveBase base, boolean forcePush) {
         Option<BranchRef> onto = switch (base) {
             case MoveBase.Parent() -> Option.none();
             case MoveBase.Onto(BranchRef branch) -> Option.of(branch);
         };
-        Option<RemoteBranch> pushTo = forcePush ? request.upstream() : Option.none();
-        return new MoveCmd.Move(request.from(), request.oldest().sha(), name, onto, pushTo);
+        return targeted(model, request, new MoveTarget.NewBranch(name, onto));
     }
 
     /**
-     * Done as a checkout of the new branch; then force-pushes the branch the commits were taken off, if asked.
+     * Moves the commits to {@code target}, after asking about force-pushing when some of them are pushed already.
+     */
+    private static Next targeted(Model model, MoveRequest request, MoveTarget target) {
+        return request.pushed()
+                ? Update.ask(model, new MovePushedPopup(request, target))
+                : Update.start(model.clearError(), move(request, target, false));
+    }
+
+    private static MoveCmd.Move move(MoveRequest request, MoveTarget target, boolean forcePush) {
+        Option<RemoteBranch> pushTo = forcePush ? request.upstream() : Option.none();
+        return new MoveCmd.Move(request.from(), request.oldest().sha(), target, pushTo);
+    }
+
+    /**
+     * Done as a checkout of the branch the commits moved to; then force-pushes the branch the commits were taken off, if asked.
      */
     private static Next moved(Model model, MoveCmd.Move cmd, List<ExecutedCommand> commands) {
         Next checkedOut = new CheckoutMsg.CheckedOut(cmd, commands).apply(model);

@@ -319,6 +319,19 @@ public interface GitInfoProvider {
     Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommits(
             Branch.Name from, Sha oldest, Branch.Name to, Option<String> onto);
 
+    /**
+     * Moves the commits of the checked out branch {@code from}, from {@code oldest} up to its tip, onto the existing
+     * branch {@code to}, which is then checked out, and moves {@code from} back to the parent of {@code oldest}. With
+     * {@code stash}, the uncommitted changes are taken along, as {@link #checkoutWithStash} does; without, a checkout
+     * they are in the way of fails with {@link GitError.LocalChanges}. A cherry-pick that stops on conflicts is left
+     * so, and fails with {@link GitError.StoppedOnConflicts}, and {@code from} is only moved back once the commits
+     * are all copied.
+     *
+     * @param oldest the full object id of a commit of {@code from} that has a parent
+     */
+    Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommitsTo(
+            Branch.Name from, Sha oldest, Branch.Name to, boolean stash);
+
     // Moving the checked out branch, as git reset does.
 
     /**

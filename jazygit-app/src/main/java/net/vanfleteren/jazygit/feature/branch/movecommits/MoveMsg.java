@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch.movecommits;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.CommitRange;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -19,7 +20,7 @@ public sealed interface MoveMsg extends Msg {
     }
 
     /**
-     * The user asked to move the commit {@code sha}, and the ones after it, to a new branch.
+     * The user asked to move the commit {@code sha}, and the ones after it, to another branch.
      */
     record Requested(Sha sha) implements MoveMsg {}
 
@@ -32,6 +33,13 @@ public sealed interface MoveMsg extends Msg {
      * Reading the commits of {@code from} that would move failed.
      */
     record RangeFailed(Branch.Name from, Failure failure) implements MoveMsg {}
+
+    /**
+     * The user chose where the commits move to: the existing {@code branch}, or else a new branch.
+     */
+    record TargetChosen(Option<Branch.Name> branch) implements MoveMsg {}
+
+    record TargetCancelled() implements MoveMsg {}
 
     /**
      * The user entered the name of the new branch.
@@ -54,6 +62,19 @@ public sealed interface MoveMsg extends Msg {
     record PushedConfirmed(boolean forcePush) implements MoveMsg {}
 
     record PushedCancelled() implements MoveMsg {}
+
+    /**
+     * Git refused to check out the existing branch {@code cmd} moves the commits to, after running
+     * {@code commands}, because uncommitted changes would be overwritten.
+     */
+    record NeedsStash(MoveCmd.Move cmd, List<ExecutedCommand> commands) implements MoveMsg {}
+
+    /**
+     * The user agreed to take the uncommitted changes along.
+     */
+    record StashConfirmed() implements MoveMsg {}
+
+    record StashCancelled() implements MoveMsg {}
 
     /**
      * {@code cmd} ran {@code commands} and moved the commits.

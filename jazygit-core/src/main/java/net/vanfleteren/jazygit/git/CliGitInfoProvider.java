@@ -325,6 +325,12 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommitsTo(
+            Branch.Name from, Sha oldest, Branch.Name to, boolean stash) {
+        return CliMoveCommits.moveTo(workTree, from, oldest, to, stash);
+    }
+
+    @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> reset(ResetTarget target, ResetMode mode) {
         return CliReset.reset(workTree, target, mode);
     }

@@ -98,6 +98,52 @@ class CliMoveCommitsTest {
     }
 
     @Test
+    void ontoAnExistingBranchTheCommitsAreAddedOnTop() throws Exception {
+        git("checkout", "-q", "main");
+        commit("e.txt", "e\n", "main work");
+        git("checkout", "-q", "feature");
+        Sha oldest = sha("HEAD~1");
+        String parent = sha("HEAD~2").value();
+
+        assertTrue(CliMoveCommits.moveTo(repo, FEATURE, oldest, new Branch.Name("main"), false)
+                .isRight());
+
+        assertEquals("main", git("branch", "--show-current").strip());
+        assertEquals("second stray\nfirst stray\nmain work\ninit\n", git("log", "--format=%s"));
+        assertEquals(parent, sha("feature").value());
+    }
+
+    @Test
+    void changesInTheWayOfTheCheckoutAreReportedAsSuch() throws Exception {
+        git("checkout", "-q", "main");
+        commit("b.txt", "main b\n", "main b");
+        git("checkout", "-q", "feature");
+        Files.writeString(repo.resolve("b.txt"), "uncommitted\n");
+        String tip = head();
+
+        var failure = CliMoveCommits.moveTo(repo, FEATURE, sha("HEAD~1"), new Branch.Name("main"), false)
+                .getLeft();
+
+        assertInstanceOf(GitError.LocalChanges.class, failure.error());
+        assertEquals("feature", git("branch", "--show-current").strip());
+        assertEquals(tip, sha("feature").value());
+    }
+
+    @Test
+    void withAStashTheChangesComeAlong() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "uncommitted\n");
+        String parent = sha("HEAD~2").value();
+
+        assertTrue(CliMoveCommits.moveTo(repo, FEATURE, sha("HEAD~1"), new Branch.Name("main"), true)
+                .isRight());
+
+        assertEquals("main", git("branch", "--show-current").strip());
+        assertEquals("uncommitted\n", Files.readString(repo.resolve("a.txt")));
+        assertEquals("", git("stash", "list"));
+        assertEquals(parent, sha("feature").value());
+    }
+
+    @Test
     void theRangeCountsTheCommitsTheMergesAndThePushedOnes() throws Exception {
         git("update-ref", "refs/remotes/origin/feature", "HEAD~1");
         git("checkout", "-q", "-b", "side", "HEAD~1");

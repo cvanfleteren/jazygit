@@ -5,7 +5,7 @@ import net.vanfleteren.jazygit.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.keys.Scopes;
 
 /**
- * Moving the selected commit, and the ones after it, to a new branch.
+ * Moving the selected commit, and the ones after it, to a new or an existing branch.
  */
 public final class MoveAction {
 
@@ -13,7 +13,7 @@ public final class MoveAction {
             keys -> keys.add(
                     Scopes.COMMITS,
                     Binding.onSelected(
-                            "N", "help.commits.moveToNewBranch", commit -> new MoveMsg.Requested(commit.sha()))),
+                            "N", "help.commits.moveToBranch", commit -> new MoveMsg.Requested(commit.sha()))),
             MoveDialogs::popups);
 
     private MoveAction() {}
