@@ -29,7 +29,8 @@ import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
 /**
  * Popup asking for a commit message: a summary and a description. Tab switches between them. Enter
- * in the summary, or Ctrl+S in either, confirms; Escape cancels. Terminals send Ctrl+Enter as a plain Enter, so it
+ * in the summary, or Ctrl+S in either, confirms; Escape cancels. Up and Down in the summary go through the summaries of
+ * earlier commits, see {@link SummaryHistory}. Terminals send Ctrl+Enter as a plain Enter, so it
  * only confirms where the terminal tells them apart. Whether it is open
  * lives in the {@link Model}; the text being typed lives in the input widgets.
  *
@@ -57,6 +58,7 @@ public final class CommitDialog implements PopupView {
 
     private final TextInputState summary = new TextInputState();
     private final TextAreaState description = new TextAreaState();
+    private SummaryHistory history = SummaryHistory.of(List.empty());
     private final String summaryId;
     private final String descriptionId;
     // The message the popup shows when it opens, or comes back from the editor, if not an empty one.
@@ -136,6 +138,7 @@ public final class CommitDialog implements PopupView {
             return Option.none();
         }
         if (opened) {
+            history = SummaryHistory.of(model.repo().commits().getOrElse(List.empty()));
             current.apply(model).forEach(message -> {
                 summary.setText(message.summary());
                 summary.moveCursorToEnd();
@@ -150,7 +153,7 @@ public final class CommitDialog implements PopupView {
                                 .placeholder(Messages.get("dialog.commit.summary.placeholder"))
                                 .length(INPUT_HEIGHT)
                                 .onSubmit(this::confirm)
-                                .onKeyEvent(this::keys),
+                                .onKeyEvent(this::summaryKeys),
                         new SubmittableTextArea(
                                         textArea(description)
                                                 .title(Messages.get("dialog.commit.description.title"))
@@ -194,6 +197,22 @@ public final class CommitDialog implements PopupView {
             return EventResult.HANDLED;
         }
         return EventResult.UNHANDLED;
+    }
+
+    /**
+     * Shows an older summary on Up and a newer one on Down, besides the {@link #keys} of both fields.
+     */
+    private EventResult summaryKeys(KeyEvent event) {
+        if (event.code() != KeyCode.UP && event.code() != KeyCode.DOWN) {
+            return keys(event);
+        }
+        // At either end the key does nothing, and the summary stays as it is.
+        (event.code() == KeyCode.UP ? history.older(summary.text()) : history.newer()).forEach(next -> {
+            history = next;
+            summary.setText(next.shown());
+            summary.moveCursorToEnd();
+        });
+        return EventResult.HANDLED;
     }
 
     private void cancel() {

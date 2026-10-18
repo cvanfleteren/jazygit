@@ -149,6 +149,58 @@ class CommitDialogTest {
     }
 
     @Test
+    void upInTheSummaryFillsInTheSummariesOfEarlierCommits() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            type(runner, "draft");
+            SettledPilot.of(runner).press(KeyCode.UP);
+            SettledPilot.of(runner).press(KeyCode.UP);
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(
+                java.util.List.of(new CommitMsg.Confirmed(new CommitMessage("Scaffold Maven project", ""))),
+                dispatched);
+    }
+
+    @Test
+    void downInTheSummaryBringsBackWhatWasTyped() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            type(runner, "draft");
+            SettledPilot.of(runner).press(KeyCode.UP);
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new CommitMsg.Confirmed(new CommitMessage("draft", ""))), dispatched);
+    }
+
+    @Test
+    void upInTheRewordDialogSkipsTheSummaryOfTheCommitItself() throws Exception {
+        CommitDialog reword = CommitDialog.reword(dispatched::add);
+        Model rewording = Update.update(
+                        TestModels.loaded(new SampleData()),
+                        new RewordMsg.Requested(
+                                new SampleData().commits().get().head().sha()))
+                .model();
+        Commit last = rewording.popup(RewordPopup.class).get().commit();
+
+        try (ToolkitTestRunner runner =
+                ToolkitTestRunner.runTest(() -> reword.render(rewording).get())) {
+            SettledPilot.focus(runner, CommitDialog.REWORD_ID);
+            RenderedText.ofLarge(runner, () -> reword.render(rewording).get());
+            SettledPilot.of(runner).press(KeyCode.UP);
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(
+                java.util.List.of(new RewordMsg.Confirmed(new CommitMessage("Scaffold Maven project", last.body()))),
+                dispatched);
+    }
+
+    @Test
     void rewordStartsOutWithTheCurrentMessageAndConfirmsIt() throws Exception {
         CommitDialog reword = CommitDialog.reword(dispatched::add);
         Model rewording = Update.update(
