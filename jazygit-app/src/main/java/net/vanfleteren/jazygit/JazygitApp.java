@@ -37,13 +37,10 @@ import net.vanfleteren.jazygit.cli.StartupOptions;
 import net.vanfleteren.jazygit.feature.branch.BranchDialogs;
 import net.vanfleteren.jazygit.feature.branch.BranchesTabMsg;
 import net.vanfleteren.jazygit.feature.cherrypick.CherryPickDialogs;
-import net.vanfleteren.jazygit.feature.commit.CommitDialog;
 import net.vanfleteren.jazygit.feature.commit.CommitDialogs;
 import net.vanfleteren.jazygit.feature.discard.DiscardDialog;
 import net.vanfleteren.jazygit.feature.error.ErrorDialog;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
-import net.vanfleteren.jazygit.feature.github.NewPullRequestDialog;
-import net.vanfleteren.jazygit.feature.github.PullRequestDialog;
 import net.vanfleteren.jazygit.feature.github.PullRequestDialogs;
 import net.vanfleteren.jazygit.feature.help.HelpDialog;
 import net.vanfleteren.jazygit.feature.inprogress.InProgressDialogs;
@@ -105,56 +102,22 @@ public class JazygitApp extends ToolkitApp {
     private final StashPanel stashPanel = new StashPanel(dispatch, this::highlight);
     private final List<PullRequestsPanel> pullRequestsPanels =
             PullRequestsPanel.all(dispatch, this::openContent, Clock.systemUTC(), this::highlight);
-    // Every popup, with where the focus goes when it closes. At most one is open.
+    // Every popup, with where the focus goes when it closes. At most one is open; errors come last.
     private final List<PopupSlot> popups = List.of(
-            new PopupSlot(new TextInputDialog<>(BranchDialogs.NEW_BRANCH, dispatch), JazygitApp::focusedPane),
-            new PopupSlot(new ChoiceDialog<>(DiscardDialog.SPEC, dispatch), model -> FilesPanel.ID),
-            new PopupSlot(new ChoiceDialog<>(ThemeDialog.SPEC, dispatch), JazygitApp::focusedPane),
-            new PopupSlot(new PickDialog<>(RecentReposDialog.SPEC, dispatch), JazygitApp::focusedPane),
-            new PopupSlot(new ChoiceDialog<>(SettingsPanelDialogs.PANEL, dispatch), JazygitApp::focusedPane),
-            new PopupSlot(new TextInputDialog<>(SettingsPanelDialogs.GH_EXECUTABLE, dispatch), JazygitApp::focusedPane),
-            new PopupSlot(new PickDialog<>(SettingsPanelDialogs.ACCOUNT, dispatch), JazygitApp::focusedPane),
-            new PopupSlot(new ChoiceDialog<>(BranchDialogs.REBASE, dispatch), model -> BranchesPanel.ID),
-            new PopupSlot(new ChoiceDialog<>(BranchDialogs.MERGE, dispatch), model -> BranchesPanel.ID),
-            new PopupSlot(new ChoiceDialog<>(BranchDialogs.DELETE_BRANCH, dispatch), model -> BranchesPanel.ID),
-            new PopupSlot(new ChoiceDialog<>(BranchDialogs.UPSTREAM, dispatch), model -> BranchesPanel.ID),
-            new PopupSlot(new ConfirmDialog<>(BranchDialogs.DELETE_REMOTE_BRANCH, dispatch), model -> BranchesPanel.ID),
-            new PopupSlot(new ConfirmDialog<>(BranchDialogs.FORCE_PUSH, dispatch), model -> BranchesPanel.ID),
-            new PopupSlot(new TextInputDialog<>(BranchDialogs.RENAME_BRANCH, dispatch), model -> BranchesPanel.ID),
-            new PopupSlot(new TextInputDialog<>(BranchDialogs.SET_UPSTREAM, dispatch), model -> BranchesPanel.ID),
-            new PopupSlot(new ConfirmDialog<>(BranchDialogs.STASH_CHECKOUT, dispatch), model -> BranchesPanel.ID),
-            new PopupSlot(new ConfirmDialog<>(BranchDialogs.SWITCH_WORKTREE, dispatch), model -> BranchesPanel.ID),
-            new PopupSlot(new TextInputDialog<>(WorktreeDialogs.NEW_WORKTREE, dispatch), model -> BranchesPanel.ID),
-            new PopupSlot(new ConfirmDialog<>(WorktreeDialogs.REMOVE_WORKTREE, dispatch), model -> BranchesPanel.ID),
-            new PopupSlot(
-                    new ConfirmDialog<>(WorktreeDialogs.FORCE_REMOVE_WORKTREE, dispatch), model -> BranchesPanel.ID),
-            new PopupSlot(new PickDialog<>(PullRequestDialogs.BASE, dispatch), model -> BranchesPanel.ID),
-            // A pull request is shown from the branches, or from the pull requests screen.
-            new PopupSlot(new PullRequestDialog(dispatch), JazygitApp::focusedPane),
-            new PopupSlot(new NewPullRequestDialog(dispatch), model -> BranchesPanel.ID),
-            new PopupSlot(new ConfirmDialog<>(CommitDialogs.AMEND, dispatch), model -> FilesPanel.ID),
-            new PopupSlot(new ConfirmDialog<>(StashDialogs.DROP, dispatch), model -> StashPanel.ID),
-            new PopupSlot(new TextInputDialog<>(StashDialogs.STASH, dispatch), model -> FilesPanel.ID),
-            new PopupSlot(new ConfirmDialog<>(CommitDialogs.STAGE_ALL, dispatch), model -> FilesPanel.ID),
-            new PopupSlot(new CommitDialog(dispatch), model -> FilesPanel.ID),
-            new PopupSlot(new ConfirmDialog<>(CommitDialogs.AMEND_COMMIT, dispatch), model -> CommitsPanel.ID),
-            new PopupSlot(
-                    new ConfirmDialog<>(CommitDialogs.AMEND_COMMIT_STAGE_ALL, dispatch), model -> CommitsPanel.ID),
-            new PopupSlot(new ConfirmDialog<>(CommitDialogs.SQUASH, dispatch), model -> CommitsPanel.ID),
-            new PopupSlot(new ChoiceDialog<>(CommitDialogs.FIXUP, dispatch), model -> CommitsPanel.ID),
-            new PopupSlot(new ConfirmDialog<>(CommitDialogs.DROP, dispatch), model -> CommitsPanel.ID),
-            // A reset is asked about from the commits, or from the upstream options of the branches.
-            new PopupSlot(new ChoiceDialog<>(CommitDialogs.RESET, dispatch), JazygitApp::focusedPane),
-            new PopupSlot(new ConfirmDialog<>(CommitDialogs.HARD_RESET, dispatch), JazygitApp::focusedPane),
-            new PopupSlot(CommitDialog.reword(dispatch), model -> CommitsPanel.ID),
-            new PopupSlot(new ConfirmDialog<>(CherryPickDialogs.PICK, dispatch), model -> CommitsPanel.ID),
-            // What is in progress is asked about from anywhere.
-            new PopupSlot(new ChoiceDialog<>(InProgressDialogs.CHOICE, dispatch), JazygitApp::focusedPane),
-            new PopupSlot(new ConfirmDialog<>(InProgressDialogs.CONFIRM, dispatch), JazygitApp::focusedPane),
-            // Help is opened from a pane, which has the focus then.
-            new PopupSlot(new HelpDialog(dispatch), JazygitApp::focusedPane),
-            // Errors come up wherever the user is.
-            new PopupSlot(new ConfirmDialog<>(ErrorDialog.SPEC, dispatch), JazygitApp::focusedPane));
+                    BranchDialogs.popups(dispatch),
+                    WorktreeDialogs.popups(dispatch),
+                    PullRequestDialogs.popups(dispatch),
+                    CommitDialogs.popups(dispatch),
+                    StashDialogs.popups(dispatch),
+                    CherryPickDialogs.popups(dispatch),
+                    DiscardDialog.popups(dispatch),
+                    ThemeDialog.popups(dispatch),
+                    RecentReposDialog.popups(dispatch),
+                    SettingsPanelDialogs.popups(dispatch),
+                    InProgressDialogs.popups(dispatch),
+                    HelpDialog.popups(dispatch),
+                    ErrorDialog.popups(dispatch))
+            .flatMap(Function.identity());
     // What runs while the app is started.
     private Option<Runtime> runtime = Option.none();
     // How the terminal is set up, and the backend that hands it over to an editor, once the app is started.
@@ -234,17 +197,6 @@ public class JazygitApp extends ToolkitApp {
                 Instant.now() + " " + trace + System.lineSeparator(),
                 StandardOpenOption.CREATE,
                 StandardOpenOption.APPEND));
-    }
-
-    /**
-     * Where the focus was outside the popups on the screen shown, which a popup opened from anywhere gives it back
-     * to, and which the screen gets back when it is shown again.
-     */
-    private static String focusedPane(Model model) {
-        return model.shownPane()
-                .getOrElse(() -> model.screen() == Screen.PULL_REQUESTS
-                        ? PullRequestsPanel.firstPane(model.prOverview())
-                        : FilesPanel.ID);
     }
 
     /**
@@ -448,7 +400,7 @@ public class JazygitApp extends ToolkitApp {
         Theme.activate(styleEngine, model.preferences().theme());
         if (model.screen() != shownScreen) {
             shownScreen = model.screen();
-            runner().focusManager().setFocus(focusedPane(model));
+            runner().focusManager().setFocus(PopupSlot.focusedPane(model));
         }
         String focusedId = runner().focusManager().focusedId();
         String activeId = activePane(model, focusedId);
@@ -559,7 +511,6 @@ public class JazygitApp extends ToolkitApp {
     /**
      * A popup, and the pane that gets the focus back when it closes.
      */
-    private record PopupSlot(PopupView view, Function<Model, String> returnTo) {}
 
     /**
      * A popup as rendered: its dialog while it is open.

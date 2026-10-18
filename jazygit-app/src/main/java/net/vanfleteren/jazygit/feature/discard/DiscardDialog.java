@@ -1,8 +1,12 @@
 package net.vanfleteren.jazygit.feature.discard;
 
 import io.vavr.collection.List;
+import java.util.function.Consumer;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Scope;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.ui.FilesPanel;
+import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 
@@ -25,4 +29,11 @@ public final class DiscardDialog {
             DiscardMsg.Cancelled::new);
 
     private DiscardDialog() {}
+
+    /**
+     * The popups of this feature, which send what the user does to {@code dispatch}.
+     */
+    public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
+        return List.of(PopupSlot.returningTo(FilesPanel.ID, new ChoiceDialog<>(SPEC, dispatch)));
+    }
 }

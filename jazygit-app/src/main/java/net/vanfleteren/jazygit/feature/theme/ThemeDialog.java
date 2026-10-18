@@ -1,9 +1,13 @@
 package net.vanfleteren.jazygit.feature.theme;
 
 import io.vavr.collection.LinkedHashMap;
+import io.vavr.collection.List;
 import io.vavr.collection.Map;
+import java.util.function.Consumer;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.settings.ThemeName;
+import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 
@@ -45,6 +49,13 @@ public final class ThemeDialog {
             .openingAt(popup -> KEYS.find(theme -> theme._2 == popup.current()).map(theme -> theme._1));
 
     private ThemeDialog() {}
+
+    /**
+     * The popups of this feature, which send what the user does to {@code dispatch}.
+     */
+    public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
+        return List.of(PopupSlot.returningToFocus(new ChoiceDialog<>(SPEC, dispatch)));
+    }
 
     /**
      * The choice of {@code theme}.

@@ -4,10 +4,13 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.io.File;
 import java.nio.file.Path;
+import java.util.function.Consumer;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.PickDialog;
 import net.vanfleteren.jazygit.ui.widgets.PickDialog.Cell;
@@ -31,6 +34,13 @@ public final class RecentReposDialog {
     private static final String HOME = System.getProperty("user.home");
 
     private RecentReposDialog() {}
+
+    /**
+     * The popups of this feature, which send what the user does to {@code dispatch}.
+     */
+    public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
+        return List.of(PopupSlot.returningToFocus(new PickDialog<>(SPEC, dispatch)));
+    }
 
     static PickDialog.Row<String> row(RecentRepo repo) {
         Path directory = Path.of(repo.directory());

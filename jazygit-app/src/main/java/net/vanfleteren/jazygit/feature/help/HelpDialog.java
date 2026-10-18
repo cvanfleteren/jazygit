@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
@@ -78,6 +79,15 @@ public final class HelpDialog implements PopupView {
         this.dispatch = dispatch;
         this.keymap = keymap;
         this.list = list().id(ID).focusable().highlightSymbol("").onKeyEvent(this::handleKey);
+    }
+
+    /**
+     * The popups of this feature, which send what the user does to {@code dispatch}.
+     */
+    public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
+        return List.of(
+                // Help is opened from a pane, which has the focus then.
+                PopupSlot.returningToFocus(new HelpDialog(dispatch)));
     }
 
     /**

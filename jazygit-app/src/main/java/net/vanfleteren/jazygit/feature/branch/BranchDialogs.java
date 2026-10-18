@@ -2,12 +2,16 @@ package net.vanfleteren.jazygit.feature.branch;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.util.function.Consumer;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.ui.BranchesPanel;
+import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
@@ -189,6 +193,24 @@ public final class BranchDialogs {
             UpstreamMsg.Cancelled::new);
 
     private BranchDialogs() {}
+
+    /**
+     * The popups of this feature, which send what the user does to {@code dispatch}.
+     */
+    public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
+        return List.of(
+                PopupSlot.returningToFocus(new TextInputDialog<>(NEW_BRANCH, dispatch)),
+                PopupSlot.returningTo(BranchesPanel.ID, new ChoiceDialog<>(REBASE, dispatch)),
+                PopupSlot.returningTo(BranchesPanel.ID, new ChoiceDialog<>(MERGE, dispatch)),
+                PopupSlot.returningTo(BranchesPanel.ID, new ChoiceDialog<>(DELETE_BRANCH, dispatch)),
+                PopupSlot.returningTo(BranchesPanel.ID, new ChoiceDialog<>(UPSTREAM, dispatch)),
+                PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(DELETE_REMOTE_BRANCH, dispatch)),
+                PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(FORCE_PUSH, dispatch)),
+                PopupSlot.returningTo(BranchesPanel.ID, new TextInputDialog<>(RENAME_BRANCH, dispatch)),
+                PopupSlot.returningTo(BranchesPanel.ID, new TextInputDialog<>(SET_UPSTREAM, dispatch)),
+                PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(STASH_CHECKOUT, dispatch)),
+                PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(SWITCH_WORKTREE, dispatch)));
+    }
 
     private static String upstreamName(Option<Branch> branch) {
         return branch.flatMap(Branch::upstream)

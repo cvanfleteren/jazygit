@@ -1,9 +1,14 @@
 package net.vanfleteren.jazygit.feature.commit;
 
 import io.vavr.collection.List;
+import java.util.function.Consumer;
 import net.vanfleteren.jazygit.git.model.ResetMode;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.ui.CommitsPanel;
+import net.vanfleteren.jazygit.ui.FilesPanel;
+import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
@@ -128,4 +133,23 @@ public final class CommitDialogs {
             CommitMsg.StageAllCancelled::new);
 
     private CommitDialogs() {}
+
+    /**
+     * The popups of this feature, which send what the user does to {@code dispatch}.
+     */
+    public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
+        return List.of(
+                PopupSlot.returningTo(FilesPanel.ID, new ConfirmDialog<>(AMEND, dispatch)),
+                PopupSlot.returningTo(FilesPanel.ID, new ConfirmDialog<>(STAGE_ALL, dispatch)),
+                PopupSlot.returningTo(FilesPanel.ID, new CommitDialog(dispatch)),
+                PopupSlot.returningTo(CommitsPanel.ID, new ConfirmDialog<>(AMEND_COMMIT, dispatch)),
+                PopupSlot.returningTo(CommitsPanel.ID, new ConfirmDialog<>(AMEND_COMMIT_STAGE_ALL, dispatch)),
+                PopupSlot.returningTo(CommitsPanel.ID, new ConfirmDialog<>(SQUASH, dispatch)),
+                PopupSlot.returningTo(CommitsPanel.ID, new ChoiceDialog<>(FIXUP, dispatch)),
+                PopupSlot.returningTo(CommitsPanel.ID, new ConfirmDialog<>(DROP, dispatch)),
+                // A reset is asked about from the commits, or from the upstream options of the branches.
+                PopupSlot.returningToFocus(new ChoiceDialog<>(RESET, dispatch)),
+                PopupSlot.returningToFocus(new ConfirmDialog<>(HARD_RESET, dispatch)),
+                PopupSlot.returningTo(CommitsPanel.ID, CommitDialog.reword(dispatch)));
+    }
 }

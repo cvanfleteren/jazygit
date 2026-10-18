@@ -2,8 +2,11 @@ package net.vanfleteren.jazygit.feature.settings;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.util.function.Consumer;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.ErrorText;
+import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 import net.vanfleteren.jazygit.ui.widgets.PickDialog;
@@ -72,6 +75,16 @@ public final class SettingsPanelDialogs {
     private static final String WARNING = "⚠ ";
 
     private SettingsPanelDialogs() {}
+
+    /**
+     * The popups of this feature, which send what the user does to {@code dispatch}.
+     */
+    public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
+        return List.of(
+                PopupSlot.returningToFocus(new ChoiceDialog<>(PANEL, dispatch)),
+                PopupSlot.returningToFocus(new TextInputDialog<>(GH_EXECUTABLE, dispatch)),
+                PopupSlot.returningToFocus(new PickDialog<>(ACCOUNT, dispatch)));
+    }
 
     private static String ghExecutable(SettingsPanelPopup popup) {
         String executable = popup.ghExecutable().getOrElse(() -> Messages.get("dialog.settings.gh.onPath"));

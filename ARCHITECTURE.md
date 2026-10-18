@@ -446,8 +446,9 @@ classDiagram
   shows, and opens an `ErrorPopup`, unless another popup is open, which then keeps what the user entered.
 - **Popups are part of the model.** `model.popup()` says which dialog is open. `JazygitApp` renders the
   dialog that matches it and moves the focus into it, then back to the pane it came from once
-  the popup closes. A popup that comes up by itself (`Model.openPopupIfFree`), like the outcome of a command
-  or the theme key, does not replace a dialog the user is typing in.
+  the popup closes. Each feature lists its dialogs, with the pane they give the focus back to, as
+  `PopupSlot`s in `XxxDialogs.popups(dispatch)`; `JazygitApp` only names the features.
+  A popup that comes up by itself (`Model.openPopupIfFree`), like the outcome of a command or the theme key, does not replace a dialog the user is typing in.
 - **The command log** (`Model.commandLog`) lists every git command that changed the repository, under the
   `Operation` that ran them, whether it succeeded or failed.
 
@@ -461,7 +462,7 @@ Each feature package follows the same shape:
 | `XxxUpdate` | `RewordUpdate` | Pure transitions for those messages; `Update.confirm` closes a popup and starts the operation made of it. |
 | `XxxCmd` | `CommitCmd.Reword` | The operation the feature asks for, an `OperationCmd`. |
 | `XxxPopup` | `RewordPopup` | What the open dialog is about; it lives in the model. |
-| `XxxDialogs` | `CommitDialogs.SQUASH`, `CommitDialog.reword` | The popups, mostly as data (`ConfirmDialog.Spec`, `ChoiceDialog.Spec`, `TextInputDialog.Spec`, `PickDialog.Spec`) that `JazygitApp` turns into widgets; `XxxDialog` for a feature with one, or a dialog of its own. |
+| `XxxDialogs` | `CommitDialogs.SQUASH`, `CommitDialog.reword` | The popups, mostly as data (`ConfirmDialog.Spec`, `ChoiceDialog.Spec`, `TextInputDialog.Spec`, `PickDialog.Spec`) that `popups(dispatch)` turns into widgets, as the `PopupSlot`s `JazygitApp` shows; `XxxDialog` for a feature with one, or a dialog of its own. |
 | `XxxKeys` | `CommitKeys` | Adds the feature's keys to the immutable `Keymap`. |
 
 The branch package holds several operations (checkout, push, pull, merge, rebase, new branch, delete). Each
