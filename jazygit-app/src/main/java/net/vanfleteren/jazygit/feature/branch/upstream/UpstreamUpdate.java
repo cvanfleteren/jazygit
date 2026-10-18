@@ -47,7 +47,7 @@ public final class UpstreamUpdate {
     /**
      * The main branch as this repository last fetched it, else as it is here; none when there is no main branch.
      */
-    static Option<BranchRef> base(Model model) {
+    public static Option<BranchRef> base(Model model) {
         return model.repo()
                 .branches()
                 .toOption()

@@ -1,7 +1,9 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.InProgress;
+import net.vanfleteren.jazygit.git.model.Sha;
 
 /**
  * What the user is told about how the last operation went, when that is no failure but still needs their
@@ -17,4 +19,11 @@ public sealed interface Notice {
      * @param conflicts  how many files have conflicts
      */
     record StoppedOnConflicts(Option<InProgress> inProgress, int conflicts) implements Notice {}
+
+    /**
+     * Moving the commits of {@code branch} since {@code oldest} to {@code target}, a new or an existing branch,
+     * stopped on conflicts while copying them onto it: {@code branch} still has them, until the user moves it back.
+     */
+    record MoveStopped(StoppedOnConflicts stopped, Branch.Name branch, Sha oldest, Branch.Name target)
+            implements Notice {}
 }
