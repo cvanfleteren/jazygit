@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
+import java.time.Instant;
+
 /**
  * Everything that can happen to the {@link Model}, grouped by feature. A message knows how to
  * apply itself: each feature has its own sub-interface, which delegates to the transitions of that
@@ -25,12 +27,14 @@ public interface Msg {
 
     /**
      * Periodic prompt to check the repository for changes made outside the app.
+     *
+     * @param now the time it is
      */
-    record Tick() implements Msg {
+    record Tick(Instant now) implements Msg {
 
         @Override
         public Update.Next apply(Model model) {
-            return Update.refresh(model);
+            return Update.refresh(model.withNow(now));
         }
     }
 

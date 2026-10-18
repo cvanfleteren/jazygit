@@ -56,39 +56,33 @@ class FetchLineTest {
 
     @Test
     void sayHowLongAgoTheRemotesWereFetchedFromAndWhetherTheLastFetchFailed() {
+        Model model = TestModels.loaded().withNow(NOW);
         Freshness fetched = Freshness.NEVER.succeeded("origin", NOW.minusSeconds(120));
 
-        assertEquals("", FetchLine.freshness(TestModels.loaded(), NOW));
-        assertEquals(
-                "fetched 2m ago",
-                FetchLine.freshness(TestModels.loaded().mapJobs(jobs -> jobs.withLastFetch(fetched)), NOW));
+        assertEquals("", FetchLine.freshness(model));
+        assertEquals("fetched 2m ago", FetchLine.freshness(model.mapJobs(jobs -> jobs.withLastFetch(fetched))));
         assertEquals(
                 "fetched 2m ago · last fetch failed",
-                FetchLine.freshness(
-                        TestModels.loaded().mapJobs(jobs -> jobs.withLastFetch(fetched.failed("upstream"))), NOW));
+                FetchLine.freshness(model.mapJobs(jobs -> jobs.withLastFetch(fetched.failed("upstream")))));
         assertEquals(
                 "fetched 2m ago",
-                FetchLine.freshness(
-                        TestModels.loaded()
-                                .mapJobs(jobs -> jobs.withLastFetch(
-                                        fetched.failed("upstream").succeeded("upstream", NOW.minusSeconds(120)))),
-                        NOW));
+                FetchLine.freshness(model.mapJobs(jobs ->
+                        jobs.withLastFetch(fetched.failed("upstream").succeeded("upstream", NOW.minusSeconds(120))))));
         assertEquals(
                 "last fetch failed",
-                FetchLine.freshness(
-                        TestModels.loaded().mapJobs(jobs -> jobs.withLastFetch(Freshness.NEVER.failed("origin"))),
-                        NOW));
+                FetchLine.freshness(model.mapJobs(jobs -> jobs.withLastFetch(Freshness.NEVER.failed("origin")))));
     }
 
     @Test
     void onThePullRequestsScreenSaysHowLongAgoTheyWereRead() {
         Model prs = TestModels.loaded()
+                .withNow(NOW)
                 .withScreen(Screen.PULL_REQUESTS)
                 .mapJobs(jobs -> jobs.withLastFetch(Freshness.NEVER.succeeded("origin", NOW)))
                 .withPrOverview(PrOverview.INITIAL.withFreshness(Freshness.NEVER
                         .succeeded("mine", NOW.minusSeconds(3 * 3600))
                         .failed("repository")));
 
-        assertEquals("read 3h ago · last read failed", FetchLine.freshness(prs, NOW));
+        assertEquals("read 3h ago · last read failed", FetchLine.freshness(prs));
     }
 }

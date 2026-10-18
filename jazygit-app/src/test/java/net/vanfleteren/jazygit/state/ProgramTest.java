@@ -271,7 +271,7 @@ class ProgramTest {
         provider.status = new RepoStatus(
                 Head.onBranch(new Branch.Name("main"), new Sha("aaaa")),
                 List.of(new FileEntry("a.txt", ChangeType.UNTRACKED)));
-        program.dispatch(new Msg.Tick());
+        program.dispatch(new Msg.Tick(Instant.EPOCH));
         settle();
 
         assertEquals(new Loaded<>(provider.status), program.model().repo().status());
@@ -283,7 +283,7 @@ class ProgramTest {
         settle();
 
         provider.status = new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("bbbb")), List.of());
-        program.dispatch(new Msg.Tick());
+        program.dispatch(new Msg.Tick(Instant.EPOCH));
         settle();
 
         assertEquals(2, provider.commitLoads);
@@ -305,7 +305,7 @@ class ProgramTest {
                 program.model().repo().status());
 
         provider.statusError = null;
-        program.dispatch(new Msg.Tick());
+        program.dispatch(new Msg.Tick(Instant.EPOCH));
         settle();
         assertEquals(new Loaded<>(provider.status), program.model().repo().status());
     }

@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.*;
 import io.vavr.control.Option;
+import java.time.Instant;
 import java.util.function.UnaryOperator;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.*;
@@ -20,6 +21,7 @@ import net.vanfleteren.jazygit.state.prs.PrOverview;
  * @param outcome        what the user is told about the operations: how the last one went, and the commands run
  * @param popup          the popup that is open, if any; only one can be
  * @param preferences    how the user wants things shown, kept from one session to the next or for this one only
+ * @param now            the time as of the last {@link Msg.Tick}, which tells how long ago things happened
  */
 @With
 public record Model(
@@ -32,7 +34,8 @@ public record Model(
         Jobs jobs,
         Outcome outcome,
         Option<Popup> popup,
-        Preferences preferences) {
+        Preferences preferences,
+        Instant now) {
 
     public static Model initial(String repositoryName) {
         return new Model(
@@ -45,7 +48,8 @@ public record Model(
                 Jobs.IDLE,
                 Outcome.NONE,
                 Option.none(),
-                Preferences.DEFAULT);
+                Preferences.DEFAULT,
+                Instant.EPOCH);
     }
 
     /**

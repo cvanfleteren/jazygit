@@ -4,6 +4,7 @@ import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
+import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
@@ -52,11 +53,12 @@ class UpdateTest {
     void tickDoesNotRepeatLoadsThatAreStillRunning() {
         Model model = Update.init("repo").model();
 
-        assertEquals(List.of(), Update.update(model, new Tick()).cmds());
+        assertEquals(List.of(), Update.update(model, new Tick(Instant.EPOCH)).cmds());
 
         Model statusDone = Update.update(model, new LoadMsg.StatusLoaded(CLEAN)).model();
         assertEquals(
-                List.of(new LoadStatus()), Update.update(statusDone, new Tick()).cmds());
+                List.of(new LoadStatus()),
+                Update.update(statusDone, new Tick(Instant.EPOCH)).cmds());
     }
 
     @Test
@@ -120,7 +122,7 @@ class UpdateTest {
                         new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(),
                         new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
                         new LoadCommits()),
-                Update.update(model, new Tick()).cmds());
+                Update.update(model, new Tick(Instant.EPOCH)).cmds());
 
         Model statusFailed = Update.update(
                         Update.init("repo").model(), new LoadMsg.Failed(new LoadStatus(), refused("no git")))
@@ -128,16 +130,16 @@ class UpdateTest {
         assertEquals(new Failed<>(refused("no git")), statusFailed.repo().status());
         assertEquals(
                 List.of(new LoadStatus()),
-                Update.update(statusFailed, new Tick()).cmds());
+                Update.update(statusFailed, new Tick(Instant.EPOCH)).cmds());
     }
 
     @Test
     void aRetryThatIsStillRunningIsNotStartedAgain() {
         Model failed = Update.update(loaded(), new LoadMsg.Failed(new LoadCommits(), refused("boom")))
                 .model();
-        Model retrying = Update.update(failed, new Tick()).model();
+        Model retrying = Update.update(failed, new Tick(Instant.EPOCH)).model();
 
-        assertFalse(Update.update(retrying, new Tick()).cmds().contains(new LoadCommits()));
+        assertFalse(Update.update(retrying, new Tick(Instant.EPOCH)).cmds().contains(new LoadCommits()));
         Model retried =
                 Update.update(retrying, new LoadMsg.CommitsLoaded(COMMITS)).model();
         assertFalse(retried.jobs().refreshing().contains(new LoadCommits()));

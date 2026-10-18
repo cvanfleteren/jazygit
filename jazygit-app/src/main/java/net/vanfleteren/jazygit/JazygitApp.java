@@ -296,7 +296,7 @@ public class JazygitApp extends ToolkitApp {
                         .getOrElse(EventResult.UNHANDLED));
         startRuntime(env, settings, themeOverride);
         runner.scheduleRepeating(
-                () -> runner.runOnRenderThread(() -> dispatch.accept(new Msg.Tick())), REFRESH_INTERVAL);
+                () -> runner.runOnRenderThread(() -> dispatch.accept(new Msg.Tick(Instant.now()))), REFRESH_INTERVAL);
         runner.scheduleRepeating(
                 () -> runner.runOnRenderThread(() -> dispatch.accept(new FetchMsg.Tick())), FETCH_INTERVAL);
         runner.scheduleRepeating(
@@ -421,8 +421,7 @@ public class JazygitApp extends ToolkitApp {
                                 CommandLogPanel.render(model).length(COMMAND_LOG_HEIGHT))
                         .fill());
         // The fetch line keeps its row under the panes, also when nothing is fetched, so they do not move.
-        Element layout =
-                column(panes.fill(), FetchLine.render(model, Instant.now()).length(FetchLine.HEIGHT));
+        Element layout = column(panes.fill(), FetchLine.render(model).length(FetchLine.HEIGHT));
         // The open popup takes the focus, and gives it back to where it was opened from.
         List<Shown> shown = popups.map(slot -> new Shown(
                 slot.view().render(model), slot.view().ids(), slot.returnTo().apply(model)));

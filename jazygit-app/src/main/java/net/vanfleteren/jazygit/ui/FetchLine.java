@@ -9,7 +9,6 @@ import dev.tamboui.toolkit.elements.TextElement;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Duration;
-import java.time.Instant;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Fetching;
 import net.vanfleteren.jazygit.state.Freshness;
@@ -35,18 +34,11 @@ public final class FetchLine {
     private FetchLine() {}
 
     public static StyledElement<?> render(Model model) {
-        return render(model, Instant.now());
-    }
-
-    /**
-     * @param now the time to tell how long ago things were read from
-     */
-    public static StyledElement<?> render(Model model, Instant now) {
         TextElement left = model.repoView()
                 .cherryPick()
                 .map(commit -> text(Messages.get("status.cherryPick", commit.shortSha())))
                 .getOrElse(() -> background(model));
-        String fresh = freshness(model, now);
+        String fresh = freshness(model);
         return fresh.isEmpty()
                 ? left
                 : row(
@@ -69,11 +61,11 @@ public final class FetchLine {
     }
 
     /**
-     * How fresh what the screen shows is at {@code now}: when the remotes were last fetched from on the repository
+     * How fresh what the screen shows is at the model's time: when the remotes were last fetched from on the repository
      * screen, or the pull requests read on theirs, and that the last try failed when it did; blank before anything
      * was tried.
      */
-    static String freshness(Model model, Instant now) {
+    static String freshness(Model model) {
         boolean pullRequests = model.screen() == Screen.PULL_REQUESTS;
         Freshness freshness =
                 pullRequests ? model.prOverview().freshness() : model.jobs().lastFetch();
@@ -82,7 +74,7 @@ public final class FetchLine {
                         freshness
                                 .read()
                                 .map(at -> Messages.get(
-                                        "status." + kind + ".ago", TimeText.age(Duration.between(at, now)))),
+                                        "status." + kind + ".ago", TimeText.age(Duration.between(at, model.now())))),
                         Option.when(freshness.stale(), () -> Messages.get("status." + kind + ".failed")))
                 .flatMap(part -> part)
                 .mkString(SEPARATOR);

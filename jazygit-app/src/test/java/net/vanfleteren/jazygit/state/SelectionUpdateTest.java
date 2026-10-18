@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
@@ -108,7 +109,7 @@ class SelectionUpdateTest {
                 Option.of(new Preview<>(new Sha("aaaa"), new Failed<>(refused("boom")))),
                 model.repoView().commitDetail());
 
-        assertTrue(Update.update(model, new Tick())
+        assertTrue(Update.update(model, new Tick(Instant.EPOCH))
                 .cmds()
                 .contains(new LoadCommitDetail(new Sha("aaaa"), DiffOptions.DEFAULT)));
     }
@@ -214,7 +215,7 @@ class SelectionUpdateTest {
                         new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(),
                         new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
                         new LoadBranchLog(new BranchRef.Local(new Branch.Name("feature")))),
-                Update.update(model, new Tick()).cmds());
+                Update.update(model, new Tick(Instant.EPOCH)).cmds());
     }
 
     @Test
@@ -296,7 +297,7 @@ class SelectionUpdateTest {
                 .model();
 
         // The diff is read again once the status confirms that its files are still as they were.
-        Model refreshed = Update.update(model, new Tick()).model();
+        Model refreshed = Update.update(model, new Tick(Instant.EPOCH)).model();
         Next statusLoaded = Update.update(refreshed, new LoadMsg.StatusLoaded(DIRTY));
         assertTrue(statusLoaded.cmds().contains(new Cmd.LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT)));
 
