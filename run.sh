@@ -32,10 +32,18 @@ if [[ -z "$JAR" ]] || [[ -n "$(find jazygit-core/src jazygit-app/src pom.xml jaz
     JAR="$(newest_jar)"
 fi
 
+# Nix wraps its JDK's java in a script that puts its gtk/glib on LD_LIBRARY_PATH, for AWT. The commands
+# jazygit runs would inherit that, and a tool built against another glibc then fails to load (gh opening the
+# browser through kde-open, for one), so start the unwrapped binary when there is one.
+JAVA="$(command -v java)"
+JAVA="$(readlink -f "$JAVA")"
+WRAPPED="$(dirname "$JAVA")/.java-wrapped"
+[[ -x "$WRAPPED" ]] && JAVA="$WRAPPED"
+
 if [[ "${1:-}" == "--debug" ]]; then
     shift
     echo "Waiting for debugger to attach on port ${DEBUG_PORT}..."
-    exec java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${DEBUG_PORT} -jar "$JAR" "$@"
+    exec "$JAVA" -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${DEBUG_PORT} -jar "$JAR" "$@"
 else
-    exec java -jar "$JAR" "$@"
+    exec "$JAVA" -jar "$JAR" "$@"
 fi
