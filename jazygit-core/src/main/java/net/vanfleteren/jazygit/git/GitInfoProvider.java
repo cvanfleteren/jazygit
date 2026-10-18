@@ -210,6 +210,14 @@ public interface GitInfoProvider {
      */
     Either<GitError, Option<String>> firstSubject(BranchRef branch, BranchRef base);
 
+    /**
+     * The commits of the local branch {@code branch} from {@code oldest} up to its tip, and how many of them are
+     * on {@code upstream}, the remote branch it follows, already.
+     *
+     * @param oldest the full object id of a commit of {@code branch} that has a parent
+     */
+    Either<GitError, CommitRange> commitRange(Branch.Name branch, Sha oldest, Option<RemoteBranch> upstream);
+
     // A single commit, as git show shows it.
 
     /**
@@ -294,6 +302,22 @@ public interface GitInfoProvider {
      * @param sha the full object id of a commit that is not a merge
      */
     Either<GitFailure<GitError>, List<ExecutedCommand>> dropCommit(Sha sha);
+
+    // Moving commits to a new branch, as git checkout, cherry-pick and branch do.
+
+    /**
+     * Moves the commits of the checked out branch {@code from}, from {@code oldest} up to its tip, to the new
+     * branch {@code to}, which is then checked out, and moves {@code from} back to the parent of {@code oldest}.
+     * Without {@code onto}, the new branch starts where {@code from} is, so nothing is copied and the working tree
+     * is left alone. With it, the new branch starts at {@code onto}, and the commits are cherry-picked onto it;
+     * a cherry-pick that stops on conflicts is left so, and fails with {@link GitError.StoppedOnConflicts}, and
+     * {@code from} is only moved back once they are all copied.
+     *
+     * @param oldest the full object id of a commit of {@code from} that has a parent
+     * @param onto   the revision the new branch starts at, if not at {@code from}
+     */
+    Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommits(
+            Branch.Name from, Sha oldest, Branch.Name to, Option<String> onto);
 
     // Moving the checked out branch, as git reset does.
 

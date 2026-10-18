@@ -162,6 +162,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<GitError, CommitRange> commitRange(Branch.Name branch, Sha oldest, Option<RemoteBranch> upstream) {
+        return CliLog.range(workTree, branch, oldest, upstream);
+    }
+
+    @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> checkout(Branch.Name branch) {
         return CliCheckout.checkout(workTree, branch);
     }
@@ -311,6 +316,12 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> dropCommit(Sha sha) {
         return CliRebase.drop(workTree, sha);
+    }
+
+    @Override
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommits(
+            Branch.Name from, Sha oldest, Branch.Name to, Option<String> onto) {
+        return CliMoveCommits.move(workTree, from, oldest, to, onto);
     }
 
     @Override

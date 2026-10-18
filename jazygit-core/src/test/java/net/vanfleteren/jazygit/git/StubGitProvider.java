@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
+import net.vanfleteren.jazygit.git.model.CommitRange;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
@@ -144,6 +145,11 @@ public interface StubGitProvider extends GitInfoProvider {
     @Override
     default Either<GitError, Option<String>> firstSubject(BranchRef branch, BranchRef base) {
         return Either.right(Option.none());
+    }
+
+    @Override
+    default Either<GitError, CommitRange> commitRange(Branch.Name branch, Sha oldest, Option<RemoteBranch> upstream) {
+        return Either.right(new CommitRange(1, 0, 0));
     }
 
     @Override
@@ -300,6 +306,12 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<GitFailure<GitError>, List<ExecutedCommand>> dropCommit(Sha sha) {
+        return ran();
+    }
+
+    @Override
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommits(
+            Branch.Name from, Sha oldest, Branch.Name to, Option<String> onto) {
         return ran();
     }
 

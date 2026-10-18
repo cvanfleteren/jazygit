@@ -96,6 +96,39 @@ final class CliLog {
                                 raw -> Either.right(GitOutput.nonBlankLines(raw).headOption())))));
     }
 
+    /**
+     * The commits of {@code branch} from {@code oldest} up to its tip, read with {@code git rev-list --parents},
+     * which lists each with its parents; and how many of them are on {@code upstream}, from how many are not.
+     */
+    static Either<GitError, CommitRange> range(
+            Path workTree, Branch.Name branch, Sha oldest, Option<RemoteBranch> upstream) {
+        List<String> revisions = List.of(Refs.head(branch), "^" + oldest.value() + "^");
+        return Either.narrow(GitProcess.read(
+                        workTree,
+                        GitCommand.reading(List.of("rev-list", "--parents")
+                                .appendAll(revisions)
+                                .append("--")),
+                        raw -> Either.right(GitOutput.nonBlankLines(raw)))
+                .flatMap(lines -> upstream.map(remote ->
+                                count(workTree, revisions.append("^" + Refs.remote(remote.remote(), remote.branch()))))
+                        .getOrElse(() -> Either.right(lines.size()))
+                        .map(unpushed -> new CommitRange(
+                                lines.size(),
+                                lines.count(line -> line.split(" ").length > 2),
+                                lines.size() - unpushed))));
+    }
+
+    /**
+     * How many commits {@code revisions} select.
+     */
+    private static Either<ProcessError, Integer> count(Path workTree, List<String> revisions) {
+        return GitProcess.read(
+                workTree,
+                GitCommand.reading(
+                        List.of("rev-list", "--count").appendAll(revisions).append("--")),
+                raw -> GitOutput.number(raw.strip()).map(Long::intValue));
+    }
+
     private static Either<GitError, Sha> tip(Path workTree, BranchRef branch) {
         return Either.<GitError, Option<Sha>>narrow(
                         resolve(workTree, Refs.of(branch)).mapLeft(GitFailure::error))
