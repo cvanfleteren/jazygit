@@ -1,0 +1,81 @@
+package net.vanfleteren.jazygit.feature.branch.checkout;
+
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.branch.BranchCmd.Checkout;
+import net.vanfleteren.jazygit.feature.branch.BranchCmd.CheckoutRemote;
+import net.vanfleteren.jazygit.feature.branch.BranchCmd.CheckoutWithStash;
+import net.vanfleteren.jazygit.feature.branch.Branches;
+import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg.*;
+import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchPopup;
+import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.state.BranchesTab;
+import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.OperationUpdate;
+import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.Update.Next;
+
+/**
+ * Checking out a branch.
+ */
+public final class CheckoutUpdate {
+
+    private CheckoutUpdate() {}
+
+    public static Next update(Model model, CheckoutMsg msg) {
+        return switch (msg) {
+            case Requested(Branch.Name branch) -> requested(model, branch);
+            case RemoteRequested(RemoteBranch branch) -> remoteRequested(model, branch);
+            // The checkout ran, and failed; the stash it needs is offered instead of the failure.
+            case NeedsStash(var cmd, var commands) ->
+                Update.refresh(OperationUpdate.done(model, cmd, commands)
+                        .openPopupIfFree(new StashCheckoutPopup(cmd.branch())));
+            case CheckedOut(var cmd, var commands) ->
+                OperationUpdate.succeeded(
+                        model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.LOCAL)), cmd, commands);
+            case StashCancelled() -> Next.of(model.withoutPopup(StashCheckoutPopup.class));
+            case StashConfirmed() ->
+                Update.confirm(
+                        model, StashCheckoutPopup.class, popup -> Option.of(new CheckoutWithStash(popup.branch())));
+            case SwitchWorktreeCancelled() -> Next.of(model.withoutPopup(SwitchWorktreePopup.class));
+            case SwitchWorktreeConfirmed() ->
+                model.popup(SwitchWorktreePopup.class)
+                        .map(popup -> Next.of(
+                                model.withoutPopup(SwitchWorktreePopup.class).clearError(),
+                                new RecentReposCmd.SwitchTo(popup.worktree())))
+                        .getOrElse(() -> Next.of(model));
+        };
+    }
+
+    /**
+     * Checks out the local branch that follows {@code remote}. Without one, creates it under the same name; when
+     * a local branch that follows something else already has that name, asks for another.
+     */
+    private static Next remoteRequested(Model model, RemoteBranch remote) {
+        if (model.repo().remoteBranch(remote).isEmpty()
+                || model.jobs().busy().containsKey(new BranchRef.Remote(remote))) {
+            return Next.of(model);
+        }
+        return model.repo()
+                .trackingBranch(remote)
+                .map(local -> requested(model, local.name()))
+                .getOrElse(() -> model.repo().branch(remote.branch()).isDefined()
+                        ? Update.ask(model, NewBranchPopup.following(remote))
+                        : Update.start(model.clearError(), new CheckoutRemote(remote.branch(), remote)));
+    }
+
+    /**
+     * Checks out {@code branch}. One that another worktree has checked out git would refuse, so switching to that
+     * worktree is offered instead.
+     */
+    private static Next requested(Model model, Branch.Name branch) {
+        return model.idleBranch(branch)
+                .flatMap(Branch::worktreeLocation)
+                .map(worktree -> Update.ask(model, new SwitchWorktreePopup(branch, worktree)))
+                .getOrElse(() -> Branches.isOtherIdleBranch(model, branch)
+                        ? Update.start(model.clearError(), new Checkout(branch))
+                        : Next.of(model));
+    }
+}

@@ -465,9 +465,11 @@ Each feature package follows the same shape:
 | `XxxDialogs` | `CommitDialogs.SQUASH`, `CommitDialog.reword` | The popups, mostly as data (`ConfirmDialog.Spec`, `ChoiceDialog.Spec`, `TextInputDialog.Spec`, `PickDialog.Spec`) that `popups(dispatch)` turns into widgets, as the `PopupSlot`s `JazygitApp` shows; `XxxDialog` for a feature with one, or a dialog of its own. |
 | `XxxKeys` | `CommitKeys` | Adds the feature's keys to the immutable `Keymap`. |
 
-The branch package holds several operations (checkout, push, pull, merge, rebase, new branch, delete). Each
-has its own `XxxMsg`, `XxxUpdate` and popups, and they share `BranchCmd`, `BranchDialogs` and `BranchKeys`.
-The commit package gives each of its operations a subpackage of its own (`create`, `amend`, `reword`, `squash`,
+The branch package gives each of its operations a subpackage of its own (`checkout`, `newbranch`, `rename`,
+`delete`, `merge`, `rebase`, `push`, `pull`, `upstream`, and `tabs` for switching between the local branches, the
+remote ones and the worktrees), with its `XxxMsg`, `XxxUpdate` and popups. What they share stays in
+`feature.branch`: `BranchCmd`, `BranchDialogs`, `BranchKeys`, and `Branches`, which knows which branches are
+checked out where. The commit package likewise gives each of its operations a subpackage of its own (`create`, `amend`, `reword`, `squash`,
 `fixup`, `drop`, `reset`), with its `XxxMsg`, `XxxUpdate` and popups. What they share stays in `feature.commit`:
 `CommitCmd`, `CommitDialogs`, `CommitKeys`, and the message dialog that committing and rewording both use
 (`CommitDialog`, `MessagePopup`, `MessageEditor*`). Amending is one operation with an `AmendTarget`: the last

@@ -7,10 +7,10 @@ import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
-import net.vanfleteren.jazygit.feature.branch.BranchesTabMsg;
-import net.vanfleteren.jazygit.feature.branch.CheckoutMsg;
-import net.vanfleteren.jazygit.feature.branch.NewBranchMsg;
-import net.vanfleteren.jazygit.feature.branch.UpstreamMsg;
+import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
+import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg;
+import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
+import net.vanfleteren.jazygit.feature.branch.upstream.UpstreamMsg;
 import net.vanfleteren.jazygit.feature.worktree.WorktreeMsg;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -290,7 +290,7 @@ class BranchesPanelTest {
         }
 
         assertEquals(
-                java.util.List.of(new net.vanfleteren.jazygit.feature.branch.RenameBranchMsg.Requested(
+                java.util.List.of(new net.vanfleteren.jazygit.feature.branch.rename.RenameBranchMsg.Requested(
                         new Branch.Name("feature"))),
                 dispatched);
     }
@@ -326,7 +326,7 @@ class BranchesPanelTest {
 
         assertEquals(
                 java.util.List.of(
-                        new net.vanfleteren.jazygit.feature.branch.PushMsg.Requested(new Branch.Name("feature"))),
+                        new net.vanfleteren.jazygit.feature.branch.push.PushMsg.Requested(new Branch.Name("feature"))),
                 dispatched);
     }
 
@@ -345,7 +345,7 @@ class BranchesPanelTest {
 
         assertEquals(
                 java.util.List.of(
-                        new net.vanfleteren.jazygit.feature.branch.PullMsg.Requested(new Branch.Name("feature"))),
+                        new net.vanfleteren.jazygit.feature.branch.pull.PullMsg.Requested(new Branch.Name("feature"))),
                 dispatched);
     }
 

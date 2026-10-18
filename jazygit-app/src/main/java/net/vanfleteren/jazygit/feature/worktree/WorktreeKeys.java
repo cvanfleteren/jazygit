@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.worktree;
 
-import net.vanfleteren.jazygit.feature.branch.BranchesTabMsg;
+import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.keys.Scopes;

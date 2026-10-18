@@ -35,7 +35,7 @@ import java.util.function.Supplier;
 import net.vanfleteren.jazygit.cli.StartupCli;
 import net.vanfleteren.jazygit.cli.StartupOptions;
 import net.vanfleteren.jazygit.feature.branch.BranchDialogs;
-import net.vanfleteren.jazygit.feature.branch.BranchesTabMsg;
+import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.feature.cherrypick.CherryPickDialogs;
 import net.vanfleteren.jazygit.feature.commit.CommitDialogs;
 import net.vanfleteren.jazygit.feature.discard.DiscardDialog;

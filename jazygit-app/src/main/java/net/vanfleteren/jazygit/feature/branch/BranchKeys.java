@@ -1,6 +1,16 @@
 package net.vanfleteren.jazygit.feature.branch;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
+import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchMsg;
+import net.vanfleteren.jazygit.feature.branch.merge.MergeMsg;
+import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg;
+import net.vanfleteren.jazygit.feature.branch.pull.PullMsg;
+import net.vanfleteren.jazygit.feature.branch.push.PushMsg;
+import net.vanfleteren.jazygit.feature.branch.rebase.RebaseMsg;
+import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchMsg;
+import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
+import net.vanfleteren.jazygit.feature.branch.upstream.UpstreamMsg;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.keys.Scopes;
