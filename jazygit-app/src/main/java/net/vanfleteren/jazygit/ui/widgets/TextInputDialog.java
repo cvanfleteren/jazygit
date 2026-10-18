@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.ui.widgets;
 import static dev.tamboui.toolkit.Toolkit.textInput;
 
 import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.TextInputElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
@@ -15,6 +16,7 @@ import java.util.function.Supplier;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.ui.LineEditInput;
 
 /**
  * The standard popup asking for one line of text. Enter confirms it, Escape cancels. Whether it is open lives
@@ -60,12 +62,11 @@ public final class TextInputDialog<P extends Popup> implements PopupView {
                 .onCancel(this::cancel));
     }
 
-    private TextInputElement field() {
+    private StyledElement<?> field() {
         TextInputElement field = textInput(input)
-                .id(spec.id())
                 .onSubmit(this::confirm)
                 .onKeyEvent(event -> event.code() == KeyCode.ESCAPE ? cancelled() : EventResult.UNHANDLED);
-        return spec.placeholder().map(field::placeholder).getOrElse(field);
+        return new LineEditInput(spec.placeholder().map(field::placeholder).getOrElse(field), input, spec.id());
     }
 
     private void confirm() {

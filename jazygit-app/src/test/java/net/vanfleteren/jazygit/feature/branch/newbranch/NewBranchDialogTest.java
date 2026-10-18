@@ -7,7 +7,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.KeyModifiers;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.model.SampleData;
@@ -47,6 +50,28 @@ class NewBranchDialogTest {
         }
 
         assertEquals(java.util.List.of(new NewBranchMsg.Confirmed("topic")), dispatched);
+    }
+
+    @Test
+    void theReadlineKeysEditTheName() throws Exception {
+        java.util.List<KeyEvent> global = new ArrayList<>();
+        try (ToolkitTestRunner runner = start()) {
+            // The app's global Ctrl+W shows whitespace in the diffs, after the field had its chance.
+            runner.runner().eventRouter().addGlobalHandler(event -> {
+                if (event instanceof KeyEvent key) {
+                    global.add(key);
+                }
+                return EventResult.UNHANDLED;
+            });
+            type(runner, "feature/foo-bar");
+            SettledPilot.of(runner).press(KeyCode.LEFT, KeyModifiers.CTRL);
+            SettledPilot.of(runner).press('w', KeyModifiers.CTRL);
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new NewBranchMsg.Confirmed("bar")), dispatched);
+        assertEquals(java.util.List.of(), global);
     }
 
     @Test

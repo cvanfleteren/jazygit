@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.ui.LineEditInput;
 import net.vanfleteren.jazygit.ui.SubmittableTextArea;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
@@ -147,17 +148,20 @@ public final class CommitDialog implements PopupView {
             });
         }
         return Option.of(dialog(
-                        textInput(summary)
-                                .id(summaryId)
-                                .title(Messages.get("dialog.commit.summary.title"))
-                                .placeholder(Messages.get("dialog.commit.summary.placeholder"))
-                                .length(INPUT_HEIGHT)
-                                .onSubmit(this::confirm)
-                                .onKeyEvent(this::summaryKeys),
+                        new LineEditInput(
+                                textInput(summary)
+                                        .title(Messages.get("dialog.commit.summary.title"))
+                                        .placeholder(Messages.get("dialog.commit.summary.placeholder"))
+                                        .length(INPUT_HEIGHT)
+                                        .onSubmit(this::confirm)
+                                        .onKeyEvent(this::summaryKeys),
+                                summary,
+                                summaryId),
                         new SubmittableTextArea(
                                         textArea(description)
                                                 .title(Messages.get("dialog.commit.description.title"))
                                                 .placeholder(Messages.get("dialog.commit.description.placeholder")),
+                                        description,
                                         descriptionId,
                                         this::confirm)
                                 .rows(DESCRIPTION_HEIGHT)

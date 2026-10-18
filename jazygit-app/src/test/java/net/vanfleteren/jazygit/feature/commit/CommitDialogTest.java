@@ -104,6 +104,28 @@ class CommitDialogTest {
     }
 
     @Test
+    void theReadlineKeysEditEitherField() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            type(runner, "fix the bug");
+            SettledPilot.of(runner).press('w', KeyModifiers.CTRL);
+            type(runner, "typo");
+            SettledPilot.of(runner).press(KeyCode.TAB);
+            type(runner, "because");
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            type(runner, "of the reasons");
+            SettledPilot.of(runner).press('b', KeyModifiers.of(false, true, false));
+            SettledPilot.of(runner).press('u', KeyModifiers.CTRL);
+            type(runner, "for ");
+            SettledPilot.of(runner).press(KeyCode.ENTER, KeyModifiers.CTRL);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(
+                java.util.List.of(new CommitMsg.Confirmed(new CommitMessage("fix the typo", "because\nfor reasons"))),
+                dispatched);
+    }
+
+    @Test
     void ctrlSCommitsFromEitherField() throws Exception {
         try (ToolkitTestRunner runner = start()) {
             // The app's global Ctrl+S opens the settings, after the fields had their chance.

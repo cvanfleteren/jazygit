@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.KeyModifiers;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.ArrayList;
@@ -186,6 +187,18 @@ class PickDialogTest {
         }
 
         assertEquals(java.util.List.of(new Picked("release")), dispatched);
+    }
+
+    @Test
+    void theReadlineKeysEditTheFilter() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            type(runner, "/rel");
+            SettledPilot.of(runner).press('w', KeyModifiers.CTRL);
+            SettledPilot.of(runner).pause();
+            String screen = RenderedText.ofLarge(runner, this::view);
+            assertTrue(screen.contains("main"), screen);
+            assertTrue(screen.contains("develop"), screen);
+        }
     }
 
     @Test

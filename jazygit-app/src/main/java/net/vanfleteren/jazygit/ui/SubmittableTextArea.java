@@ -10,7 +10,9 @@ import dev.tamboui.toolkit.elements.TextAreaElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.widgets.input.TextAreaState;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.ui.edit.LineEdit;
 import net.vanfleteren.jazygit.ui.widgets.BottomTitle;
 
 /**
@@ -18,11 +20,13 @@ import net.vanfleteren.jazygit.ui.widgets.BottomTitle;
  * send both alike. The plain text area turns
  * every Enter into a newline, whatever the modifiers, and handles its keys before any handler that
  * can be attached to it; so this element registers itself with the same id, ahead of the text area,
- * to see the keys first.
+ * to see the keys first. It also knows the {@link LineEdit readline keys}, which the text area would take as
+ * plain ones.
  */
 public final class SubmittableTextArea extends StyledElement<SubmittableTextArea> {
 
     private final TextAreaElement area;
+    private final TextAreaState state;
     private final Runnable onSubmit;
     // The rows the text area takes, borders included, if it is told.
     private Option<Integer> height = Option.none();
@@ -31,10 +35,12 @@ public final class SubmittableTextArea extends StyledElement<SubmittableTextArea
 
     /**
      * @param area     the text area; it gets the id
+     * @param state    the state of the text area
      * @param onSubmit what Ctrl+Enter does
      */
-    public SubmittableTextArea(TextAreaElement area, String id, Runnable onSubmit) {
+    public SubmittableTextArea(TextAreaElement area, TextAreaState state, String id, Runnable onSubmit) {
         this.area = area.id(id);
+        this.state = state;
         this.onSubmit = onSubmit;
         id(id);
     }
@@ -62,7 +68,7 @@ public final class SubmittableTextArea extends StyledElement<SubmittableTextArea
             return EventResult.HANDLED;
         }
         // The text area itself is registered under the same id, and is tried next.
-        return EventResult.UNHANDLED;
+        return focused && LineEdit.handle(state, event) ? EventResult.HANDLED : EventResult.UNHANDLED;
     }
 
     @Override

@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.ui.LineEditInput;
 import net.vanfleteren.jazygit.ui.SubmittableTextArea;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
 import net.vanfleteren.jazygit.ui.widgets.HintedDialog;
@@ -91,17 +92,20 @@ public final class NewPullRequestDialog implements PopupView {
                                     open.branch().value(),
                                     open.base().value()),
                             WIDTH,
-                            textInput(title)
-                                    .id(ID)
-                                    .title(Messages.get("dialog.newPullRequest.titleField"))
-                                    .placeholder(Messages.get("dialog.newPullRequest.titlePlaceholder"))
-                                    .length(INPUT_HEIGHT)
-                                    .onSubmit(this::confirm)
-                                    .onKeyEvent(this::keys),
+                            new LineEditInput(
+                                    textInput(title)
+                                            .title(Messages.get("dialog.newPullRequest.titleField"))
+                                            .placeholder(Messages.get("dialog.newPullRequest.titlePlaceholder"))
+                                            .length(INPUT_HEIGHT)
+                                            .onSubmit(this::confirm)
+                                            .onKeyEvent(this::keys),
+                                    title,
+                                    ID),
                             new SubmittableTextArea(
                                             textArea(body)
                                                     .title(Messages.get("dialog.newPullRequest.body"))
                                                     .placeholder(Messages.get("dialog.newPullRequest.bodyPlaceholder")),
+                                            body,
                                             BODY_ID,
                                             this::confirm)
                                     .rows(BODY_HEIGHT)

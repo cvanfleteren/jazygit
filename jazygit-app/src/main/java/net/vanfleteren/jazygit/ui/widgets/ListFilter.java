@@ -13,6 +13,7 @@ import dev.tamboui.widgets.input.TextInputState;
 import java.util.Locale;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.ui.Theme;
+import net.vanfleteren.jazygit.ui.edit.LineEdit;
 
 /**
  * The filter of a list in a popup. Typing {@code /} opens a line above the list to type it in, and only the rows
@@ -65,13 +66,17 @@ final class ListFilter {
     }
 
     /**
-     * Edits the text with {@code event}, while the filter is open: any character goes in it, and the arrows to the
-     * sides move in it. Home and End are left to the list.
+     * Edits the text with {@code event}, while the filter is open: any character goes in it, the arrows to the
+     * sides move in it, and the {@link LineEdit readline keys} work. Home and End are left to the list.
      *
      * @return whether it did
      */
     boolean edit(KeyEvent event) {
-        return open && event.code() != KeyCode.HOME && event.code() != KeyCode.END && handleTextInputKey(input, event);
+        return open
+                && (LineEdit.handle(input, event)
+                        || (event.code() != KeyCode.HOME
+                                && event.code() != KeyCode.END
+                                && handleTextInputKey(input, event)));
     }
 
     /**
