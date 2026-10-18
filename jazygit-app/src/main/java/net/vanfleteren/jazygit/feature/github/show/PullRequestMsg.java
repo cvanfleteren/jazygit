@@ -1,10 +1,8 @@
-package net.vanfleteren.jazygit.feature.github;
+package net.vanfleteren.jazygit.feature.github.show;
 
 import io.vavr.collection.List;
-import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.github.PullRequestCmd;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
-import net.vanfleteren.jazygit.gh.model.NewPullRequest;
-import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -14,6 +12,10 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
 
+/**
+ * Showing the pull request of a branch, and what is done to it from there: opening it in the browser, merging,
+ * closing, and turning it into a draft or back.
+ */
 public sealed interface PullRequestMsg extends Msg {
 
     @Override
@@ -31,11 +33,6 @@ public sealed interface PullRequestMsg extends Msg {
      * repository, else to open it in the browser.
      */
     record SummaryRequested(PullRequestSummary pullRequest) implements PullRequestMsg {}
-
-    /**
-     * The user asked to check out a pull request listed on the pull requests screen.
-     */
-    record CheckoutRequested(PullRequestSummary pullRequest) implements PullRequestMsg {}
 
     /**
      * The details of pull request {@code number} were read.
@@ -75,36 +72,4 @@ public sealed interface PullRequestMsg extends Msg {
     record Ended(PullRequestCmd.ChangingCmd cmd, List<ExecutedCommand> commands) implements PullRequestMsg {}
 
     record InfoClosed() implements PullRequestMsg {}
-
-    /**
-     * The user picked the branch the pull request merges into.
-     */
-    record BaseChosen(Branch.Name base) implements PullRequestMsg {}
-
-    record BaseCancelled() implements PullRequestMsg {}
-
-    /**
-     * The title a new pull request of {@code branch} into {@code base} starts out with was read: the subject of
-     * its oldest commit, if one was found.
-     *
-     * @param head the name the branch has on its remote
-     */
-    record TitleRead(Branch.Name branch, Branch.Name head, Branch.Name base, Option<String> subject)
-            implements PullRequestMsg {}
-
-    /**
-     * The user confirmed what the new pull request says.
-     */
-    record CreateConfirmed(NewPullRequest pullRequest) implements PullRequestMsg {}
-
-    record CreateCancelled() implements PullRequestMsg {}
-
-    /**
-     * The pull request was created by running {@code commands}.
-     *
-     * @param pullRequest the new pull request, as far as it is known before it is read from GitHub
-     */
-    record Created(
-            PullRequestCmd.CreatePullRequest cmd, Option<PullRequest> pullRequest, List<ExecutedCommand> commands)
-            implements PullRequestMsg {}
 }

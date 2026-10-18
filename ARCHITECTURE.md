@@ -469,12 +469,18 @@ The branch package gives each of its operations a subpackage of its own (`checko
 `delete`, `merge`, `rebase`, `push`, `pull`, `upstream`, and `tabs` for switching between the local branches, the
 remote ones and the worktrees), with its `XxxMsg`, `XxxUpdate` and popups. What they share stays in
 `feature.branch`: `BranchCmd`, `BranchDialogs`, `BranchKeys`, and `Branches`, which knows which branches are
-checked out where. The commit package likewise gives each of its operations a subpackage of its own (`create`, `amend`, `reword`, `squash`,
-`fixup`, `drop`, `reset`), with its `XxxMsg`, `XxxUpdate` and popups. What they share stays in `feature.commit`:
-`CommitCmd`, `CommitDialogs`, `CommitKeys`, and the message dialog that committing and rewording both use
-(`CommitDialog`, `MessagePopup`, `MessageEditor*`). Amending is one operation with an `AmendTarget`: the last
-commit, which is amended in place, also while something is in progress, or an older one, which rebases the commits
-after it and so waits until nothing is.
+checked out where.
+
+The commit package likewise gives each of its operations a subpackage of its own (`create`, `amend`, `reword`,
+`squash`, `fixup`, `drop`, `reset`), with its `XxxMsg`, `XxxUpdate` and popups. What they share stays in
+`feature.commit`: `CommitCmd`, `CommitDialogs`, `CommitKeys`, and the message dialog that committing and rewording
+both use (`CommitDialog`, `MessagePopup`, `MessageEditor*`). Amending is one operation with an `AmendTarget`: the
+last commit, which is amended in place, also while something is in progress, or an older one, which rebases the
+commits after it and so waits until nothing is.
+
+So do the github package (`create`, `show` for the pull request dialog and what is done from it, `checkout`,
+`browse`; `PullRequestCmd`, `PullRequestDialogs`, `PullRequestKeys` and `BrowseKeys` are shared) and the worktree
+package (`add`, `remove`, `switchto`; `WorktreeCmd`, `WorktreeDialogs` and `WorktreeKeys` are shared).
 `ErrorPopup` lives in `state`, as `Model.fail` opens it; the error feature only closes it.
 
 ## The git layer

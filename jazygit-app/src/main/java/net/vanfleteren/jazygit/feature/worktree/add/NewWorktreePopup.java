@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.feature.worktree;
+package net.vanfleteren.jazygit.feature.worktree.add;
 
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Popup;

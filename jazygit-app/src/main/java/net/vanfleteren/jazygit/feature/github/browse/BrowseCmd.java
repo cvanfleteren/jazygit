@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.feature.github;
+package net.vanfleteren.jazygit.feature.github.browse;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;

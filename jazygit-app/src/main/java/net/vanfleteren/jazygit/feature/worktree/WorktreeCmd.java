@@ -4,6 +4,8 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
+import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg;
+import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeMsg;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
@@ -60,7 +62,7 @@ public sealed interface WorktreeCmd extends GitOperationCmd {
 
         @Override
         public Msg succeeded(List<ExecutedCommand> commands) {
-            return new WorktreeMsg.Added(this, commands);
+            return new AddWorktreeMsg.Added(this, commands);
         }
     }
 
@@ -91,7 +93,7 @@ public sealed interface WorktreeCmd extends GitOperationCmd {
                     .removeWorktree(path(location), force)
                     .fold(
                             failure -> failure.error() instanceof GitError.WorktreeHasChanges
-                                    ? new WorktreeMsg.NeedsForce(this, failure.commands())
+                                    ? new RemoveWorktreeMsg.NeedsForce(this, failure.commands())
                                     : failedWith(failure),
                             this::succeeded);
         }

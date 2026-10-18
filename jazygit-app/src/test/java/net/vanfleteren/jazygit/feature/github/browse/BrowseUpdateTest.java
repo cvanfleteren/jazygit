@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.feature.github;
+package net.vanfleteren.jazygit.feature.github.browse;
 
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static org.junit.jupiter.api.Assertions.assertEquals;

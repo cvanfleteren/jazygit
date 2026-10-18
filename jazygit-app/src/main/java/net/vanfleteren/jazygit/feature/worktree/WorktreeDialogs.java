@@ -3,6 +3,11 @@ package net.vanfleteren.jazygit.feature.worktree;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
+import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg;
+import net.vanfleteren.jazygit.feature.worktree.add.NewWorktreePopup;
+import net.vanfleteren.jazygit.feature.worktree.remove.ForceRemoveWorktreePopup;
+import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeMsg;
+import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreePopup;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.BranchesPanel;
@@ -25,8 +30,8 @@ public final class WorktreeDialogs {
             popup -> Messages.get("dialog.newWorktree.title", popup.branch().value()),
             Option.of(Messages.get("dialog.newWorktree.placeholder")),
             NewWorktreePopup::location,
-            WorktreeMsg.NewConfirmed::new,
-            WorktreeMsg.NewCancelled::new);
+            AddWorktreeMsg.Confirmed::new,
+            AddWorktreeMsg.Cancelled::new);
 
     /**
      * Asks to confirm removing a worktree.
@@ -36,8 +41,8 @@ public final class WorktreeDialogs {
             RemoveWorktreePopup.class,
             popup -> Messages.get("dialog.removeWorktree.title", popup.name()),
             popup -> Messages.get("dialog.removeWorktree.message", popup.location()),
-            WorktreeMsg.RemoveConfirmed::new,
-            WorktreeMsg.RemoveCancelled::new);
+            RemoveWorktreeMsg.Confirmed::new,
+            RemoveWorktreeMsg.Cancelled::new);
 
     /**
      * Warns that a worktree has changes, and asks to remove it anyway.
@@ -47,8 +52,8 @@ public final class WorktreeDialogs {
             ForceRemoveWorktreePopup.class,
             popup -> Messages.get("dialog.removeWorktree.title", popup.name()),
             popup -> Messages.get("dialog.forceRemoveWorktree.message", popup.location()),
-            WorktreeMsg.ForceConfirmed::new,
-            WorktreeMsg.ForceCancelled::new);
+            RemoveWorktreeMsg.ForceConfirmed::new,
+            RemoveWorktreeMsg.ForceCancelled::new);
 
     private WorktreeDialogs() {}
 

@@ -11,7 +11,9 @@ import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.feature.branch.upstream.UpstreamMsg;
-import net.vanfleteren.jazygit.feature.worktree.WorktreeMsg;
+import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg;
+import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeMsg;
+import net.vanfleteren.jazygit.feature.worktree.switchto.SwitchWorktreeMsg;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -412,8 +414,8 @@ class BranchesPanelTest {
 
         assertEquals(
                 java.util.List.of(
-                        new WorktreeMsg.SwitchRequested("/repos/app-feature"),
-                        new WorktreeMsg.RemoveRequested("/repos/app-feature"),
+                        new SwitchWorktreeMsg.Requested("/repos/app-feature"),
+                        new RemoveWorktreeMsg.Requested("/repos/app-feature"),
                         new BranchesTabMsg.Switched(1)),
                 dispatched);
         assertEquals(
@@ -457,7 +459,7 @@ class BranchesPanelTest {
             SettledPilot.of(testRunner).quit();
         }
 
-        assertEquals(java.util.List.of(new WorktreeMsg.NewRequested(new Branch.Name("feature"))), dispatched);
+        assertEquals(java.util.List.of(new AddWorktreeMsg.Requested(new Branch.Name("feature"))), dispatched);
     }
 
     @Test

@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.feature.github;
+package net.vanfleteren.jazygit.feature.github.create;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.Branch;

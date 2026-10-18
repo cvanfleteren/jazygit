@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.github;
 
+import net.vanfleteren.jazygit.feature.github.browse.BrowseMsg;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.keys.Scopes;

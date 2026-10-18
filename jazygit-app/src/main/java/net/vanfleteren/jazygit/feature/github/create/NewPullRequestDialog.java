@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.feature.github;
+package net.vanfleteren.jazygit.feature.github.create;
 
 import static dev.tamboui.toolkit.Toolkit.*;
 
@@ -144,7 +144,7 @@ public final class NewPullRequestDialog implements PopupView {
      */
     private EventResult keys(KeyEvent event) {
         if (event.code() == KeyCode.ESCAPE) {
-            dispatch.accept(new PullRequestMsg.CreateCancelled());
+            dispatch.accept(new CreatePullRequestMsg.Cancelled());
             return EventResult.HANDLED;
         }
         if (event.hasCtrl() && event.isChar(CONFIRM_KEY)) {
@@ -155,7 +155,7 @@ public final class NewPullRequestDialog implements PopupView {
     }
 
     private void confirm() {
-        // A blank title keeps the popup open, see PullRequestUpdate.
-        dispatch.accept(new PullRequestMsg.CreateConfirmed(new NewPullRequest(title.text(), body.text(), draft)));
+        // A blank title keeps the popup open, see CreatePullRequestUpdate.
+        dispatch.accept(new CreatePullRequestMsg.Confirmed(new NewPullRequest(title.text(), body.text(), draft)));
     }
 }

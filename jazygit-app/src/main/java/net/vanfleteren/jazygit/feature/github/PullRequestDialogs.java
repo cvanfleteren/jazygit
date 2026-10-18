@@ -2,6 +2,10 @@ package net.vanfleteren.jazygit.feature.github;
 
 import io.vavr.collection.List;
 import java.util.function.Consumer;
+import net.vanfleteren.jazygit.feature.github.create.BasePopup;
+import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestMsg;
+import net.vanfleteren.jazygit.feature.github.create.NewPullRequestDialog;
+import net.vanfleteren.jazygit.feature.github.show.PullRequestDialog;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Msg;
@@ -22,8 +26,8 @@ public final class PullRequestDialogs {
             BasePopup.class,
             popup -> Messages.get("dialog.pullRequestBase.title", popup.branch().value()),
             popup -> popup.bases().map(Branch.Name::value).map(PickDialog.Row::of),
-            base -> new PullRequestMsg.BaseChosen(new Branch.Name(base)),
-            PullRequestMsg.BaseCancelled::new);
+            base -> new CreatePullRequestMsg.BaseChosen(new Branch.Name(base)),
+            CreatePullRequestMsg.BaseCancelled::new);
 
     private PullRequestDialogs() {}
 

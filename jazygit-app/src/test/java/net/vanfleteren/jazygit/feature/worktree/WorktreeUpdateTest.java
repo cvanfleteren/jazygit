@@ -11,6 +11,12 @@ import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
 import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
+import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg;
+import net.vanfleteren.jazygit.feature.worktree.add.NewWorktreePopup;
+import net.vanfleteren.jazygit.feature.worktree.remove.ForceRemoveWorktreePopup;
+import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeMsg;
+import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreePopup;
+import net.vanfleteren.jazygit.feature.worktree.switchto.SwitchWorktreeMsg;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.*;
@@ -61,14 +67,14 @@ class WorktreeUpdateTest {
 
     @Test
     void aNewWorktreeForABranchStartsOutNextToTheMainOne() {
-        Next asked = Update.update(model(), new WorktreeMsg.NewRequested(FEATURE));
+        Next asked = Update.update(model(), new AddWorktreeMsg.Requested(FEATURE));
 
         assertEquals(
                 Option.of(new NewWorktreePopup(FEATURE, "/repos/app-feature")),
                 asked.model().popup());
         assertEquals(
                 Option.none(),
-                Update.update(asked.model(), new WorktreeMsg.NewCancelled())
+                Update.update(asked.model(), new AddWorktreeMsg.Cancelled())
                         .model()
                         .popup());
     }
@@ -79,24 +85,24 @@ class WorktreeUpdateTest {
 
         assertEquals(
                 Option.none(),
-                Update.update(model(), new WorktreeMsg.NewRequested(new Branch.Name("main")))
+                Update.update(model(), new AddWorktreeMsg.Requested(new Branch.Name("main")))
                         .model()
                         .popup());
         assertEquals(
                 Option.none(),
-                Update.update(model(), new WorktreeMsg.NewRequested(new Branch.Name("nope")))
+                Update.update(model(), new AddWorktreeMsg.Requested(new Branch.Name("nope")))
                         .model()
                         .popup());
         assertEquals(
                 Option.none(),
-                Update.update(busy, new WorktreeMsg.NewRequested(FEATURE))
+                Update.update(busy, new AddWorktreeMsg.Requested(FEATURE))
                         .model()
                         .popup());
     }
 
     @Test
     void aBranchCheckedOutInAnotherWorktreeGetsNoOtherOneAndTheErrorSaysWhere() {
-        Next next = Update.update(model(), new WorktreeMsg.NewRequested(TAKEN));
+        Next next = Update.update(model(), new AddWorktreeMsg.Requested(TAKEN));
 
         assertEquals(
                 Option.of(
@@ -107,12 +113,12 @@ class WorktreeUpdateTest {
     @Test
     void confirmingAddsTheWorktreeWithTheBranchBusyAndABlankLocationKeepsTheDialogOpen() {
         Model asked =
-                Update.update(model(), new WorktreeMsg.NewRequested(FEATURE)).model();
+                Update.update(model(), new AddWorktreeMsg.Requested(FEATURE)).model();
 
         assertEquals(
                 List.of(),
-                Update.update(asked, new WorktreeMsg.NewConfirmed("  ")).cmds());
-        Next confirmed = Update.update(asked, new WorktreeMsg.NewConfirmed(" ~/elsewhere "));
+                Update.update(asked, new AddWorktreeMsg.Confirmed("  ")).cmds());
+        Next confirmed = Update.update(asked, new AddWorktreeMsg.Confirmed(" ~/elsewhere "));
 
         assertEquals(List.of(new WorktreeCmd.Add(FEATURE, "~/elsewhere")), confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());
@@ -138,36 +144,36 @@ class WorktreeUpdateTest {
     void switchingOpensAnotherWorktreeButNotTheOneShown() {
         assertEquals(
                 List.of(new RecentReposCmd.SwitchTo("/repos/app-taken")),
-                Update.update(model(), new WorktreeMsg.SwitchRequested("/repos/app-taken"))
+                Update.update(model(), new SwitchWorktreeMsg.Requested("/repos/app-taken"))
                         .cmds());
         assertEquals(
                 List.of(),
-                Update.update(model(), new WorktreeMsg.SwitchRequested("/repos/app"))
+                Update.update(model(), new SwitchWorktreeMsg.Requested("/repos/app"))
                         .cmds());
         assertEquals(
                 List.of(),
-                Update.update(model(), new WorktreeMsg.SwitchRequested("/repos/unknown"))
+                Update.update(model(), new SwitchWorktreeMsg.Requested("/repos/unknown"))
                         .cmds());
     }
 
     @Test
     void onlyALinkedWorktreeThatIsNotShownCanBeRemoved() {
-        Next asked = Update.update(model(), new WorktreeMsg.RemoveRequested("/repos/app-taken"));
+        Next asked = Update.update(model(), new RemoveWorktreeMsg.Requested("/repos/app-taken"));
 
         assertEquals(
                 Option.of(new RemoveWorktreePopup("/repos/app-taken", "app-taken")),
                 asked.model().popup());
         assertEquals(
                 Option.none(),
-                Update.update(model(), new WorktreeMsg.RemoveRequested("/repos/app"))
+                Update.update(model(), new RemoveWorktreeMsg.Requested("/repos/app"))
                         .model()
                         .popup());
         assertEquals(
                 List.of(new WorktreeCmd.Remove("/repos/app-taken", false)),
-                Update.update(asked.model(), new WorktreeMsg.RemoveConfirmed()).cmds());
+                Update.update(asked.model(), new RemoveWorktreeMsg.Confirmed()).cmds());
         assertEquals(
                 Option.none(),
-                Update.update(asked.model(), new WorktreeMsg.RemoveCancelled())
+                Update.update(asked.model(), new RemoveWorktreeMsg.Cancelled())
                         .model()
                         .popup());
     }
@@ -178,7 +184,8 @@ class WorktreeUpdateTest {
 
         Next refused = Update.update(
                 model(),
-                new WorktreeMsg.NeedsForce(remove, StubGitProvider.executed("git worktree remove /repos/app-taken")));
+                new RemoveWorktreeMsg.NeedsForce(
+                        remove, StubGitProvider.executed("git worktree remove /repos/app-taken")));
 
         assertEquals(
                 Option.of(new ForceRemoveWorktreePopup("/repos/app-taken", "app-taken")),
@@ -193,10 +200,11 @@ class WorktreeUpdateTest {
                         .map(command -> command.line()));
         assertEquals(
                 List.of(new WorktreeCmd.Remove("/repos/app-taken", true)),
-                Update.update(refused.model(), new WorktreeMsg.ForceConfirmed()).cmds());
+                Update.update(refused.model(), new RemoveWorktreeMsg.ForceConfirmed())
+                        .cmds());
         assertEquals(
                 Option.none(),
-                Update.update(refused.model(), new WorktreeMsg.ForceCancelled())
+                Update.update(refused.model(), new RemoveWorktreeMsg.ForceCancelled())
                         .model()
                         .popup());
     }

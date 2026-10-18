@@ -10,6 +10,14 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.fetch.FetchCmd;
 import net.vanfleteren.jazygit.feature.github.PullRequestCmd.*;
+import net.vanfleteren.jazygit.feature.github.browse.BrowsePullRequestCmd;
+import net.vanfleteren.jazygit.feature.github.checkout.CheckoutPullRequestCmd;
+import net.vanfleteren.jazygit.feature.github.checkout.CheckoutPullRequestMsg;
+import net.vanfleteren.jazygit.feature.github.create.BasePopup;
+import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestMsg;
+import net.vanfleteren.jazygit.feature.github.create.NewPullRequestPopup;
+import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
+import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.gh.StubGitHub;
@@ -116,7 +124,7 @@ class PullRequestUpdateTest {
         Model asked = Update.update(model(), new PullRequestMsg.Requested(new Branch.Name("feature")))
                 .model();
 
-        Next reading = Update.update(asked, new PullRequestMsg.BaseChosen(new Branch.Name("main")));
+        Next reading = Update.update(asked, new CreatePullRequestMsg.BaseChosen(new Branch.Name("main")));
 
         assertEquals(
                 List.of(new ReadTitle(
@@ -131,7 +139,7 @@ class PullRequestUpdateTest {
     @Test
     void theTitleReadIsOfferedToEdit() {
         Next asking = Update.update(
-                model(), new PullRequestMsg.TitleRead(FEATURE, FEATURE, MAIN.name(), Option.of("Add login")));
+                model(), new CreatePullRequestMsg.TitleRead(FEATURE, FEATURE, MAIN.name(), Option.of("Add login")));
 
         assertEquals(
                 Option.of(new NewPullRequestPopup(FEATURE, FEATURE, MAIN.name(), "Add login")),
@@ -141,8 +149,8 @@ class PullRequestUpdateTest {
 
     @Test
     void withoutACommitOfItsOwnTheTitleIsTheBranch() {
-        Next asking =
-                Update.update(model(), new PullRequestMsg.TitleRead(FEATURE, FEATURE, MAIN.name(), Option.none()));
+        Next asking = Update.update(
+                model(), new CreatePullRequestMsg.TitleRead(FEATURE, FEATURE, MAIN.name(), Option.none()));
 
         assertEquals(
                 Option.of(new NewPullRequestPopup(FEATURE, FEATURE, MAIN.name(), "feature")),
@@ -153,7 +161,7 @@ class PullRequestUpdateTest {
     void confirmingCreatesThePullRequestAsEnteredAndKeepsTheBranchBusy() {
         NewPullRequest entered = new NewPullRequest(" Add login ", "Why", true);
 
-        Next created = Update.update(creating(), new PullRequestMsg.CreateConfirmed(entered));
+        Next created = Update.update(creating(), new CreatePullRequestMsg.Confirmed(entered));
 
         assertEquals(
                 List.of(new CreatePullRequest(
@@ -167,7 +175,7 @@ class PullRequestUpdateTest {
 
     @Test
     void aBlankTitleKeepsThePopupOpen() {
-        Next next = Update.update(creating(), new PullRequestMsg.CreateConfirmed(new NewPullRequest(" ", "", false)));
+        Next next = Update.update(creating(), new CreatePullRequestMsg.Confirmed(new NewPullRequest(" ", "", false)));
 
         assertEquals(List.empty(), next.cmds());
         assertTrue(next.model().popup(NewPullRequestPopup.class).isDefined());
@@ -177,7 +185,7 @@ class PullRequestUpdateTest {
     void cancellingTheNewPullRequestClosesThePopup() {
         assertEquals(
                 Option.none(),
-                Update.update(creating(), new PullRequestMsg.CreateCancelled())
+                Update.update(creating(), new CreatePullRequestMsg.Cancelled())
                         .model()
                         .popup());
     }
@@ -187,7 +195,8 @@ class PullRequestUpdateTest {
      */
     private static Model creating() {
         return Update.update(
-                        model(), new PullRequestMsg.TitleRead(FEATURE, FEATURE, MAIN.name(), Option.of("Add login")))
+                        model(),
+                        new CreatePullRequestMsg.TitleRead(FEATURE, FEATURE, MAIN.name(), Option.of("Add login")))
                 .model();
     }
 
@@ -198,7 +207,9 @@ class PullRequestUpdateTest {
 
         assertEquals(
                 Option.none(),
-                Update.update(asked, new PullRequestMsg.BaseCancelled()).model().popup());
+                Update.update(asked, new CreatePullRequestMsg.BaseCancelled())
+                        .model()
+                        .popup());
     }
 
     @Test
@@ -508,7 +519,7 @@ class PullRequestUpdateTest {
     void aCreatedPullRequestIsLoggedAndThePullRequestsAreReadAgain() {
         CreatePullRequest cmd =
                 new CreatePullRequest(FEATURE, FEATURE, MAIN.name(), new NewPullRequest("Login", "", true));
-        Model creating = Update.update(creating(), new PullRequestMsg.CreateConfirmed(cmd.pullRequest()))
+        Model creating = Update.update(creating(), new CreatePullRequestMsg.Confirmed(cmd.pullRequest()))
                 .model();
 
         Next done = Update.update(creating, cmd.run(new Env(new StubGitProvider() {}, StubGitHub.empty())));
@@ -526,10 +537,10 @@ class PullRequestUpdateTest {
         CreatePullRequest cmd =
                 new CreatePullRequest(FEATURE, FEATURE, MAIN.name(), new NewPullRequest("Login", "", false));
         PullRequest created = new PullRequest(43, "feature", false, Checks.NONE, Review.NONE);
-        Model creating = Update.update(creating(), new PullRequestMsg.CreateConfirmed(cmd.pullRequest()))
+        Model creating = Update.update(creating(), new CreatePullRequestMsg.Confirmed(cmd.pullRequest()))
                 .model();
 
-        Next done = Update.update(creating, new PullRequestMsg.Created(cmd, Option.of(created), List.empty()));
+        Next done = Update.update(creating, new CreatePullRequestMsg.Created(cmd, Option.of(created), List.empty()));
 
         assertEquals(
                 Option.of(created),
@@ -617,7 +628,7 @@ class PullRequestUpdateTest {
     void aPullRequestOfTheRepositoryIsCheckedOutWhenOnlyUntrackedFilesAreAround() {
         PullRequestSummary pr = summary("owner/repo");
 
-        Next checkingOut = Update.update(ofOwnerRepo(DIRTY), new PullRequestMsg.CheckoutRequested(pr));
+        Next checkingOut = Update.update(ofOwnerRepo(DIRTY), new CheckoutPullRequestMsg.Requested(pr));
 
         assertEquals(List.of(new CheckoutPullRequestCmd(pr)), checkingOut.cmds());
         assertEquals(Option.none(), checkingOut.model().outcome().error());
@@ -629,7 +640,7 @@ class PullRequestUpdateTest {
                 RepoStatus.Head.onBranch(new Branch.Name("main"), new Sha("aaaa")),
                 List.of(new FileEntry("a.txt", ChangeType.MODIFIED)));
 
-        Next refused = Update.update(ofOwnerRepo(changed), new PullRequestMsg.CheckoutRequested(summary("owner/repo")));
+        Next refused = Update.update(ofOwnerRepo(changed), new CheckoutPullRequestMsg.Requested(summary("owner/repo")));
 
         assertEquals(List.empty(), refused.cmds());
         assertEquals(
@@ -639,7 +650,7 @@ class PullRequestUpdateTest {
 
     @Test
     void aPullRequestOfAnotherRepositoryIsNotCheckedOut() {
-        Next refused = Update.update(ofOwnerRepo(CLEAN), new PullRequestMsg.CheckoutRequested(summary("other/repo")));
+        Next refused = Update.update(ofOwnerRepo(CLEAN), new CheckoutPullRequestMsg.Requested(summary("other/repo")));
 
         assertEquals(List.empty(), refused.cmds());
         assertEquals(
@@ -651,7 +662,7 @@ class PullRequestUpdateTest {
     void aPullRequestIsNotCheckedOutWhileItIsNotKnownWhichRepositoryThisIs() {
         Model reading = Update.update(loaded(), new LoadMsg.StatusLoaded(CLEAN)).model();
 
-        Next refused = Update.update(reading, new PullRequestMsg.CheckoutRequested(summary("owner/repo")));
+        Next refused = Update.update(reading, new CheckoutPullRequestMsg.Requested(summary("owner/repo")));
 
         assertEquals(List.empty(), refused.cmds());
         assertEquals(

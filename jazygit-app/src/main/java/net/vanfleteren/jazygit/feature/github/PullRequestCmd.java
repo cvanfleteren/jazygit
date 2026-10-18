@@ -2,6 +2,8 @@ package net.vanfleteren.jazygit.feature.github;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestMsg;
+import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
@@ -84,7 +86,7 @@ public sealed interface PullRequestCmd extends Cmd {
         }
 
         private Msg read(Option<String> subject) {
-            return new PullRequestMsg.TitleRead(branch, head, base, subject);
+            return new CreatePullRequestMsg.TitleRead(branch, head, base, subject);
         }
     }
 
@@ -116,7 +118,7 @@ public sealed interface PullRequestCmd extends Cmd {
                     .createPullRequest(head.value(), base.value(), pullRequest)
                     .fold(
                             this::failedWith,
-                            created -> new PullRequestMsg.Created(
+                            created -> new CreatePullRequestMsg.Created(
                                     this,
                                     created.number()
                                             .map(number -> new PullRequest(

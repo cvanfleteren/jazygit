@@ -8,7 +8,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchMsg;
 import net.vanfleteren.jazygit.feature.diff.DiffOptionsMsg;
-import net.vanfleteren.jazygit.feature.github.BrowseMsg;
+import net.vanfleteren.jazygit.feature.github.browse.BrowseMsg;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.feature.inprogress.InProgressMsg;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelMsg;

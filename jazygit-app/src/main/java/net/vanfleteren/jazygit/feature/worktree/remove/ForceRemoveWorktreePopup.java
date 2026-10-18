@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.feature.worktree;
+package net.vanfleteren.jazygit.feature.worktree.remove;
 
 import net.vanfleteren.jazygit.state.Popup;
 

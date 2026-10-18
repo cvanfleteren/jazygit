@@ -1,6 +1,7 @@
-package net.vanfleteren.jazygit.feature.github;
+package net.vanfleteren.jazygit.feature.github.browse;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.github.PullRequestCmd;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Msg;

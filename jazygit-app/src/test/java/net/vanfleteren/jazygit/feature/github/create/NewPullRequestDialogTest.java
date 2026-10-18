@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.feature.github;
+package net.vanfleteren.jazygit.feature.github.create;
 
 import static dev.tamboui.toolkit.Toolkit.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -68,7 +68,7 @@ class NewPullRequestDialogTest {
         }
 
         assertEquals(
-                java.util.List.of(new PullRequestMsg.CreateConfirmed(new NewPullRequest("Add login", "", false))),
+                java.util.List.of(new CreatePullRequestMsg.Confirmed(new NewPullRequest("Add login", "", false))),
                 dispatched);
     }
 
@@ -97,7 +97,7 @@ class NewPullRequestDialogTest {
 
         assertEquals(
                 java.util.List.of(
-                        new PullRequestMsg.CreateConfirmed(new NewPullRequest("Add login!", "Why\nit matters", true))),
+                        new CreatePullRequestMsg.Confirmed(new NewPullRequest("Add login!", "Why\nit matters", true))),
                 dispatched);
     }
 
@@ -148,9 +148,9 @@ class NewPullRequestDialogTest {
 
         assertEquals(
                 java.util.List.of(
-                        new PullRequestMsg.CreateCancelled(),
-                        new PullRequestMsg.CreateCancelled(),
-                        new PullRequestMsg.CreateCancelled()),
+                        new CreatePullRequestMsg.Cancelled(),
+                        new CreatePullRequestMsg.Cancelled(),
+                        new CreatePullRequestMsg.Cancelled()),
                 dispatched);
     }
 

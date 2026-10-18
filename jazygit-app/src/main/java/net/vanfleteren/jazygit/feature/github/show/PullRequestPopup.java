@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.feature.github;
+package net.vanfleteren.jazygit.feature.github.show;
 
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -21,11 +21,11 @@ public record PullRequestPopup(
     /**
      * The popup while its details are being read.
      */
-    static PullRequestPopup loading(Branch.Name branch, PullRequest pullRequest) {
+    public static PullRequestPopup loading(Branch.Name branch, PullRequest pullRequest) {
         return new PullRequestPopup(branch, pullRequest, Option.none());
     }
 
-    PullRequestPopup with(Either<Failure, PullRequestDetails> read) {
+    public PullRequestPopup with(Either<Failure, PullRequestDetails> read) {
         return new PullRequestPopup(branch, pullRequest, Option.of(read));
     }
 
