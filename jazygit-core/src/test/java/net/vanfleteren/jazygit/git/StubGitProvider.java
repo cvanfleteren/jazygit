@@ -317,7 +317,7 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommitsTo(
-            Branch.Name from, Sha oldest, Branch.Name to, boolean stash) {
+            Branch.Name from, Sha oldest, Branch.Name to) {
         return ran();
     }
 

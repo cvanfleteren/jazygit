@@ -57,9 +57,9 @@ along to the new branch):
 1. `git checkout -b <name>` (at HEAD)
 2. `git branch -f <old> <sha>^`
 
-Any other base:
+Any other base (only without uncommitted changes, see [Uncommitted changes](#uncommitted-changes)):
 
-1. `git checkout -b <name> <base>` (uncommitted changes handled the way checkout handles them today)
+1. `git checkout -b <name> <base>`
 2. `git cherry-pick <sha>^..<old>`
 3. only when the cherry-pick succeeded: `git branch -f <old> <sha>^`
 
@@ -67,6 +67,20 @@ When force-push was chosen, as the last step: `git push --force-with-lease` of `
 takes the branch explicitly, so it doesn't need to be checked out).
 
 Afterwards the new branch is checked out.
+
+### Uncommitted changes
+
+*Amended 2026-10-18, after review.* git refuses to cherry-pick onto staged changes, whatever files they are in, and
+onto changes to the files the picked commits touch. The checkout before it would then already have happened,
+leaving the user on the new branch with their changes and the old branch unmoved. So moving onto any base other
+than the parent is refused up front while the working tree has changes ("Commit or stash your changes before
+copying the commits onto `<base>`"). Untracked files don't count, as git only stops for those that are in the way,
+the same rule as checking out a pull request. Moving to a new branch at the parent never copies, so it still takes
+uncommitted changes along.
+
+Stashing before the checkout and popping after the copy was considered and rejected: a cherry-pick that stops on
+conflicts would leave the changes in the stash while the user resolves them, and the pop can still conflict with
+the copied commits.
 
 ### Failures
 

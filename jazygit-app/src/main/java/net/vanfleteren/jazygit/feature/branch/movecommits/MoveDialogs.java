@@ -11,13 +11,12 @@ import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
-import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
 import net.vanfleteren.jazygit.ui.widgets.PickDialog;
 import net.vanfleteren.jazygit.ui.widgets.TextInputDialog;
 
 /**
  * The popups of moving commits to another branch: which branch, or the name of a new one and where it starts,
- * whether to force-push the branch they are taken off, and whether to take uncommitted changes along.
+ * and whether to force-push the branch they are taken off.
  */
 public final class MoveDialogs {
 
@@ -106,19 +105,6 @@ public final class MoveDialogs {
                             () -> new MoveMsg.PushedConfirmed(false))),
             MoveMsg.PushedCancelled::new);
 
-    /**
-     * Asks to take the uncommitted changes along, which are in the way of checking out the branch the commits move
-     * to, as checking out a branch does.
-     */
-    public static final ConfirmDialog.Spec<MoveStashPopup> STASH = new ConfirmDialog.Spec<>(
-            "move-commits-stash",
-            MoveStashPopup.class,
-            popup -> Messages.get(
-                    "dialog.stashCheckout.title", popup.cmd().branch().value()),
-            popup -> Messages.get("dialog.stashCheckout.message"),
-            MoveMsg.StashConfirmed::new,
-            MoveMsg.StashCancelled::new);
-
     private MoveDialogs() {}
 
     private static String label(MoveBasePopup popup, MoveBase base) {
@@ -136,7 +122,6 @@ public final class MoveDialogs {
                 PopupSlot.returningTo(CommitsPanel.ID, new PickDialog<>(TARGET, dispatch)),
                 PopupSlot.returningTo(CommitsPanel.ID, new TextInputDialog<>(NAME, dispatch)),
                 PopupSlot.returningTo(CommitsPanel.ID, new PickDialog<>(BASE, dispatch)),
-                PopupSlot.returningTo(CommitsPanel.ID, new ChoiceDialog<>(PUSHED, dispatch)),
-                PopupSlot.returningTo(CommitsPanel.ID, new ConfirmDialog<>(STASH, dispatch)));
+                PopupSlot.returningTo(CommitsPanel.ID, new ChoiceDialog<>(PUSHED, dispatch)));
     }
 }

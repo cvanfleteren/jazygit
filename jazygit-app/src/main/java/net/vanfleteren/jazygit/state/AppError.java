@@ -133,6 +133,12 @@ public sealed interface AppError {
     record ChangesBeforeCheckout(String pullRequest) implements AppError {}
 
     /**
+     * Commits are not copied onto {@code target}, a branch, while the working tree has changes, which git would
+     * refuse to cherry-pick onto.
+     */
+    record ChangesBeforeMove(String target) implements AppError {}
+
+    /**
      * Deleting a remote branch was asked for, but it is the default branch of its remote.
      *
      * @param branch the short name of the remote branch, e.g. {@code origin/main}

@@ -41,9 +41,10 @@ There is no base step: the commits always go on top of the target's tip.
 2. `git cherry-pick <sha>^..<old>`
 3. only when the cherry-pick succeeded: `git branch -f <old> <sha>^`
 
-When the checkout is refused because uncommitted changes would be overwritten, the user is offered to take them
-along, as checking out a branch does: confirming runs the same steps, with the checkout done as stash, check out
-and pop (`checkoutWithStash`).
+*Amended 2026-10-18, after review.* Like every move that copies commits, this is refused up front while the working
+tree has changes, untracked files apart (see ADR 1, "Uncommitted changes"). The first version offered to take them
+along through a stash, popped right after the checkout; but the cherry-pick then refuses when they are staged or
+touch the same files, which left the user on the target branch with their changes and the commits unmoved.
 
 ### Unchanged from ADR 1
 

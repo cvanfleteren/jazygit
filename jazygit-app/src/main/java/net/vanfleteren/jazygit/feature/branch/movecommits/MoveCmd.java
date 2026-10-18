@@ -4,7 +4,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
-import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -74,38 +73,24 @@ public sealed interface MoveCmd extends Cmd {
             return switch (target) {
                 case MoveTarget.NewBranch(var branch, var onto) ->
                     git.moveCommits(from, oldest, branch, onto.map(Move::revision));
-                case MoveTarget.Existing(var branch, boolean stash) -> git.moveCommitsTo(from, oldest, branch, stash);
+                case MoveTarget.Existing(var branch) -> git.moveCommitsTo(from, oldest, branch);
             };
         }
 
         /**
-         * Reports a stop on conflicts as one of moving commits, as the branch they are taken off still has them;
-         * and offers to take the uncommitted changes along when they are in the way of checking out an existing
-         * branch.
+         * Reports a stop on conflicts as one of moving commits, as the branch they are taken off still has them.
          */
         @Override
         public Msg run(Env env) {
             Msg outcome = ChecksOutBranch.super.run(env);
-            return switch (outcome) {
-                case OperationMsg.Stopped(var cmd, var commands, var notice) ->
-                    new MoveMsg.Stopped(this, commands, notice);
-                case OperationMsg.Failed(var cmd, Failure.Git(GitError.LocalChanges changes, var commands, var cleanup))
-                when target instanceof MoveTarget.Existing(var branch, boolean stash) && !stash ->
-                    new MoveMsg.NeedsStash(this, commands);
-                default -> outcome;
-            };
+            return outcome instanceof OperationMsg.Stopped(var cmd, var commands, var notice)
+                    ? new MoveMsg.Stopped(this, commands, notice)
+                    : outcome;
         }
 
         @Override
         public Msg succeeded(List<ExecutedCommand> commands) {
             return new MoveMsg.Moved(this, commands);
-        }
-
-        /**
-         * This move, taking the uncommitted changes along to the existing branch it moves the commits to.
-         */
-        public Move withStash() {
-            return new Move(from, oldest, new MoveTarget.Existing(target.branch(), true), forcePush);
         }
 
         private static String revision(BranchRef ref) {

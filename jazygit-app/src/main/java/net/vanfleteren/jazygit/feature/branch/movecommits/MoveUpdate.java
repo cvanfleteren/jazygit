@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.feature.branch.upstream.UpstreamUpdate;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.CommitRange;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -55,14 +56,6 @@ public final class MoveUpdate {
                         MovePushedPopup.class,
                         popup -> Option.of(move(popup.request(), popup.target(), forcePush)));
             case PushedCancelled() -> Next.of(model.withoutPopup(MovePushedPopup.class));
-            case NeedsStash(var cmd, var commands) ->
-                Update.refresh(OperationUpdate.done(model, cmd, commands).openPopupIfFree(new MoveStashPopup(cmd)));
-            case StashConfirmed() ->
-                Update.confirm(
-                        model,
-                        MoveStashPopup.class,
-                        popup -> Option.of(popup.cmd().withStash()));
-            case StashCancelled() -> Next.of(model.withoutPopup(MoveStashPopup.class));
             case Moved(var cmd, var commands) -> moved(model, cmd, commands);
             case Stopped(var cmd, var commands, var notice) ->
                 Update.refresh(OperationUpdate.done(model, cmd, commands)
@@ -137,7 +130,7 @@ public final class MoveUpdate {
                                 .map(worktree -> Next.of(
                                         model.fail(new AppError.CheckedOutElsewhere(MoveCmd.MOVE, name, worktree))))
                                 .getOrElse(() -> model.idleBranch(name)
-                                        .map(idle -> targeted(model, request, new MoveTarget.Existing(name, false)))
+                                        .map(idle -> targeted(model, request, new MoveTarget.Existing(name)))
                                         .getOrElse(() -> Next.of(model))))
                         .getOrElse(() -> Next.of(model)));
     }
@@ -187,11 +180,29 @@ public final class MoveUpdate {
 
     /**
      * Moves the commits to {@code target}, after asking about force-pushing when some of them are pushed already.
+     * Commits that are copied are not moved while the working tree has changes: git refuses to cherry-pick onto
+     * staged changes, or onto changes to the files the commits touch, which would leave the target checked out and
+     * the commits unmoved. Untracked files do not count, as git only stops for those that are in the way.
      */
     private static Next targeted(Model model, MoveRequest request, MoveTarget target) {
-        return request.pushed()
-                ? Update.ask(model, new MovePushedPopup(request, target))
-                : Update.start(model.clearError(), move(request, target, false));
+        boolean changed = Update.files(model).exists(file -> file.type() != ChangeType.UNTRACKED);
+        return copiedOnto(target)
+                .filter(onto -> changed)
+                .map(onto -> Next.of(model.fail(new AppError.ChangesBeforeMove(onto))))
+                .getOrElse(() -> request.pushed()
+                        ? Update.ask(model, new MovePushedPopup(request, target))
+                        : Update.start(model.clearError(), move(request, target, false)));
+    }
+
+    /**
+     * The branch the commits are copied onto, by name: an existing one, or the one a new branch starts at elsewhere;
+     * none when they stay where they are.
+     */
+    private static Option<String> copiedOnto(MoveTarget target) {
+        return switch (target) {
+            case MoveTarget.NewBranch(var branch, var onto) -> onto.map(BranchRef::name);
+            case MoveTarget.Existing(var branch) -> Option.of(branch.value());
+        };
     }
 
     private static MoveCmd.Move move(MoveRequest request, MoveTarget target, boolean forcePush) {

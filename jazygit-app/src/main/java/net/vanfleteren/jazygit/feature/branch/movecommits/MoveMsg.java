@@ -64,19 +64,6 @@ public sealed interface MoveMsg extends Msg {
     record PushedCancelled() implements MoveMsg {}
 
     /**
-     * Git refused to check out the existing branch {@code cmd} moves the commits to, after running
-     * {@code commands}, because uncommitted changes would be overwritten.
-     */
-    record NeedsStash(MoveCmd.Move cmd, List<ExecutedCommand> commands) implements MoveMsg {}
-
-    /**
-     * The user agreed to take the uncommitted changes along.
-     */
-    record StashConfirmed() implements MoveMsg {}
-
-    record StashCancelled() implements MoveMsg {}
-
-    /**
      * {@code cmd} ran {@code commands} and moved the commits.
      */
     record Moved(MoveCmd.Move cmd, List<ExecutedCommand> commands) implements MoveMsg {}

@@ -10,12 +10,16 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitRange;
+import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
+import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Tracking;
 import net.vanfleteren.jazygit.git.model.Upstream;
@@ -113,8 +117,20 @@ class MoveUpdateTest {
         return new MoveCmd.Move(FEATURE, MIDDLE.sha(), new MoveTarget.NewBranch(TOPIC, onto), forcePush);
     }
 
-    private static MoveCmd.Move toMain(boolean stash) {
-        return new MoveCmd.Move(FEATURE, MIDDLE.sha(), new MoveTarget.Existing(MAIN, stash), Option.none());
+    private static MoveCmd.Move toMain() {
+        return new MoveCmd.Move(FEATURE, MIDDLE.sha(), new MoveTarget.Existing(MAIN), Option.none());
+    }
+
+    /**
+     * {@code model} with a change in the working tree.
+     */
+    private static Model changed(Model model) {
+        return Update.update(
+                        model,
+                        new LoadMsg.StatusLoaded(new RepoStatus(
+                                Head.onBranch(FEATURE, TIP.sha()),
+                                List.of(new FileEntry("a.txt", ChangeType.MODIFIED)))))
+                .model();
     }
 
     @Test
@@ -190,7 +206,7 @@ class MoveUpdateTest {
     void choosingAnExistingBranchCopiesTheCommitsOntoIt() {
         Next next = Update.update(read(UNPUSHED), new MoveMsg.TargetChosen(Option.of(MAIN)));
 
-        assertEquals(List.of(toMain(false)), next.cmds());
+        assertEquals(List.of(toMain()), next.cmds());
         assertEquals(Option.none(), next.model().popup(MoveTargetPopup.class));
     }
 
@@ -205,15 +221,44 @@ class MoveUpdateTest {
     }
 
     @Test
-    void changesInTheWayOfTheCheckoutAreOfferedToBeTakenAlong() {
-        Model asked = Update.update(model(true), new MoveMsg.NeedsStash(toMain(false), List.of()))
+    void changesKeepCommitsFromBeingCopiedOntoAnExistingBranch() {
+        Next next = Update.update(changed(read(UNPUSHED)), new MoveMsg.TargetChosen(Option.of(MAIN)));
+
+        assertEquals(List.of(), next.cmds());
+        assertEquals(
+                Option.of(new AppError.ChangesBeforeMove("main")),
+                next.model().outcome().error());
+    }
+
+    @Test
+    void changesKeepCommitsFromBeingCopiedOntoTheBaseOfANewBranch() {
+        Next next = Update.update(changed(named(UNPUSHED)), new MoveMsg.BaseChosen(ONTO_MAIN));
+
+        assertEquals(List.of(), next.cmds());
+        assertEquals(
+                Option.of(new AppError.ChangesBeforeMove("origin/main")),
+                next.model().outcome().error());
+    }
+
+    @Test
+    void changesDoNotKeepCommitsFromMovingWhereTheyAre() {
+        Next next = Update.update(changed(named(UNPUSHED)), new MoveMsg.BaseChosen(PARENT));
+
+        assertEquals(List.of(toTopic(Option.none(), Option.none())), next.cmds());
+    }
+
+    @Test
+    void untrackedFilesDoNotKeepCommitsFromBeingCopied() {
+        Model untracked = Update.update(
+                        read(UNPUSHED),
+                        new LoadMsg.StatusLoaded(new RepoStatus(
+                                Head.onBranch(FEATURE, TIP.sha()),
+                                List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)))))
                 .model();
 
-        Next next = Update.update(asked, new MoveMsg.StashConfirmed());
+        Next next = Update.update(untracked, new MoveMsg.TargetChosen(Option.of(MAIN)));
 
-        assertEquals(Option.of(new MoveStashPopup(toMain(false))), asked.popup(MoveStashPopup.class));
-        assertEquals(List.of(toMain(true)), next.cmds());
-        assertEquals(Option.none(), next.model().popup(MoveStashPopup.class));
+        assertEquals(List.of(toMain()), next.cmds());
     }
 
     @Test
@@ -243,7 +288,7 @@ class MoveUpdateTest {
                 .model();
 
         assertEquals(
-                Option.of(new MoveTarget.Existing(MAIN, false)),
+                Option.of(new MoveTarget.Existing(MAIN)),
                 asked.popup(MovePushedPopup.class).map(MovePushedPopup::target));
     }
 
@@ -260,7 +305,7 @@ class MoveUpdateTest {
         Notice.StoppedOnConflicts stopped =
                 new Notice.StoppedOnConflicts(Option.of(new InProgress.CherryPicking(MIDDLE.sha())), 1);
 
-        Next next = Update.update(model(true), new MoveMsg.Stopped(toMain(false), List.of(), stopped));
+        Next next = Update.update(model(true), new MoveMsg.Stopped(toMain(), List.of(), stopped));
 
         assertEquals(
                 Option.of(new Notice.MoveStopped(stopped, FEATURE, MIDDLE.sha())),

@@ -17,8 +17,7 @@ public sealed interface MoveTarget {
     record NewBranch(Branch.Name branch, Option<BranchRef> onto) implements MoveTarget {}
 
     /**
-     * An existing branch, onto which the commits are copied; with {@code stash}, the uncommitted changes are taken
-     * along to it.
+     * An existing branch, onto which the commits are copied.
      */
-    record Existing(Branch.Name branch, boolean stash) implements MoveTarget {}
+    record Existing(Branch.Name branch) implements MoveTarget {}
 }

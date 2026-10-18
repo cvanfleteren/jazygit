@@ -105,7 +105,7 @@ class CliMoveCommitsTest {
         Sha oldest = sha("HEAD~1");
         String parent = sha("HEAD~2").value();
 
-        assertTrue(CliMoveCommits.moveTo(repo, FEATURE, oldest, new Branch.Name("main"), false)
+        assertTrue(CliMoveCommits.moveTo(repo, FEATURE, oldest, new Branch.Name("main"))
                 .isRight());
 
         assertEquals("main", git("branch", "--show-current").strip());
@@ -121,26 +121,12 @@ class CliMoveCommitsTest {
         Files.writeString(repo.resolve("b.txt"), "uncommitted\n");
         String tip = head();
 
-        var failure = CliMoveCommits.moveTo(repo, FEATURE, sha("HEAD~1"), new Branch.Name("main"), false)
+        var failure = CliMoveCommits.moveTo(repo, FEATURE, sha("HEAD~1"), new Branch.Name("main"))
                 .getLeft();
 
         assertInstanceOf(GitError.LocalChanges.class, failure.error());
         assertEquals("feature", git("branch", "--show-current").strip());
         assertEquals(tip, sha("feature").value());
-    }
-
-    @Test
-    void withAStashTheChangesComeAlong() throws Exception {
-        Files.writeString(repo.resolve("a.txt"), "uncommitted\n");
-        String parent = sha("HEAD~2").value();
-
-        assertTrue(CliMoveCommits.moveTo(repo, FEATURE, sha("HEAD~1"), new Branch.Name("main"), true)
-                .isRight());
-
-        assertEquals("main", git("branch", "--show-current").strip());
-        assertEquals("uncommitted\n", Files.readString(repo.resolve("a.txt")));
-        assertEquals("", git("stash", "list"));
-        assertEquals(parent, sha("feature").value());
     }
 
     @Test

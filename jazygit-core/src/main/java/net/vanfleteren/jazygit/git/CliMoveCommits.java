@@ -40,16 +40,15 @@ final class CliMoveCommits {
     /**
      * Checks out the existing branch {@code to}, copies the commits of {@code from} since {@code oldest} onto it,
      * and moves {@code from} back to the parent of {@code oldest}, each step only when the one before it succeeded.
-     * With {@code stash}, the uncommitted changes are taken along through a stash; without, a checkout they are in
-     * the way of fails with {@link GitError.LocalChanges}. A cherry-pick that stops on conflicts is left so; one that
-     * fails otherwise is aborted.
+     * A checkout that uncommitted changes are in the way of fails with {@link GitError.LocalChanges}. A cherry-pick
+     * that stops on conflicts is left so; one that fails otherwise is aborted.
      *
      * @return the command lines that were run
      */
     static Either<GitFailure<GitError>, List<ExecutedCommand>> moveTo(
-            Path workTree, Branch.Name from, Sha oldest, Branch.Name to, boolean stash) {
+            Path workTree, Branch.Name from, Sha oldest, Branch.Name to) {
         return GitFailure.sequence(
-                () -> stash ? CliCheckout.checkoutWithStash(workTree, to) : CliCheckout.checkout(workTree, to),
+                () -> CliCheckout.checkout(workTree, to),
                 () -> copy(workTree, from, oldest),
                 () -> moveBack(workTree, from, oldest));
     }

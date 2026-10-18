@@ -326,8 +326,8 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommitsTo(
-            Branch.Name from, Sha oldest, Branch.Name to, boolean stash) {
-        return CliMoveCommits.moveTo(workTree, from, oldest, to, stash);
+            Branch.Name from, Sha oldest, Branch.Name to) {
+        return CliMoveCommits.moveTo(workTree, from, oldest, to);
     }
 
     @Override
