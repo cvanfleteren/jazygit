@@ -266,6 +266,13 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
+     * Shows {@code screen}, as clicking its name in the title of the status pane does.
+     */
+    private void showScreen(Screen screen) {
+        dispatch.accept(new PrOverviewMsg.Chosen(screen));
+    }
+
+    /**
      * Gives the focus back to the pane whose content has it, and says whether there was one.
      */
     private boolean leaveScrollArea() {
@@ -455,7 +462,7 @@ public class JazygitApp extends ToolkitApp {
         Panel stash = stashPanel.render(model, focusedId, activeId);
         Option<Integer> stashHeight = stashHeight(model);
         return column(
-                StatusPanel.render(model),
+                StatusPanel.render(model, this::showScreen),
                 filesPanel.render(model, focusedId, activeId).percent(FILES_PERCENT),
                 branches.percent(BRANCHES_PERCENT),
                 // With the stash sized to its content, the commits take what is left, which is
@@ -479,7 +486,7 @@ public class JazygitApp extends ToolkitApp {
                 .flatMap(pane -> pane.selectionChange(model))
                 .forEach(dispatch);
         return column(panes.<Element>map(pane -> pane)
-                .prepend(StatusPanel.render(model))
+                .prepend(StatusPanel.render(model, this::showScreen))
                 .toJavaArray(Element[]::new));
     }
 

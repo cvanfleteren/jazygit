@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.gh.model.RepositoryPullRequests;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.Update;
 
 /**
@@ -24,6 +25,11 @@ public sealed interface PrOverviewMsg extends Msg {
      * The user asked to show the other screen.
      */
     record Toggled() implements PrOverviewMsg {}
+
+    /**
+     * The user asked to show {@code screen}, by clicking its name.
+     */
+    record Chosen(Screen screen) implements PrOverviewMsg {}
 
     /**
      * Periodic prompt to read the pull requests again, while they are shown.

@@ -33,6 +33,9 @@ public final class PrOverviewUpdate {
         return switch (msg) {
             case PrOverviewMsg.Toggled() ->
                 reloadIfShown(Next.of(model.withScreen(model.screen().other())));
+            // The screen already shown stays as it is, without reading it again.
+            case PrOverviewMsg.Chosen(Screen screen) ->
+                screen == model.screen() ? Next.of(model) : reloadIfShown(Next.of(model.withScreen(screen)));
             case PrOverviewMsg.Tick() -> reloadIfShown(Next.of(model));
             default -> {
                 Step step = update(model.prOverview(), msg);
@@ -85,6 +88,7 @@ public final class PrOverviewUpdate {
             case PrOverviewMsg.PreviewLoadFailed(PullRequestSummary key, Failure failure) ->
                 Step.of(overview.withPreview(Preview.updated(overview.preview(), key, shown -> shown.failed(failure))));
             case PrOverviewMsg.Toggled(), PrOverviewMsg.Tick() -> Step.of(overview);
+            case PrOverviewMsg.Chosen(Screen screen) -> Step.of(overview);
         };
     }
 

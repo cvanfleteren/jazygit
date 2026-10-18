@@ -4,13 +4,18 @@ import static dev.tamboui.toolkit.Toolkit.panel;
 import static dev.tamboui.toolkit.Toolkit.row;
 import static dev.tamboui.toolkit.Toolkit.text;
 
+import dev.tamboui.layout.Rect;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.elements.TextElement;
+import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.tui.event.MouseEvent;
+import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.util.function.Consumer;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
@@ -39,6 +44,13 @@ public final class StatusPanel {
     private StatusPanel() {}
 
     public static Panel render(Model model) {
+        return render(model, screen -> {});
+    }
+
+    /**
+     * @param screenClicked called when the name of a screen in the title is clicked, with that screen
+     */
+    public static Panel render(Model model, Consumer<Screen> screenClicked) {
         String branch = switch (model.repo().status()) {
             case Loadable.Loading<RepoStatus>() -> Placeholders.loading();
             case Loadable.Failed<RepoStatus>(Failure failure) -> Placeholders.error(failure);
@@ -57,13 +69,49 @@ public final class StatusPanel {
                         .map(label -> SEPARATOR)
                         .getOrElse("");
         TextElement repository = text(line);
-        return panel(unfinished
+        Panel panel = panel(unfinished
                         // The row would share its width out evenly, cutting off what is in progress.
                         .<StyledElement<?>>map(label -> row(
                                 repository.length(line.length()), text(label).addClass(Theme.Classes.IN_PROGRESS)))
                         .getOrElse(repository))
                 .title(title(model.screen()))
                 .length(HEIGHT);
+        return panel.onMouseEvent(event -> titleClick(panel.renderedArea(), event, screenClicked));
+    }
+
+    /**
+     * Shows the screen whose name in the title of the panel, drawn in {@code area}, is clicked. The title starts
+     * after the corner of the border.
+     */
+    private static EventResult titleClick(Rect area, MouseEvent event, Consumer<Screen> screenClicked) {
+        return Option.when(
+                        event.kind() == MouseEventKind.PRESS
+                                && event.isLeftButton()
+                                && area != null
+                                && event.y() == area.top(),
+                        event.x() - area.left() - 1)
+                .flatMap(StatusPanel::screenAt)
+                .map(clicked -> {
+                    screenClicked.accept(clicked);
+                    return EventResult.HANDLED;
+                })
+                .getOrElse(EventResult.UNHANDLED);
+    }
+
+    /**
+     * The screen whose name in the title is {@code column} cells from the start of the title, if any; the
+     * separators between them are none.
+     */
+    static Option<Screen> screenAt(int column) {
+        int separator = Span.raw(TITLE_SEPARATOR).width();
+        List<Screen> screens = List.of(Screen.values());
+        // Where the name of each screen starts: after the names and separators before it.
+        List<Integer> starts = screens.init()
+                .scanLeft(0, (start, screen) -> start + screenName(screen).width() + separator);
+        return screens.zip(starts)
+                .find(screen -> column >= screen._2
+                        && column < screen._2 + screenName(screen._1).width())
+                .map(screen -> screen._1);
     }
 
     /**

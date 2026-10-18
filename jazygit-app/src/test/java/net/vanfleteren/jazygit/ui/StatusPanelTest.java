@@ -12,9 +12,11 @@ import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import org.junit.jupiter.api.Test;
@@ -23,6 +25,20 @@ import org.junit.jupiter.api.Test;
  * The status panel shows the repository name and the current branch.
  */
 class StatusPanelTest {
+
+    @Test
+    void aClickOnTheNameOfAScreenInTheTitleTellsWhichOne() {
+        int repository = Messages.get("screen.repository").length();
+        int pullRequests = Messages.get("screen.pullRequests").length();
+
+        assertEquals(Option.of(Screen.REPOSITORY), StatusPanel.screenAt(0));
+        assertEquals(Option.of(Screen.REPOSITORY), StatusPanel.screenAt(repository - 1));
+        assertEquals(Option.none(), StatusPanel.screenAt(repository + 1));
+        assertEquals(Option.of(Screen.PULL_REQUESTS), StatusPanel.screenAt(repository + 3));
+        assertEquals(Option.of(Screen.PULL_REQUESTS), StatusPanel.screenAt(repository + 3 + pullRequests - 1));
+        assertEquals(Option.none(), StatusPanel.screenAt(repository + 3 + pullRequests));
+        assertEquals(Option.none(), StatusPanel.screenAt(-1));
+    }
 
     @Test
     void showsRepositoryNameAndCurrentBranch() throws Exception {

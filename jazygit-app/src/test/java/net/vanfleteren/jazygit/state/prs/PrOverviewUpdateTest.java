@@ -85,6 +85,21 @@ class PrOverviewUpdateTest {
     }
 
     @Test
+    void choosingAScreenShowsItAndChoosingTheOneShownDoesNothing() {
+        Next shown = Update.update(loaded(), new PrOverviewMsg.Chosen(Screen.PULL_REQUESTS));
+        assertEquals(Screen.PULL_REQUESTS, shown.model().screen());
+        assertEquals(BOTH_READS, shown.cmds());
+
+        Next again = Update.update(shown.model(), new PrOverviewMsg.Chosen(Screen.PULL_REQUESTS));
+        assertEquals(shown.model(), again.model());
+        assertEquals(List.empty(), again.cmds());
+
+        Next back = Update.update(shown.model(), new PrOverviewMsg.Chosen(Screen.REPOSITORY));
+        assertEquals(Screen.REPOSITORY, back.model().screen());
+        assertEquals(List.empty(), back.cmds());
+    }
+
+    @Test
     void aTickReadsAgainWhatIsNotStillBeingRead() {
         Model shown = toggled(loaded()).model();
 
