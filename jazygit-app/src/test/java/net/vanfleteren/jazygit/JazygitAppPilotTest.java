@@ -334,14 +334,17 @@ class JazygitAppPilotTest {
             assertEquals(
                     fixture.data().status().get().files().toSet(), all.files().toSet());
 
-            pilot.press(KeyCode.DOWN);
-            pilot.press(KeyCode.DOWN);
+            // Files come before directories: README.md, notes.txt, pom.xml, the merged src/... directory,
+            // JazygitApp.java and then the "model" directory.
+            for (int i = 0; i < 6; i++) {
+                pilot.press(KeyCode.DOWN);
+            }
             pilot.press(' ');
             pilot.pause();
 
             StageMsg.Requested requested =
                     (StageMsg.Requested) fixture.dispatched().get(1);
-            // DOWN highlights the "model" directory, so only its file is requested.
+            // Only the file in the highlighted "model" directory is requested.
             assertEquals(
                     List.of("src/main/java/net/vanfleteren/jazygit/model/SampleData.java"),
                     requested.files().map(f -> f.path()).toList());

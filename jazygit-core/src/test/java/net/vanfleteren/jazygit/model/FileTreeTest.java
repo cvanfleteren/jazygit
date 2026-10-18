@@ -23,9 +23,9 @@ class FileTreeTest {
         FileEntry c = modified("c.txt");
         List<FileTree> roots = FileTree.of(List.of(a, b, c));
 
-        // Directories sort before files.
-        assertEquals(List.of(b, a), roots.get(0).entries());
-        assertEquals(List.of(c), roots.get(1).entries());
+        // Files sort before directories.
+        assertEquals(List.of(c), roots.get(0).entries());
+        assertEquals(List.of(a, b), roots.get(1).entries());
     }
 
     @Test
@@ -36,7 +36,7 @@ class FileTreeTest {
         Dir root = new Dir("root", "", FileTree.of(List.of(a, b, c)));
 
         assertEquals(List.of(c), root.directEntries());
-        assertEquals(List.of(a), root.children().get(0).directEntries());
+        assertEquals(List.of(a), root.children().get(1).directEntries());
         assertEquals(List.of(c), new File("c.txt", c).directEntries());
     }
 
@@ -72,8 +72,8 @@ class FileTreeTest {
                         "net/vanfleteren",
                         "net/vanfleteren",
                         List.of(
-                                new Dir("b", "net/vanfleteren/b", List.of(new File("B.java", b))),
-                                new File("A.java", a)))),
+                                new File("A.java", a),
+                                new Dir("b", "net/vanfleteren/b", List.of(new File("B.java", b)))))),
                 FileTree.of(List.of(a, b)));
     }
 
@@ -93,12 +93,12 @@ class FileTreeTest {
     }
 
     @Test
-    void directoriesComeBeforeFiles() {
-        FileEntry pom = modified("a.xml");
-        FileEntry app = modified("z/App.java");
+    void filesComeBeforeDirectories() {
+        FileEntry pom = modified("z.xml");
+        FileEntry app = modified("a/App.java");
 
         assertEquals(
-                List.of(new Dir("z", "z", List.of(new File("App.java", app))), new File("a.xml", pom)),
+                List.of(new File("z.xml", pom), new Dir("a", "a", List.of(new File("App.java", app)))),
                 FileTree.of(List.of(pom, app)));
     }
 }
