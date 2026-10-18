@@ -3,6 +3,9 @@ package net.vanfleteren.jazygit.feature.commit;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.commit.amend.AmendTarget;
+import net.vanfleteren.jazygit.feature.commit.amend.AmendTarget.LastCommit;
+import net.vanfleteren.jazygit.feature.commit.amend.AmendTarget.Older;
 import net.vanfleteren.jazygit.feature.commit.create.CommitMsg;
 import net.vanfleteren.jazygit.feature.stage.StageCmd;
 import net.vanfleteren.jazygit.git.GitError;
@@ -75,34 +78,26 @@ public sealed interface CommitCmd extends GitOperationCmd {
     }
 
     /**
-     * Stages the paths, if any, then amends the last commit with the index, keeping its message.
+     * Stages the paths, if any, then amends {@code target} with the index, keeping its message. Only amending an
+     * older commit waits until nothing is in progress, as it rebases the commits after it.
      */
-    record Amend(List<String> stage) implements CommitCmd {
+    record Amend(AmendTarget target, List<String> stage) implements CommitCmd {
 
         @Override
         public Operation operation() {
-            return AMEND;
+            return switch (target) {
+                case LastCommit() -> AMEND;
+                case Older(Sha sha) -> AMEND_COMMIT;
+            };
         }
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return GitFailure.sequence(() -> git.stage(stage), git::amendLastCommit);
-        }
-    }
-
-    /**
-     * Stages the paths, if any, then amends the commit {@code sha} with the index, keeping its message.
-     */
-    record AmendCommit(Sha sha, List<String> stage) implements CommitCmd {
-
-        @Override
-        public Operation operation() {
-            return AMEND_COMMIT;
-        }
-
-        @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return GitFailure.<GitError>sequence(() -> GitFailure.widen(git.stage(stage)), () -> git.amendCommit(sha));
+            return switch (target) {
+                case LastCommit() -> GitFailure.sequence(() -> git.stage(stage), git::amendLastCommit);
+                case Older(Sha sha) ->
+                    GitFailure.<GitError>sequence(() -> GitFailure.widen(git.stage(stage)), () -> git.amendCommit(sha));
+            };
         }
     }
 

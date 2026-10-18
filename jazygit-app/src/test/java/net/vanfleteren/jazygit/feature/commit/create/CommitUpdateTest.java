@@ -9,12 +9,10 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.commit.CommitCmd;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendMsg;
-import net.vanfleteren.jazygit.feature.commit.amend.AmendPopup;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordMsg;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordPopup;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
@@ -22,7 +20,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
 /**
- * The commit transitions: committing, amending and rewording.
+ * The commit transitions: committing and rewording.
  */
 class CommitUpdateTest {
 
@@ -115,56 +113,6 @@ class CommitUpdateTest {
         assertEquals(
                 Option.none(),
                 Update.update(open, new RewordMsg.Cancelled()).model().popup());
-    }
-
-    @Test
-    void amendAsksForConfirmationThenAmendsWithTheStagedFiles() {
-        Model asking = Update.update(
-                        withFiles(
-                                new FileEntry("a.txt", ChangeType.ADDED), new FileEntry("b.txt", ChangeType.MODIFIED)),
-                        new AmendMsg.Requested())
-                .model();
-        assertTrue(asking.popup(AmendPopup.class).isDefined());
-
-        Next next = Update.update(asking, new AmendMsg.Confirmed());
-
-        assertEquals(List.of(new CommitCmd.Amend(List.of())), next.cmds());
-        assertFalse(next.model().popup(AmendPopup.class).isDefined());
-    }
-
-    @Test
-    void amendStagesAllFilesWhenNoneIsStaged() {
-        Model asking = Update.update(
-                        withFiles(
-                                new FileEntry("a.txt", ChangeType.MODIFIED),
-                                new FileEntry("b.txt", ChangeType.UNTRACKED)),
-                        new AmendMsg.Requested())
-                .model();
-
-        assertEquals(
-                List.of(new CommitCmd.Amend(List.of("a.txt", "b.txt"))),
-                Update.update(asking, new AmendMsg.Confirmed()).cmds());
-    }
-
-    @Test
-    void cancellingTheAmendClosesThePrompt() {
-        Model asking = Update.update(withFiles(new FileEntry("a.txt", ChangeType.ADDED)), new AmendMsg.Requested())
-                .model();
-
-        Next next = Update.update(asking, new AmendMsg.Cancelled());
-
-        assertFalse(next.model().popup(AmendPopup.class).isDefined());
-        assertEquals(List.of(), next.cmds());
-    }
-
-    @Test
-    void amendWithoutChangesIsAnError() {
-        assertEquals(
-                Option.of(new AppError.NothingToAmend()),
-                Update.update(withFiles(), new AmendMsg.Requested())
-                        .model()
-                        .outcome()
-                        .error());
     }
 
     @Test

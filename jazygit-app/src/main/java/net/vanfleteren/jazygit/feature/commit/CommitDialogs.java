@@ -4,9 +4,8 @@ import io.vavr.collection.List;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendMsg;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendPopup;
-import net.vanfleteren.jazygit.feature.commit.amendcommit.AmendCommitMsg;
-import net.vanfleteren.jazygit.feature.commit.amendcommit.AmendCommitPopup;
-import net.vanfleteren.jazygit.feature.commit.amendcommit.AmendCommitStageAllPopup;
+import net.vanfleteren.jazygit.feature.commit.amend.AmendStageAllPopup;
+import net.vanfleteren.jazygit.feature.commit.amend.AmendTarget;
 import net.vanfleteren.jazygit.feature.commit.create.CommitMsg;
 import net.vanfleteren.jazygit.feature.commit.create.StageAllPopup;
 import net.vanfleteren.jazygit.feature.commit.drop.DropMsg;
@@ -35,37 +34,26 @@ import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
 public final class CommitDialogs {
 
     /**
-     * Asks to amend the last commit.
+     * Asks to amend the last commit, or another commit, with the staged changes.
      */
     public static final ConfirmDialog.Spec<AmendPopup> AMEND = new ConfirmDialog.Spec<>(
             "amend-commit",
             AmendPopup.class,
-            popup -> Messages.get("dialog.amend.title"),
-            popup -> Messages.get("dialog.amend.message"),
+            popup -> Messages.get(amendKey(popup.target()) + ".title"),
+            popup -> Messages.get(amendKey(popup.target()) + ".message"),
             AmendMsg.Confirmed::new,
             AmendMsg.Cancelled::new);
 
     /**
-     * Asks to amend a commit with the staged changes.
-     */
-    public static final ConfirmDialog.Spec<AmendCommitPopup> AMEND_COMMIT = new ConfirmDialog.Spec<>(
-            "amend-selected-commit",
-            AmendCommitPopup.class,
-            popup -> Messages.get("dialog.amendCommit.title"),
-            popup -> Messages.get("dialog.amendCommit.message"),
-            AmendCommitMsg.Confirmed::new,
-            AmendCommitMsg.Cancelled::new);
-
-    /**
      * Asks whether to amend a commit with all files, because none is staged.
      */
-    public static final ConfirmDialog.Spec<AmendCommitStageAllPopup> AMEND_COMMIT_STAGE_ALL = new ConfirmDialog.Spec<>(
-            "amend-selected-commit-stage-all",
-            AmendCommitStageAllPopup.class,
-            popup -> Messages.get("dialog.amendCommit.stageAll.title"),
-            popup -> Messages.get("dialog.amendCommit.stageAll.message"),
-            AmendCommitMsg.StageAllConfirmed::new,
-            AmendCommitMsg.Cancelled::new);
+    public static final ConfirmDialog.Spec<AmendStageAllPopup> AMEND_STAGE_ALL = new ConfirmDialog.Spec<>(
+            "amend-commit-stage-all",
+            AmendStageAllPopup.class,
+            popup -> Messages.get("dialog.amend.stageAll.title"),
+            popup -> Messages.get("dialog.amend.stageAll.message"),
+            AmendMsg.StageAllConfirmed::new,
+            AmendMsg.Cancelled::new);
 
     /**
      * Asks to squash a commit into the one below it.
@@ -151,15 +139,25 @@ public final class CommitDialogs {
     private CommitDialogs() {}
 
     /**
+     * The prefix of the message keys of the amend dialog for {@code target}.
+     */
+    private static String amendKey(AmendTarget target) {
+        return switch (target) {
+            case AmendTarget.LastCommit() -> "dialog.amend";
+            case AmendTarget.Older(var sha) -> "dialog.amendCommit";
+        };
+    }
+
+    /**
      * The popups of this feature, which send what the user does to {@code dispatch}.
      */
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
-                PopupSlot.returningTo(FilesPanel.ID, new ConfirmDialog<>(AMEND, dispatch)),
+                // A commit is amended from the files (the last one), or from the commits.
+                PopupSlot.returningToFocus(new ConfirmDialog<>(AMEND, dispatch)),
+                PopupSlot.returningToFocus(new ConfirmDialog<>(AMEND_STAGE_ALL, dispatch)),
                 PopupSlot.returningTo(FilesPanel.ID, new ConfirmDialog<>(STAGE_ALL, dispatch)),
                 PopupSlot.returningTo(FilesPanel.ID, new CommitDialog(dispatch)),
-                PopupSlot.returningTo(CommitsPanel.ID, new ConfirmDialog<>(AMEND_COMMIT, dispatch)),
-                PopupSlot.returningTo(CommitsPanel.ID, new ConfirmDialog<>(AMEND_COMMIT_STAGE_ALL, dispatch)),
                 PopupSlot.returningTo(CommitsPanel.ID, new ConfirmDialog<>(SQUASH, dispatch)),
                 PopupSlot.returningTo(CommitsPanel.ID, new ChoiceDialog<>(FIXUP, dispatch)),
                 PopupSlot.returningTo(CommitsPanel.ID, new ConfirmDialog<>(DROP, dispatch)),

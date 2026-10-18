@@ -416,7 +416,7 @@ class ProgramTest {
     }
 
     @Test
-    void amendingStagesAllFilesWhenNoneIsStaged() {
+    void amendingStagesAllFilesWhenNoneIsStagedOnceAgreed() {
         provider.status = new RepoStatus(
                 Head.onBranch(new Branch.Name("main"), new Sha("aaaa")),
                 List.of(new FileEntry("a.txt", ChangeType.MODIFIED)));
@@ -424,6 +424,7 @@ class ProgramTest {
 
         program.dispatch(new AmendMsg.Requested());
         program.dispatch(new AmendMsg.Confirmed());
+        program.dispatch(new AmendMsg.StageAllConfirmed());
         settle();
 
         assertEquals(java.util.List.of("stage[a.txt]", "amend[]"), provider.indexCalls);

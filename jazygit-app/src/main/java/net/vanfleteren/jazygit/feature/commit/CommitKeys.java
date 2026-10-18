@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.commit;
 
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendMsg;
-import net.vanfleteren.jazygit.feature.commit.amendcommit.AmendCommitMsg;
 import net.vanfleteren.jazygit.feature.commit.create.CommitMsg;
 import net.vanfleteren.jazygit.feature.commit.drop.DropMsg;
 import net.vanfleteren.jazygit.feature.commit.fixup.FixupMsg;
@@ -27,7 +27,7 @@ public final class CommitKeys {
                 .add(
                         Scopes.COMMITS,
                         Binding.onSelected(
-                                "A", "help.commits.amend", commit -> new AmendCommitMsg.Requested(commit.sha())),
+                                "A", "help.commits.amend", commit -> new AmendMsg.Requested(Option.of(commit.sha()))),
                         Binding.onSelected("r", "help.commits.reword", commit -> new RewordMsg.Requested(commit.sha())),
                         Binding.onSelected("s", "help.commits.squash", commit -> new SquashMsg.Requested(commit.sha())),
                         Binding.onSelected("f", "help.commits.fixup", commit -> new FixupMsg.Requested(commit.sha())),

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.DeleteBranchPopup;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendPopup;
+import net.vanfleteren.jazygit.feature.commit.amend.AmendTarget;
 import net.vanfleteren.jazygit.git.model.Branch;
 import org.junit.jupiter.api.Test;
 
@@ -17,7 +18,8 @@ class ModelPopupTest {
 
     @Test
     void openingAPopupReplacesTheOneThatWasOpen() {
-        Model model = closed.openPopup(new AmendPopup()).openPopup(new DeleteBranchPopup(new Branch.Name("feature")));
+        Model model = closed.openPopup(new AmendPopup(new AmendTarget.LastCommit()))
+                .openPopup(new DeleteBranchPopup(new Branch.Name("feature")));
 
         assertEquals(Option.of(new DeleteBranchPopup(new Branch.Name("feature"))), model.popup());
         assertEquals(Option.none(), model.popup(AmendPopup.class));
@@ -40,7 +42,7 @@ class ModelPopupTest {
         assertEquals(Option.of("branches"), focused.repoView().focusedPane());
         assertEquals(
                 Option.of("branches"),
-                focused.openPopup(new AmendPopup())
+                focused.openPopup(new AmendPopup(new AmendTarget.LastCommit()))
                         .withoutPopup(AmendPopup.class)
                         .repoView()
                         .focusedPane());

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendPopup;
+import net.vanfleteren.jazygit.feature.commit.amend.AmendTarget;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
@@ -87,7 +88,7 @@ class DiffOptionsUpdateTest {
 
     @Test
     void theToggleDoesNothingWhileADialogIsOpen() {
-        Model model = shown().openPopup(new AmendPopup());
+        Model model = shown().openPopup(new AmendPopup(new AmendTarget.LastCommit()));
 
         Next next = Update.update(model, new DiffOptionsMsg.WhitespaceToggled());
 

@@ -467,10 +467,12 @@ Each feature package follows the same shape:
 
 The branch package holds several operations (checkout, push, pull, merge, rebase, new branch, delete). Each
 has its own `XxxMsg`, `XxxUpdate` and popups, and they share `BranchCmd`, `BranchDialogs` and `BranchKeys`.
-The commit package gives each of its operations a subpackage of its own (`create`, `amend`, `amendcommit`,
-`reword`, `squash`, `fixup`, `drop`, `reset`), with its `XxxMsg`, `XxxUpdate` and popups. What they share stays
-in `feature.commit`: `CommitCmd`, `CommitDialogs`, `CommitKeys`, and the message dialog that committing and
-rewording both use (`CommitDialog`, `MessagePopup`, `MessageEditor*`).
+The commit package gives each of its operations a subpackage of its own (`create`, `amend`, `reword`, `squash`,
+`fixup`, `drop`, `reset`), with its `XxxMsg`, `XxxUpdate` and popups. What they share stays in `feature.commit`:
+`CommitCmd`, `CommitDialogs`, `CommitKeys`, and the message dialog that committing and rewording both use
+(`CommitDialog`, `MessagePopup`, `MessageEditor*`). Amending is one operation with an `AmendTarget`: the last
+commit, which is amended in place, also while something is in progress, or an older one, which rebases the commits
+after it and so waits until nothing is.
 `ErrorPopup` lives in `state`, as `Model.fail` opens it; the error feature only closes it.
 
 ## The git layer
