@@ -14,16 +14,16 @@ public final class RecentReposUpdate {
     public static Next update(Model model, RecentReposMsg msg) {
         return switch (msg) {
             // The key works everywhere, but does not take away a dialog that is open.
-            case RecentReposMsg.Requested() ->
-                model.popup().isDefined() ? Next.of(model) : Next.of(model, new RecentReposCmd.ListRecent());
+            case RecentReposMsg.Requested() when model.popup().isDefined() -> Next.of(model);
+            case RecentReposMsg.Requested() -> Next.of(model, new RecentReposCmd.ListRecent());
             case RecentReposMsg.Listed(var repos) -> Next.of(model.openPopupIfFree(new RecentReposPopup(repos)));
             case RecentReposMsg.Cancelled() -> Next.of(model.withoutPopup(RecentReposPopup.class));
-            case RecentReposMsg.Chosen(String directory) ->
-                model.popup(RecentReposPopup.class).isDefined()
-                        ? Next.of(
-                                model.withoutPopup(RecentReposPopup.class).clearError(),
-                                new RecentReposCmd.SwitchTo(directory))
-                        : Next.of(model);
+            case RecentReposMsg.Chosen(String directory)
+            when model.popup(RecentReposPopup.class).isDefined() ->
+                Next.of(
+                        model.withoutPopup(RecentReposPopup.class).clearError(),
+                        new RecentReposCmd.SwitchTo(directory));
+            case RecentReposMsg.Chosen(String directory) -> Next.of(model);
             // The app shows the other repository already; this one is not shown anymore.
             case RecentReposMsg.Switched(String directory) -> Next.of(model);
             case RecentReposMsg.NotSwitched(String directory, var failure) ->

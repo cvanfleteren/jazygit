@@ -35,22 +35,21 @@ public final class CreatePullRequestUpdate {
                 Next.of(model.openPopupIfFree(
                         new NewPullRequestPopup(branch, head, base, subject.getOrElse(branch::value))));
             // A blank title keeps the popup open, as GitHub needs one.
+            case Confirmed(NewPullRequest pullRequest) when pullRequest.title().isBlank() -> Next.of(model);
             case Confirmed(NewPullRequest pullRequest) ->
-                pullRequest.title().isBlank()
-                        ? Next.of(model)
-                        : Update.confirm(
-                                model,
-                                NewPullRequestPopup.class,
-                                popup -> model.repo()
-                                        .branch(popup.branch())
-                                        .map(known -> new CreatePullRequest(
-                                                popup.branch(),
-                                                popup.head(),
-                                                popup.base(),
-                                                new NewPullRequest(
-                                                        pullRequest.title().strip(),
-                                                        pullRequest.body(),
-                                                        pullRequest.draft()))));
+                Update.confirm(
+                        model,
+                        NewPullRequestPopup.class,
+                        popup -> model.repo()
+                                .branch(popup.branch())
+                                .map(known -> new CreatePullRequest(
+                                        popup.branch(),
+                                        popup.head(),
+                                        popup.base(),
+                                        new NewPullRequest(
+                                                pullRequest.title().strip(),
+                                                pullRequest.body(),
+                                                pullRequest.draft()))));
             case Cancelled() -> Next.of(model.withoutPopup(NewPullRequestPopup.class));
             case Created(CreatePullRequest cmd, var pullRequest, var commands) -> {
                 // Done like any operation. The new pull request shows at once, as GitHub may not list it yet;

@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.git.model;
 
 import io.vavr.collection.List;
-import io.vavr.control.Option;
 
 /**
  * Changed files arranged as a directory tree. A directory whose only child is another directory is
@@ -46,7 +45,8 @@ public sealed interface FileTree {
         return dir.children()
                 .headOption()
                 .filter(only -> dir.children().size() == 1)
-                .flatMap(only -> only instanceof Dir child ? Option.of(child) : Option.none())
+                .filter(Dir.class::isInstance)
+                .map(Dir.class::cast)
                 .<FileTree>map(child -> new Dir(dir.name() + "/" + child.name(), child.path(), child.children()))
                 .getOrElse(dir);
     }
@@ -74,7 +74,10 @@ public sealed interface FileTree {
         return switch (this) {
             case File file -> List.of(file.entry());
             case Dir dir ->
-                dir.children().flatMap(child -> child instanceof File file ? List.of(file.entry()) : List.empty());
+                dir.children()
+                        .filter(File.class::isInstance)
+                        .map(File.class::cast)
+                        .map(File::entry);
         };
     }
 

@@ -24,7 +24,8 @@ public final class FetchUpdate {
     public static Next update(Model model, FetchMsg msg) {
         return switch (msg) {
             // A fetch that is still running is not started again.
-            case FetchMsg.Tick() -> model.jobs().fetching().isDefined() ? Next.of(model) : start(Next.of(model));
+            case FetchMsg.Tick() when model.jobs().fetching().isDefined() -> Next.of(model);
+            case FetchMsg.Tick() -> start(Next.of(model));
             case FetchMsg.RemotesListed(List<String> remotes) -> next(model, remotes);
             case FetchMsg.ListingFailed(var failure) -> {
                 Next stopped = Next.of(model.mapJobs(jobs -> jobs.withFetching(Option.none())

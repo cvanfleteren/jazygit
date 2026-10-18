@@ -545,9 +545,9 @@ public class BranchesPanel {
     public Option<Commit> selectedDivergenceCommit() {
         return divergence.flatMap(view -> divergenceList
                 .selected(shown -> entries(view, shown))
-                .flatMap(entry -> entry instanceof DivergenceEntry.Shown(var node, var joins, var ahead)
-                        ? Option.of(node.commit())
-                        : Option.none()));
+                .filter(DivergenceEntry.Shown.class::isInstance)
+                .map(DivergenceEntry.Shown.class::cast)
+                .map(shown -> shown.node().commit()));
     }
 
     /**

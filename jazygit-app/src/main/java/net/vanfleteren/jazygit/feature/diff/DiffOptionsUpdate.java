@@ -20,16 +20,14 @@ public final class DiffOptionsUpdate {
     public static Next update(Model model, DiffOptionsMsg msg) {
         return switch (msg) {
             // The key works everywhere, but not in a dialog, whose diff does not change.
+            case DiffOptionsMsg.WhitespaceToggled() when model.popup().isDefined() -> Next.of(model);
             case DiffOptionsMsg.WhitespaceToggled() ->
-                model.popup().isDefined()
-                        ? Next.of(model)
-                        : changed(
-                                model,
-                                model.preferences()
-                                        .diffOptions()
-                                        .withIgnoreWhitespace(!model.preferences()
-                                                .diffOptions()
-                                                .ignoreWhitespace()));
+                changed(
+                        model,
+                        model.preferences()
+                                .diffOptions()
+                                .withIgnoreWhitespace(
+                                        !model.preferences().diffOptions().ignoreWhitespace()));
         };
     }
 

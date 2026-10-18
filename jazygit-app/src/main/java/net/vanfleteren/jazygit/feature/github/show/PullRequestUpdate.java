@@ -28,10 +28,11 @@ public final class PullRequestUpdate {
             case PullRequestMsg.Requested(Branch.Name branch) -> requested(model, branch);
             // A pull request of another repository is opened in the browser, as gh acts on this one; so is one
             // while it is not known yet which repository this is, which does no harm.
+            case PullRequestMsg.SummaryRequested(var pullRequest)
+            when model.prOverview().ofThisRepository(pullRequest).getOrElse(false) ->
+                show(model, new Branch.Name(pullRequest.headBranch()), pullRequest.pullRequest());
             case PullRequestMsg.SummaryRequested(var pullRequest) ->
-                model.prOverview().ofThisRepository(pullRequest).getOrElse(false)
-                        ? show(model, new Branch.Name(pullRequest.headBranch()), pullRequest.pullRequest())
-                        : Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
+                Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
             case PullRequestMsg.DetailsLoaded(int number, var details) ->
                 Next.of(shown(model, number, Either.right(details)));
             case PullRequestMsg.DetailsFailed(int number, var failure) ->

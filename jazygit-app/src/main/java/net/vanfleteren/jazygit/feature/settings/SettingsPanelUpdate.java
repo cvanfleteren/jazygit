@@ -21,16 +21,15 @@ public final class SettingsPanelUpdate {
     public static Next update(Model model, SettingsPanelMsg msg) {
         return switch (msg) {
             // The key works everywhere, but does not take away a dialog that is open.
+            case SettingsPanelMsg.Requested() when model.popup().isDefined() -> Next.of(model);
             case SettingsPanelMsg.Requested() ->
-                model.popup().isDefined()
-                        ? Next.of(model)
-                        : Next.of(
-                                model.openPopup(new SettingsPanelPopup(
-                                        model.preferences().theme(),
-                                        model.preferences().settings().ghExecutable(),
-                                        Option.none())),
-                                new SettingsPanelCmd.ReadGitHub(
-                                        model.preferences().settings().gh()));
+                Next.of(
+                        model.openPopup(new SettingsPanelPopup(
+                                model.preferences().theme(),
+                                model.preferences().settings().ghExecutable(),
+                                Option.none())),
+                        new SettingsPanelCmd.ReadGitHub(
+                                model.preferences().settings().gh()));
             // Read for a panel that may be closed already, or open on another gh executable.
             case SettingsPanelMsg.GitHubRead(GitHubSetup gitHub) ->
                 Next.of(model.popup(SettingsPanelPopup.class)
@@ -46,13 +45,13 @@ public final class SettingsPanelUpdate {
                                 new GhExecutablePopup(panel.ghExecutable().getOrElse(""))))
                         .getOrElse(model));
             case SettingsPanelMsg.GhExecutableCancelled() -> Next.of(model.withoutPopup(GhExecutablePopup.class));
-            case SettingsPanelMsg.GhExecutableEntered(String executable) ->
-                model.popup(GhExecutablePopup.class).isDefined()
-                        ? Next.of(
-                                model.withoutPopup(GhExecutablePopup.class),
-                                new SettingsPanelCmd.CheckGhExecutable(
-                                        Option.of(executable.strip()).filter(path -> !path.isEmpty())))
-                        : Next.of(model);
+            case SettingsPanelMsg.GhExecutableEntered(String executable)
+            when model.popup(GhExecutablePopup.class).isDefined() ->
+                Next.of(
+                        model.withoutPopup(GhExecutablePopup.class),
+                        new SettingsPanelCmd.CheckGhExecutable(
+                                Option.of(executable.strip()).filter(path -> !path.isEmpty())));
+            case SettingsPanelMsg.GhExecutableEntered(String executable) -> Next.of(model);
             case SettingsPanelMsg.GhExecutableChecked(var executable, var version) ->
                 version.fold(
                         failure -> Next.of(model.fail(new AppError.GhExecutableUnusable(executable, failure))),

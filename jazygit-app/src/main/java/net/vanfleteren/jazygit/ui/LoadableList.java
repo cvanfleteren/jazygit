@@ -74,11 +74,11 @@ final class LoadableList<T> {
         List<Row> rows = switch (value) {
             case Loadable.Loading<T>() -> List.of(Row.of(Placeholders.loading()));
             case Loadable.Failed<T>(Failure failure) -> List.of(Row.of(Placeholders.error(failure)));
-            case Loadable.Loaded<T>(T loaded) ->
-                items.isEmpty()
-                        ? empty.map(text -> List.of(Row.of(Seg.styled(text, Theme.Classes.DIM))))
-                                .getOrElse(items)
-                        : items;
+            case Loadable.Loaded<T>(T loaded)
+            when items.isEmpty() ->
+                empty.map(text -> List.of(Row.of(Seg.styled(text, Theme.Classes.DIM))))
+                        .getOrElse(items);
+            case Loadable.Loaded<T>(T loaded) -> items;
         };
         if (!shown.exists(previous -> previous == value)) {
             Option<T> before = shown.flatMap(Loadable::toOption);

@@ -103,7 +103,8 @@ public final class HelpDialog implements PopupView {
     private static StyledElement<?> element(Row row) {
         StyledElement<?> line = text(line(row));
         return switch (row) {
-            case Key key -> key.action().isDefined() ? line : line.addClass(Theme.Classes.DISABLED);
+            case Key key when key.action().isDefined() -> line;
+            case Key ignore -> line.addClass(Theme.Classes.DISABLED);
             case Text text -> text.style().<StyledElement<?>>map(line::addClass).getOrElse(line);
         };
     }
@@ -152,7 +153,7 @@ public final class HelpDialog implements PopupView {
             return new WithDetails(
                     frame,
                     selected().flatMap(HelpDialog::details),
-                    rows.flatMap(row -> row instanceof Key key ? details(key) : Option.none()));
+                    rows.filter(Key.class::isInstance).map(Key.class::cast).flatMap(HelpDialog::details));
         });
     }
 
@@ -192,9 +193,7 @@ public final class HelpDialog implements PopupView {
      * The highlighted key, if the highlighted row is one.
      */
     private Option<Key> selected() {
-        return rows.lift()
-                .apply(list.selected())
-                .flatMap(row -> row instanceof Key key ? Option.of(key) : Option.none());
+        return rows.lift().apply(list.selected()).filter(Key.class::isInstance).map(Key.class::cast);
     }
 
     private EventResult handleKey(KeyEvent event) {
@@ -212,7 +211,8 @@ public final class HelpDialog implements PopupView {
         }
         // The keys of the panel come first, as they are listed first.
         Option<Key> pressed = rows.iterator()
-                .flatMap(row -> row instanceof Key key ? Option.of(key) : Option.none())
+                .filter(Key.class::isInstance)
+                .map(Key.class::cast)
                 .find(key -> key.matches().test(event));
         pressed.forEach(this::run);
         return pressed.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;

@@ -208,7 +208,10 @@ public class FilesPanel {
     private void rebuild(Loadable<RepoStatus> status) {
         Set<String> collapsed = nodes(roots)
                 .filter(n -> !n.isExpanded())
-                .flatMap(n -> n.data() instanceof FileTree.Dir dir ? Option.of(dir.path()) : Option.none())
+                .map(n -> n.data())
+                .filter(FileTree.Dir.class::isInstance)
+                .map(FileTree.Dir.class::cast)
+                .map(FileTree.Dir::path)
                 .toSet();
         Option<String> selected = selected().map(FilesPanel::path);
 

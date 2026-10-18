@@ -188,10 +188,8 @@ public final class ChoiceList<P extends Popup> {
 
     private StyledElement<?> element(Line line) {
         return switch (line) {
-            case OptionLine(int index) ->
-                shown.get(index).enabled()
-                        ? text(lineText(line))
-                        : text(lineText(line)).addClass(Theme.Classes.DISABLED);
+            case OptionLine(int index) when shown.get(index).enabled() -> text(lineText(line));
+            case OptionLine(int index) -> text(lineText(line)).addClass(Theme.Classes.DISABLED);
             case Heading(String heading) -> text(heading).addClass(Theme.Classes.BOLD);
             case Blank() -> text("");
             case NoMatches() -> ListFilter.noMatches();
@@ -256,7 +254,9 @@ public final class ChoiceList<P extends Popup> {
     private Option<Integer> selected() {
         return lines.lift()
                 .apply(Math.clamp(list.selected(), 0, lines.size() - 1))
-                .flatMap(line -> line instanceof OptionLine(int index) ? Option.of(index) : Option.none());
+                .filter(OptionLine.class::isInstance)
+                .map(OptionLine.class::cast)
+                .map(OptionLine::index);
     }
 
     /**

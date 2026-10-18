@@ -52,16 +52,15 @@ public final class LoadUpdate {
                         .map(view -> view.load().equals(msg.cmd())
                                 ? view.withCommits(view.commits().reload(divergence))
                                 : view))));
-            case CommitDetailLoaded(Sha sha, var options, DiffText changes)
-            when !options.equals(done.preferences().diffOptions()) -> Next.of(done);
+            case CommitDetailLoaded cl
+            when !cl.options().equals(done.preferences().diffOptions()) -> Next.of(done);
             case CommitDetailLoaded(Sha sha, var options, DiffText changes) ->
                 Next.of(withDetail(
                         done.mapRepoView(repoView -> repoView.withCommitDetail(
                                 Preview.updated(repoView.commitDetail(), sha, d -> d.reload(changes)))),
                         sha,
                         d -> d.reload(changes)));
-            case FileDiffLoaded(var files, var options, var diff)
-            when !options.equals(done.preferences().diffOptions()) -> Next.of(done);
+            case FileDiffLoaded fl when !fl.options().equals(done.preferences().diffOptions()) -> Next.of(done);
             case FileDiffLoaded(var files, var options, var diff) ->
                 Next.of(done.mapRepoView(repoView ->
                         repoView.withFileDiff(Preview.updated(repoView.fileDiff(), files, d -> d.reload(diff)))));

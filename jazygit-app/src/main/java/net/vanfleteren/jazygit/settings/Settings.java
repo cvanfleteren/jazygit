@@ -37,10 +37,10 @@ public record Settings(ThemeName theme, Option<String> ghExecutable) {
     static Read read(Function<String, Option<Object>> value) {
         Option<Object> theme = value.apply(THEME);
         Option<ThemeName> validTheme =
-                theme.flatMap(found -> found instanceof String id ? ThemeName.of(id) : Option.none());
+                theme.filter(String.class::isInstance).map(String.class::cast).flatMap(ThemeName::of);
         Option<Object> gh = value.apply(GH_EXECUTABLE);
         Option<String> validGh =
-                gh.flatMap(found -> found instanceof String path && !path.isBlank() ? Option.of(path) : Option.none());
+                gh.filter(String.class::isInstance).map(String.class::cast).filter(path -> !path.isBlank());
         return new Read(
                 new Settings(validTheme.getOrElse(DEFAULT.theme), validGh),
                 Option.when(theme.isDefined() && validTheme.isEmpty(), THEME)
