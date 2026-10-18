@@ -59,7 +59,7 @@ public final class MoveUpdate {
             case Moved(var cmd, var commands) -> moved(model, cmd, commands);
             case Stopped(var cmd, var commands, var notice) ->
                 Update.refresh(OperationUpdate.done(model, cmd, commands)
-                        .inform(new Notice.MoveStopped(notice, cmd.from(), cmd.oldest())));
+                        .inform(new Notice.MoveStopped(notice, cmd.from(), cmd.oldest(), cmd.branch())));
         };
     }
 
@@ -200,7 +200,7 @@ public final class MoveUpdate {
      */
     private static Option<String> copiedOnto(MoveTarget target) {
         return switch (target) {
-            case MoveTarget.NewBranch(var branch, var onto) -> onto.map(BranchRef::name);
+            case MoveTarget.NewBranch newBranch -> newBranch.onto().map(BranchRef::name);
             case MoveTarget.Existing(var branch) -> Option.of(branch.value());
         };
     }

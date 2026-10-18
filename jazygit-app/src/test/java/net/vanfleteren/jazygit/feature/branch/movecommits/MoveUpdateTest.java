@@ -308,7 +308,7 @@ class MoveUpdateTest {
         Next next = Update.update(model(true), new MoveMsg.Stopped(toMain(), List.of(), stopped));
 
         assertEquals(
-                Option.of(new Notice.MoveStopped(stopped, FEATURE, MIDDLE.sha())),
+                Option.of(new Notice.MoveStopped(stopped, FEATURE, MIDDLE.sha(), MAIN)),
                 next.model().outcome().notice());
     }
 }

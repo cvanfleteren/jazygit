@@ -6,6 +6,8 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
+import java.util.function.Supplier;
+import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -25,7 +27,8 @@ final class CliMoveCommits {
      * {@code from} since {@code oldest} onto it, when it starts elsewhere; and moves {@code from} back to the
      * parent of {@code oldest}. Each step only runs when the one before it succeeded, so {@code from} keeps its
      * commits until they are on {@code to}. A cherry-pick that stops on conflicts is left so; one that fails
-     * otherwise is aborted.
+     * otherwise is aborted, and {@code from} is checked out again and {@code to} deleted, so the repository is left
+     * as it was.
      *
      * @return the command lines that were run
      */
@@ -33,7 +36,13 @@ final class CliMoveCommits {
             Path workTree, Branch.Name from, Sha oldest, Branch.Name to, Option<String> onto) {
         return GitFailure.sequence(
                 () -> GitFailure.widen(CliCheckout.checkoutNewBranch(workTree, to, onto.getOrElse(from.value()))),
-                () -> onto.isDefined() ? copy(workTree, from, oldest) : GitFailure.nothing(),
+                () -> onto.isDefined()
+                        ? copy(workTree, from, oldest)
+                                .mapLeft(failure -> undone(
+                                        failure,
+                                        () -> GitFailure.sequence(
+                                                () -> checkout(workTree, from), () -> delete(workTree, to))))
+                        : GitFailure.nothing(),
                 () -> moveBack(workTree, from, oldest));
     }
 
@@ -41,7 +50,8 @@ final class CliMoveCommits {
      * Checks out the existing branch {@code to}, copies the commits of {@code from} since {@code oldest} onto it,
      * and moves {@code from} back to the parent of {@code oldest}, each step only when the one before it succeeded.
      * A checkout that uncommitted changes are in the way of fails with {@link GitError.LocalChanges}. A cherry-pick
-     * that stops on conflicts is left so; one that fails otherwise is aborted.
+     * that stops on conflicts is left so; one that fails otherwise is aborted, and {@code from} is checked out again,
+     * so the repository is left as it was.
      *
      * @return the command lines that were run
      */
@@ -49,20 +59,44 @@ final class CliMoveCommits {
             Path workTree, Branch.Name from, Sha oldest, Branch.Name to) {
         return GitFailure.sequence(
                 () -> CliCheckout.checkout(workTree, to),
-                () -> copy(workTree, from, oldest),
+                () -> copy(workTree, from, oldest).mapLeft(failure -> undone(failure, () -> checkout(workTree, from))),
                 () -> moveBack(workTree, from, oldest));
     }
 
     /**
-     * {@code git cherry-pick <oldest>^..<from>}: copies the commits of {@code from} since {@code oldest} onto the
-     * checked out branch.
+     * {@code git cherry-pick --empty=drop --allow-empty <oldest>^..<from>}: copies the commits of {@code from} since
+     * {@code oldest} onto the checked out branch. A commit whose changes are on it already is left out, as there is
+     * nothing to copy; one that was empty to begin with is copied as it is.
      */
     private static Either<GitFailure<GitError>, List<ExecutedCommand>> copy(
             Path workTree, Branch.Name from, Sha oldest) {
         return Unfinished.runOrUndo(
                 workTree,
-                git("cherry-pick", parent(oldest) + ".." + Refs.head(from)),
+                git("cherry-pick", "--empty=drop", "--allow-empty", parent(oldest) + ".." + Refs.head(from)),
                 left -> Option.when(left.picking(), ABORT));
+    }
+
+    /**
+     * {@code failure} of the copy, followed by the {@code undo} of what came before it, unless it stopped on
+     * conflicts, which are left for the user to resolve on the branch they are copied onto.
+     */
+    private static GitFailure<GitError> undone(
+            GitFailure<GitError> failure, Supplier<Either<GitFailure<ProcessError>, List<ExecutedCommand>>> undo) {
+        return failure.error() instanceof GitError.StoppedOnConflicts ? failure : failure.followedBy(undo.get());
+    }
+
+    /**
+     * {@code git checkout <branch>}: checks out {@code branch} again, which the working tree came from.
+     */
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkout(Path workTree, Branch.Name branch) {
+        return GitProcess.log(workTree, git("checkout", "--quiet", branch.value(), "--"));
+    }
+
+    /**
+     * {@code git branch -D <branch>}: deletes the new {@code branch}, which got none of the commits.
+     */
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> delete(Path workTree, Branch.Name branch) {
+        return GitProcess.log(workTree, git("branch", "-D", branch.value()));
     }
 
     /**

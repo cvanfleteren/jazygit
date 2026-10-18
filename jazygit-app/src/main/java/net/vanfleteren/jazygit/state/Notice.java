@@ -21,8 +21,9 @@ public sealed interface Notice {
     record StoppedOnConflicts(Option<InProgress> inProgress, int conflicts) implements Notice {}
 
     /**
-     * Moving the commits of {@code branch} since {@code oldest} to a new branch stopped on conflicts while copying
-     * them onto it: {@code branch} still has them, until the user moves it back.
+     * Moving the commits of {@code branch} since {@code oldest} to {@code target}, a new or an existing branch,
+     * stopped on conflicts while copying them onto it: {@code branch} still has them, until the user moves it back.
      */
-    record MoveStopped(StoppedOnConflicts stopped, Branch.Name branch, Sha oldest) implements Notice {}
+    record MoveStopped(StoppedOnConflicts stopped, Branch.Name branch, Sha oldest, Branch.Name target)
+            implements Notice {}
 }

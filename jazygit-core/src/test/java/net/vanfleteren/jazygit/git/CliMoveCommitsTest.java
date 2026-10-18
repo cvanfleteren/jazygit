@@ -130,6 +130,59 @@ class CliMoveCommitsTest {
     }
 
     @Test
+    void commitsThatAreOnTheTargetAlreadyAreLeftOut() throws Exception {
+        git("checkout", "-q", "main");
+        git("cherry-pick", "feature~1");
+        git("checkout", "-q", "feature");
+        git("commit", "-q", "--allow-empty", "-m", "empty on purpose");
+        String parent = sha("HEAD~3").value();
+
+        assertTrue(CliMoveCommits.moveTo(repo, FEATURE, sha("HEAD~2"), new Branch.Name("main"))
+                .isRight());
+
+        assertEquals("main", git("branch", "--show-current").strip());
+        assertEquals("empty on purpose\nsecond stray\nfirst stray\ninit\n", git("log", "--format=%s"));
+        assertEquals(parent, sha("feature").value());
+    }
+
+    @Test
+    void aCopyThatFailsOtherwiseLeavesTheExistingBranchAsItWas() throws Exception {
+        String main = sha("main").value();
+        String tip = head();
+        failToSign();
+
+        var failure = CliMoveCommits.moveTo(repo, FEATURE, sha("HEAD~1"), new Branch.Name("main"))
+                .getLeft();
+
+        assertFalse(failure.error() instanceof StoppedOnConflicts);
+        assertEquals("feature", git("branch", "--show-current").strip());
+        assertEquals(tip, head());
+        assertEquals(main, sha("main").value());
+        assertFalse(Files.exists(repo.resolve(".git/CHERRY_PICK_HEAD")));
+    }
+
+    @Test
+    void aCopyThatFailsOtherwiseDeletesTheNewBranch() throws Exception {
+        String tip = head();
+        failToSign();
+
+        assertTrue(CliMoveCommits.move(repo, FEATURE, sha("HEAD~1"), MOVED, Option.of("main"))
+                .isLeft());
+
+        assertEquals("feature", git("branch", "--show-current").strip());
+        assertEquals(tip, head());
+        assertEquals("", git("branch", "--list", "moved"));
+    }
+
+    /**
+     * Makes every commit fail to be signed, so a cherry-pick fails half-way without conflicts.
+     */
+    private void failToSign() throws Exception {
+        git("config", "commit.gpgsign", "true");
+        git("config", "gpg.program", "false");
+    }
+
+    @Test
     void theRangeCountsTheCommitsTheMergesAndThePushedOnes() throws Exception {
         git("update-ref", "refs/remotes/origin/feature", "HEAD~1");
         git("checkout", "-q", "-b", "side", "HEAD~1");

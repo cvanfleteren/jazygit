@@ -17,8 +17,10 @@ public final class NoticeText {
                 inProgress
                         .map(op -> stopped(op, conflicts))
                         .getOrElse(() -> Messages.get("notice.stopped.uncommitted", conflicts));
-            case Notice.MoveStopped(var stopped, var branch, var oldest) ->
-                of(stopped) + " " + Messages.get("notice.moveStopped", branch.value(), oldest.shortSha());
+            case Notice.MoveStopped(var stopped, var branch, var oldest, var target) ->
+                of(stopped)
+                        + " "
+                        + Messages.get("notice.moveStopped", branch.value(), oldest.shortSha(), target.value());
         };
     }
 
