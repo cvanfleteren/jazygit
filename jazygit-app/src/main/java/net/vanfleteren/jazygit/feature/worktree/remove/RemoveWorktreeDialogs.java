@@ -1,37 +1,17 @@
-package net.vanfleteren.jazygit.feature.worktree;
+package net.vanfleteren.jazygit.feature.worktree.remove;
 
 import io.vavr.collection.List;
-import io.vavr.control.Option;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg;
-import net.vanfleteren.jazygit.feature.worktree.add.NewWorktreePopup;
-import net.vanfleteren.jazygit.feature.worktree.remove.ForceRemoveWorktreePopup;
-import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeMsg;
-import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreePopup;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.BranchesPanel;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
-import net.vanfleteren.jazygit.ui.widgets.TextInputDialog;
 
 /**
- * The popups of the worktree operations.
+ * The popups of removing a worktree.
  */
-public final class WorktreeDialogs {
-
-    /**
-     * Asks where the new worktree for a branch goes, starting out next to the main worktree. A blank location
-     * keeps it open.
-     */
-    public static final TextInputDialog.Spec<NewWorktreePopup> NEW_WORKTREE = new TextInputDialog.Spec<>(
-            "new-worktree",
-            NewWorktreePopup.class,
-            popup -> Messages.get("dialog.newWorktree.title", popup.branch().value()),
-            Option.of(Messages.get("dialog.newWorktree.placeholder")),
-            NewWorktreePopup::location,
-            AddWorktreeMsg.Confirmed::new,
-            AddWorktreeMsg.Cancelled::new);
+public final class RemoveWorktreeDialogs {
 
     /**
      * Asks to confirm removing a worktree.
@@ -55,14 +35,10 @@ public final class WorktreeDialogs {
             RemoveWorktreeMsg.ForceConfirmed::new,
             RemoveWorktreeMsg.ForceCancelled::new);
 
-    private WorktreeDialogs() {}
+    private RemoveWorktreeDialogs() {}
 
-    /**
-     * The popups of this feature, which send what the user does to {@code dispatch}.
-     */
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
-                PopupSlot.returningTo(BranchesPanel.ID, new TextInputDialog<>(NEW_WORKTREE, dispatch)),
                 PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(REMOVE_WORKTREE, dispatch)),
                 PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(FORCE_REMOVE_WORKTREE, dispatch)));
     }

@@ -10,7 +10,6 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.feature.branch.BranchDialogs;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Model;
@@ -29,7 +28,7 @@ class RebaseDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final ChoiceDialog<RebasePopup> dialog =
-            new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(BranchDialogs.REBASE, dispatched::add);
+            new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(RebaseDialogs.REBASE, dispatched::add);
     private final Model open = Update.update(
                     TestModels.loaded(new SampleData()),
                     new RebaseMsg.Requested(new Branch.Name("feature/initial-layout")))
@@ -72,7 +71,7 @@ class RebaseDialogTest {
 
     private List<Msg> pressing(Keys keys) throws Exception {
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view())) {
-            SettledPilot.focus(runner, BranchDialogs.REBASE.id());
+            SettledPilot.focus(runner, RebaseDialogs.REBASE.id());
             RenderedText.of(runner, () -> view());
             keys.press(runner);
             SettledPilot.of(runner).pause();

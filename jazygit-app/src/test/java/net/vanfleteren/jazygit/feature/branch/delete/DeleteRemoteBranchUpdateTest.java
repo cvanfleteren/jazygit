@@ -6,8 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd.DeleteRemoteBranch;
+import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchCmd.DeleteRemoteBranch;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -60,7 +59,7 @@ class DeleteRemoteBranchUpdateTest {
         assertEquals(List.of(new DeleteRemoteBranch(ORIGIN_FEATURE)), confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());
         assertEquals(
-                Option.of(BranchCmd.DELETE_BRANCH),
+                Option.of(DeleteBranchCmd.DELETE_BRANCH),
                 confirmed.model().jobs().busy().get(new BranchRef.Remote(ORIGIN_FEATURE)));
         assertEquals(
                 Option.none(),

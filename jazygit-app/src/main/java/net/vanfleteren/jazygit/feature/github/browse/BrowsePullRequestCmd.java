@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.feature.github.browse;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.github.GitHubCmd;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Msg;
@@ -13,9 +12,14 @@ import net.vanfleteren.jazygit.state.OperationCmd;
  */
 public record BrowsePullRequestCmd(PullRequestSummary pullRequest) implements OperationCmd {
 
+    /**
+     * Opening a pull request in the browser: one listed on the pull requests screen, or the one shown.
+     */
+    public static final Operation OPEN_PR = Operation.of("log.title.openPr", "error.openPr.failed");
+
     @Override
     public Operation operation() {
-        return GitHubCmd.OPEN_PR;
+        return OPEN_PR;
     }
 
     @Override

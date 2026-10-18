@@ -1,8 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch.newbranch;
 
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd.CheckoutRemote;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd.CreateBranch;
+import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.CheckoutRemote;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg.Requested;
@@ -51,6 +50,6 @@ public final class NewBranchUpdate {
                 popup -> Branch.Name.parse(name)
                         .map(branch -> popup.following()
                                 .<BranchCmd>map(remote -> new CheckoutRemote(branch, remote))
-                                .getOrElse(() -> new CreateBranch(branch, popup.base()))));
+                                .getOrElse(() -> new NewBranchCmd(branch, popup.base()))));
     }
 }

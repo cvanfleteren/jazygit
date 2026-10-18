@@ -2,8 +2,8 @@ package net.vanfleteren.jazygit.feature.github.create;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.fetch.FetchUpdate;
-import net.vanfleteren.jazygit.feature.github.GitHubCmd.CreatePullRequest;
-import net.vanfleteren.jazygit.feature.github.GitHubCmd.ReadTitle;
+import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.CreatePullRequest;
+import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.ReadTitle;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestMsg.*;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.git.model.Branch;

@@ -36,7 +36,7 @@ public sealed interface CheckoutMsg extends Msg {
      * Git refused the checkout {@code cmd}, which ran {@code commands}, because uncommitted changes would be
      * overwritten.
      */
-    record NeedsStash(BranchCmd.Checkout cmd, List<ExecutedCommand> commands) implements CheckoutMsg {}
+    record NeedsStash(CheckoutCmd.Checkout cmd, List<ExecutedCommand> commands) implements CheckoutMsg {}
 
     /**
      * The user agreed to stash the uncommitted changes, check out and pop them again.

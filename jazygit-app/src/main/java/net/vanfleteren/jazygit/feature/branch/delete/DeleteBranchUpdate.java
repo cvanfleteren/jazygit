@@ -1,10 +1,9 @@
 package net.vanfleteren.jazygit.feature.branch.delete;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd.DeleteBranch;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd.DeleteRemoteBranch;
 import net.vanfleteren.jazygit.feature.branch.Branches;
+import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchCmd.DeleteBranch;
+import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchCmd.DeleteRemoteBranch;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchMsg.Chosen;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchMsg.Requested;
@@ -49,7 +48,7 @@ public final class DeleteBranchUpdate {
         return model.repo()
                 .branch(branch)
                 .filter(known -> !known.remoteDeletable())
-                .flatMap(known -> Branches.checkedOutElsewhere(model, BranchCmd.DELETE_BRANCH, branch))
+                .flatMap(known -> Branches.checkedOutElsewhere(model, DeleteBranchCmd.DELETE_BRANCH, branch))
                 .map(error -> Next.of(model.fail(error)))
                 .getOrElse(() -> Update.ask(
                         model,

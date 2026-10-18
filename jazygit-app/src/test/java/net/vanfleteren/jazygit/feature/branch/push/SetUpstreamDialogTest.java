@@ -9,7 +9,6 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.feature.branch.BranchDialogs;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -27,7 +26,7 @@ class SetUpstreamDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final net.vanfleteren.jazygit.ui.widgets.TextInputDialog<SetUpstreamPopup> dialog =
-            new net.vanfleteren.jazygit.ui.widgets.TextInputDialog<>(BranchDialogs.SET_UPSTREAM, dispatched::add);
+            new net.vanfleteren.jazygit.ui.widgets.TextInputDialog<>(PushDialogs.SET_UPSTREAM, dispatched::add);
     // In the test models, feature has no upstream.
     private final Model open = Update.update(TestModels.loaded(), new PushMsg.Requested(new Branch.Name("feature")))
             .model();
@@ -85,7 +84,7 @@ class SetUpstreamDialogTest {
     private ToolkitTestRunner start() throws Exception {
         assertTrue(open.popup(SetUpstreamPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        SettledPilot.focus(runner, BranchDialogs.SET_UPSTREAM.id());
+        SettledPilot.focus(runner, PushDialogs.SET_UPSTREAM.id());
         RenderedText.of(runner, this::view);
         return runner;
     }

@@ -10,8 +10,6 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd;
-import net.vanfleteren.jazygit.feature.branch.BranchDialogs;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -28,13 +26,13 @@ class StashCheckoutDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<StashCheckoutPopup> dialog =
-            new net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<>(BranchDialogs.STASH_CHECKOUT, dispatched::add);
+            new net.vanfleteren.jazygit.ui.widgets.ConfirmDialog<>(CheckoutDialogs.STASH_CHECKOUT, dispatched::add);
     private final Model open = openModel();
 
     private static Model openModel() {
         return Update.update(
                         TestModels.loaded(),
-                        new CheckoutMsg.NeedsStash(new BranchCmd.Checkout(new Branch.Name("feature")), List.empty()))
+                        new CheckoutMsg.NeedsStash(new CheckoutCmd.Checkout(new Branch.Name("feature")), List.empty()))
                 .model();
     }
 
@@ -76,7 +74,7 @@ class StashCheckoutDialogTest {
     private ToolkitTestRunner start() throws Exception {
         assertTrue(open.popup(StashCheckoutPopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        SettledPilot.focus(runner, BranchDialogs.STASH_CHECKOUT.id());
+        SettledPilot.focus(runner, CheckoutDialogs.STASH_CHECKOUT.id());
         RenderedText.of(runner, this::view);
         return runner;
     }

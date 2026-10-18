@@ -1,14 +1,9 @@
-package net.vanfleteren.jazygit.feature.github;
+package net.vanfleteren.jazygit.feature.github.show;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestMsg;
-import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
+import net.vanfleteren.jazygit.feature.github.browse.BrowsePullRequestCmd;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
-import net.vanfleteren.jazygit.gh.model.NewPullRequest;
-import net.vanfleteren.jazygit.gh.model.PullRequest;
-import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
-import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -16,14 +11,9 @@ import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Operation;
 
 /**
- * Commands that talk to GitHub, through gh.
+ * Reading the details of the pull request that is shown, and what is done to it from there.
  */
-public sealed interface GitHubCmd extends Cmd {
-
-    Operation CREATE_PR =
-            Operation.of("log.title.createPr", "error.createPr.failed").labelledWhenBusy("branches.busy.pullRequest");
-
-    Operation OPEN_PR = Operation.of("log.title.openPr", "error.openPr.failed");
+public sealed interface PullRequestCmd extends Cmd {
 
     Operation MERGE_PR =
             Operation.of("log.title.mergePr", "error.mergePr.failed").labelledWhenBusy("branches.busy.mergePr");
@@ -64,80 +54,13 @@ public sealed interface GitHubCmd extends Cmd {
     }
 
     /**
-     * Reads the title a new pull request of {@code branch} into {@code base} starts out with: the subject of its
-     * oldest commit that is not on {@code baseRef}, the branch {@code base} is on its remote. Without it, the
-     * user still gets to enter one.
-     *
-     * @param head the name the branch has on its remote
-     */
-    record ReadTitle(Branch.Name branch, Branch.Name head, Branch.Name base, BranchRef baseRef) implements GitHubCmd {
-
-        @Override
-        public Msg run(Env env) {
-            return env.git()
-                    .firstSubject(new BranchRef.Local(branch), baseRef)
-                    .fold(error -> read(Option.none()), this::read);
-        }
-
-        @Override
-        public Msg failed(Failure failure) {
-            return read(Option.none());
-        }
-
-        private Msg read(Option<String> subject) {
-            return new CreatePullRequestMsg.TitleRead(branch, head, base, subject);
-        }
-    }
-
-    /**
-     * Creates a pull request from {@code branch}, as it is on its remote under the name {@code head}, into
-     * {@code base}, as {@code pullRequest} says.
-     */
-    record CreatePullRequest(Branch.Name branch, Branch.Name head, Branch.Name base, NewPullRequest pullRequest)
-            implements GitHubCmd, OperationCmd {
-
-        @Override
-        public Operation operation() {
-            return CREATE_PR;
-        }
-
-        @Override
-        public Option<String> subject() {
-            return Option.of(branch.value());
-        }
-
-        @Override
-        public Option<BranchRef> busyBranch() {
-            return Option.of(new BranchRef.Local(branch));
-        }
-
-        @Override
-        public Msg run(Env env) {
-            return env.gitHub()
-                    .createPullRequest(head.value(), base.value(), pullRequest)
-                    .fold(
-                            this::failedWith,
-                            created -> new CreatePullRequestMsg.Created(
-                                    this,
-                                    created.number()
-                                            .map(number -> new PullRequest(
-                                                    number,
-                                                    head.value(),
-                                                    pullRequest.draft(),
-                                                    Checks.NONE,
-                                                    Review.NONE)),
-                                    created.commands()));
-        }
-    }
-
-    /**
      * Opens pull request {@code number}, from {@code branch}, in the browser.
      */
-    record OpenPullRequest(Branch.Name branch, int number) implements GitHubCmd, OperationCmd {
+    record OpenPullRequest(Branch.Name branch, int number) implements PullRequestCmd, OperationCmd {
 
         @Override
         public Operation operation() {
-            return OPEN_PR;
+            return BrowsePullRequestCmd.OPEN_PR;
         }
 
         @Override
@@ -154,7 +77,7 @@ public sealed interface GitHubCmd extends Cmd {
     /**
      * Merges pull request {@code number}, from {@code branch}, as {@code method} says.
      */
-    record MergePullRequest(Branch.Name branch, int number, MergeMethod method) implements GitHubCmd, ChangingCmd {
+    record MergePullRequest(Branch.Name branch, int number, MergeMethod method) implements PullRequestCmd, ChangingCmd {
 
         @Override
         public Operation operation() {
@@ -170,7 +93,7 @@ public sealed interface GitHubCmd extends Cmd {
     /**
      * Closes pull request {@code number}, from {@code branch}, without merging it.
      */
-    record ClosePullRequest(Branch.Name branch, int number) implements GitHubCmd, ChangingCmd {
+    record ClosePullRequest(Branch.Name branch, int number) implements PullRequestCmd, ChangingCmd {
 
         @Override
         public Operation operation() {
@@ -187,7 +110,7 @@ public sealed interface GitHubCmd extends Cmd {
      * Turns pull request {@code number}, from {@code branch}, into a draft when {@code draft}, else marks it
      * ready for review.
      */
-    record SetDraft(Branch.Name branch, int number, boolean draft) implements GitHubCmd, OperationCmd {
+    record SetDraft(Branch.Name branch, int number, boolean draft) implements PullRequestCmd, OperationCmd {
 
         @Override
         public Operation operation() {
@@ -223,7 +146,7 @@ public sealed interface GitHubCmd extends Cmd {
     /**
      * Reads the details of pull request {@code number}, which the user is waiting for.
      */
-    record LoadPullRequestDetails(int number) implements GitHubCmd {
+    record LoadPullRequestDetails(int number) implements PullRequestCmd {
 
         @Override
         public Msg run(Env env) {

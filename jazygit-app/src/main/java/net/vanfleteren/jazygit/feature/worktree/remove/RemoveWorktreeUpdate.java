@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.feature.worktree.remove;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.worktree.WorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeMsg.*;
 import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.state.*;
@@ -31,7 +30,7 @@ public final class RemoveWorktreeUpdate {
                         popup -> model.repo()
                                 .worktree(popup.location())
                                 .filter(RemoveWorktreeUpdate::removable)
-                                .map(worktree -> new WorktreeCmd.Remove(popup.location(), false)));
+                                .map(worktree -> new RemoveWorktreeCmd(popup.location(), false)));
             // The removal ran, and failed; removing it anyway is offered instead of the failure.
             case NeedsForce(var cmd, var commands) ->
                 Update.refresh(OperationUpdate.done(model, cmd, commands)
@@ -46,7 +45,7 @@ public final class RemoveWorktreeUpdate {
                 Update.confirm(
                         model,
                         ForceRemoveWorktreePopup.class,
-                        popup -> Option.of(new WorktreeCmd.Remove(popup.location(), true)));
+                        popup -> Option.of(new RemoveWorktreeCmd(popup.location(), true)));
         };
     }
 

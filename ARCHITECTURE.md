@@ -463,27 +463,28 @@ Each feature package follows the same shape:
 | `XxxCmd` | `RewordCmd` | The operation the feature asks for, an `OperationCmd`. |
 | `XxxPopup` | `RewordPopup` | What the open dialog is about; it lives in the model. |
 | `XxxDialogs` | `SquashDialogs.SQUASH`, `CommitDialog.reword` | The popups, mostly as data (`ConfirmDialog.Spec`, `ChoiceDialog.Spec`, `TextInputDialog.Spec`, `PickDialog.Spec`) that `popups(dispatch)` turns into widgets, as the `PopupSlot`s `JazygitApp` shows; `XxxDialog` for a feature with one, or a dialog of its own. |
-| `XxxKeys` | `BranchKeys` | Adds the feature's keys to the immutable `Keymap`. |
-| `XxxAction` | `DropAction` | In the commit feature, an operation's keys and popups together, which `CommitFeature` lists. |
+| `XxxKeys` | `StashKeys` | Adds the feature's keys to the immutable `Keymap`. |
+| `XxxAction` | `DropAction` | In the features split into operations, an operation's keys and popups together, a `FeatureAction` its `XxxFeature` lists. |
+| `XxxFeature` | `CommitFeature` | The operations of such a feature: what `Keymap` and `JazygitApp` know of it. |
 
-The branch package gives each of its operations a subpackage of its own (`checkout`, `newbranch`, `rename`,
-`delete`, `merge`, `rebase`, `push`, `pull`, `upstream`, and `tabs` for switching between the local branches, the
-remote ones and the worktrees), with its `XxxMsg`, `XxxUpdate` and popups. What they share stays in
-`feature.branch`: `BranchCmd`, `BranchDialogs`, `BranchKeys`, and `Branches`, which knows which branches are
-checked out where.
+The commit, branch, github and worktree features give each of their operations a subpackage of its own, which holds
+all of it: its `XxxMsg`, `XxxUpdate` and popups, its command (`DropCmd`, with its `Operation`), its dialogs
+(`DropDialogs`) and its keys, which its `XxxAction` (`DropAction.ACTION`, a `FeatureAction`) brings together. The
+feature's `XxxFeature` lists the actions, in the order their keys are listed in a panel, and is what `Keymap` and
+`JazygitApp` know of it; adding an operation is adding its subpackage and one line there. A few keys that belong to
+no operation, like switching the lists of the branches pane from the worktrees, are listed there too.
 
-The commit package goes further: each of its operations (`create`, `amend`, `reword`, `squash`, `fixup`, `drop`,
-`reset`) is all in its subpackage, its command (`DropCmd`, with its `Operation`), its dialogs (`DropDialogs`) and
-its keys included, which its `XxxAction` (`DropAction.ACTION`, a `CommitAction`) brings together. `CommitFeature`
-lists the actions, and is what `Keymap` and `JazygitApp` know of the feature; adding an operation is adding its
-subpackage and one line there. What the operations share stays in `feature.commit`: the message dialog that
-committing and rewording both use (`CommitDialog`, `MessagePopup`, `MessageEditor*`). Amending is one operation
-with an `AmendTarget`: the last commit, which is amended in place, also while something is in progress, or an older
-one, which rebases the commits after it and so waits until nothing is.
+- **commit:** `create`, `amend`, `reword`, `squash`, `fixup`, `drop`, `reset`. They share the message dialog that
+  committing and rewording both use (`CommitDialog`, `MessagePopup`, `MessageEditor*`). Amending is one operation
+  with an `AmendTarget`: the last commit, which is amended in place, also while something is in progress, or an
+  older one, which rebases the commits after it and so waits until nothing is.
+- **branch:** `checkout`, `push`, `pull`, `newbranch`, `merge`, `rebase`, `rename`, `delete`, `upstream`, and
+  `tabs` for switching between the local branches, the remote ones and the worktrees. They share `BranchCmd`, the
+  branch a command acts on and whether it keeps it busy or checks it out, and `Branches`, which knows which
+  branches are checked out where.
+- **github:** `show` for the pull request dialog and what is done from it, `create`, `checkout`, `browse`.
+- **worktree:** `add`, `switchto`, `remove`. They share `WorktreeCmd`, which reads a location as a path.
 
-So do the github package (`create`, `show` for the pull request dialog and what is done from it, `checkout`,
-`browse`; `GitHubCmd`, `GitHubDialogs`, `PullRequestKeys` and `BrowseKeys` are shared) and the worktree
-package (`add`, `remove`, `switchto`; `WorktreeCmd`, `WorktreeDialogs` and `WorktreeKeys` are shared).
 `ErrorPopup` lives in `state`, as `Model.fail` opens it; the error feature only closes it.
 
 ## The git layer

@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.feature.worktree.remove;
 
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.feature.worktree.WorktreeCmd;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -30,7 +29,7 @@ public sealed interface RemoveWorktreeMsg extends Msg {
      * Git refused the removal {@code cmd}, which ran {@code commands}, because the worktree has changes that
      * removing it would lose.
      */
-    record NeedsForce(WorktreeCmd.Remove cmd, List<ExecutedCommand> commands) implements RemoveWorktreeMsg {}
+    record NeedsForce(RemoveWorktreeCmd cmd, List<ExecutedCommand> commands) implements RemoveWorktreeMsg {}
 
     record ForceCancelled() implements RemoveWorktreeMsg {}
 

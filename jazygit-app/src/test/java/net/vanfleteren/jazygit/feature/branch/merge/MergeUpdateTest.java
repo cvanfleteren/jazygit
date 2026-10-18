@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
@@ -54,7 +53,7 @@ class MergeUpdateTest {
                 .model();
 
         Next chosen = Update.update(asked, new MergeMsg.Chosen(MergeMode.SQUASH));
-        assertEquals(List.of(new BranchCmd.Merge(new Branch.Name("feature"), MergeMode.SQUASH)), chosen.cmds());
+        assertEquals(List.of(new MergeCmd(new Branch.Name("feature"), MergeMode.SQUASH)), chosen.cmds());
         assertEquals(Option.none(), chosen.model().popup());
 
         Next cancelled = Update.update(asked, new MergeMsg.Cancelled());
@@ -71,7 +70,7 @@ class MergeUpdateTest {
         Next done = Update.update(
                 loaded(),
                 succeeded(
-                        new BranchCmd.Merge(new Branch.Name("feature"), MergeMode.FAST_FORWARD),
+                        new MergeCmd(new Branch.Name("feature"), MergeMode.FAST_FORWARD),
                         "git merge --ff --no-edit feature"));
         assertEquals(
                 List.of(
@@ -86,7 +85,7 @@ class MergeUpdateTest {
 
         Next failed = Update.update(
                 loaded(),
-                failed(new BranchCmd.Merge(new Branch.Name("feature"), MergeMode.FAST_FORWARD), "CONFLICT (content)"));
+                failed(new MergeCmd(new Branch.Name("feature"), MergeMode.FAST_FORWARD), "CONFLICT (content)"));
         assertEquals(Option.of("Merging feature failed: CONFLICT (content)"), errorText(failed.model()));
     }
 }

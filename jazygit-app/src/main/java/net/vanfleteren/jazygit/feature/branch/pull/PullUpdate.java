@@ -1,9 +1,8 @@
 package net.vanfleteren.jazygit.feature.branch.pull;
 
-import net.vanfleteren.jazygit.feature.branch.BranchCmd;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd.FastForward;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd.Pull;
 import net.vanfleteren.jazygit.feature.branch.Branches;
+import net.vanfleteren.jazygit.feature.branch.pull.PullCmd.FastForward;
+import net.vanfleteren.jazygit.feature.branch.pull.PullCmd.Pull;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
@@ -35,7 +34,7 @@ public final class PullUpdate {
                                 ? Update.start(model.clearError(), new Pull(branch))
                                 : known.ahead() > 0
                                         ? Next.of(model.fail(new AppError.UnpushedCommits(branch)))
-                                        : Branches.checkedOutElsewhere(model, BranchCmd.FAST_FORWARD, branch)
+                                        : Branches.checkedOutElsewhere(model, PullCmd.FAST_FORWARD, branch)
                                                 .map(error -> Next.of(model.fail(error)))
                                                 .getOrElse(() -> Update.start(
                                                         model.clearError(),

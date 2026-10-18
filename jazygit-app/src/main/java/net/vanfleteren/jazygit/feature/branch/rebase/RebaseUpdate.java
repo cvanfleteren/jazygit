@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch.rebase;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd.Rebase;
 import net.vanfleteren.jazygit.feature.branch.Branches;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Model;
@@ -20,7 +19,7 @@ public final class RebaseUpdate {
             case RebaseMsg.Requested(Branch.Name onto) -> requested(model, onto);
             case RebaseMsg.Cancelled() -> Next.of(model.withoutPopup(RebasePopup.class));
             case RebaseMsg.Chosen() ->
-                Update.confirm(model, RebasePopup.class, popup -> Option.of(new Rebase(popup.onto())));
+                Update.confirm(model, RebasePopup.class, popup -> Option.of(new RebaseCmd(popup.onto())));
         };
     }
 

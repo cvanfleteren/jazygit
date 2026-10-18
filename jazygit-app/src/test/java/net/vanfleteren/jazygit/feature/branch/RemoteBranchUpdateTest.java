@@ -6,10 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd.Checkout;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd.CheckoutRemote;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd.CreateBranch;
+import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd;
+import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.Checkout;
+import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.CheckoutRemote;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
+import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchCmd;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchPopup;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
@@ -92,7 +93,7 @@ class RemoteBranchUpdateTest {
 
         assertEquals(List.of(new CheckoutRemote(new Branch.Name("new"), ORIGIN_NEW)), next.cmds());
         // The remote branch shows as busy, as the local one is not there yet.
-        assertEquals(Option.of(BranchCmd.CHECKOUT), next.model().jobs().busy().get(new BranchRef.Remote(ORIGIN_NEW)));
+        assertEquals(Option.of(CheckoutCmd.CHECKOUT), next.model().jobs().busy().get(new BranchRef.Remote(ORIGIN_NEW)));
         assertEquals(
                 List.of(),
                 Update.update(next.model(), new CheckoutMsg.RemoteRequested(ORIGIN_NEW))
@@ -154,7 +155,7 @@ class RemoteBranchUpdateTest {
                 Option.of(new NewBranchPopup("refs/remotes/origin/new", "origin/new")),
                 asked.popup(NewBranchPopup.class));
         assertEquals(
-                List.of(new CreateBranch(new Branch.Name("topic"), "refs/remotes/origin/new")),
+                List.of(new NewBranchCmd(new Branch.Name("topic"), "refs/remotes/origin/new")),
                 Update.update(asked, new NewBranchMsg.Confirmed("topic")).cmds());
     }
 
@@ -166,7 +167,7 @@ class RemoteBranchUpdateTest {
         List.<BranchCmd>of(
                         new CheckoutRemote(new Branch.Name("new"), ORIGIN_NEW),
                         new Checkout(new Branch.Name("feature")),
-                        new CreateBranch(new Branch.Name("topic"), "refs/remotes/origin/new"))
+                        new NewBranchCmd(new Branch.Name("topic"), "refs/remotes/origin/new"))
                 .forEach(cmd -> assertEquals(
                         BranchesTab.LOCAL,
                         Update.update(onRemotes, cmd.succeeded(List.empty()))

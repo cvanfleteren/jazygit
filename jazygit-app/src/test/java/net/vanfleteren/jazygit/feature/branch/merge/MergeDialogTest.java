@@ -10,7 +10,6 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.feature.branch.BranchDialogs;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.state.Model;
@@ -28,7 +27,7 @@ class MergeDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<MergePopup> dialog =
-            new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(BranchDialogs.MERGE, dispatched::add);
+            new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(MergeDialogs.MERGE, dispatched::add);
     // In the test models, main is checked out.
     private final Model open = Update.update(TestModels.loaded(), new MergeMsg.Requested(new Branch.Name("feature")))
             .model();
@@ -77,7 +76,7 @@ class MergeDialogTest {
     private ToolkitTestRunner start() throws Exception {
         assertTrue(open.popup(MergePopup.class).isDefined());
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        SettledPilot.focus(runner, BranchDialogs.MERGE.id());
+        SettledPilot.focus(runner, MergeDialogs.MERGE.id());
         RenderedText.of(runner, this::view);
         return runner;
     }

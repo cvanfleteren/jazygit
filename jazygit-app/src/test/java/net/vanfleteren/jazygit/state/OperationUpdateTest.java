@@ -9,7 +9,10 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd;
+import net.vanfleteren.jazygit.feature.branch.merge.MergeCmd;
+import net.vanfleteren.jazygit.feature.branch.pull.PullCmd;
+import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
+import net.vanfleteren.jazygit.feature.branch.rebase.RebaseCmd;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
@@ -31,22 +34,21 @@ import org.junit.jupiter.api.Test;
 
 class OperationUpdateTest {
 
-    private static final BranchCmd.Merge MERGE =
-            new BranchCmd.Merge(new Branch.Name("feature"), MergeMode.MERGE_COMMIT);
+    private static final MergeCmd MERGE = new MergeCmd(new Branch.Name("feature"), MergeMode.MERGE_COMMIT);
     private static final InProgress MERGING =
             new InProgress.Merging(new Sha("0123456789012345678901234567890123456789"));
-    private static final BranchCmd.Push PUSH = new BranchCmd.Push(
+    private static final PushCmd.Push PUSH = new PushCmd.Push(
             new Branch.Name("feature"), new RemoteBranch("origin", new Branch.Name("feature")), PushMode.FAST_FORWARD);
 
     @Test
     void aSuccessLogsItsCommandsReleasesItsBranchClearsTheErrorAndReadsTheRepositoryAgain() {
         Model pushing = TestModels.withCheckoutError(loaded(), "foo", "boom")
-                .withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), BranchCmd.PUSH);
+                .withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), PushCmd.PUSH);
 
         Next next = Update.update(pushing, succeeded(PUSH, "git push origin feature"));
 
         assertEquals(
-                List.of(new LogEntry(BranchCmd.PUSH, executed("git push origin feature"))),
+                List.of(new LogEntry(PushCmd.PUSH, executed("git push origin feature"))),
                 next.model().outcome().commandLog());
         assertEquals(HashSet.empty(), next.model().jobs().busy().keySet());
         assertEquals(Option.none(), next.model().outcome().error());
@@ -63,7 +65,7 @@ class OperationUpdateTest {
 
     @Test
     void onlyAnOperationThatChangesGitHubReadsItAgain() {
-        BranchCmd.Pull pull = new BranchCmd.Pull(new Branch.Name("feature"));
+        PullCmd.Pull pull = new PullCmd.Pull(new Branch.Name("feature"));
 
         Next next = Update.update(loaded(), succeeded(pull, "git pull"));
 
@@ -82,15 +84,15 @@ class OperationUpdateTest {
                 new GitError.CommandFailed("rejected", 1), executed("git push origin feature"), Option.none());
 
         Next next = Update.update(
-                loaded().withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), BranchCmd.PUSH),
+                loaded().withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), PushCmd.PUSH),
                 new OperationMsg.Failed(PUSH, failure));
 
         assertEquals(
-                List.of(new LogEntry(BranchCmd.PUSH, executed("git push origin feature"))),
+                List.of(new LogEntry(PushCmd.PUSH, executed("git push origin feature"))),
                 next.model().outcome().commandLog());
         assertEquals(HashSet.empty(), next.model().jobs().busy().keySet());
         assertEquals(
-                Option.of(new AppError.OperationFailed(BranchCmd.PUSH, Option.of("feature"), failure)),
+                Option.of(new AppError.OperationFailed(PushCmd.PUSH, Option.of("feature"), failure)),
                 next.model().outcome().error());
         assertEquals(Option.of("Pushing branch feature failed: rejected"), errorText(next.model()));
     }
@@ -102,8 +104,7 @@ class OperationUpdateTest {
                 List.of(),
                 Option.of(new GitError.CommandFailed("fatal: no rebase in progress", 128)));
 
-        Next next = Update.update(
-                loaded(), new OperationMsg.Failed(new BranchCmd.Rebase(new Branch.Name("main")), failure));
+        Next next = Update.update(loaded(), new OperationMsg.Failed(new RebaseCmd(new Branch.Name("main")), failure));
 
         assertEquals(
                 Option.of("Rebasing onto main failed: CONFLICT; cleaning up afterwards failed too: "
@@ -183,7 +184,7 @@ class OperationUpdateTest {
                 new OperationMsg.Stopped(MERGE, executed("git merge feature"), notice));
 
         assertEquals(
-                List.of(new LogEntry(BranchCmd.MERGE, executed("git merge feature"))),
+                List.of(new LogEntry(MergeCmd.MERGE, executed("git merge feature"))),
                 next.model().outcome().commandLog());
         assertEquals(Option.none(), next.model().outcome().error());
         assertEquals(Option.of(notice), next.model().outcome().notice());

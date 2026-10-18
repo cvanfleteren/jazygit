@@ -1,11 +1,7 @@
-package net.vanfleteren.jazygit.feature.github;
+package net.vanfleteren.jazygit.feature.github.create;
 
 import io.vavr.collection.List;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.feature.github.create.BasePopup;
-import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestMsg;
-import net.vanfleteren.jazygit.feature.github.create.NewPullRequestDialog;
-import net.vanfleteren.jazygit.feature.github.show.PullRequestDialog;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Msg;
@@ -14,9 +10,9 @@ import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.widgets.PickDialog;
 
 /**
- * The popups of the pull request operations.
+ * The popups of creating a pull request: which branch it merges into, and what it says.
  */
-public final class GitHubDialogs {
+public final class CreatePullRequestDialogs {
 
     /**
      * Asks which branch a new pull request merges into.
@@ -29,16 +25,11 @@ public final class GitHubDialogs {
             base -> new CreatePullRequestMsg.BaseChosen(new Branch.Name(base)),
             CreatePullRequestMsg.BaseCancelled::new);
 
-    private GitHubDialogs() {}
+    private CreatePullRequestDialogs() {}
 
-    /**
-     * The popups of this feature, which send what the user does to {@code dispatch}.
-     */
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
                 PopupSlot.returningTo(BranchesPanel.ID, new PickDialog<>(BASE, dispatch)),
-                // A pull request is shown from the branches, or from the pull requests screen.
-                PopupSlot.returningToFocus(new PullRequestDialog(dispatch)),
                 PopupSlot.returningTo(BranchesPanel.ID, new NewPullRequestDialog(dispatch)));
     }
 }

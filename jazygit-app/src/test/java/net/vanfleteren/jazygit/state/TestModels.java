@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd;
+import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
@@ -95,7 +95,7 @@ public final class TestModels {
      * {@code model} showing that checking out {@code branch} failed, git saying {@code explanation}.
      */
     public static Model withCheckoutError(Model model, String branch, String explanation) {
-        return model.fail(new AppError.OperationFailed(BranchCmd.CHECKOUT, Option.of(branch), refused(explanation)));
+        return model.fail(new AppError.OperationFailed(CheckoutCmd.CHECKOUT, Option.of(branch), refused(explanation)));
     }
 
     /**

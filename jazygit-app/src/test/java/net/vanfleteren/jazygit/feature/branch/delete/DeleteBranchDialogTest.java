@@ -9,7 +9,6 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.feature.branch.BranchDialogs;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -26,7 +25,7 @@ class DeleteBranchDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<DeleteBranchPopup> dialog =
-            new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(BranchDialogs.DELETE_BRANCH, dispatched::add);
+            new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(DeleteBranchDialogs.DELETE_BRANCH, dispatched::add);
     private final Model open = Update.update(
                     TestModels.loaded(new SampleData()),
                     new DeleteBranchMsg.Requested(new Branch.Name("feature/initial-layout")))
@@ -126,7 +125,7 @@ class DeleteBranchDialogTest {
 
     private List<Msg> pressing(Model model, Keys keys) throws Exception {
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(model))) {
-            SettledPilot.focus(runner, BranchDialogs.DELETE_BRANCH.id());
+            SettledPilot.focus(runner, DeleteBranchDialogs.DELETE_BRANCH.id());
             RenderedText.of(runner, () -> view(model));
             keys.press(runner);
             SettledPilot.of(runner).pause();

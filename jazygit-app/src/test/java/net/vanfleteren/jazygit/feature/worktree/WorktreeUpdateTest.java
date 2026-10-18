@@ -9,11 +9,13 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd;
+import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
+import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg;
 import net.vanfleteren.jazygit.feature.worktree.add.NewWorktreePopup;
 import net.vanfleteren.jazygit.feature.worktree.remove.ForceRemoveWorktreePopup;
+import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeMsg;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreePopup;
 import net.vanfleteren.jazygit.feature.worktree.switchto.SwitchWorktreeMsg;
@@ -81,7 +83,7 @@ class WorktreeUpdateTest {
 
     @Test
     void theCheckedOutBranchAndUnknownOrBusyBranchesGetNoWorktree() {
-        Model busy = model().withBusyBranch(new BranchRef.Local(FEATURE), BranchCmd.PUSH);
+        Model busy = model().withBusyBranch(new BranchRef.Local(FEATURE), PushCmd.PUSH);
 
         assertEquals(
                 Option.none(),
@@ -120,16 +122,16 @@ class WorktreeUpdateTest {
                 Update.update(asked, new AddWorktreeMsg.Confirmed("  ")).cmds());
         Next confirmed = Update.update(asked, new AddWorktreeMsg.Confirmed(" ~/elsewhere "));
 
-        assertEquals(List.of(new WorktreeCmd.Add(FEATURE, "~/elsewhere")), confirmed.cmds());
+        assertEquals(List.of(new AddWorktreeCmd(FEATURE, "~/elsewhere")), confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());
         assertEquals(
-                Option.of(WorktreeCmd.ADD_WORKTREE),
+                Option.of(AddWorktreeCmd.ADD_WORKTREE),
                 confirmed.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
     }
 
     @Test
     void anAddedWorktreeShowsTheWorktreesAndReadsTheRepositoryAgain() {
-        WorktreeCmd.Add add = new WorktreeCmd.Add(FEATURE, "/repos/app-feature");
+        AddWorktreeCmd add = new AddWorktreeCmd(FEATURE, "/repos/app-feature");
         Model adding = Update.start(model(), add).model();
 
         Next next = Update.update(
@@ -169,7 +171,7 @@ class WorktreeUpdateTest {
                         .model()
                         .popup());
         assertEquals(
-                List.of(new WorktreeCmd.Remove("/repos/app-taken", false)),
+                List.of(new RemoveWorktreeCmd("/repos/app-taken", false)),
                 Update.update(asked.model(), new RemoveWorktreeMsg.Confirmed()).cmds());
         assertEquals(
                 Option.none(),
@@ -180,7 +182,7 @@ class WorktreeUpdateTest {
 
     @Test
     void aWorktreeWithChangesIsOnlyRemovedOnceTheUserForcesIt() {
-        WorktreeCmd.Remove remove = new WorktreeCmd.Remove("/repos/app-taken", false);
+        RemoveWorktreeCmd remove = new RemoveWorktreeCmd("/repos/app-taken", false);
 
         Next refused = Update.update(
                 model(),
@@ -199,7 +201,7 @@ class WorktreeUpdateTest {
                         .flatMap(entry -> entry.commands())
                         .map(command -> command.line()));
         assertEquals(
-                List.of(new WorktreeCmd.Remove("/repos/app-taken", true)),
+                List.of(new RemoveWorktreeCmd("/repos/app-taken", true)),
                 Update.update(refused.model(), new RemoveWorktreeMsg.ForceConfirmed())
                         .cmds());
         assertEquals(

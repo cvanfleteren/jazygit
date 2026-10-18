@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.feature.worktree.add;
 
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.feature.worktree.WorktreeCmd;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Model;
@@ -33,5 +32,5 @@ public sealed interface AddWorktreeMsg extends Msg {
     /**
      * {@code cmd} ran {@code commands} and added the worktree.
      */
-    record Added(WorktreeCmd.Add cmd, List<ExecutedCommand> commands) implements AddWorktreeMsg {}
+    record Added(AddWorktreeCmd cmd, List<ExecutedCommand> commands) implements AddWorktreeMsg {}
 }

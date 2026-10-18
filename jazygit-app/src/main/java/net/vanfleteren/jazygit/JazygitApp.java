@@ -34,21 +34,21 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.cli.StartupCli;
 import net.vanfleteren.jazygit.cli.StartupOptions;
-import net.vanfleteren.jazygit.feature.branch.BranchDialogs;
+import net.vanfleteren.jazygit.feature.branch.BranchFeature;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.feature.cherrypick.CherryPickDialogs;
 import net.vanfleteren.jazygit.feature.commit.CommitFeature;
 import net.vanfleteren.jazygit.feature.discard.DiscardDialog;
 import net.vanfleteren.jazygit.feature.error.ErrorDialog;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
-import net.vanfleteren.jazygit.feature.github.GitHubDialogs;
+import net.vanfleteren.jazygit.feature.github.GitHubFeature;
 import net.vanfleteren.jazygit.feature.help.HelpDialog;
 import net.vanfleteren.jazygit.feature.inprogress.InProgressDialogs;
 import net.vanfleteren.jazygit.feature.repos.RecentReposDialog;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelDialogs;
 import net.vanfleteren.jazygit.feature.stash.StashDialogs;
 import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
-import net.vanfleteren.jazygit.feature.worktree.WorktreeDialogs;
+import net.vanfleteren.jazygit.feature.worktree.WorktreeFeature;
 import net.vanfleteren.jazygit.gh.CliGitHub;
 import net.vanfleteren.jazygit.gh.GhToken;
 import net.vanfleteren.jazygit.git.CliGitInfoProvider;
@@ -104,9 +104,9 @@ public class JazygitApp extends ToolkitApp {
             PullRequestsPanel.all(dispatch, this::openContent, Clock.systemUTC(), this::highlight);
     // Every popup, with where the focus goes when it closes. At most one is open; errors come last.
     private final List<PopupSlot> popups = List.of(
-                    BranchDialogs.popups(dispatch),
-                    WorktreeDialogs.popups(dispatch),
-                    GitHubDialogs.popups(dispatch),
+                    BranchFeature.popups(dispatch),
+                    WorktreeFeature.popups(dispatch),
+                    GitHubFeature.popups(dispatch),
                     CommitFeature.popups(dispatch),
                     StashDialogs.popups(dispatch),
                     CherryPickDialogs.popups(dispatch),

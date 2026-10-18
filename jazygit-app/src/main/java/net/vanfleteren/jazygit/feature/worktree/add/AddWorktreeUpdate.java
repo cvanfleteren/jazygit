@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.feature.worktree.add;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.worktree.WorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg.*;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.*;
@@ -25,7 +24,7 @@ public final class AddWorktreeUpdate {
                         NewWorktreePopup.class,
                         popup -> Option.of(location.strip())
                                 .filter(text -> !text.isEmpty())
-                                .map(text -> new WorktreeCmd.Add(popup.branch(), text)));
+                                .map(text -> new AddWorktreeCmd(popup.branch(), text)));
             // The worktrees are shown, the new one among them, to switch to.
             case Added(var cmd, var commands) ->
                 OperationUpdate.succeeded(
@@ -43,7 +42,7 @@ public final class AddWorktreeUpdate {
                 .filter(known -> !known.current())
                 .map(known -> known.worktreeLocation()
                         .map(worktree -> Next.of(model.fail(
-                                new AppError.CheckedOutElsewhere(WorktreeCmd.ADD_WORKTREE, branch, worktree))))
+                                new AppError.CheckedOutElsewhere(AddWorktreeCmd.ADD_WORKTREE, branch, worktree))))
                         .getOrElse(() -> Update.ask(
                                 model,
                                 new NewWorktreePopup(

@@ -101,9 +101,10 @@ as if the key had been pressed in the panel. `Msg.Quit` is dispatched as it is, 
 
 ### 4. Where the keys are declared
 
-`Keymap.standard()` returns `Standard.KEYMAP`, which is built by folding each feature's `*Keys.register`
-over `Keymap.empty()`: `StageKeys`, `CommitKeys`, `DiscardKeys`, `StashKeys`, `BranchKeys`, `PullRequestKeys`
-and `GlobalKeys`. A feature adds its panel keys with `Keymap.add(scope, bindings...)`, which refuses a key bound
+`Keymap.standard()` returns `Standard.KEYMAP`, which is built by folding each feature's `register` over
+`Keymap.empty()`: `StageKeys`, `CommitFeature`, `CherryPickKeys`, `DiscardKeys`, `EditKeys`, `StashKeys`,
+`BranchFeature`, `GitHubFeature`, `WorktreeFeature` and `GlobalKeys`. An `XxxFeature` registers the keys of each
+of its operations, in the order it lists them. A feature adds its panel keys with `Keymap.add(scope, bindings...)`, which refuses a key bound
 twice in the same panel, and adds its global keys with `Keymap.global(...)`. The panels and the help dialog read
 the same keymap, so the help always lists the keys that work.
 

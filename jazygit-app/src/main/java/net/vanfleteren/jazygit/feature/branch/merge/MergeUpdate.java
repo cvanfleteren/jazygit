@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch.merge;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd.Merge;
 import net.vanfleteren.jazygit.feature.branch.Branches;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.MergeMode;
@@ -21,7 +20,7 @@ public final class MergeUpdate {
             case MergeMsg.Requested(Branch.Name branch) -> requested(model, branch);
             case MergeMsg.Cancelled() -> Next.of(model.withoutPopup(MergePopup.class));
             case MergeMsg.Chosen(MergeMode mode) ->
-                Update.confirm(model, MergePopup.class, popup -> Option.of(new Merge(popup.branch(), mode)));
+                Update.confirm(model, MergePopup.class, popup -> Option.of(new MergeCmd(popup.branch(), mode)));
         };
     }
 

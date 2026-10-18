@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.feature.branch.push;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd.Push;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd.PushSettingUpstream;
+import net.vanfleteren.jazygit.feature.branch.push.PushCmd.Push;
+import net.vanfleteren.jazygit.feature.branch.push.PushCmd.PushSettingUpstream;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;

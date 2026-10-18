@@ -6,9 +6,11 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
+import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchCmd;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg;
+import net.vanfleteren.jazygit.feature.branch.pull.PullCmd;
+import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.feature.branch.upstream.UpstreamMsg;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg;
@@ -227,8 +229,8 @@ class BranchesPanelTest {
 
     @Test
     void aBranchBeingPushedOrPulledShowsWhatIsDoneLeftOfTheSpinner() throws Exception {
-        Model busy = before.withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), BranchCmd.PUSH)
-                .withBusyBranch(new BranchRef.Local(new Branch.Name("main")), BranchCmd.PULL);
+        Model busy = before.withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), PushCmd.PUSH)
+                .withBusyBranch(new BranchRef.Local(new Branch.Name("main")), PullCmd.PULL);
         String frame = net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(java.time.Instant.EPOCH);
         BranchesPanel panel = new BranchesPanel(
                 msg -> {}, tab -> {}, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
@@ -242,7 +244,7 @@ class BranchesPanelTest {
     @Test
     void aBranchBeingDeletedShowsOnlyTheSpinner() throws Exception {
         Model deleting =
-                before.withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), BranchCmd.DELETE_BRANCH);
+                before.withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), DeleteBranchCmd.DELETE_BRANCH);
         String frame = net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(java.time.Instant.EPOCH);
         BranchesPanel panel = new BranchesPanel(
                 msg -> {}, tab -> {}, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
@@ -255,7 +257,7 @@ class BranchesPanelTest {
 
     @Test
     void aFastForwardIsShownAsAPull() {
-        assertEquals(BranchesPanel.busyLabel(BranchCmd.PULL), BranchesPanel.busyLabel(BranchCmd.FAST_FORWARD));
+        assertEquals(BranchesPanel.busyLabel(PullCmd.PULL), BranchesPanel.busyLabel(PullCmd.FAST_FORWARD));
     }
 
     @Test

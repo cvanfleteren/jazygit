@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.feature.github.show;
 
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.feature.github.GitHubCmd;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
@@ -64,12 +63,12 @@ public sealed interface PullRequestMsg extends Msg {
     /**
      * The pull request became a draft, or ready for review, as {@code cmd} says, by running {@code commands}.
      */
-    record DraftSet(GitHubCmd.SetDraft cmd, List<ExecutedCommand> commands) implements PullRequestMsg {}
+    record DraftSet(PullRequestCmd.SetDraft cmd, List<ExecutedCommand> commands) implements PullRequestMsg {}
 
     /**
      * The pull request was merged or closed by running {@code commands}.
      */
-    record Ended(GitHubCmd.ChangingCmd cmd, List<ExecutedCommand> commands) implements PullRequestMsg {}
+    record Ended(PullRequestCmd.ChangingCmd cmd, List<ExecutedCommand> commands) implements PullRequestMsg {}
 
     record InfoClosed() implements PullRequestMsg {}
 }

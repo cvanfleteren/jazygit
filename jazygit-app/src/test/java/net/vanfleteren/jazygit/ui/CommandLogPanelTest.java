@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd;
+import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.feature.commit.create.CreateCommitCmd;
 import net.vanfleteren.jazygit.feature.stage.StageCmd;
 import net.vanfleteren.jazygit.model.SampleData;
@@ -49,7 +49,7 @@ class CommandLogPanelTest {
     @Test
     void showsExecutedCommandsUnderTheirTitle() throws Exception {
         Model model = TestModels.withLog(
-                TestModels.loaded(new SampleData()), new LogEntry(BranchCmd.PUSH, executed("git push origin main")));
+                TestModels.loaded(new SampleData()), new LogEntry(PushCmd.PUSH, executed("git push origin main")));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> CommandLogPanel.render(model))) {
             String screen = RenderedText.of(testRunner, () -> CommandLogPanel.render(model));

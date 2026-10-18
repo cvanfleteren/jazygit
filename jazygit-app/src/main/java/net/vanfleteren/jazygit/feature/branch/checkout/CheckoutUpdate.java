@@ -1,10 +1,10 @@
 package net.vanfleteren.jazygit.feature.branch.checkout;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd.Checkout;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd.CheckoutRemote;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd.CheckoutWithStash;
 import net.vanfleteren.jazygit.feature.branch.Branches;
+import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.Checkout;
+import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.CheckoutRemote;
+import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.CheckoutWithStash;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg.*;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchPopup;
 import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
