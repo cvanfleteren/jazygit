@@ -9,13 +9,11 @@ import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.DialogElement;
 import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.event.EventResult;
-import dev.tamboui.tui.bindings.Actions;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.HashMap;
-import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
@@ -24,18 +22,21 @@ import java.util.function.Predicate;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
+import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
+import net.vanfleteren.jazygit.ui.widgets.ListKeys;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 import net.vanfleteren.jazygit.ui.widgets.WithDetails;
 
 /**
  * Popup listing the keys of a panel and what they do, under which the details of the highlighted key show when it
  * has any. A key is run with the arrow keys and Enter, or by pressing it; a key of the panel that does nothing for
- * what is selected in it is struck through. Escape or ? closes it. Whether it is open lives in the {@link Model}.
+ * what is selected in it is struck through. Escape or ? closes it. Whether it is open, and the highlighted key, live
+ * in the {@link Model}.
  */
 public final class HelpDialog implements PopupView {
 
@@ -65,9 +66,6 @@ public final class HelpDialog implements PopupView {
     private final Consumer<Msg> dispatch;
     private final Keymap keymap;
     private final ListElement<?> list;
-    // The help the rows show, as of the last render; none while it is closed.
-    private Option<HelpPopup> shownPopup = Option.none();
-    private List<Row> rows = List.empty();
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
@@ -78,7 +76,7 @@ public final class HelpDialog implements PopupView {
     HelpDialog(Consumer<Msg> dispatch, Keymap keymap) {
         this.dispatch = dispatch;
         this.keymap = keymap;
-        this.list = list().id(ID).focusable().highlightSymbol("").onKeyEvent(this::handleKey);
+        this.list = list().id(ID).focusable().highlightSymbol("");
     }
 
     /**
@@ -135,38 +133,39 @@ public final class HelpDialog implements PopupView {
 
     @Override
     public Option<Element> render(Model model) {
-        Option<HelpPopup> open = model.popup(HelpPopup.class)
-                .filter(popup -> keymap.titleKey(popup.scopeId()).isDefined());
-        show(open);
-        return open.map(popup -> {
-            int widest = rows.map(HelpDialog::line).map(String::length).max().getOrElse(0);
-            DialogElement frame = DialogFrame.withHint(
-                            Messages.get(
-                                    "dialog.help.title",
-                                    Messages.get(
-                                            keymap.titleKey(popup.scopeId()).get())),
-                            Math.max(WIDTH, widest + DialogFrame.FRAME),
-                            "dialog.help.hint",
-                            List.of(list.constraint(Constraint.fill())))
-                    // The rows, the blank line and the hint, plus the border.
-                    .length(rows.size() + 2 + 2);
-            return new WithDetails(
-                    frame,
-                    selected().flatMap(HelpDialog::details),
-                    rows.filter(Key.class::isInstance).map(Key.class::cast).flatMap(HelpDialog::details));
-        });
+        return model.popup(HelpPopup.class)
+                .filter(popup -> keymap.titleKey(popup.scopeId()).isDefined())
+                .map(popup -> render(popup, model.listCursor()));
     }
 
-    /**
-     * Shows the rows of {@code open}, from its first key when it was not open before.
-     */
-    private void show(Option<HelpPopup> open) {
-        if (!open.equals(shownPopup)) {
-            shownPopup = open;
-            rows = open.map(this::rows).getOrElse(List.empty());
-            list.elements(rows.map(HelpDialog::element).toJavaArray(StyledElement[]::new));
-            list.selected(Math.max(0, rows.indexWhere(Key.class::isInstance)));
-        }
+    private Element render(HelpPopup popup, ListCursor cursor) {
+        List<Row> rows = rows(popup);
+        // Until the user moves, the first key is highlighted.
+        View view = new View(
+                rows,
+                cursor.line()
+                        .map(line -> Math.clamp(line, 0, rows.size() - 1))
+                        .getOrElse(() -> Math.max(0, rows.indexWhere(Key.class::isInstance))),
+                cursor);
+        list.elements(rows.map(HelpDialog::element).toJavaArray(StyledElement[]::new))
+                .selected(view.selected())
+                .onKeyEvent(event -> handleKey(view, event))
+                .onMouseEvent(event -> ListKeys.wheel(
+                        event, view.selected(), rows.size(), view::isKey, line -> highlight(view, line)));
+        int widest = rows.map(HelpDialog::line).map(String::length).max().getOrElse(0);
+        DialogElement frame = DialogFrame.withHint(
+                        Messages.get(
+                                "dialog.help.title",
+                                Messages.get(keymap.titleKey(popup.scopeId()).get())),
+                        Math.max(WIDTH, widest + DialogFrame.FRAME),
+                        "dialog.help.hint",
+                        List.of(list.constraint(Constraint.fill())))
+                // The rows, the blank line and the hint, plus the border.
+                .length(rows.size() + 2 + 2);
+        return new WithDetails(
+                frame,
+                view.key().flatMap(HelpDialog::details),
+                rows.filter(Key.class::isInstance).map(Key.class::cast).flatMap(HelpDialog::details));
     }
 
     /**
@@ -189,28 +188,24 @@ public final class HelpDialog implements PopupView {
                                 Option.of(global.action()))));
     }
 
-    /**
-     * The highlighted key, if the highlighted row is one.
-     */
-    private Option<Key> selected() {
-        return rows.lift().apply(list.selected()).filter(Key.class::isInstance).map(Key.class::cast);
-    }
-
-    private EventResult handleKey(KeyEvent event) {
+    private EventResult handleKey(View view, KeyEvent event) {
         if (event.code() == KeyCode.ESCAPE || Keymap.HELP_KEY.equals(event.string())) {
             dispatch.accept(new HelpMsg.Closed());
             return EventResult.HANDLED;
         }
         if (event.isConfirm()) {
-            selected().forEach(this::run);
+            view.key().forEach(this::run);
             return EventResult.HANDLED;
         }
-        if (event.matches(Actions.MOVE_UP) || event.matches(Actions.MOVE_DOWN)) {
-            move(event.matches(Actions.MOVE_UP) ? -1 : 1);
+        Option<Integer> moved =
+                ListKeys.move(event, view.selected(), view.rows().size(), view::isKey);
+        if (moved.isDefined()) {
+            moved.filter(line -> line != view.selected()).forEach(line -> highlight(view, line));
             return EventResult.HANDLED;
         }
         // The keys of the panel come first, as they are listed first.
-        Option<Key> pressed = rows.iterator()
+        Option<Key> pressed = view.rows()
+                .iterator()
                 .filter(Key.class::isInstance)
                 .map(Key.class::cast)
                 .find(key -> key.matches().test(event));
@@ -218,15 +213,8 @@ public final class HelpDialog implements PopupView {
         return pressed.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
     }
 
-    /**
-     * Highlights the next key in {@code direction}, skipping the texts; stays put at either end.
-     */
-    private void move(int direction) {
-        int from = list.selected();
-        Iterator<Integer> next = direction < 0
-                ? Iterator.iterate(from - 1, i -> i - 1).takeWhile(i -> i >= 0)
-                : Iterator.iterate(from + 1, i -> i + 1).takeWhile(i -> i < rows.size());
-        next.find(i -> rows.get(i) instanceof Key).forEach(list::selected);
+    private void highlight(View view, int line) {
+        dispatch.accept(new Msg.ListCursorChanged(view.cursor().at(line)));
     }
 
     /**
@@ -235,6 +223,25 @@ public final class HelpDialog implements PopupView {
     private void run(Key key) {
         // Quitting is up to the app, which only sees the message as is.
         key.action().forEach(msg -> dispatch.accept(msg instanceof Msg.Quit ? msg : new HelpMsg.Chosen(msg)));
+    }
+
+    /**
+     * What the help shows for its popup and the model's cursor in it.
+     *
+     * @param selected the highlighted row
+     */
+    private record View(List<Row> rows, int selected, ListCursor cursor) {
+
+        boolean isKey(int line) {
+            return rows.get(line) instanceof Key;
+        }
+
+        /**
+         * The highlighted key, if the highlighted row is one.
+         */
+        Option<Key> key() {
+            return rows.lift().apply(selected).filter(Key.class::isInstance).map(Key.class::cast);
+        }
     }
 
     /**

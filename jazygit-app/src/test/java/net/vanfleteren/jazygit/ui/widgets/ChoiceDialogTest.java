@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 class ChoiceDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
+    private final CursorFeedback cursor = new CursorFeedback(dispatched::add);
     private final ChoiceDialog<PickPopup> dialog = new ChoiceDialog<>(
             new ChoiceDialog.Spec<>(
                     "pick",
@@ -34,7 +35,7 @@ class ChoiceDialogTest {
                                     () -> new Picked("b"),
                                     (model, popup) -> popup.second())),
                     () -> new Picked("cancel")),
-            dispatched::add);
+            cursor);
 
     private static Model open(boolean second) {
         return TestModels.loaded().openPopup(new PickPopup(second));
@@ -42,7 +43,7 @@ class ChoiceDialogTest {
 
     @Test
     void closedModelShowsNoPopup() {
-        assertTrue(dialog.render(TestModels.loaded()).isEmpty());
+        assertTrue(dialog.render(cursor.on(TestModels.loaded())).isEmpty());
     }
 
     @Test
@@ -170,9 +171,9 @@ class ChoiceDialogTest {
                                         .withHeading("dialog.help.legend")
                                         .withPreview(() -> new Picked("preview b"))),
                         () -> new Picked("cancel")),
-                dispatched::add);
-        Supplier<Element> view =
-                () -> stack(text("background"), grouped.render(open(true)).get());
+                cursor);
+        Supplier<Element> view = () ->
+                stack(text("background"), grouped.render(cursor.on(open(true))).get());
 
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
             SettledPilot.focus(runner, "pick");
@@ -188,22 +189,6 @@ class ChoiceDialogTest {
         assertEquals(java.util.List.of(new Picked("preview b")), dispatched);
     }
 
-    @Test
-    void theFilterIsGoneWhenTheDialogOpensAgain() throws Exception {
-        try (ToolkitTestRunner runner = start(true)) {
-            type(runner, "/uns");
-            SettledPilot.of(runner).press(KeyCode.ENTER);
-            SettledPilot.of(runner).pause();
-        }
-        dialog.render(TestModels.loaded());
-
-        try (ToolkitTestRunner runner = start(true)) {
-            String screen = RenderedText.ofLarge(runner, () -> view(true));
-            assertFalse(screen.contains("/ uns"), screen);
-            assertTrue(screen.contains("(a) Discard all changes"), screen);
-        }
-    }
-
     private static void type(ToolkitTestRunner runner, String keys) {
         keys.chars().forEach(key -> SettledPilot.of(runner).press((char) key));
         SettledPilot.of(runner).pause();
@@ -217,7 +202,7 @@ class ChoiceDialogTest {
     }
 
     private Element view(boolean second) {
-        return stack(text("background"), dialog.render(open(second)).get());
+        return stack(text("background"), dialog.render(cursor.on(open(second))).get());
     }
 
     private record PickPopup(boolean second) implements Popup {}

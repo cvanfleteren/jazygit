@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Scope;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.state.CursorFeedback;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -30,8 +31,9 @@ class DiscardDialogTest {
     private static final FileEntry STAGED = new FileEntry("b.txt", ChangeType.ADDED);
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
+    private final CursorFeedback cursor = new CursorFeedback(dispatched::add);
     private final net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<DiscardPopup> dialog =
-            new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(DiscardDialog.SPEC, dispatched::add);
+            new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(DiscardDialog.SPEC, cursor);
 
     private static Model open(FileEntry... files) {
         return Update.update(TestModels.loaded(), new DiscardMsg.Requested(List.of(files)))
@@ -115,7 +117,7 @@ class DiscardDialogTest {
     }
 
     private Element view(Model model) {
-        return stack(text("background"), dialog.render(model).get());
+        return stack(text("background"), dialog.render(cursor.on(model)).get());
     }
 
     @FunctionalInterface

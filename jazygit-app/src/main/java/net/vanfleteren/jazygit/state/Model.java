@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.state.prs.PrOverview;
  * @param jobs           what runs in the background, and when the remotes were last fetched from
  * @param outcome        what the user is told about the operations: how the last one went, and the commands run
  * @param popup          the popup that is open, if any; only one can be
+ * @param listCursor     where the user is in the list of the popup, if it has one
  * @param preferences    how the user wants things shown, kept from one session to the next or for this one only
  * @param now            the time as of the last {@link Msg.Tick}, which tells how long ago things happened
  */
@@ -34,6 +35,7 @@ public record Model(
         Jobs jobs,
         Outcome outcome,
         Option<Popup> popup,
+        ListCursor listCursor,
         Preferences preferences,
         Instant now) {
 
@@ -48,6 +50,7 @@ public record Model(
                 Jobs.IDLE,
                 Outcome.NONE,
                 Option.none(),
+                ListCursor.START,
                 Preferences.DEFAULT,
                 Instant.EPOCH);
     }
@@ -169,10 +172,12 @@ public record Model(
     }
 
     /**
-     * This model with {@code popup} open, replacing the one that was open.
+     * This model with {@code popup} open, replacing the one that was open. A popup of the kind that was open, which
+     * shows what changed in it, keeps where the user was in its list; any other one starts at the top.
      */
     public Model openPopup(Popup popup) {
-        return withPopup(Option.of(popup));
+        boolean same = this.popup.exists(open -> open.getClass() == popup.getClass());
+        return withPopup(Option.of(popup)).withListCursor(same ? listCursor : ListCursor.START);
     }
 
     /**
@@ -188,6 +193,6 @@ public record Model(
      * opened in the meantime stays open.
      */
     public Model withoutPopup(Class<? extends Popup> type) {
-        return popup(type).isDefined() ? withPopup(Option.none()) : this;
+        return popup(type).isDefined() ? withPopup(Option.none()).withListCursor(ListCursor.START) : this;
     }
 }

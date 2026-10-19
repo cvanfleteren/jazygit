@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.feature.settings.SettingsPanelMsg;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
+import net.vanfleteren.jazygit.state.CursorFeedback;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -34,7 +35,8 @@ class HelpDialogTest {
 
     private static final Branch.Name FEATURE = new Branch.Name("feature");
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final HelpDialog dialog = new HelpDialog(dispatched::add);
+    private final CursorFeedback cursor = new CursorFeedback(dispatched::add);
+    private final HelpDialog dialog = new HelpDialog(cursor);
 
     private static Model open(String topic) {
         return open(topic, Option.none());
@@ -185,7 +187,7 @@ class HelpDialogTest {
 
     @Test
     void closedModelShowsNoPopup() {
-        assertTrue(dialog.render(TestModels.loaded()).isEmpty());
+        assertTrue(dialog.render(cursor.on(TestModels.loaded())).isEmpty());
     }
 
     private List<Msg> press(java.util.function.Consumer<ToolkitTestRunner> keys) throws Exception {
@@ -194,8 +196,8 @@ class HelpDialogTest {
 
     private List<Msg> press(Model open, java.util.function.Consumer<ToolkitTestRunner> keys) throws Exception {
         dispatched.clear();
-        // Closed in between, as the app draws it, so it starts at the top again.
-        dialog.render(TestModels.loaded());
+        // Closed in between, which the model forgets where the user was in, so it starts at the top again.
+        cursor.reset();
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(open))) {
             SettledPilot.focus(runner, HelpDialog.ID);
             RenderedText.of(runner, () -> view(open));
@@ -213,6 +215,6 @@ class HelpDialogTest {
     }
 
     private Element view(Model model) {
-        return stack(text("background"), dialog.render(model).get());
+        return stack(text("background"), dialog.render(cursor.on(model)).get());
     }
 }

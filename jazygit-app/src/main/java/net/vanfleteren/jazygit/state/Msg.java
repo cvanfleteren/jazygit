@@ -39,6 +39,17 @@ public interface Msg {
     }
 
     /**
+     * The user moved in the list of the open popup, or changed its filter.
+     */
+    record ListCursorChanged(ListCursor cursor) implements Msg {
+
+        @Override
+        public Update.Next apply(Model model) {
+            return Update.Next.of(model.popup().isDefined() ? model.withListCursor(cursor) : model);
+        }
+    }
+
+    /**
      * The element with the id {@code id} of the screen shown, outside the popups, got the focus.
      */
     record Focused(String id) implements Msg {

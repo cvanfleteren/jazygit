@@ -10,6 +10,7 @@ import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.widgets.input.TextInputState;
+import io.vavr.control.Option;
 import java.util.Locale;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.ui.Theme;
@@ -18,13 +19,13 @@ import net.vanfleteren.jazygit.ui.edit.LineEdit;
 /**
  * The filter of a list in a popup. Typing {@code /} opens a line above the list to type it in, and only the rows
  * that contain it stay shown, until Escape closes it again. It ignores case, unless it has an uppercase letter.
- * The list keeps the focus while the filter is open, and passes it the keys that edit it.
+ * The list keeps the focus while the filter is open, and passes it the keys that edit it. Whether it is open, and
+ * its text, live in the {@link net.vanfleteren.jazygit.state.ListCursor}; the line only keeps where its cursor is.
  */
 final class ListFilter {
 
     private static final char OPEN_KEY = '/';
     private final TextInputState input = new TextInputState();
-    private boolean open;
 
     /**
      * Whether {@code text} contains {@code filter}: ignoring case, unless {@code filter} has an uppercase letter.
@@ -36,14 +37,10 @@ final class ListFilter {
     }
 
     /**
-     * Whether a row showing {@code text} stays shown: always while the filter is closed.
+     * Whether a row showing {@code text} stays shown: always while there is no filter.
      */
-    boolean matches(String text) {
-        return !open || matches(input.text(), text);
-    }
-
-    boolean isOpen() {
-        return open;
+    static boolean matches(Option<String> filter, String text) {
+        return filter.forAll(typed -> matches(typed, text));
     }
 
     /**
@@ -53,36 +50,22 @@ final class ListFilter {
         return event.isChar(OPEN_KEY);
     }
 
-    void open() {
-        open = true;
+    /**
+     * The text of the open {@code filter} after {@code event}, if it edits it: any character goes in it, the arrows
+     * to the sides move in it, and the {@link LineEdit readline keys} work. Home and End are left to the list.
+     */
+    Option<String> edit(String filter, KeyEvent event) {
+        sync(filter);
+        boolean edited = LineEdit.handle(input, event)
+                || (event.code() != KeyCode.HOME && event.code() != KeyCode.END && handleTextInputKey(input, event));
+        return Option.when(edited, input::text);
     }
 
     /**
-     * Closes the filter and forgets its text, so all rows show again.
+     * The line to type {@code filter} in, above the list.
      */
-    void close() {
-        open = false;
-        input.clear();
-    }
-
-    /**
-     * Edits the text with {@code event}, while the filter is open: any character goes in it, the arrows to the
-     * sides move in it, and the {@link LineEdit readline keys} work. Home and End are left to the list.
-     *
-     * @return whether it did
-     */
-    boolean edit(KeyEvent event) {
-        return open
-                && (LineEdit.handle(input, event)
-                        || (event.code() != KeyCode.HOME
-                                && event.code() != KeyCode.END
-                                && handleTextInputKey(input, event)));
-    }
-
-    /**
-     * The line to type the filter in, above the list.
-     */
-    StyledElement<?> field() {
+    StyledElement<?> field(String filter) {
+        sync(filter);
         return row(
                         text(OPEN_KEY + " ").addClass(Theme.Classes.DIM).length(2),
                         textInput(input)
@@ -90,6 +73,16 @@ final class ListFilter {
                                 .cursorRequiresFocus(false)
                                 .constraint(Constraint.fill()))
                 .length(1);
+    }
+
+    /**
+     * Makes the line show {@code filter}, with the cursor at its end when it was typed elsewhere.
+     */
+    private void sync(String filter) {
+        if (!input.text().equals(filter)) {
+            input.setText(filter);
+            input.moveCursorToEnd();
+        }
     }
 
     /**

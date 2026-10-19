@@ -23,6 +23,7 @@ class PickDialogTest {
 
     private static final List<String> BRANCHES = List.of("main", "develop", "release");
     private final java.util.List<Msg> dispatched = new ArrayList<>();
+    private final CursorFeedback cursor = new CursorFeedback(dispatched::add);
     private final PickDialog<BranchPopup, String> dialog = new PickDialog<>(
             new PickDialog.Spec<>(
                     "pick",
@@ -31,11 +32,11 @@ class PickDialogTest {
                     popup -> popup.branches().map(PickDialog.Row::of),
                     Picked::new,
                     () -> new Picked("cancel")),
-            dispatched::add);
+            cursor);
 
     @Test
     void closedModelShowsNoPopup() {
-        assertTrue(dialog.render(TestModels.loaded()).isEmpty());
+        assertTrue(dialog.render(cursor.on(TestModels.loaded())).isEmpty());
     }
 
     @Test
@@ -76,10 +77,10 @@ class PickDialogTest {
                         Picked::new,
                         () -> new Picked("cancel"),
                         Option.of("dialog.recentRepos.none")),
-                dispatched::add);
+                cursor);
         Supplier<Element> view = () -> stack(
                 text("background"),
-                empty.render(TestModels.loaded().openPopup(new BranchPopup(List.empty())))
+                empty.render(cursor.on(TestModels.loaded().openPopup(new BranchPopup(List.empty()))))
                         .get());
 
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
@@ -121,10 +122,11 @@ class PickDialogTest {
                                         List.of(PickDialog.Cell.of(name).capped(8), PickDialog.Cell.of("~/repos")))),
                         Picked::new,
                         () -> new Picked("cancel")),
-                dispatched::add);
+                cursor);
         Supplier<Element> view = () -> stack(
                 text("background"),
-                columns.render(TestModels.loaded().openPopup(new BranchPopup(List.of("short", "a-very-long-name"))))
+                columns.render(cursor.on(
+                                TestModels.loaded().openPopup(new BranchPopup(List.of("short", "a-very-long-name")))))
                         .get());
 
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
@@ -157,10 +159,11 @@ class PickDialogTest {
                                         List.of(PickDialog.Cell.of(name), PickDialog.Cell.of("~/" + name + "-dir")))),
                         Picked::new,
                         () -> new Picked("cancel")),
-                dispatched::add);
+                cursor);
         Supplier<Element> view = () -> stack(
                 text("background"),
-                columns.render(TestModels.loaded().openPopup(new BranchPopup(List.of("main", "develop", "release"))))
+                columns.render(cursor.on(
+                                TestModels.loaded().openPopup(new BranchPopup(List.of("main", "develop", "release")))))
                         .get());
 
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
@@ -235,7 +238,7 @@ class PickDialogTest {
     private Element view() {
         return stack(
                 text("background"),
-                dialog.render(TestModels.loaded().openPopup(new BranchPopup(BRANCHES)))
+                dialog.render(cursor.on(TestModels.loaded().openPopup(new BranchPopup(BRANCHES))))
                         .get());
     }
 

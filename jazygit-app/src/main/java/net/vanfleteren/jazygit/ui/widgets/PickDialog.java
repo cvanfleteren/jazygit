@@ -18,6 +18,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
@@ -29,7 +30,8 @@ import net.vanfleteren.jazygit.ui.Theme;
  * their widest cell; a cell longer than its cap is cut, and when one of the highlighted row is, the row shows in
  * full in a box under the popup. When there are no rows, it can say so in a dimmed line, which cannot be picked.
  * {@code /} opens a {@link ListFilter}: then only the rows with a cell that contains it stay shown, and Escape
- * closes it instead of cancelling. Whether the popup is open lives in the {@link Model}, as a popup of type {@code P}.
+ * closes it instead of cancelling. Whether the popup is open lives in the {@link Model}, as a popup of type {@code P},
+ * and so do the highlighted row and the filter, as its {@link ListCursor}.
  *
  * @param <P> the popup that makes this dialog show
  * @param <T> what a row stands for, which picking it sends
@@ -50,31 +52,23 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
     // Shown instead of the list when no row contains the filter.
     private final ListElement<?> noMatches;
     private final ListFilter filter = new ListFilter();
-    // The rows of the popup, as of the last render.
-    private List<Row<T>> all = List.empty();
-    // The rows shown, which contain the filter.
-    private List<Row<T>> shown = List.empty();
-    // The widths of the columns, as of the last render.
-    private List<Integer> widths = List.empty();
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public PickDialog(Spec<P, T> spec, Consumer<Msg> dispatch) {
         this.spec = spec;
         this.dispatch = dispatch;
-        this.list = list().id(spec.id()).focusable().highlightSymbol("").onKeyEvent(this::handleKey);
+        this.list = list().id(spec.id()).focusable().highlightSymbol("");
         this.empty = spec.emptyKey()
                 .map(key -> list().id(spec.id())
                         .focusable()
                         .highlightSymbol("")
                         .highlightStyle(Style.EMPTY)
-                        .onKeyEvent(this::handleKey)
                         .elements(text(Messages.get(key)).addClass(Theme.Classes.DIM)));
         this.noMatches = list().id(spec.id())
                 .focusable()
                 .highlightSymbol("")
                 .highlightStyle(Style.EMPTY)
-                .onKeyEvent(this::handleKey)
                 .elements(ListFilter.noMatches());
     }
 
@@ -90,26 +84,43 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
     @Override
     public Option<Element> render(Model model) {
         return model.popup(spec.popupType()).map(popup -> {
-            show(spec.rows().apply(popup));
+            View<T> view = View.of(spec.rows().apply(popup), model.listCursor());
+            List<Integer> widths = widths(view.all());
+            list.elements(view.shown().map(row -> element(row, widths)).toJavaArray(StyledElement[]::new))
+                    .selected(view.selected());
+            List.of(list, noMatches)
+                    .appendAll(empty)
+                    .forEach(element -> element.onKeyEvent(event -> handleKey(view, event))
+                            .onMouseEvent(event -> ListKeys.wheel(
+                                    event,
+                                    view.selected(),
+                                    view.shown().size(),
+                                    line -> true,
+                                    line -> highlight(view, line))));
+            ListCursor cursor = model.listCursor();
             int width = widths.sum().intValue() + GAP * Math.max(0, widths.size() - 1);
-            ListElement<?> rows = all.isEmpty() ? empty.getOrElse(list) : shown.isEmpty() ? noMatches : list;
+            ListElement<?> rows =
+                    view.all().isEmpty() ? empty.getOrElse(list) : view.shown().isEmpty() ? noMatches : list;
             // Wide enough for the hint, which would wrap otherwise.
             int hint = Math.max(
                     Messages.get(HINT).length(), Messages.get(FILTERING_HINT).length());
             Element frame = DialogFrame.withHint(
                             spec.title().apply(popup),
                             Math.max(DialogFrame.LIST_WIDTH, Math.max(width, hint) + DialogFrame.FRAME),
-                            filter.isOpen() ? FILTERING_HINT : HINT,
-                            filter.isOpen()
-                                    ? List.of(filter.field(), rows.constraint(Constraint.fill()))
-                                    : List.of(rows.constraint(Constraint.fill())))
+                            cursor.filter().isDefined() ? FILTERING_HINT : HINT,
+                            cursor.filter()
+                                    .map(typed -> List.of(filter.field(typed), rows.constraint(Constraint.fill())))
+                                    .getOrElse(() -> List.of(rows.constraint(Constraint.fill()))))
                     // The filter, the rows of the popup whatever the filter, the blank line and the hint, plus the
                     // border.
-                    .length((filter.isOpen() ? 1 : 0) + Math.max(1, all.size()) + 2 + 2);
+                    .length((cursor.filter().isDefined() ? 1 : 0)
+                            + Math.max(1, view.all().size())
+                            + 2
+                            + 2);
             return new WithDetails(
                     frame,
-                    shown.lift().apply(list.selected()).flatMap(PickDialog::details),
-                    all.flatMap(PickDialog::details));
+                    view.highlighted().flatMap(PickDialog::details),
+                    view.all().flatMap(PickDialog::details));
         });
     }
 
@@ -137,28 +148,6 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
                         .mkString("\n"));
     }
 
-    private void show(List<Row<T>> rows) {
-        if (!rows.equals(all)) {
-            all = rows;
-            widths = widths(rows);
-            list.selected(0);
-            refilter();
-        }
-    }
-
-    /**
-     * Shows the rows that contain the filter, keeping the highlighted one when it does, else highlighting the first.
-     */
-    private void refilter() {
-        Option<T> before = shown.lift().apply(list.selected()).map(Row::value);
-        shown = all.filter(row -> row.cells().exists(cell -> filter.matches(cell.text())));
-        list.elements(shown.map(row -> element(row, widths)).toJavaArray(StyledElement[]::new));
-        list.selected(Math.max(
-                0,
-                before.map(value -> shown.indexWhere(row -> row.value().equals(value)))
-                        .getOrElse(0)));
-    }
-
     private static StyledElement<?> element(Row<?> row, List<Integer> widths) {
         if (row.cells().size() == 1) {
             return element(row.cells().head());
@@ -176,35 +165,72 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
         return cell.cssClass().<StyledElement<?>>map(text::addClass).getOrElse(text);
     }
 
-    private EventResult handleKey(KeyEvent event) {
-        if (filter.isOpen() && event.code() == KeyCode.ESCAPE) {
-            filter.close();
-            refilter();
+    private EventResult handleKey(View<T> view, KeyEvent event) {
+        Option<String> typed = view.cursor().filter();
+        if (typed.isDefined() && event.code() == KeyCode.ESCAPE) {
+            dispatch.accept(new Msg.ListCursorChanged(view.filtered(Option.none())));
             return EventResult.HANDLED;
         }
-        if (!filter.isOpen() && !all.isEmpty() && ListFilter.opens(event)) {
-            filter.open();
+        if (typed.isEmpty() && !view.all().isEmpty() && ListFilter.opens(event)) {
+            dispatch.accept(new Msg.ListCursorChanged(view.cursor().withFilter(Option.of(""))));
             return EventResult.HANDLED;
         }
-        if (filter.edit(event)) {
-            refilter();
+        Option<String> edited = typed.flatMap(text -> filter.edit(text, event));
+        if (edited.isDefined()) {
+            dispatch.accept(new Msg.ListCursorChanged(view.filtered(edited)));
+            return EventResult.HANDLED;
+        }
+        Option<Integer> moved =
+                ListKeys.move(event, view.selected(), view.shown().size(), line -> true);
+        if (moved.isDefined()) {
+            moved.filter(line -> line != view.selected()).forEach(line -> highlight(view, line));
             return EventResult.HANDLED;
         }
         Option<Msg> msg = event.code() == KeyCode.ESCAPE
                 ? Option.of(spec.onCancel().get())
-                : event.isConfirm()
-                        ? shown.lift().apply(list.selected()).map(Row::value).map(spec.onPick())
-                        : Option.none();
-        msg.forEach(this::send);
+                : event.isConfirm() ? view.highlighted().map(Row::value).map(spec.onPick()) : Option.none();
+        msg.forEach(dispatch);
         return msg.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
     }
 
-    private void send(Msg msg) {
-        // The next time it opens, it starts at the top again, without a filter.
-        filter.close();
-        all = List.empty();
-        shown = List.empty();
-        dispatch.accept(msg);
+    private void highlight(View<T> view, int line) {
+        dispatch.accept(new Msg.ListCursorChanged(view.cursor().at(line)));
+    }
+
+    /**
+     * What the dialog shows for its popup and the model's cursor in it.
+     *
+     * @param all      the rows of the popup
+     * @param shown    the rows that contain the filter
+     * @param selected the line of the highlighted row among those shown
+     */
+    private record View<T>(List<Row<T>> all, List<Row<T>> shown, int selected, ListCursor cursor) {
+
+        static <T> View<T> of(List<Row<T>> all, ListCursor cursor) {
+            List<Row<T>> shown = shown(all, cursor.filter());
+            return new View<>(
+                    all, shown, Math.clamp(cursor.line().getOrElse(0), 0, Math.max(0, shown.size() - 1)), cursor);
+        }
+
+        static <T> List<Row<T>> shown(List<Row<T>> all, Option<String> filter) {
+            return all.filter(row -> row.cells().exists(cell -> ListFilter.matches(filter, cell.text())));
+        }
+
+        Option<Row<T>> highlighted() {
+            return shown.lift().apply(selected);
+        }
+
+        /**
+         * The cursor with {@code filter}, keeping the highlighted row when it still shows, else on the first one.
+         */
+        ListCursor filtered(Option<String> filter) {
+            List<Row<T>> after = shown(all, filter);
+            int line = highlighted()
+                    .map(row -> after.indexWhere(other -> other.value().equals(row.value())))
+                    .filter(index -> index >= 0)
+                    .getOrElse(0);
+            return new ListCursor(Option.of(line), filter);
+        }
     }
 
     /**

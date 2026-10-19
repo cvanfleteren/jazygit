@@ -13,6 +13,7 @@ import io.vavr.control.Option;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.settings.ThemeName;
+import net.vanfleteren.jazygit.state.CursorFeedback;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -28,8 +29,9 @@ import org.junit.jupiter.api.Test;
 class ThemeDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
+    private final CursorFeedback cursor = new CursorFeedback(dispatched::add);
     private final ChoiceDialog<ThemePopup> dialog =
-            new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(ThemeDialog.SPEC, dispatched::add);
+            new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(ThemeDialog.SPEC, cursor);
     private final Model open = Update.update(TestModels.loaded(new SampleData()), new ThemeMsg.Requested())
             .model();
 
@@ -143,7 +145,7 @@ class ThemeDialogTest {
     }
 
     private Element view(Model model) {
-        return stack(text("background"), dialog.render(model).get());
+        return stack(text("background"), dialog.render(cursor.on(model)).get());
     }
 
     @FunctionalInterface

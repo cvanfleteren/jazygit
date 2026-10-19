@@ -12,8 +12,10 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.ArrayList;
+import java.util.function.Supplier;
 import net.vanfleteren.jazygit.gh.model.GhLogin;
 import net.vanfleteren.jazygit.settings.ThemeName;
+import net.vanfleteren.jazygit.state.CursorFeedback;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
@@ -105,16 +107,17 @@ class SettingsPanelDialogsTest {
     @Test
     void theArrowsSkipTheHeadings() throws Exception {
         java.util.List<Msg> dispatched = new ArrayList<>();
-        ChoiceDialog<SettingsPanelPopup> dialog = new ChoiceDialog<>(SettingsPanelDialogs.PANEL, dispatched::add);
+        CursorFeedback cursor = new CursorFeedback(dispatched::add);
+        ChoiceDialog<SettingsPanelPopup> dialog = new ChoiceDialog<>(SettingsPanelDialogs.PANEL, cursor);
         SettingsPanelPopup popup =
                 new SettingsPanelPopup(ThemeName.DARK, Option.none(), Option.of(setup(Option.none())));
-        Element view = stack(
+        Supplier<Element> view = () -> stack(
                 text("background"),
-                dialog.render(TestModels.loaded().openPopup(popup)).get());
+                dialog.render(cursor.on(TestModels.loaded().openPopup(popup))).get());
 
-        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view)) {
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
             SettledPilot.focus(runner, SettingsPanelDialogs.PANEL.id());
-            RenderedText.of(runner, () -> view);
+            RenderedText.of(runner, view);
             SettledPilot.of(runner).press(KeyCode.DOWN);
             SettledPilot.of(runner).press(KeyCode.DOWN);
             SettledPilot.of(runner).press(KeyCode.ENTER);

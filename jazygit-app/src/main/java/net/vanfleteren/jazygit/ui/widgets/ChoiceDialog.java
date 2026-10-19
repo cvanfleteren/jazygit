@@ -15,7 +15,8 @@ import net.vanfleteren.jazygit.state.Popup;
 
 /**
  * The standard popup offering a choice between several options, as a {@link ChoiceList} that {@code /} filters.
- * Whether the popup is open lives in the {@link Model}, as a popup of type {@code P}.
+ * Whether the popup is open lives in the {@link Model}, as a popup of type {@code P}, and so does where the user is in
+ * its options.
  *
  * @param <P> the popup that makes this dialog show
  */
@@ -23,8 +24,6 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
 
     private final Spec<P> spec;
     private final ChoiceList<P> list;
-    // The popup the highlight was put in place for, so that is only done when it opens.
-    private Option<P> shownFor = Option.none();
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
@@ -43,20 +42,18 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
      */
     @Override
     public Option<Element> render(Model model) {
-        Option<P> open = model.popup(spec.popupType());
-        open.filter(popup -> !shownFor.contains(popup))
-                .forEach(popup -> list.highlightKey(spec.opensAt().apply(popup)));
-        shownFor = open;
-        return open.map(popup -> {
-            StyledElement<?> rows = list.render(model, popup);
+        return model.popup(spec.popupType()).map(popup -> {
+            StyledElement<?> rows = list.render(model, popup, spec.opensAt().apply(popup));
             String title = spec.title().apply(popup);
             // The title sits in the top border, between its corners, and is cut off where it does not fit. It is
             // wide enough for the hint, which would wrap otherwise.
             int width = Math.max(
                     spec.minWidth(),
-                    Math.max(Math.max(list.width(), list.hintWidth()) + DialogFrame.FRAME, title.length() + 2));
-            List<StyledElement<?>> filter = list.filterField().toList();
-            return DialogFrame.withHint(title, width, list.hintKey(), filter.append(rows))
+                    Math.max(
+                            Math.max(list.width(model, popup), list.hintWidth()) + DialogFrame.FRAME,
+                            title.length() + 2));
+            List<StyledElement<?>> filter = list.filterField(model.listCursor()).toList();
+            return DialogFrame.withHint(title, width, list.hintKey(model.listCursor()), filter.append(rows))
                     // The filter, the options whatever the filter, the blank line and the hint, plus the border.
                     .length(filter.size() + list.height() + 2 + 2);
         });
