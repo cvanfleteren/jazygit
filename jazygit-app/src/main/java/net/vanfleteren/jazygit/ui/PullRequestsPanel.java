@@ -35,6 +35,7 @@ public final class PullRequestsPanel {
 
     private final Scope<PullRequestSummary> scope;
     private final Function<PrOverview, Loadable<PullRequestList>> pullRequests;
+    private final boolean anyRepository;
     private final LoadableList<PullRequestList> list;
     private final Keymap keymap = Keymap.standard();
     private final Clock clock;
@@ -58,11 +59,11 @@ public final class PullRequestsPanel {
             Theme.Highlights highlights) {
         this.scope = scope;
         this.pullRequests = pullRequests;
+        this.anyRepository = anyRepository;
         this.clock = clock;
         list = new LoadableList<>(
                 Messages.get(scope.titleKey()),
                 scope.id(),
-                read -> read.pullRequests().map(pr -> row(pr, since(pr), anyRepository)),
                 (previous, next, selected) -> LoadableList.Reselect.<PullRequestSummary, String>following(
                                 pr -> pr.repository() + "#" + pr.number())
                         .apply(previous.pullRequests(), next.pullRequests(), selected),
@@ -173,6 +174,7 @@ public final class PullRequestsPanel {
         Loadable<PullRequestList> shown = pullRequests.apply(model.prOverview());
         return list.render(
                 shown,
+                read -> read.pullRequests().map(pr -> row(pr, since(pr), anyRepository)),
                 id().equals(focusedId),
                 id().equals(activeId),
                 Pane.title(title(Messages.get(scope.titleKey()), shown)));

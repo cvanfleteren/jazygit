@@ -449,6 +449,15 @@ classDiagram
   the popup closes. Each feature lists its dialogs, with the pane they give the focus back to, as
   `PopupSlot`s in `XxxDialogs.popups(dispatch)`; `JazygitApp` only names the features.
   A popup that comes up by itself (`Model.openPopupIfFree`), like the outcome of a command or the theme key, does not replace a dialog the user is typing in.
+- **The cursors of the panes and the focus are view state.** The highlighted row of a pane lives in its TamboUI
+  list, not in the `Model`: no update needs to know where it is. What the model needs is the item highlighted,
+  which the panel sends as a `SelectionMsg`. The cursor of a popup's list is the exception, as its update needs it
+  (`ListCursor`).
+  The focus lives in TamboUI's `FocusManager`. The model only remembers, per screen, which pane had it last
+  outside the popups (`Msg.Focused`, `Model.shownPane`, and `PrOverview.listPane` for the list of pull requests in
+  use), so a closing popup or a screen shown again can give it back. No update decides anything on it.
+  Everything else a panel shows comes from the model it is rendered with: the rows of a `LoadableList` are
+  given to `render`, so a panel keeps no copy of the model between renders.
 - **The command log** (`Model.commandLog`) lists every git command that changed the repository, under the
   `Operation` that ran them, whether it succeeded or failed.
 

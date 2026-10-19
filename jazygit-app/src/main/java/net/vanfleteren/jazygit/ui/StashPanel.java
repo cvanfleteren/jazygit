@@ -33,11 +33,7 @@ public final class StashPanel {
      */
     public StashPanel(Consumer<Msg> dispatch, Theme.Highlights highlights) {
         list = new LoadableList<>(
-                Messages.get("panel.stash.title"),
-                ID,
-                stashes -> stashes.zipWithIndex((stash, index) -> LoadableList.Row.of(row(index, stash))),
-                LoadableList.Reselect.following(Stash::sha),
-                highlights);
+                Messages.get("panel.stash.title"), ID, LoadableList.Reselect.following(Stash::sha), highlights);
         list.onKey(event -> PaneKeys.sending(keymap.handle(Scopes.STASH, event, selectedStash()), dispatch));
     }
 
@@ -60,7 +56,11 @@ public final class StashPanel {
      * @param activeId the id of the left pane in use, whose highlighted row shows
      */
     public Panel render(Model model, String focusedId, String activeId) {
-        return list.render(model.repo().stashes(), ID.equals(focusedId), ID.equals(activeId));
+        return list.render(
+                model.repo().stashes(),
+                stashes -> stashes.zipWithIndex((stash, index) -> LoadableList.Row.of(row(index, stash))),
+                ID.equals(focusedId),
+                ID.equals(activeId));
     }
 
     /**

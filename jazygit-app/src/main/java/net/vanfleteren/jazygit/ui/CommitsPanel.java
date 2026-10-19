@@ -24,8 +24,6 @@ public class CommitsPanel {
 
     private final LoadableList<List<Commit>> list;
     private final Keymap keymap = Keymap.standard();
-    // The commit copied to cherry-pick, as the last render's model had it.
-    private Option<Sha> copied = Option.none();
 
     /**
      * @param dispatch   receives the messages for the user's actions, on the render thread
@@ -39,12 +37,7 @@ public class CommitsPanel {
      * @param highlights how the highlighted commit is shown, also when the pane is not in use
      */
     public CommitsPanel(Consumer<Msg> dispatch, Runnable openCommit, Theme.Highlights highlights) {
-        list = new LoadableList<>(
-                Messages.get("panel.commits.title"),
-                ID,
-                commits -> rows(CommitGraph.layout(commits), copied),
-                CommitsPanel::reselect,
-                highlights);
+        list = new LoadableList<>(Messages.get("panel.commits.title"), ID, CommitsPanel::reselect, highlights);
         list.onKey(event -> event.code() == KeyCode.ENTER && selectedCommit().isDefined()
                 ? Option.of(openCommit)
                 : PaneKeys.sending(keymap.handle(Scopes.COMMITS, event, selectedCommit()), dispatch));
@@ -125,8 +118,12 @@ public class CommitsPanel {
      * @param activeId the id of the left pane in use, whose highlighted row shows
      */
     public Panel render(Model model, String focusedId, String activeId) {
-        copied = model.repoView().cherryPick().map(Commit::sha);
-        return list.render(model.repo().commits(), ID.equals(focusedId), ID.equals(activeId));
+        Option<Sha> copied = model.repoView().cherryPick().map(Commit::sha);
+        return list.render(
+                model.repo().commits(),
+                commits -> rows(CommitGraph.layout(commits), copied),
+                ID.equals(focusedId),
+                ID.equals(activeId));
     }
 
     /**

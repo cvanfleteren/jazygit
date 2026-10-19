@@ -8,7 +8,6 @@ import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
-import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Stream;
@@ -17,8 +16,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.git.model.*;
@@ -59,17 +56,7 @@ public class BranchesPanel {
     private final LoadableList<Divergence> divergenceList;
     private final Keymap keymap = Keymap.standard();
     private final Consumer<BranchesTab> tabClicked;
-    // The list the pane shows, as of the last render; the keys of the others do nothing.
-    private BranchesTab tab = BranchesTab.LOCAL;
-    // Whether a local branch follows a remote branch, as of the last render.
-    private Predicate<RemoteBranch> tracked = remote -> false;
-    // The branches an operation runs on, shown with a spinner; the rows are built from it on every render.
-    private Map<BranchRef, Operation> busy = HashMap.empty();
-    // How a branch is doing on GitHub, as of the last render; the rows are built from it on every render.
-    private Function<Branch, List<LoadableList.Seg>> gitHub = branch -> List.empty();
-    private Function<RemoteBranch, List<LoadableList.Seg>> remoteGitHub = remote -> List.empty();
-    // The divergence listed in place of the local branches, as of the last render.
-    private Option<DivergenceView> divergence = Option.none();
+    private final Clock clock;
     // The highlighted row of the divergence at the last render, which tells which way the highlight moved.
     private int divergenceSelected;
     // Which divergence was listed at the last render, by the load that reads it.
@@ -108,78 +95,52 @@ public class BranchesPanel {
             Clock clock,
             Theme.Highlights highlights) {
         this.tabClicked = tabClicked;
-        list = new LoadableList<>(
-                Messages.get("panel.branches.title"),
-                ID,
-                branches -> branches.map(b -> row(
-                        b,
-                        Duration.between(b.tipTime(), clock.instant()),
-                        gitHub.apply(b),
-                        busy.get(new BranchRef.Local(b.name())).map(operation -> spinner(operation, clock.instant())))),
-                BranchesPanel::reselect,
-                highlights);
+        this.clock = clock;
+        // Only the list shown is rendered, that of the tab or the divergence in place of the local branches, so
+        // only it gets keys: TamboUI routes them to the elements of the last frame.
+        list = new LoadableList<>(Messages.get("panel.branches.title"), ID, BranchesPanel::reselect, highlights);
         // The highlight alone marks the selection; a symbol would indent the rows.
         list.highlightSymbol("");
-        list.onKey(event -> Option.when(tab == BranchesTab.LOCAL && divergence.isEmpty(), event)
-                .flatMap(key -> PaneKeys.sending(keymap.handle(Scopes.BRANCHES, key, selectedBranch()), dispatch)));
+        list.onKey(event -> PaneKeys.sending(keymap.handle(Scopes.BRANCHES, event, selectedBranch()), dispatch));
         remoteList = new LoadableList<>(
                 Messages.get("panel.remoteBranches.title"),
                 ID,
-                refs -> refs.map(ref -> remoteRow(
-                        ref,
-                        Duration.between(ref.tipTime(), clock.instant()),
-                        tracked.test(ref.branch()),
-                        remoteGitHub.apply(ref.branch()),
-                        busy.get(new BranchRef.Remote(ref.branch()))
-                                .map(operation -> spinner(operation, clock.instant())))),
                 LoadableList.Reselect.following(RemoteRef::branch),
                 highlights);
         remoteList.highlightSymbol("");
         remoteList.whenEmpty(Messages.get("remoteBranches.empty"));
-        remoteList.onKey(event -> Option.when(tab == BranchesTab.REMOTE, event)
-                .flatMap(key -> PaneKeys.sending(
-                        keymap.handle(Scopes.REMOTE_BRANCHES, key, selectedRemoteBranch()), dispatch)));
+        remoteList.onKey(event ->
+                PaneKeys.sending(keymap.handle(Scopes.REMOTE_BRANCHES, event, selectedRemoteBranch()), dispatch));
         worktreeList = new LoadableList<>(
-                Messages.get("panel.worktrees.title"),
-                ID,
-                worktrees -> worktrees.map(BranchesPanel::worktreeRow),
-                LoadableList.Reselect.following(Worktree::path),
-                highlights);
+                Messages.get("panel.worktrees.title"), ID, LoadableList.Reselect.following(Worktree::path), highlights);
         worktreeList.highlightSymbol("");
         worktreeList.whenEmpty(Messages.get("worktrees.empty"));
-        worktreeList.onKey(event -> Option.when(tab == BranchesTab.WORKTREES, event)
-                .flatMap(key -> PaneKeys.sending(keymap.handle(Scopes.WORKTREES, key, selectedWorktree()), dispatch)));
+        worktreeList.onKey(
+                event -> PaneKeys.sending(keymap.handle(Scopes.WORKTREES, event, selectedWorktree()), dispatch));
         divergenceList = new LoadableList<>(
                 Messages.get("panel.divergence.title"),
                 ID,
-                commits -> divergence
-                        .map(view -> entries(view, commits).map(BranchesPanel::divergenceRow))
-                        .getOrElse(List.empty()),
-                (previous, next, selected) -> divergence
-                        .map(view -> LoadableList.Reselect.following(BranchesPanel::identity)
-                                .apply(entries(view, previous), entries(view, next), selected))
-                        .getOrElse(selected),
+                (previous, next, selected) -> LoadableList.Reselect.following(BranchesPanel::identity)
+                        .apply(entries(previous), entries(next), selected),
                 highlights);
         divergenceList.highlightSymbol("");
-        divergenceList.onKey(event -> Option.when(divergence.isDefined(), event)
-                .flatMap(key -> key.code() == KeyCode.ENTER
-                        ? selectedDivergenceCommit().map(commit -> openCommit)
-                        : PaneKeys.sending(
-                                keymap.handle(Scopes.DIVERGENCE, key, selectedDivergenceCommit()), dispatch)));
+        divergenceList.onKey(event -> event.code() == KeyCode.ENTER
+                ? selectedDivergenceCommit().map(commit -> openCommit)
+                : PaneKeys.sending(keymap.handle(Scopes.DIVERGENCE, event, selectedDivergenceCommit()), dispatch));
     }
 
     /**
      * The rows of a divergence: the commits only on the branch it is compared with, then the ones only on the
-     * local branch, each under the name of their branch, with a line when there are none or more than are listed.
+     * local branch, each under a header for their branch, with a line when there are none or more than are listed.
      */
-    static List<DivergenceEntry> entries(DivergenceView view, Divergence divergence) {
-        return side(view.other().name(), false, divergence.behind(), divergence.behindCount())
-                .appendAll(side(view.branch().value(), true, divergence.ahead(), divergence.aheadCount()));
+    static List<DivergenceEntry> entries(Divergence divergence) {
+        return side(false, divergence.behind(), divergence.behindCount())
+                .appendAll(side(true, divergence.ahead(), divergence.aheadCount()));
     }
 
-    private static List<DivergenceEntry> side(String branch, boolean ahead, List<Commit> commits, int count) {
+    private static List<DivergenceEntry> side(boolean ahead, List<Commit> commits, int count) {
         List<CommitGraph.Node> nodes = CommitGraph.layout(commits);
-        return List.<DivergenceEntry>of(new DivergenceEntry.Header(branch))
+        return List.<DivergenceEntry>of(new DivergenceEntry.Header(ahead))
                 .appendAll(nodes.zipWith(
                         nodes.map(CommitGraph.Node::closesBranch).prepend(false),
                         (node, joins) -> new DivergenceEntry.Shown(node, joins, ahead)))
@@ -197,10 +158,14 @@ public class BranchesPanel {
                 : entry;
     }
 
-    static LoadableList.Row divergenceRow(DivergenceEntry entry) {
+    /**
+     * @param view the divergence the row is of, which names its branches
+     */
+    static LoadableList.Row divergenceRow(DivergenceView view, DivergenceEntry entry) {
         return switch (entry) {
-            case DivergenceEntry.Header(String branch) ->
-                LoadableList.Row.of(LoadableList.Seg.styled("── " + branch, Theme.Classes.BOLD));
+            case DivergenceEntry.Header(boolean ahead) ->
+                LoadableList.Row.of(LoadableList.Seg.styled(
+                        "── " + (ahead ? view.branch().value() : view.other().name()), Theme.Classes.BOLD));
             case DivergenceEntry.Shown(CommitGraph.Node node, boolean joins, boolean ahead) ->
                 new LoadableList.Row(List.of(
                                 ahead
@@ -428,17 +393,10 @@ public class BranchesPanel {
      * @param activeId the id of the left pane in use, whose highlighted row shows
      */
     public Panel render(Model model, String focusedId, String activeId) {
-        busy = model.jobs().busy();
-        gitHub = branch ->
-                gitHub(model.gitHub().pullRequest(branch), model.gitHub().checks(branch));
-        remoteGitHub = remote ->
-                gitHub(model.gitHub().pullRequest(remote), model.gitHub().checks(remote));
-        tab = model.repoView().branchesTab();
-        tracked = remote -> model.repo().trackingBranch(remote).isDefined();
+        BranchesTab tab = model.repoView().branchesTab();
         boolean focused = ID.equals(focusedId);
         boolean active = ID.equals(activeId);
-        divergence = Option.when(tab == BranchesTab.LOCAL, model.repoView()::divergence)
-                .flatMap(open -> open);
+        Option<DivergenceView> divergence = divergence(model);
         if (divergence.isDefined()) {
             DivergenceView view = divergence.get();
             if (!divergenceShown.contains(view.load())) {
@@ -449,20 +407,55 @@ public class BranchesPanel {
             }
             Panel panel = divergenceList.render(
                     view.commits(),
+                    commits -> entries(commits).map(entry -> divergenceRow(view, entry)),
                     focused,
                     active,
                     Pane.title(Messages.get(
                             "panel.divergence.titleFor",
                             view.branch().value(),
                             view.other().name())));
-            skipToCommit();
+            skipToCommit(view);
             return panel;
         }
         divergenceShown = Option.none();
+        Instant now = clock.instant();
+        Map<BranchRef, Operation> busy = model.jobs().busy();
         Panel panel = switch (tab) {
-            case LOCAL -> list.render(model.repo().branches(), focused, active, title(tab));
-            case REMOTE -> remoteList.render(model.repo().remoteBranches(), focused, active, title(tab));
-            case WORKTREES -> worktreeList.render(model.repo().worktrees(), focused, active, title(tab));
+            case LOCAL ->
+                list.render(
+                        model.repo().branches(),
+                        branches -> branches.map(b -> row(
+                                b,
+                                Duration.between(b.tipTime(), now),
+                                gitHub(
+                                        model.gitHub().pullRequest(b),
+                                        model.gitHub().checks(b)),
+                                busy.get(new BranchRef.Local(b.name())).map(operation -> spinner(operation, now)))),
+                        focused,
+                        active,
+                        title(tab));
+            case REMOTE ->
+                remoteList.render(
+                        model.repo().remoteBranches(),
+                        refs -> refs.map(ref -> remoteRow(
+                                ref,
+                                Duration.between(ref.tipTime(), now),
+                                model.repo().trackingBranch(ref.branch()).isDefined(),
+                                gitHub(
+                                        model.gitHub().pullRequest(ref.branch()),
+                                        model.gitHub().checks(ref.branch())),
+                                busy.get(new BranchRef.Remote(ref.branch()))
+                                        .map(operation -> spinner(operation, now)))),
+                        focused,
+                        active,
+                        title(tab));
+            case WORKTREES ->
+                worktreeList.render(
+                        model.repo().worktrees(),
+                        worktrees -> worktrees.map(BranchesPanel::worktreeRow),
+                        focused,
+                        active,
+                        title(tab));
         };
         return panel.onMouseEvent(event -> titleClick(panel.renderedArea(), event));
     }
@@ -471,11 +464,10 @@ public class BranchesPanel {
      * Moves the highlight off a row of the divergence that is not a commit, to the nearest commit the way it
      * moved, else the other way; when there are no commits, it stays.
      */
-    private void skipToCommit() {
-        List<Boolean> commits = divergence
-                .flatMap(view -> view.commits()
-                        .toOption()
-                        .map(shown -> entries(view, shown).map(DivergenceEntry.Shown.class::isInstance)))
+    private void skipToCommit(DivergenceView view) {
+        List<Boolean> commits = view.commits()
+                .toOption()
+                .map(shown -> entries(shown).map(DivergenceEntry.Shown.class::isInstance))
                 .getOrElse(List.empty());
         int at = divergenceList.selectedIndex();
         int way = at >= divergenceSelected ? 1 : -1;
@@ -512,13 +504,13 @@ public class BranchesPanel {
     }
 
     /**
-     * The index of the currently highlighted branch in the list shown, never negative.
+     * The index of the currently highlighted branch in the list {@code model} shows, never negative.
      */
-    public int selectedIndex() {
-        if (divergence.isDefined()) {
+    public int selectedIndex(Model model) {
+        if (divergence(model).isDefined()) {
             return divergenceList.selectedIndex();
         }
-        return switch (tab) {
+        return switch (model.repoView().branchesTab()) {
             case LOCAL -> list.selectedIndex();
             case REMOTE -> remoteList.selectedIndex();
             case WORKTREES -> worktreeList.selectedIndex();
@@ -543,11 +535,19 @@ public class BranchesPanel {
      * The highlighted commit of the divergence, once one is shown.
      */
     public Option<Commit> selectedDivergenceCommit() {
-        return divergence.flatMap(view -> divergenceList
-                .selected(shown -> entries(view, shown))
+        return divergenceList
+                .selected(BranchesPanel::entries)
                 .filter(DivergenceEntry.Shown.class::isInstance)
                 .map(DivergenceEntry.Shown.class::cast)
-                .map(shown -> shown.node().commit()));
+                .map(shown -> shown.node().commit());
+    }
+
+    /**
+     * The divergence {@code model} lists in place of the local branches, if any.
+     */
+    private static Option<DivergenceView> divergence(Model model) {
+        return Option.when(model.repoView().branchesTab() == BranchesTab.LOCAL, model.repoView()::divergence)
+                .flatMap(open -> open);
     }
 
     /**
@@ -562,8 +562,7 @@ public class BranchesPanel {
      * holds.
      */
     public Option<Msg> selectionChange(Model model) {
-        if (model.repoView().branchesTab() == BranchesTab.LOCAL
-                && model.repoView().divergence().isDefined()) {
+        if (divergence(model).isDefined()) {
             return PaneKeys.selectionChange(
                     selectedDivergenceCommit().map(Commit::sha),
                     model.repoView().divergence().flatMap(DivergenceView::detail),
@@ -584,9 +583,11 @@ public class BranchesPanel {
     sealed interface DivergenceEntry {
 
         /**
-         * The name of the branch the commits below are only on.
+         * The header of the branch the commits below are only on.
+         *
+         * @param ahead whether it is the local branch, rather than the one it is compared with
          */
-        record Header(String branch) implements DivergenceEntry {}
+        record Header(boolean ahead) implements DivergenceEntry {}
 
         /**
          * A commit only on one of the branches.

@@ -25,7 +25,6 @@ final class LoadableList<T> {
 
     private final String title;
     private final ListElement<?> list;
-    private final Function<T, List<Row>> items;
     private final Reselect<T> reselect;
     private final Theme.Highlights highlights;
     // TamboUI's default, which indents every row.
@@ -37,14 +36,12 @@ final class LoadableList<T> {
     private Option<String> empty = Option.none();
     private boolean focused;
 
-    LoadableList(String title, String id, Function<T, List<Row>> items, Theme.Highlights highlights) {
-        this(title, id, items, (previous, next, selected) -> selected, highlights);
+    LoadableList(String title, String id, Theme.Highlights highlights) {
+        this(title, id, (previous, next, selected) -> selected, highlights);
     }
 
-    LoadableList(
-            String title, String id, Function<T, List<Row>> items, Reselect<T> reselect, Theme.Highlights highlights) {
+    LoadableList(String title, String id, Reselect<T> reselect, Theme.Highlights highlights) {
         this.title = title;
-        this.items = items;
         this.reselect = reselect;
         this.highlights = highlights;
         this.list = list().id(id)
@@ -55,30 +52,32 @@ final class LoadableList<T> {
     }
 
     /**
+     * @param items   the rows of the loaded value; given on every render, so they can depend on more than the
+     *                value, like the model they are drawn from
      * @param focused whether the list has the focus, which its keys need
      * @param active  whether the list is the one in use, which shows its selection: also while what it
      *                selects or a popup opened from it has the focus
      */
-    Panel render(Loadable<T> value, boolean focused, boolean active) {
-        return render(value, focused, active, Pane.title(title));
+    Panel render(Loadable<T> value, Function<T, List<Row>> items, boolean focused, boolean active) {
+        return render(value, items, focused, active, Pane.title(title));
     }
 
     /**
      * @param title the title to show instead of the one the list was made with
      */
-    Panel render(Loadable<T> value, boolean focused, boolean active, Line title) {
+    Panel render(Loadable<T> value, Function<T, List<Row>> items, boolean focused, boolean active, Line title) {
         this.focused = focused;
         list.highlightStyle(highlights.of(active))
                 .highlightSymbol(active ? highlightSymbol : " ".repeat(highlightSymbol.length()));
-        List<Row> items = value.toOption().map(this.items).getOrElse(List.empty());
+        List<Row> itemRows = value.toOption().map(items).getOrElse(List.empty());
         List<Row> rows = switch (value) {
             case Loadable.Loading<T>() -> List.of(Row.of(Placeholders.loading()));
             case Loadable.Failed<T>(Failure failure) -> List.of(Row.of(Placeholders.error(failure)));
             case Loadable.Loaded<T>(T loaded)
-            when items.isEmpty() ->
+            when itemRows.isEmpty() ->
                 empty.map(text -> List.of(Row.of(Seg.styled(text, Theme.Classes.DIM))))
-                        .getOrElse(items);
-            case Loadable.Loaded<T>(T loaded) -> items;
+                        .getOrElse(itemRows);
+            case Loadable.Loaded<T>(T loaded) -> itemRows;
         };
         if (!shown.exists(previous -> previous == value)) {
             Option<T> before = shown.flatMap(Loadable::toOption);
@@ -89,7 +88,7 @@ final class LoadableList<T> {
             if (list.selected() >= rows.size()) {
                 list.selected(Math.max(0, rows.size() - 1));
             }
-            count = value.toOption().map(loaded -> items.size());
+            count = value.toOption().map(loaded -> itemRows.size());
         } else if (!rows.equals(shownRows)) {
             // The rows can depend on more than the value, e.g. on the time.
             show(rows);

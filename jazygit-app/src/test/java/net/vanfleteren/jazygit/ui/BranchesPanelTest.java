@@ -594,16 +594,16 @@ class BranchesPanelTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(diverged, BranchesPanel.ID))) {
             SettledPilot.focus(testRunner, BranchesPanel.ID);
             String screen = RenderedText.ofLarge(testRunner, () -> panel.render(diverged, BranchesPanel.ID));
-            highlighted.add(panel.selectedIndex());
+            highlighted.add(panel.selectedIndex(diverged));
             assertEquals(
                     Option.of(new SelectionMsg.DivergenceCommitSelected(new Sha("b1"))),
                     panel.selectionChange(diverged));
             SettledPilot.of(testRunner).press(KeyCode.DOWN);
             SettledPilot.of(testRunner).pause();
-            highlighted.add(panel.selectedIndex());
+            highlighted.add(panel.selectedIndex(diverged));
             SettledPilot.of(testRunner).press(KeyCode.UP);
             SettledPilot.of(testRunner).pause();
-            highlighted.add(panel.selectedIndex());
+            highlighted.add(panel.selectedIndex(diverged));
             SettledPilot.of(testRunner).press(KeyCode.ENTER);
             SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
             SettledPilot.of(testRunner).press(']');
@@ -629,8 +629,8 @@ class BranchesPanelTest {
                 new Branch.Name("feature"), new BranchRef.Local(new Branch.Name("main")), DivergenceView.Against.BASE);
         Commit ours = new Commit(new Sha("a1"), "Ada", "a@x", java.time.Instant.EPOCH, "Ours", "");
 
-        List<String> rows = BranchesPanel.entries(view, new Divergence(List.of(ours), 400, List.of(), 0))
-                .map(BranchesPanel::divergenceRow)
+        List<String> rows = BranchesPanel.entries(new Divergence(List.of(ours), 400, List.of(), 0))
+                .map(entry -> BranchesPanel.divergenceRow(view, entry))
                 .map(LoadableList.Row::text);
 
         assertEquals(List.of("── main", "  no commits", "── feature", "↑ a1 Ad ○ Ours", "  … 399 more"), rows);
@@ -644,7 +644,7 @@ class BranchesPanelTest {
                 SettledPilot.of(testRunner).press(KeyCode.DOWN);
             }
             SettledPilot.of(testRunner).pause();
-            assertEquals(index, panel.selectedIndex());
+            assertEquals(index, panel.selectedIndex(before));
 
             RenderedText.of(testRunner, () -> panel.render(after, BranchesPanel.ID));
             SettledPilot.of(testRunner).quit();

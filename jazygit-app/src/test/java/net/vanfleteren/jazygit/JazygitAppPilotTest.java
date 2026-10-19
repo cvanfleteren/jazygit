@@ -183,15 +183,18 @@ class JazygitAppPilotTest {
 
             Pilot pilot = SettledPilot.of(testRunner);
             pilot.pause();
-            assertEquals(0, fixture.branches().selectedIndex());
+            assertEquals(0, fixture.branches().selectedIndex(fixture.model()));
 
             pilot.press(KeyCode.UP);
             pilot.pause();
-            assertEquals(0, fixture.branches().selectedIndex(), "selection should not go below the first item");
+            assertEquals(
+                    0,
+                    fixture.branches().selectedIndex(fixture.model()),
+                    "selection should not go below the first item");
 
             pilot.press(KeyCode.DOWN);
             pilot.pause();
-            assertEquals(1, fixture.branches().selectedIndex());
+            assertEquals(1, fixture.branches().selectedIndex(fixture.model()));
 
             int branchCount = fixture.data().branches().get().size();
             for (int i = 0; i < branchCount + 5; i++) {
@@ -199,7 +202,9 @@ class JazygitAppPilotTest {
             }
             pilot.pause();
             assertEquals(
-                    branchCount - 1, fixture.branches().selectedIndex(), "selection should clamp at the last item");
+                    branchCount - 1,
+                    fixture.branches().selectedIndex(fixture.model()),
+                    "selection should clamp at the last item");
 
             assertEquals(0, fixture.commits().selectedIndex(), "an unfocused pane's selection should be unaffected");
 
