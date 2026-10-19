@@ -11,7 +11,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  verify:
+    uses: ./.github/workflows/build.yml
+    permissions:
+      contents: read
+
   snapshot:
+    needs: verify
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
@@ -26,10 +32,11 @@ jobs:
           cache: maven
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      # The verify job already ran the tests and checks.
       - name: Build fat-jar and native image
         run: |
-          mvn --batch-mode --no-transfer-progress -Pnative verify
-          version=$(mvn --batch-mode --no-transfer-progress -N help:evaluate -Dexpression=project.version -q -DforceStdout)
+          ./mvnw --batch-mode --no-transfer-progress -Pnative package -DskipTests
+          version=$(./mvnw --batch-mode --no-transfer-progress -N help:evaluate -Dexpression=project.version -q -DforceStdout)
           mv jazygit-app/target/jazygit "jazygit-app/target/jazygit-$version-linux-x86_64"
 
       - name: Replace the rolling snapshot release
@@ -44,6 +51,7 @@ jobs:
             --notes "Automated build of main at $GITHUB_SHA"
 
   release:
+    needs: verify
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     permissions:
@@ -61,12 +69,13 @@ jobs:
       - name: Set version from the release tag
         run: |
           version="${GITHUB_REF_NAME#v}"
-          mvn --batch-mode --no-transfer-progress versions:set -DnewVersion="$version" -DgenerateBackupPoms=false
+          ./mvnw --batch-mode --no-transfer-progress versions:set -DnewVersion="$version" -DgenerateBackupPoms=false
 
+      # The verify job already ran the tests and checks.
       - name: Build fat-jar and native image
         run: |
-          mvn --batch-mode --no-transfer-progress -Pnative verify
-          version=$(mvn --batch-mode --no-transfer-progress -N help:evaluate -Dexpression=project.version -q -DforceStdout)
+          ./mvnw --batch-mode --no-transfer-progress -Pnative package -DskipTests
+          version=$(./mvnw --batch-mode --no-transfer-progress -N help:evaluate -Dexpression=project.version -q -DforceStdout)
           mv jazygit-app/target/jazygit "jazygit-app/target/jazygit-$version-linux-x86_64"
 
       - name: Attach fat-jar and native image to the release
