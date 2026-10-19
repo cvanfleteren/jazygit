@@ -25,7 +25,8 @@ import net.vanfleteren.jazygit.ui.widgets.PopupView;
  * Popup asking what a new pull request says: its title, which starts out as the subject of the oldest commit of
  * the branch, its body, which starts out empty, and whether it is a draft. Tab goes from one field to the next; space
  * or Enter on the draft box ticks it. Enter in the title, or Ctrl+S anywhere, creates the pull request; Escape
- * cancels. Whether it is open lives in the {@link Model}; what is typed and ticked lives in the widgets.
+ * cancels. What is typed and ticked lives in the {@link Model}, which every change is sent to; the fields only keep
+ * where their cursor is.
  */
 public final class NewPullRequestDialog implements PopupView {
 
@@ -52,8 +53,6 @@ public final class NewPullRequestDialog implements PopupView {
     private final TextInputState title = new TextInputState();
     private final TextAreaState body = new TextAreaState();
     private final Consumer<Msg> dispatch;
-    private boolean draft;
-    private Option<NewPullRequestPopup> shownFor = Option.none();
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
@@ -75,15 +74,15 @@ public final class NewPullRequestDialog implements PopupView {
      */
     @Override
     public Option<Element> render(Model model) {
-        Option<NewPullRequestPopup> popup = model.popup(NewPullRequestPopup.class);
-        boolean opened = popup.isDefined() && !shownFor.equals(popup);
-        shownFor = popup;
-        return popup.map(open -> {
-            if (opened) {
-                title.setText(open.title());
+        return model.popup(NewPullRequestPopup.class).map(open -> {
+            NewPullRequest pullRequest = open.pullRequest();
+            // The fields show what the model has: what was typed in them, or what the popup opened with.
+            if (!title.text().equals(pullRequest.title())) {
+                title.setText(pullRequest.title());
                 title.moveCursorToEnd();
-                body.clear();
-                draft = false;
+            }
+            if (!body.text().equals(pullRequest.body())) {
+                body.setText(pullRequest.body());
             }
             return new HintedDialog(
                     DialogFrame.of(
@@ -93,14 +92,15 @@ public final class NewPullRequestDialog implements PopupView {
                                     open.base().value()),
                             WIDTH,
                             new LineEditInput(
-                                    textInput(title)
-                                            .title(Messages.get("dialog.newPullRequest.titleField"))
-                                            .placeholder(Messages.get("dialog.newPullRequest.titlePlaceholder"))
-                                            .length(INPUT_HEIGHT)
-                                            .onSubmit(this::confirm)
-                                            .onKeyEvent(this::keys),
-                                    title,
-                                    ID),
+                                            textInput(title)
+                                                    .title(Messages.get("dialog.newPullRequest.titleField"))
+                                                    .placeholder(Messages.get("dialog.newPullRequest.titlePlaceholder"))
+                                                    .length(INPUT_HEIGHT)
+                                                    .onSubmit(this::confirm)
+                                                    .onKeyEvent(this::keys),
+                                            title,
+                                            ID)
+                                    .onChange(text -> edited(pullRequest.draft())),
                             new SubmittableTextArea(
                                             textArea(body)
                                                     .title(Messages.get("dialog.newPullRequest.body"))
@@ -108,16 +108,17 @@ public final class NewPullRequestDialog implements PopupView {
                                             body,
                                             BODY_ID,
                                             this::confirm)
+                                    .onChange(text -> edited(pullRequest.draft()))
                                     .rows(BODY_HEIGHT)
                                     .onKeyEvent(this::keys),
                             // The box itself takes the focus, which the themes show by reversing it, as a cursor.
                             panel(row(
-                                            text(box(draft))
+                                            text(box(pullRequest.draft()))
                                                     .id(DRAFT_ID)
                                                     .addClass(CHECKBOX)
                                                     .focusable()
                                                     .length(BOX_WIDTH)
-                                                    .onKeyEvent(this::draftKeys),
+                                                    .onKeyEvent(event -> draftKeys(event, pullRequest.draft())),
                                             text(" " + Messages.get("dialog.newPullRequest.draft"))))
                                     .length(INPUT_HEIGHT)),
                     Messages.get("dialog.newPullRequest.hint"));
@@ -134,9 +135,9 @@ public final class NewPullRequestDialog implements PopupView {
     /**
      * Ticks or unticks the draft box on space or Enter; the other keys are those of every field.
      */
-    private EventResult draftKeys(KeyEvent event) {
+    private EventResult draftKeys(KeyEvent event, boolean draft) {
         if (event.code() == KeyCode.ENTER || (event.isChar(' ') && !event.hasCtrl() && !event.hasAlt())) {
-            draft = !draft;
+            edited(!draft);
             return EventResult.HANDLED;
         }
         return keys(event);
@@ -158,8 +159,17 @@ public final class NewPullRequestDialog implements PopupView {
         return EventResult.UNHANDLED;
     }
 
+    /**
+     * Tells the model what the pull request says now. The text comes from the fields, which hold every key typed so
+     * far, also those typed since the model was last rendered.
+     */
+    private void edited(boolean draft) {
+        dispatch.accept(
+                new CreatePullRequestMsg.PullRequestEdited(new NewPullRequest(title.text(), body.text(), draft)));
+    }
+
     private void confirm() {
         // A blank title keeps the popup open, see CreatePullRequestUpdate.
-        dispatch.accept(new CreatePullRequestMsg.Confirmed(new NewPullRequest(title.text(), body.text(), draft)));
+        dispatch.accept(new CreatePullRequestMsg.Confirmed());
     }
 }

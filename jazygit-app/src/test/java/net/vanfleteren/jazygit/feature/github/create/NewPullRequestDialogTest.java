@@ -10,12 +10,14 @@ import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
+import io.vavr.control.Option;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.Theme;
@@ -29,10 +31,19 @@ import org.junit.jupiter.api.Test;
 class NewPullRequestDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final NewPullRequestDialog dialog = new NewPullRequestDialog(dispatched::add);
-    private final Model open = TestModels.loaded()
+    private Model model = TestModels.loaded()
             .openPopup(new NewPullRequestPopup(
-                    new Branch.Name("feature"), new Branch.Name("feature"), new Branch.Name("main"), "Add login"));
+                    new Branch.Name("feature"),
+                    new Branch.Name("feature"),
+                    new Branch.Name("main"),
+                    new NewPullRequest("Add login", "", false)));
+    // As in the app, an edit changes the model the popup shows; the other messages are only kept.
+    private final NewPullRequestDialog dialog = new NewPullRequestDialog(msg -> {
+        dispatched.add(msg);
+        if (msg instanceof CreatePullRequestMsg.PullRequestEdited) {
+            model = Update.update(model, msg).model();
+        }
+    });
 
     private static void type(ToolkitTestRunner runner, String text) throws Exception {
         for (char c : text.toCharArray()) {
@@ -67,13 +78,11 @@ class NewPullRequestDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(
-                java.util.List.of(new CreatePullRequestMsg.Confirmed(new NewPullRequest("Add login", "", false))),
-                dispatched);
+        assertEquals(java.util.List.of(new CreatePullRequestMsg.Confirmed()), dispatched);
     }
 
     @Test
-    void theBodyAndTheDraftBoxAreTakenAlong() throws Exception {
+    void whatIsTypedAndTickedGoesToTheModel() throws Exception {
         try (ToolkitTestRunner runner = start()) {
             // The app's global Ctrl+S opens the settings, after the fields had their chance.
             runner.runner()
@@ -96,9 +105,9 @@ class NewPullRequestDialogTest {
         }
 
         assertEquals(
-                java.util.List.of(
-                        new CreatePullRequestMsg.Confirmed(new NewPullRequest("Add login!", "Why\nit matters", true))),
-                dispatched);
+                Option.of(new NewPullRequest("Add login!", "Why\nit matters", true)),
+                model.popup(NewPullRequestPopup.class).map(NewPullRequestPopup::pullRequest));
+        assertEquals(new CreatePullRequestMsg.Confirmed(), dispatched.getLast());
     }
 
     @Test
@@ -162,6 +171,6 @@ class NewPullRequestDialogTest {
     }
 
     private Element view() {
-        return dialog.render(open).get();
+        return dialog.render(model).get();
     }
 }

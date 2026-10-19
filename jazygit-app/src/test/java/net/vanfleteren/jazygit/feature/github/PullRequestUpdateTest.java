@@ -145,7 +145,8 @@ class PullRequestUpdateTest {
                 model(), new CreatePullRequestMsg.TitleRead(FEATURE, FEATURE, MAIN.name(), Option.of("Add login")));
 
         assertEquals(
-                Option.of(new NewPullRequestPopup(FEATURE, FEATURE, MAIN.name(), "Add login")),
+                Option.of(new NewPullRequestPopup(
+                        FEATURE, FEATURE, MAIN.name(), new NewPullRequest("Add login", "", false))),
                 asking.model().popup());
         assertEquals(List.empty(), asking.cmds());
     }
@@ -156,7 +157,8 @@ class PullRequestUpdateTest {
                 model(), new CreatePullRequestMsg.TitleRead(FEATURE, FEATURE, MAIN.name(), Option.none()));
 
         assertEquals(
-                Option.of(new NewPullRequestPopup(FEATURE, FEATURE, MAIN.name(), "feature")),
+                Option.of(new NewPullRequestPopup(
+                        FEATURE, FEATURE, MAIN.name(), new NewPullRequest("feature", "", false))),
                 asking.model().popup());
     }
 
@@ -164,7 +166,7 @@ class PullRequestUpdateTest {
     void confirmingCreatesThePullRequestAsEnteredAndKeepsTheBranchBusy() {
         NewPullRequest entered = new NewPullRequest(" Add login ", "Why", true);
 
-        Next created = Update.update(creating(), new CreatePullRequestMsg.Confirmed(entered));
+        Next created = confirmed(entered);
 
         assertEquals(
                 List.of(new CreatePullRequest(
@@ -178,10 +180,32 @@ class PullRequestUpdateTest {
 
     @Test
     void aBlankTitleKeepsThePopupOpen() {
-        Next next = Update.update(creating(), new CreatePullRequestMsg.Confirmed(new NewPullRequest(" ", "", false)));
+        Next next = confirmed(new NewPullRequest(" ", "", false));
 
         assertEquals(List.empty(), next.cmds());
         assertTrue(next.model().popup(NewPullRequestPopup.class).isDefined());
+    }
+
+    @Test
+    void editingKeepsWhatThePullRequestSaysInThePopup() {
+        NewPullRequest edited = new NewPullRequest("Add login!", "Why", true);
+
+        Next next = Update.update(creating(), new CreatePullRequestMsg.PullRequestEdited(edited));
+
+        assertEquals(
+                Option.of(edited), next.model().popup(NewPullRequestPopup.class).map(NewPullRequestPopup::pullRequest));
+        assertEquals(List.empty(), next.cmds());
+    }
+
+    @Test
+    void anEditAfterThePopupClosedIsIgnored() {
+        Model closed =
+                Update.update(creating(), new CreatePullRequestMsg.Cancelled()).model();
+
+        assertEquals(
+                closed,
+                Update.update(closed, new CreatePullRequestMsg.PullRequestEdited(new NewPullRequest("x", "", false)))
+                        .model());
     }
 
     @Test
@@ -191,6 +215,15 @@ class PullRequestUpdateTest {
                 Update.update(creating(), new CreatePullRequestMsg.Cancelled())
                         .model()
                         .popup());
+    }
+
+    /**
+     * Confirming {@code pullRequest} as what the new pull request of the feature branch into main says.
+     */
+    private static Next confirmed(NewPullRequest pullRequest) {
+        Model edited = Update.update(creating(), new CreatePullRequestMsg.PullRequestEdited(pullRequest))
+                .model();
+        return Update.update(edited, new CreatePullRequestMsg.Confirmed());
     }
 
     /**
@@ -522,8 +555,7 @@ class PullRequestUpdateTest {
     void aCreatedPullRequestIsLoggedAndThePullRequestsAreReadAgain() {
         CreatePullRequest cmd =
                 new CreatePullRequest(FEATURE, FEATURE, MAIN.name(), new NewPullRequest("Login", "", true));
-        Model creating = Update.update(creating(), new CreatePullRequestMsg.Confirmed(cmd.pullRequest()))
-                .model();
+        Model creating = confirmed(cmd.pullRequest()).model();
 
         Next done = Update.update(creating, cmd.run(new Env(new StubGitProvider() {}, StubGitHub.empty())));
 
@@ -540,8 +572,7 @@ class PullRequestUpdateTest {
         CreatePullRequest cmd =
                 new CreatePullRequest(FEATURE, FEATURE, MAIN.name(), new NewPullRequest("Login", "", false));
         PullRequest created = new PullRequest(43, "feature", false, Checks.NONE, Review.NONE);
-        Model creating = Update.update(creating(), new CreatePullRequestMsg.Confirmed(cmd.pullRequest()))
-                .model();
+        Model creating = confirmed(cmd.pullRequest()).model();
 
         Next done = Update.update(creating, new CreatePullRequestMsg.Created(cmd, Option.of(created), List.empty()));
 

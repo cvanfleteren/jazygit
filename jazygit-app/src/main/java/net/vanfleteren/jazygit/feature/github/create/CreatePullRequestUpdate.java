@@ -32,24 +32,24 @@ public final class CreatePullRequestUpdate {
             case BaseCancelled() -> Next.of(model.withoutPopup(BasePopup.class));
             // Without a commit of its own to name it after, it is named after the branch, as gh would.
             case TitleRead(var branch, var head, var base, var subject) ->
-                Next.of(model.openPopupIfFree(
-                        new NewPullRequestPopup(branch, head, base, subject.getOrElse(branch::value))));
+                Next.of(model.openPopupIfFree(new NewPullRequestPopup(
+                        branch, head, base, new NewPullRequest(subject.getOrElse(branch::value), "", false))));
+            case PullRequestEdited(NewPullRequest pullRequest) ->
+                Next.of(model.popup(NewPullRequestPopup.class)
+                        .map(popup -> model.openPopup(popup.withPullRequest(pullRequest)))
+                        .getOrElse(model));
             // A blank title keeps the popup open, as GitHub needs one.
-            case Confirmed(NewPullRequest pullRequest) when pullRequest.title().isBlank() -> Next.of(model);
-            case Confirmed(NewPullRequest pullRequest) ->
+            case Confirmed()
+            when model.popup(NewPullRequestPopup.class)
+                    .exists(popup -> popup.pullRequest().title().isBlank()) -> Next.of(model);
+            case Confirmed() ->
                 Update.confirm(
                         model,
                         NewPullRequestPopup.class,
                         popup -> model.repo()
                                 .branch(popup.branch())
                                 .map(known -> new CreatePullRequest(
-                                        popup.branch(),
-                                        popup.head(),
-                                        popup.base(),
-                                        new NewPullRequest(
-                                                pullRequest.title().strip(),
-                                                pullRequest.body(),
-                                                pullRequest.draft()))));
+                                        popup.branch(), popup.head(), popup.base(), stripped(popup.pullRequest()))));
             case Cancelled() -> Next.of(model.withoutPopup(NewPullRequestPopup.class));
             case Created(CreatePullRequest cmd, var pullRequest, var commands) -> {
                 // Done like any operation. The new pull request shows at once, as GitHub may not list it yet;
@@ -65,6 +65,13 @@ public final class CreatePullRequestUpdate {
                 yield FetchUpdate.requested(PullRequestsUpdate.loadAnyway(new Next(shown, done.cmds())));
             }
         };
+    }
+
+    /**
+     * {@code pullRequest} without the whitespace around its title.
+     */
+    private static NewPullRequest stripped(NewPullRequest pullRequest) {
+        return new NewPullRequest(pullRequest.title().strip(), pullRequest.body(), pullRequest.draft());
     }
 
     /**

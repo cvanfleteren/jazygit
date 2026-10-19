@@ -12,6 +12,7 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.widgets.input.TextAreaState;
 import io.vavr.control.Option;
+import java.util.function.Consumer;
 import net.vanfleteren.jazygit.ui.edit.LineEdit;
 import net.vanfleteren.jazygit.ui.widgets.BottomTitle;
 
@@ -21,13 +22,14 @@ import net.vanfleteren.jazygit.ui.widgets.BottomTitle;
  * every Enter into a newline, whatever the modifiers, and handles its keys before any handler that
  * can be attached to it; so this element registers itself with the same id, ahead of the text area,
  * to see the keys first. It also knows the {@link LineEdit readline keys}, which the text area would take as
- * plain ones.
+ * plain ones. It hands the other keys on to the text area itself, so it can tell when the text changed.
  */
 public final class SubmittableTextArea extends StyledElement<SubmittableTextArea> {
 
     private final TextAreaElement area;
     private final TextAreaState state;
     private final Runnable onSubmit;
+    private Consumer<String> onChange = text -> {};
     // The rows the text area takes, borders included, if it is told.
     private Option<Integer> height = Option.none();
     // Shown in the bottom border, if any.
@@ -61,14 +63,31 @@ public final class SubmittableTextArea extends StyledElement<SubmittableTextArea
         return this;
     }
 
+    /**
+     * Calls {@code onChange} with the text whenever a key changed it.
+     */
+    public SubmittableTextArea onChange(Consumer<String> onChange) {
+        this.onChange = onChange;
+        return this;
+    }
+
     @Override
     public EventResult handleKeyEvent(KeyEvent event, boolean focused) {
-        if (focused && event.code() == KeyCode.ENTER && event.hasCtrl()) {
+        if (!focused) {
+            return EventResult.UNHANDLED;
+        }
+        if (event.code() == KeyCode.ENTER && event.hasCtrl()) {
             onSubmit.run();
             return EventResult.HANDLED;
         }
-        // The text area itself is registered under the same id, and is tried next.
-        return focused && LineEdit.handle(state, event) ? EventResult.HANDLED : EventResult.UNHANDLED;
+        String before = state.text();
+        // Left unhandled, the text area itself, registered under the same id, is tried next, then its handlers.
+        boolean handled = LineEdit.handle(state, event)
+                || area.handleKeyEvent(event, true).isHandled();
+        if (!state.text().equals(before)) {
+            onChange.accept(state.text());
+        }
+        return handled ? EventResult.HANDLED : EventResult.UNHANDLED;
     }
 
     @Override

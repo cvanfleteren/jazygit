@@ -37,9 +37,14 @@ public sealed interface CreatePullRequestMsg extends Msg {
             implements CreatePullRequestMsg {}
 
     /**
+     * The user changed what the new pull request says.
+     */
+    record PullRequestEdited(NewPullRequest pullRequest) implements CreatePullRequestMsg {}
+
+    /**
      * The user confirmed what the new pull request says.
      */
-    record Confirmed(NewPullRequest pullRequest) implements CreatePullRequestMsg {}
+    record Confirmed() implements CreatePullRequestMsg {}
 
     record Cancelled() implements CreatePullRequestMsg {}
 
