@@ -275,7 +275,7 @@ public final class ChoiceList<P extends Popup> {
                 .filter(found -> found >= 0)
                 .getOrElse(() -> firstOption(lines));
         dispatch.accept(new Msg.ListCursorChanged(new ListCursor(Option.of(line), filter)));
-        Option<Integer> after = lines.lift().apply(line).flatMap(ChoiceList::index);
+        Option<Integer> after = lines.asPartialFunction().lift().apply(line).flatMap(ChoiceList::index);
         if (!after.equals(view.option())) {
             preview(after);
         }
@@ -313,7 +313,7 @@ public final class ChoiceList<P extends Popup> {
          * The index of the option on {@code line}, if that is one.
          */
         Option<Integer> lineOption(int line) {
-            return lines.lift().apply(line).flatMap(ChoiceList::index);
+            return lines.asPartialFunction().lift().apply(line).flatMap(ChoiceList::index);
         }
 
         /**

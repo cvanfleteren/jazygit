@@ -472,7 +472,7 @@ public class BranchesPanel {
                 .getOrElse(List.empty());
         int at = divergenceList.selectedIndex();
         int way = at >= divergenceSelected ? 1 : -1;
-        Option<Integer> target = commits.lift().apply(at).contains(false)
+        Option<Integer> target = commits.asPartialFunction().lift().apply(at).contains(false)
                 ? nearest(commits, at, way).orElse(() -> nearest(commits, at, -way))
                 : Option.none();
         target.forEach(divergenceList::select);
