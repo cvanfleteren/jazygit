@@ -27,10 +27,13 @@ final class HandOverBackend implements Backend {
 
     // What a read returns when no key came in time.
     private static final int NO_KEY = -2;
+    // How long a key is read for at a time, which is as long as handing the terminal over waits for a read.
+    private static final int SLICE_MILLIS = 10;
 
     private final Backend backend;
-    // Held while a key is read, so none is read once the terminal is handed over.
-    private final Lock reading = new ReentrantLock();
+    // Held while a key is read, so none is read once the terminal is handed over. Fair, as the reader takes it again
+    // right after it lets go, and would else keep the render thread waiting in leave for as long as it reads.
+    private final Lock reading = new ReentrantLock(true);
     private volatile boolean keysPaused;
     private volatile boolean muted;
 
@@ -119,38 +122,49 @@ final class HandOverBackend implements Backend {
 
     @Override
     public int read(int timeoutMs) throws IOException {
-        reading.lock();
-        try {
-            if (!keysPaused) {
-                return backend.read(timeoutMs);
-            }
-        } finally {
-            reading.unlock();
-        }
-        return noKey(timeoutMs);
+        return await(timeoutMs, backend::read);
     }
 
     @Override
     public int peek(int timeoutMs) throws IOException {
-        reading.lock();
-        try {
-            if (!keysPaused) {
-                return backend.peek(timeoutMs);
-            }
-        } finally {
-            reading.unlock();
-        }
-        return noKey(timeoutMs);
+        return await(timeoutMs, backend::peek);
     }
 
-    private static int noKey(int timeoutMs) throws IOException {
+    /**
+     * The key {@code read} gives within {@code timeoutMs}, read in short slices, so that {@link #leave} only waits for
+     * the slice under way rather than for the whole read.
+     */
+    private int await(int timeoutMs, Read read) throws IOException {
+        long deadline = System.nanoTime() + Math.max(timeoutMs, 0) * 1_000_000L;
+        while (true) {
+            int slice = (int) Math.min(SLICE_MILLIS, Math.max((deadline - System.nanoTime()) / 1_000_000L, 0));
+            reading.lock();
+            try {
+                if (!keysPaused) {
+                    int key = read.within(slice);
+                    if (key != NO_KEY) {
+                        return key;
+                    }
+                }
+            } finally {
+                reading.unlock();
+            }
+            if (System.nanoTime() >= deadline) {
+                return NO_KEY;
+            }
+            if (keysPaused) {
+                pause(slice);
+            }
+        }
+    }
+
+    private static void pause(int millis) throws IOException {
         try {
-            Thread.sleep(Math.max(timeoutMs, 0));
+            Thread.sleep(millis);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new InterruptedIOException();
         }
-        return NO_KEY;
     }
 
     // Asks the terminal, and reads its answer as keys.
@@ -390,5 +404,11 @@ final class HandOverBackend implements Backend {
         if (!muted) {
             backend.writeRaw(data);
         }
+    }
+
+    // A read or peek of the backend.
+    @FunctionalInterface
+    private interface Read {
+        int within(int timeoutMs) throws IOException;
     }
 }
