@@ -37,6 +37,10 @@
             <artifactId>tamboui-jline3-backend</artifactId>
         </dependency>
         <dependency>
+            <groupId>dev.tamboui</groupId>
+            <artifactId>tamboui-panama-backend</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.electronwill.night-config</groupId>
             <artifactId>toml</artifactId>
         </dependency>
