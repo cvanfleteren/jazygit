@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.feature.branch.push;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.BranchesPanel;
@@ -25,7 +24,6 @@ public final class PushDialogs {
             SetUpstreamPopup.class,
             popup -> Messages.get("dialog.setUpstream.title"),
             Option.none(),
-            popup -> new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, popup.branch()).text(),
             PushMsg.UpstreamConfirmed::new,
             PushMsg.UpstreamCancelled::new);
 

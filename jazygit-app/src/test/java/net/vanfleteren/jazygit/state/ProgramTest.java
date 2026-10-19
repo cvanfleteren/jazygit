@@ -14,6 +14,7 @@ import java.util.Queue;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg;
+import net.vanfleteren.jazygit.feature.commit.MessageEdited;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendMsg;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendPopup;
 import net.vanfleteren.jazygit.feature.commit.create.CommitMsg;
@@ -339,7 +340,8 @@ class ProgramTest {
         settle();
 
         program.dispatch(new NewBranchMsg.Requested(new Branch.Name("other")));
-        program.dispatch(new NewBranchMsg.Confirmed("topic"));
+        program.dispatch(new Msg.TextEdited("topic"));
+        program.dispatch(new NewBranchMsg.Confirmed());
         settle();
 
         Model model = program.model();
@@ -360,7 +362,8 @@ class ProgramTest {
         provider.checkoutError = "fatal: exists";
 
         program.dispatch(new NewBranchMsg.Requested(new Branch.Name("other")));
-        program.dispatch(new NewBranchMsg.Confirmed("topic"));
+        program.dispatch(new Msg.TextEdited("topic"));
+        program.dispatch(new NewBranchMsg.Confirmed());
         settle();
 
         assertEquals(Option.of("Creating branch topic failed: fatal: exists"), errorText(program.model()));
@@ -407,7 +410,8 @@ class ProgramTest {
         assertEquals(java.util.List.of("stage[a.txt]"), provider.indexCalls);
         assertEquals(true, program.model().popup(CommitPopup.class).isDefined());
 
-        program.dispatch(new CommitMsg.Confirmed(new CommitMessage("summary", "more")));
+        program.dispatch(new MessageEdited(new CommitMessage("summary", "more")));
+        program.dispatch(new CommitMsg.Confirmed());
         settle();
 
         assertEquals(java.util.List.of("summary|more"), provider.commits);
@@ -438,7 +442,8 @@ class ProgramTest {
 
         program.dispatch(new RewordMsg.Requested(
                 program.model().repo().commits().toOption().get().head().sha()));
-        program.dispatch(new RewordMsg.Confirmed(new CommitMessage("new summary", "new body")));
+        program.dispatch(new MessageEdited(new CommitMessage("new summary", "new body")));
+        program.dispatch(new RewordMsg.Confirmed());
         settle();
 
         assertEquals(java.util.List.of("reword new summary|new body"), provider.commits);
@@ -455,7 +460,8 @@ class ProgramTest {
         settle();
 
         program.dispatch(new CommitMsg.Requested());
-        program.dispatch(new CommitMsg.Confirmed(new CommitMessage("summary", "")));
+        program.dispatch(new MessageEdited(new CommitMessage("summary", "")));
+        program.dispatch(new CommitMsg.Confirmed());
         settle();
 
         assertEquals(Option.of("Commit failed: boom"), errorText(program.model()));

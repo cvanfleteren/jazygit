@@ -30,7 +30,7 @@ public final class NewBranchUpdate {
                                 .remoteBranch(remote)
                                 .map(known -> new NewBranchPopup(remote.trackingRef(), remote.shortName())));
             case Cancelled() -> Next.of(model.withoutPopup(NewBranchPopup.class));
-            case Confirmed(String name) -> confirmed(model, name);
+            case Confirmed() -> confirmed(model);
         };
     }
 
@@ -42,12 +42,12 @@ public final class NewBranchUpdate {
                         .map(commit -> new NewBranchPopup(commit.sha().value(), commit.shortSha())));
     }
 
-    private static Next confirmed(Model model, String name) {
+    private static Next confirmed(Model model) {
         // A name that is no branch name, like a blank one, keeps the dialog open.
         return Update.confirm(
                 model,
                 NewBranchPopup.class,
-                popup -> Branch.Name.parse(name)
+                popup -> Branch.Name.parse(popup.name())
                         .map(branch -> popup.following()
                                 .<BranchCmd>map(remote -> new CheckoutRemote(branch, remote))
                                 .getOrElse(() -> new NewBranchCmd(branch, popup.base()))));

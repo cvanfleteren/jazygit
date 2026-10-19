@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.commit.create;
 
 import static net.vanfleteren.jazygit.state.TestModels.errorText;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
+import static net.vanfleteren.jazygit.state.TestModels.typed;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
@@ -87,7 +88,7 @@ class CommitUpdateTest {
         Model open = Update.update(withCommits(commit("last", "")), new RewordMsg.Requested(new Sha("abc1234")))
                 .model();
 
-        Next next = Update.update(open, new RewordMsg.Confirmed(new CommitMessage(" better ", "\nwhy\n")));
+        Next next = Update.update(typed(open, new CommitMessage(" better ", "\nwhy\n")), new RewordMsg.Confirmed());
 
         assertEquals(List.of(new RewordCmd(new Sha("abc1234"), new CommitMessage("better", "why"))), next.cmds());
         assertEquals(Option.none(), next.model().popup());
@@ -98,10 +99,11 @@ class CommitUpdateTest {
         Model open = Update.update(withCommits(commit("last", "")), new RewordMsg.Requested(new Sha("abc1234")))
                 .model();
 
-        Next next = Update.update(open, new RewordMsg.Confirmed(new CommitMessage(" ", "why")));
+        Model typed = typed(open, new CommitMessage(" ", "why"));
+        Next next = Update.update(typed, new RewordMsg.Confirmed());
 
         assertEquals(List.of(), next.cmds());
-        assertEquals(open.popup(), next.model().popup());
+        assertEquals(typed.popup(), next.model().popup());
     }
 
     @Test
@@ -177,7 +179,8 @@ class CommitUpdateTest {
         Model open = Update.update(withFiles(new FileEntry("a.txt", ChangeType.ADDED)), new CommitMsg.Requested())
                 .model();
 
-        Next next = Update.update(open, new CommitMsg.Confirmed(new CommitMessage(" summary ", "\ndetails\n")));
+        Next next =
+                Update.update(typed(open, new CommitMessage(" summary ", "\ndetails\n")), new CommitMsg.Confirmed());
 
         assertEquals(List.of(new CreateCommitCmd.Commit(new CommitMessage("summary", "details"))), next.cmds());
         assertFalse(next.model().popup(CommitPopup.class).isDefined());
@@ -188,7 +191,7 @@ class CommitUpdateTest {
         Model open = Update.update(withFiles(new FileEntry("a.txt", ChangeType.ADDED)), new CommitMsg.Requested())
                 .model();
 
-        Next next = Update.update(open, new CommitMsg.Confirmed(new CommitMessage("  ", "details")));
+        Next next = Update.update(typed(open, new CommitMessage("  ", "details")), new CommitMsg.Confirmed());
 
         assertEquals(List.of(), next.cmds());
         assertTrue(next.model().popup(CommitPopup.class).isDefined());

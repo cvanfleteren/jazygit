@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
+import io.vavr.control.Option;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Model;
@@ -25,11 +26,17 @@ import org.junit.jupiter.api.Test;
 class SetUpstreamDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final net.vanfleteren.jazygit.ui.widgets.TextInputDialog<SetUpstreamPopup> dialog =
-            new net.vanfleteren.jazygit.ui.widgets.TextInputDialog<>(PushDialogs.SET_UPSTREAM, dispatched::add);
     // In the test models, feature has no upstream.
-    private final Model open = Update.update(TestModels.loaded(), new PushMsg.Requested(new Branch.Name("feature")))
+    private Model open = Update.update(TestModels.loaded(), new PushMsg.Requested(new Branch.Name("feature")))
             .model();
+    // As in the app, an edit changes the model the popup shows; the other messages are only kept.
+    private final net.vanfleteren.jazygit.ui.widgets.TextInputDialog<SetUpstreamPopup> dialog =
+            new net.vanfleteren.jazygit.ui.widgets.TextInputDialog<>(PushDialogs.SET_UPSTREAM, msg -> {
+                dispatched.add(msg);
+                if (msg instanceof Msg.TextEdited) {
+                    open = Update.update(open, msg).model();
+                }
+            });
 
     @Test
     void showsTheTitleAndStartsOutWithTheSameBranchOnOrigin() throws Exception {
@@ -47,7 +54,9 @@ class SetUpstreamDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new PushMsg.UpstreamConfirmed("origin feature")), dispatched);
+        assertEquals(java.util.List.of(new PushMsg.UpstreamConfirmed()), dispatched);
+        assertEquals(
+                Option.of("origin feature"), open.popup(SetUpstreamPopup.class).map(SetUpstreamPopup::upstream));
     }
 
     @Test
@@ -63,7 +72,9 @@ class SetUpstreamDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new PushMsg.UpstreamConfirmed("origin shared")), dispatched);
+        assertEquals(new PushMsg.UpstreamConfirmed(), dispatched.getLast());
+        assertEquals(
+                Option.of("origin shared"), open.popup(SetUpstreamPopup.class).map(SetUpstreamPopup::upstream));
     }
 
     @Test

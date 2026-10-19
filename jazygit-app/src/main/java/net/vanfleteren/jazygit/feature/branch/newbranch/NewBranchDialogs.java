@@ -21,7 +21,6 @@ public final class NewBranchDialogs {
             NewBranchPopup.class,
             popup -> Messages.get("dialog.newBranch.title", popup.label()),
             Option.of(Messages.get("dialog.newBranch.placeholder")),
-            NewBranchPopup::name,
             NewBranchMsg.Confirmed::new,
             NewBranchMsg.Cancelled::new);
 

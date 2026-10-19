@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit.create;
 
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -31,5 +30,8 @@ public sealed interface CommitMsg extends Msg {
 
     record Cancelled() implements CommitMsg {}
 
-    record Confirmed(CommitMessage message) implements CommitMsg {}
+    /**
+     * The user confirmed the message typed in the popup.
+     */
+    record Confirmed() implements CommitMsg {}
 }

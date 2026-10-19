@@ -72,4 +72,17 @@ public interface Msg {
             return Update.Next.of(model.withScrolled(model.scrolled().put(area, to)));
         }
     }
+
+    /**
+     * The user changed the text of the open {@link TextPopup} to {@code text}.
+     */
+    record TextEdited(String text) implements Msg {
+
+        @Override
+        public Update.Next apply(Model model) {
+            return Update.Next.of(model.popup(TextPopup.class)
+                    .map(popup -> model.openPopup(popup.withText(text)))
+                    .getOrElse(model));
+        }
+    }
 }

@@ -24,7 +24,6 @@ public final class StashDialogs {
             StashPopup.class,
             popup -> Messages.get("dialog.stash.title"),
             Option.of(Messages.get("dialog.stash.placeholder")),
-            popup -> "",
             StashMsg.Confirmed::new,
             StashMsg.Cancelled::new);
 

@@ -259,9 +259,9 @@ failure, and the repository is read again once it is closed.
 Ctrl+O in the commit and reword dialogs opens the message typed so far in the same editor (`MessageEditorMsg`,
 `MessageEditorCmd`). `CliEditor.editMessage` writes it to a file named `COMMIT_EDITMSG` in a temporary directory, so
 editors treat it as a commit message, and reads it back once the editor is closed. No comments are added to it, so
-lines starting with `#` are kept. The text being typed lives in the dialog's widgets, not in the model, so the
-message comes back as the popup's `draft` (`MessagePopup`): a popup that changed counts as newly opened for
-`CommitDialog`, which then fills its fields from the draft. The dialog stays open meanwhile, and a failing editor
+lines starting with `#` are kept. The message being typed lives in the popup (`MessagePopup.message`), so the
+editor starts from it, and what comes back replaces it; the fields then show it, as they show any message the
+model has. The dialog stays open meanwhile, and a failing editor
 leaves it as it was.
 
 The editor needs the terminal, which the TUI owns. `Env.terminal()` (`state.Terminal`) hands it over: `EditCmd`
@@ -479,6 +479,12 @@ classDiagram
   use), so a closing popup or a screen shown again can give it back. No update decides anything on it.
   Everything else a panel shows comes from the model it is rendered with: the rows of a `LoadableList` are
   given to `render`, so a panel keeps no copy of the model between renders.
+- **What a dialog is filled in with is part of the model.** The popup holds the text as far as it was typed: a
+  `TextPopup` for the `TextInputDialog`s, a `MessagePopup` for the commit and reword dialogs, `NewPullRequestPopup`
+  for a new pull request. The fields show it, and send an edit message for every key that changes it
+  (`Msg.TextEdited`, `MessageEdited`, `PullRequestEdited`); the confirming message carries nothing, as its update
+  reads the popup. A field only keeps its caret, and the commit dialog where Up and Down are in the earlier
+  summaries (`SummaryHistory`). See `documentation/adr/0002-model-and-view-state.md`.
 - **The command log** (`Model.commandLog`) lists every git command that changed the repository, under the
   `Operation` that ran them, whether it succeeded or failed.
 

@@ -18,11 +18,11 @@ public final class AddWorktreeUpdate {
             case Requested(Branch.Name branch) -> requested(model, branch);
             case Cancelled() -> Next.of(model.withoutPopup(NewWorktreePopup.class));
             // A blank location keeps the dialog open.
-            case Confirmed(String location) ->
+            case Confirmed() ->
                 Update.confirm(
                         model,
                         NewWorktreePopup.class,
-                        popup -> Option.of(location.strip())
+                        popup -> Option.of(popup.location().strip())
                                 .filter(text -> !text.isEmpty())
                                 .map(text -> new AddWorktreeCmd(popup.branch(), text)));
             // The worktrees are shown, the new one among them, to switch to.

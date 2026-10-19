@@ -19,7 +19,7 @@ public final class StashUpdate {
         return switch (msg) {
             case StashMsg.Requested() -> requested(model);
             case StashMsg.Cancelled() -> Next.of(model.withoutPopup(StashPopup.class));
-            case StashMsg.Confirmed(String name) -> confirmed(model, name);
+            case StashMsg.Confirmed() -> confirmed(model);
             case StashMsg.PopRequested(var stash) ->
                 listed(model, stash) ? Update.start(model.clearError(), new StashCmd.Pop(stash)) : Next.of(model);
             case StashMsg.DropRequested(var stash) ->
@@ -51,11 +51,10 @@ public final class StashUpdate {
                 .exists(listed -> listed.sha().equals(stash.sha()));
     }
 
-    private static Next confirmed(Model model, String name) {
-        String trimmed = name.strip();
+    private static Next confirmed(Model model) {
         return Update.confirm(
                 model,
                 StashPopup.class,
-                popup -> Option.of(new Stash(Option.of(trimmed).filter(text -> !text.isEmpty()))));
+                popup -> Option.of(new Stash(Option.of(popup.name().strip()).filter(text -> !text.isEmpty()))));
     }
 }

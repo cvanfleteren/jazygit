@@ -42,9 +42,9 @@ public sealed interface MoveMsg extends Msg {
     record TargetCancelled() implements MoveMsg {}
 
     /**
-     * The user entered the name of the new branch.
+     * The user confirmed the name of the new branch typed in the popup.
      */
-    record NameConfirmed(String name) implements MoveMsg {}
+    record NameConfirmed() implements MoveMsg {}
 
     record NameCancelled() implements MoveMsg {}
 

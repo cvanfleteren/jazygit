@@ -11,6 +11,7 @@ import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
+import io.vavr.control.Option;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.model.SampleData;
@@ -28,11 +29,17 @@ import org.junit.jupiter.api.Test;
 class NewBranchDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private final net.vanfleteren.jazygit.ui.widgets.TextInputDialog<NewBranchPopup> dialog =
-            new net.vanfleteren.jazygit.ui.widgets.TextInputDialog<>(NewBranchDialogs.NEW_BRANCH, dispatched::add);
-    private final Model open = Update.update(
+    private Model open = Update.update(
                     TestModels.loaded(new SampleData()), new NewBranchMsg.Requested(new Branch.Name("main")))
             .model();
+    // As in the app, an edit changes the model the popup shows; the other messages are only kept.
+    private final net.vanfleteren.jazygit.ui.widgets.TextInputDialog<NewBranchPopup> dialog =
+            new net.vanfleteren.jazygit.ui.widgets.TextInputDialog<>(NewBranchDialogs.NEW_BRANCH, msg -> {
+                dispatched.add(msg);
+                if (msg instanceof Msg.TextEdited) {
+                    open = Update.update(open, msg).model();
+                }
+            });
 
     private static void type(ToolkitTestRunner runner, String text) throws Exception {
         for (char c : text.toCharArray()) {
@@ -49,7 +56,8 @@ class NewBranchDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new NewBranchMsg.Confirmed("topic")), dispatched);
+        assertEquals(Option.of("topic"), open.popup(NewBranchPopup.class).map(NewBranchPopup::name));
+        assertEquals(new NewBranchMsg.Confirmed(), dispatched.getLast());
     }
 
     @Test
@@ -70,7 +78,8 @@ class NewBranchDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new NewBranchMsg.Confirmed("bar")), dispatched);
+        assertEquals(Option.of("bar"), open.popup(NewBranchPopup.class).map(NewBranchPopup::name));
+        assertEquals(new NewBranchMsg.Confirmed(), dispatched.getLast());
         assertEquals(java.util.List.of(), global);
     }
 
@@ -82,7 +91,7 @@ class NewBranchDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new NewBranchMsg.Cancelled()), dispatched);
+        assertEquals(new NewBranchMsg.Cancelled(), dispatched.getLast());
     }
 
     @Test

@@ -21,7 +21,7 @@ public final class RewordUpdate {
         return switch (msg) {
             case Requested(var sha) -> requested(model, sha);
             case Cancelled() -> Next.of(model.withoutPopup(RewordPopup.class));
-            case Confirmed(CommitMessage message) -> confirmed(model, message.stripped());
+            case Confirmed() -> confirmed(model);
         };
     }
 
@@ -32,12 +32,12 @@ public final class RewordUpdate {
         return model.repo().commit(sha).map(RewordPopup::new).transform(popup -> Update.ask(model, popup));
     }
 
-    private static Next confirmed(Model model, CommitMessage message) {
+    private static Next confirmed(Model model) {
         // A blank summary keeps the dialog open.
-        return Update.confirm(
-                model,
-                RewordPopup.class,
-                popup -> Option.when(
-                        message.hasSummary(), () -> new RewordCmd(popup.commit().sha(), message)));
+        return Update.confirm(model, RewordPopup.class, popup -> {
+            CommitMessage message = popup.message().stripped();
+            return Option.when(
+                    message.hasSummary(), () -> new RewordCmd(popup.commit().sha(), message));
+        });
     }
 }

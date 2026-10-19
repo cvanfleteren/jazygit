@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.settings;
 
+import static net.vanfleteren.jazygit.state.TestModels.typed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.HashMap;
@@ -94,7 +95,7 @@ class SettingsPanelUpdateTest {
                 .model();
         assertEquals(Option.of(new GhExecutablePopup("")), entering.popup(GhExecutablePopup.class));
 
-        Next next = Update.update(entering, new SettingsPanelMsg.GhExecutableEntered("  /opt/gh/bin/gh "));
+        Next next = Update.update(typed(entering, "  /opt/gh/bin/gh "), new SettingsPanelMsg.GhExecutableEntered());
 
         assertEquals(Option.none(), next.model().popup());
         assertEquals(List.of(new SettingsPanelCmd.CheckGhExecutable(Option.of("/opt/gh/bin/gh"))), next.cmds());
@@ -104,7 +105,7 @@ class SettingsPanelUpdateTest {
     void anEmptyGhExecutableIsTheOneOnThePath() {
         Model entering = TestModels.loaded().openPopup(new GhExecutablePopup("/opt/gh/bin/gh"));
 
-        Next next = Update.update(entering, new SettingsPanelMsg.GhExecutableEntered(" "));
+        Next next = Update.update(typed(entering, " "), new SettingsPanelMsg.GhExecutableEntered());
 
         assertEquals(List.of(new SettingsPanelCmd.CheckGhExecutable(Option.none())), next.cmds());
     }

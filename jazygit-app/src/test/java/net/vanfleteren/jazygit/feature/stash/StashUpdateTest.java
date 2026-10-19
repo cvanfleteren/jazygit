@@ -66,7 +66,7 @@ class StashUpdateTest {
     void confirmingStashesUnderTheEnteredName() {
         Model open = Update.update(withChanges(), new StashMsg.Requested()).model();
 
-        Next next = Update.update(open, new StashMsg.Confirmed("  my work "));
+        Next next = Update.update(typed(open, "  my work "), new StashMsg.Confirmed());
 
         assertEquals(List.of(new Stash(Option.of("my work"))), next.cmds());
         assertEquals(Option.none(), next.model().popup());
@@ -76,7 +76,7 @@ class StashUpdateTest {
     void aBlankNameLeavesNamingTheStashToGit() {
         Model open = Update.update(withChanges(), new StashMsg.Requested()).model();
 
-        Next next = Update.update(open, new StashMsg.Confirmed(" "));
+        Next next = Update.update(typed(open, " "), new StashMsg.Confirmed());
 
         assertEquals(List.of(new Stash(Option.none())), next.cmds());
     }

@@ -247,7 +247,8 @@ class BranchUpdateTest {
         assertEquals(
                 io.vavr.collection.HashSet.empty(), asked.model().jobs().busy().keySet());
 
-        Next confirmed = Update.update(asked.model(), new PushMsg.UpstreamConfirmed("  upstream   shared/feature "));
+        Next confirmed =
+                Update.update(typed(asked.model(), "  upstream   shared/feature "), new PushMsg.UpstreamConfirmed());
         assertEquals(
                 List.of(new PushCmd.PushSettingUpstream(
                         new Branch.Name("feature"), new RemoteBranch("upstream", new Branch.Name("shared/feature")))),
@@ -296,10 +297,10 @@ class BranchUpdateTest {
                 .model();
 
         for (String text : List.of("", "origin", "origin feature extra")) {
-            Next next = Update.update(asked, new PushMsg.UpstreamConfirmed(text));
+            Next next = Update.update(typed(asked, text), new PushMsg.UpstreamConfirmed());
             assertEquals(List.of(), next.cmds());
             assertEquals(
-                    Option.of(new SetUpstreamPopup(new Branch.Name("feature"))),
+                    Option.of(new SetUpstreamPopup(new Branch.Name("feature"), text)),
                     next.model().popup());
             assertTrue(next.model().outcome().error().isDefined());
         }
@@ -309,7 +310,7 @@ class BranchUpdateTest {
     void confirmingAnUpstreamWithoutTheDialogDoesNothing() {
         assertEquals(
                 List.of(),
-                Update.update(loaded(), new PushMsg.UpstreamConfirmed("origin feature"))
+                Update.update(typed(loaded(), "origin feature"), new PushMsg.UpstreamConfirmed())
                         .cmds());
     }
 
@@ -587,7 +588,7 @@ class BranchUpdateTest {
         Model open = Update.update(loaded(), new NewBranchMsg.Requested(new Branch.Name("feature")))
                 .model();
 
-        Next next = Update.update(open, new NewBranchMsg.Confirmed(" topic "));
+        Next next = Update.update(typed(open, " topic "), new NewBranchMsg.Confirmed());
 
         assertEquals(List.of(new NewBranchCmd(new Branch.Name("topic"), "feature")), next.cmds());
         assertEquals(Option.none(), next.model().popup());
@@ -598,10 +599,12 @@ class BranchUpdateTest {
         Model open = Update.update(loaded(), new NewBranchMsg.Requested(new Branch.Name("feature")))
                 .model();
 
-        Next next = Update.update(open, new NewBranchMsg.Confirmed("  "));
+        Next next = Update.update(typed(open, "  "), new NewBranchMsg.Confirmed());
 
         assertEquals(List.of(), next.cmds());
-        assertEquals(Option.of(new NewBranchPopup("feature")), next.model().popup());
+        assertEquals(
+                Option.of(new NewBranchPopup("feature").withText("  ")),
+                next.model().popup());
     }
 
     @Test
@@ -649,7 +652,7 @@ class BranchUpdateTest {
         Model open = Update.update(loaded(), new RenameBranchMsg.Requested(new Branch.Name("feature")))
                 .model();
 
-        Next next = Update.update(open, new RenameBranchMsg.Confirmed(" topic "));
+        Next next = Update.update(typed(open, " topic "), new RenameBranchMsg.Confirmed());
 
         assertEquals(List.of(new RenameBranchCmd(new Branch.Name("feature"), new Branch.Name("topic"))), next.cmds());
         assertEquals(Option.none(), next.model().popup());
@@ -660,13 +663,13 @@ class BranchUpdateTest {
         Model open = Update.update(loaded(), new RenameBranchMsg.Requested(new Branch.Name("feature")))
                 .model();
 
-        Next blank = Update.update(open, new RenameBranchMsg.Confirmed("  "));
+        Next blank = Update.update(typed(open, "  "), new RenameBranchMsg.Confirmed());
         assertEquals(List.of(), blank.cmds());
         assertEquals(
-                Option.of(new RenameBranchPopup(new Branch.Name("feature"))),
+                Option.of(new RenameBranchPopup(new Branch.Name("feature"), "  ")),
                 blank.model().popup());
 
-        Next same = Update.update(open, new RenameBranchMsg.Confirmed("feature "));
+        Next same = Update.update(typed(open, "feature "), new RenameBranchMsg.Confirmed());
         assertEquals(List.of(), same.cmds());
         assertEquals(Option.none(), same.model().popup());
     }

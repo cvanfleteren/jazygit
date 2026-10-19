@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch;
 
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
+import static net.vanfleteren.jazygit.state.TestModels.typed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
@@ -133,7 +134,8 @@ class RemoteBranchUpdateTest {
                 asked.popup(NewBranchPopup.class));
         assertEquals(
                 List.of(new CheckoutRemote(new Branch.Name("feature-2"), ORIGIN_FEATURE)),
-                Update.update(asked, new NewBranchMsg.Confirmed("feature-2")).cmds());
+                Update.update(typed(asked, "feature-2"), new NewBranchMsg.Confirmed())
+                        .cmds());
     }
 
     @Test
@@ -156,7 +158,8 @@ class RemoteBranchUpdateTest {
                 asked.popup(NewBranchPopup.class));
         assertEquals(
                 List.of(new NewBranchCmd(new Branch.Name("topic"), "refs/remotes/origin/new")),
-                Update.update(asked, new NewBranchMsg.Confirmed("topic")).cmds());
+                Update.update(typed(asked, "topic"), new NewBranchMsg.Confirmed())
+                        .cmds());
     }
 
     @Test

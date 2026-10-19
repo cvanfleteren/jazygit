@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.commit;
 
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
+import static net.vanfleteren.jazygit.state.TestModels.typed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
@@ -46,28 +47,28 @@ class MessageEditorUpdateTest {
 
     @Test
     void theTypedMessageIsOpenedInTheEditor() {
-        Next next = Update.update(committing(), new MessageEditorMsg.Requested(TYPED));
+        Next next = Update.update(typed(committing(), TYPED), new MessageEditorMsg.Requested());
 
         assertEquals(List.of(new MessageEditorCmd(TYPED)), next.cmds());
-        assertEquals(Option.of(new CommitPopup(Option.of(TYPED))), next.model().popup());
+        assertEquals(Option.of(new CommitPopup(TYPED)), next.model().popup());
     }
 
     @Test
     void withoutCommitDialogNothingIsOpened() {
-        Next next = Update.update(loaded(), new MessageEditorMsg.Requested(TYPED));
+        Next next = Update.update(loaded(), new MessageEditorMsg.Requested());
 
         assertEquals(List.empty(), next.cmds());
     }
 
     @Test
     void theEditedMessageIsShownInTheDialog() {
-        Model editing = Update.update(committing(), new MessageEditorMsg.Requested(TYPED))
+        Model editing = Update.update(typed(committing(), TYPED), new MessageEditorMsg.Requested())
                 .model();
 
         Model edited = Update.update(editing, new MessageEditorMsg.Edited(EDITED, List.of(NVIM)))
                 .model();
 
-        assertEquals(Option.of(new CommitPopup(Option.of(EDITED))), edited.popup());
+        assertEquals(Option.of(new CommitPopup(EDITED)), edited.popup());
         assertEquals(
                 MessageEditorCmd.EDIT_MESSAGE,
                 edited.outcome().commandLog().last().operation());
@@ -80,8 +81,7 @@ class MessageEditorUpdateTest {
         Model edited = Update.update(loaded().openPopup(rewording), new MessageEditorMsg.Edited(EDITED, List.of(NVIM)))
                 .model();
 
-        assertEquals(Option.of(rewording.withDraft(EDITED)), edited.popup());
-        assertEquals(EDITED, rewording.withDraft(EDITED).message());
+        assertEquals(Option.of(rewording.withMessage(EDITED)), edited.popup());
     }
 
     @Test

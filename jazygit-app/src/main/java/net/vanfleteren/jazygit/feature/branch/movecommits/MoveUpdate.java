@@ -42,7 +42,7 @@ public final class MoveUpdate {
                         .map(popup -> targetChosen(model.withoutPopup(MoveTargetPopup.class), popup.request(), branch))
                         .getOrElse(() -> Next.of(model));
             case TargetCancelled() -> Next.of(model.withoutPopup(MoveTargetPopup.class));
-            case NameConfirmed(String name) -> named(model, name);
+            case NameConfirmed() -> named(model);
             case NameCancelled() -> Next.of(model.withoutPopup(MoveNamePopup.class));
             case BaseChosen(MoveBase base) ->
                 model.popup(MoveBasePopup.class)
@@ -154,9 +154,9 @@ public final class MoveUpdate {
      * Asks where the new branch starts, when it can start elsewhere than where the commits are. A name that is no
      * branch name, or that of a branch that exists, keeps the dialog open.
      */
-    private static Next named(Model model, String text) {
+    private static Next named(Model model) {
         return model.popup(MoveNamePopup.class)
-                .flatMap(popup -> Branch.Name.parse(text)
+                .flatMap(popup -> Branch.Name.parse(popup.name())
                         .filter(name -> model.repo().branch(name).isEmpty())
                         .map(name -> {
                             Model closed = model.withoutPopup(MoveNamePopup.class);

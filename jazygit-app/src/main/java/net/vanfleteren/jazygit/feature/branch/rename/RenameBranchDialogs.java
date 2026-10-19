@@ -22,7 +22,6 @@ public final class RenameBranchDialogs {
             RenameBranchPopup.class,
             popup -> Messages.get("dialog.renameBranch.title", popup.branch().value()),
             Option.of(Messages.get("dialog.renameBranch.placeholder")),
-            popup -> popup.branch().value(),
             RenameBranchMsg.Confirmed::new,
             RenameBranchMsg.Cancelled::new);
 

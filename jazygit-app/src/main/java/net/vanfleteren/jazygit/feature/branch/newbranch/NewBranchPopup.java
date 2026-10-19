@@ -2,15 +2,16 @@ package net.vanfleteren.jazygit.feature.branch.newbranch;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.TextPopup;
 
 /**
  * Asking for the name of a new branch, which starts at {@code base}, shown to the user as {@code label}.
  *
- * @param name      the name the dialog starts out with
+ * @param name      the name as far as it was typed; it starts out empty, or as the remote branch is named
  * @param following the remote branch the new branch is to follow, if any
  */
-public record NewBranchPopup(String base, String label, String name, Option<RemoteBranch> following) implements Popup {
+public record NewBranchPopup(String base, String label, String name, Option<RemoteBranch> following)
+        implements TextPopup {
 
     public NewBranchPopup(String base, String label) {
         this(base, label, "", Option.none());
@@ -18,6 +19,16 @@ public record NewBranchPopup(String base, String label, String name, Option<Remo
 
     public NewBranchPopup(String base) {
         this(base, base);
+    }
+
+    @Override
+    public String text() {
+        return name;
+    }
+
+    @Override
+    public NewBranchPopup withText(String text) {
+        return new NewBranchPopup(base, label, text, following);
     }
 
     /**

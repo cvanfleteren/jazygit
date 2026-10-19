@@ -20,7 +20,7 @@ public sealed interface RenameBranchMsg extends Msg {
     record Cancelled() implements RenameBranchMsg {}
 
     /**
-     * The user entered the new name of the branch.
+     * The user confirmed the new name typed in the popup.
      */
-    record Confirmed(String name) implements RenameBranchMsg {}
+    record Confirmed() implements RenameBranchMsg {}
 }

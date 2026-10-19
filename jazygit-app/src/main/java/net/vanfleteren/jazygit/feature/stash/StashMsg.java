@@ -22,7 +22,7 @@ public sealed interface StashMsg extends Msg {
     /**
      * The user confirmed the dialog; a blank name asks for a generated one.
      */
-    record Confirmed(String name) implements StashMsg {}
+    record Confirmed() implements StashMsg {}
 
     /**
      * The user asked to unstash {@code stash}.

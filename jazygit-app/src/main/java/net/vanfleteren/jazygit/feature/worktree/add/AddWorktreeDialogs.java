@@ -23,7 +23,6 @@ public final class AddWorktreeDialogs {
             NewWorktreePopup.class,
             popup -> Messages.get("dialog.newWorktree.title", popup.branch().value()),
             Option.of(Messages.get("dialog.newWorktree.placeholder")),
-            NewWorktreePopup::location,
             AddWorktreeMsg.Confirmed::new,
             AddWorktreeMsg.Cancelled::new);
 

@@ -23,7 +23,10 @@ public final class PushUpdate {
             case PushMsg.Requested(Branch.Name branch) -> requested(model, branch);
             case PushMsg.ForceCancelled() -> Next.of(model.withoutPopup(ForcePushPopup.class));
             case PushMsg.UpstreamCancelled() -> Next.of(model.withoutPopup(SetUpstreamPopup.class));
-            case PushMsg.UpstreamConfirmed(String upstream) -> upstreamConfirmed(model, upstream);
+            case PushMsg.UpstreamConfirmed() ->
+                model.popup(SetUpstreamPopup.class)
+                        .map(popup -> upstreamConfirmed(model, popup.upstream()))
+                        .getOrElse(() -> Next.of(model));
             case PushMsg.ForceConfirmed() ->
                 Update.confirm(
                         model,
@@ -55,7 +58,7 @@ public final class PushUpdate {
      */
     private static Next upstreamConfirmed(Model model, String text) {
         Option<RemoteBranch> upstream = RemoteBranch.parse(text);
-        return model.popup(SetUpstreamPopup.class).isDefined() && upstream.isEmpty()
+        return upstream.isEmpty()
                 ? Next.of(model.fail(new AppError.InvalidUpstream(text)))
                 : Update.confirm(
                         model,

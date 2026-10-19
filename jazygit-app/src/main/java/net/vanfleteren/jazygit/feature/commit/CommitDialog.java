@@ -12,8 +12,6 @@ import dev.tamboui.widgets.input.TextInputState;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.feature.commit.create.CommitMsg;
 import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
@@ -23,7 +21,6 @@ import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Popup;
 import net.vanfleteren.jazygit.ui.LineEditInput;
 import net.vanfleteren.jazygit.ui.SubmittableTextArea;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
@@ -32,8 +29,10 @@ import net.vanfleteren.jazygit.ui.widgets.PopupView;
  * Popup asking for a commit message: a summary and a description. Tab switches between them. Enter
  * in the summary, or Ctrl+S in either, confirms; Escape cancels. Up and Down in the summary go through the summaries of
  * earlier commits, see {@link SummaryHistory}. Terminals send Ctrl+Enter as a plain Enter, so it
- * only confirms where the terminal tells them apart. Whether it is open
- * lives in the {@link Model}; the text being typed lives in the input widgets.
+ * only confirms where the terminal tells them apart. Whether it is open, and the message as far as it was typed,
+ * live in the {@link Model}, as a {@link MessagePopup}: the fields show its message, and send a
+ * {@link MessageEdited} for every change. Only the carets, and where Up and Down are in the earlier summaries, are
+ * kept here.
  *
  * <p>There are two flavours: {@link #commit} asks for the message of a new commit, {@link #reword}
  * for a new message of any commit, starting out with its current one.
@@ -59,29 +58,25 @@ public final class CommitDialog implements PopupView {
 
     private final TextInputState summary = new TextInputState();
     private final TextAreaState description = new TextAreaState();
-    private SummaryHistory history = SummaryHistory.of(List.empty());
+    // Where Up and Down are in the summaries of earlier commits, while the popup is open.
+    private Option<SummaryHistory> history = Option.none();
     private final String summaryId;
     private final String descriptionId;
-    // The message the popup shows when it opens, or comes back from the editor, if not an empty one.
-    private final Function<Model, Option<CommitMessage>> current;
-    private final Predicate<Model> open;
-    private final Function<CommitMessage, Msg> confirmed;
+    private final Class<? extends MessagePopup> popupType;
+    private final Supplier<Msg> confirmed;
     private final Supplier<Msg> cancelled;
     private final Consumer<Msg> dispatch;
-    private Option<Popup> shownFor = Option.none();
 
     private CommitDialog(
             String summaryId,
             String descriptionId,
-            Predicate<Model> open,
-            Function<Model, Option<CommitMessage>> current,
-            Function<CommitMessage, Msg> confirmed,
+            Class<? extends MessagePopup> popupType,
+            Supplier<Msg> confirmed,
             Supplier<Msg> cancelled,
             Consumer<Msg> dispatch) {
         this.summaryId = summaryId;
         this.descriptionId = descriptionId;
-        this.open = open;
-        this.current = current;
+        this.popupType = popupType;
         this.confirmed = confirmed;
         this.cancelled = cancelled;
         this.dispatch = dispatch;
@@ -93,14 +88,7 @@ public final class CommitDialog implements PopupView {
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public CommitDialog(Consumer<Msg> dispatch) {
-        this(
-                ID,
-                DESCRIPTION_ID,
-                model -> model.popup(CommitPopup.class).isDefined(),
-                model -> model.popup(CommitPopup.class).flatMap(CommitPopup::draft),
-                CommitMsg.Confirmed::new,
-                CommitMsg.Cancelled::new,
-                dispatch);
+        this(ID, DESCRIPTION_ID, CommitPopup.class, CommitMsg.Confirmed::new, CommitMsg.Cancelled::new, dispatch);
     }
 
     /**
@@ -112,8 +100,7 @@ public final class CommitDialog implements PopupView {
         return new CommitDialog(
                 REWORD_ID,
                 REWORD_DESCRIPTION_ID,
-                model -> model.popup(RewordPopup.class).isDefined(),
-                model -> model.popup(RewordPopup.class).map(RewordPopup::message),
+                RewordPopup.class,
                 RewordMsg.Confirmed::new,
                 RewordMsg.Cancelled::new,
                 dispatch);
@@ -132,31 +119,35 @@ public final class CommitDialog implements PopupView {
      */
     @Override
     public Option<Element> render(Model model) {
-        Option<Popup> popup = model.popup().filter(p -> open.test(model));
-        boolean opened = popup.isDefined() && !shownFor.equals(popup);
-        shownFor = popup;
+        Option<? extends MessagePopup> popup = model.popup(popupType);
         if (popup.isEmpty()) {
+            history = Option.none();
             return Option.none();
         }
-        if (opened) {
-            history = SummaryHistory.of(model.repo().commits().getOrElse(List.empty()));
-            current.apply(model).forEach(message -> {
-                summary.setText(message.summary());
-                summary.moveCursorToEnd();
-                description.setText(message.description());
-                description.moveCursorToEnd();
-            });
+        if (history.isEmpty()) {
+            history = Option.of(SummaryHistory.of(model.repo().commits().getOrElse(List.empty())));
+        }
+        // The fields show what the model has: what was typed in them, or what came back from the editor.
+        CommitMessage message = popup.get().message();
+        if (!summary.text().equals(message.summary())) {
+            summary.setText(message.summary());
+            summary.moveCursorToEnd();
+        }
+        if (!description.text().equals(message.description())) {
+            description.setText(message.description());
+            description.moveCursorToEnd();
         }
         return Option.of(dialog(
                         new LineEditInput(
-                                textInput(summary)
-                                        .title(Messages.get("dialog.commit.summary.title"))
-                                        .placeholder(Messages.get("dialog.commit.summary.placeholder"))
-                                        .length(INPUT_HEIGHT)
-                                        .onSubmit(this::confirm)
-                                        .onKeyEvent(this::summaryKeys),
-                                summary,
-                                summaryId),
+                                        textInput(summary)
+                                                .title(Messages.get("dialog.commit.summary.title"))
+                                                .placeholder(Messages.get("dialog.commit.summary.placeholder"))
+                                                .length(INPUT_HEIGHT)
+                                                .onSubmit(this::confirm)
+                                                .onKeyEvent(this::summaryKeys),
+                                        summary,
+                                        summaryId)
+                                .onChange(text -> edited()),
                         new SubmittableTextArea(
                                         textArea(description)
                                                 .title(Messages.get("dialog.commit.description.title"))
@@ -164,6 +155,7 @@ public final class CommitDialog implements PopupView {
                                         description,
                                         descriptionId,
                                         this::confirm)
+                                .onChange(text -> edited())
                                 .rows(DESCRIPTION_HEIGHT)
                                 .bottomTitle(Messages.get("dialog.commit.hint"))
                                 .onKeyEvent(this::keys))
@@ -172,14 +164,17 @@ public final class CommitDialog implements PopupView {
                 .onCancel(this::cancel));
     }
 
+    /**
+     * Tells the model what the message is now. The text comes from the fields, which hold every key typed so far,
+     * also those typed since the model was last rendered.
+     */
+    private void edited() {
+        dispatch.accept(new MessageEdited(new CommitMessage(summary.text(), description.text())));
+    }
+
     private void confirm() {
-        String message = summary.text();
-        String details = description.text();
         // A blank summary keeps the popup open, see CommitUpdate and RewordUpdate.
-        if (!message.isBlank()) {
-            clear();
-        }
-        dispatch.accept(confirmed.apply(new CommitMessage(message, details)));
+        dispatch.accept(confirmed.get());
     }
 
     /**
@@ -197,7 +192,7 @@ public final class CommitDialog implements PopupView {
             return EventResult.HANDLED;
         }
         if (event.hasCtrl() && event.isChar(EDITOR_KEY)) {
-            dispatch.accept(new MessageEditorMsg.Requested(new CommitMessage(summary.text(), description.text())));
+            dispatch.accept(new MessageEditorMsg.Requested());
             return EventResult.HANDLED;
         }
         return EventResult.UNHANDLED;
@@ -211,21 +206,17 @@ public final class CommitDialog implements PopupView {
             return keys(event);
         }
         // At either end the key does nothing, and the summary stays as it is.
-        (event.code() == KeyCode.UP ? history.older(summary.text()) : history.newer()).forEach(next -> {
-            history = next;
-            summary.setText(next.shown());
-            summary.moveCursorToEnd();
-        });
+        history.flatMap(at -> event.code() == KeyCode.UP ? at.older(summary.text()) : at.newer())
+                .forEach(next -> {
+                    history = Option.of(next);
+                    summary.setText(next.shown());
+                    summary.moveCursorToEnd();
+                    edited();
+                });
         return EventResult.HANDLED;
     }
 
     private void cancel() {
-        clear();
         dispatch.accept(cancelled.get());
-    }
-
-    private void clear() {
-        summary.clear();
-        description.clear();
     }
 }

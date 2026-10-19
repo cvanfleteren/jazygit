@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.commit.reword;
 
-import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -20,5 +19,8 @@ public sealed interface RewordMsg extends Msg {
 
     record Cancelled() implements RewordMsg {}
 
-    record Confirmed(CommitMessage message) implements RewordMsg {}
+    /**
+     * The user confirmed the message typed in the popup.
+     */
+    record Confirmed() implements RewordMsg {}
 }

@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch.movecommits;
 
+import static net.vanfleteren.jazygit.state.TestModels.typed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -109,7 +110,7 @@ class MoveUpdateTest {
     }
 
     private static Model named(CommitRange range) {
-        return Update.update(newBranch(range), new MoveMsg.NameConfirmed("topic"))
+        return Update.update(typed(newBranch(range), "topic"), new MoveMsg.NameConfirmed())
                 .model();
     }
 
@@ -179,7 +180,7 @@ class MoveUpdateTest {
     void commitsWithAMergeOnlyMoveToANewBranchWhereTheyAre() {
         Model asked = read(new CommitRange(2, 1, 0));
 
-        Next next = Update.update(asked, new MoveMsg.NameConfirmed("topic"));
+        Next next = Update.update(typed(asked, "topic"), new MoveMsg.NameConfirmed());
 
         assertEquals(Option.none(), asked.popup(MoveTargetPopup.class));
         assertEquals(List.of(toTopic(Option.none(), Option.none())), next.cmds());
@@ -188,7 +189,7 @@ class MoveUpdateTest {
 
     @Test
     void theNameOfABranchThatExistsKeepsTheDialogOpen() {
-        Next next = Update.update(newBranch(UNPUSHED), new MoveMsg.NameConfirmed("main"));
+        Next next = Update.update(typed(newBranch(UNPUSHED), "main"), new MoveMsg.NameConfirmed());
 
         assertTrue(next.model().popup(MoveNamePopup.class).isDefined());
         assertEquals(List.of(), next.cmds());

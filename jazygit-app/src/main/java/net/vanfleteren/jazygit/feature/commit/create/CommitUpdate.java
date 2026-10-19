@@ -31,7 +31,7 @@ public final class CommitUpdate {
                 yield new Next(staged.model().openPopupIfFree(new CommitPopup()), staged.cmds());
             }
             case Cancelled() -> Next.of(model.withoutPopup(CommitPopup.class));
-            case Confirmed(CommitMessage message) -> confirmed(model, message.stripped());
+            case Confirmed() -> confirmed(model);
         };
     }
 
@@ -53,9 +53,11 @@ public final class CommitUpdate {
         return Update.confirm(model, StageAllPopup.class, popup -> Option.of(new StageForCommit(paths)));
     }
 
-    private static Next confirmed(Model model, CommitMessage message) {
+    private static Next confirmed(Model model) {
         // A blank summary keeps the dialog open.
-        return Update.confirm(
-                model, CommitPopup.class, popup -> Option.when(message.hasSummary(), () -> new Commit(message)));
+        return Update.confirm(model, CommitPopup.class, popup -> {
+            CommitMessage message = popup.message().stripped();
+            return Option.when(message.hasSummary(), () -> new Commit(message));
+        });
     }
 }

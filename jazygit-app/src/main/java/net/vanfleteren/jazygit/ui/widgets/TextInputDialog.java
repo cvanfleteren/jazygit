@@ -15,24 +15,23 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.TextPopup;
 import net.vanfleteren.jazygit.ui.LineEditInput;
 
 /**
- * The standard popup asking for one line of text. Enter confirms it, Escape cancels. Whether it is open lives
- * in the {@link Model}, as a popup of type {@code P}; the text being typed lives in the input widget, which
- * starts out with the popup's initial text each time the popup opens.
+ * The standard popup asking for one line of text. Enter confirms it, Escape cancels. Whether it is open, and the
+ * text as far as it was typed, live in the {@link Model}, as a popup of type {@code P}: the input shows the popup's
+ * text, and sends a {@link Msg.TextEdited} for every change. Only the input's caret is kept here.
  *
  * @param <P> the popup that makes this dialog show
  */
-public final class TextInputDialog<P extends Popup> implements PopupView {
+public final class TextInputDialog<P extends TextPopup> implements PopupView {
 
     private static final int WIDTH = 50;
     private final Spec<P> spec;
     private final Consumer<Msg> dispatch;
     private final TextInputState input = new TextInputState();
-    // The popup the input was filled in for, so the initial text is only filled in when it opens.
-    private Option<P> shownFor = Option.none();
+
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
@@ -51,26 +50,28 @@ public final class TextInputDialog<P extends Popup> implements PopupView {
      */
     @Override
     public Option<Element> render(Model model) {
-        Option<P> popup = model.popup(spec.popupType());
-        popup.filter(open -> !shownFor.contains(open)).forEach(open -> {
-            input.setText(spec.initialText().apply(open));
-            input.moveCursorToEnd();
+        return model.popup(spec.popupType()).map(open -> {
+            // The input shows what the model has: what was typed in it, or what the popup opened with.
+            if (!input.text().equals(open.text())) {
+                input.setText(open.text());
+                input.moveCursorToEnd();
+            }
+            return DialogFrame.of(spec.title().apply(open), WIDTH, field())
+                    .onConfirm(this::confirm)
+                    .onCancel(this::cancel);
         });
-        shownFor = popup;
-        return popup.map(open -> DialogFrame.of(spec.title().apply(open), WIDTH, field())
-                .onConfirm(this::confirm)
-                .onCancel(this::cancel));
     }
 
     private StyledElement<?> field() {
         TextInputElement field = textInput(input)
                 .onSubmit(this::confirm)
                 .onKeyEvent(event -> event.code() == KeyCode.ESCAPE ? cancelled() : EventResult.UNHANDLED);
-        return new LineEditInput(spec.placeholder().map(field::placeholder).getOrElse(field), input, spec.id());
+        return new LineEditInput(spec.placeholder().map(field::placeholder).getOrElse(field), input, spec.id())
+                .onChange(text -> dispatch.accept(new Msg.TextEdited(text)));
     }
 
     private void confirm() {
-        dispatch.accept(spec.onConfirm().apply(input.text()));
+        dispatch.accept(spec.onConfirm().get());
     }
 
     private EventResult cancelled() {
@@ -89,8 +90,8 @@ public final class TextInputDialog<P extends Popup> implements PopupView {
      * @param popupType   the popup that makes the dialog show
      * @param title       the title, from the popup
      * @param placeholder what the input shows while it is empty, if anything
-     * @param initialText the text the input starts out with, from the popup
-     * @param onConfirm   the message for Enter, given the text; it decides whether the popup closes
+     * @param onConfirm   the message for Enter; its update reads the text from the popup, and decides whether it
+     *                    closes
      * @param onCancel    the message for Escape
      */
     public record Spec<P>(
@@ -98,7 +99,6 @@ public final class TextInputDialog<P extends Popup> implements PopupView {
             Class<P> popupType,
             Function<P, String> title,
             Option<String> placeholder,
-            Function<P, String> initialText,
-            Function<String, Msg> onConfirm,
+            Supplier<Msg> onConfirm,
             Supplier<Msg> onCancel) {}
 }

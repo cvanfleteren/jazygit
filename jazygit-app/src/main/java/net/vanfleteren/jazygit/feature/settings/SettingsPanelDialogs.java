@@ -25,7 +25,6 @@ public final class SettingsPanelDialogs {
             GhExecutablePopup.class,
             popup -> Messages.get("dialog.settings.gh.title"),
             Option.of(Messages.get("dialog.settings.gh.placeholder")),
-            GhExecutablePopup::current,
             SettingsPanelMsg.GhExecutableEntered::new,
             SettingsPanelMsg.GhExecutableCancelled::new);
     /**

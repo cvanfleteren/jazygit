@@ -25,9 +25,9 @@ public sealed interface AddWorktreeMsg extends Msg {
     record Cancelled() implements AddWorktreeMsg {}
 
     /**
-     * The user entered where the new worktree goes.
+     * The user confirmed where the new worktree goes, as typed in the popup.
      */
-    record Confirmed(String location) implements AddWorktreeMsg {}
+    record Confirmed() implements AddWorktreeMsg {}
 
     /**
      * {@code cmd} ran {@code commands} and added the worktree.

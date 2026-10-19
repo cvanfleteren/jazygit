@@ -1,30 +1,22 @@
 package net.vanfleteren.jazygit.feature.commit.reword;
 
-import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.commit.MessagePopup;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 
 /**
- * Asking for a new message of a commit, starting out with its current one.
+ * Asking for a new message of a commit.
  *
- * @param draft the message to show instead, once it came back from the editor
+ * @param message the new message as far as it was typed; it starts out as the current message of the commit
  */
-public record RewordPopup(Commit commit, Option<CommitMessage> draft) implements MessagePopup {
+public record RewordPopup(Commit commit, CommitMessage message) implements MessagePopup {
 
     public RewordPopup(Commit commit) {
-        this(commit, Option.none());
+        this(commit, new CommitMessage(commit.message(), commit.body()));
     }
 
     @Override
-    public RewordPopup withDraft(CommitMessage draft) {
-        return new RewordPopup(commit, Option.of(draft));
-    }
-
-    /**
-     * The message the dialog shows: the draft, else the current message of the commit.
-     */
-    public CommitMessage message() {
-        return draft.getOrElse(() -> new CommitMessage(commit.message(), commit.body()));
+    public RewordPopup withMessage(CommitMessage message) {
+        return new RewordPopup(commit, message);
     }
 }

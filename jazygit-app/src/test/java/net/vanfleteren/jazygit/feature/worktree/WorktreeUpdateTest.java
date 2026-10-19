@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.worktree;
 
 import static net.vanfleteren.jazygit.state.TestModels.errorText;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
+import static net.vanfleteren.jazygit.state.TestModels.typed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -119,8 +120,9 @@ class WorktreeUpdateTest {
 
         assertEquals(
                 List.of(),
-                Update.update(asked, new AddWorktreeMsg.Confirmed("  ")).cmds());
-        Next confirmed = Update.update(asked, new AddWorktreeMsg.Confirmed(" ~/elsewhere "));
+                Update.update(typed(asked, "  "), new AddWorktreeMsg.Confirmed())
+                        .cmds());
+        Next confirmed = Update.update(typed(asked, " ~/elsewhere "), new AddWorktreeMsg.Confirmed());
 
         assertEquals(List.of(new AddWorktreeCmd(FEATURE, "~/elsewhere")), confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());

@@ -33,9 +33,9 @@ public sealed interface SettingsPanelMsg extends Msg {
     record GhExecutableCancelled() implements SettingsPanelMsg {}
 
     /**
-     * The user entered the gh executable to run; blank for the one on the PATH.
+     * The user confirmed the gh executable typed in the popup; blank for the one on the PATH.
      */
-    record GhExecutableEntered(String executable) implements SettingsPanelMsg {}
+    record GhExecutableEntered() implements SettingsPanelMsg {}
 
     /**
      * Whether {@code executable}, none for the one on the PATH, is a gh that runs, by its version.

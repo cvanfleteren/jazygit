@@ -19,9 +19,9 @@ public sealed interface MessageEditorMsg extends Msg {
     }
 
     /**
-     * The user asked to edit {@code message}, as the dialog shows it, in the editor.
+     * The user asked to edit the message of the open popup in the editor.
      */
-    record Requested(CommitMessage message) implements MessageEditorMsg {}
+    record Requested() implements MessageEditorMsg {}
 
     /**
      * The editor ran {@code commands}, and saved the message as {@code message}.

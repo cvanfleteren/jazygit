@@ -58,7 +58,6 @@ public final class MoveDialogs {
                     popup.request().range().commits(),
                     popup.request().from().value()),
             Option.of(Messages.get("dialog.newBranch.placeholder")),
-            popup -> "",
             MoveMsg.NameConfirmed::new,
             MoveMsg.NameCancelled::new);
 

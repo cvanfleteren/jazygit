@@ -45,13 +45,13 @@ public final class SettingsPanelUpdate {
                                 new GhExecutablePopup(panel.ghExecutable().getOrElse(""))))
                         .getOrElse(model));
             case SettingsPanelMsg.GhExecutableCancelled() -> Next.of(model.withoutPopup(GhExecutablePopup.class));
-            case SettingsPanelMsg.GhExecutableEntered(String executable)
-            when model.popup(GhExecutablePopup.class).isDefined() ->
-                Next.of(
-                        model.withoutPopup(GhExecutablePopup.class),
-                        new SettingsPanelCmd.CheckGhExecutable(
-                                Option.of(executable.strip()).filter(path -> !path.isEmpty())));
-            case SettingsPanelMsg.GhExecutableEntered(String executable) -> Next.of(model);
+            case SettingsPanelMsg.GhExecutableEntered() ->
+                model.popup(GhExecutablePopup.class)
+                        .map(popup -> Next.of(
+                                model.withoutPopup(GhExecutablePopup.class),
+                                new SettingsPanelCmd.CheckGhExecutable(
+                                        Option.of(popup.executable().strip()).filter(path -> !path.isEmpty()))))
+                        .getOrElse(() -> Next.of(model));
             case SettingsPanelMsg.GhExecutableChecked(var executable, var version) ->
                 version.fold(
                         failure -> Next.of(model.fail(new AppError.GhExecutableUnusable(executable, failure))),

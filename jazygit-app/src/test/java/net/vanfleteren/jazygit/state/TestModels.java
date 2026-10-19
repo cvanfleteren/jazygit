@@ -4,6 +4,8 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd;
+import net.vanfleteren.jazygit.feature.commit.MessageEdited;
+import net.vanfleteren.jazygit.feature.commit.MessagePopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
@@ -132,5 +134,19 @@ public final class TestModels {
     public static Model switchingBranch(Model model, String branch) {
         return model.mapRepoView(repoView -> repoView.withBranchLog(Option.of(Preview.loading(
                 new BranchRef.Local(new Branch.Name(branch)), model.repoView().branchLog()))));
+    }
+
+    /**
+     * {@code model} after the user typed {@code text} in the open {@link TextPopup}.
+     */
+    public static Model typed(Model model, String text) {
+        return Update.update(model, new Msg.TextEdited(text)).model();
+    }
+
+    /**
+     * {@code model} after the user typed {@code message} in the open {@link MessagePopup}.
+     */
+    public static Model typed(Model model, CommitMessage message) {
+        return Update.update(model, new MessageEdited(message)).model();
     }
 }

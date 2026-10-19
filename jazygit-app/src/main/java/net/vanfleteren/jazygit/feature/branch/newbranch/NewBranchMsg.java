@@ -32,7 +32,7 @@ public sealed interface NewBranchMsg extends Msg {
     record Cancelled() implements NewBranchMsg {}
 
     /**
-     * The user entered the name of the new branch.
+     * The user confirmed the name typed in the popup.
      */
-    record Confirmed(String name) implements NewBranchMsg {}
+    record Confirmed() implements NewBranchMsg {}
 }
