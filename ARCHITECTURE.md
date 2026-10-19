@@ -266,7 +266,8 @@ leaves it as it was.
 
 The editor needs the terminal, which the TUI owns. `Env.terminal()` (`state.Terminal`) hands it over: `EditCmd`
 and `MessageEditorCmd` run the editor inside `terminal().handOver(...)`, on the `git-io` thread. `JazygitApp`
-implements it with `HandOverBackend`, the TamboUI backend it gives the runner:
+implements it with `HandOverBackend`, the TamboUI backend it gives the runner. It wraps the backend TamboUI picks
+by itself (`BackendFactory.create()`, so `tamboui.backend` or `TAMBOUI_BACKEND` still chooses), and forwards to it:
 
 - **Leaving**, on the render thread between two frames: it stops reading keys, then puts the terminal back as it
   was before the app started (no mouse capture or bracketed paste, cursor shown, main screen, cooked mode), and
@@ -277,9 +278,10 @@ implements it with `HandOverBackend`, the TamboUI backend it gives the runner:
 - **Coming back**, on the render thread again: it sets the terminal up as before, reads keys again, and clears
   TamboUI's buffers, so the next frame draws the whole screen.
 
-Keys are read by polling the terminal (`available()` on the standard input), not through JLine. After a read that
-timed out, JLine leaves a thread blocked on reading the terminal, which would take the first key typed in the
-editor. On Windows, whose console cannot be polled that way, keys are read through JLine.
+While the terminal is handed over, a read waits out its timeout without touching the terminal; one under way is let
+finish first. This takes a backend whose timed-out read leaves nothing behind, as the Panama backend, which polls the
+terminal. The JLine backend does not do for this: after a read that timed out, it leaves a thread blocked on reading
+the terminal, which would take the first key typed in the editor.
 
 ## The runtime loop
 
