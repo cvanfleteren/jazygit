@@ -51,12 +51,25 @@ public interface Msg {
 
     /**
      * The element with the id {@code id} of the screen shown, outside the popups, got the focus.
+     *
+     * @param content whether it is an area of the content panel, rather than a pane
      */
-    record Focused(String id) implements Msg {
+    record Focused(String id, boolean content) implements Msg {
 
         @Override
         public Update.Next apply(Model model) {
-            return Update.Next.of(model.withShownPane(id));
+            return Update.Next.of(model.withShownPane(id, content));
+        }
+    }
+
+    /**
+     * The user scrolled the content area {@code area}.
+     */
+    record ContentScrolled(String area, Scrolled to) implements Msg {
+
+        @Override
+        public Update.Next apply(Model model) {
+            return Update.Next.of(model.withScrolled(model.scrolled().put(area, to)));
         }
     }
 }

@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.ui;
 
 import static dev.tamboui.toolkit.Toolkit.*;
 
+import dev.tamboui.style.RichTextState;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import dev.tamboui.text.Text;
@@ -9,7 +10,10 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.RichTextAreaElement;
 import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.tui.bindings.Actions;
 import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.Tuple;
 import io.vavr.collection.List;
@@ -20,21 +24,20 @@ import java.util.Locale;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.keys.Keymap;
-import net.vanfleteren.jazygit.keys.Scopes;
-import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.DivergenceView;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Preview;
 import net.vanfleteren.jazygit.state.Screen;
+import net.vanfleteren.jazygit.state.Scrolled;
+import net.vanfleteren.jazygit.state.ScrolledContent;
 
 /**
  * The right-hand content panel: it always mirrors whichever left pane currently has focus,
@@ -50,9 +53,9 @@ public final class ContentPanel {
             List.of(FilesPanel.ID, BranchesPanel.ID, CommitsPanel.ID, StashPanel.ID);
     private static final String MESSAGE_INDENT = "    ";
     private final Theme.SpanStyles styles;
-    // The scrollable areas for the diffs, the branch log and the commit. They are kept between renders because
-    // an area holds its own scroll position; a new element every frame would jump back to the top. Only used
-    // from the render thread.
+    // The scrollable areas for the diffs, the branch log and the commit. Where they are scrolled to lives in the
+    // model; the elements are kept between renders as they also lay out the text for the scrollbar. Only used from
+    // the render thread.
     private final ScrollArea stagedArea;
     private final ScrollArea unstagedArea;
     private final ScrollArea commitArea;
@@ -76,24 +79,31 @@ public final class ContentPanel {
      * @param focus called with the id of a focusable area that is clicked, to give it the focus
      */
     public ContentPanel(Theme.SpanStyles styles, BooleanSupplier leaveScrollArea, Consumer<String> focus) {
+        this(styles, leaveScrollArea, focus, msg -> {});
+    }
+
+    /**
+     * @param dispatch receives where the user scrolled an area to, on the render thread
+     */
+    public ContentPanel(
+            Theme.SpanStyles styles, BooleanSupplier leaveScrollArea, Consumer<String> focus, Consumer<Msg> dispatch) {
         this.styles = styles;
-        stagedArea = new ScrollArea(
-                "diff-staged", Option.of(FilesPanel.ID), text -> diffText(text, styles), leaveScrollArea, focus);
-        unstagedArea = new ScrollArea(
-                "diff-unstaged", Option.of(FilesPanel.ID), text -> diffText(text, styles), leaveScrollArea, focus);
-        commitArea = new ScrollArea(
-                COMMIT_AREA_ID, Option.of(CommitsPanel.ID), ContentPanel::plainText, leaveScrollArea, focus);
-        divergenceArea = new ScrollArea(
-                DIVERGENCE_AREA_ID, Option.of(BranchesPanel.ID), ContentPanel::plainText, leaveScrollArea, focus);
-        logArea = new ScrollArea("branch-log", Option.none(), text -> logText(text, styles), leaveScrollArea, focus);
-        // It shows the pull request highlighted in whichever pane of the pull requests screen is in use.
-        pullRequestArea = new ScrollArea(
-                PULL_REQUEST_AREA_ID,
-                Option.of(PullRequestsPanel.REVIEW_REQUESTED_ID),
-                ContentPanel::plainText,
-                leaveScrollArea,
-                focus);
+        Function<String, ScrollArea> area = id -> new ScrollArea(id, leaveScrollArea, focus, dispatch);
+        stagedArea = area.apply("diff-staged");
+        unstagedArea = area.apply("diff-unstaged");
+        commitArea = area.apply(COMMIT_AREA_ID);
+        divergenceArea = area.apply(DIVERGENCE_AREA_ID);
+        logArea = area.apply("branch-log");
+        pullRequestArea = area.apply(PULL_REQUEST_AREA_ID);
         focusableAreas = List.of(stagedArea, unstagedArea, commitArea, divergenceArea, pullRequestArea);
+    }
+
+    /**
+     * Whether {@code id} is an area of the content panel that can have the focus, rather than a pane.
+     */
+    public static boolean isArea(String id) {
+        return List.of("diff-staged", "diff-unstaged", COMMIT_AREA_ID, DIVERGENCE_AREA_ID, PULL_REQUEST_AREA_ID)
+                .contains(id);
     }
 
     /**
@@ -266,24 +276,69 @@ public final class ContentPanel {
 
     /**
      * The pane that gets the focus back when Escape is pressed in the area with id {@code areaId}, if that
-     * is a focusable area.
+     * is a focusable area: the pane whose highlighted row it shows.
      */
-    public Option<String> paneOfArea(String areaId) {
-        return focusableAreas
-                .filter(area -> area.id().equals(areaId))
-                .flatMap(area -> area.pane)
-                .headOption();
+    public Option<String> paneOfArea(Model model, String areaId) {
+        return switch (areaId) {
+            case "diff-staged", "diff-unstaged" -> Option.of(FilesPanel.ID);
+            case COMMIT_AREA_ID -> Option.of(CommitsPanel.ID);
+            case DIVERGENCE_AREA_ID -> Option.of(BranchesPanel.ID);
+            // It shows the pull request highlighted in whichever list of the pull requests screen is in use.
+            case PULL_REQUEST_AREA_ID ->
+                Option.of(model.prOverview().listPane().getOrElse(PullRequestsPanel.REVIEW_REQUESTED_ID));
+            default -> Option.none();
+        };
     }
 
     /**
      * The id of the area that shows what the pane {@code paneId} has highlighted, to move the focus into:
-     * the staged diff if it shows anything, else the unstaged one, or the commit.
+     * the staged diff if it shows anything, else the unstaged one, or the commit; none while it shows nothing.
      */
-    public Option<String> areaOfPane(String paneId) {
+    public Option<String> areaOfPane(Model model, String paneId) {
         return focusableAreas
-                .filter(area -> area.pane.contains(paneId) && area.hasContent())
                 .map(ScrollArea::id)
+                .filter(id -> paneOfArea(model, id).contains(paneId) && showsContent(model, id))
                 .headOption();
+    }
+
+    /**
+     * Whether the area {@code areaId} has something to show in {@code model}.
+     */
+    private static boolean showsContent(Model model, String areaId) {
+        return switch (areaId) {
+            case "diff-staged" ->
+                diffs(model).exists(diffs -> !shown(diffs.staged()).isBlank());
+            case "diff-unstaged" ->
+                diffs(model).exists(diffs -> !shown(diffs.unstaged()).isBlank());
+            case COMMIT_AREA_ID ->
+                model.repoView()
+                        .commitDetail()
+                        .map(Preview::shown)
+                        .exists(detail -> detail.value().toOption().isDefined()
+                                && commit(model, detail.key()).isDefined());
+            case DIVERGENCE_AREA_ID ->
+                model.repoView()
+                        .divergence()
+                        .filter(view -> model.repoView().branchesTab() == BranchesTab.LOCAL)
+                        .flatMap(view -> view.detail()
+                                .map(Preview::shown)
+                                .filter(detail -> detail.value().toOption().isDefined())
+                                .flatMap(detail -> view.commit(detail.key())))
+                        .isDefined();
+            case PULL_REQUEST_AREA_ID ->
+                model.prOverview()
+                        .preview()
+                        .map(Preview::shown)
+                        .exists(preview -> preview.value().toOption().isDefined());
+            default -> false;
+        };
+    }
+
+    private static Option<Diffs> diffs(Model model) {
+        return model.repoView()
+                .fileDiff()
+                .map(Preview::shown)
+                .flatMap(diff -> diff.value().toOption());
     }
 
     /**
@@ -292,8 +347,6 @@ public final class ContentPanel {
      * until the focus is given back.
      */
     public StyledElement<?> render(Model model, String focusedId) {
-        List.of(stagedArea, unstagedArea, commitArea, divergenceArea, logArea, pullRequestArea)
-                .forEach(area -> area.restyle(model.preferences().theme()));
         boolean inContent = focusableAreas.exists(area -> area.id().equals(focusedId));
         focusableAreas.forEach(area -> area.tabbable(inContent));
         if (model.screen() == Screen.PULL_REQUESTS) {
@@ -305,14 +358,13 @@ public final class ContentPanel {
             return model.repoView()
                     .divergence()
                     .filter(view -> model.repoView().branchesTab() == BranchesTab.LOCAL)
-                    .<StyledElement<?>>map(view ->
-                            divergenceCommitView(view, model.preferences().diffOptions()))
-                    .getOrElse(() -> branchLogView(model));
+                    .<StyledElement<?>>map(view -> divergenceCommitView(model, focusedId, view))
+                    .getOrElse(() -> branchLogView(model, focusedId));
         }
         if (CommitsPanel.ID.equals(pane) || COMMIT_AREA_ID.equals(pane)) {
-            return commitDiffView(model);
+            return commitDiffView(model, focusedId);
         }
-        return fileDiffView(model);
+        return fileDiffView(model, focusedId);
     }
 
     /**
@@ -320,7 +372,6 @@ public final class ContentPanel {
      * shows it; the one shown before stays while it is read.
      */
     private StyledElement<?> pullRequestView(Model model, String focusedId) {
-        Scopes.PULL_REQUESTS.map(Keymap.Scope::id).find(focusedId::equals).forEach(pullRequestArea::showsPane);
         String title = Messages.get("panel.pullRequest.title");
         return model.prOverview()
                 .preview()
@@ -328,14 +379,15 @@ public final class ContentPanel {
                 .<StyledElement<?>>map(preview -> whenLoaded(
                         title,
                         preview.value(),
-                        read -> pullRequestArea
-                                .with(
-                                        new PullRequestContent(preview.key(), read),
-                                        () -> pullRequestText(preview.key(), read, styles))
-                                .show(Messages.get(
+                        read -> pullRequestArea.show(
+                                model,
+                                focusedId,
+                                Messages.get(
                                         "panel.pullRequest.titleFor",
                                         preview.key().repository(),
-                                        String.valueOf(preview.key().number())))))
+                                        String.valueOf(preview.key().number())),
+                                new ScrolledContent.PullRequest(preview.key(), read),
+                                pullRequestText(preview.key(), read, styles))))
                 .getOrElse(() -> dimPanel(title, Messages.get("content.noPullRequest")));
     }
 
@@ -380,7 +432,7 @@ public final class ContentPanel {
     /**
      * One panel for the staged changes and one for the unstaged changes, one above the other when both exist.
      */
-    private StyledElement<?> fileDiffView(Model model) {
+    private StyledElement<?> fileDiffView(Model model, String focusedId) {
         DiffOptions options = model.preferences().diffOptions();
         String title = titled(Messages.get("panel.diff.title"), options);
         // With no files there is nothing to highlight, so no diff is ever requested.
@@ -389,40 +441,45 @@ public final class ContentPanel {
                 : model.repoView()
                         .fileDiff()
                         .map(Preview::shown)
-                        .<StyledElement<?>>map(
-                                diff -> whenLoaded(title, diff.value(), diffs -> diffPanels(title, diffs, options)))
+                        .<StyledElement<?>>map(diff ->
+                                whenLoaded(title, diff.value(), diffs -> diffPanels(model, focusedId, title, diffs)))
                         .getOrElse(() -> loadingPanel(title));
     }
 
-    private StyledElement<?> diffPanels(String title, Diffs diffs, DiffOptions options) {
+    private StyledElement<?> diffPanels(Model model, String focusedId, String title, Diffs diffs) {
+        DiffOptions options = model.preferences().diffOptions();
         if (diffs.isEmpty()) {
             return dimPanel(
                     title, Messages.get(options.ignoreWhitespace() ? "content.onlyWhitespace" : "content.noChanges"));
         }
         List<Element> panels = List.of(
-                        Tuple.of(
-                                titled(Messages.get("content.staged"), options),
-                                stagedArea.with(shown(diffs.staged()))),
-                        Tuple.of(
-                                titled(Messages.get("content.unstaged"), options),
-                                unstagedArea.with(shown(diffs.unstaged()))))
-                .filter(e -> e._2.hasContent())
-                .map(e -> e._2.show(e._1));
+                        Tuple.of(stagedArea, "content.staged", diffs.staged()),
+                        Tuple.of(unstagedArea, "content.unstaged", diffs.unstaged()))
+                .filter(panel -> !shown(panel._3).isBlank())
+                .map(panel -> panel._1.show(
+                        model,
+                        focusedId,
+                        titled(Messages.get(panel._2), options),
+                        new ScrolledContent.Diff(panel._3),
+                        diffText(shown(panel._3), styles)));
         return column(panels.toJavaArray(Element[]::new));
     }
 
-    private StyledElement<?> branchLogView(Model model) {
+    private StyledElement<?> branchLogView(Model model, String focusedId) {
         return model.repoView()
                 .branchLog()
                 .map(Preview::shown)
                 .<StyledElement<?>>map(log -> {
                     String title = Messages.get("panel.log.titleFor", log.key().name());
-                    return whenLoaded(
-                            title,
-                            log.value(),
-                            commits -> logArea.with(logLines(commits, ZoneId.systemDefault())
-                                            .mkString("\n"))
-                                    .show(title));
+                    return whenLoaded(title, log.value(), commits -> {
+                        String lines = logLines(commits, ZoneId.systemDefault()).mkString("\n");
+                        return logArea.show(
+                                model,
+                                focusedId,
+                                title,
+                                new ScrolledContent.BranchLog(commits),
+                                logText(lines, styles));
+                    });
                 })
                 .getOrElse(() -> loadingPanel(Messages.get("panel.log.title")));
     }
@@ -430,7 +487,8 @@ public final class ContentPanel {
     /**
      * The commit highlighted in the divergence {@code view}, as the commits pane shows its commits.
      */
-    private StyledElement<?> divergenceCommitView(DivergenceView view, DiffOptions options) {
+    private StyledElement<?> divergenceCommitView(Model model, String focusedId, DivergenceView view) {
+        DiffOptions options = model.preferences().diffOptions();
         String title = Messages.get("panel.commit.title");
         return view.detail()
                 .map(Preview::shown)
@@ -438,12 +496,12 @@ public final class ContentPanel {
                         title,
                         detail.value(),
                         changes -> view.commit(detail.key())
-                                .<StyledElement<?>>map(commit -> divergenceArea
-                                        .with(
-                                                new CommitContent(commit, changes),
-                                                () -> commitText(commit, shownChanges(changes, options), styles))
-                                        .show(titled(
-                                                Messages.get("panel.commit.titleFor", commit.shortSha()), options)))
+                                .<StyledElement<?>>map(commit -> divergenceArea.show(
+                                        model,
+                                        focusedId,
+                                        titled(Messages.get("panel.commit.titleFor", commit.shortSha()), options),
+                                        new ScrolledContent.CommitChanges(commit, changes),
+                                        commitText(commit, shownChanges(changes, options), styles)))
                                 .getOrElse(() -> loadingPanel(title))))
                 .getOrElse(() -> view.commits()
                                 .toOption()
@@ -453,7 +511,7 @@ public final class ContentPanel {
                         : loadingPanel(title));
     }
 
-    private StyledElement<?> commitDiffView(Model model) {
+    private StyledElement<?> commitDiffView(Model model, String focusedId) {
         DiffOptions options = model.preferences().diffOptions();
         String title = Messages.get("panel.commit.title");
         return model.repoView()
@@ -463,58 +521,38 @@ public final class ContentPanel {
                         title,
                         detail.value(),
                         changes -> commit(model, detail.key())
-                                .<StyledElement<?>>map(commit -> commitArea
-                                        .with(
-                                                new CommitContent(commit, changes),
-                                                () -> commitText(commit, shownChanges(changes, options), styles))
-                                        .show(titled(
-                                                Messages.get("panel.commit.titleFor", commit.shortSha()), options)))
+                                .<StyledElement<?>>map(commit -> commitArea.show(
+                                        model,
+                                        focusedId,
+                                        titled(Messages.get("panel.commit.titleFor", commit.shortSha()), options),
+                                        new ScrolledContent.CommitChanges(commit, changes),
+                                        commitText(commit, shownChanges(changes, options), styles)))
                                 .getOrElse(() -> loadingPanel(title))))
                 .getOrElse(() -> model.repo().commits().toOption().exists(List::isEmpty)
                         ? panel(title, text(Messages.get("content.noCommits")))
                         : loadingPanel(title));
     }
 
+    /**
+     * A scrollable area of the panel. It shows what it is given at the position the model has for that, and tells
+     * where the user scrolled it to; the element only keeps the layout of the text.
+     */
     private static final class ScrollArea {
-        private final String id;
-        // The pane this area shows the content of, which gets the focus back from it; none if the area
-        // cannot be focused.
-        private Option<String> pane;
-        private final RichTextAreaElement element;
-        private final Function<String, Text> styling;
-        // What is shown, which only changes the text and the scroll position when it changes.
-        private Object key = "";
-        // How the text of what is shown is built, and the theme it was built in.
-        private Supplier<Text> text = Text::empty;
-        private Option<ThemeName> theme = Option.none();
 
-        ScrollArea(
-                String id,
-                Option<String> pane,
-                Function<String, Text> styling,
-                BooleanSupplier leaveScrollArea,
-                Consumer<String> focus) {
+        private static final int WHEEL_LINES = 3;
+
+        private final String id;
+        private final RichTextAreaElement element;
+        private final BooleanSupplier leaveScrollArea;
+        private final Consumer<String> focus;
+        private final Consumer<Msg> dispatch;
+
+        ScrollArea(String id, BooleanSupplier leaveScrollArea, Consumer<String> focus, Consumer<Msg> dispatch) {
             this.id = id;
-            this.pane = pane;
-            this.styling = styling;
+            this.leaveScrollArea = leaveScrollArea;
+            this.focus = focus;
+            this.dispatch = dispatch;
             element = richTextArea().id(id).rounded().scrollbar().fill();
-            // Only focusable, and so part of the Tab cycle, while the content has the focus; a click still
-            // gives it the focus from the panes.
-            if (pane.isDefined()) {
-                element.onMouseEvent(event -> {
-                    if (event.kind() == MouseEventKind.PRESS && event.isLeftButton()) {
-                        focus.accept(id);
-                        return EventResult.HANDLED;
-                    }
-                    return EventResult.UNHANDLED;
-                });
-            }
-            element.onKeyEvent(event -> {
-                // Key handlers also see keys typed elsewhere; the callback checks that a diff has focus.
-                return event.code() == KeyCode.ESCAPE && leaveScrollArea.getAsBoolean()
-                        ? EventResult.HANDLED
-                        : EventResult.UNHANDLED;
-            });
         }
 
         String id() {
@@ -522,68 +560,80 @@ public final class ContentPanel {
         }
 
         /**
-         * Makes the area show the content of the pane {@code paneId}, which gets the focus back from it.
-         */
-        void showsPane(String paneId) {
-            pane = Option.of(paneId);
-        }
-
-        /**
-         * Shows {@code newContent}, scrolling back to the top when it differs from what was shown.
-         */
-        ScrollArea with(String newContent) {
-            return with(newContent, () -> styling.apply(newContent));
-        }
-
-        /**
-         * Shows the text for {@code newKey}, which is only built, and the scroll position only reset to
-         * the top, when the key differs from the one shown.
-         */
-        ScrollArea with(Object newKey, Supplier<Text> text) {
-            if (!newKey.equals(key)) {
-                key = newKey;
-                this.text = text;
-                element.text(text.get());
-                element.state().scrollToTop();
-            }
-            return this;
-        }
-
-        /**
-         * Builds the text shown again when the theme is not {@code current} anymore, as its colours are
-         * resolved when it is built; the scroll position stays.
-         */
-        void restyle(ThemeName current) {
-            if (!theme.contains(current)) {
-                theme = Option.of(current);
-                element.text(text.get());
-            }
-        }
-
-        boolean hasContent() {
-            return !(key instanceof String content) || !content.isBlank();
-        }
-
-        /**
          * Makes the area part of the Tab cycle while {@code inContent}, so Tab goes from one area to the
-         * other then, but from the last pane back to the first otherwise.
+         * other then, but from the last pane back to the first otherwise. Only the areas with a pane are.
          */
         void tabbable(boolean inContent) {
-            element.focusable(pane.isDefined() && inContent);
+            element.focusable(isArea(id) && inContent);
         }
 
-        RichTextAreaElement show(String title) {
-            return element.title(title);
+        /**
+         * The area titled {@code title}, showing {@code text}, the text of {@code content}, where the model has it
+         * scrolled to.
+         */
+        RichTextAreaElement show(Model model, String focusedId, String title, ScrolledContent content, Text text) {
+            Scrolled at = model.scrolled(id, content);
+            RichTextState state = element.text(text).title(title).state();
+            state.scrollToTop();
+            state.scrollDown(at.row());
+            state.scrollRight(at.column());
+            boolean focused = id.equals(focusedId);
+            return element.onKeyEvent(event -> keys(event, focused, content))
+                    .onMouseEvent(event -> mouse(event, content));
+        }
+
+        private EventResult keys(KeyEvent event, boolean focused, ScrolledContent content) {
+            // Key handlers also see keys typed elsewhere; the callback checks that an area has focus.
+            if (event.code() == KeyCode.ESCAPE && leaveScrollArea.getAsBoolean()) {
+                return EventResult.HANDLED;
+            }
+            return focused && scroll(element.state(), event) ? scrolled(content) : EventResult.UNHANDLED;
+        }
+
+        /**
+         * A click gives the focus to an area that can have it, even from the panes; the wheel scrolls.
+         */
+        private EventResult mouse(MouseEvent event, ScrolledContent content) {
+            RichTextState state = element.state();
+            if (event.kind() == MouseEventKind.PRESS && event.isLeftButton() && isArea(id)) {
+                focus.accept(id);
+                return EventResult.HANDLED;
+            }
+            if (event.kind() == MouseEventKind.SCROLL_UP) {
+                state.scrollUp(WHEEL_LINES);
+                return scrolled(content);
+            }
+            if (event.kind() == MouseEventKind.SCROLL_DOWN) {
+                state.scrollDown(WHEEL_LINES);
+                return scrolled(content);
+            }
+            return EventResult.UNHANDLED;
+        }
+
+        /**
+         * Scrolls {@code state} as the area itself does on {@code event}, and says whether it was a key for that.
+         */
+        private static boolean scroll(RichTextState state, KeyEvent event) {
+            return Option.<Runnable>none()
+                    .orElse(Option.when(event.matches(Actions.MOVE_UP), () -> state::scrollUp))
+                    .orElse(Option.when(event.matches(Actions.MOVE_DOWN), () -> state::scrollDown))
+                    .orElse(Option.when(event.matches(Actions.PAGE_UP), () -> state::pageUp))
+                    .orElse(Option.when(event.matches(Actions.PAGE_DOWN), () -> state::pageDown))
+                    .orElse(Option.when(event.matches(Actions.HOME), () -> state::scrollToTop))
+                    .orElse(Option.when(event.matches(Actions.END), () -> state::scrollToBottom))
+                    .orElse(Option.when(event.matches(Actions.MOVE_LEFT), () -> state::scrollLeft))
+                    .orElse(Option.when(event.matches(Actions.MOVE_RIGHT), () -> state::scrollRight))
+                    .peek(Runnable::run)
+                    .isDefined();
+        }
+
+        /**
+         * Tells the model where the area showing {@code content} is scrolled to now.
+         */
+        private EventResult scrolled(ScrolledContent content) {
+            RichTextState state = element.state();
+            dispatch.accept(new Msg.ContentScrolled(id, new Scrolled(content, state.scrollRow(), state.scrollCol())));
+            return EventResult.HANDLED;
         }
     }
-
-    /**
-     * What the commit area shows: the commit, and what it changed.
-     */
-    private record CommitContent(Commit commit, DiffText changes) {}
-
-    /**
-     * What the pull request area shows: the pull request, and what it says and changes.
-     */
-    private record PullRequestContent(PullRequestSummary pullRequest, PullRequestPreview preview) {}
 }

@@ -141,7 +141,8 @@ public class JazygitApp extends ToolkitApp {
         this.contentPanel = new ContentPanel(
                 Theme.spanStyles(styleEngine),
                 this::leaveScrollArea,
-                id -> runner().focusManager().setFocus(id));
+                id -> runner().focusManager().setFocus(id),
+                dispatch);
     }
 
     /**
@@ -246,7 +247,7 @@ public class JazygitApp extends ToolkitApp {
         return Option.of(focusedId)
                 .filter(id -> popups.forAll(slot -> !slot.view().ids().contains(id)))
                 .orElse(model.shownPane())
-                .map(id -> contentPanel.paneOfArea(id).getOrElse(id))
+                .map(id -> contentPanel.paneOfArea(model, id).getOrElse(id))
                 .getOrNull();
     }
 
@@ -254,7 +255,9 @@ public class JazygitApp extends ToolkitApp {
      * Moves the focus to the content shown for the pane {@code paneId}, so it can be scrolled by key.
      */
     private void openContent(String paneId) {
-        contentPanel.areaOfPane(paneId).forEach(id -> runner().focusManager().setFocus(id));
+        contentPanel
+                .areaOfPane(model(), paneId)
+                .forEach(id -> runner().focusManager().setFocus(id));
     }
 
     /**
@@ -276,7 +279,8 @@ public class JazygitApp extends ToolkitApp {
      * Gives the focus back to the pane whose content has it, and says whether there was one.
      */
     private boolean leaveScrollArea() {
-        Option<String> pane = contentPanel.paneOfArea(runner().focusManager().focusedId());
+        Option<String> pane =
+                contentPanel.paneOfArea(model(), runner().focusManager().focusedId());
         pane.forEach(runner().focusManager()::setFocus);
         return pane.isDefined();
     }
@@ -400,10 +404,17 @@ public class JazygitApp extends ToolkitApp {
         runtime = Option.none();
     }
 
+    /**
+     * The model of the running program; the initial one before it runs.
+     */
+    private Model model() {
+        return runtime.map(running -> running.program().model())
+                .getOrElse(() -> Model.initial(env.git().repositoryName()));
+    }
+
     @Override
     protected Element render() {
-        Model model = runtime.map(running -> running.program().model())
-                .getOrElse(() -> Model.initial(env.git().repositoryName()));
+        Model model = model();
         Theme.activate(styleEngine, model.preferences().theme());
         if (model.screen() != shownScreen) {
             shownScreen = model.screen();
@@ -430,7 +441,7 @@ public class JazygitApp extends ToolkitApp {
         Option<String> focus = Option.of(focusedId);
         focus.filter(id -> shown.forAll(p -> !p.ids().contains(id)))
                 .filter(id -> !model.shownPane().contains(id))
-                .map(Msg.Focused::new)
+                .map(id -> new Msg.Focused(id, ContentPanel.isArea(id)))
                 .forEach(dispatch);
         Option<Shown> open = shown.find(p -> p.element().isDefined());
         open.fold(

@@ -28,6 +28,8 @@ import net.vanfleteren.jazygit.state.Preview;
  * @param freshness       when the pull requests were last read, and which reads failed the last time
  * @param highlighted     the pull request highlighted in the pane in use, once one is
  * @param preview         what the highlighted pull request says and changes, once one is highlighted
+ * @param listPane        the id of the list that had the focus last, whose highlighted pull request the content
+ *                        panel shows; none before one had it
  * @param focusedPane     the id of the pane of the screen that had the focus last, which it gets back when the
  *                        screen is shown again; none before one had it
  */
@@ -41,6 +43,7 @@ public record PrOverview(
         Freshness freshness,
         Option<PullRequestSummary> highlighted,
         Option<Preview<PullRequestSummary, PullRequestPreview>> preview,
+        Option<String> listPane,
         Option<String> focusedPane) {
 
     public static final PrOverview INITIAL = new PrOverview(
@@ -50,6 +53,7 @@ public record PrOverview(
             Option.none(),
             HashSet.empty(),
             Freshness.NEVER,
+            Option.none(),
             Option.none(),
             Option.none(),
             Option.none());

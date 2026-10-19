@@ -37,7 +37,8 @@ class ModelPopupTest {
     void theFocusOutsideThePopupsIsKeptThroughAPopup() {
         assertEquals(Option.none(), closed.repoView().focusedPane());
 
-        Model focused = Update.update(closed, new Msg.Focused("branches")).model();
+        Model focused =
+                Update.update(closed, new Msg.Focused("branches", false)).model();
 
         assertEquals(Option.of("branches"), focused.repoView().focusedPane());
         assertEquals(

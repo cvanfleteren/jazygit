@@ -6,6 +6,7 @@ import dev.tamboui.text.Span;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.StyledElement;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
@@ -81,8 +82,7 @@ class ContentPanelTest {
     @Test
     void aPopupThatJustClosedKeepsShowingTheBranchLogUntilTheFocusIsBack() throws Exception {
         // The popup is gone from the model, but has the focus until the render gives it back.
-        Model closed =
-                model.mapRepoView(repoView -> repoView.withFocusedPane(io.vavr.control.Option.of(BranchesPanel.ID)));
+        Model closed = model.mapRepoView(repoView -> repoView.withFocusedPane(Option.of(BranchesPanel.ID)));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(closed, "new-branch"))) {
             String screen = RenderedText.ofLarge(testRunner, () -> content.render(closed, "new-branch"));
             assertTrue(screen.contains("Log: feature/initial-layout"), screen);
@@ -91,10 +91,8 @@ class ContentPanelTest {
 
     @Test
     void aPopupOpenedFromTheBranchesKeepsShowingTheBranchLog() throws Exception {
-        Model withPopup = model.mapRepoView(
-                        repoView -> repoView.withFocusedPane(io.vavr.control.Option.of(BranchesPanel.ID)))
-                .openPopup(new net.vanfleteren.jazygit.feature.help.HelpPopup(
-                        BranchesPanel.ID, io.vavr.collection.List.empty()));
+        Model withPopup = model.mapRepoView(repoView -> repoView.withFocusedPane(Option.of(BranchesPanel.ID)))
+                .openPopup(new net.vanfleteren.jazygit.feature.help.HelpPopup(BranchesPanel.ID, List.empty()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(withPopup, "help"))) {
             String screen = RenderedText.ofLarge(testRunner, () -> content.render(withPopup, "help"));
             assertTrue(screen.contains("Log: feature/initial-layout"), screen);
@@ -151,11 +149,8 @@ class ContentPanelTest {
                         new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffOptions.DEFAULT, DiffText.of("changes")))
                 .model();
 
-        // Rendering gives the area its content; the commits pane has the focus while doing so.
-        content.render(selected, CommitsPanel.ID);
-
-        String area = content.areaOfPane(CommitsPanel.ID).get();
-        assertEquals(io.vavr.control.Option.of(CommitsPanel.ID), content.paneOfArea(area));
+        String area = content.areaOfPane(selected, CommitsPanel.ID).get();
+        assertEquals(Option.of(CommitsPanel.ID), content.paneOfArea(selected, area));
         assertNotNull(content.render(selected, area));
     }
 
@@ -207,12 +202,12 @@ class ContentPanelTest {
     void withADivergenceOpenTheBranchesShowItsHighlightedCommitWhichCanBeFocused() throws Exception {
         Commit ours = plain("cccc");
         Model diverged = TestModels.loaded()
-                .mapRepoView(repoView -> repoView.withDivergence(io.vavr.control.Option.of(new DivergenceView(
+                .mapRepoView(repoView -> repoView.withDivergence(Option.of(new DivergenceView(
                         new Branch.Name("main"),
                         new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main"))),
                         DivergenceView.Against.UPSTREAM,
                         new Loadable.Loaded<>(new Divergence(List.of(ours), 1, List.of(), 0)),
-                        io.vavr.control.Option.none()))));
+                        Option.none()))));
         Model selected = Update.update(
                         Update.update(diverged, new SelectionMsg.DivergenceCommitSelected(new Sha("cccc")))
                                 .model(),
@@ -228,19 +223,19 @@ class ContentPanelTest {
             assertFalse(screen.contains("Log:"), screen);
         }
 
-        String area = content.areaOfPane(BranchesPanel.ID).get();
-        assertEquals(io.vavr.control.Option.of(BranchesPanel.ID), content.paneOfArea(area));
+        String area = content.areaOfPane(selected, BranchesPanel.ID).get();
+        assertEquals(Option.of(BranchesPanel.ID), content.paneOfArea(selected, area));
     }
 
     @Test
     void aDivergenceWithoutCommitsSaysTheBranchesHaveNotDiverged() throws Exception {
         Model diverged = TestModels.loaded()
-                .mapRepoView(repoView -> repoView.withDivergence(io.vavr.control.Option.of(new DivergenceView(
+                .mapRepoView(repoView -> repoView.withDivergence(Option.of(new DivergenceView(
                         new Branch.Name("main"),
                         new BranchRef.Local(new Branch.Name("feature")),
                         DivergenceView.Against.BASE,
                         new Loadable.Loaded<>(new Divergence(List.of(), 0, List.of(), 0)),
-                        io.vavr.control.Option.none()))));
+                        Option.none()))));
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> content.render(diverged, BranchesPanel.ID))) {
@@ -250,10 +245,43 @@ class ContentPanelTest {
     }
 
     @Test
+    void scrollingTellsTheModelAndTheAreaShowsWhereTheModelHasIt() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        ContentPanel scrolling = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
+        String changes = List.range(0, 100).map(i -> "+line " + i).mkString("\n");
+        Model selected = Update.update(
+                        Update.update(TestModels.loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa")))
+                                .model(),
+                        new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffOptions.DEFAULT, DiffText.of(changes)))
+                .model();
+        String area = scrolling.areaOfPane(selected, CommitsPanel.ID).get();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(selected, area))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> scrolling.render(selected, area));
+            SettledPilot.of(testRunner).press(dev.tamboui.tui.event.KeyCode.DOWN);
+            SettledPilot.of(testRunner).pause();
+        }
+        Msg.ContentScrolled down = (Msg.ContentScrolled) dispatched.getLast();
+        assertEquals(area, down.area());
+        assertEquals(1, down.to().row());
+
+        // Where the model has it scrolled to is what shows, whatever was scrolled in the element before.
+        Model scrolled = selected.withScrolled(
+                io.vavr.collection.HashMap.of(area, new Scrolled(down.to().content(), 20, 0)));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(scrolled, area))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> scrolling.render(scrolled, area));
+            assertFalse(screen.contains("commit aaaa"), screen);
+            assertTrue(screen.contains("+line 20"), screen);
+        }
+    }
+
+    @Test
     void theDiffAreasReturnToTheFilesPane() {
-        assertEquals(io.vavr.control.Option.none(), content.paneOfArea("unknown"));
-        assertEquals(io.vavr.control.Option.of(FilesPanel.ID), content.paneOfArea("diff-staged"));
-        assertEquals(io.vavr.control.Option.of(FilesPanel.ID), content.paneOfArea("diff-unstaged"));
+        Model model = TestModels.loaded();
+        assertEquals(Option.none(), content.paneOfArea(model, "unknown"));
+        assertEquals(Option.of(FilesPanel.ID), content.paneOfArea(model, "diff-staged"));
+        assertEquals(Option.of(FilesPanel.ID), content.paneOfArea(model, "diff-unstaged"));
     }
 
     @Test

@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.state.prs.PrOverview;
  * @param outcome        what the user is told about the operations: how the last one went, and the commands run
  * @param popup          the popup that is open, if any; only one can be
  * @param listCursor     where the user is in the list of the popup, if it has one
+ * @param scrolled       where the areas of the content panel were scrolled to, by the id of the area
  * @param preferences    how the user wants things shown, kept from one session to the next or for this one only
  * @param now            the time as of the last {@link Msg.Tick}, which tells how long ago things happened
  */
@@ -36,6 +37,7 @@ public record Model(
         Outcome outcome,
         Option<Popup> popup,
         ListCursor listCursor,
+        Map<String, Scrolled> scrolled,
         Preferences preferences,
         Instant now) {
 
@@ -51,6 +53,7 @@ public record Model(
                 Outcome.NONE,
                 Option.none(),
                 ListCursor.START,
+                HashMap.empty(),
                 Preferences.DEFAULT,
                 Instant.EPOCH);
     }
@@ -68,12 +71,26 @@ public record Model(
 
     /**
      * This model with {@code id} as the element of the screen shown that had the focus last.
+     *
+     * @param content whether {@code id} is an area of the content panel, rather than a pane whose highlighted row
+     *                it shows
      */
-    public Model withShownPane(String id) {
+    public Model withShownPane(String id, boolean content) {
         return switch (screen) {
             case REPOSITORY -> withRepoView(repoView.withFocusedPane(Option.of(id)));
-            case PULL_REQUESTS -> withPrOverview(prOverview.withFocusedPane(Option.of(id)));
+            case PULL_REQUESTS ->
+                withPrOverview(prOverview
+                        .withFocusedPane(Option.of(id))
+                        .withListPane(content ? prOverview.listPane() : Option.of(id)));
         };
+    }
+
+    /**
+     * Where the content area {@code area} is scrolled to while it shows {@code content}: where the user scrolled it
+     * to, unless it showed something else then.
+     */
+    public Scrolled scrolled(String area, ScrolledContent content) {
+        return scrolled.get(area).filter(at -> at.content().equals(content)).getOrElse(() -> Scrolled.top(content));
     }
 
     /**
