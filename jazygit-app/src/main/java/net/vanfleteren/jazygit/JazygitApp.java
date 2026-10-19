@@ -410,7 +410,7 @@ public class JazygitApp extends ToolkitApp {
     /**
      * The model of the running program; the initial one before it runs.
      */
-    private Model model() {
+    Model model() {
         return runtime.map(running -> running.program().model())
                 .getOrElse(() -> Model.initial(env.git().repositoryName()));
     }
@@ -439,13 +439,9 @@ public class JazygitApp extends ToolkitApp {
         // The open popup takes the focus, and gives it back to where it was opened from.
         List<Shown> shown = popups.map(slot -> new Shown(
                 slot.view().render(model), slot.view().ids(), slot.returnTo().apply(model)));
-        // The framework knows no focus before the first render. Where the focus is outside the popups is kept
-        // in the model, as a closing popup gives it back there.
+        // The framework knows no focus before the first render.
         Option<String> focus = Option.of(focusedId);
-        focus.filter(id -> shown.forAll(p -> !p.ids().contains(id)))
-                .filter(id -> !model.shownPane().contains(id))
-                .map(id -> new Msg.Focused(id, ContentPanel.isArea(id)))
-                .forEach(dispatch);
+        report(reports());
         Option<Shown> open = shown.find(p -> p.element().isDefined());
         open.fold(
                         // A popup that just closed gives the focus back.
@@ -467,11 +463,6 @@ public class JazygitApp extends ToolkitApp {
      */
     private Column repositoryPanes(Model model, String focusedId, String activeId) {
         Panel branches = branchesPanel.render(model, focusedId, activeId);
-        // The highlighted branch lives in the list widget, which knows it once rendered; the
-        // content panel then shows the log of that branch.
-        branchesPanel.selectionChange(model).forEach(dispatch);
-        commitsPanel.selectionChange(model).forEach(dispatch);
-        filesPanel.selectionChange(model).forEach(dispatch);
         Panel stash = stashPanel.render(model, focusedId, activeId);
         Option<Integer> stashHeight = stashHeight(model);
         return column(
@@ -493,14 +484,46 @@ public class JazygitApp extends ToolkitApp {
     private Column pullRequestPanes(Model model, String focusedId, String activeId) {
         List<Panel> panes = pullRequestsPanels.map(
                 pane -> pane.render(model, focusedId, activeId).fill());
-        // The content panel shows the pull request highlighted in the pane in use.
-        pullRequestsPanels
-                .filter(pane -> pane.id().equals(activeId))
-                .flatMap(pane -> pane.selectionChange(model))
-                .forEach(dispatch);
         return column(panes.<Element>map(pane -> pane)
                 .prepend(StatusPanel.render(model, this::showScreen))
                 .toJavaArray(Element[]::new));
+    }
+
+    /**
+     * What the widgets know that the model, which they were last rendered from, does not: the item highlighted in each
+     * pane, which the content panel shows the preview of, and where the focus is outside the popups, which a closing
+     * popup gives it back to. Empty once the model agrees with them. Called on the render thread.
+     */
+    List<Msg> reports() {
+        Model model = model();
+        String focusedId = runner().focusManager().focusedId();
+        String activeId = activePane(model, focusedId);
+        List<Msg> selections = model.screen() == Screen.PULL_REQUESTS
+                // The content panel shows the pull request highlighted in the pane in use.
+                ? pullRequestsPanels
+                        .filter(pane -> pane.id().equals(activeId))
+                        .flatMap(pane -> pane.selectionChange(model))
+                : List.of(
+                                branchesPanel.selectionChange(model),
+                                commitsPanel.selectionChange(model),
+                                filesPanel.selectionChange(model))
+                        .flatMap(change -> change);
+        // The framework knows no focus before the first render.
+        Option<Msg> focused = Option.of(focusedId)
+                .filter(id -> popups.forAll(slot -> !slot.view().ids().contains(id)))
+                .filter(id -> !model.shownPane().contains(id))
+                .map(id -> new Msg.Focused(id, ContentPanel.isArea(id)));
+        return selections.appendAll(focused);
+    }
+
+    /**
+     * Tells the model what the widgets know, once the frame being rendered is drawn: never during a render, which
+     * draws one model throughout. The next frame draws what the reports change.
+     */
+    private void report(List<Msg> reports) {
+        if (!reports.isEmpty()) {
+            runner().tuiRunner().runLater(() -> reports.forEach(dispatch));
+        }
     }
 
     /**

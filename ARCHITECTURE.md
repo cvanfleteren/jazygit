@@ -305,11 +305,12 @@ finishes by itself once the app is gone.
 ```mermaid
 flowchart LR
     subgraph render["render thread"]
-        Event["key event / tick / selection change"] --> Dispatch["Program.dispatch(msg)"]
+        Event["key event / tick"] --> Dispatch["Program.dispatch(msg)"]
         Dispatch --> Update["msg.apply(model)<br/><i>pure</i>"]
         Update --> Next["Next(model, cmds)"]
         Next --> Store["program.model = next.model"]
         Store --> Render["JazygitApp.render()<br/>draws the Model"]
+        Render -- "reports, after the frame" --> Dispatch
     end
     subgraph io["git-io thread"]
         Perform["Program.perform(env, cmd)<br/>cmd.run(env)"] --> Result["Msg<br/><i>OperationMsg / LoadMsg / ...</i>"]
@@ -317,6 +318,24 @@ flowchart LR
     Next -- "each Cmd" --> Perform
     Result -- "ui.execute" --> Dispatch
 ```
+
+### The view reports back
+
+The cursors and the focus are the widgets' (see [Core types](#core-types)), but the model needs to know what
+they point at: the content panel shows the preview of the item highlighted in a pane, and a closing popup gives
+the focus back to where it was. Whatever moved them (a key a list handles itself, a click, Tab, a list that
+reselects after a reload, a popup that opens or closes), `JazygitApp.render` compares the widgets with the model
+they were just rendered from, and makes the messages that tell it the difference (`JazygitApp.reports`):
+
+- the item highlighted in each pane of the screen shown (`SelectionMsg`, `PrOverviewMsg.Highlighted`), from
+  each panel's `selectionChange`;
+- the element with the focus outside the popups (`Msg.Focused`).
+
+They are dispatched once the frame is drawn (`TuiRunner.runLater`), never during a render, which draws one
+model throughout. The next frame draws what they change, and reports nothing once the model agrees with the
+widgets. A report can come twice, when a frame is drawn before the first one is dispatched, so each of them
+leaves a model that already has its value as it is. This is the only way the view tells the model something
+no message from a user's event did.
 
 Every 500 ms a `Msg.Tick` triggers `Update.refresh`, which re-reads the status, the local and remote
 branches, and the stashes.
@@ -451,8 +470,8 @@ classDiagram
   A popup that comes up by itself (`Model.openPopupIfFree`), like the outcome of a command or the theme key, does not replace a dialog the user is typing in.
 - **The cursors of the panes and the focus are view state.** The highlighted row of a pane lives in its TamboUI
   list, not in the `Model`: no update needs to know where it is. What the model needs is the item highlighted,
-  which the panel sends as a `SelectionMsg`. The cursor of a popup's list is the exception, as its update needs it
-  (`ListCursor`).
+  which the view reports back as a `SelectionMsg` ([The view reports back](#the-view-reports-back)). The cursor of
+  a popup's list is the exception, as its update needs it (`ListCursor`).
   The focus lives in TamboUI's `FocusManager`. The model only remembers, per screen, which pane had it last
   outside the popups (`Msg.Focused`, `Model.shownPane`, and `PrOverview.listPane` for the list of pull requests in
   use), so a closing popup or a screen shown again can give it back. No update decides anything on it.
