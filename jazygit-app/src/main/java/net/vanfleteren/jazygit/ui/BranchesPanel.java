@@ -71,7 +71,8 @@ public class BranchesPanel {
     }
 
     /**
-     * @param clock tells how long ago the branches were last committed to
+     * @param clock animates the spinners of the busy branches; how long ago they were committed to is told by the
+     *              time of the model
      */
     public BranchesPanel(Consumer<Msg> dispatch, Consumer<BranchesTab> tabClicked, Clock clock) {
         this(dispatch, tabClicked, clock, Theme.Highlights.DEFAULT);
@@ -418,7 +419,7 @@ public class BranchesPanel {
             return panel;
         }
         divergenceShown = Option.none();
-        Instant now = clock.instant();
+        Instant frame = clock.instant();
         Map<BranchRef, Operation> busy = model.jobs().busy();
         Panel panel = switch (tab) {
             case LOCAL ->
@@ -426,11 +427,11 @@ public class BranchesPanel {
                         model.repo().branches(),
                         branches -> branches.map(b -> row(
                                 b,
-                                Duration.between(b.tipTime(), now),
+                                Duration.between(b.tipTime(), model.now()),
                                 gitHub(
                                         model.gitHub().pullRequest(b),
                                         model.gitHub().checks(b)),
-                                busy.get(new BranchRef.Local(b.name())).map(operation -> spinner(operation, now)))),
+                                busy.get(new BranchRef.Local(b.name())).map(operation -> spinner(operation, frame)))),
                         focused,
                         active,
                         title(tab));
@@ -439,13 +440,13 @@ public class BranchesPanel {
                         model.repo().remoteBranches(),
                         refs -> refs.map(ref -> remoteRow(
                                 ref,
-                                Duration.between(ref.tipTime(), now),
+                                Duration.between(ref.tipTime(), model.now()),
                                 model.repo().trackingBranch(ref.branch()).isDefined(),
                                 gitHub(
                                         model.gitHub().pullRequest(ref.branch()),
                                         model.gitHub().checks(ref.branch())),
                                 busy.get(new BranchRef.Remote(ref.branch()))
-                                        .map(operation -> spinner(operation, now)))),
+                                        .map(operation -> spinner(operation, frame)))),
                         focused,
                         active,
                         title(tab));

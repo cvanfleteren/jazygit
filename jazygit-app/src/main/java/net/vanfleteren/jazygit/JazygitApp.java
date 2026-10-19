@@ -101,7 +101,7 @@ public class JazygitApp extends ToolkitApp {
             new CommitsPanel(dispatch, () -> openContent(CommitsPanel.ID), this::highlight);
     private final StashPanel stashPanel = new StashPanel(dispatch, this::highlight);
     private final List<PullRequestsPanel> pullRequestsPanels =
-            PullRequestsPanel.all(dispatch, this::openContent, Clock.systemUTC(), this::highlight);
+            PullRequestsPanel.all(dispatch, this::openContent, this::highlight);
     // Every popup, with where the focus goes when it closes. At most one is open; errors come last.
     private final List<PopupSlot> popups = List.of(
                     BranchFeature.popups(dispatch),
@@ -319,6 +319,9 @@ public class JazygitApp extends ToolkitApp {
                 io,
                 fetch,
                 Program.start(env, settings, themeOverride, io, fetch, runner::runOnRenderThread, JazygitApp::logBug)));
+        // The model tells the time from the ticks; the first one is half a second off, and the ages it shows are
+        // told from the start. The loads it would start are running already, so it starts none.
+        dispatch.accept(new Msg.Tick(Instant.now()));
         // The first fetch is a while off; the pull requests show from the start.
         dispatch.accept(new PullRequestsMsg.Refresh());
     }

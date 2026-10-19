@@ -4,7 +4,6 @@ import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import java.time.Clock;
 import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -38,7 +37,6 @@ public final class PullRequestsPanel {
     private final boolean anyRepository;
     private final LoadableList<PullRequestList> list;
     private final Keymap keymap = Keymap.standard();
-    private final Clock clock;
 
     /**
      * @param scope        the pane, whose id and keys it has
@@ -46,7 +44,6 @@ public final class PullRequestsPanel {
      * @param dispatch     receives the messages for the user's actions, on the render thread
      * @param openPullRequest called with the id of the pane when Enter is pressed on a pull request, to move the
      *                     focus to its content
-     * @param clock        tells how long ago the pull requests changed
      * @param highlights   how the highlighted pull request is shown, also when the pane is not in use
      */
     private PullRequestsPanel(
@@ -55,12 +52,10 @@ public final class PullRequestsPanel {
             boolean anyRepository,
             Consumer<Msg> dispatch,
             Consumer<String> openPullRequest,
-            Clock clock,
             Theme.Highlights highlights) {
         this.scope = scope;
         this.pullRequests = pullRequests;
         this.anyRepository = anyRepository;
-        this.clock = clock;
         list = new LoadableList<>(
                 Messages.get(scope.titleKey()),
                 scope.id(),
@@ -79,7 +74,7 @@ public final class PullRequestsPanel {
      * opened, and the ones of the repository.
      */
     public static List<PullRequestsPanel> all(
-            Consumer<Msg> dispatch, Consumer<String> openPullRequest, Clock clock, Theme.Highlights highlights) {
+            Consumer<Msg> dispatch, Consumer<String> openPullRequest, Theme.Highlights highlights) {
         return List.of(
                 new PullRequestsPanel(
                         Scopes.PR_REVIEW_REQUESTED,
@@ -87,18 +82,11 @@ public final class PullRequestsPanel {
                         true,
                         dispatch,
                         openPullRequest,
-                        clock,
                         highlights),
                 new PullRequestsPanel(
-                        Scopes.PR_AUTHORED, PrOverview::authored, true, dispatch, openPullRequest, clock, highlights),
+                        Scopes.PR_AUTHORED, PrOverview::authored, true, dispatch, openPullRequest, highlights),
                 new PullRequestsPanel(
-                        Scopes.PR_REPOSITORY,
-                        PrOverview::repository,
-                        false,
-                        dispatch,
-                        openPullRequest,
-                        clock,
-                        highlights));
+                        Scopes.PR_REPOSITORY, PrOverview::repository, false, dispatch, openPullRequest, highlights));
     }
 
     /**
@@ -111,10 +99,6 @@ public final class PullRequestsPanel {
                         pane._2.toOption().exists(read -> !read.pullRequests().isEmpty()))
                 .map(pane -> pane._1)
                 .getOrElse(REVIEW_REQUESTED_ID);
-    }
-
-    private Duration since(PullRequestSummary pr) {
-        return Duration.between(pr.updatedAt(), clock.instant());
     }
 
     /**
@@ -174,7 +158,8 @@ public final class PullRequestsPanel {
         Loadable<PullRequestList> shown = pullRequests.apply(model.prOverview());
         return list.render(
                 shown,
-                read -> read.pullRequests().map(pr -> row(pr, since(pr), anyRepository)),
+                read -> read.pullRequests()
+                        .map(pr -> row(pr, Duration.between(pr.updatedAt(), model.now()), anyRepository)),
                 id().equals(focusedId),
                 id().equals(activeId),
                 Pane.title(title(Messages.get(scope.titleKey()), shown)));

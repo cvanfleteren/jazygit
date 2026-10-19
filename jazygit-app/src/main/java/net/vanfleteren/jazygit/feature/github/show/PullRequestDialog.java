@@ -9,6 +9,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
@@ -68,7 +69,8 @@ public final class PullRequestDialog implements PopupView {
     }
 
     /**
-     * @param clock tells how long ago the pull request was opened, and on which day, and animates the spinner
+     * @param clock tells on which day the pull request was opened, and animates the spinner; how long ago is told by
+     *              the time of the model
      */
     PullRequestDialog(Consumer<Msg> dispatch, Clock clock) {
         this.clock = clock;
@@ -221,7 +223,7 @@ public final class PullRequestDialog implements PopupView {
     public Option<Element> render(Model model) {
         return model.popup(PullRequestPopup.class).map(popup -> {
             List<Line> lines = popup.details()
-                    .map(read -> read.fold(PullRequestDialog::failed, this::details))
+                    .map(read -> read.fold(PullRequestDialog::failed, pr -> details(pr, model.now())))
                     .getOrElse(() -> loading(popup));
             int blanks = CONTENT_HEIGHT - lines.map(Line::height).sum().intValue();
             return DialogFrame.withHint(
@@ -249,7 +251,7 @@ public final class PullRequestDialog implements PopupView {
                         text(TimeText.spinnerFrame(clock.instant())).addClass(Theme.Classes.SPINNER))));
     }
 
-    private List<Line> details(PullRequestDetails pr) {
+    private List<Line> details(PullRequestDetails pr, Instant now) {
         return List.of(
                         Line.wrapped(pr.title(), Theme.Classes.BOLD, TITLE_LINES),
                         Line.blank(),
@@ -259,7 +261,7 @@ public final class PullRequestDialog implements PopupView {
                         () -> Line.labelled("dialog.pullRequest.author", text("@" + pr.author()))))
                 .appendAll(List.of(
                         Line.labelled("dialog.pullRequest.branch", text(pr.headBranch() + " → " + pr.baseBranch())),
-                        Line.labelled("dialog.pullRequest.created", text(created(pr))),
+                        Line.labelled("dialog.pullRequest.created", text(created(pr, now))),
                         Line.labelled(
                                 "dialog.pullRequest.changes",
                                 text("+" + pr.additions()).addClass(Theme.Classes.DIFF_ADDED),
@@ -285,11 +287,11 @@ public final class PullRequestDialog implements PopupView {
                 .appendAll(checks(pr.checks()));
     }
 
-    private String created(PullRequestDetails pr) {
+    private String created(PullRequestDetails pr, Instant now) {
         return Messages.get(
                 "dialog.pullRequest.created.value",
                 LocalDate.ofInstant(pr.createdAt(), clock.getZone()).toString(),
-                TimeText.age(Duration.between(pr.createdAt(), clock.instant())));
+                TimeText.age(Duration.between(pr.createdAt(), now)));
     }
 
     /**

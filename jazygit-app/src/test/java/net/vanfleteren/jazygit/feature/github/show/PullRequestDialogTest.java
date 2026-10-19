@@ -273,7 +273,7 @@ class PullRequestDialogTest {
     }
 
     private String screen(PullRequestPopup popup) throws Exception {
-        Model model = TestModels.loaded().openPopup(popup);
+        Model model = TestModels.loaded().withNow(NOW).openPopup(popup);
         try (ToolkitTestRunner runner = start(model)) {
             return RenderedText.ofTall(runner, () -> view(model));
         }
