@@ -121,18 +121,18 @@ final class LoadableList<T> {
         }
         int selected = selectedIndex();
         List<Integer> tops = shownRows.map(Row::height).scanLeft(0, Integer::sum);
-        return elements.lift()
+        return elements.asPartialFunction()
+                .lift()
                 .apply(selected)
                 .flatMap(element -> Option.of(element.renderedArea()))
                 .map(Rect::top)
                 .map(top -> event.y() - top + tops.get(selected))
                 .map(line -> tops.lastIndexWhere(top -> top <= line))
                 .filter(index -> index >= 0 && index < shownRows.size())
-                .map(index -> {
+                .fold(() -> EventResult.UNHANDLED, index -> {
                     list.selected(index);
                     return EventResult.HANDLED;
-                })
-                .getOrElse(EventResult.UNHANDLED);
+                });
     }
 
     /**
@@ -156,7 +156,7 @@ final class LoadableList<T> {
     <E> Option<E> selected(Function<T, List<E>> items) {
         return shown.flatMap(Loadable::toOption)
                 .map(items)
-                .flatMap(all -> all.lift().apply(Math.min(selectedIndex(), all.size() - 1)));
+                .flatMap(all -> all.asPartialFunction().lift().apply(Math.min(selectedIndex(), all.size() - 1)));
     }
 
     /**
@@ -199,7 +199,8 @@ final class LoadableList<T> {
          * it; when it is gone, the selection stays where it was.
          */
         static <E, K> Reselect<List<E>> following(Function<E, K> key) {
-            return (previous, next, selected) -> previous.lift()
+            return (previous, next, selected) -> previous.asPartialFunction()
+                    .lift()
                     .apply(selected)
                     .map(key)
                     .map(item ->

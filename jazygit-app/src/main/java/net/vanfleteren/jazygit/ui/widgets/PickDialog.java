@@ -130,7 +130,8 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
     static List<Integer> widths(List<? extends Row<?>> rows) {
         int columns = rows.map(row -> row.cells().size()).max().getOrElse(0);
         return List.range(0, columns)
-                .map(column -> rows.flatMap(row -> row.cells().lift().apply(column))
+                .map(column -> rows.flatMap(
+                                row -> row.cells().asPartialFunction().lift().apply(column))
                         .map(cell -> cell.shown().length())
                         .max()
                         .getOrElse(0));
@@ -217,7 +218,7 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
         }
 
         Option<Row<T>> highlighted() {
-            return shown.lift().apply(selected);
+            return shown.asPartialFunction().lift().apply(selected);
         }
 
         /**

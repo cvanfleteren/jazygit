@@ -240,7 +240,11 @@ public final class HelpDialog implements PopupView {
          * The highlighted key, if the highlighted row is one.
          */
         Option<Key> key() {
-            return rows.lift().apply(selected).filter(Key.class::isInstance).map(Key.class::cast);
+            return rows.asPartialFunction()
+                    .lift()
+                    .apply(selected)
+                    .filter(Key.class::isInstance)
+                    .map(Key.class::cast);
         }
     }
 

@@ -386,7 +386,7 @@ public class JazygitApp extends ToolkitApp {
      * command. The app keeps running meanwhile, but draws nothing and reads no keys, and is drawn anew afterwards.
      */
     private <T> T handOver(Supplier<T> program) {
-        return backend.fold(program::get, handing -> {
+        return backend.fold(program, handing -> {
             onRenderThread(() -> Try.run(() -> handing.leave(config)).get());
             try {
                 return program.get();
