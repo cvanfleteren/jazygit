@@ -11,8 +11,12 @@ import dev.tamboui.tui.event.MouseButton;
 import dev.tamboui.tui.pilot.ElementNotFoundException;
 import dev.tamboui.tui.pilot.Pilot;
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 
 /**
  * A {@link Pilot} that returns from every action only once the render thread has handled it and drawn the
@@ -122,17 +126,24 @@ public final class SettledPilot implements Pilot {
 
     /**
      * Where {@code elementId} was drawn, once the render thread has drawn everything sent to it.
+     * <p>
+     * Looked up on the render thread: it clears the element registry and fills it again on every frame, ticks
+     * included, so read from the test's thread it can be empty halfway through one.
      */
     @Override
     public Rect findElement(String elementId) throws ElementNotFoundException {
         settle(testRunner);
-        return pilot.findElement(elementId);
+        Rect area = onRenderThread(() -> testRunner.runner().elementRegistry().getArea(elementId));
+        if (area == null) {
+            throw new ElementNotFoundException("Element not found: " + elementId);
+        }
+        return area;
     }
 
     @Override
     public boolean hasElement(String elementId) {
         settle(testRunner);
-        return pilot.hasElement(elementId);
+        return onRenderThread(() -> testRunner.runner().elementRegistry().getArea(elementId) != null);
     }
 
     @Override
@@ -167,6 +178,19 @@ public final class SettledPilot implements Pilot {
     @Override
     public void quit() {
         pilot.quit();
+    }
+
+    private <T> T onRenderThread(Supplier<T> read) {
+        CompletableFuture<T> value = new CompletableFuture<>();
+        testRunner.runner().runOnRenderThread(() -> value.complete(read.get()));
+        try {
+            return value.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new AssertionError("interrupted while waiting for the render thread", interrupted);
+        } catch (ExecutionException | TimeoutException failed) {
+            throw new AssertionError("the render thread did not answer within " + TIMEOUT, failed);
+        }
     }
 
     private void dispatch(Event event) {
