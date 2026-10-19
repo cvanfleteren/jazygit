@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit;
 import static dev.tamboui.toolkit.Toolkit.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import dev.tamboui.layout.Rect;
 import dev.tamboui.layout.Size;
 import dev.tamboui.terminal.TestBackend;
 import dev.tamboui.toolkit.app.ToolkitRunner;
@@ -10,6 +11,8 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.TuiConfig;
 import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.MouseButton;
+import dev.tamboui.tui.pilot.Pilot;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Duration;
@@ -26,6 +29,7 @@ import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Preview;
 import net.vanfleteren.jazygit.ui.CommitsPanel;
+import net.vanfleteren.jazygit.ui.FilesPanel;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.Theme;
 import org.junit.jupiter.api.Test;
@@ -56,6 +60,34 @@ class JazygitAppReportsTest {
         } finally {
             app.onStop();
         }
+    }
+
+    @Test
+    void aClickOnAPaneWithoutTheFocusGivesItTheFocusAndHighlightsTheRowClickedOn() throws Exception {
+        App app = new App();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, ticking())) {
+            app.start(testRunner);
+            awaitModel(testRunner, app, model -> shownCommit(model).contains(commits.get(0)));
+            Pilot pilot = SettledPilot.of(testRunner);
+            Rect list = pilot.findElement(CommitsPanel.ID);
+
+            // The second commit.
+            pilot.mousePress(MouseButton.LEFT, list.left() + 3, list.top() + 1);
+
+            assertEquals(CommitsPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
+            awaitModel(testRunner, app, model -> shownCommit(model).contains(commits.get(1)));
+
+            Rect files = pilot.findElement(FilesPanel.ID);
+            pilot.mousePress(MouseButton.LEFT, files.left() + 3, files.top());
+
+            assertEquals(FilesPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
+        } finally {
+            app.onStop();
+        }
+    }
+
+    private static String focusedId(ToolkitTestRunner testRunner) {
+        return testRunner.runner().focusManager().focusedId();
     }
 
     /**

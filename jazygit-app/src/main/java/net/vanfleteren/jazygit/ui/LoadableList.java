@@ -2,12 +2,16 @@ package net.vanfleteren.jazygit.ui;
 
 import static dev.tamboui.toolkit.Toolkit.*;
 
+import dev.tamboui.layout.Rect;
 import dev.tamboui.text.Line;
 import dev.tamboui.toolkit.Toolkit;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.elements.Panel;
+import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.MouseEvent;
+import dev.tamboui.tui.event.MouseEventKind;
 import dev.tamboui.widgets.common.ScrollBarPolicy;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -32,6 +36,8 @@ final class LoadableList<T> {
     // The value the last render showed, and its rows.
     private Option<Loadable<T>> shown = Option.none();
     private List<Row> shownRows = List.of();
+    // What the list draws the rows as.
+    private List<StyledElement<?>> elements = List.of();
     private Option<Integer> count = Option.none();
     private Option<String> empty = Option.none();
     private boolean focused;
@@ -48,7 +54,8 @@ final class LoadableList<T> {
                 .focusable()
                 .autoScroll()
                 .scrollbar(ScrollBarPolicy.AS_NEEDED)
-                .fill();
+                .fill()
+                .onMouseEvent(this::click);
     }
 
     /**
@@ -98,7 +105,34 @@ final class LoadableList<T> {
     }
 
     private void show(List<Row> rows) {
-        list.elements(rows.map(Row::element).toJavaArray(StyledElement[]::new));
+        elements = rows.map(Row::element);
+        list.elements(elements.toJavaArray(StyledElement[]::new));
+    }
+
+    /**
+     * A left click highlights the row clicked on, as moving to it with the keys does; the app has already
+     * given the list the focus. The list keeps where it is scrolled to to itself, and the rows it no longer draws
+     * still have the area they were last drawn in, but the highlighted row is always drawn: the clicked row is found
+     * from where that one is.
+     */
+    private EventResult click(MouseEvent event) {
+        if (event.kind() != MouseEventKind.PRESS || !event.isLeftButton()) {
+            return EventResult.UNHANDLED;
+        }
+        int selected = selectedIndex();
+        List<Integer> tops = shownRows.map(Row::height).scanLeft(0, Integer::sum);
+        return elements.lift()
+                .apply(selected)
+                .flatMap(element -> Option.of(element.renderedArea()))
+                .map(Rect::top)
+                .map(top -> event.y() - top + tops.get(selected))
+                .map(line -> tops.lastIndexWhere(top -> top <= line))
+                .filter(index -> index >= 0 && index < shownRows.size())
+                .map(index -> {
+                    list.selected(index);
+                    return EventResult.HANDLED;
+                })
+                .getOrElse(EventResult.UNHANDLED);
     }
 
     /**
@@ -221,6 +255,13 @@ final class LoadableList<T> {
 
         String text() {
             return segs.map(Seg::text).mkString();
+        }
+
+        /**
+         * The number of lines the row takes.
+         */
+        int height() {
+            return detail.isDefined() ? 2 : 1;
         }
 
         StyledElement<?> element() {

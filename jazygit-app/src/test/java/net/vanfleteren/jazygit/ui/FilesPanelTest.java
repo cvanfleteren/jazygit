@@ -2,7 +2,11 @@ package net.vanfleteren.jazygit.ui;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import dev.tamboui.layout.Size;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.MouseButton;
+import dev.tamboui.tui.pilot.Pilot;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
@@ -144,6 +148,42 @@ class FilesPanelTest {
             assertEquals(b, ((FileTree.File) selected).entry());
 
             SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
+    void clickingANodeHighlightsIt() throws Exception {
+        Model model = TestModels.loaded(new FixedProvider(
+                List.of(new FileEntry("a.txt", ChangeType.MODIFIED), new FileEntry("b.txt", ChangeType.MODIFIED))));
+
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.ID), new Size(40, 8))) {
+            Pilot pilot = SettledPilot.of(testRunner);
+            // The border, the root, a.txt, then b.txt.
+            pilot.mousePress(MouseButton.LEFT, 5, 3);
+
+            assertEquals("b.txt", ((FileTree.File) panel.tree().selectedNode().data()).name());
+
+            pilot.quit();
+        }
+    }
+
+    @Test
+    void clickingANodeOfAScrolledTreeHighlightsTheNodeShownThere() throws Exception {
+        Model model = TestModels.loaded(new FixedProvider(
+                List.range(0, 20).map(i -> new FileEntry("f%02d.txt".formatted(i), ChangeType.MODIFIED))));
+
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.ID), new Size(40, 8))) {
+            Pilot pilot = SettledPilot.of(testRunner);
+            // Six rows fit inside the border; at the last file they show f14.txt to f19.txt.
+            SettledPilot.focus(testRunner, FilesPanel.ID);
+            pilot.press(KeyCode.END);
+            pilot.mousePress(MouseButton.LEFT, 5, 2);
+
+            assertEquals("f15.txt", ((FileTree.File) panel.tree().selectedNode().data()).name());
+
+            pilot.quit();
         }
     }
 

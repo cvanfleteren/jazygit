@@ -12,6 +12,8 @@ import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.TuiConfig;
 import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.MouseEvent;
+import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
@@ -276,6 +278,20 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
+     * Gives the focus to the pane or area a left click lands on, which then handles the click as usual. TamboUI only
+     * does so for a click that no element handles, but the layout around the panes hands the click to the pane, which
+     * does. An open popup keeps the focus.
+     */
+    private void focusClicked(MouseEvent event) {
+        String focused = runner().focusManager().focusedId();
+        if (event.kind() == MouseEventKind.PRESS
+                && event.isLeftButton()
+                && popups.forAll(slot -> !slot.view().ids().contains(focused))) {
+            runner().focusManager().focusAt(event.x(), event.y());
+        }
+    }
+
+    /**
      * Gives the focus back to the pane whose content has it, and says whether there was one.
      */
     private boolean leaveScrollArea() {
@@ -298,6 +314,12 @@ public class JazygitApp extends ToolkitApp {
                             return EventResult.HANDLED;
                         })
                         .getOrElse(EventResult.UNHANDLED));
+        runner.eventRouter().addGlobalHandler(event -> {
+            if (event instanceof MouseEvent mouse) {
+                focusClicked(mouse);
+            }
+            return EventResult.UNHANDLED;
+        });
         startRuntime(env, settings, themeOverride);
         runner.scheduleRepeating(
                 () -> runner.runOnRenderThread(() -> dispatch.accept(new Msg.Tick(Instant.now()))), REFRESH_INTERVAL);

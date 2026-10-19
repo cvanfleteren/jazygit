@@ -1,10 +1,14 @@
 package net.vanfleteren.jazygit.ui;
 
+import dev.tamboui.layout.Rect;
 import dev.tamboui.toolkit.Toolkit;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.elements.TreeElement;
+import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.MouseEvent;
+import dev.tamboui.tui.event.MouseEventKind;
 import dev.tamboui.widgets.common.ScrollBarPolicy;
 import dev.tamboui.widgets.tree.TreeNode;
 import io.vavr.collection.List;
@@ -36,7 +40,7 @@ public class FilesPanel {
             .id(ID)
             .focusable()
             .scrollbar(ScrollBarPolicy.AS_NEEDED)
-            .nodeRenderer(FilesPanel::renderNode);
+            .nodeRenderer(this::drawNode);
     private final Keymap keymap = Keymap.standard();
     private final Theme.Highlights highlights;
     private List<TreeNode<FileTree>> roots = List.of();
@@ -44,6 +48,8 @@ public class FilesPanel {
     private Option<Loadable<RepoStatus>> shown = Option.none();
     // The tree's key handler also sees keys typed in other panes, so it must know whether it has focus.
     private boolean focused;
+    // The nodes drawn for the frame being rendered, with what they were drawn as, to find the one clicked on.
+    private List<Drawn> drawn = List.of();
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
@@ -63,6 +69,37 @@ public class FilesPanel {
                 event -> event.code() == KeyCode.ENTER && selected().isDefined()
                         ? Option.of(openDiff)
                         : PaneKeys.sending(keymap.handle(Scopes.FILES, event, selected()), dispatch)));
+        tree.onMouseEvent(this::click);
+    }
+
+    /**
+     * A left click highlights the node clicked on, as moving to it with the keys does; the app has already
+     * given the pane the focus.
+     */
+    private EventResult click(MouseEvent event) {
+        if (event.kind() != MouseEventKind.PRESS || !event.isLeftButton()) {
+            return EventResult.UNHANDLED;
+        }
+        return drawn.find(d -> {
+                    Rect area = d.element().renderedArea();
+                    return area != null && event.y() >= area.top() && event.y() < area.bottom();
+                })
+                .map(d -> visible(roots).indexOf(d.node()))
+                .filter(index -> index >= 0)
+                .map(index -> {
+                    tree.selected(index);
+                    return EventResult.HANDLED;
+                })
+                .getOrElse(EventResult.UNHANDLED);
+    }
+
+    /**
+     * Draws {@code node}, remembering where, for {@link #click}.
+     */
+    private StyledElement<?> drawNode(TreeNode<FileTree> node) {
+        StyledElement<?> element = renderNode(node);
+        drawn = drawn.prepend(new Drawn(node, element));
+        return element;
     }
 
     private static TreeNode<FileTree> node(FileTree node, Set<String> collapsed) {
@@ -183,6 +220,7 @@ public class FilesPanel {
      */
     public Panel render(Model model, String focusedId, String activeId) {
         focused = ID.equals(focusedId);
+        drawn = List.of();
         boolean active = ID.equals(activeId);
         tree.highlightStyle(highlights.of(active))
                 .highlightSymbol(active ? HIGHLIGHT_SYMBOL : " ".repeat(HIGHLIGHT_SYMBOL.length()));
@@ -235,4 +273,9 @@ public class FilesPanel {
                 .filter(i -> i >= 0)
                 .getOrElse(fallback));
     }
+
+    /**
+     * A node, and the element it was drawn as.
+     */
+    private record Drawn(TreeNode<FileTree> node, StyledElement<?> element) {}
 }

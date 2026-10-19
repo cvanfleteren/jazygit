@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.MouseButton;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
@@ -390,6 +391,20 @@ class BranchesPanelTest {
         assertEquals(
                 Option.of(new SelectionMsg.BranchSelected(
                         new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("feature"))))),
+                panel.selectionChange(remote));
+    }
+
+    @Test
+    void clickingARemoteBranchHighlightsIt() throws Exception {
+        Model remote = withRemotes(before);
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(remote, BranchesPanel.ID))) {
+            // The title, origin/feature, then upstream/main.
+            SettledPilot.of(testRunner).mousePress(MouseButton.LEFT, 5, 2);
+            SettledPilot.of(testRunner).quit();
+        }
+        assertEquals(
+                Option.of(new SelectionMsg.BranchSelected(
+                        new BranchRef.Remote(new RemoteBranch("upstream", new Branch.Name("main"))))),
                 panel.selectionChange(remote));
     }
 

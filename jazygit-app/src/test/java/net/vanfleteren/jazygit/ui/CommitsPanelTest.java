@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.MouseButton;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
@@ -142,6 +143,23 @@ class CommitsPanelTest {
             assertEquals(45, panel.selectedIndex());
             assertTrue(screen.contains("msg s45"), screen);
             assertFalse(screen.contains("msg s0 "), screen);
+
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
+    void clickingACommitHighlightsItAndFocusesThePane() throws Exception {
+        List<Commit> log = List.of(commit("s1"), commit("s0"));
+        Model model = TestModels.loaded(new SampleData()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log)));
+        CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.ID))) {
+            // The border, s1, then s0.
+            SettledPilot.of(testRunner).mousePress(MouseButton.LEFT, 5, 2);
+
+            assertEquals(commit("s0").sha(), panel.selectedCommit().get().sha());
+            assertEquals(CommitsPanel.ID, testRunner.runner().focusManager().focusedId());
 
             SettledPilot.of(testRunner).quit();
         }
