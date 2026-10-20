@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit.drop;
 
+import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -35,7 +36,8 @@ public final class DropUpdate {
 
     /**
      * A merge can't be dropped, as the rebase would bring the merged commits back, and neither can the only
-     * commit, which would leave the branch without any.
+     * commit, which would leave the branch without any. The commits of the pane are all in the history of HEAD,
+     * so a first commit that is not HEAD has commits following it, even one older than the log reads.
      */
     private static boolean droppable(Model model, Commit commit) {
         return switch (commit.parents().size()) {
@@ -43,7 +45,8 @@ public final class DropUpdate {
                 model.repo()
                         .commits()
                         .toOption()
-                        .exists(log -> log.exists(other -> other.parents().contains(commit.sha())));
+                        .flatMap(List::headOption)
+                        .exists(head -> !head.sha().equals(commit.sha()));
             case 1 -> true;
             default -> false;
         };

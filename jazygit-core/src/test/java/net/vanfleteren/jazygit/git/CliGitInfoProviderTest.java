@@ -160,6 +160,17 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void thePickaxeIgnoresCaseUnlessItHasAnUppercaseLetter() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "Token\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Add it");
+
+        assertEquals(List.of("Add it"), messages("-S:token"));
+        assertEquals(List.of("Add it"), messages("-S:Token"));
+        assertEquals(List.of(), messages("-S:TOKEN"));
+    }
+
+    @Test
     void searchFindsNothingWithoutCommits(@TempDir Path empty) throws Exception {
         gitIn(empty, "init", "-q");
 

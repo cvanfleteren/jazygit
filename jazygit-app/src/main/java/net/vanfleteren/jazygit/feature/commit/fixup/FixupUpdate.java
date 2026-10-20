@@ -33,9 +33,7 @@ public final class FixupUpdate {
      */
     private static Next requested(Model model, Sha sha) {
         return model.commit(sha)
-                .flatMap(commit -> SquashUpdate.onlyParent(commit)
-                        .flatMap(model.repo()::commit)
-                        .map(into -> new FixupPopup(commit, into)))
+                .flatMap(commit -> SquashUpdate.onlyParent(commit).map(into -> new FixupPopup(commit, into)))
                 .transform(popup -> Update.ask(model, popup));
     }
 }

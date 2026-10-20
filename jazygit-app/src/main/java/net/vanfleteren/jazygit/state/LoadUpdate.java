@@ -41,7 +41,7 @@ public final class LoadUpdate {
                 Next.of(done.mapRepo(repo -> repo.withStashes(repo.stashes().reload(stashes))));
             case LoadMsg.WorktreesLoaded(var worktrees) ->
                 Next.of(done.mapRepo(repo -> repo.withWorktrees(repo.worktrees().reload(worktrees))));
-            // The log changed, and so may have what the search finds in it.
+            // The log is only read again when HEAD moved, so the history the search runs on changed too.
             case CommitsLoaded(var commits) ->
                 new Next(
                         done.mapRepo(repo -> repo.withCommits(repo.commits().reload(commits))),

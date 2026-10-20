@@ -7,7 +7,8 @@ import java.util.function.BiFunction;
 /**
  * What a search of the commits looks for, as typed on one line: bare words, and the prefixes {@code author:},
  * {@code path:} and {@code -S:}. A value with spaces goes in double quotes, as in {@code author:"Jane Doe"}. Only
- * those prefixes count: {@code feat:} is text of the message. A commit matches when it matches every filter given.
+ * those prefixes count: {@code feat:} is text of the message. A commit matches when it matches each kind of filter
+ * given; of several authors or paths, it needs to match only one.
  *
  * @param message the bare words, as one phrase the message contains
  * @param authors the authors, of whom the commit has one
@@ -80,7 +81,7 @@ public record CommitQuery(Option<String> message, List<String> authors, List<Str
 
     /**
      * The words of {@code text} as typed, quotes included: separated by spaces, except those between quotes. A
-     * quote that is not closed runs to the end.
+     * quote that is not closed runs to the end, also one inside a word, as in {@code it"s}.
      */
     private static List<String> tokens(String text) {
         return List.ofAll(text.toCharArray())

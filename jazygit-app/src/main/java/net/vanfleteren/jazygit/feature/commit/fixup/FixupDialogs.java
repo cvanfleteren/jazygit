@@ -24,7 +24,7 @@ public final class FixupDialogs {
             popup -> Messages.get(
                     "dialog.fixup.title",
                     popup.commit().sha().shortSha(),
-                    popup.into().sha().shortSha()),
+                    popup.into().shortSha()),
             List.of(
                     new Choice<>('f', "dialog.fixup.fixup", () -> new FixupMsg.Chosen(SquashMode.FIXUP)),
                     new Choice<>(

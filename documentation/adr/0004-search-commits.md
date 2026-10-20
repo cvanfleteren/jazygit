@@ -28,9 +28,11 @@ fix login author:alice author:"Jane Doe" path:src/ -S:token
 ```
 
 - All bare words together are one phrase of the message: `--grep="fix login"`.
-- `author:` and `path:` may repeat; their values are OR'd, as git does with `--author` and pathspecs.
+- `author:` and `path:` may repeat; their values are OR'd, as git does with `--author` and pathspecs. The different
+  kinds are AND'd: `fix author:alice` finds Alice's commits whose message has "fix".
 - `-S:` at most once, as git takes only one: the pickaxe, commits that change how often the text occurs.
-- A value with spaces goes in quotes.
+- A value with spaces goes in quotes. A quote that is not closed runs to the end of the line, also one inside a
+  word, such as `it"s`; the quotes themselves are dropped.
 - Only those prefixes count: `feat: …` or `fix(ui): …` are text of the message, as conventional commits are full of
   them. A prefix with nothing after it filters nothing.
 

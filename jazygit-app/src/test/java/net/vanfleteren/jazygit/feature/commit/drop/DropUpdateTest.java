@@ -62,6 +62,16 @@ class DropUpdateTest {
     }
 
     @Test
+    void aFirstCommitOlderThanTheLogThatTheSearchFoundCanBeDropped() {
+        Commit old = commit("o1", List.of());
+        Model model = TestModels.searched(withCommits(TIP), "old", List.of(old));
+
+        assertEquals(
+                Option.of(new DropPopup(old)),
+                Update.update(model, new DropMsg.Requested(old.sha())).model().popup(DropPopup.class));
+    }
+
+    @Test
     void theOnlyCommitCannotBeDropped() {
         Model model = withCommits(ROOT);
 

@@ -52,6 +52,14 @@ class CommitQueryTest {
     }
 
     @Test
+    void aQuoteInsideAWordAlsoRunsToTheEnd() {
+        CommitQuery query = CommitQuery.parse("it\"s author:bob");
+
+        assertEquals(Option.of("its author:bob"), query.message());
+        assertEquals(List.empty(), query.authors());
+    }
+
+    @Test
     void otherPrefixesAreTextOfTheMessage() {
         assertEquals(
                 Option.of("feat: fix(ui): Author:x"),

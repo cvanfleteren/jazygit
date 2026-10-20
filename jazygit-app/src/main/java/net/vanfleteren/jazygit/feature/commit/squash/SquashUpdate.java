@@ -33,8 +33,7 @@ public final class SquashUpdate {
      */
     private static Next requested(Model model, Sha sha) {
         return model.commit(sha)
-                .flatMap(commit ->
-                        onlyParent(commit).flatMap(model.repo()::commit).map(into -> new SquashPopup(commit, into)))
+                .flatMap(commit -> onlyParent(commit).map(into -> new SquashPopup(commit, into)))
                 .transform(popup -> Update.ask(model, popup));
     }
 
