@@ -11,7 +11,8 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
 
 /**
- * Creating the pull request of a branch that has none: choosing what it merges into, then what it says.
+ * Creating the pull request of a branch that has none: reading the branch it came from, choosing what it merges
+ * into, then what it says.
  */
 public sealed interface CreatePullRequestMsg extends Msg {
 
@@ -19,6 +20,11 @@ public sealed interface CreatePullRequestMsg extends Msg {
     default Update.Next apply(Model model) {
         return CreatePullRequestUpdate.update(model, this);
     }
+
+    /**
+     * The branch {@code branch} was made from was read, if it could be told: the base that is offered first.
+     */
+    record ParentRead(Branch.Name branch, Option<Branch.Name> parent) implements CreatePullRequestMsg {}
 
     /**
      * The user picked the branch the pull request merges into.

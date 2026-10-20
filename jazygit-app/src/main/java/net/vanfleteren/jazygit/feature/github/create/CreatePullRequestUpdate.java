@@ -1,8 +1,11 @@
 package net.vanfleteren.jazygit.feature.github.create;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.fetch.FetchUpdate;
+import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.Base;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.CreatePullRequest;
+import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.ReadParent;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.ReadTitle;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestMsg.*;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
@@ -12,8 +15,8 @@ import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
- * Creating the pull request of a branch: asking what it merges into, reading the title it starts out with, and
- * asking what it says.
+ * Creating the pull request of a branch: reading the branch it came from, asking what it merges into, reading the
+ * title it starts out with, and asking what it says.
  */
 public final class CreatePullRequestUpdate {
 
@@ -21,6 +24,13 @@ public final class CreatePullRequestUpdate {
 
     public static Next update(Model model, CreatePullRequestMsg msg) {
         return switch (msg) {
+            // The branch may have gone while its parent was read; then there is nothing to ask.
+            case ParentRead(var branch, var parent) ->
+                Next.of(model.repo()
+                        .branch(branch)
+                        .map(known -> model.clearError()
+                                .openPopupIfFree(new BasePopup(branch, parentFirst(bases(model, branch), parent))))
+                        .getOrElse(model));
             case BaseChosen(Branch.Name base) ->
                 model.popup(BasePopup.class)
                         .flatMap(popup -> model.repo().branch(popup.branch()))
@@ -75,10 +85,23 @@ public final class CreatePullRequestUpdate {
     }
 
     /**
-     * Asks which branch the pull request of {@code branch}, which has none yet, merges into.
+     * Asks which branch the pull request of {@code branch}, which has none yet, merges into, once the branch it came
+     * from is read, which is offered first. With one to choose or none, there is nothing to read.
      */
     public static Next askBase(Model model, Branch.Name branch) {
-        return Update.ask(model, new BasePopup(branch, bases(model, branch)));
+        List<Branch.Name> bases = bases(model, branch);
+        return bases.size() < 2
+                ? Update.ask(model, new BasePopup(branch, bases))
+                : Next.of(model, new ReadParent(branch, bases.map(base -> new Base(base, baseRef(model, base)))));
+    }
+
+    /**
+     * {@code bases} with {@code parent} first, if it is one of them.
+     */
+    static List<Branch.Name> parentFirst(List<Branch.Name> bases, Option<Branch.Name> parent) {
+        return parent.filter(bases::contains)
+                .map(first -> bases.remove(first).prepend(first))
+                .getOrElse(bases);
     }
 
     /**

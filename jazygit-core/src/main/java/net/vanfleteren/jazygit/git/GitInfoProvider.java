@@ -77,9 +77,11 @@ public interface GitInfoProvider {
     Either<GitFailure<GitError>, List<ExecutedCommand>> checkoutWithStash(Branch.Name branch);
 
     /**
-     * Creates the local branch {@code name} at {@code startPoint} and checks it out.
+     * Creates the local branch {@code name} at {@code startPoint} and checks it out; records {@code parent} as the
+     * branch it came from, if given, as {@link #parentBranch} reads it.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(Branch.Name name, String startPoint);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(
+            Branch.Name name, String startPoint, Option<Branch.Name> parent);
 
     /**
      * Creates the local branch {@code name} at the remote-tracking branch of {@code upstream}, following it, and
@@ -187,6 +189,12 @@ public interface GitInfoProvider {
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> setLocalConfig(String key, Option<String> value);
 
+    /**
+     * The branch {@code branch} was made from, if that was recorded: as {@code gh} does, in
+     * {@code branch.<name>.gh-merge-base}.
+     */
+    Either<ProcessError, Option<Branch.Name>> parentBranch(Branch.Name branch);
+
     // The history, as git log shows it.
 
     /**
@@ -209,6 +217,11 @@ public interface GitInfoProvider {
      * The subject of the oldest commit on {@code branch} that is not on {@code base}; none when there is none.
      */
     Either<GitError, Option<String>> firstSubject(BranchRef branch, BranchRef base);
+
+    /**
+     * How many commits are on {@code branch} and not on {@code base}, counting no further than {@code max}.
+     */
+    Either<ProcessError, Integer> countNotOn(BranchRef branch, BranchRef base, int max);
 
     /**
      * The commits of the local branch {@code branch} from {@code oldest} up to its tip, and how many of them are
@@ -311,13 +324,14 @@ public interface GitInfoProvider {
      * Without {@code onto}, the new branch starts where {@code from} is, so nothing is copied and the working tree
      * is left alone. With it, the new branch starts at {@code onto}, and the commits are cherry-picked onto it;
      * a cherry-pick that stops on conflicts is left so, and fails with {@link GitError.StoppedOnConflicts}, and
-     * {@code from} is only moved back once they are all copied.
+     * {@code from} is only moved back once they are all copied. The new branch records the branch it starts at as
+     * the one it came from, as {@link #parentBranch} reads it.
      *
      * @param oldest the full object id of a commit of {@code from} that has a parent
-     * @param onto   the revision the new branch starts at, if not at {@code from}
+     * @param onto   the branch the new branch starts at, if not at {@code from}
      */
     Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommits(
-            Branch.Name from, Sha oldest, Branch.Name to, Option<String> onto);
+            Branch.Name from, Sha oldest, Branch.Name to, Option<BranchRef> onto);
 
     /**
      * Moves the commits of the checked out branch {@code from}, from {@code oldest} up to its tip, onto the existing

@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch.newbranch;
 
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.CheckoutRemote;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg.Cancelled;
@@ -21,14 +22,15 @@ public final class NewBranchUpdate {
     public static Next update(Model model, NewBranchMsg msg) {
         return switch (msg) {
             case Requested(Branch.Name base) ->
-                Update.ask(model, model.idleBranch(base).map(known -> new NewBranchPopup(base.value())));
+                Update.ask(model, model.idleBranch(base).map(known -> new NewBranchPopup(base)));
             case NewBranchMsg.RequestedAtCommit(var sha) -> atCommit(model, sha);
             case NewBranchMsg.RequestedAtRemote(var remote) ->
                 Update.ask(
                         model,
                         model.repo()
                                 .remoteBranch(remote)
-                                .map(known -> new NewBranchPopup(remote.trackingRef(), remote.shortName())));
+                                .map(known -> new NewBranchPopup(
+                                        remote.trackingRef(), remote.shortName(), Option.of(remote.branch()))));
             case Cancelled() -> Next.of(model.withoutPopup(NewBranchPopup.class));
             case Confirmed() -> confirmed(model);
         };
@@ -39,7 +41,7 @@ public final class NewBranchUpdate {
                 model,
                 model.repo()
                         .commit(sha)
-                        .map(commit -> new NewBranchPopup(commit.sha().value(), commit.shortSha())));
+                        .map(commit -> new NewBranchPopup(commit.sha().value(), commit.shortSha(), Option.none())));
     }
 
     private static Next confirmed(Model model) {
@@ -50,6 +52,6 @@ public final class NewBranchUpdate {
                 popup -> Branch.Name.parse(popup.name())
                         .map(branch -> popup.following()
                                 .<BranchCmd>map(remote -> new CheckoutRemote(branch, remote))
-                                .getOrElse(() -> new NewBranchCmd(branch, popup.base()))));
+                                .getOrElse(() -> new NewBranchCmd(branch, popup.base(), popup.parent()))));
     }
 }

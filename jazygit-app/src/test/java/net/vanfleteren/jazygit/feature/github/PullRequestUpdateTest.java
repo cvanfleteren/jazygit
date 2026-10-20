@@ -4,7 +4,9 @@ import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
@@ -31,6 +33,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -111,21 +114,191 @@ class PullRequestUpdateTest {
     }
 
     @Test
-    void aPushedBranchWithoutPullRequestAsksForTheBaseWithTheDefaultBranchFirst() {
-        Next asked = Update.update(model(), new PullRequestMsg.Requested(new Branch.Name("feature")));
+    void aPushedBranchWithoutPullRequestReadsWhichBaseItCameFromFirst() {
+        Next reading = Update.update(model(), new PullRequestMsg.Requested(FEATURE));
 
         assertEquals(
-                Option.of(new BasePopup(
-                        new Branch.Name("feature"),
-                        List.of(new Branch.Name("main"), new Branch.Name("release"), new Branch.Name("ahead")))),
+                List.of(new ReadParent(
+                        FEATURE,
+                        List.of(
+                                new Base(MAIN.name(), remote("main")),
+                                new Base(RELEASE.name(), remote("release")),
+                                new Base(AHEAD.name(), remote("ahead"))))),
+                reading.cmds());
+        assertEquals(Option.none(), reading.model().popup());
+    }
+
+    @Test
+    void withoutAParentTheBaseIsAskedWithTheDefaultBranchFirst() {
+        Next asked = Update.update(model(), new CreatePullRequestMsg.ParentRead(FEATURE, Option.none()));
+
+        assertEquals(
+                Option.of(new BasePopup(FEATURE, List.of(MAIN.name(), RELEASE.name(), AHEAD.name()))),
                 asked.model().popup());
         assertEquals(List.empty(), asked.cmds());
     }
 
     @Test
-    void choosingTheBaseReadsTheTitleFromTheFirstCommitNotOnTheBaseOnItsRemote() {
-        Model asked = Update.update(model(), new PullRequestMsg.Requested(new Branch.Name("feature")))
+    void theParentIsOfferedFirstThenTheDefaultBranch() {
+        Next asked = Update.update(model(), new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(AHEAD.name())));
+
+        assertEquals(
+                Option.of(new BasePopup(FEATURE, List.of(AHEAD.name(), MAIN.name(), RELEASE.name()))),
+                asked.model().popup());
+    }
+
+    @Test
+    void aParentThatCannotBeChosenIsIgnored() {
+        Next asked = Update.update(model(), new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(UNPUSHED.name())));
+
+        assertEquals(
+                Option.of(new BasePopup(FEATURE, List.of(MAIN.name(), RELEASE.name(), AHEAD.name()))),
+                asked.model().popup());
+    }
+
+    @Test
+    void theParentReadOfABranchThatIsGoneAsksNothing() {
+        Model gone = Update.update(model(), new LoadMsg.BranchesLoaded(List.of(RELEASE, MAIN)))
                 .model();
+
+        Next next = Update.update(gone, new CreatePullRequestMsg.ParentRead(FEATURE, Option.none()));
+
+        assertEquals(Option.none(), next.model().popup());
+        assertEquals(List.empty(), next.cmds());
+    }
+
+    @Test
+    void theParentReadDoesNotTakeAwayAnotherPopup() {
+        Model busy = creating();
+
+        assertEquals(
+                busy.popup(),
+                Update.update(busy, new CreatePullRequestMsg.ParentRead(FEATURE, Option.none()))
+                        .model()
+                        .popup());
+    }
+
+    @Test
+    void theRecordedParentIsReadWithoutCountingCommits() {
+        StubGitProvider git = new StubGitProvider() {
+            @Override
+            public Either<GitError.ProcessError, Option<Branch.Name>> parentBranch(Branch.Name branch) {
+                return Either.right(Option.of(RELEASE.name()));
+            }
+
+            @Override
+            public Either<GitError.ProcessError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
+                throw new AssertionError("counted");
+            }
+        };
+
+        assertEquals(
+                new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(RELEASE.name())),
+                readParent().run(new Env(git, StubGitHub.empty())));
+    }
+
+    @Test
+    void withoutARecordedParentTheClosestBaseIsTheParent() {
+        assertEquals(
+                new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(RELEASE.name())),
+                readParent().run(distances(5, 2, 3)));
+    }
+
+    @Test
+    void onATieTheEarliestBaseIsTheParent() {
+        assertEquals(
+                new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(MAIN.name())),
+                readParent().run(distances(2, 2, 3)));
+    }
+
+    @Test
+    void basesTooFarAwayAreNoParent() {
+        int far = ReadParent.MAX_DISTANCE;
+        assertEquals(
+                new CreatePullRequestMsg.ParentRead(FEATURE, Option.none()),
+                readParent().run(distances(far, far, far)));
+    }
+
+    @Test
+    void aRecordedParentThatIsNoBaseIsIgnored() {
+        StubGitProvider git = new StubGitProvider() {
+            @Override
+            public Either<GitError.ProcessError, Option<Branch.Name>> parentBranch(Branch.Name branch) {
+                return Either.right(Option.of(UNPUSHED.name()));
+            }
+
+            @Override
+            public Either<GitError.ProcessError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
+                return Either.right(base.equals(remote("ahead")) ? 1 : 4);
+            }
+        };
+
+        assertEquals(
+                new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(AHEAD.name())),
+                readParent().run(new Env(git, StubGitHub.empty())));
+    }
+
+    @Test
+    void failingToCountLeavesNoParent() {
+        StubGitProvider git = new StubGitProvider() {
+            @Override
+            public Either<GitError.ProcessError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
+                return Either.left(new GitError.CommandFailed("boom", 128));
+            }
+        };
+
+        assertEquals(
+                new CreatePullRequestMsg.ParentRead(FEATURE, Option.none()),
+                readParent().run(new Env(git, StubGitHub.empty())));
+    }
+
+    private static BranchRef remote(String branch) {
+        return new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name(branch)));
+    }
+
+    /**
+     * Reading which of main, release and ahead the feature branch came from.
+     */
+    private static ReadParent readParent() {
+        return new ReadParent(
+                FEATURE,
+                List.of(
+                        new Base(MAIN.name(), remote("main")),
+                        new Base(RELEASE.name(), remote("release")),
+                        new Base(AHEAD.name(), remote("ahead"))));
+    }
+
+    /**
+     * Git without a recorded parent, where the feature branch has {@code main}, {@code release} and {@code ahead}
+     * commits not on those bases.
+     */
+    private static Env distances(int main, int release, int ahead) {
+        Map<BranchRef, Integer> counts =
+                HashMap.of(remote("main"), main, remote("release"), release, remote("ahead"), ahead);
+        return new Env(
+                new StubGitProvider() {
+                    @Override
+                    public Either<GitError.ProcessError, Integer> countNotOn(
+                            BranchRef branch, BranchRef base, int max) {
+                        return Either.right(counts.get(base).get());
+                    }
+                },
+                StubGitHub.empty());
+    }
+
+    /**
+     * Asked which branch the pull request of the feature branch merges into, the default branch first.
+     */
+    private static Model asked() {
+        Model reading =
+                Update.update(model(), new PullRequestMsg.Requested(FEATURE)).model();
+        return Update.update(reading, new CreatePullRequestMsg.ParentRead(FEATURE, Option.none()))
+                .model();
+    }
+
+    @Test
+    void choosingTheBaseReadsTheTitleFromTheFirstCommitNotOnTheBaseOnItsRemote() {
+        Model asked = asked();
 
         Next reading = Update.update(asked, new CreatePullRequestMsg.BaseChosen(new Branch.Name("main")));
 
@@ -238,8 +411,7 @@ class PullRequestUpdateTest {
 
     @Test
     void cancellingTheBaseClosesThePopup() {
-        Model asked = Update.update(model(), new PullRequestMsg.Requested(new Branch.Name("feature")))
-                .model();
+        Model asked = asked();
 
         assertEquals(
                 Option.none(),

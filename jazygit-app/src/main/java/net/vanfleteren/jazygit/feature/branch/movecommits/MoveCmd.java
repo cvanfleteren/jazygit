@@ -7,7 +7,6 @@ import net.vanfleteren.jazygit.feature.branch.BranchCmd;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -71,8 +70,7 @@ public sealed interface MoveCmd extends Cmd {
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return switch (target) {
-                case MoveTarget.NewBranch(var branch, var onto) ->
-                    git.moveCommits(from, oldest, branch, onto.map(Move::revision));
+                case MoveTarget.NewBranch(var branch, var onto) -> git.moveCommits(from, oldest, branch, onto);
                 case MoveTarget.Existing(var branch) -> git.moveCommitsTo(from, oldest, branch);
             };
         }
@@ -91,13 +89,6 @@ public sealed interface MoveCmd extends Cmd {
         @Override
         public Msg succeeded(List<ExecutedCommand> commands) {
             return new MoveMsg.Moved(this, commands);
-        }
-
-        private static String revision(BranchRef ref) {
-            return switch (ref) {
-                case BranchRef.Local(Branch.Name name) -> "refs/heads/" + name.value();
-                case BranchRef.Remote(RemoteBranch remote) -> remote.ref();
-            };
         }
     }
 }

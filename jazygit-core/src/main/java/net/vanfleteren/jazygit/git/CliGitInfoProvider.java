@@ -162,6 +162,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<ProcessError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
+        return CliLog.countNotOn(workTree, branch, base, max);
+    }
+
+    @Override
     public Either<GitError, CommitRange> commitRange(Branch.Name branch, Sha oldest, Option<RemoteBranch> upstream) {
         return CliLog.range(workTree, branch, oldest, upstream);
     }
@@ -178,8 +183,8 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(
-            Branch.Name name, String startPoint) {
-        return CliCheckout.checkoutNewBranch(workTree, name, startPoint);
+            Branch.Name name, String startPoint, Option<Branch.Name> parent) {
+        return CliCheckout.checkoutNewBranch(workTree, name, startPoint, parent);
     }
 
     @Override
@@ -245,6 +250,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> setLocalConfig(String key, Option<String> value) {
         return CliConfig.set(workTree, key, value);
+    }
+
+    @Override
+    public Either<ProcessError, Option<Branch.Name>> parentBranch(Branch.Name branch) {
+        return CliConfig.parent(workTree, branch);
     }
 
     @Override
@@ -320,7 +330,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommits(
-            Branch.Name from, Sha oldest, Branch.Name to, Option<String> onto) {
+            Branch.Name from, Sha oldest, Branch.Name to, Option<BranchRef> onto) {
         return CliMoveCommits.move(workTree, from, oldest, to, onto);
     }
 

@@ -557,7 +557,7 @@ class BranchUpdateTest {
     void newBranchRequestOpensTheDialogAndCancelClosesIt() {
         Model open = Update.update(loaded(), new NewBranchMsg.Requested(new Branch.Name("feature")))
                 .model();
-        assertEquals(Option.of(new NewBranchPopup("feature")), open.popup());
+        assertEquals(Option.of(new NewBranchPopup(new Branch.Name("feature"))), open.popup());
 
         Next cancelled = Update.update(open, new NewBranchMsg.Cancelled());
         assertEquals(Option.none(), cancelled.model().popup());
@@ -572,7 +572,7 @@ class BranchUpdateTest {
                 .model();
 
         assertEquals(
-                Option.of(new NewBranchPopup("abc1234567", "abc1234")),
+                Option.of(new NewBranchPopup("abc1234567", "abc1234", Option.none())),
                 Update.update(model, new NewBranchMsg.RequestedAtCommit(commit.sha()))
                         .model()
                         .popup());
@@ -590,7 +590,9 @@ class BranchUpdateTest {
 
         Next next = Update.update(typed(open, " topic "), new NewBranchMsg.Confirmed());
 
-        assertEquals(List.of(new NewBranchCmd(new Branch.Name("topic"), "feature")), next.cmds());
+        assertEquals(
+                List.of(new NewBranchCmd(new Branch.Name("topic"), "feature", Option.of(new Branch.Name("feature")))),
+                next.cmds());
         assertEquals(Option.none(), next.model().popup());
     }
 
@@ -603,13 +605,14 @@ class BranchUpdateTest {
 
         assertEquals(List.of(), next.cmds());
         assertEquals(
-                Option.of(new NewBranchPopup("feature").withText("  ")),
+                Option.of(new NewBranchPopup(new Branch.Name("feature")).withText("  ")),
                 next.model().popup());
     }
 
     @Test
     void failedBranchCreationIsStored() {
-        Model model = Update.update(loaded(), failed(new NewBranchCmd(new Branch.Name("topic"), "main"), "boom"))
+        Model model = Update.update(
+                        loaded(), failed(new NewBranchCmd(new Branch.Name("topic"), "main", Option.none()), "boom"))
                 .model();
 
         assertEquals(Option.of("Creating branch topic failed: boom"), errorText(model));

@@ -9,6 +9,8 @@ import java.nio.file.Path;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
@@ -23,19 +25,23 @@ final class CliMoveCommits {
     private CliMoveCommits() {}
 
     /**
-     * Creates {@code to} at {@code onto}, or else at {@code from}, and checks it out; copies the commits of
-     * {@code from} since {@code oldest} onto it, when it starts elsewhere; and moves {@code from} back to the
-     * parent of {@code oldest}. Each step only runs when the one before it succeeded, so {@code from} keeps its
-     * commits until they are on {@code to}. A cherry-pick that stops on conflicts is left so; one that fails
-     * otherwise is aborted, and {@code from} is checked out again and {@code to} deleted, so the repository is left
-     * as it was.
+     * Creates {@code to} at {@code onto}, or else at {@code from}, recording that branch as the one it came from,
+     * and checks it out; copies the commits of {@code from} since {@code oldest} onto it, when it starts elsewhere;
+     * and moves {@code from} back to the parent of {@code oldest}. Each step only runs when the one before it
+     * succeeded, so {@code from} keeps its commits until they are on {@code to}. A cherry-pick that stops on
+     * conflicts is left so; one that fails otherwise is aborted, and {@code from} is checked out again and {@code to}
+     * deleted, so the repository is left as it was.
      *
      * @return the command lines that were run
      */
     static Either<GitFailure<GitError>, List<ExecutedCommand>> move(
-            Path workTree, Branch.Name from, Sha oldest, Branch.Name to, Option<String> onto) {
+            Path workTree, Branch.Name from, Sha oldest, Branch.Name to, Option<BranchRef> onto) {
         return GitFailure.sequence(
-                () -> GitFailure.widen(CliCheckout.checkoutNewBranch(workTree, to, onto.getOrElse(from.value()))),
+                () -> GitFailure.widen(CliCheckout.checkoutNewBranch(
+                        workTree,
+                        to,
+                        onto.map(Refs::of).getOrElse(from.value()),
+                        Option.of(onto.map(CliMoveCommits::name).getOrElse(from)))),
                 () -> onto.isDefined()
                         ? copy(workTree, from, oldest)
                                 .mapLeft(failure -> undone(
@@ -106,6 +112,16 @@ final class CliMoveCommits {
     private static Either<GitFailure<GitError>, List<ExecutedCommand>> moveBack(
             Path workTree, Branch.Name branch, Sha oldest) {
         return GitFailure.widen(GitProcess.log(workTree, git("branch", "--force", branch.value(), parent(oldest))));
+    }
+
+    /**
+     * The name of {@code branch}; on its remote, the name it has there.
+     */
+    private static Branch.Name name(BranchRef branch) {
+        return switch (branch) {
+            case BranchRef.Local(Branch.Name name) -> name;
+            case BranchRef.Remote(RemoteBranch remote) -> remote.branch();
+        };
     }
 
     private static String parent(Sha oldest) {
