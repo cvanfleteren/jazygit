@@ -15,8 +15,8 @@ import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
- * Creating the pull request of a branch: reading the branch it came from, asking what it merges into, reading the title it starts out with, and
- * asking what it says.
+ * Creating the pull request of a branch: reading the branch it came from, asking what it merges into, reading the
+ * title it starts out with, and asking what it says.
  */
 public final class CreatePullRequestUpdate {
 
@@ -24,9 +24,13 @@ public final class CreatePullRequestUpdate {
 
     public static Next update(Model model, CreatePullRequestMsg msg) {
         return switch (msg) {
+            // The branch may have gone while its parent was read; then there is nothing to ask.
             case ParentRead(var branch, var parent) ->
-                Next.of(model.clearError()
-                        .openPopupIfFree(new BasePopup(branch, parentFirst(bases(model, branch), parent))));
+                Next.of(model.repo()
+                        .branch(branch)
+                        .map(known -> model.clearError()
+                                .openPopupIfFree(new BasePopup(branch, parentFirst(bases(model, branch), parent))))
+                        .getOrElse(model));
             case BaseChosen(Branch.Name base) ->
                 model.popup(BasePopup.class)
                         .flatMap(popup -> model.repo().branch(popup.branch()))

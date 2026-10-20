@@ -1138,6 +1138,32 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void failingToRecordTheParentStillMakesTheBranch() throws Exception {
+        // git config cannot write the configuration while another writer holds its lock.
+        Files.writeString(repo.resolve(".git/config.lock"), "");
+
+        var made = provider.checkoutNewBranch(new Branch.Name("topic"), "main", Option.of(new Branch.Name("main")));
+
+        assertTrue(made.isRight());
+        assertEquals(2, made.get().size());
+        assertEquals(
+                Option.of(new Branch.Name("topic")),
+                provider.status().get().head().branchName());
+        assertEquals(
+                Option.none(), provider.parentBranch(new Branch.Name("topic")).get());
+    }
+
+    @Test
+    void countsAgainstABranchOfThisRepositoryFollowedAsARemoteOne() throws Exception {
+        git("checkout", "-q", "-b", "side");
+        git("commit", "-q", "--allow-empty", "-m", "Side one");
+        BranchRef side = new BranchRef.Local(new Branch.Name("side"));
+        BranchRef main = new BranchRef.Remote(new RemoteBranch(".", new Branch.Name("main")));
+
+        assertEquals(1, provider.countNotOn(side, main, 1000).get());
+    }
+
+    @Test
     void branchesKnowWhetherTheyExistOnTheirRemote() throws Exception {
         git("branch", "pushed");
         git("branch", "local-only");

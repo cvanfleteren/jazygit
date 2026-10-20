@@ -26,7 +26,7 @@ When jazygit creates a branch from a branch, it sets `branch.<new>.gh-merge-base
 - **Move commits to a new branch** (ADR 1): the branch it starts on, or else the branch the commits came from.
 
 git moves or deletes the `branch.<name>` section along with the branch, so renames and deletes need no handling. The
-chosen base is never written back.
+chosen base is never written back. Failing to record the parent does not fail creating the branch: it is only a hint.
 
 ### Finding the parent
 
@@ -39,6 +39,9 @@ remote):
    old order, so the default branch when it is among them. 1000 or more counts as too far to tell apart.
 
 If reading fails, the list opens in the old order.
+
+The guess has known blind spots: it counts against the remote-tracking branches as last fetched, so a stale one can
+mislead it; and a base the branch was squash-merged into looks further away than it is.
 
 ### Why this way
 

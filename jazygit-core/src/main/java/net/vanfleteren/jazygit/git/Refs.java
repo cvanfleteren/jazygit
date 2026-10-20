@@ -34,7 +34,7 @@ final class Refs {
     static String of(BranchRef branch) {
         return switch (branch) {
             case BranchRef.Local(Branch.Name name) -> head(name);
-            case BranchRef.Remote(RemoteBranch remote) -> remote(remote.remote(), remote.branch());
+            case BranchRef.Remote(RemoteBranch remote) -> remote.ref();
         };
     }
 }

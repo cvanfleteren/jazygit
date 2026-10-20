@@ -38,7 +38,8 @@ public record NewBranchPopup(
     }
 
     /**
-     * Asking for the name of a new branch that follows {@code remote}, starting out with the name it has there.
+     * Asking for the name of a new branch that follows {@code remote}, starting out with the name it has there. It
+     * records no parent: it is the same branch as {@code remote}, not one made from it.
      */
     public static NewBranchPopup following(RemoteBranch remote) {
         return new NewBranchPopup(

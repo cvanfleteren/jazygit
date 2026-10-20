@@ -157,6 +157,17 @@ class PullRequestUpdateTest {
     }
 
     @Test
+    void theParentReadOfABranchThatIsGoneAsksNothing() {
+        Model gone = Update.update(model(), new LoadMsg.BranchesLoaded(List.of(RELEASE, MAIN)))
+                .model();
+
+        Next next = Update.update(gone, new CreatePullRequestMsg.ParentRead(FEATURE, Option.none()));
+
+        assertEquals(Option.none(), next.model().popup());
+        assertEquals(List.empty(), next.cmds());
+    }
+
+    @Test
     void theParentReadDoesNotTakeAwayAnotherPopup() {
         Model busy = creating();
 

@@ -69,12 +69,23 @@ final class CliCheckout {
     /**
      * Runs {@code git checkout -b <name> <startPoint>} in {@code workTree}: creates the branch at
      * {@code startPoint} and switches to it; then records {@code parent} as the branch it came from, if given.
+     * The parent is only a hint, so failing to record it does not fail the branch, which is there.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(
             Path workTree, Branch.Name name, String startPoint, Option<Branch.Name> parent) {
         return GitFailure.sequence(
                 () -> GitProcess.log(workTree, git("checkout", "--quiet", "-b", name.value(), startPoint, "--")),
-                () -> parent.map(p -> CliConfig.setParent(workTree, name, p)).getOrElse(GitFailure::nothing));
+                () -> parent.map(p -> recordParent(workTree, name, p)).getOrElse(GitFailure::nothing));
+    }
+
+    /**
+     * Records {@code parent} as the branch {@code name} came from; the command lines that were run, also when that
+     * failed.
+     */
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> recordParent(
+            Path workTree, Branch.Name name, Branch.Name parent) {
+        return Either.right(
+                CliConfig.setParent(workTree, name, parent).fold(GitFailure::commands, commands -> commands));
     }
 
     /**

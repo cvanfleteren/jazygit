@@ -26,12 +26,11 @@ final class CliMoveCommits {
 
     /**
      * Creates {@code to} at {@code onto}, or else at {@code from}, recording that branch as the one it came from,
-     * and checks it out; copies the commits of
-     * {@code from} since {@code oldest} onto it, when it starts elsewhere; and moves {@code from} back to the
-     * parent of {@code oldest}. Each step only runs when the one before it succeeded, so {@code from} keeps its
-     * commits until they are on {@code to}. A cherry-pick that stops on conflicts is left so; one that fails
-     * otherwise is aborted, and {@code from} is checked out again and {@code to} deleted, so the repository is left
-     * as it was.
+     * and checks it out; copies the commits of {@code from} since {@code oldest} onto it, when it starts elsewhere;
+     * and moves {@code from} back to the parent of {@code oldest}. Each step only runs when the one before it
+     * succeeded, so {@code from} keeps its commits until they are on {@code to}. A cherry-pick that stops on
+     * conflicts is left so; one that fails otherwise is aborted, and {@code from} is checked out again and {@code to}
+     * deleted, so the repository is left as it was.
      *
      * @return the command lines that were run
      */
