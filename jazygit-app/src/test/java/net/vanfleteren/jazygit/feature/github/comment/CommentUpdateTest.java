@@ -16,7 +16,10 @@ import java.util.ArrayList;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.feature.github.comment.CommentCmd.AddComment;
 import net.vanfleteren.jazygit.feature.github.comment.CommentCmd.EditComment;
+import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.LoadPullRequestDetails;
+import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.SetDraft;
+import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
@@ -129,8 +132,57 @@ class CommentUpdateTest {
         assertEquals(
                 Option.of(CommentPopup.on(SHOWN).withText("  Looks good\n").withSending(true)),
                 sending.model().popup());
+        // A comment does not touch the branch.
+        assertEquals(Option.none(), sending.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
+    }
+
+    @Test
+    void aCommentSentWhileTheDraftChangesLeavesTheBranchBusyUntilThatIsDone() {
+        SetDraft drafting = new SetDraft(FEATURE, 42, true);
+        Model busy = commenting("Looks good").withBusyBranch(new BranchRef.Local(FEATURE), PullRequestCmd.DRAFT_PR);
+        Next sending = Update.update(busy, new CommentMsg.Confirmed());
+        AddComment cmd = (AddComment) sending.cmds().head();
+        Env env = env(new StubGitProvider() {}, StubGitHub.empty(), Terminal.NONE);
+
+        Model sent = Update.update(sending.model(), cmd.run(env)).model();
+
+        assertEquals(Option.of(PullRequestCmd.DRAFT_PR), sent.jobs().busy().get(new BranchRef.Local(FEATURE)));
+        Model drafted = Update.update(sent, drafting.run(env)).model();
+        assertEquals(Option.none(), drafted.jobs().busy().get(new BranchRef.Local(FEATURE)));
+    }
+
+    @Test
+    void aDraftChangedWhileCommentingShowsInThePullRequestGoneBackTo() {
+        SetDraft drafting = new SetDraft(FEATURE, 42, true);
+        Model commenting = commenting("half a thought");
+
+        Model drafted = Update.update(
+                        commenting, drafting.run(env(new StubGitProvider() {}, StubGitHub.empty(), Terminal.NONE)))
+                .model();
+        Model back = Update.update(drafted, new CommentMsg.Cancelled()).model();
+
+        assertEquals(Option.of(true), back.popup(PullRequestPopup.class).flatMap(PullRequestPopup::draft));
+        // Changing the draft again turns it back.
         assertEquals(
-                Option.of(CommentCmd.COMMENT_PR), sending.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
+                List.of(new SetDraft(FEATURE, 42, false)),
+                Update.update(back, new PullRequestMsg.DraftChosen()).cmds());
+    }
+
+    @Test
+    void detailsReadWhileCommentingShowInThePullRequestGoneBackTo() {
+        Model commenting = loaded().openPopup(CommentPopup.on(PullRequestPopup.loading(FEATURE, FEATURE_PR)));
+
+        Model read = Update.update(commenting, new PullRequestMsg.DetailsLoaded(42, DETAILS))
+                .model();
+
+        assertEquals(
+                Option.of(PullRequestPopup.loading(FEATURE, FEATURE_PR).with(Either.right(DETAILS))),
+                read.popup(CommentPopup.class).map(CommentPopup::shown));
+        // Details of another pull request change nothing.
+        assertEquals(
+                commenting,
+                Update.update(commenting, new PullRequestMsg.DetailsLoaded(7, DETAILS))
+                        .model());
     }
 
     @Test
@@ -182,7 +234,6 @@ class CommentUpdateTest {
         assertTrue(
                 sent.cmds().contains(new LoadPullRequestDetails(42)),
                 sent.cmds().toString());
-        assertEquals(Option.none(), sent.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
         assertEquals(
                 "gh pr comment 42 --body 'Looks good'",
                 sent.model().outcome().commandLog().last().commands().last().line());
@@ -191,7 +242,7 @@ class CommentUpdateTest {
     @Test
     void aCommentSentAfterThePopupClosedOnlyLogsIt() {
         AddComment cmd = new AddComment(FEATURE, 42, "Looks good");
-        Model elsewhere = loaded().withBusyBranch(new BranchRef.Local(FEATURE), CommentCmd.COMMENT_PR);
+        Model elsewhere = loaded();
 
         Next sent = Update.update(elsewhere, cmd.succeeded(List.empty()));
 
@@ -222,7 +273,6 @@ class CommentUpdateTest {
         assertEquals(
                 Option.of("Commenting on the pull request of feature failed: could not add comment: network down"),
                 errorText(failed.model()));
-        assertEquals(Option.none(), failed.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
         // It can be sent again.
         assertEquals(
                 List.of(cmd),

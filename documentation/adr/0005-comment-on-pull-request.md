@@ -30,9 +30,17 @@ still sends it, so the text is seen before it goes to GitHub.
 
 ### Sending
 
-Sending is an operation (`AddComment` cmd, `GitHub.commentOnPullRequest(number, body)`): the branch of the pull
-request is busy meanwhile, and the command goes to the log. The comment popup stays open until it is done, saying it is
-sending; meanwhile the comment cannot be changed, sent again or left.
+Sending is an operation (`AddComment` cmd, `GitHub.commentOnPullRequest(number, body)`), whose command goes to the
+log. The comment popup stays open until it is done, saying it is sending; meanwhile the comment cannot be changed, sent
+again or left.
+
+The branch of the pull request is **not** marked busy. A comment does not touch the branch, so it need not wait for
+what is done to it, like a push or turning the pull request into a draft, nor hold that up. Marking it busy would also
+overwrite the mark of such an operation still running, which would then free the branch too early when the first of
+the two is done.
+
+While the comment popup is open, what changes the pull request dialog (its details read, it becoming a draft) changes
+the dialog the comment popup goes back to, so that one is never out of date.
 
 - On success it closes, back on the pull request dialog, whose details are read again so the count of comments is
   current.

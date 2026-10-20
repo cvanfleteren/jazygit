@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.feature.github.comment;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
@@ -17,8 +16,9 @@ import net.vanfleteren.jazygit.state.OperationCmd;
  */
 public sealed interface CommentCmd extends Cmd {
 
-    Operation COMMENT_PR =
-            Operation.of("log.title.commentPr", "error.commentPr.failed").labelledWhenBusy("branches.busy.commentPr");
+    // The branch is not busy meanwhile: a comment does not touch it, so it waits for nothing done to it, nor holds
+    // anything up; the popup tells it is being sent.
+    Operation COMMENT_PR = Operation.of("log.title.commentPr", "error.commentPr.failed");
 
     Operation EDIT_COMMENT = Operation.of("log.title.editComment", "error.editComment.failed");
 
@@ -58,11 +58,6 @@ public sealed interface CommentCmd extends Cmd {
         @Override
         public Option<String> subject() {
             return Option.of(branch.value());
-        }
-
-        @Override
-        public Option<BranchRef> busyBranch() {
-            return Option.of(new BranchRef.Local(branch));
         }
 
         @Override
