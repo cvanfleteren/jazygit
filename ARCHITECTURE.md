@@ -195,6 +195,18 @@ tabs, closes it.
 It is read again when either branch moves, as the periodic loads of the branches tell. When the branch is gone, it
 closes; when the upstream is gone, or the base branch, it closes with the error that says so.
 
+## Searching the commits
+
+`/` in the commits pane opens a line above the list to type a query in (`RepoView.searchLine`); Enter runs it through
+`GitInfoProvider.search`, and the pane then lists what it found in place of the log of HEAD (`RepoView.commitSearch`,
+`state.CommitSearch`), flat, without the rails of merges, until Escape clears it. Its messages and update are in
+`state` (`CommitSearchMsg`, `CommitSearchUpdate`), as the pane sends them; `feature.commit.search` only declares the
+key. `git.model.CommitQuery` parses the query: bare words for the message, `author:`, `path:` and `-S:`, smart case.
+See ADR 4.
+
+The search runs again each time the log is read again, so it stays right after an operation, and the commit
+operations find the commits it found through `Model.commit`, also those older than the log reads.
+
 ## The pull requests screen
 
 Ctrl+P switches the left of the screen between the repository and the pull requests (`Model.screen`, `state.Screen`);

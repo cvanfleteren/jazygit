@@ -41,8 +41,7 @@ public final class CherryPickUpdate {
      * A merge cannot be copied: which of its parents to pick it against is not asked.
      */
     private static Next copied(Model model, Sha sha) {
-        return Next.of(model.repo()
-                .commit(sha)
+        return Next.of(model.commit(sha)
                 .filter(commit -> !commit.isMerge())
                 .map(commit -> model.mapRepoView(repoView -> repoView.withCherryPick(Option.of(commit))))
                 .getOrElse(model));

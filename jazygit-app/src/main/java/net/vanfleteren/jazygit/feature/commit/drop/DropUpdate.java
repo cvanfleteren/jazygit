@@ -27,8 +27,7 @@ public final class DropUpdate {
     }
 
     private static Next requested(Model model, Sha sha) {
-        return model.repo()
-                .commit(sha)
+        return model.commit(sha)
                 .filter(commit -> droppable(model, commit))
                 .map(DropPopup::new)
                 .transform(popup -> Update.ask(model, popup));

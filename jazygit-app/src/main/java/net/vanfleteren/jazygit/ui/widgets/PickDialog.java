@@ -51,7 +51,7 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
     private final Option<ListElement<?>> empty;
     // Shown instead of the list when no row contains the filter.
     private final ListElement<?> noMatches;
-    private final ListFilter filter = new ListFilter();
+    private final FilterLine filter = new FilterLine();
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
      */

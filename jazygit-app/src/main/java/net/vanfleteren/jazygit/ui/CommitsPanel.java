@@ -2,21 +2,29 @@ package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
+import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
+import net.vanfleteren.jazygit.state.CommitSearch;
+import net.vanfleteren.jazygit.state.CommitSearchMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.SelectionMsg;
+import net.vanfleteren.jazygit.ui.widgets.FilterLine;
+import net.vanfleteren.jazygit.ui.widgets.Pane;
 
 /**
- * Left-side panel listing the commit log.
+ * Left-side panel listing the commit log, or what the search of it found. {@code /} opens the line to type the
+ * search in above the list, which then takes the keys that edit it; Enter runs it and Escape closes it. While the
+ * panel lists the commits found, Escape clears the search.
  */
 public class CommitsPanel {
 
@@ -24,6 +32,10 @@ public class CommitsPanel {
 
     private final LoadableList<List<Commit>> list;
     private final Keymap keymap = Keymap.standard();
+    private final FilterLine searchLine = new FilterLine();
+    // What the last render showed: the text of the open search line, and whether a search was listed.
+    private Option<String> typing = Option.none();
+    private boolean searching;
 
     /**
      * @param dispatch   receives the messages for the user's actions, on the render thread
@@ -38,9 +50,25 @@ public class CommitsPanel {
      */
     public CommitsPanel(Consumer<Msg> dispatch, Runnable openCommit, Theme.Highlights highlights) {
         list = new LoadableList<>(Messages.get("panel.commits.title"), ID, CommitsPanel::reselect, highlights);
-        list.onKey(event -> event.code() == KeyCode.ENTER && selectedCommit().isDefined()
-                ? Option.of(openCommit)
-                : PaneKeys.sending(keymap.handle(Scopes.COMMITS, event, selectedCommit()), dispatch));
+        list.onKey(event -> typing.map(text -> typed(text, event, dispatch))
+                .orElse(() -> event.code() == KeyCode.ENTER && selectedCommit().isDefined()
+                        ? Option.of(openCommit)
+                        : searching && event.code() == KeyCode.ESCAPE
+                                ? PaneKeys.sending(Option.of(new CommitSearchMsg.Cleared()), dispatch)
+                                : PaneKeys.sending(keymap.handle(Scopes.COMMITS, event, selectedCommit()), dispatch)));
+    }
+
+    /**
+     * What {@code event} does while the search line is open with {@code text}: the keys that edit it do, Enter runs
+     * it, Escape closes it, and the other keys do nothing, but for those the list moves with, which it took before.
+     */
+    private Runnable typed(String text, KeyEvent event, Consumer<Msg> dispatch) {
+        Option<Msg> msg = event.code() == KeyCode.ESCAPE
+                ? Option.of(new CommitSearchMsg.Cancelled())
+                : event.code() == KeyCode.ENTER
+                        ? Option.of(new CommitSearchMsg.Submitted())
+                        : searchLine.edit(text, event).map(CommitSearchMsg.Edited::new);
+        return () -> msg.forEach(dispatch);
     }
 
     /**
@@ -66,6 +94,14 @@ public class CommitsPanel {
     }
 
     /**
+     * The rows of the commits a search found, without the rails of merges: with commits left out, they no longer
+     * join up. A merge is still a {@code ◎}.
+     */
+    static List<LoadableList.Row> foundRows(List<Commit> commits, Option<Sha> copied) {
+        return commits.map(commit -> row(commit, commit.isMerge() ? "◎ " : "○ ", copied.contains(commit.sha())));
+    }
+
+    /**
      * The row of a commit. Commits brought in by a merge are drawn on a rail beside the merge, which opens
      * it with {@code ◎─╮}; the commit after the branch, where it joins the main line, is {@code ○─╯}.
      *
@@ -81,7 +117,13 @@ public class CommitsPanel {
     static LoadableList.Row row(CommitGraph.Node node, boolean joins, boolean copied) {
         Commit commit = node.commit();
         String rails = "│ ".repeat(node.depth());
-        String graph = commit.isMerge() ? rails + "◎─╮ " : joins ? rails + "○─╯ " : rails + "○ ";
+        return row(commit, commit.isMerge() ? rails + "◎─╮ " : joins ? rails + "○─╯ " : rails + "○ ", copied);
+    }
+
+    /**
+     * @param graph where the commit is in the graph, before its message
+     */
+    private static LoadableList.Row row(Commit commit, String graph, boolean copied) {
         String author = " " + initials(commit.authorName()) + " " + graph;
         List<LoadableList.Seg> prefix = copied
                 ? List.of(LoadableList.Seg.styled(commit.shortSha(), Theme.Classes.COPIED), LoadableList.Seg.of(author))
@@ -119,11 +161,27 @@ public class CommitsPanel {
      */
     public Panel render(Model model, String focusedId, String activeId) {
         Option<Sha> copied = model.repoView().cherryPick().map(Commit::sha);
+        Option<CommitSearch> search = model.repoView().commitSearch();
+        typing = model.repoView().searchLine();
+        searching = search.isDefined();
+        list.whenEmpty(search.map(found -> Messages.get("panel.commits.noMatches")));
         return list.render(
-                model.repo().commits(),
-                commits -> rows(CommitGraph.layout(commits), copied),
+                search.map(CommitSearch::results).getOrElse(model.repo().commits()),
+                commits -> search.isDefined() ? foundRows(commits, copied) : rows(CommitGraph.layout(commits), copied),
                 ID.equals(focusedId),
-                ID.equals(activeId));
+                ID.equals(activeId),
+                Pane.title(search.map(CommitsPanel::title).getOrElse(() -> Messages.get("panel.commits.title"))),
+                typing.map(searchLine::field));
+    }
+
+    /**
+     * The title of the panel while it lists what {@code search} found, which says when it found more than it
+     * lists.
+     */
+    static String title(CommitSearch search) {
+        return search.results().toOption().exists(found -> found.size() >= GitInfoProvider.MAX_COMMITS)
+                ? Messages.get("panel.commits.titleSearchCapped", search.text(), GitInfoProvider.MAX_COMMITS)
+                : Messages.get("panel.commits.titleSearch", search.text());
     }
 
     /**

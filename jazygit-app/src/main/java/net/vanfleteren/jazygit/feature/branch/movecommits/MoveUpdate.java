@@ -71,7 +71,7 @@ public final class MoveUpdate {
         return model.repo()
                 .currentBranch()
                 .map(from -> model.idleBranch(from.name())
-                        .flatMap(idle -> model.repo().commit(sha))
+                        .flatMap(idle -> model.commit(sha))
                         .filter(commit -> !commit.parents().isEmpty())
                         .map(commit -> Next.of(
                                 model.clearError(),
@@ -90,8 +90,7 @@ public final class MoveUpdate {
         return model.repo()
                 .currentBranch()
                 .filter(current -> current.name().equals(from) && range.commits() > 0)
-                .flatMap(current -> model.repo()
-                        .commit(oldest)
+                .flatMap(current -> model.commit(oldest)
                         .map(commit -> new MoveRequest(
                                 from,
                                 current.isDefault(),

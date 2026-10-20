@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.CommitQuery;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -140,6 +141,19 @@ public interface Cmd {
         @Override
         public Msg run(Env env) {
             return env.git().commits().fold(this::failedWith, LoadMsg.CommitsLoaded::new);
+        }
+    }
+
+    /**
+     * Reads the commits of the log of HEAD that {@code query} finds.
+     */
+    record SearchCommits(CommitQuery query) implements Load {
+
+        @Override
+        public Msg run(Env env) {
+            return env.git()
+                    .search(query)
+                    .fold(this::failedWith, commits -> new LoadMsg.CommitSearchLoaded(query, commits));
         }
     }
 

@@ -66,6 +66,14 @@ public sealed interface LoadMsg extends Msg {
         }
     }
 
+    record CommitSearchLoaded(CommitQuery query, List<Commit> commits) implements LoadMsg {
+
+        @Override
+        public Cmd.Load cmd() {
+            return new Cmd.SearchCommits(query);
+        }
+    }
+
     record BranchLogLoaded(BranchRef branch, List<Commit> commits) implements LoadMsg {
 
         @Override

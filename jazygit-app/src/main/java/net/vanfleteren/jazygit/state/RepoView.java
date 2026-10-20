@@ -21,6 +21,9 @@ import net.vanfleteren.jazygit.git.model.*;
  * @param focusedPane  the id of the element of the screen, outside the popups, that had the focus last, which a
  *                     closing popup gives it back to; none before the view reported one
  * @param cherryPick   the commit copied to be cherry-picked onto the branch checked out later, if one is
+ * @param searchLine   the text of the line above the commits pane to type a search in, while it is open
+ * @param commitSearch the search of the log of HEAD that was run last, which the commits pane lists in place of
+ *                     the log until it is cleared
  */
 @With
 public record RepoView(
@@ -30,10 +33,14 @@ public record RepoView(
         Option<Preview<Sha, DiffText>> commitDetail,
         Option<Preview<List<FileEntry>, Diffs>> fileDiff,
         Option<String> focusedPane,
-        Option<Commit> cherryPick) {
+        Option<Commit> cherryPick,
+        Option<String> searchLine,
+        Option<CommitSearch> commitSearch) {
 
     public static final RepoView INITIAL = new RepoView(
             BranchesTab.LOCAL,
+            Option.none(),
+            Option.none(),
             Option.none(),
             Option.none(),
             Option.none(),

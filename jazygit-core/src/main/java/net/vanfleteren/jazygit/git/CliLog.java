@@ -17,7 +17,7 @@ import net.vanfleteren.jazygit.git.model.*;
  */
 final class CliLog {
 
-    static final int MAX_COMMITS = 300;
+    static final int MAX_COMMITS = GitInfoProvider.MAX_COMMITS;
     // sha, parents, author name, author email, author time, subject, ref names, raw message
     private static final List<String> FIELDS = List.of("%H", "%P", "%an", "%ae", "%at", "%s", "%D", "%B");
     private static final String TAG_PREFIX = "tag: ";
@@ -46,6 +46,31 @@ final class CliLog {
         return resolve(workTree, "HEAD")
                 .mapLeft(GitFailure::error)
                 .flatMap(head -> head.fold(() -> Either.right(List.empty()), tip -> log(workTree, tip)));
+    }
+
+    /**
+     * The commits of the log of HEAD that {@code query} finds, newest first; none in a repository without commits.
+     * They are left as git lists them: with commits left out, merges and what they brought in no longer join up.
+     */
+    static Either<ProcessError, List<Commit>> search(Path workTree, CommitQuery query) {
+        return resolve(workTree, "HEAD")
+                .mapLeft(GitFailure::error)
+                .flatMap(head -> head.fold(
+                        () -> Either.right(List.empty()),
+                        tip -> read(workTree, filters(query).append(tip.value()), query.paths())));
+    }
+
+    /**
+     * The options of {@code git log} that keep the commits {@code query} finds, apart from its paths. The texts
+     * are found as they are, not as regular expressions. git keeps a commit of any of the authors, whose message has
+     * the phrase.
+     */
+    static List<String> filters(CommitQuery query) {
+        return List.of("--fixed-strings")
+                .appendAll(Option.when(query.ignoresCase(), "--regexp-ignore-case"))
+                .appendAll(query.message().map(message -> "--grep=" + message))
+                .appendAll(query.authors().map(author -> "--author=" + author))
+                .appendAll(query.pickaxe().map(text -> "-S" + text));
     }
 
     /**
@@ -166,14 +191,23 @@ final class CliLog {
      * The newest commits {@code revisions} select, newest first, laid out by {@link CommitGraph#arrange}.
      */
     private static Either<ProcessError, List<Commit>> selected(Path workTree, List<String> revisions) {
+        return read(workTree, revisions, List.empty()).map(CommitGraph::arrange);
+    }
+
+    /**
+     * The newest commits {@code arguments} select that change one of {@code paths}, or any commit when there are
+     * none, as {@code git log} lists them.
+     */
+    private static Either<ProcessError, List<Commit>> read(Path workTree, List<String> arguments, List<String> paths) {
         return GitProcess.read(
                 workTree,
                 GitCommand.reading(
                         List.of("log", "--no-color", "--no-show-signature", "-z", "--max-count=" + MAX_COMMITS)
                                 .append("--format=" + FORMAT)
-                                .appendAll(revisions)
-                                .append("--")),
-                raw -> parse(raw).map(CommitGraph::arrange));
+                                .appendAll(arguments)
+                                .append("--")
+                                .appendAll(paths)),
+                CliLog::parse);
     }
 
     /**

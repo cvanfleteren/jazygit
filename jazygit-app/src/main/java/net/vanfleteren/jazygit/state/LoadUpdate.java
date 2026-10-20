@@ -41,8 +41,20 @@ public final class LoadUpdate {
                 Next.of(done.mapRepo(repo -> repo.withStashes(repo.stashes().reload(stashes))));
             case LoadMsg.WorktreesLoaded(var worktrees) ->
                 Next.of(done.mapRepo(repo -> repo.withWorktrees(repo.worktrees().reload(worktrees))));
+            // The log changed, and so may have what the search finds in it.
             case CommitsLoaded(var commits) ->
-                Next.of(done.mapRepo(repo -> repo.withCommits(repo.commits().reload(commits))));
+                new Next(
+                        done.mapRepo(repo -> repo.withCommits(repo.commits().reload(commits))),
+                        List.narrow(done.repoView()
+                                .commitSearch()
+                                .map(CommitSearch::load)
+                                .toList()));
+            // What arrives after another search was run, or after the search was cleared, is dropped.
+            case CommitSearchLoaded(var query, var commits) ->
+                Next.of(done.mapRepoView(repoView -> repoView.withCommitSearch(repoView.commitSearch()
+                        .map(search -> search.query().equals(query)
+                                ? search.withResults(search.results().reload(commits))
+                                : search))));
             // What arrives after another item was highlighted, or after the diff options changed, is dropped.
             case BranchLogLoaded(var branch, var commits) ->
                 Next.of(done.mapRepoView(repoView -> repoView.withBranchLog(
@@ -216,6 +228,10 @@ public final class LoadUpdate {
             case Cmd.LoadStashes() -> model.mapRepo(repo -> repo.withStashes(new Failed<>(failure)));
             case Cmd.LoadWorktrees() -> model.mapRepo(repo -> repo.withWorktrees(new Failed<>(failure)));
             case LoadCommits() -> model.mapRepo(repo -> repo.withCommits(new Failed<>(failure)));
+            case Cmd.SearchCommits(var query) ->
+                model.mapRepoView(repoView -> repoView.withCommitSearch(repoView.commitSearch()
+                        .map(search ->
+                                search.query().equals(query) ? search.withResults(new Failed<>(failure)) : search)));
             case LoadCommitDetail(Sha sha, var options) ->
                 withDetail(
                         model.mapRepoView(repoView -> repoView.withCommitDetail(

@@ -151,6 +151,14 @@ public record Model(
     }
 
     /**
+     * The commit {@code sha} of the commits pane: in the log of HEAD, or else among the results of the search of
+     * it, which can find older commits than the log reads.
+     */
+    public Option<Commit> commit(Sha sha) {
+        return repo.commit(sha).orElse(() -> repoView.commitSearch().flatMap(search -> search.commit(sha)));
+    }
+
+    /**
      * This model without an error shown, nor a notice.
      */
     public Model clearError() {

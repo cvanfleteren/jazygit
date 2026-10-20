@@ -42,8 +42,7 @@ public final class AmendUpdate {
         return sha.filter(older -> !head.contains(older))
                 .fold(
                         () -> ask(model, new LastCommit()),
-                        older -> model.repo()
-                                .commit(older)
+                        older -> model.commit(older)
                                 .map(commit -> commit.isMerge()
                                         ? Next.of(model.fail(new AppError.MergeNotAmendable()))
                                         : ask(model, new Older(older)))
