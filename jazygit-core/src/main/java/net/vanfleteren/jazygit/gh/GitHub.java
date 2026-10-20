@@ -94,6 +94,11 @@ public interface GitHub {
     Either<GhFailure, List<ExecutedCommand>> setDraft(int number, boolean draft);
 
     /**
+     * Adds a comment saying {@code body} to the conversation of pull request {@code number}.
+     */
+    Either<GhFailure, List<ExecutedCommand>> commentOnPullRequest(int number, String body);
+
+    /**
      * A pull request that was created.
      *
      * @param number   its number, if gh said where it is

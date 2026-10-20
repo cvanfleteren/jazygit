@@ -420,4 +420,11 @@ public interface GitInfoProvider {
      * over. Fails as {@link #edit} does, or with a {@link GitError.TempFileFailed}.
      */
     Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(CommitMessage message);
+
+    /**
+     * Opens {@code text} in the editor git uses, in a temporary file called {@code fileName}, which tells the editor
+     * what it is, and gives the text it was saved as once the editor is closed, with the command that ran. It runs on
+     * the terminal, which the caller must have handed over. Fails as {@link #editMessage} does.
+     */
+    Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(String fileName, String text);
 }

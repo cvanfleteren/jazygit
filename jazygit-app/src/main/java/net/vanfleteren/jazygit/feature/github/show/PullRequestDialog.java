@@ -12,6 +12,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.function.Consumer;
+import net.vanfleteren.jazygit.feature.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -33,8 +34,8 @@ import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
 /**
  * Popup showing the pull request of a branch: its title, state, branches, review and checks, as labelled
- * rows, and under them what can be done with it: open it in the browser, mark it ready for review or turn it
- * into a draft, merge it or close it. Whether it is
+ * rows, and under them what can be done with it: open it in the browser, comment on it, mark it ready for review or
+ * turn it into a draft, merge it or close it. Whether it is
  * open lives in the {@link Model}.
  */
 public final class PullRequestDialog implements PopupView {
@@ -78,6 +79,11 @@ public final class PullRequestDialog implements PopupView {
                 ID,
                 List.of(
                         new Choice<>('o', "dialog.pullRequest.open", PullRequestMsg.OpenConfirmed::new),
+                        new Choice<>(
+                                'c',
+                                "dialog.pullRequest.comment",
+                                CommentMsg.Requested::new,
+                                (model, popup) -> popup.detailsRead()),
                         // Before merging, which a draft has to wait for.
                         new Choice<>(
                                 'd',

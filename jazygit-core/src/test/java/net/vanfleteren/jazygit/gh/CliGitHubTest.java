@@ -202,6 +202,15 @@ class CliGitHubTest {
     }
 
     @Test
+    void aCommentIsAddedWithItsBodyAsTyped() {
+        assertEquals(
+                List.of("gh", "pr", "comment", "12", "--body", "Looks good\n\n- one nit"),
+                CliGitHub.commentCommand(12, "Looks good\n\n- one nit")
+                        .executed()
+                        .commandLine());
+    }
+
+    @Test
     void theVersionIsInTheFirstLine() {
         assertEquals(Either.right("2.102.0"), CliGitHub.parseVersion("""
                 gh version 2.102.0 (2026-09-30)
