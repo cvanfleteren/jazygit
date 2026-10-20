@@ -8,14 +8,22 @@ import dev.tamboui.tui.event.MouseButton;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import java.util.concurrent.atomic.AtomicReference;
+import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
+import net.vanfleteren.jazygit.git.model.CommitQuery;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Tag;
 import net.vanfleteren.jazygit.model.SampleData;
+import net.vanfleteren.jazygit.state.CommitSearch;
+import net.vanfleteren.jazygit.state.CommitSearchMsg;
+import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.Update;
 import org.junit.jupiter.api.Test;
 
 class CommitsPanelTest {
@@ -160,6 +168,91 @@ class CommitsPanelTest {
 
             assertEquals(commit("s0").sha(), panel.selectedCommit().get().sha());
             assertEquals(CommitsPanel.ID, testRunner.runner().focusManager().focusedId());
+
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
+    void theCommitsFoundAreListedWithoutRails() {
+        List<LoadableList.Row> rows = CommitsPanel.foundRows(
+                List.of(commit("mmmmmmm", "bbbbbbb", "fffff02"), commit("aaaaaaa")), Option.none());
+
+        assertEquals(
+                List.of("mmmmmmm Ad ◎ msg mmmmmmm", "aaaaaaa Ad ○ msg aaaaaaa"),
+                rows.map(LoadableList.Row::text).toList());
+    }
+
+    @Test
+    void theTitleSaysWhatWasSearchedAndWhenThereWereMoreThanItLists() {
+        CommitSearch search = CommitSearch.loading("fix");
+
+        assertEquals("Commits: /fix", CommitsPanel.title(search));
+        assertEquals(
+                "Commits: /fix (first 300)",
+                CommitsPanel.title(search.withResults(new Loadable.Loaded<>(
+                        List.range(0, GitInfoProvider.MAX_COMMITS).map(i -> commit("s" + i))))));
+    }
+
+    @Test
+    void theSearchIsTypedAboveTheListRunWithEnterAndClearedWithEscape() throws Exception {
+        AtomicReference<Model> model = new AtomicReference<>(TestModels.loaded(new SampleData())
+                .mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(List.of(commit("s1"), commit("s0"))))));
+        java.util.List<Msg> sent = new java.util.ArrayList<>();
+        CommitsPanel panel = new CommitsPanel(
+                msg -> {
+                    sent.add(msg);
+                    model.set(Update.update(model.get(), msg).model());
+                },
+                () -> {});
+
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(model.get(), CommitsPanel.ID))) {
+            SettledPilot.focus(testRunner, CommitsPanel.ID);
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).press('/');
+            SettledPilot.of(testRunner).pause();
+            // The keys of the commits, like d to drop, are letters of the search meanwhile.
+            SettledPilot.of(testRunner).press('d');
+            SettledPilot.of(testRunner).pause();
+            assertTrue(RenderedText.of(testRunner, () -> panel.render(model.get(), CommitsPanel.ID))
+                    .contains("/ d"));
+            SettledPilot.of(testRunner).press(KeyCode.ENTER);
+            SettledPilot.of(testRunner).pause();
+
+            assertEquals(
+                    List.of(
+                            new CommitSearchMsg.Opened(),
+                            new CommitSearchMsg.Edited("d"),
+                            new CommitSearchMsg.Submitted()),
+                    List.ofAll(sent));
+            assertEquals(Option.of("d"), model.get().repoView().commitSearch().map(CommitSearch::text));
+            model.set(Update.update(
+                            model.get(), new LoadMsg.CommitSearchLoaded(CommitQuery.parse("d"), List.of(commit("s0"))))
+                    .model());
+            String shown = RenderedText.of(testRunner, () -> panel.render(model.get(), CommitsPanel.ID));
+            assertTrue(shown.contains("Commits: /d"), shown);
+            assertTrue(shown.contains("msg s0"), shown);
+            assertFalse(shown.contains("msg s1"), shown);
+
+            SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
+            SettledPilot.of(testRunner).pause();
+
+            assertEquals(Option.none(), model.get().repoView().commitSearch());
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
+    void aSearchThatFindsNothingSaysSo() throws Exception {
+        Model model = TestModels.loaded(new SampleData())
+                .mapRepoView(repoView -> repoView.withCommitSearch(
+                        Option.of(CommitSearch.loading("nothing").withResults(new Loadable.Loaded<>(List.empty())))));
+        CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.ID))) {
+            assertTrue(RenderedText.of(testRunner, () -> panel.render(model, CommitsPanel.ID))
+                    .contains("No commits match"));
 
             SettledPilot.of(testRunner).quit();
         }

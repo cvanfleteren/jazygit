@@ -134,6 +134,62 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void searchFindsTheCommitsOfHeadThatMatchEveryFilter() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "token\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Fix login", "-m", "with a token");
+        Files.writeString(repo.resolve("b.txt"), "other\n");
+        git("add", "b.txt");
+        git("-c", "user.name=Jane Doe", "commit", "-q", "-m", "fix logout");
+        Files.writeString(repo.resolve("a.txt"), "no more\n");
+        git("commit", "-q", "-am", "Remove it");
+
+        assertEquals(List.of("fix logout", "Fix login"), messages("fix"));
+        assertEquals(List.of("Fix login"), messages("Fix"));
+        assertEquals(List.of("Fix login"), messages("a token"));
+        assertEquals(List.of("fix logout"), messages("author:jane"));
+        assertEquals(List.of("fix logout"), messages("fix author:jane"));
+        assertEquals(List.of("fix logout", "Fix login"), messages("fix author:jane author:test"));
+        assertEquals(List.of("Remove it", "Fix login"), messages("path:a.txt"));
+        assertEquals(List.of("Remove it", "fix logout", "Fix login"), messages("path:a.txt path:b.txt"));
+        assertEquals(List.of("Remove it", "Fix login"), messages("-S:token"));
+        assertEquals(List.of("Fix login"), messages("fix -S:token"));
+        // Not as a regular expression.
+        assertEquals(List.of(), messages("f.x"));
+        assertEquals(List.of(), messages("nothing like it"));
+    }
+
+    @Test
+    void thePickaxeIgnoresCaseUnlessItHasAnUppercaseLetter() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "Token\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Add it");
+
+        assertEquals(List.of("Add it"), messages("-S:token"));
+        assertEquals(List.of("Add it"), messages("-S:Token"));
+        assertEquals(List.of(), messages("-S:TOKEN"));
+    }
+
+    @Test
+    void searchFindsNothingWithoutCommits(@TempDir Path empty) throws Exception {
+        gitIn(empty, "init", "-q");
+
+        assertEquals(
+                List.of(),
+                CliGitInfoProvider.open(empty)
+                        .get()
+                        .search(CommitQuery.parse("x"))
+                        .get());
+    }
+
+    private List<String> messages(String query) {
+        return provider.search(CommitQuery.parse(query))
+                .get()
+                .map(Commit::message)
+                .toList();
+    }
+
+    @Test
     void branchesFollowExternalChanges() throws Exception {
         Sha head = provider.status().get().headCommit().get();
         assertEquals(

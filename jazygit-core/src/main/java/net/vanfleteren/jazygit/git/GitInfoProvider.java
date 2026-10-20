@@ -18,6 +18,11 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 public interface GitInfoProvider {
 
     /**
+     * How many commits a log or a search reads at most.
+     */
+    int MAX_COMMITS = 300;
+
+    /**
      * The name of the repository, i.e. the name of its working tree directory.
      */
     String repositoryName();
@@ -201,6 +206,12 @@ public interface GitInfoProvider {
      * The log of HEAD, newest first.
      */
     Either<ProcessError, List<Commit>> commits();
+
+    /**
+     * The commits of the log of HEAD that {@code query} finds, newest first, as many as {@link #commits} reads at
+     * most; none in a repository without commits.
+     */
+    Either<ProcessError, List<Commit>> search(CommitQuery query);
 
     /**
      * The log of the branch {@code branch}, local or remote-tracking, newest first.

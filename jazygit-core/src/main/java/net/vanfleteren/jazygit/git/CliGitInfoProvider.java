@@ -142,6 +142,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<ProcessError, List<Commit>> search(CommitQuery query) {
+        return CliLog.search(workTree, query);
+    }
+
+    @Override
     public Either<ProcessError, List<RemoteRef>> remoteBranches() {
         return CliBranch.remotes(workTree);
     }

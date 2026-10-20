@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.feature.commit.drop.DropAction;
 import net.vanfleteren.jazygit.feature.commit.fixup.FixupAction;
 import net.vanfleteren.jazygit.feature.commit.reset.ResetAction;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordAction;
+import net.vanfleteren.jazygit.feature.commit.search.CommitSearchAction;
 import net.vanfleteren.jazygit.feature.commit.squash.SquashAction;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.state.Msg;
@@ -16,7 +17,7 @@ import net.vanfleteren.jazygit.ui.PopupSlot;
 
 /**
  * The commit operations: committing, amending (the last or any commit), rewording, squashing, fixing up, dropping
- * and resetting. Adding one is adding its subpackage, and listing its action here.
+ * resetting, and searching them. Adding one is adding its subpackage, and listing its action here.
  */
 public final class CommitFeature {
 
@@ -30,7 +31,8 @@ public final class CommitFeature {
             SquashAction.ACTION,
             FixupAction.ACTION,
             DropAction.ACTION,
-            ResetAction.ACTION);
+            ResetAction.ACTION,
+            CommitSearchAction.ACTION);
 
     private CommitFeature() {}
 

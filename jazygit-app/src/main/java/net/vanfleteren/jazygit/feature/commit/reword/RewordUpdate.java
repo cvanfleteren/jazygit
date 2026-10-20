@@ -29,7 +29,7 @@ public final class RewordUpdate {
      * Any commit can be reworded; the dialog starts out with its message.
      */
     private static Next requested(Model model, Sha sha) {
-        return model.repo().commit(sha).map(RewordPopup::new).transform(popup -> Update.ask(model, popup));
+        return model.commit(sha).map(RewordPopup::new).transform(popup -> Update.ask(model, popup));
     }
 
     private static Next confirmed(Model model) {

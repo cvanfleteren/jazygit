@@ -41,7 +41,7 @@ public final class ChoiceList<P extends Popup> {
     private final Consumer<Msg> dispatch;
     private final ListElement<?> list;
     private final boolean filterable;
-    private final ListFilter filter = new ListFilter();
+    private final FilterLine filter = new FilterLine();
 
     /**
      * @param id       the id of the list, which takes the focus while the popup is open

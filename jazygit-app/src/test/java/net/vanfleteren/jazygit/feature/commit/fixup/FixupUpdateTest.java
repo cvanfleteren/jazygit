@@ -50,8 +50,18 @@ class FixupUpdateTest {
     void requestOpensTheQuestionWithTheCommitAndItsParent() {
         Next next = Update.update(withCommits(TIP, MIDDLE, ROOT), new FixupMsg.Requested(TIP.sha()));
 
-        assertEquals(Option.of(new FixupPopup(TIP, MIDDLE)), next.model().popup(FixupPopup.class));
+        assertEquals(Option.of(new FixupPopup(TIP, MIDDLE.sha())), next.model().popup(FixupPopup.class));
         assertEquals(List.of(), next.cmds());
+    }
+
+    @Test
+    void aCommitTheSearchFoundOlderThanTheLogGoesIntoItsParent() {
+        Commit old = commit("o2", List.of("o1"));
+        Model model = TestModels.searched(withCommits(TIP, MIDDLE, ROOT), "old", List.of(old));
+
+        assertEquals(
+                Option.of(new FixupPopup(old, new Sha("o1"))),
+                Update.update(model, new FixupMsg.Requested(old.sha())).model().popup(FixupPopup.class));
     }
 
     @Test

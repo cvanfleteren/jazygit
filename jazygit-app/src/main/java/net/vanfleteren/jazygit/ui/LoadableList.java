@@ -5,6 +5,7 @@ import static dev.tamboui.toolkit.Toolkit.*;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.text.Line;
 import dev.tamboui.toolkit.Toolkit;
+import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.elements.Panel;
@@ -73,6 +74,19 @@ final class LoadableList<T> {
      * @param title the title to show instead of the one the list was made with
      */
     Panel render(Loadable<T> value, Function<T, List<Row>> items, boolean focused, boolean active, Line title) {
+        return render(value, items, focused, active, title, Option.none());
+    }
+
+    /**
+     * @param above a line drawn above the rows, inside the border, if there is one
+     */
+    Panel render(
+            Loadable<T> value,
+            Function<T, List<Row>> items,
+            boolean focused,
+            boolean active,
+            Line title,
+            Option<StyledElement<?>> above) {
         this.focused = focused;
         list.highlightStyle(highlights.of(active))
                 .highlightSymbol(active ? highlightSymbol : " ".repeat(highlightSymbol.length()));
@@ -101,7 +115,8 @@ final class LoadableList<T> {
             show(rows);
         }
         shownRows = rows;
-        return Pane.bordered(title, list, focused, selectedIndex(), count);
+        Element content = above.<Element>map(line -> column(line, list)).getOrElse(list);
+        return Pane.bordered(title, content, focused, selectedIndex(), count);
     }
 
     private void show(List<Row> rows) {
@@ -170,7 +185,15 @@ final class LoadableList<T> {
      * Sets the dimmed line shown instead of the rows when the loaded value has none.
      */
     void whenEmpty(String text) {
-        empty = Option.of(text);
+        whenEmpty(Option.of(text));
+    }
+
+    /**
+     * Sets the dimmed line shown instead of the rows when the loaded value has none, if there is one; else no row
+     * is shown then.
+     */
+    void whenEmpty(Option<String> text) {
+        empty = text;
     }
 
     /**

@@ -220,7 +220,7 @@ public final class ContentPanel {
     }
 
     private static Option<Commit> commit(Model model, Sha sha) {
-        return model.repo().commits().getOrElse(List.empty()).find(c -> c.sha().equals(sha));
+        return model.commit(sha);
     }
 
     /**

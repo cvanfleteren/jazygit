@@ -49,8 +49,18 @@ class SquashUpdateTest {
 
         Next next = Update.update(model, new SquashMsg.Requested(TIP.sha()));
 
-        assertEquals(Option.of(new SquashPopup(TIP, MIDDLE)), next.model().popup(SquashPopup.class));
+        assertEquals(Option.of(new SquashPopup(TIP, MIDDLE.sha())), next.model().popup(SquashPopup.class));
         assertEquals(List.of(), next.cmds());
+    }
+
+    @Test
+    void aCommitTheSearchFoundOlderThanTheLogGoesIntoItsParent() {
+        Commit old = commit("o2", List.of("o1"));
+        Model model = TestModels.searched(withCommits(TIP, MIDDLE, ROOT), "old", List.of(old));
+
+        assertEquals(
+                Option.of(new SquashPopup(old, new Sha("o1"))),
+                Update.update(model, new SquashMsg.Requested(old.sha())).model().popup(SquashPopup.class));
     }
 
     @Test

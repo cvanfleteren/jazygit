@@ -70,6 +70,17 @@ public final class TestModels {
     }
 
     /**
+     * {@code model} listing what the search {@code text} found: {@code found}.
+     */
+    public static Model searched(Model model, String text, List<Commit> found) {
+        model = Update.update(model, new CommitSearchMsg.Opened()).model();
+        model = Update.update(model, new CommitSearchMsg.Edited(text)).model();
+        model = Update.update(model, new CommitSearchMsg.Submitted()).model();
+        return Update.update(model, new LoadMsg.CommitSearchLoaded(CommitQuery.parse(text), found))
+                .model();
+    }
+
+    /**
      * The model after all of the provider's data, and the diff of {@code files}, has been loaded.
      */
     public static Model withFilesSelected(GitInfoProvider provider, io.vavr.collection.List<FileEntry> files) {

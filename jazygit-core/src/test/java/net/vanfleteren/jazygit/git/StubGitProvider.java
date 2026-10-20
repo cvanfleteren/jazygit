@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
+import net.vanfleteren.jazygit.git.model.CommitQuery;
 import net.vanfleteren.jazygit.git.model.CommitRange;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
@@ -124,6 +125,11 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<ProcessError, List<Commit>> commits() {
+        return Either.right(List.empty());
+    }
+
+    @Override
+    default Either<ProcessError, List<Commit>> search(CommitQuery query) {
         return Either.right(List.empty());
     }
 

@@ -39,8 +39,7 @@ public final class NewBranchUpdate {
     private static Next atCommit(Model model, Sha sha) {
         return Update.ask(
                 model,
-                model.repo()
-                        .commit(sha)
+                model.commit(sha)
                         .map(commit -> new NewBranchPopup(commit.sha().value(), commit.shortSha(), Option.none())));
     }
 
