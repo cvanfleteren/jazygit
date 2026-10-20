@@ -103,6 +103,19 @@ class CliEditorTest {
                         .error());
     }
 
+    @Test
+    void aTextIsEditedInAFileOfTheGivenName() {
+        Tuple2<String, List<ExecutedCommand>> edited = CliEditor.editText(
+                        repo,
+                        "sh -c 'test \"$(basename \"$1\")\" = PR_COMMENT.md && printf \"%s!\" \"$(cat \"$1\")\" > \"$1\"' -",
+                        "PR_COMMENT.md",
+                        "looks good")
+                .get();
+
+        assertEquals("looks good!", edited._1);
+        assertEquals(1, edited._2.size());
+    }
+
     private void configureEditor(String editor) throws Exception {
         new ProcessExecutor()
                 .command("git", "-C", repo.toString(), "config", "core.editor", editor)

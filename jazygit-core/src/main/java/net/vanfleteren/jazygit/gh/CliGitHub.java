@@ -596,4 +596,13 @@ public final class CliGitHub implements GitHub {
     static GhCommand draftCommand(int number, boolean draft) {
         return draft ? gh("pr", "ready", String.valueOf(number), "--undo") : gh("pr", "ready", String.valueOf(number));
     }
+
+    @Override
+    public Either<GhFailure, List<ExecutedCommand>> commentOnPullRequest(int number, String body) {
+        return process.log(commentCommand(number, body));
+    }
+
+    static GhCommand commentCommand(int number, String body) {
+        return gh("pr", "comment", String.valueOf(number), "--body", body);
+    }
 }

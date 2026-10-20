@@ -48,7 +48,7 @@ final class CliEditor {
      * command that ran. The file is called {@code COMMIT_EDITMSG}, as git calls it, so editors treat it as a commit
      * message. Lines starting with {@code #} are kept, as no comments are added to it.
      *
-     * <p>Fails as {@link #edit} does, or with a {@link TempFileFailed} when the file cannot be written or read.
+     * <p>Fails as {@link #editText} does.
      */
     static Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
             Path workTree, CommitMessage message) {
@@ -60,13 +60,34 @@ final class CliEditor {
      */
     static Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
             Path workTree, String editor, CommitMessage message) {
+        return editText(workTree, editor, MESSAGE_FILE, message.text())
+                .map(edited -> edited.map1(CommitMessage::parse));
+    }
+
+    /**
+     * Opens {@code text} in git's editor, as {@link #edit} does, in a temporary file called {@code fileName}, and
+     * gives the text it was saved as, with the command that ran. The name tells editors what the text is, e.g. by
+     * its extension.
+     *
+     * <p>Fails as {@link #edit} does, or with a {@link TempFileFailed} when the file cannot be written or read.
+     */
+    static Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(
+            Path workTree, String fileName, String text) {
+        return editor(workTree).flatMap(editor -> editText(workTree, editor, fileName, text));
+    }
+
+    /**
+     * Opens {@code text} in {@code editor}, as git names it, as {@link #editText(Path, String, String)} does.
+     */
+    static Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(
+            Path workTree, String editor, String fileName, String text) {
         return Try.of(() -> Files.createTempDirectory("jazygit"))
                 .toEither()
                 .<GitFailure<GitError>>mapLeft(CliEditor::tempFileFailed)
                 .flatMap(directory -> {
-                    Path file = directory.resolve(MESSAGE_FILE);
-                    Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> edited = Try.run(
-                                    () -> Files.writeString(file, message.text()))
+                    Path file = directory.resolve(fileName);
+                    Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> edited = Try.run(
+                                    () -> Files.writeString(file, text))
                             .toEither()
                             .<GitFailure<GitError>>mapLeft(CliEditor::tempFileFailed)
                             .flatMap(written -> open(workTree, editor, List.of(file.toString())))
@@ -74,7 +95,7 @@ final class CliEditor {
                                     .toEither()
                                     .<GitFailure<GitError>>mapLeft(
                                             e -> tempFileFailed(e).after(commands))
-                                    .map(text -> Tuple.of(CommitMessage.parse(text), commands)));
+                                    .map(saved -> Tuple.of(saved, commands)));
                     // A leftover temporary file is harmless.
                     Try.run(() -> Files.deleteIfExists(file));
                     Try.run(() -> Files.deleteIfExists(directory));

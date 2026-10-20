@@ -44,6 +44,13 @@ public record PullRequestPopup(
     }
 
     /**
+     * Whether its details were read, rather than being read still or having failed to.
+     */
+    public boolean detailsRead() {
+        return readDetails().isDefined();
+    }
+
+    /**
      * Whether it is known to be open, so it can be closed: once its details are read.
      */
     public boolean open() {

@@ -115,6 +115,14 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     /**
+     * Saves the text as it is.
+     */
+    @Override
+    default Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(String fileName, String text) {
+        return Either.right(Tuple.of(text, List.empty()));
+    }
+
+    /**
      * Saves the message as it is.
      */
     @Override

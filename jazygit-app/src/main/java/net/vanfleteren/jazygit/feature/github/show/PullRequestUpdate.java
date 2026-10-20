@@ -2,8 +2,10 @@ package net.vanfleteren.jazygit.feature.github.show;
 
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.util.function.Function;
 import net.vanfleteren.jazygit.feature.fetch.FetchUpdate;
 import net.vanfleteren.jazygit.feature.github.browse.BrowsePullRequestCmd;
+import net.vanfleteren.jazygit.feature.github.comment.CommentPopup;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestUpdate;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
@@ -77,12 +79,7 @@ public final class PullRequestUpdate {
             case PullRequestMsg.DraftSet(SetDraft cmd, var commands) -> {
                 Next done = OperationUpdate.succeeded(model, cmd, commands);
                 yield PrOverviewUpdate.reloadIfShown(new Next(
-                        done.model()
-                                .popup(PullRequestPopup.class)
-                                .filter(popup -> popup.pullRequest().number() == cmd.number())
-                                .map(popup -> done.model().openPopup(popup.withDraft(cmd.draft())))
-                                .getOrElse(done.model()),
-                        done.cmds()));
+                        mapShown(done.model(), cmd.number(), popup -> popup.withDraft(cmd.draft())), done.cmds()));
             }
             case PullRequestMsg.Ended(ChangingCmd cmd, var commands) -> {
                 // Done like any operation. The pull request is no longer open, which reading them again confirms;
@@ -112,9 +109,20 @@ public final class PullRequestUpdate {
      * shown, as the user closed it, or opened another one, while it was being read.
      */
     private static Model shown(Model model, int number, Either<Failure, PullRequestDetails> read) {
+        return mapShown(model, number, popup -> popup.with(read));
+    }
+
+    /**
+     * {@code model} with the dialog of pull request {@code number} as {@code change} makes it: the one that is open,
+     * or the one a comment on it goes back to, so that one is not out of date then. Unchanged when neither shows it.
+     */
+    private static Model mapShown(Model model, int number, Function<PullRequestPopup, PullRequestPopup> change) {
         return model.popup(PullRequestPopup.class)
                 .filter(popup -> popup.pullRequest().number() == number)
-                .map(popup -> model.openPopup(popup.with(read)))
+                .map(popup -> model.openPopup(change.apply(popup)))
+                .orElse(() -> model.popup(CommentPopup.class)
+                        .filter(popup -> popup.number() == number)
+                        .map(popup -> model.openPopup(popup.withShown(change.apply(popup.shown())))))
                 .getOrElse(model);
     }
 
