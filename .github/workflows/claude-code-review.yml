@@ -3,44 +3,117 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
+
+# A newer push supersedes a review that is still running for the same PR.
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   claude-review:
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
-
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
       issues: read
+      actions: read # lets Claude read the PR's CI results
       id-token: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0 # full history, so Claude can diff against base and against the previous review
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
 
       - name: Run Claude Code Review
-        id: claude-review
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          allowed_bots: 'claude'
-          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
-          plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
-          claude_args: '--allowedTools "mcp__github_inline_comment__create_inline_comment"'
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+            PR TITLE: ${{ github.event.pull_request.title }}
+            BASE: origin/${{ github.event.pull_request.base.ref }}
+            HEAD SHA: ${{ github.event.pull_request.head.sha }}
+            EVENT: ${{ github.event.action }}
+            PREVIOUS HEAD (only for EVENT=synchronize): ${{ github.event.before }}
 
+            You are a senior reviewer for jazygit, a Java 25 terminal git client built on TamboUI
+            with an Elm-like architecture. Do a thorough, critical review of this pull request, the
+            kind a demanding maintainer would do, not a surface skim.
+
+            ## 1. Build context first
+            - Read agents.md, ARCHITECTURE.md and the ADRs in documentation/adr/. They are the
+              project's standards; judge the change against them.
+            - `gh pr view ${{ github.event.pull_request.number }} --json title,body,commits,files` for intent.
+              If the body links an issue, read it with `gh issue view` so you can check the PR does
+              what was asked.
+            - `git diff origin/${{ github.event.pull_request.base.ref }}...HEAD` for the full change.
+              For every changed file, read the surrounding code, its callers and its tests, not only
+              the hunks. Bugs often live in how the change interacts with unchanged code.
+
+            ## 2. Re-review on new commits
+            If EVENT is `synchronize`, this PR was already reviewed:
+            - Fetch your earlier review comments:
+              `gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments --paginate`
+              and the PR conversation via `gh pr view ${{ github.event.pull_request.number }} --comments`.
+            - Look at what changed since the last review: `git diff ${{ github.event.before }}..HEAD`
+              (if that commit is gone after a force-push, fall back to the full diff).
+            - For each earlier finding of yours: if it is now fixed, reply in that thread with a short
+              "Fixed in <sha>" via
+              `gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments/<id>/replies -f body=...`.
+              If it is still open, don't repeat it; list it under "Still open" in the summary.
+              If the author replied disagreeing, weigh their argument honestly.
+            - Review the new commits as thoroughly as a fresh change, but never post a duplicate of an
+              existing comment.
+
+            ## 3. What to look for, in priority order
+            1. Correctness: logic errors, off-by-one, null/empty/edge cases, wrong git semantics
+               (detached HEAD, rebase in progress, merge commits, unborn branches, paths with spaces,
+               non-ASCII), handling of failing git processes, concurrency and blocking work on
+               the UI thread.
+            2. Architecture: does it fit the Elm-like model/update/view split and the ADRs? Model state
+               must be immutable; pane cursors and focus are deliberately view state in TamboUI widgets.
+               Flag side effects leaking into update logic, mutable shared state, misplaced responsibilities.
+            3. Tests: are the new behaviours and edge cases covered? Name concrete missing test
+               cases, not "add more tests". Check existing tests weren't weakened.
+            4. Code style per agents.md: modern functional Java, immutable collections, records, streams
+               and recursion over mutable loops and javabeans. No overridden toString() on records.
+               Dead code, duplication of existing helpers (search for them), unclear naming.
+            5. Performance only where it matters (e.g. per-keystroke or per-commit work on large repos).
+
+            You may run `./mvnw -B -q ...` to confirm a suspicion, e.g. run one test class or write
+            a throwaway test. Never commit or push. CI already runs the full build;
+            check its status with `gh pr checks ${{ github.event.pull_request.number }}` and mention failures.
+
+            Verify every finding before posting it: re-read the code and make sure the problem is real.
+            No speculative or generic advice, no praise filler, no nitpicks a formatter would catch.
+
+            ## 4. Output
+            - Post each concrete finding as an inline comment on the exact line with
+              `mcp__github_inline_comment__create_inline_comment`. Start each with a severity tag:
+              **[blocker]**, **[major]**, **[minor]** or **[nit]**. Explain the failure scenario
+              (which input or state makes it go wrong) and suggest a fix, using a ```suggestion block
+              when the fix is small and self-contained.
+            - Then post exactly one summary comment on the PR, updating your previous one if it exists:
+              write it to a file and run
+              `gh pr comment ${{ github.event.pull_request.number }} --edit-last --create-if-none --body-file <file>`.
+              The summary contains:
+              - A verdict line: "Ready to merge", "Merge after minor fixes" or "Needs changes".
+              - A 2-3 sentence assessment of the overall approach.
+              - Findings grouped by severity, each with a file:line reference.
+              - On re-reviews, a "Since last review" section: what was fixed and what is still open.
+              - The reviewed commit: ${{ github.event.pull_request.head.sha }}.
+          claude_args: |
+            --model claude-opus-5-5
+            --max-turns 80
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Read,Glob,Grep,Write,Edit,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git blame:*),Bash(git status:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(gh pr comment:*),Bash(gh issue view:*),Bash(gh api:*),Bash(./mvnw:*)"
