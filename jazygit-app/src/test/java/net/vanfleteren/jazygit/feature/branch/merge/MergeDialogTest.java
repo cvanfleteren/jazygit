@@ -33,7 +33,7 @@ class MergeDialogTest {
             .model();
 
     @Test
-    void listsTheFourWaysToMergeAndCancel() throws Exception {
+    void listsTheFourWaysToMerge() throws Exception {
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view)) {
             String screen = RenderedText.ofLarge(runner, this::view);
             assertTrue(screen.contains("Merge 'feature' into 'main'"), screen);
@@ -41,7 +41,6 @@ class MergeDialogTest {
             assertTrue(screen.contains("(n) Regular merge (with merge commit)"), screen);
             assertTrue(screen.contains("(s) Squash merge and leave uncommitted"), screen);
             assertTrue(screen.contains("(S) Squash merge and commit"), screen);
-            assertTrue(screen.contains("(c) Cancel"), screen);
         }
     }
 
@@ -54,9 +53,7 @@ class MergeDialogTest {
     }
 
     @Test
-    void escapeAndCCancel() throws Exception {
-        assertEquals(List.of(new MergeMsg.Cancelled()), pressing('c'));
-        dispatched.clear();
+    void escapeCancels() throws Exception {
         try (ToolkitTestRunner runner = start()) {
             SettledPilot.of(runner).press(KeyCode.ESCAPE);
             SettledPilot.of(runner).pause();

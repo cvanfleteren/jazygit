@@ -53,7 +53,6 @@ class UpstreamDialogTest {
         assertTrue(screen.contains("(v) view divergence from origin/feature"), screen);
         assertTrue(screen.contains("(b) view divergence from base branch origin/main"), screen);
         assertTrue(screen.contains("(g) reset checked out branch onto origin/feature"), screen);
-        assertTrue(screen.contains("(c) Cancel"), screen);
     }
 
     @Test

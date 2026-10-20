@@ -48,7 +48,7 @@ class ResetDialogTest {
     }
 
     @Test
-    void listsTheThreeResetsAndCancel() throws Exception {
+    void listsTheThreeResets() throws Exception {
         String screen =
                 render(() -> stack(text("background"), dialog.render(open).get()));
 
@@ -56,7 +56,6 @@ class ResetDialogTest {
         assertTrue(screen.contains("(m) Mixed reset: keep changes, unstaged"), screen);
         assertTrue(screen.contains("(s) Soft reset: keep changes, staged"), screen);
         assertTrue(screen.contains("(h) Hard reset: discard all changes"), screen);
-        assertTrue(screen.contains("(c) Cancel"), screen);
     }
 
     @Test
@@ -64,7 +63,6 @@ class ResetDialogTest {
         assertEquals(List.of(new ResetMsg.Chosen(ResetMode.MIXED)), pressing('m'));
         assertEquals(List.of(new ResetMsg.Chosen(ResetMode.SOFT)), pressing('s'));
         assertEquals(List.of(new ResetMsg.Chosen(ResetMode.HARD)), pressing('h'));
-        assertEquals(List.of(new ResetMsg.Cancelled()), pressing('c'));
     }
 
     @Test

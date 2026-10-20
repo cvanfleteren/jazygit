@@ -208,7 +208,6 @@ class PullRequestDialogTest {
         assertTrue(screen.contains("(s) Squash and merge"), screen);
         assertTrue(screen.contains("(r) Rebase and merge"), screen);
         assertTrue(screen.contains("(x) Close pull request"), screen);
-        assertTrue(screen.contains("(c) Cancel"), screen);
     }
 
     @Test

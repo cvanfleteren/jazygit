@@ -39,7 +39,7 @@ class FixupDialogTest {
     }
 
     @Test
-    void listsBothWaysToFixUpAndCancel() throws Exception {
+    void listsBothWaysToFixUp() throws Exception {
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view)) {
             String screen = RenderedText.ofLarge(runner, this::view);
             assertTrue(
@@ -48,7 +48,6 @@ class FixupDialogTest {
                     screen);
             assertTrue(screen.contains("(f) Fixup"), screen);
             assertTrue(screen.contains("(C) Fixup and use this commit's message"), screen);
-            assertTrue(screen.contains("(c) Cancel"), screen);
         }
     }
 
@@ -59,9 +58,7 @@ class FixupDialogTest {
     }
 
     @Test
-    void escapeAndCCancel() throws Exception {
-        assertEquals(List.of(new FixupMsg.Cancelled()), pressing('c'));
-        dispatched.clear();
+    void escapeCancels() throws Exception {
         try (ToolkitTestRunner runner = start()) {
             SettledPilot.of(runner).press(KeyCode.ESCAPE);
             SettledPilot.of(runner).pause();

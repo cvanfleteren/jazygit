@@ -4,6 +4,7 @@ import static dev.tamboui.toolkit.Toolkit.stack;
 import static dev.tamboui.toolkit.Toolkit.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
@@ -47,15 +48,30 @@ class ChoiceDialogTest {
     }
 
     @Test
-    void listsTheOptionsAndAlwaysEndsWithCancel() throws Exception {
+    void listsTheOptionsThenTheHintWithoutACancelOption() throws Exception {
         try (ToolkitTestRunner runner = start(true)) {
             String screen = RenderedText.ofLarge(runner, () -> view(true));
             assertTrue(screen.contains("Pick one"), screen);
             assertTrue(
                     screen.indexOf("(a) Discard all changes") < screen.indexOf("(b) Discard unstaged changes"), screen);
-            assertTrue(screen.indexOf("(b) Discard unstaged changes") < screen.indexOf("(c) Cancel"), screen);
-            assertTrue(screen.indexOf("(c) Cancel") < screen.indexOf("(enter) select   (esc) cancel"), screen);
+            assertTrue(
+                    screen.indexOf("(b) Discard unstaged changes") < screen.indexOf("(enter) select   (esc) cancel"),
+                    screen);
+            assertFalse(screen.contains("Cancel"), screen);
         }
+    }
+
+    @Test
+    void twoOptionsWithTheSameLetterAreRefused() {
+        List<Choice<PickPopup>> choices = List.of(
+                new Choice<>('a', "dialog.discard.all", () -> new Picked("a")),
+                new Choice<>('b', "dialog.discard.unstaged", () -> new Picked("b")),
+                new Choice<>('a', "dialog.discard.all", () -> new Picked("again")));
+
+        IllegalArgumentException refused = assertThrows(
+                IllegalArgumentException.class,
+                () -> new ChoiceList<>("pick", choices, () -> new Picked("cancel"), msg -> {}));
+        assertTrue(refused.getMessage().contains("share the letters a"), refused.getMessage());
     }
 
     @Test
@@ -66,16 +82,15 @@ class ChoiceDialogTest {
             SettledPilot.of(runner).press(KeyCode.ENTER);
             SettledPilot.of(runner).pause();
             SettledPilot.of(runner).press(KeyCode.DOWN);
-            SettledPilot.of(runner).press(KeyCode.DOWN);
             SettledPilot.of(runner).press(KeyCode.ENTER);
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Picked("b"), new Picked("a"), new Picked("cancel")), dispatched);
+        assertEquals(java.util.List.of(new Picked("b"), new Picked("a"), new Picked("b")), dispatched);
     }
 
     @Test
-    void escapeAndTheCancelLetterCancel() throws Exception {
+    void escapeCancelsAndNoLetterDoes() throws Exception {
         try (ToolkitTestRunner runner = start(true)) {
             SettledPilot.of(runner).press(KeyCode.ESCAPE);
             SettledPilot.of(runner).pause();
@@ -83,7 +98,7 @@ class ChoiceDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Picked("cancel"), new Picked("cancel")), dispatched);
+        assertEquals(java.util.List.of(new Picked("cancel")), dispatched);
     }
 
     @Test
@@ -104,7 +119,6 @@ class ChoiceDialogTest {
             assertTrue(screen.contains("/ uns"), screen);
             assertTrue(screen.contains("(b) Discard unstaged changes"), screen);
             assertFalse(screen.contains("(a) Discard all changes"), screen);
-            assertFalse(screen.contains("(c) Cancel"), screen);
             assertTrue(screen.contains("(esc) clear filter"), screen);
             SettledPilot.of(runner).press(KeyCode.ENTER);
             SettledPilot.of(runner).pause();
@@ -120,7 +134,7 @@ class ChoiceDialogTest {
             String screen = RenderedText.ofLarge(runner, () -> view(true));
             assertTrue(screen.contains("/ c"), screen);
             assertTrue(screen.contains("(a) Discard all changes"), screen);
-            assertTrue(screen.contains("(c) Cancel"), screen);
+            assertTrue(screen.contains("(b) Discard unstaged changes"), screen);
         }
 
         assertEquals(java.util.List.of(), dispatched);

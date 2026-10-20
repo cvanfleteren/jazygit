@@ -108,14 +108,10 @@ class ThemeDialogTest {
     }
 
     @Test
-    void escapeAndCCancel() throws Exception {
+    void escapeCancels() throws Exception {
         assertEquals(
                 List.of(new ThemeMsg.Cancelled()),
                 pressing(r -> SettledPilot.of(r).press(KeyCode.ESCAPE)));
-        dispatched.clear();
-        assertEquals(
-                List.of(new ThemeMsg.Cancelled()),
-                pressing(r -> SettledPilot.of(r).press('c')));
     }
 
     @Test
@@ -126,7 +122,6 @@ class ThemeDialogTest {
             assertTrue(screen.contains("(l) light"), screen);
             assertTrue(screen.contains("(a) darcula"), screen);
             assertTrue(screen.contains("(b) dark, colour-blind friendly"), screen);
-            assertTrue(screen.contains("(c) Cancel"), screen);
         }
     }
 

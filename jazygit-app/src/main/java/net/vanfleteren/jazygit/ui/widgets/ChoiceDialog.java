@@ -126,8 +126,8 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
      * @param id        the id of the list, which takes the focus while the dialog is open
      * @param popupType the popup that makes the dialog show
      * @param title     the title, from the popup
-     * @param choices   the options, in order; a cancel option is added after them
-     * @param onCancel  the message for cancelling, by the cancel option or by Escape
+     * @param choices   the options, in order, each with a letter of its own
+     * @param onCancel  the message for cancelling, by Escape
      * @param minWidth  the width it takes at least, borders included, so it does not grow as the options change
      * @param opensAt   the key of the option highlighted when the dialog opens, given the popup; else the first
      */

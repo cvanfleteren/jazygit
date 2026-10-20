@@ -49,10 +49,6 @@ class DiscardDialogTest {
         assertEquals(
                 List.of(new DiscardMsg.Chosen(Scope.UNSTAGED)),
                 pressing(open(MODIFIED), r -> SettledPilot.of(r).press('u')));
-        dispatched.clear();
-        assertEquals(
-                List.of(new DiscardMsg.Cancelled()),
-                pressing(open(MODIFIED), r -> SettledPilot.of(r).press('c')));
     }
 
     @Test
@@ -62,12 +58,6 @@ class DiscardDialogTest {
                 pressing(open(MODIFIED), r -> SettledPilot.of(r).press(KeyCode.ENTER)));
         dispatched.clear();
         assertEquals(List.of(new DiscardMsg.Chosen(Scope.UNSTAGED)), pressing(open(MODIFIED), r -> {
-            SettledPilot.of(r).press(KeyCode.DOWN);
-            SettledPilot.of(r).press(KeyCode.ENTER);
-        }));
-        dispatched.clear();
-        assertEquals(List.of(new DiscardMsg.Cancelled()), pressing(open(MODIFIED), r -> {
-            SettledPilot.of(r).press(KeyCode.DOWN);
             SettledPilot.of(r).press(KeyCode.DOWN);
             SettledPilot.of(r).press(KeyCode.ENTER);
         }));
@@ -94,14 +84,13 @@ class DiscardDialogTest {
     }
 
     @Test
-    void showsTheTitleAndTheThreeOptions() throws Exception {
+    void showsTheTitleAndTheOptions() throws Exception {
         Model model = open(MODIFIED);
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(model))) {
             String screen = RenderedText.ofLarge(runner, () -> view(model));
             assertTrue(screen.contains("Discard changes"), screen);
             assertTrue(screen.contains("(x) Discard all changes"), screen);
             assertTrue(screen.contains("(u) Discard unstaged changes"), screen);
-            assertTrue(screen.contains("(c) Cancel"), screen);
             assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
         }
     }

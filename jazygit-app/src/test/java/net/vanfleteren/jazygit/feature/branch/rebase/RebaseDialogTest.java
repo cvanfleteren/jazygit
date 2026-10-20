@@ -49,14 +49,10 @@ class RebaseDialogTest {
     }
 
     @Test
-    void escapeAndCCancel() throws Exception {
+    void escapeCancels() throws Exception {
         assertEquals(
                 List.of(new RebaseMsg.Cancelled()),
                 pressing(r -> SettledPilot.of(r).press(KeyCode.ESCAPE)));
-        dispatched.clear();
-        assertEquals(
-                List.of(new RebaseMsg.Cancelled()),
-                pressing(r -> SettledPilot.of(r).press('c')));
     }
 
     @Test
@@ -65,7 +61,6 @@ class RebaseDialogTest {
             String screen = RenderedText.ofLarge(runner, () -> view());
             assertTrue(screen.contains("Rebase 'main'"), screen);
             assertTrue(screen.contains("(s) simple rebase onto feature/initial-layout"), screen);
-            assertTrue(screen.contains("(c) Cancel"), screen);
         }
     }
 

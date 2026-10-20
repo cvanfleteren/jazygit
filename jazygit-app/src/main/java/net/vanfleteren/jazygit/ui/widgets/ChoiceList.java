@@ -22,8 +22,8 @@ import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 
 /**
- * A selectable list of options that ends in a cancel option, for inside a popup. An option is chosen with its
- * letter, or with the arrow keys and Enter; Escape cancels. An option that does not apply is struck through
+ * A selectable list of options, for inside a popup. An option is chosen with its letter, or with the arrow keys and
+ * Enter; Escape cancels, which the hint of the popup tells. No two options have the same letter. An option that does not apply is struck through
  * and dimmed, and cannot be chosen. Options can be grouped under headings, which the arrow keys skip. An option
  * can preview what choosing it does, as soon as it is highlighted. A list can be filterable: then {@code /}
  * opens a {@link ListFilter}, and only the options whose text contains it stay shown; while it is open, the
@@ -34,8 +34,8 @@ import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
  */
 public final class ChoiceList<P extends Popup> {
 
-    private static final char CANCEL_KEY = 'c';
     private final List<Choice<P>> choices;
+    private final Supplier<Msg> onCancel;
     // The lines of all options, whatever the filter.
     private final List<Line> allLines;
     private final Consumer<Msg> dispatch;
@@ -45,8 +45,8 @@ public final class ChoiceList<P extends Popup> {
 
     /**
      * @param id       the id of the list, which takes the focus while the popup is open
-     * @param choices  the options, in order; a cancel option is added after them
-     * @param onCancel the message for cancelling, by the cancel option or by Escape
+     * @param choices  the options, in order, each with a letter of its own
+     * @param onCancel the message for cancelling, by Escape
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public ChoiceList(String id, List<Choice<P>> choices, Supplier<Msg> onCancel, Consumer<Msg> dispatch) {
@@ -55,10 +55,21 @@ public final class ChoiceList<P extends Popup> {
 
     /**
      * @param filterable whether {@code /} opens a filter on the options
+     * @throws IllegalArgumentException when two options have the same letter, as only the first could be chosen
      */
     public ChoiceList(
             String id, List<Choice<P>> choices, Supplier<Msg> onCancel, Consumer<Msg> dispatch, boolean filterable) {
-        this.choices = choices.append(new Choice<P>(CANCEL_KEY, "dialog.choice.cancel", onCancel));
+        List<Character> shared = choices.map(Choice::key)
+                .groupBy(key -> key)
+                .filterValues(keys -> keys.size() > 1)
+                .keySet()
+                .toList()
+                .sorted();
+        if (!shared.isEmpty()) {
+            throw new IllegalArgumentException("The options of " + id + " share the letters " + shared.mkString(", "));
+        }
+        this.choices = choices;
+        this.onCancel = onCancel;
         this.allLines = lines(this.choices, List.range(0, this.choices.size()));
         this.dispatch = dispatch;
         this.filterable = filterable;
@@ -67,33 +78,25 @@ public final class ChoiceList<P extends Popup> {
 
     /**
      * The lines that show the options of {@code choices} at {@code visible}: a heading starts a group that has
-     * one of them, after a blank line unless it is the first line; with groups, cancelling comes after a blank
-     * line too, so it is in none of them. Without options, it says nothing matches.
+     * one of them, after a blank line unless it is the first line. Without options, it says nothing matches.
      */
     private static <P> List<Line> lines(List<Choice<P>> choices, List<Integer> visible) {
         if (visible.isEmpty()) {
             return List.of(new NoMatches());
         }
-        boolean grouped = choices.exists(choice -> choice.heading().isDefined());
-        int cancel = choices.size() - 1;
-        // The group of an option: the index of the option whose heading starts it, if any; cancelling has its own.
-        Function<Integer, Integer> group = index -> index == cancel
-                ? cancel
-                : choices.take(index + 1)
-                        .lastIndexWhere(choice -> choice.heading().isDefined());
+        // The group of an option: the index of the option whose heading starts it, if any.
+        Function<Integer, Integer> group = index -> choices.take(index + 1)
+                .lastIndexWhere(choice -> choice.heading().isDefined());
         return visible.zipWithIndex().flatMap(indexed -> {
             int index = indexed._1;
             int position = indexed._2;
             int start = group.apply(index);
             boolean starts = position == 0 || group.apply(visible.get(position - 1)) != start;
-            Option<String> heading = Option.when(starts && index != cancel && start >= 0, () -> choices.get(start))
-                    .flatMap(Choice::heading);
+            Option<String> heading =
+                    Option.when(starts && start >= 0, () -> choices.get(start)).flatMap(Choice::heading);
             List<Line> before = heading.map(key -> List.<Line>of(new Heading(Messages.get(key))))
                     .getOrElse(List.empty())
-                    .prependAll(
-                            position > 0 && (heading.isDefined() || grouped && index == cancel)
-                                    ? List.of(new Blank())
-                                    : List.empty());
+                    .prependAll(position > 0 && heading.isDefined() ? List.of(new Blank()) : List.empty());
             return before.append(new OptionLine(index));
         });
     }
@@ -246,12 +249,14 @@ public final class ChoiceList<P extends Popup> {
             moved.filter(line -> line != view.selected()).forEach(line -> highlight(view, line));
             return EventResult.HANDLED;
         }
+        if (event.code() == KeyCode.ESCAPE) {
+            dispatch.accept(onCancel.get());
+            return EventResult.HANDLED;
+        }
         // While the filter is open, the letters are its own.
-        Option<Choice<P>> chosen = event.code() == KeyCode.ESCAPE
-                ? Option.of(choices.last())
-                : event.isConfirm()
-                        ? view.option().map(choices::get)
-                        : typed.isDefined() ? Option.none() : choices.find(choice -> event.isChar(choice.key()));
+        Option<Choice<P>> chosen = event.isConfirm()
+                ? view.option().map(choices::get)
+                : typed.isDefined() ? Option.none() : choices.find(choice -> event.isChar(choice.key()));
         chosen.forEach(choice -> choose(view, choice));
         return chosen.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
     }

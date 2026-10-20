@@ -55,14 +55,10 @@ class DeleteBranchDialogTest {
     }
 
     @Test
-    void escapeAndCCancel() throws Exception {
+    void escapeCancels() throws Exception {
         assertEquals(
                 List.of(new DeleteBranchMsg.Cancelled()),
                 pressing(r -> SettledPilot.of(r).press(KeyCode.ESCAPE)));
-        dispatched.clear();
-        assertEquals(
-                List.of(new DeleteBranchMsg.Cancelled()),
-                pressing(r -> SettledPilot.of(r).press('c')));
     }
 
     @Test
@@ -115,7 +111,6 @@ class DeleteBranchDialogTest {
             String screen = RenderedText.ofLarge(runner, () -> view(open));
             org.junit.jupiter.api.Assertions.assertTrue(screen.contains("(d) delete local branch"), screen);
             org.junit.jupiter.api.Assertions.assertTrue(screen.contains("(b) delete local and remote branch"), screen);
-            org.junit.jupiter.api.Assertions.assertTrue(screen.contains("(c) Cancel"), screen);
             org.junit.jupiter.api.Assertions.assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
         }
     }

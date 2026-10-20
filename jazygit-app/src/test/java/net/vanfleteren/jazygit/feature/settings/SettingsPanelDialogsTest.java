@@ -94,9 +94,9 @@ class SettingsPanelDialogsTest {
             assertTrue(screen.contains("(a) Account for this repository on github.com: ⚠ alice-work"), screen);
             List<String> lines = List.of(screen.split("\n")).map(String::strip);
             assertEquals(
-                    List.of("Appearance", "(t)", "", "GitHub", "(g)", "(a)", "", "(c)"),
+                    List.of("Appearance", "(t)", "", "GitHub", "(g)", "(a)"),
                     lines.dropWhile(line -> !line.contains("Appearance"))
-                            .take(8)
+                            .take(6)
                             .map(line -> line.replaceAll("^│", "").strip())
                             .map(line -> line.startsWith("(")
                                     ? line.substring(0, 3)
