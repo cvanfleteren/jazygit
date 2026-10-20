@@ -53,6 +53,11 @@ public interface GitHub {
     Either<GhError, PullRequestDetails> pullRequestDetails(int number);
 
     /**
+     * PROTOTYPE: the comments and the reviews with something to say on pull request {@code number}, oldest first.
+     */
+    Either<GhError, List<PrototypeComment>> prototypeComments(int number);
+
+    /**
      * Creates a pull request from the remote branch {@code head} into {@code base}, as {@code pullRequest} says.
      */
     Either<GhFailure, Created> createPullRequest(String head, String base, NewPullRequest pullRequest);

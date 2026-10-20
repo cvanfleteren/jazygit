@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.feature.github.comment.CommentMsg;
+import net.vanfleteren.jazygit.feature.github.prototype.CommentsPrototypeMsg;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -83,6 +84,12 @@ public final class PullRequestDialog implements PopupView {
                                 'c',
                                 "dialog.pullRequest.comment",
                                 CommentMsg.Requested::new,
+                                (model, popup) -> popup.detailsRead()),
+                        // PROTOTYPE: the comments dialog.
+                        new Choice<>(
+                                'v',
+                                "dialog.pullRequest.viewComments",
+                                CommentsPrototypeMsg.Requested::new,
                                 (model, popup) -> popup.detailsRead()),
                         // Before merging, which a draft has to wait for.
                         new Choice<>(

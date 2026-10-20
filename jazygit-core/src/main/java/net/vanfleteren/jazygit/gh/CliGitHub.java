@@ -34,6 +34,14 @@ public final class CliGitHub implements GitHub {
     // The most lines of a diff of a pull request that are shown, as for the diffs of git.
     static final int MAX_DIFF_LINES = 5000;
 
+    // PROTOTYPE: comments and reviews, a review only when it says something or approves or asks for changes; the
+    // empty COMMENTED ones are what inline comments hang from.
+    private static final String PROTOTYPE_COMMENTS_JQ = """
+            [(.comments[] | [.author.login, .createdAt, "", .body, .url]),
+             (.reviews[] | select(.body != "" or .state != "COMMENTED")
+                | [.author.login, .submittedAt, .state, .body, ""])]
+            | sort_by(.[1]) | .[] | @tsv""";
+
     private static final String LIMIT = "200";
     private static final String FIELDS =
             "number,headRefName,isDraft,isCrossRepository,reviewDecision,statusCheckRollup";
@@ -550,6 +558,17 @@ public final class CliGitHub implements GitHub {
         return process.read(
                 gh("pr", "view", String.valueOf(number), "--json", DETAIL_FIELDS, "--jq", DETAILS_JQ),
                 CliGitHub::parseDetails);
+    }
+
+    @Override
+    public Either<GhError, List<PrototypeComment>> prototypeComments(int number) {
+        return process.read(
+                gh("pr", "view", String.valueOf(number), "--json", "comments,reviews", "--jq", PROTOTYPE_COMMENTS_JQ),
+                raw -> Either.right(List.of(raw.split("\\R"))
+                        .filter(line -> !line.isBlank())
+                        .map(line -> List.of(line.split("\t", -1)).map(CliGitHub::unescape))
+                        .map(f -> new PrototypeComment(
+                                f.get(0), Instant.parse(f.get(1)), f.get(2), f.get(3), f.get(4)))));
     }
 
     @Override

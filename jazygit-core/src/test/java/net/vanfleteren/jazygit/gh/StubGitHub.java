@@ -72,6 +72,11 @@ public interface StubGitHub extends GitHub {
      * An open pull request {@code number} from branch {@code feature} into {@code main}, with nothing else to it.
      */
     @Override
+    default Either<GhError, List<PrototypeComment>> prototypeComments(int number) {
+        return Either.right(List.empty());
+    }
+
+    @Override
     default Either<GhError, PullRequestDetails> pullRequestDetails(int number) {
         return Either.right(new PullRequestDetails(
                 number,

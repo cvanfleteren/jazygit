@@ -32,6 +32,11 @@
             <groupId>dev.tamboui</groupId>
             <artifactId>tamboui-toolkit</artifactId>
         </dependency>
+        <!-- PROTOTYPE: the comments dialog renders them as markdown. -->
+        <dependency>
+            <groupId>dev.tamboui</groupId>
+            <artifactId>tamboui-toolkit-markdown</artifactId>
+        </dependency>
         <dependency>
             <groupId>dev.tamboui</groupId>
             <artifactId>tamboui-jline3-backend</artifactId>
