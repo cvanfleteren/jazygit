@@ -132,7 +132,7 @@ class ProgramTest {
 
         @Override
         public Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(
-                Branch.Name name, String startPoint) {
+                Branch.Name name, String startPoint, Option<Branch.Name> parent) {
             return switchTo(name, "git checkoutNewBranch");
         }
 

@@ -119,6 +119,13 @@ final class CliLog {
     }
 
     /**
+     * How many commits are on {@code branch} and not on {@code base}, counting no further than {@code max}.
+     */
+    static Either<ProcessError, Integer> countNotOn(Path workTree, BranchRef branch, BranchRef base, int max) {
+        return count(workTree, List.of("--max-count=" + max, Refs.of(branch), "^" + Refs.of(base)));
+    }
+
+    /**
      * How many commits {@code revisions} select.
      */
     private static Either<ProcessError, Integer> count(Path workTree, List<String> revisions) {

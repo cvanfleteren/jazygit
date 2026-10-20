@@ -148,6 +148,11 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
+    default Either<ProcessError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
+        return Either.right(0);
+    }
+
+    @Override
     default Either<GitError, CommitRange> commitRange(Branch.Name branch, Sha oldest, Option<RemoteBranch> upstream) {
         return Either.right(new CommitRange(1, 0, 0));
     }
@@ -174,7 +179,7 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(
-            Branch.Name name, String startPoint) {
+            Branch.Name name, String startPoint, Option<Branch.Name> parent) {
         return ran();
     }
 
@@ -218,6 +223,11 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<ProcessError, Option<String>> localConfig(String key) {
+        return Either.right(Option.none());
+    }
+
+    @Override
+    default Either<ProcessError, Option<Branch.Name>> parentBranch(Branch.Name branch) {
         return Either.right(Option.none());
     }
 
@@ -311,7 +321,7 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommits(
-            Branch.Name from, Sha oldest, Branch.Name to, Option<String> onto) {
+            Branch.Name from, Sha oldest, Branch.Name to, Option<BranchRef> onto) {
         return ran();
     }
 

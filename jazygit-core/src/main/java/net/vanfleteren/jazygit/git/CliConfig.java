@@ -8,6 +8,7 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.CommandFailed;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -19,6 +20,25 @@ final class CliConfig {
     private static final int NOT_SET = 5;
 
     private CliConfig() {}
+
+    /**
+     * The branch {@code branch} was made from, as {@code gh} records it to take as the base of its pull request.
+     */
+    static Either<ProcessError, Option<Branch.Name>> parent(Path workTree, Branch.Name branch) {
+        return get(workTree, parentKey(branch)).map(value -> value.flatMap(Branch.Name::parse));
+    }
+
+    /**
+     * Records {@code parent} as the branch {@code branch} was made from, where {@code gh} looks for it.
+     */
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> setParent(
+            Path workTree, Branch.Name branch, Branch.Name parent) {
+        return set(workTree, parentKey(branch), Option.of(parent.value()));
+    }
+
+    private static String parentKey(Branch.Name branch) {
+        return "branch." + branch.value() + ".gh-merge-base";
+    }
 
     /**
      * The value of {@code key} in the repository's own configuration, not the user's or the system's. Only looked

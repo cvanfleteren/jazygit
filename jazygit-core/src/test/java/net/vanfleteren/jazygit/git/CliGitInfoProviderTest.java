@@ -271,6 +271,20 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void countsTheCommitsNotOnTheBaseUpToTheMaximum() throws Exception {
+        git("checkout", "-q", "-b", "side");
+        git("commit", "-q", "--allow-empty", "-m", "Side one");
+        git("commit", "-q", "--allow-empty", "-m", "Side two");
+        git("commit", "-q", "--allow-empty", "-m", "Side three");
+        BranchRef side = new BranchRef.Local(new Branch.Name("side"));
+        BranchRef main = new BranchRef.Local(new Branch.Name("main"));
+
+        assertEquals(3, provider.countNotOn(side, main, 1000).get());
+        assertEquals(2, provider.countNotOn(side, main, 2).get());
+        assertEquals(0, provider.countNotOn(main, side, 1000).get());
+    }
+
+    @Test
     void reportsRepositoryNameAndCurrentBranch() throws Exception {
         assertEquals(repo.getFileName().toString(), provider.repositoryName());
         assertEquals(
@@ -1102,12 +1116,25 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "-m", "On other");
         git("checkout", "-q", "main");
 
-        provider.checkoutNewBranch(new Branch.Name("topic"), "other").get();
+        provider.checkoutNewBranch(new Branch.Name("topic"), "other", Option.of(new Branch.Name("other")))
+                .get();
 
         assertEquals(
                 Option.of(new Branch.Name("topic")),
                 provider.status().get().head().branchName());
         assertTrue(Files.exists(repo.resolve("other.txt")));
+        assertEquals(
+                Option.of(new Branch.Name("other")),
+                provider.parentBranch(new Branch.Name("topic")).get());
+    }
+
+    @Test
+    void aBranchMadeWithoutAParentHasNoneRecorded() throws Exception {
+        provider.checkoutNewBranch(new Branch.Name("topic"), "main", Option.none())
+                .get();
+
+        assertEquals(
+                Option.none(), provider.parentBranch(new Branch.Name("topic")).get());
     }
 
     @Test
@@ -1479,7 +1506,8 @@ class CliGitInfoProviderTest {
     void checkoutNewBranchFailsWhenTheNameIsTaken() throws Exception {
         git("branch", "topic");
 
-        assertTrue(provider.checkoutNewBranch(new Branch.Name("topic"), "main").isLeft());
+        assertTrue(provider.checkoutNewBranch(new Branch.Name("topic"), "main", Option.none())
+                .isLeft());
     }
 
     @Test

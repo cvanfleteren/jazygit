@@ -130,7 +130,11 @@ class RemoteBranchUpdateTest {
 
         assertEquals(
                 Option.of(new NewBranchPopup(
-                        "refs/remotes/origin/feature", "origin/feature", "feature", Option.of(ORIGIN_FEATURE))),
+                        "refs/remotes/origin/feature",
+                        "origin/feature",
+                        "feature",
+                        Option.of(ORIGIN_FEATURE),
+                        Option.none())),
                 asked.popup(NewBranchPopup.class));
         assertEquals(
                 List.of(new CheckoutRemote(new Branch.Name("feature-2"), ORIGIN_FEATURE)),
@@ -154,10 +158,12 @@ class RemoteBranchUpdateTest {
                 .model();
 
         assertEquals(
-                Option.of(new NewBranchPopup("refs/remotes/origin/new", "origin/new")),
+                Option.of(
+                        new NewBranchPopup("refs/remotes/origin/new", "origin/new", Option.of(new Branch.Name("new")))),
                 asked.popup(NewBranchPopup.class));
         assertEquals(
-                List.of(new NewBranchCmd(new Branch.Name("topic"), "refs/remotes/origin/new")),
+                List.of(new NewBranchCmd(
+                        new Branch.Name("topic"), "refs/remotes/origin/new", Option.of(new Branch.Name("new")))),
                 Update.update(typed(asked, "topic"), new NewBranchMsg.Confirmed())
                         .cmds());
     }
@@ -170,7 +176,8 @@ class RemoteBranchUpdateTest {
         List.<BranchCmd>of(
                         new CheckoutRemote(new Branch.Name("new"), ORIGIN_NEW),
                         new Checkout(new Branch.Name("feature")),
-                        new NewBranchCmd(new Branch.Name("topic"), "refs/remotes/origin/new"))
+                        new NewBranchCmd(
+                                new Branch.Name("topic"), "refs/remotes/origin/new", Option.of(new Branch.Name("new"))))
                 .forEach(cmd -> assertEquals(
                         BranchesTab.LOCAL,
                         Update.update(onRemotes, cmd.succeeded(List.empty()))
