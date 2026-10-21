@@ -31,7 +31,8 @@ shows nothing.
   once and the markers follow. A worktree whose status cannot be read is left out quietly: no error, no retry.
 - A worktree that cannot be read in a read that otherwise succeeds is left out, so it loses what was known of it.
   When the whole read fails, what was read before stays.
-- It is read only while the branches pane shows the worktrees, whether the pane has the focus or not: right after
+- It is read only while the branches pane shows the worktrees on the repository screen (not while the pull
+  requests are shown, as their previews load on the same thread), whether the pane has the focus or not: right after
   switching to them, and then by a tick at least 3 s after the last read finished, failed or not. It is not
   started again while one is still running.
 - It runs in the background, beside fetching and the GitHub loads rather than on the thread of the other loads

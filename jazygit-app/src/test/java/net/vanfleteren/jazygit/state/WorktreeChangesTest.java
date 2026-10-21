@@ -62,6 +62,15 @@ class WorktreeChangesTest {
     }
 
     @Test
+    void aTickDoesNotReadThemWhileThePullRequestsAreShown() {
+        Model pullRequests = onWorktreesTab(withWorktrees()).withScreen(Screen.PULL_REQUESTS);
+
+        assertFalse(Update.update(pullRequests, new Msg.Tick(Instant.parse("2026-10-21T10:00:00Z")))
+                .cmds()
+                .exists(cmd -> cmd instanceof LoadWorktreeChanges));
+    }
+
+    @Test
     void aTickDoesNotReadThemAgainWhileTheyAreBeingRead() {
         Model reading = Update.refresh(onWorktreesTab(withWorktrees())).model();
 

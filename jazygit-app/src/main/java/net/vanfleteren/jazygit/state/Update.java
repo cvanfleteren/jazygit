@@ -177,13 +177,14 @@ public final class Update {
     }
 
     /**
-     * The load of which other worktrees have changes, while the branches pane shows the worktrees: none while it
-     * runs already, even for other worktrees, or when there are no others.
+     * The load of which other worktrees have changes, while the branches pane shows the worktrees on screen: none
+     * while it runs already, even for other worktrees, or when there are no others.
      */
     private static Option<Cmd.Load> worktreeChanges(Model model) {
         List<String> others = model.repo().otherWorktrees();
         return Option.<Cmd.Load>of(new LoadWorktreeChanges(others))
-                .filter(load -> model.repoView().branchesTab() == BranchesTab.WORKTREES
+                .filter(load -> model.screen() == Screen.REPOSITORY
+                        && model.repoView().branchesTab() == BranchesTab.WORKTREES
                         && others.nonEmpty()
                         && !model.jobs().refreshing().exists(running -> running instanceof LoadWorktreeChanges));
     }
