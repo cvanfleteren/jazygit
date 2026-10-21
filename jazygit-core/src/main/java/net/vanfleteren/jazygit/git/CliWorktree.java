@@ -30,8 +30,8 @@ final class CliWorktree {
     private CliWorktree() {}
 
     /**
-     * Runs {@code git worktree list --porcelain -z}: the worktrees, the main one first. {@code workTree} is the one
-     * that is current.
+     * Runs {@code git worktree list --porcelain -z}: the worktrees, {@code workTree}, the one that is current, first,
+     * then the others as git lists them, the main one first.
      */
     static Either<ProcessError, List<Worktree>> list(Path workTree) {
         return GitProcess.read(
@@ -48,7 +48,11 @@ final class CliWorktree {
                 .map(record -> List.of(record.split("\0")).filter(line -> !line.isEmpty()))
                 .filter(List::nonEmpty);
         return Either.sequenceRight(records.zipWithIndex().map(record -> worktree(record._1, record._2 == 0, current)))
-                .map(worktrees -> worktrees.flatMap(worktree -> worktree).toList());
+                .map(worktrees -> worktrees.flatMap(worktree -> worktree).toList())
+                // The one shown first, as the checked out branch is; the others in the order git has them.
+                .map(worktrees -> worktrees
+                        .filter(Worktree::current)
+                        .appendAll(worktrees.filter(worktree -> !worktree.current())));
     }
 
     /**

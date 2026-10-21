@@ -388,7 +388,8 @@ public interface GitInfoProvider {
     // Listing, adding and removing the worktrees of the repository, as git worktree does.
 
     /**
-     * The worktrees, the main one first; none for a bare repository itself, which has no working tree.
+     * The worktrees, the one shown first, then the others as git lists them, the main one first; none for a bare
+     * repository itself, which has no working tree.
      */
     Either<ProcessError, List<Worktree>> worktrees();
 

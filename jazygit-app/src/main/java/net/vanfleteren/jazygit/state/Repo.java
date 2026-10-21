@@ -14,7 +14,7 @@ import net.vanfleteren.jazygit.git.model.*;
  * @param remoteBranches the remote-tracking branches
  * @param commits        the commit log of HEAD
  * @param stashes        the stashes, newest first
- * @param worktrees      the worktrees of the repository, the main one first
+ * @param worktrees      the worktrees of the repository, the one shown first
  */
 @With
 public record Repo(

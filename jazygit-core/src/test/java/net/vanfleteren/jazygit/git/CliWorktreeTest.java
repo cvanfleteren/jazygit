@@ -86,16 +86,9 @@ class CliWorktreeTest {
                         "branch refs/heads/gone",
                         "prunable gitdir file points to non-existent location");
 
+        // The one shown first, then the others as git lists them.
         assertEquals(
                 List.of(
-                        new Worktree(
-                                Path.of("/repos/app"),
-                                Option.of(new Sha(A)),
-                                Option.of(new Branch.Name("main")),
-                                true,
-                                false,
-                                Option.none(),
-                                false),
                         new Worktree(
                                 Path.of("/repos/app feature"),
                                 Option.of(new Sha(A)),
@@ -103,6 +96,14 @@ class CliWorktreeTest {
                                 false,
                                 true,
                                 Option.of("on usb"),
+                                false),
+                        new Worktree(
+                                Path.of("/repos/app"),
+                                Option.of(new Sha(A)),
+                                Option.of(new Branch.Name("main")),
+                                true,
+                                false,
+                                Option.none(),
                                 false),
                         new Worktree(
                                 Path.of("/repos/detached"),
@@ -191,8 +192,8 @@ class CliWorktreeTest {
                 List.of(Option.of(new Branch.Name("main")), Option.of(new Branch.Name("feature"))),
                 worktrees.map(Worktree::branch));
         assertEquals(
-                List.of(false, true),
-                CliGitInfoProvider.open(linked).get().worktrees().get().map(Worktree::current));
+                List.of(linked, main),
+                CliGitInfoProvider.open(linked).get().worktrees().get().map(Worktree::path));
 
         Files.writeString(linked.resolve("new.txt"), "untracked\n");
         assertInstanceOf(
