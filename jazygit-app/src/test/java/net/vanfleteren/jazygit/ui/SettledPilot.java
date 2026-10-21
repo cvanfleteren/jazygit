@@ -30,6 +30,7 @@ import java.util.function.Supplier;
 public final class SettledPilot implements Pilot {
 
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
+    private static final int SETTLE_ROUNDS = 3;
 
     private final ToolkitTestRunner testRunner;
     private final Pilot pilot;
@@ -57,11 +58,15 @@ public final class SettledPilot implements Pilot {
     }
 
     /**
-     * Waits until the render thread has handled everything sent to it so far.
+     * Waits until the render thread has handled everything sent to it so far, and drawn the frames those ask for.
+     * <p>
+     * A frame can ask for the next one: the app checks behind it whether the focus moved, and if so queues a
+     * redraw. Each round through the queue gets behind what the round before queued, so the frame, the check and
+     * the redraw take three.
      */
     public static void settle(ToolkitTestRunner testRunner) {
         CountDownLatch handled = new CountDownLatch(1);
-        testRunner.runner().tuiRunner().runLater(handled::countDown);
+        queueRounds(testRunner, SETTLE_ROUNDS, handled::countDown);
         try {
             if (!handled.await(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)) {
                 throw new AssertionError("the render thread did not catch up within " + TIMEOUT);
@@ -70,6 +75,19 @@ public final class SettledPilot implements Pilot {
             Thread.currentThread().interrupt();
             throw new AssertionError("interrupted while waiting for the render thread", interrupted);
         }
+    }
+
+    /**
+     * Runs {@code done} on the render thread after going through its queue {@code rounds} times.
+     */
+    private static void queueRounds(ToolkitTestRunner testRunner, int rounds, Runnable done) {
+        testRunner.runner().tuiRunner().runLater(() -> {
+            if (rounds == 1) {
+                done.run();
+            } else {
+                queueRounds(testRunner, rounds - 1, done);
+            }
+        });
     }
 
     @Override
