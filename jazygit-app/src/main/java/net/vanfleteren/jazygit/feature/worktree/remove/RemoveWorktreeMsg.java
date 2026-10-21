@@ -23,7 +23,10 @@ public sealed interface RemoveWorktreeMsg extends Msg {
 
     record Cancelled() implements RemoveWorktreeMsg {}
 
-    record Confirmed() implements RemoveWorktreeMsg {}
+    /**
+     * The user chose to remove the worktree, and with {@code deleteBranch} to delete its branch too.
+     */
+    record Chosen(boolean deleteBranch) implements RemoveWorktreeMsg {}
 
     /**
      * Git refused the removal {@code cmd}, which ran {@code commands}, because the worktree has changes that

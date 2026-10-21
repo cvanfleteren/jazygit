@@ -24,6 +24,12 @@ public sealed interface DeleteBranchMsg extends Msg {
     record Chosen(DeleteScope scope) implements DeleteBranchMsg {}
 
     /**
+     * The user chose to remove the other worktree that has the branch checked out, and to delete the branch
+     * locally once it is gone.
+     */
+    record WithWorktreeChosen() implements DeleteBranchMsg {}
+
+    /**
      * The user asked to delete a remote branch; that is still to be confirmed.
      */
     record RemoteRequested(RemoteBranch branch) implements DeleteBranchMsg {}

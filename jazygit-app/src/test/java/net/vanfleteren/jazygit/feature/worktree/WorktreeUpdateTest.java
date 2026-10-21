@@ -11,6 +11,10 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
+import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchCmd;
+import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchDialogs;
+import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchMsg;
+import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchPopup;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeCmd;
@@ -28,6 +32,7 @@ import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeMsg;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreePopup;
 import net.vanfleteren.jazygit.feature.worktree.switchto.SwitchWorktreeMsg;
+import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
@@ -37,6 +42,7 @@ import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -68,6 +74,13 @@ class WorktreeUpdateTest {
      * {@code feature} in none.
      */
     private static Model model() {
+        return model(false);
+    }
+
+    /**
+     * {@link #model()}, with {@code taken} also on its remote when {@code takenOnRemote}.
+     */
+    private static Model model(boolean takenOnRemote) {
         Model branches = Update.update(
                         loaded(),
                         new LoadMsg.BranchesLoaded(List.of(
@@ -78,7 +91,7 @@ class WorktreeUpdateTest {
                                         false,
                                         new Sha("1111"),
                                         Instant.EPOCH,
-                                        false,
+                                        takenOnRemote,
                                         false,
                                         new Tracking.None(),
                                         Option.of(LINKED.path())))))
@@ -284,16 +297,167 @@ class WorktreeUpdateTest {
         Next asked = Update.update(model(), new RemoveWorktreeMsg.Requested("/repos/app-taken"));
 
         assertEquals(
-                Option.of(new RemoveWorktreePopup("/repos/app-taken", "app-taken")),
+                Option.of(new RemoveWorktreePopup("/repos/app-taken", "app-taken", Option.of(TAKEN))),
                 asked.model().popup());
         assertEquals(
                 List.of(new RemoveWorktreeCmd("/repos/app-taken", false)),
-                Update.update(asked.model(), new RemoveWorktreeMsg.Confirmed()).cmds());
+                Update.update(asked.model(), new RemoveWorktreeMsg.Chosen(false))
+                        .cmds());
         assertEquals(
                 Option.none(),
                 Update.update(asked.model(), new RemoveWorktreeMsg.Cancelled())
                         .model()
                         .popup());
+    }
+
+    @Test
+    void itsBranchCanBeDeletedWithTheWorktree() {
+        Next asked = Update.update(model(), new RemoveWorktreeMsg.Requested("/repos/app-taken"));
+
+        Next chosen = Update.update(asked.model(), new RemoveWorktreeMsg.Chosen(true));
+        assertEquals(List.of(new RemoveWorktreeCmd("/repos/app-taken", false, Option.of(TAKEN))), chosen.cmds());
+        assertEquals(Option.none(), chosen.model().popup());
+    }
+
+    @Test
+    void withoutABranchOrWhileItIsBusyOnlyTheWorktreeIsRemoved() {
+        Worktree detached =
+                new Worktree(LINKED.path(), LINKED.head(), Option.none(), false, false, Option.none(), false);
+        Model asked = Update.update(worktrees(MAIN, detached), new RemoveWorktreeMsg.Requested("/repos/app-taken"))
+                .model();
+        assertEquals(Option.of(new RemoveWorktreePopup("/repos/app-taken", "app-taken", Option.none())), asked.popup());
+        assertEquals(
+                List.of(),
+                Update.update(asked, new RemoveWorktreeMsg.Chosen(true)).cmds());
+
+        Model busy = Update.update(model(), new RemoveWorktreeMsg.Requested("/repos/app-taken"))
+                .model()
+                .withBusyBranch(new BranchRef.Local(TAKEN), PushCmd.PUSH);
+        assertEquals(
+                List.of(),
+                Update.update(busy, new RemoveWorktreeMsg.Chosen(true)).cmds());
+        assertEquals(
+                List.of(new RemoveWorktreeCmd("/repos/app-taken", false)),
+                Update.update(busy, new RemoveWorktreeMsg.Chosen(false)).cmds());
+    }
+
+    @Test
+    void deletingTheBranchOfAnotherWorktreeOffersToRemoveThatWorktreeFirst() {
+        Model asked =
+                Update.update(model(), new DeleteBranchMsg.Requested(TAKEN)).model();
+
+        assertEquals(Option.of(new DeleteBranchPopup(TAKEN, Option.of("app-taken"))), asked.popup());
+        // Deleting it locally on its own git would refuse.
+        assertEquals(
+                List.of(),
+                Update.update(asked, new DeleteBranchMsg.Chosen(DeleteScope.LOCAL))
+                        .cmds());
+        Next chosen = Update.update(asked, new DeleteBranchMsg.WithWorktreeChosen());
+        assertEquals(List.of(new RemoveWorktreeCmd("/repos/app-taken", false, Option.of(TAKEN))), chosen.cmds());
+        assertEquals(Option.none(), chosen.model().popup());
+    }
+
+    @Test
+    void aBranchOnItsRemoteInAnotherWorktreeCanBeDeletedOnTheRemoteOrWithThatWorktree() {
+        Model asked =
+                Update.update(model(true), new DeleteBranchMsg.Requested(TAKEN)).model();
+        DeleteBranchPopup popup = asked.popup(DeleteBranchPopup.class).get();
+
+        assertEquals(
+                List.of('r', 'w'),
+                DeleteBranchDialogs.DELETE_BRANCH
+                        .choices()
+                        .filter(choice -> choice.shown().test(asked, popup)
+                                && choice.enabled().test(asked, popup))
+                        .map(ChoiceDialog.Choice::key));
+        assertEquals(
+                List.of(new DeleteBranchCmd.DeleteBranch(
+                        TAKEN, new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, TAKEN), DeleteScope.REMOTE)),
+                Update.update(asked, new DeleteBranchMsg.Chosen(DeleteScope.REMOTE))
+                        .cmds());
+    }
+
+    @Test
+    void aBranchWhoseWorktreeCannotBeRemovedIsStillNotDeletedAndTheErrorSaysWhere() {
+        Worktree locked =
+                new Worktree(LINKED.path(), LINKED.head(), LINKED.branch(), false, false, Option.of(""), false);
+
+        Next next = Update.update(worktrees(MAIN, locked), new DeleteBranchMsg.Requested(TAKEN));
+
+        assertEquals(Option.none(), next.model().popup(DeleteBranchPopup.class));
+        assertEquals(
+                Option.of("Deleting branch taken failed: it is checked out in the worktree at /repos/app-taken"),
+                errorText(next.model()));
+    }
+
+    @Test
+    void theBranchIsDeletedLocallyOnceTheWorktreeIsRemovedAndNotWhenRemovingItFails() {
+        java.util.List<String> ran = new java.util.ArrayList<>();
+        GitInfoProvider git = new StubGitProvider() {
+            @Override
+            public Either<GitFailure<GitError>, List<ExecutedCommand>> removeWorktree(Path location, boolean force) {
+                ran.add("remove " + location + " " + force);
+                return location.toString().endsWith("changed")
+                        ? Either.left(new GitFailure<>(new GitError.WorktreeHasChanges("changed"), List.empty()))
+                        : Either.right(List.empty());
+            }
+
+            @Override
+            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(Branch.Name name) {
+                ran.add("delete " + name.value());
+                return Either.right(List.empty());
+            }
+        };
+
+        new RemoveWorktreeCmd("/repos/app-taken", true, Option.of(TAKEN)).perform(git);
+        assertEquals(java.util.List.of("remove /repos/app-taken true", "delete taken"), ran);
+
+        ran.clear();
+        RemoveWorktreeCmd changed = new RemoveWorktreeCmd("/repos/app-changed", false, Option.of(TAKEN));
+        assertEquals(
+                new RemoveWorktreeMsg.NeedsForce(changed, List.empty()),
+                changed.run(new Env(git, net.vanfleteren.jazygit.gh.StubGitHub.empty())));
+        assertEquals(java.util.List.of("remove /repos/app-changed false"), ran);
+    }
+
+    @Test
+    void whenTheBranchIsNotDeletedAfterTheWorktreeIsRemovedThatFailsWithBothCommandsLogged() {
+        GitInfoProvider git = new StubGitProvider() {
+            @Override
+            public Either<GitFailure<GitError>, List<ExecutedCommand>> removeWorktree(Path location, boolean force) {
+                return StubGitProvider.ran("git worktree remove " + location);
+            }
+
+            @Override
+            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(Branch.Name name) {
+                return StubGitProvider.refused("git branch --delete --force " + name.value(), "ref is locked");
+            }
+        };
+        RemoveWorktreeCmd remove = new RemoveWorktreeCmd("/repos/app-taken", false, Option.of(TAKEN));
+
+        Msg failed = remove.run(new Env(git, net.vanfleteren.jazygit.gh.StubGitHub.empty()));
+
+        assertEquals(
+                remove.failedWith(new GitFailure<>(
+                        new GitError.CommandFailed("ref is locked", 1),
+                        StubGitProvider.executed(
+                                "git worktree remove /repos/app-taken", "git branch --delete --force taken"))),
+                failed);
+        assertEquals(
+                Option.of("Removing the worktree /repos/app-taken and deleting its branch failed: ref is locked"),
+                errorText(Update.update(model(), failed).model()));
+    }
+
+    @Test
+    void forcingTheRemovalStillDeletesTheBranch() {
+        RemoveWorktreeCmd remove = new RemoveWorktreeCmd("/repos/app-taken", false, Option.of(TAKEN));
+
+        Next refused = Update.update(model(), new RemoveWorktreeMsg.NeedsForce(remove, List.of()));
+
+        assertEquals(
+                List.of(new RemoveWorktreeCmd("/repos/app-taken", true, Option.of(TAKEN))),
+                Update.update(refused.model(), new RemoveWorktreeMsg.ForceConfirmed())
+                        .cmds());
     }
 
     @Test
@@ -433,7 +597,7 @@ class WorktreeUpdateTest {
                         remove, StubGitProvider.executed("git worktree remove /repos/app-taken")));
 
         assertEquals(
-                Option.of(new ForceRemoveWorktreePopup("/repos/app-taken", "app-taken")),
+                Option.of(new ForceRemoveWorktreePopup(remove, "app-taken")),
                 refused.model().popup());
         // The removal that ran is logged like any other.
         assertEquals(

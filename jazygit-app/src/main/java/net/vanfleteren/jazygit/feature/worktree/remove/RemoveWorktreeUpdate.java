@@ -7,7 +7,8 @@ import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
- * Removing a worktree; when it has changes, removing it anyway is offered.
+ * Removing a worktree, and deleting its branch with it when the user chose so; when it has changes, removing it
+ * anyway is offered.
  */
 public final class RemoveWorktreeUpdate {
 
@@ -21,22 +22,26 @@ public final class RemoveWorktreeUpdate {
                         .map(worktree -> notRemovable(worktree)
                                 .map(error -> Next.of(model.fail(error)))
                                 .getOrElse(() -> Update.ask(
-                                        model, new RemoveWorktreePopup(worktree.location(), worktree.name()))))
+                                        model,
+                                        new RemoveWorktreePopup(
+                                                worktree.location(), worktree.name(), worktree.branch()))))
                         .getOrElse(() -> Next.of(model));
             case Cancelled() -> Next.of(model.withoutPopup(RemoveWorktreePopup.class));
-            case Confirmed() ->
+            case Chosen(boolean deleteBranch) ->
                 Update.confirm(
                         model,
                         RemoveWorktreePopup.class,
                         popup -> model.repo()
                                 .worktree(popup.location())
                                 .filter(worktree -> notRemovable(worktree).isEmpty())
-                                .map(worktree -> new RemoveWorktreeCmd(popup.location(), false)));
+                                .filter(worktree -> !deleteBranch || branchDeletable(model, popup))
+                                .map(worktree -> new RemoveWorktreeCmd(
+                                        popup.location(), false, popup.branch().filter(branch -> deleteBranch))));
             // The removal ran, and failed; removing it anyway is offered instead of the failure.
             case NeedsForce(var cmd, var commands) ->
                 Update.refresh(OperationUpdate.done(model, cmd, commands)
                         .openPopupIfFree(new ForceRemoveWorktreePopup(
-                                cmd.location(),
+                                cmd,
                                 model.repo()
                                         .worktree(cmd.location())
                                         .map(Worktree::name)
@@ -46,7 +51,7 @@ public final class RemoveWorktreeUpdate {
                 Update.confirm(
                         model,
                         ForceRemoveWorktreePopup.class,
-                        popup -> Option.of(new RemoveWorktreeCmd(popup.location(), true)));
+                        popup -> Option.of(popup.removal().forced()));
         };
     }
 
@@ -54,11 +59,19 @@ public final class RemoveWorktreeUpdate {
      * Why {@code worktree} cannot be removed, if it cannot: it is the main one, where the repository lives, the one
      * shown, or locked, which git refuses.
      */
-    private static Option<AppError> notRemovable(Worktree worktree) {
+    public static Option<AppError> notRemovable(Worktree worktree) {
         return worktree.main()
                 ? Option.of(new AppError.MainWorktreeNotRemovable(worktree.name()))
                 : worktree.current()
                         ? Option.of(new AppError.ShownWorktreeNotRemovable(worktree.name()))
                         : worktree.locked().map(reason -> new AppError.WorktreeLocked(worktree.name(), reason));
+    }
+
+    /**
+     * Whether the branch of the worktree {@code popup} asks about can be deleted with it: it has one, and no
+     * operation runs on it.
+     */
+    static boolean branchDeletable(Model model, RemoveWorktreePopup popup) {
+        return popup.branch().flatMap(model::idleBranch).isDefined();
     }
 }

@@ -1541,6 +1541,22 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void deleteLocalBranchRemovesAnUnmergedBranchWithoutTouchingTheRemote() throws Exception {
+        git("checkout", "-q", "-b", "topic");
+        Files.writeString(repo.resolve("topic.txt"), "topic\n");
+        git("add", "topic.txt");
+        git("commit", "-q", "-m", "Topic");
+        git("checkout", "-q", "main");
+
+        assertEquals(
+                List.of("git branch --delete --force topic"),
+                provider.deleteLocalBranch(new Branch.Name("topic")).get().map(ExecutedCommand::line));
+        assertEquals(
+                List.of("main"),
+                provider.branches().get().map(b -> b.name().value()).toList());
+    }
+
+    @Test
     void deleteBranchFailsForTheCheckedOutBranch() {
         assertTrue(provider.deleteBranch(
                         new Branch.Name("main"), new RemoteBranch("origin", new Branch.Name("main")), DeleteScope.LOCAL)

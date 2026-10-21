@@ -56,6 +56,11 @@ public interface GitInfoProvider {
             Branch.Name name, RemoteBranch remote, DeleteScope scope);
 
     /**
+     * Deletes the local branch {@code name}, merged or not.
+     */
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(Branch.Name name);
+
+    /**
      * Renames the local branch {@code name} to {@code newName}; it keeps following the same upstream. Fails when a
      * branch is called {@code newName} already.
      */

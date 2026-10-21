@@ -112,6 +112,37 @@ class ChoiceDialogTest {
     }
 
     @Test
+    void anOptionLeftOutIsNotDrawnAndItsLetterChoosesNothing() throws Exception {
+        ChoiceDialog<PickPopup> leaving = new ChoiceDialog<>(
+                new ChoiceDialog.Spec<>(
+                        "pick",
+                        PickPopup.class,
+                        popup -> "Pick one",
+                        List.of(
+                                new Choice<>('a', "dialog.discard.all", () -> new Picked("a")),
+                                new Choice<PickPopup>('b', "dialog.discard.unstaged", () -> new Picked("b"))
+                                        .shownWhen((model, popup) -> popup.second())),
+                        () -> new Picked("cancel")),
+                cursor);
+        Supplier<Element> view = () ->
+                stack(text("background"), leaving.render(cursor.on(open(false))).get());
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
+            SettledPilot.focus(runner, "pick");
+            String screen = RenderedText.ofLarge(runner, view);
+            assertTrue(screen.contains("(a) Discard all changes"), screen);
+            assertFalse(screen.contains("Discard unstaged changes"), screen);
+            SettledPilot.of(runner).press('b');
+            SettledPilot.of(runner).pause();
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new Picked("a")), dispatched);
+    }
+
+    @Test
     void slashFiltersTheOptionsOnTheirTextAndEnterChoosesTheHighlightedOne() throws Exception {
         try (ToolkitTestRunner runner = start(true)) {
             type(runner, "/uns");

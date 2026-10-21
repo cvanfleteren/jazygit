@@ -167,12 +167,18 @@ one and one whose directory is gone.
   the worktrees.
 - **Switching:** space on a worktree opens it in place of the one shown, as switching to a recent repository
   does (`RecentReposCmd.SwitchTo`), which makes it a recent one too.
-- **Removing:** `d` removes a worktree other than the main one and the one shown (`git worktree remove`). When
-  git refuses because it has changes (`GitError.WorktreeHasChanges`), removing it anyway (`--force`) is offered.
+- **Removing:** `d` removes a worktree other than the main one and the one shown (`git worktree remove`), keeping
+  its branch or deleting it locally too, once the worktree is gone (`RemoveWorktreeCmd.deleting`). When git refuses
+  because it has changes (`GitError.WorktreeHasChanges`), removing it anyway (`--force`) is offered, still deleting
+  the branch when that was chosen.
 - **A branch checked out in another worktree** is marked `(worktree)` in the list of branches. git checks a branch
   out in one worktree at a time, so what it would refuse is not run: checking the branch out offers to switch to
-  that worktree instead, and fast-forwarding it, deleting it locally or adding a worktree for it fail up front with
-  an `AppError.CheckedOutElsewhere` that names the worktree. Deleting it on its remote still works.
+  that worktree instead, and fast-forwarding it or adding a worktree for it fail up front with an
+  `AppError.CheckedOutElsewhere` that names the worktree. Deleting it offers to remove that worktree and then delete
+  the branch locally, the same removal as above, besides deleting it on its remote; only when the worktree cannot be
+  removed either and the branch is not on its remote does deleting it fail up front. The branch feature depends on
+  the worktree feature for this, so the keys switching the tabs of the branches pane, the worktrees' too, are the
+  branch feature's.
 
 ## Divergence
 

@@ -56,7 +56,7 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
             List<StyledElement<?>> filter = list.filterField(model.listCursor()).toList();
             return DialogFrame.withHint(title, width, list.hintKey(model.listCursor()), filter.append(rows))
                     // The filter, the options whatever the filter, the blank line and the hint, plus the border.
-                    .length(filter.size() + list.height() + 2 + 2);
+                    .length(filter.size() + list.height(model, popup) + 2 + 2);
         });
     }
 
@@ -69,6 +69,8 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
      * @param enabled     whether it applies, given the model and the open popup
      * @param heading     the message key of the heading it starts a group of options under, if any
      * @param onHighlight the message for highlighting it with the arrow keys, if it shows what choosing it does
+     * @param shown       whether it is in the list at all, given the model and the open popup; one that is not
+     *                    takes no line and cannot be chosen
      */
     public record Choice<P>(
             char key,
@@ -76,13 +78,14 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
             Supplier<Msg> msg,
             BiPredicate<Model, P> enabled,
             Option<String> heading,
-            Option<Supplier<Msg>> onHighlight) {
+            Option<Supplier<Msg>> onHighlight,
+            BiPredicate<Model, P> shown) {
 
         /**
          * An option with a text that depends on the popup, without a heading.
          */
         public Choice(char key, Function<P, String> label, Supplier<Msg> msg, BiPredicate<Model, P> enabled) {
-            this(key, label, msg, enabled, Option.none(), Option.none());
+            this(key, label, msg, enabled, Option.none(), Option.none(), (model, popup) -> true);
         }
 
         /**
@@ -110,14 +113,22 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
          * This option, starting a group of options under the heading with the message key {@code headingKey}.
          */
         public Choice<P> withHeading(String headingKey) {
-            return new Choice<>(key, label, msg, enabled, Option.of(headingKey), onHighlight);
+            return new Choice<>(key, label, msg, enabled, Option.of(headingKey), onHighlight, shown);
         }
 
         /**
          * This option, sending {@code preview} when it is highlighted, so what choosing it does shows before.
          */
         public Choice<P> withPreview(Supplier<Msg> preview) {
-            return new Choice<>(key, label, msg, enabled, heading, Option.of(preview));
+            return new Choice<>(key, label, msg, enabled, heading, Option.of(preview), shown);
+        }
+
+        /**
+         * This option, left out of the list unless {@code shown} holds, for one that makes no sense for some
+         * popups rather than not applying for now.
+         */
+        public Choice<P> shownWhen(BiPredicate<Model, P> shown) {
+            return new Choice<>(key, label, msg, enabled, heading, onHighlight, shown);
         }
     }
 

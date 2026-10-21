@@ -25,7 +25,7 @@ import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 /**
  * A selectable list of options, for inside a popup. An option is chosen with its letter, or with the arrow keys and
  * Enter; Escape cancels, which the hint of the popup tells. No two options have the same letter. An option that does not apply is struck through
- * and dimmed, and cannot be chosen. Options can be grouped under headings, which the arrow keys skip. An option
+ * and dimmed, and cannot be chosen; one that makes no sense for the popup is left out. Options can be grouped under headings, which the arrow keys skip. An option
  * can preview what choosing it does, as soon as it is highlighted. A list can be filterable: then {@code /}
  * opens a {@link ListFilter}, and only the options whose text contains it stay shown; while it is open, the
  * letters go into it, and Escape closes it instead of cancelling. The highlighted line and the filter live in the
@@ -37,8 +37,6 @@ public final class ChoiceList<P extends Popup> {
 
     private final List<Choice<P>> choices;
     private final Supplier<Msg> onCancel;
-    // The lines of all options, whatever the filter.
-    private final List<Line> allLines;
     private final Consumer<Msg> dispatch;
     private final ListElement<?> list;
     private final boolean filterable;
@@ -71,7 +69,6 @@ public final class ChoiceList<P extends Popup> {
         }
         this.choices = choices;
         this.onCancel = onCancel;
-        this.allLines = lines(this.choices, List.range(0, this.choices.size()));
         this.dispatch = dispatch;
         this.filterable = filterable;
         this.list = list().id(id).focusable().highlightSymbol("");
@@ -121,14 +118,15 @@ public final class ChoiceList<P extends Popup> {
                 .onKeyEvent(event -> handleKey(view, event))
                 .onMouseEvent(event -> ListKeys.wheel(
                         event, view.selected(), view.lines().size(), view::isOption, line -> highlight(view, line)));
-        return list.length(height());
+        return list.length(height(model, popup));
     }
 
     /**
-     * How many lines the list takes: as many as without a filter, so it does not shrink as the filter grows.
+     * How many lines the list takes for {@code popup}: as many as without a filter, so it does not shrink as the
+     * filter grows.
      */
-    public int height() {
-        return allLines.size();
+    public int height(Model model, P popup) {
+        return unfiltered(rows(model, popup)).size();
     }
 
     /**
@@ -136,7 +134,8 @@ public final class ChoiceList<P extends Popup> {
      */
     public int width(Model model, P popup) {
         List<Row> rows = rows(model, popup);
-        return allLines.map(line -> lineText(line, rows))
+        return unfiltered(rows)
+                .map(line -> lineText(line, rows))
                 .map(TextWidth::of)
                 .max()
                 .getOrElse(0);
@@ -171,8 +170,17 @@ public final class ChoiceList<P extends Popup> {
     }
 
     private List<Row> rows(Model model, P popup) {
-        return choices.map(
-                choice -> new Row(choice.label().apply(popup), choice.enabled().test(model, popup)));
+        return choices.map(choice -> new Row(
+                choice.label().apply(popup),
+                choice.enabled().test(model, popup),
+                choice.shown().test(model, popup)));
+    }
+
+    /**
+     * The lines of the options shown for {@code rows}, whatever the filter.
+     */
+    private List<Line> unfiltered(List<Row> rows) {
+        return lines(choices, visible(rows, Option.none()));
     }
 
     /**
@@ -191,11 +199,12 @@ public final class ChoiceList<P extends Popup> {
     }
 
     /**
-     * The indexes of the options whose text contains {@code filter}.
+     * The indexes of the options shown whose text contains {@code filter}.
      */
     private List<Integer> visible(List<Row> rows, Option<String> filter) {
         return List.range(0, choices.size())
-                .filter(index -> ListFilter.matches(filter, rows.get(index).label()));
+                .filter(index -> rows.get(index).shown()
+                        && ListFilter.matches(filter, rows.get(index).label()));
     }
 
     /**
@@ -292,8 +301,9 @@ public final class ChoiceList<P extends Popup> {
     }
 
     private void choose(View view, Choice<P> choice) {
-        // A disabled option is not actionable.
-        if (view.rows().get(choices.indexOf(choice)).enabled()) {
+        // A disabled or left out option is not actionable.
+        Row row = view.rows().get(choices.indexOf(choice));
+        if (row.shown() && row.enabled()) {
             dispatch.accept(choice.msg().get());
         }
     }
@@ -337,9 +347,9 @@ public final class ChoiceList<P extends Popup> {
     private sealed interface Line {}
 
     /**
-     * An option as it is shown: its text, and whether it applies.
+     * An option as it is shown: its text, whether it applies, and whether it is in the list at all.
      */
-    private record Row(String label, boolean enabled) {}
+    private record Row(String label, boolean enabled, boolean shown) {}
 
     /**
      * @param index the index of the option among the choices
