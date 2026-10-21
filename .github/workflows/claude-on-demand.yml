@@ -1,27 +1,23 @@
-name: Claude Code
+name: Claude on demand
 
+# Runs only when someone mentions @claude in a comment on an issue or PR, or in an inline review comment.
 on:
   issue_comment:
     types: [created]
   pull_request_review_comment:
     types: [created]
-  issues:
-    types: [opened, assigned]
-  pull_request_review:
-    types: [submitted]
 
 jobs:
   claude:
+    # Outsiders' comments don't start a job; claude-code-action also rejects users without write access.
     if: |
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+      contains(github.event.comment.body, '@claude') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
     runs-on: ubuntu-latest
     permissions:
       actions: read # Required for Claude to read CI results on PRs
       contents: write        # needed to push merge commits
-      pull-requests: write   # needed for gh pr merge / comments
+      pull-requests: write   # needed for gh pr create / comments
       issues: write
       id-token: write
     steps:
@@ -40,4 +36,4 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: |
             --max-turns 40
-            --allowedTools "Bash(git:*),Bash(gh pr:*),Bash(gh issue comment:*),Bash(mv
+            --allowedTools "Bash(git:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(gh pr comment:*),Bash(gh pr create:*),Bash(gh issue comment:*),Bash(mvn:*),Bash(./mvnw:*),Edit,Write,Read,Glob,Grep"
