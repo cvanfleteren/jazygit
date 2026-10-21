@@ -61,11 +61,12 @@ shown as tamboui shows it, as dimmed text. Every theme styles the Markdown in it
 
 - `j`/`k` or the arrows highlight the next or previous comment, Home and End the first and last. The popup opens on
   the last, the newest.
-- `J`/`K` or Page Up and Page Down scroll the highlighted comment, as far as its end. Highlighting another comment
-  scrolls back to its top.
+- `J`/`K` scroll the highlighted comment a line, Page Up and Page Down a page, as far as its end. Highlighting another
+  comment scrolls back to its top.
 - The mouse wheel over the list moves the highlight, over the comment scrolls it; a click on a row highlights it.
-- `o` opens the highlighted comment in the browser; a review or the description, which have no link of their own,
-  open the pull request.
+- `o` opens the pull request in the browser, as the pull request dialog does. Opening the highlighted comment itself
+  was wanted, but gh only opens pull requests (`gh pr view --web` drops the `#issuecomment-…` of a link), and jazygit
+  starts no browser of its own; that is for a decision of its own, as copying is.
 - `c` comments on the pull request: see below.
 - Escape goes back to the pull request dialog.
 

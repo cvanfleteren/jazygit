@@ -53,6 +53,13 @@ public interface GitHub {
     Either<GhError, PullRequestDetails> pullRequestDetails(int number);
 
     /**
+     * The conversation on pull request {@code number}: its description, unless it is empty, then its comments and
+     * the reviews that say something, oldest first. A review says something when it has text, approves, asks for
+     * changes or was dismissed; pending reviews, which only their author sees, are left out.
+     */
+    Either<GhError, List<PullRequestComment>> pullRequestComments(int number);
+
+    /**
      * Creates a pull request from the remote branch {@code head} into {@code base}, as {@code pullRequest} says.
      */
     Either<GhFailure, Created> createPullRequest(String head, String base, NewPullRequest pullRequest);

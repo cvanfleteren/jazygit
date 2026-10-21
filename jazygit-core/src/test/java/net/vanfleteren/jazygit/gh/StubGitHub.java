@@ -69,6 +69,14 @@ public interface StubGitHub extends GitHub {
     }
 
     /**
+     * No description, comments or reviews.
+     */
+    @Override
+    default Either<GhError, List<PullRequestComment>> pullRequestComments(int number) {
+        return Either.right(List.empty());
+    }
+
+    /**
      * An open pull request {@code number} from branch {@code feature} into {@code main}, with nothing else to it.
      */
     @Override

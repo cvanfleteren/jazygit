@@ -83,3 +83,25 @@ Span.bold { text-style: bold; }
 
 /* The draft box of a new pull request, when it has the focus: reversed, as a cursor. */
 .checkbox:focus { text-style: reversed; }
+
+/* The comments on a pull request, written in Markdown. */
+MarkdownElement {
+    heading-1-color: $accent;
+    heading-1-text-style: bold;
+    heading-2-color: $accent;
+    heading-2-text-style: bold;
+    heading-3-text-style: bold;
+    heading-4-text-style: bold;
+    heading-5-text-style: bold;
+    heading-6-text-style: bold;
+    link-color: $hunk;
+    link-text-style: underlined;
+    inline-code-color: $warn;
+    code-block-color: $border;
+    blockquote-color: $muted;
+    blockquote-text-style: italic;
+    list-marker-color: $accent;
+    horizontal-rule-color: $border;
+    task-checked-color: $added;
+    html-color: $muted;
+}

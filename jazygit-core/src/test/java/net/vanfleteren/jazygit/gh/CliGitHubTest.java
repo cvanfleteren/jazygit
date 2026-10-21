@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.*;
 import net.vanfleteren.jazygit.gh.model.PullRequestList;
@@ -347,5 +348,72 @@ class CliGitHubTest {
         assertTrue(CliGitHub.parseDetails("label\tui\n").isLeft());
         assertTrue(CliGitHub.parseDetails("pr\tx\n").isLeft());
         assertTrue(CliGitHub.parseDetails("something\telse\n").isLeft());
+    }
+
+    @Test
+    void parsesTheConversationOnAPullRequest() {
+        String raw = "description\tdescription\tcvf\t2026-10-10T08:00:00Z\tfalse\tfalse\t\tAdds\\n**rename**\n"
+                + "comment\tIC_1\tbob\t2026-10-10T09:00:00Z\ttrue\tfalse\t\tLooks\\tgood\n"
+                + "CHANGES_REQUESTED\tPRR_1\tcarol\t2026-10-10T10:00:00Z\tfalse\tfalse\t\tNot yet\n"
+                + "comment\tIC_2\t\t2026-10-10T11:00:00Z\tfalse\ttrue\toutdated\tOld\n"
+                + "APPROVED\tPRR_2\tcarol\t2026-10-10T12:00:00Z\tfalse\tfalse\t\t\n";
+
+        assertEquals(
+                Either.right(List.of(
+                        new PullRequestComment(
+                                PullRequestComment.DESCRIPTION,
+                                PullRequestComment.Kind.DESCRIPTION,
+                                "cvf",
+                                Instant.parse("2026-10-10T08:00:00Z"),
+                                "Adds\n**rename**",
+                                false,
+                                Option.none()),
+                        new PullRequestComment(
+                                new PullRequestComment.Id("IC_1"),
+                                PullRequestComment.Kind.COMMENT,
+                                "bob",
+                                Instant.parse("2026-10-10T09:00:00Z"),
+                                "Looks\tgood",
+                                true,
+                                Option.none()),
+                        new PullRequestComment(
+                                new PullRequestComment.Id("PRR_1"),
+                                PullRequestComment.Kind.CHANGES_REQUESTED,
+                                "carol",
+                                Instant.parse("2026-10-10T10:00:00Z"),
+                                "Not yet",
+                                false,
+                                Option.none()),
+                        new PullRequestComment(
+                                new PullRequestComment.Id("IC_2"),
+                                PullRequestComment.Kind.COMMENT,
+                                "",
+                                Instant.parse("2026-10-10T11:00:00Z"),
+                                "Old",
+                                false,
+                                Option.of("outdated")),
+                        new PullRequestComment(
+                                new PullRequestComment.Id("PRR_2"),
+                                PullRequestComment.Kind.APPROVED,
+                                "carol",
+                                Instant.parse("2026-10-10T12:00:00Z"),
+                                "",
+                                false,
+                                Option.none()))),
+                CliGitHub.parseComments(raw));
+    }
+
+    @Test
+    void aConversationWithoutAnything() {
+        assertEquals(Either.right(List.empty()), CliGitHub.parseComments(""));
+    }
+
+    @Test
+    void aConversationThatCannotBeReadIsUnexpectedOutput() {
+        assertTrue(CliGitHub.parseComments("comment\tIC_1\n").isLeft());
+        assertTrue(CliGitHub.parseComments("PENDING\tPRR_1\tbob\t2026-10-10T09:00:00Z\tfalse\tfalse\t\tx\n")
+                .isLeft());
+        assertTrue(CliGitHub.parseComments("comment\tIC_1\tbob\tyesterday\tfalse\tfalse\t\tx\n")
+                .isLeft());
     }
 }

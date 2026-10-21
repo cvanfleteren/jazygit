@@ -5,7 +5,6 @@ import io.vavr.control.Option;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.feature.fetch.FetchUpdate;
 import net.vanfleteren.jazygit.feature.github.browse.BrowsePullRequestCmd;
-import net.vanfleteren.jazygit.feature.github.comment.CommentPopup;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestUpdate;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
@@ -114,15 +113,13 @@ public final class PullRequestUpdate {
 
     /**
      * {@code model} with the dialog of pull request {@code number} as {@code change} makes it: the one that is open,
-     * or the one a comment on it goes back to, so that one is not out of date then. Unchanged when neither shows it.
+     * or the one the open popup goes back to, like a comment on it, so that one is not out of date then. Unchanged
+     * when no popup shows it.
      */
     private static Model mapShown(Model model, int number, Function<PullRequestPopup, PullRequestPopup> change) {
-        return model.popup(PullRequestPopup.class)
-                .filter(popup -> popup.pullRequest().number() == number)
-                .map(popup -> model.openPopup(change.apply(popup)))
-                .orElse(() -> model.popup(CommentPopup.class)
-                        .filter(popup -> popup.number() == number)
-                        .map(popup -> model.openPopup(popup.withShown(change.apply(popup.shown())))))
+        return model.popup(ShowsPullRequest.class)
+                .filter(popup -> popup.number() == number)
+                .map(popup -> model.openPopup(popup.withPullRequestPopup(change.apply(popup.pullRequestPopup()))))
                 .getOrElse(model);
     }
 
