@@ -408,6 +408,34 @@ class BranchesPanelTest {
                 panel.selectionChange(remote));
     }
 
+    /**
+     * A popup about the worktree at {@code location}.
+     */
+    private record AboutWorktree(String location) implements WorktreePopup {}
+
+    @Test
+    void aWorktreeAddedOutsideTheAppLeavesTheHighlightButTheOneAPopupIsAboutGetsIt() {
+        BranchesPanel panel = new BranchesPanel(msg -> {}, tab -> {});
+        Model two = withWorktrees(before);
+        Worktree added = new Worktree(
+                java.nio.file.Path.of("/repos/app-other"),
+                Option.of(new Sha("3")),
+                Option.of(new Branch.Name("other")),
+                false,
+                false,
+                Option.none(),
+                false);
+        Model three = two.mapRepo(repo -> repo.withWorktrees(
+                new Loadable.Loaded<>(repo.worktrees().toOption().get().append(added))));
+
+        panel.render(two, BranchesPanel.ID);
+        panel.render(three, BranchesPanel.ID);
+        assertEquals("/repos/app", panel.selectedWorktree().get().location());
+
+        panel.render(three.openPopup(new AboutWorktree("/repos/app-other")), BranchesPanel.ID);
+        assertEquals("/repos/app-other", panel.selectedWorktree().get().location());
+    }
+
     @Test
     void theWorktreesTabListsTheWorktreesAndItsKeysActOnTheHighlightedOne() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();

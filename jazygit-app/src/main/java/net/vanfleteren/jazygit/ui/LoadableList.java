@@ -233,22 +233,6 @@ final class LoadableList<T> {
         }
 
         /**
-         * The selection goes to the item that was added, when one was; else it follows its item, as
-         * {@link #following} does. When more than one was added, as when the list is of something else now, none
-         * is chosen over the others.
-         */
-        static <E, K> Reselect<List<E>> followingOrAdded(Function<E, K> key) {
-            Reselect<List<E>> following = following(key);
-            return (previous, next, selected) -> {
-                List<K> before = previous.map(key);
-                List<Integer> added = next.zipWithIndex()
-                        .filter(item -> !before.contains(key.apply(item._1)))
-                        .map(item -> item._2);
-                return added.size() == 1 ? added.head() : following.apply(previous, next, selected);
-            };
-        }
-
-        /**
          * @param selected the index selected in {@code previous}
          * @return the index to select in {@code next}
          */

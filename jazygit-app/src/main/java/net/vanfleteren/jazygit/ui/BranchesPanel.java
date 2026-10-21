@@ -114,10 +114,7 @@ public class BranchesPanel {
         remoteList.onKey(event ->
                 PaneKeys.sending(keymap.handle(Scopes.REMOTE_BRANCHES, event, selectedRemoteBranch()), dispatch));
         worktreeList = new LoadableList<>(
-                Messages.get("panel.worktrees.title"),
-                ID,
-                LoadableList.Reselect.followingOrAdded(Worktree::path),
-                highlights);
+                Messages.get("panel.worktrees.title"), ID, LoadableList.Reselect.following(Worktree::path), highlights);
         worktreeList.highlightSymbol("");
         worktreeList.whenEmpty(Messages.get("worktrees.empty"));
         worktreeList.onKey(
@@ -457,13 +454,17 @@ public class BranchesPanel {
                         focused,
                         active,
                         title(tab));
-            case WORKTREES ->
-                worktreeList.render(
+            case WORKTREES -> {
+                Panel worktrees = worktreeList.render(
                         model.repo().worktrees(),
-                        worktrees -> worktrees.map(BranchesPanel::worktreeRow),
+                        all -> all.map(BranchesPanel::worktreeRow),
                         focused,
                         active,
                         title(tab));
+                // Highlighted when drawn, after the render followed the highlighted one.
+                worktreeAsked(model).forEach(worktreeList::select);
+                yield worktrees;
+            }
         };
         return panel.onMouseEvent(event -> titleClick(panel.renderedArea(), event));
     }
@@ -556,6 +557,20 @@ public class BranchesPanel {
     private static Option<DivergenceView> divergence(Model model) {
         return Option.when(model.repoView().branchesTab() == BranchesTab.LOCAL, model.repoView()::divergence)
                 .flatMap(open -> open);
+    }
+
+    /**
+     * Where among the worktrees the one an open popup is about is, once they list it: the one the user acts on
+     * next, as the one just added. Only a popup moves the highlight; a worktree added outside the app does not.
+     */
+    static Option<Integer> worktreeAsked(Model model) {
+        return model.popup(WorktreePopup.class)
+                .flatMap(popup -> model.repo()
+                        .worktrees()
+                        .toOption()
+                        .map(worktrees -> worktrees.indexWhere(
+                                worktree -> worktree.location().equals(popup.location()))))
+                .filter(index -> index >= 0);
     }
 
     /**
