@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Mergeable;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewThreads;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Reviewer;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewerState;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -100,24 +101,40 @@ public final class CliGitHub implements GitHub {
     // The base branch of a pull request on the first line, its body after it.
     private static final String PREVIEW_JQ = ".baseRefName + \"\\n\" + .body";
 
-    private static final String DETAIL_FIELDS = """
-            number,title,author,state,isDraft,headRefName,baseRefName,createdAt,\
-            additions,deletions,changedFiles,mergeable,reviewDecision,comments,labels,latestReviews,reviewRequests,\
-            statusCheckRollup""";
     /*
-     * Tab separated lines, each starting with what it is: one "pr" line with the fields of the pull request, then
-     * a "label" line per label, a "review" line per latest review, a "requested" line per requested reviewer
-     * and a "check" line per check, with its state as in JQ.
+     * Everything about one pull request the dialog shows, its latest commit for its checks. gh fills in the
+     * repository of the working tree for {owner} and {repo}.
+     */
+    private static final String DETAILS_QUERY = """
+            query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { \
+            pullRequest(number: $number) { number title author { login } state isDraft headRefName baseRefName \
+            createdAt additions deletions changedFiles mergeable reviewDecision comments { totalCount } \
+            labels(first: 100) { nodes { name } } latestReviews(first: 100) { nodes { author { login } state } } \
+            reviewRequests(first: 100) { nodes { requestedReviewer { ... on User { login } ... on Bot { login } \
+            ... on Mannequin { login } ... on Team { name } } } } \
+            commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes { __typename \
+            ... on CheckRun { name status conclusion } ... on StatusContext { context state } } } } } } } \
+            reviewThreads(last: 100) { totalCount nodes { isResolved comments { totalCount } } } } } }""";
+    /*
+     * Tab separated lines, each starting with what it is: one "pr" line with the fields of the pull request, one
+     * "threads" line with how many review threads it has, how many of them were read, and how many of those are
+     * unresolved and how many comments they hold, then a "label" line per label, a "review" line per latest review, a "requested" line per
+     * requested reviewer and a "check" line per check, with its state as in JQ.
      */
     private static final String DETAILS_JQ = """
+            .data.repository.pullRequest | \
             ((["pr", (.number | tostring), .title, (.author.login // ""), .state, \
             (.isDraft | tostring), .headRefName, .baseRefName, .createdAt, (.additions | tostring), \
             (.deletions | tostring), (.changedFiles | tostring), (.mergeable // ""), (.reviewDecision // ""), \
-            (.comments | length | tostring)] | @tsv), \
-            (.labels[]? | ["label", .name] | @tsv), \
-            (.latestReviews[]? | ["review", (.author.login // ""), .state] | @tsv), \
-            (.reviewRequests[]? | ["requested", (.login // .name // "")] | @tsv), \
-            (.statusCheckRollup[]? | ["check", \
+            (.comments.totalCount | tostring)] | @tsv), \
+            (.reviewThreads | ["threads", (.totalCount | tostring), (.nodes | length | tostring), \
+            ([.nodes[] | select(.isResolved | not)] | length | tostring), \
+            ([.nodes[].comments.totalCount] | add // 0 | tostring)] | @tsv), \
+            (.labels.nodes[]? | ["label", .name] | @tsv), \
+            (.latestReviews.nodes[]? | ["review", (.author.login // ""), .state] | @tsv), \
+            (.reviewRequests.nodes[]? | ["requested", ((.requestedReviewer.login // .requestedReviewer.name) // "")] \
+            | @tsv), \
+            (.commits.nodes[0].commit.statusCheckRollup.contexts.nodes[]? | ["check", \
             ((if .__typename == "CheckRun" then .name else .context end) // ""), \
             %s] | @tsv))""".formatted(CHECK_STATE);
     private static final int DETAIL_FIELD_COUNT = 15;
@@ -367,11 +384,18 @@ public final class CliGitHub implements GitHub {
                 .filter(reviewer -> !requested.contains(reviewer.login()))
                 .appendAll(requested.map(login -> new Reviewer(login, ReviewerState.REQUESTED)));
         List<String> labels = lines.filter(f -> f.head().equals("label")).map(f -> f.get(1));
+        Option<ReviewThreads> threads = lines.find(f -> f.head().equals("threads"))
+                .flatMap(f -> Try.of(() -> new ReviewThreads(
+                                Integer.parseInt(f.get(1)),
+                                Integer.parseInt(f.get(2)),
+                                Integer.parseInt(f.get(3)),
+                                Integer.parseInt(f.get(4))))
+                        .toOption());
         List<Check> checks = lines.filter(f -> f.head().equals("check"))
                 // A check without a state yet, like a status nobody set, is neither passing nor failing.
                 .map(f -> new Check(f.get(1), checks(List.of(f.get(2)).filter(state -> !state.isEmpty()))));
         return lines.find(f -> f.head().equals("pr"))
-                .flatMap(f -> Try.of(() -> new PullRequestDetails(
+                .flatMap(f -> threads.flatMap(reviewThreads -> Try.of(() -> new PullRequestDetails(
                                 Integer.parseInt(f.get(1)),
                                 f.get(2),
                                 f.get(3),
@@ -386,10 +410,11 @@ public final class CliGitHub implements GitHub {
                                 mergeable(f.get(12)),
                                 review(f.get(13)),
                                 Integer.parseInt(f.get(14)),
+                                reviewThreads,
                                 labels,
                                 reviewers,
                                 checks))
-                        .toOption())
+                        .toOption()))
                 .toEither(() -> new UnexpectedOutput(raw));
     }
 
@@ -398,6 +423,7 @@ public final class CliGitHub implements GitHub {
             case "pr" -> fields.size() == DETAIL_FIELD_COUNT;
             case "label", "requested" -> fields.size() == 2;
             case "review", "check" -> fields.size() == 3;
+            case "threads" -> fields.size() == 5;
             default -> false;
         };
     }
@@ -601,7 +627,19 @@ public final class CliGitHub implements GitHub {
     @Override
     public Either<GhError, PullRequestDetails> pullRequestDetails(int number) {
         return process.read(
-                gh("pr", "view", String.valueOf(number), "--json", DETAIL_FIELDS, "--jq", DETAILS_JQ),
+                gh(
+                        "api",
+                        "graphql",
+                        "-F",
+                        "owner={owner}",
+                        "-F",
+                        "name={repo}",
+                        "-F",
+                        "number=" + number,
+                        "-f",
+                        "query=" + DETAILS_QUERY,
+                        "--jq",
+                        DETAILS_JQ),
                 CliGitHub::parseDetails);
     }
 

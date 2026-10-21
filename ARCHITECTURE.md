@@ -615,9 +615,11 @@ the GitHub repository from the git remotes itself. It mirrors the git layer with
 - **Reading the pull requests:** `gh pr list --json ... --jq ...`. gh's built-in jq turns the JSON into one
   tab-separated line per pull request (fork pull requests left out), which `CliGitHub.parse` reads; there is
   no JSON library. The CI checks are folded into one state: failing, else pending, else passing.
-- **The details of one pull request**, for its dialog: `gh pr view <n> --json ... --jq ...`, one tab-separated
-  line per piece (the pull request, its labels, reviews, requested reviewers and checks), which
-  `CliGitHub.parseDetails` reads.
+- **The details of one pull request**, for its dialog: one `gh api graphql` query, gh filling in the repository of
+  the working tree for `{owner}` and `{repo}`, as `gh pr view --json` has no review threads (ADR 7). Its jq prints
+  one tab-separated line per piece (the pull request; its review threads: how many, how many were read, and of those
+  how many are unresolved and how many comments they hold; its labels, reviews, requested reviewers and checks),
+  which `CliGitHub.parseDetails` reads. Every list is read up to 100, the review threads the newest 100.
 - **Creating and opening:** `gh pr create --head <branch on the remote> --base <base> --fill` and
   `gh pr view <n> --web`. The name of the branch on its remote is the branch's push target, as the branches
   were read (`Branch.pushTarget`), which `PullRequestUpdate` puts in `PullRequestCmd.CreatePullRequest`.
