@@ -1025,4 +1025,27 @@ class PullRequestUpdateTest {
                         .model()
                         .popup());
     }
+
+    @Test
+    void whileTheWorktreeOfAPullRequestIsBeingAddedItsBranchIsBusyAndAnotherIsNotAsked() {
+        PullRequestSummary own = own("feature/login");
+        Model asked = Update.update(withMainWorktree(CLEAN), new CheckoutPullRequestMsg.WorktreeRequested(own))
+                .model();
+
+        Next adding = Update.update(asked, new AddWorktreeMsg.Confirmed());
+        BranchRef login = new BranchRef.Local(new Branch.Name("feature/login"));
+        assertEquals(
+                Option.of(AddWorktreeCmd.ADD_WORKTREE),
+                adding.model().jobs().busy().get(login));
+
+        Next again = Update.update(adding.model(), new CheckoutPullRequestMsg.WorktreeRequested(own));
+        assertEquals(Option.none(), again.model().popup(NewWorktreePopup.class));
+        assertEquals(List.empty(), again.cmds());
+
+        // The branch gh gives one from a fork is not known up front, so nothing is busy for it.
+        assertEquals(
+                Option.none(),
+                new AddWorktreeCmd(new WorktreeSource.PullRequest(summary("owner/repo")), "/repos/app-pr-9")
+                        .busyBranch());
+    }
 }

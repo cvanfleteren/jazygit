@@ -33,7 +33,7 @@ public sealed interface Failure {
      * Whether gh did not run as the account chosen for the repository could not be had.
      */
     default boolean accountUnavailable() {
-        return this instanceof GitHub(GhError.TokenUnavailable unavailable, var commands);
+        return this instanceof GitHub(GhError.TokenUnavailable unavailable, var commands, var cleanupFailed);
     }
 
     /**
@@ -50,11 +50,18 @@ public sealed interface Failure {
 
     /**
      * gh failed.
+     *
+     * @param cleanupFailed why cleaning up after the failure with git failed too, if it did
      */
-    record GitHub(GhError error, List<ExecutedCommand> commands) implements Failure {
+    record GitHub(GhError error, List<ExecutedCommand> commands, Option<ProcessError> cleanupFailed)
+            implements Failure {
 
         public GitHub(GhError error) {
-            this(error, List.empty());
+            this(error, List.empty(), Option.none());
+        }
+
+        public GitHub(GhError error, List<ExecutedCommand> commands) {
+            this(error, commands, Option.none());
         }
     }
 

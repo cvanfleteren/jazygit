@@ -354,6 +354,57 @@ class WorktreeUpdateTest {
     }
 
     @Test
+    void whenRemovingTheWorktreeOfThePullRequestFailsTooThatIsSaid() {
+        GitError.CommandFailed locked = new GitError.CommandFailed(Option.of("fatal: cannot remove"), 128, "");
+        GitInfoProvider git = new StubGitProvider() {
+            @Override
+            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addDetachedWorktree(
+                    Path location, String startPoint) {
+                return Either.right(StubGitProvider.executed("git worktree add"));
+            }
+
+            @Override
+            public Either<GitFailure<GitError>, List<ExecutedCommand>> removeWorktree(Path location, boolean force) {
+                return Either.left(new GitFailure<>(locked, StubGitProvider.executed("git worktree remove --force")));
+            }
+        };
+        StubGitHub fails = new StubGitHub() {
+            @Override
+            public Either<GhFailure, List<ExecutedCommand>> checkoutPullRequest(int number, Path in) {
+                return Either.left(new GhFailure(
+                        new GhError.CommandFailed(Option.of("no such pull request"), 1),
+                        StubGitProvider.executed("gh pr checkout 9")));
+            }
+        };
+
+        Msg failed = new AddWorktreeCmd(new WorktreeSource.PullRequest(pullRequest()), "/repos/app-pr-9")
+                .run(new Env(git, fails));
+
+        Failure failure = ((OperationMsg.Failed) failed).failure();
+        assertEquals(
+                List.of("git worktree add", "gh pr checkout 9", "git worktree remove --force"),
+                failure.commands().map(ExecutedCommand::line));
+        assertEquals(
+                new Failure.GitHub(
+                        new GhError.CommandFailed(Option.of("no such pull request"), 1),
+                        failure.commands(),
+                        Option.of(locked)),
+                failure);
+    }
+
+    @Test
+    void aStartThatGitWouldTakeForAnOptionKeepsTheDialogOpen() {
+        Model typed = typed(
+                Update.update(model(), new AddWorktreeMsg.StartRequested()).model(), "--no-checkout");
+
+        assertEquals(
+                typed.popup(),
+                Update.update(typed, new AddWorktreeMsg.StartConfirmed())
+                        .model()
+                        .popup());
+    }
+
+    @Test
     void unknownOrBusyBranchesGetNoWorktree() {
         Model busy = model().withBusyBranch(new BranchRef.Local(FEATURE), PushCmd.PUSH);
 

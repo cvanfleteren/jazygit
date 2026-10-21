@@ -62,7 +62,8 @@ pull request is added from the pull requests screen rather than from the branche
 3. Where it goes.
 
 What was typed is not checked against git beforehand. git refuses a start that names nothing, and the failure is
-shown as for any other operation.
+shown as for any other operation. Only a start beginning with `-` keeps the dialog open, as a blank one does,
+because git would read it as an option (`--no-checkout`, `--force`) and quietly do something else.
 
 ### A pull request in a new worktree
 
@@ -74,7 +75,13 @@ pull request's branch, or `pr-<number>` for one from a fork, whose branch gh may
 2. Runs `gh pr checkout <number>` in it (`GitHub.checkoutPullRequest(number, in)`). This sets up the branch exactly
    as checking the pull request out in place does, from a fork too, without repeating what gh knows.
 3. Removes the worktree again (`--force`) when gh fails, so no worktree is left on no branch. The failure carries
-   every command that ran, the removal included.
+   every command that ran, the removal included. When the removal fails too, the error says so
+   (`Failure.GitHub.cleanupFailed`, shown as `error.cleanupFailed` is for git), so the worktree left behind gets
+   noticed. That field lives on the app's `Failure`, not on `GhFailure`, because gh knows nothing of git.
+
+The pull request's branch is busy while gh fetches it, as the branch of any other new worktree is, and `w` does
+nothing while it is. The branch is looked for among the busy ones, since it is usually not known here yet. A pull
+request from a fork marks nothing busy, because gh names its branch.
 
 Changes in the worktree shown do not stop it; they stay where they are. As when checking out in place, a pull
 request of another repository is refused, and one whose branch another worktree has checked out offers to switch

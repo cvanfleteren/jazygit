@@ -102,5 +102,14 @@ public sealed interface WorktreeSource {
         public Branch.Name directory() {
             return new Branch.Name(pullRequest.fromFork() ? "pr-" + pullRequest.number() : pullRequest.headBranch());
         }
+
+        /**
+         * Its branch, which gh checks out, unless it is from a fork, whose branch gh may name otherwise.
+         */
+        @Override
+        public Option<BranchRef> busyBranch() {
+            return Option.when(
+                    !pullRequest.fromFork(), () -> new BranchRef.Local(new Branch.Name(pullRequest.headBranch())));
+        }
     }
 }

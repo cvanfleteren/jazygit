@@ -31,10 +31,12 @@ public final class CheckoutPullRequestUpdate {
     /**
      * Asks where the new worktree that checks out {@code pullRequest} goes, if it is of the repository; the changes
      * here stay here. When another worktree has its branch checked out, switching to it is offered instead, as
-     * checking it out in place does; when this one has, that is said.
+     * checking it out in place does; when this one has, that is said. While its worktree is being added already,
+     * nothing is done.
      */
     private static Next inWorktree(Model model, PullRequestSummary pullRequest) {
         String name = pullRequest.repository() + "#" + pullRequest.number();
+        WorktreeSource source = new WorktreeSource.PullRequest(pullRequest);
         boolean checkedOutHere = !pullRequest.fromFork()
                 && model.repo()
                         .currentBranch()
@@ -48,9 +50,17 @@ public final class CheckoutPullRequestUpdate {
                                 : checkedOutElsewhere(model, pullRequest)
                                         .getOrElse(() -> checkedOutHere
                                                 ? Next.of(model.fail(new AppError.PullRequestCheckedOutHere(name)))
-                                                : AddWorktreeUpdate.ask(
-                                                        model.clearError(),
-                                                        new WorktreeSource.PullRequest(pullRequest))));
+                                                : busy(model, source)
+                                                        ? Next.of(model)
+                                                        : AddWorktreeUpdate.ask(model.clearError(), source)));
+    }
+
+    /**
+     * Whether an operation runs on the branch of {@code source}, as when its worktree is being added already. The
+     * branch need not be known here yet, so it is looked for among the busy ones rather than among the branches.
+     */
+    private static boolean busy(Model model, WorktreeSource source) {
+        return source.busyBranch().exists(model.jobs().busy()::containsKey);
     }
 
     /**

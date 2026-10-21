@@ -28,6 +28,13 @@ final class GhProcess {
     }
 
     /**
+     * Runs the same gh, as the same account, in {@code directory}, taken relative to the working tree of this one.
+     */
+    GhProcess in(Path directory) {
+        return new GhProcess(workTree.resolve(directory).normalize(), executable, token);
+    }
+
+    /**
      * Whether gh failed as GitHub did not accept its credentials.
      */
     static boolean rejected(GhError error) {

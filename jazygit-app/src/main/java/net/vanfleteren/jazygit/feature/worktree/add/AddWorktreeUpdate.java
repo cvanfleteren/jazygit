@@ -108,12 +108,12 @@ public final class AddWorktreeUpdate {
      * Asks for the name of a new branch starting where was typed, which may be left blank: the worktree then checks
      * out the local branch typed, when it can, or else what was typed on no branch. A new branch made from a local
      * branch records it as its parent; one made from a remote branch follows it, and starts out named as it. A blank
-     * start keeps the dialog open.
+     * start keeps the dialog open, and so does one starting with {@code -}, which git would take for an option.
      */
     private static Next startConfirmed(Model model) {
         return model.popup(NewWorktreeStartPopup.class)
                 .map(popup -> popup.start().strip())
-                .filter(start -> !start.isEmpty())
+                .filter(start -> !start.isEmpty() && !start.startsWith("-"))
                 .map(start -> {
                     Option<Branch> local = model.repo().branch(new Branch.Name(start));
                     Option<RemoteBranch> remote = local.isDefined()

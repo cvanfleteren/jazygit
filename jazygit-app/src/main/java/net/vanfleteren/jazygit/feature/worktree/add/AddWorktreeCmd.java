@@ -7,14 +7,15 @@ import io.vavr.control.Try;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.feature.worktree.WorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource.*;
-import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.gh.GitHub;
+import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Env;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.OperationCmd;
@@ -47,34 +48,42 @@ public record AddWorktreeCmd(WorktreeSource source, String location) implements 
     public Msg run(Env env) {
         GitInfoProvider git = env.git();
         Path path = WorktreeCmd.path(location);
-        Either<GitFailure<ProcessError>, List<ExecutedCommand>> added = switch (source) {
-            case Existing(var branch) -> git.addWorktree(path, branch);
+        return switch (source) {
+            case Existing(var branch) -> reported(env, git.addWorktree(path, branch));
             case Created(var name, var from) ->
-                git.addWorktreeWithNewBranch(path, name, from.start(), from.parent(), from.track());
-            case Detached(var start) -> git.addDetachedWorktree(path, start);
-            case PullRequest pullRequest -> git.addDetachedWorktree(path, "HEAD");
-        };
-        return added.fold(this::failedWith, commands -> switch (source) {
+                reported(env, git.addWorktreeWithNewBranch(path, name, from.start(), from.parent(), from.track()));
+            case Detached(var start) -> reported(env, git.addDetachedWorktree(path, start));
             case PullRequest(var pullRequest) ->
-                checkout(git, env.gitHub(), path, pullRequest.number(), commands)
-                        .fold(this::failedWith, all -> added(env, all));
-            default -> added(env, commands);
-        });
+                git.addDetachedWorktree(path, "HEAD")
+                        .fold(
+                                this::failedWith,
+                                added -> checkout(git, env.gitHub(), path, pullRequest.number(), added)
+                                        .fold(this::failed, all -> added(env, all)));
+        };
+    }
+
+    private Msg reported(Env env, Either<GitFailure<ProcessError>, List<ExecutedCommand>> outcome) {
+        return outcome.fold(this::failedWith, commands -> added(env, commands));
     }
 
     /**
      * Has gh check pull request {@code number} out in the worktree at {@code path}, which was just added running
-     * {@code added}; removes it again when gh fails. A failure carries every command that ran.
+     * {@code added}; removes it again when gh fails. A failure carries every command that ran, and why removing the
+     * worktree failed too, if it did, as the worktree is then left behind.
      */
-    private static Either<GhFailure, List<ExecutedCommand>> checkout(
+    private static Either<Failure, List<ExecutedCommand>> checkout(
             GitInfoProvider git, GitHub gitHub, Path path, int number, List<ExecutedCommand> added) {
-        return gitHub.checkoutPullRequest(number, path)
-                .map(added::appendAll)
-                .mapLeft(failure -> new GhFailure(
-                        failure.error(),
-                        added.appendAll(failure.commands())
-                                .appendAll(git.removeWorktree(path, true)
-                                        .fold(GitFailure::commands, removed -> removed))));
+        return gitHub.checkoutPullRequest(number, path).map(added::appendAll).mapLeft(failure -> {
+            Either<GitFailure<GitError>, List<ExecutedCommand>> removed = git.removeWorktree(path, true);
+            return new Failure.GitHub(
+                    failure.error(),
+                    added.appendAll(failure.commands()).appendAll(removed.fold(GitFailure::commands, ran -> ran)),
+                    removed.swap()
+                            .toOption()
+                            .map(GitFailure::error)
+                            .flatMap(error ->
+                                    error instanceof ProcessError process ? Option.of(process) : Option.none()));
+        });
     }
 
     /**

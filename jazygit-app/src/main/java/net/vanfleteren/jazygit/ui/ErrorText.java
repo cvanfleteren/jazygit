@@ -93,7 +93,10 @@ public final class ErrorText {
                 cleanupFailed
                         .map(cleanup -> Messages.get("error.cleanupFailed", of(error), of(cleanup)))
                         .getOrElse(() -> of(error));
-            case Failure.GitHub(GhError error, var commands) -> of(error);
+            case Failure.GitHub(GhError error, var commands, var cleanupFailed) ->
+                cleanupFailed
+                        .map(cleanup -> Messages.get("error.cleanupFailed", of(error), of(cleanup)))
+                        .getOrElse(() -> of(error));
             case Failure.Settings(SettingsProblem problem) -> of(problem);
             case Failure.Bug(Throwable cause) -> Messages.get("error.bug", reason(cause));
         };
