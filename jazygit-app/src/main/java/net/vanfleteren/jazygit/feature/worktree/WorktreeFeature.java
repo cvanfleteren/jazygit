@@ -5,6 +5,8 @@ import java.util.function.Consumer;
 import net.vanfleteren.jazygit.feature.FeatureAction;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeAction;
+import net.vanfleteren.jazygit.feature.worktree.lock.LockWorktreeAction;
+import net.vanfleteren.jazygit.feature.worktree.prune.PruneWorktreesAction;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeAction;
 import net.vanfleteren.jazygit.feature.worktree.switchto.SwitchWorktreeAction;
 import net.vanfleteren.jazygit.keys.Keymap;
@@ -14,8 +16,8 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 
 /**
- * The worktree operations: adding one for a branch, switching to one, and removing one. Adding an operation is
- * adding its subpackage, and listing its action here.
+ * The worktree operations: adding one for a branch, switching to one, removing one, pruning the ones whose
+ * directory is gone, and locking one. Adding an operation is adding its subpackage, and listing its action here.
  */
 public final class WorktreeFeature {
 
@@ -30,8 +32,13 @@ public final class WorktreeFeature {
     /**
      * The operations, in the order their keys are listed in a panel.
      */
-    private static final List<FeatureAction> ACTIONS =
-            List.of(AddWorktreeAction.ACTION, SwitchWorktreeAction.ACTION, RemoveWorktreeAction.ACTION, TABS);
+    private static final List<FeatureAction> ACTIONS = List.of(
+            AddWorktreeAction.ACTION,
+            SwitchWorktreeAction.ACTION,
+            RemoveWorktreeAction.ACTION,
+            PruneWorktreesAction.ACTION,
+            LockWorktreeAction.ACTION,
+            TABS);
 
     private WorktreeFeature() {}
 

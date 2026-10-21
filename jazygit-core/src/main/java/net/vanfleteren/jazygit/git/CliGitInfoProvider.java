@@ -106,6 +106,16 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pruneWorktrees() {
+        return CliWorktree.prune(workTree);
+    }
+
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> lockWorktree(Path location, boolean lock) {
+        return CliWorktree.lock(workTree, location, lock);
+    }
+
+    @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> edit(List<String> files) {
         return CliEditor.edit(workTree, files);
     }

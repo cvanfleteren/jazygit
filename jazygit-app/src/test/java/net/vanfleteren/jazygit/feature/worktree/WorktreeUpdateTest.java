@@ -15,6 +15,10 @@ import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg;
 import net.vanfleteren.jazygit.feature.worktree.add.NewWorktreePopup;
+import net.vanfleteren.jazygit.feature.worktree.lock.LockWorktreeCmd;
+import net.vanfleteren.jazygit.feature.worktree.lock.LockWorktreeMsg;
+import net.vanfleteren.jazygit.feature.worktree.prune.PruneWorktreesCmd;
+import net.vanfleteren.jazygit.feature.worktree.prune.PruneWorktreesMsg;
 import net.vanfleteren.jazygit.feature.worktree.remove.ForceRemoveWorktreePopup;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeMsg;
@@ -40,10 +44,16 @@ class WorktreeUpdateTest {
             Option.of(new Branch.Name("main")),
             true,
             true,
-            false,
+            Option.none(),
             false);
     private static final Worktree LINKED = new Worktree(
-            Path.of("/repos/app-taken"), Option.of(new Sha("1111")), Option.of(TAKEN), false, false, false, false);
+            Path.of("/repos/app-taken"),
+            Option.of(new Sha("1111")),
+            Option.of(TAKEN),
+            false,
+            false,
+            Option.none(),
+            false);
 
     /**
      * {@code main} is checked out in the main worktree, which is shown; {@code taken} in a linked one;
@@ -193,9 +203,16 @@ class WorktreeUpdateTest {
                 Option.of("Worktree app is the main one, which holds the repository; it cannot be removed"),
                 errorText(main.model()));
 
-        Worktree mainNotShown = new Worktree(MAIN.path(), MAIN.head(), MAIN.branch(), true, false, false, false);
+        Worktree mainNotShown =
+                new Worktree(MAIN.path(), MAIN.head(), MAIN.branch(), true, false, Option.none(), false);
         Worktree shownLinked = new Worktree(
-                Path.of("/repos/app-shown"), Option.of(new Sha("2222")), Option.none(), false, true, false, false);
+                Path.of("/repos/app-shown"),
+                Option.of(new Sha("2222")),
+                Option.none(),
+                false,
+                true,
+                Option.none(),
+                false);
         Next shown = Update.update(
                 worktrees(mainNotShown, shownLinked), new RemoveWorktreeMsg.Requested("/repos/app-shown"));
         assertEquals(Option.none(), shown.model().popup(RemoveWorktreePopup.class));
@@ -204,12 +221,65 @@ class WorktreeUpdateTest {
                 errorText(shown.model()));
 
         // Said before asking, rather than after git refuses.
-        Worktree lockedLinked = new Worktree(LINKED.path(), LINKED.head(), LINKED.branch(), false, false, true, false);
+        Worktree lockedLinked =
+                new Worktree(LINKED.path(), LINKED.head(), LINKED.branch(), false, false, Option.of(""), false);
         Next locked = Update.update(worktrees(MAIN, lockedLinked), new RemoveWorktreeMsg.Requested("/repos/app-taken"));
         assertEquals(Option.none(), locked.model().popup(RemoveWorktreePopup.class));
         assertEquals(
                 Option.of("Worktree app-taken is locked, which keeps it from being removed"),
                 errorText(locked.model()));
+        Worktree lockedWithReason =
+                new Worktree(LINKED.path(), LINKED.head(), LINKED.branch(), false, false, Option.of("on usb"), false);
+        assertEquals(
+                Option.of("Worktree app-taken is locked, which keeps it from being removed: on usb"),
+                errorText(Update.update(
+                                worktrees(MAIN, lockedWithReason), new RemoveWorktreeMsg.Requested("/repos/app-taken"))
+                        .model()));
+    }
+
+    @Test
+    void aWorktreeWhoseDirectoryIsGoneIsNotSwitchedTo() {
+        Worktree missing =
+                new Worktree(LINKED.path(), LINKED.head(), LINKED.branch(), false, false, Option.none(), true);
+
+        Next next = Update.update(worktrees(MAIN, missing), new SwitchWorktreeMsg.Requested("/repos/app-taken"));
+
+        assertEquals(List.of(), next.cmds());
+        assertEquals(
+                Option.of("The directory of worktree app-taken is gone; prune it with p"), errorText(next.model()));
+    }
+
+    @Test
+    void pruningRunsOnlyWhenAWorktreeHasItsDirectoryGone() {
+        Next nothing = Update.update(model(), new PruneWorktreesMsg.Requested());
+        assertEquals(List.of(), nothing.cmds());
+        assertEquals(
+                Option.of("No worktree has its directory gone; there is nothing to prune"), errorText(nothing.model()));
+
+        Worktree missing =
+                new Worktree(LINKED.path(), LINKED.head(), LINKED.branch(), false, false, Option.none(), true);
+        assertEquals(
+                List.of(new PruneWorktreesCmd()),
+                Update.update(worktrees(MAIN, missing), new PruneWorktreesMsg.Requested())
+                        .cmds());
+    }
+
+    @Test
+    void lockingLocksAnUnlockedWorktreeUnlocksALockedOneAndRefusesTheMainOne() {
+        assertEquals(
+                List.of(new LockWorktreeCmd("/repos/app-taken", true)),
+                Update.update(model(), new LockWorktreeMsg.Requested("/repos/app-taken"))
+                        .cmds());
+        Worktree locked =
+                new Worktree(LINKED.path(), LINKED.head(), LINKED.branch(), false, false, Option.of(""), false);
+        assertEquals(
+                List.of(new LockWorktreeCmd("/repos/app-taken", false)),
+                Update.update(worktrees(MAIN, locked), new LockWorktreeMsg.Requested("/repos/app-taken"))
+                        .cmds());
+
+        Next main = Update.update(model(), new LockWorktreeMsg.Requested("/repos/app"));
+        assertEquals(List.of(), main.cmds());
+        assertEquals(Option.of("The main worktree cannot be locked"), errorText(main.model()));
     }
 
     /**

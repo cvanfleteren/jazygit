@@ -47,7 +47,7 @@ class BranchesPanelTest {
                                 Option.of(new Branch.Name("main")),
                                 true,
                                 true,
-                                false,
+                                Option.none(),
                                 false),
                         new Worktree(
                                 java.nio.file.Path.of("/repos/app-feature"),
@@ -55,7 +55,7 @@ class BranchesPanelTest {
                                 Option.of(new Branch.Name("feature")),
                                 false,
                                 false,
-                                false,
+                                Option.none(),
                                 false)))));
     }
 
@@ -448,7 +448,7 @@ class BranchesPanelTest {
                 Option.none(),
                 false,
                 false,
-                true,
+                Option.of(""),
                 true);
 
         assertEquals(
@@ -461,6 +461,21 @@ class BranchesPanelTest {
                         Option.of(Theme.Classes.DIM),
                         Option.of(Theme.Classes.GONE)),
                 BranchesPanel.worktreeRow(detached).segs().map(LoadableList.Seg::cssClass));
+    }
+
+    @Test
+    void aWorktreeLockedForAReasonSaysWhy() {
+        Worktree locked = new Worktree(
+                java.nio.file.Path.of("/repos/x"),
+                Option.of(new Sha("1234567890")),
+                Option.of(new Branch.Name("feature")),
+                false,
+                false,
+                Option.of("on usb"),
+                false);
+
+        assertEquals(
+                "  x feature locked: on usb", BranchesPanel.worktreeRow(locked).text());
     }
 
     @Test

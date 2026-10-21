@@ -38,7 +38,8 @@ import net.vanfleteren.jazygit.ui.widgets.Pane;
  * local branch. Clicking the name of a list in the title shows that list.
  * <p>
  * The third list is the worktrees of the repository, the one shown marked. Space switches to the highlighted one,
- * d removes it. On the local branches, w checks the highlighted branch out in a new worktree.
+ * d removes it, L locks or unlocks it, and p forgets the ones whose directory is gone. On the local branches, w
+ * checks the highlighted branch out in a new worktree.
  * <p>
  * While a divergence is open, it is listed in place of the local branches: the commits only on the branch it is
  * compared with, then the ones only on the local branch, each under the name of their branch. Enter moves the
@@ -271,10 +272,13 @@ public class BranchesPanel {
                         Option.when(
                                 worktree.main(),
                                 () -> LoadableList.Seg.styled(" " + Messages.get("worktrees.main"), Theme.Classes.DIM)),
-                        Option.when(
-                                worktree.locked(),
-                                () -> LoadableList.Seg.styled(
-                                        " " + Messages.get("worktrees.locked"), Theme.Classes.DIM)),
+                        worktree.locked()
+                                .map(reason -> LoadableList.Seg.styled(
+                                        " "
+                                                + (reason.isBlank()
+                                                        ? Messages.get("worktrees.locked")
+                                                        : Messages.get("worktrees.lockedBecause", reason)),
+                                        Theme.Classes.DIM)),
                         Option.when(
                                 worktree.prunable(),
                                 () -> LoadableList.Seg.styled(

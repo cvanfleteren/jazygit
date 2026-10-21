@@ -96,7 +96,13 @@ public interface StubGitProvider extends GitInfoProvider {
     @Override
     default Either<ProcessError, List<Worktree>> worktrees() {
         return Either.right(List.of(new Worktree(
-                workTree(), Option.of(new Sha("aaaa")), Option.of(new Branch.Name("main")), true, true, false, false)));
+                workTree(),
+                Option.of(new Sha("aaaa")),
+                Option.of(new Branch.Name("main")),
+                true,
+                true,
+                Option.none(),
+                false)));
     }
 
     @Override
@@ -106,6 +112,16 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<GitFailure<GitError>, List<ExecutedCommand>> removeWorktree(Path location, boolean force) {
+        return ran();
+    }
+
+    @Override
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> pruneWorktrees() {
+        return ran();
+    }
+
+    @Override
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> lockWorktree(Path location, boolean lock) {
         return ran();
     }
 

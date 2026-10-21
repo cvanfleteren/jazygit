@@ -62,6 +62,14 @@ class CliWorktreeTest {
         }
     }
 
+    private static void deleteRecursively(Path directory) throws IOException {
+        try (var paths = Files.walk(directory)) {
+            for (Path path : List.ofAll(paths::iterator).reverse()) {
+                Files.delete(path);
+            }
+        }
+    }
+
     @BeforeEach
     void setUp() throws Exception {
         main = Files.createDirectories(dir.resolve("main")).toRealPath();
@@ -86,7 +94,7 @@ class CliWorktreeTest {
                                 Option.of(new Branch.Name("main")),
                                 true,
                                 false,
-                                false,
+                                Option.none(),
                                 false),
                         new Worktree(
                                 Path.of("/repos/app feature"),
@@ -94,7 +102,7 @@ class CliWorktreeTest {
                                 Option.of(new Branch.Name("feature/x")),
                                 false,
                                 true,
-                                true,
+                                Option.of("on usb"),
                                 false),
                         new Worktree(
                                 Path.of("/repos/detached"),
@@ -102,7 +110,7 @@ class CliWorktreeTest {
                                 Option.none(),
                                 false,
                                 false,
-                                true,
+                                Option.of(""),
                                 false),
                         new Worktree(
                                 Path.of("/repos/gone"),
@@ -110,7 +118,7 @@ class CliWorktreeTest {
                                 Option.of(new Branch.Name("gone")),
                                 false,
                                 false,
-                                false,
+                                Option.none(),
                                 true)),
                 CliWorktree.parse(raw, Path.of("/repos/app feature")).get());
     }
@@ -127,7 +135,7 @@ class CliWorktreeTest {
                         Option.of(new Branch.Name("main")),
                         false,
                         true,
-                        false,
+                        Option.none(),
                         false)),
                 CliWorktree.parse(raw, Path.of("/repos/linked")).get());
     }
@@ -152,7 +160,8 @@ class CliWorktreeTest {
 
     @Test
     void aNewWorktreeGoesNextToThisOneNamedAfterItAndTheBranch() {
-        Worktree app = new Worktree(Path.of("/repos/app"), Option.none(), Option.none(), true, true, false, false);
+        Worktree app =
+                new Worktree(Path.of("/repos/app"), Option.none(), Option.none(), true, true, Option.none(), false);
 
         assertEquals("/repos/app-feature-login", app.siblingFor(new Branch.Name("feature/login")));
         assertEquals("app", app.name());
@@ -191,6 +200,39 @@ class CliWorktreeTest {
 
         provider.removeWorktree(linked, true).get();
         assertFalse(Files.exists(linked));
+        assertEquals(List.of(main), provider.worktrees().get().map(Worktree::path));
+    }
+
+    @Test
+    void worktreesAreLockedUnlockedAndPrunedOnceTheirDirectoryIsGone() throws Exception {
+        assumeTrue(gitAvailable(), "git is not installed");
+        git(main, "init", "-q", "-b", "main");
+        git(main, "commit", "-q", "--allow-empty", "-m", "Initial commit");
+        git(main, "branch", "feature");
+        CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
+        Path linked = main.resolveSibling("linked");
+        provider.addWorktree(linked, new Branch.Name("feature")).get();
+
+        assertEquals(
+                List.of("git worktree lock " + linked),
+                provider.lockWorktree(linked, true).get().map(ExecutedCommand::line));
+        assertEquals(
+                List.of(Option.none(), Option.of("")),
+                provider.worktrees().get().map(Worktree::locked));
+        assertInstanceOf(
+                GitError.CommandFailed.class,
+                provider.lockWorktree(main, true).getLeft().error());
+        provider.lockWorktree(linked, false).get();
+        assertEquals(List.of(false, false), provider.worktrees().get().map(Worktree::isLocked));
+
+        git(main, "worktree", "lock", "--reason", "on usb", linked.toString());
+        assertEquals(Option.of("on usb"), provider.worktrees().get().last().locked());
+        git(main, "worktree", "unlock", linked.toString());
+        deleteRecursively(linked);
+        assertTrue(provider.worktrees().get().last().prunable());
+
+        assertEquals(
+                List.of("git worktree prune"), provider.pruneWorktrees().get().map(ExecutedCommand::line));
         assertEquals(List.of(main), provider.worktrees().get().map(Worktree::path));
     }
 

@@ -404,6 +404,17 @@ public interface GitInfoProvider {
      */
     Either<GitFailure<GitError>, List<ExecutedCommand>> removeWorktree(Path location, boolean force);
 
+    /**
+     * Forgets the worktrees whose directory is gone; their branches stay.
+     */
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> pruneWorktrees();
+
+    /**
+     * Locks the linked worktree at {@code location}, which keeps git from removing or pruning it, or unlocks it
+     * when not {@code lock}. Git refuses the main worktree, and one that is locked already or not locked.
+     */
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> lockWorktree(Path location, boolean lock);
+
     // Editing files, as git edits commit messages.
 
     /**

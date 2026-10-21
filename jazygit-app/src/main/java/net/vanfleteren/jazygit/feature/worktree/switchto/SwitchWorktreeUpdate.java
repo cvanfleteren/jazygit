@@ -21,14 +21,16 @@ public final class SwitchWorktreeUpdate {
 
     /**
      * Opens the worktree at {@code location} in place of this one, through the repositories the app knows; the
-     * one shown already stays, which is said.
+     * one shown already stays, and one whose directory is gone cannot be opened, which is said.
      */
     private static Next requested(Model model, String location) {
         return model.repo()
                 .worktree(location)
                 .map(worktree -> worktree.current()
                         ? Next.of(model.fail(new AppError.WorktreeShownAlready(worktree.name())))
-                        : Next.of(model.clearError(), RecentReposCmd.SwitchTo.worktree(location)))
+                        : worktree.prunable()
+                                ? Next.of(model.fail(new AppError.WorktreeMissing(worktree.name())))
+                                : Next.of(model.clearError(), RecentReposCmd.SwitchTo.worktree(location)))
                 .getOrElse(() -> Next.of(model));
     }
 }

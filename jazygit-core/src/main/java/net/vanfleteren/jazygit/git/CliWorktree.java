@@ -73,8 +73,8 @@ final class CliWorktree {
                                 .map(Branch.Name::new),
                         first,
                         root.equals(current),
-                        flag(lines, "locked"),
-                        flag(lines, "prunable")))));
+                        reason(lines, "locked"),
+                        reason(lines, "prunable").isDefined()))));
     }
 
     /**
@@ -87,10 +87,12 @@ final class CliWorktree {
     }
 
     /**
-     * Whether {@code lines} have the attribute {@code name}, with a reason or without.
+     * The reason {@code lines} give for the attribute {@code name}, if they have it: empty when it has none.
      */
-    private static boolean flag(Seq<String> lines, String name) {
-        return lines.exists(line -> line.equals(name) || line.startsWith(name + " "));
+    private static Option<String> reason(Seq<String> lines, String name) {
+        return lines.iterator()
+                .flatMap(line -> line.equals(name) ? Option.of("") : GitOutput.after(line, name + " "))
+                .headOption();
     }
 
     /**
@@ -121,6 +123,25 @@ final class CliWorktree {
                                 .appendAll(Option.when(force, "--force"))
                                 .append(workTree.resolve(location).normalize().toString())))
                 .mapLeft(failure -> failure.map(CliWorktree::classify));
+    }
+
+    /**
+     * Runs {@code git worktree prune} in {@code workTree}: forgets the worktrees whose directory is gone.
+     */
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> prune(Path workTree) {
+        return GitProcess.log(workTree, git("worktree", "prune"));
+    }
+
+    /**
+     * Runs {@code git worktree lock <location>}, or {@code unlock} when not {@code lock}, in {@code workTree}.
+     */
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> lock(Path workTree, Path location, boolean lock) {
+        return GitProcess.log(
+                workTree,
+                git(
+                        "worktree",
+                        lock ? "lock" : "unlock",
+                        workTree.resolve(location).normalize().toString()));
     }
 
     static GitError classify(ProcessError error) {

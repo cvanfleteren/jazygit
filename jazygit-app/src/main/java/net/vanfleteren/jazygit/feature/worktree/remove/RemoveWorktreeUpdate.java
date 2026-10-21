@@ -59,6 +59,6 @@ public final class RemoveWorktreeUpdate {
                 ? Option.of(new AppError.MainWorktreeNotRemovable(worktree.name()))
                 : worktree.current()
                         ? Option.of(new AppError.ShownWorktreeNotRemovable(worktree.name()))
-                        : Option.when(worktree.locked(), () -> new AppError.WorktreeLocked(worktree.name()));
+                        : worktree.locked().map(reason -> new AppError.WorktreeLocked(worktree.name(), reason));
     }
 }
