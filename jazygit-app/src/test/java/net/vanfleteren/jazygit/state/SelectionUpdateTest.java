@@ -212,7 +212,6 @@ class SelectionUpdateTest {
                 List.of(
                         new LoadStatus(),
                         new LoadBranches(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(),
                         new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
                         new LoadBranchLog(new BranchRef.Local(new Branch.Name("feature")))),
                 Update.update(model, new Tick(Instant.EPOCH)).cmds());

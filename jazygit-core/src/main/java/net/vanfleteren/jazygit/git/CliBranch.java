@@ -6,6 +6,7 @@ import static net.vanfleteren.jazygit.git.Refs.REMOTES;
 
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
+import io.vavr.collection.Seq;
 import io.vavr.collection.Set;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -46,9 +47,6 @@ final class CliBranch {
             .thenComparing(Comparator.comparing(Branch::tipTime).reversed())
             .thenComparing(branch -> branch.name().value());
 
-    private static final List<String> REMOTE_FIELDS =
-            List.of("%(refname)", "%(objectname)", "%(committerdate:unix)", "%(symref)");
-    private static final String REMOTE_FORMAT = REMOTE_FIELDS.mkString(GitOutput.REF_FIELD_SEPARATOR);
     private static final Comparator<RemoteRef> REMOTE_ORDER = Comparator.comparing(RemoteRef::tipTime)
             .reversed()
             .thenComparing(ref -> ref.branch().shortName());
@@ -56,11 +54,21 @@ final class CliBranch {
     private CliBranch() {}
 
     /**
+     * The local and the remote-tracking branches, from a single {@code git for-each-ref}: the local branches need
+     * the remote ones anyway, to tell which are pushed and which is the default.
+     */
+    static Either<ProcessError, AllBranches> all(Path workTree) {
+        return GitProcess.read(
+                workTree,
+                GitCommand.reading("for-each-ref", "--format=" + FORMAT, HEADS, REMOTES),
+                CliBranch::parseAll);
+    }
+
+    /**
      * The local branches: the checked out one first, then the most recently committed to.
      */
     static Either<ProcessError, List<Branch>> list(Path workTree) {
-        return GitProcess.read(
-                workTree, GitCommand.reading("for-each-ref", "--format=" + FORMAT, HEADS, REMOTES), CliBranch::parse);
+        return all(workTree).map(AllBranches::local);
     }
 
     /**
@@ -68,10 +76,7 @@ final class CliBranch {
      * which only names one of the others.
      */
     static Either<ProcessError, List<RemoteRef>> remotes(Path workTree) {
-        return GitProcess.read(
-                workTree,
-                GitCommand.reading("for-each-ref", "--format=" + REMOTE_FORMAT, REMOTES),
-                CliBranch::parseRemotes);
+        return all(workTree).map(AllBranches::remote);
     }
 
     /**
@@ -111,32 +116,31 @@ final class CliBranch {
                 credentials);
     }
 
-    static Either<UnexpectedOutput, List<RemoteRef>> parseRemotes(String raw) {
-        return Either.sequenceRight(GitOutput.nonBlankLines(raw).map(CliBranch::remoteRef))
-                .map(refs -> refs.flatMap(ref -> ref).toList().sorted(REMOTE_ORDER));
+    static Either<UnexpectedOutput, List<Branch>> parse(String raw) {
+        return parseAll(raw).map(AllBranches::local);
+    }
+
+    static Either<UnexpectedOutput, AllBranches> parseAll(String raw) {
+        return Either.sequenceRight(GitOutput.nonBlankLines(raw).map(Ref::parse))
+                .map(Seq::toList)
+                .map(refs -> new AllBranches(branches(refs), remoteRefs(refs)));
     }
 
     /**
-     * A line of {@code for-each-ref} output for a remote-tracking ref; none for a symbolic one.
+     * The remote-tracking branches among {@code refs}, not the symbolic ones like the {@code HEAD} of a remote.
      * The remote is the part of the name before the first slash, as a remote's name has none in practice.
      */
-    private static Either<UnexpectedOutput, Option<RemoteRef>> remoteRef(String line) {
-        return GitOutput.fields(line, REMOTE_FIELDS.size())
-                .flatMap(f -> GitOutput.sha(f.get(1))
-                        .flatMap(tip -> GitOutput.epochSeconds(f.get(2))
-                                .map(time -> GitOutput.after(f.get(0), REMOTES)
-                                        .filter(name -> f.get(3).isEmpty() && name.indexOf('/') > 0)
-                                        .map(name -> new RemoteRef(
-                                                new RemoteBranch(
-                                                        name.substring(0, name.indexOf('/')),
-                                                        new Branch.Name(name.substring(name.indexOf('/') + 1))),
-                                                tip,
-                                                time)))));
-    }
-
-    static Either<UnexpectedOutput, List<Branch>> parse(String raw) {
-        return Either.sequenceRight(GitOutput.nonBlankLines(raw).map(Ref::parse))
-                .map(refs -> branches(refs.toList()));
+    private static List<RemoteRef> remoteRefs(List<Ref> refs) {
+        return refs.filter(ref -> ref.symref().isEmpty())
+                .flatMap(ref -> GitOutput.after(ref.name(), REMOTES)
+                        .filter(name -> name.indexOf('/') > 0)
+                        .map(name -> new RemoteRef(
+                                new RemoteBranch(
+                                        name.substring(0, name.indexOf('/')),
+                                        new Branch.Name(name.substring(name.indexOf('/') + 1))),
+                                ref.tip(),
+                                ref.time())))
+                .sorted(REMOTE_ORDER);
     }
 
     private static List<Branch> branches(List<Ref> refs) {

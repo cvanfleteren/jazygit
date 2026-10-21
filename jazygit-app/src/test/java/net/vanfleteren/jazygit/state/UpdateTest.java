@@ -37,7 +37,6 @@ class UpdateTest {
                 List.of(
                         new LoadStatus(),
                         new LoadBranches(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(),
                         new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
                         new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
                 next.cmds());
@@ -136,7 +135,6 @@ class UpdateTest {
                 List.of(
                         new LoadStatus(),
                         new LoadBranches(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(),
                         new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
                         new LoadCommits()),
                 Update.update(model, new Tick(Instant.EPOCH)).cmds());

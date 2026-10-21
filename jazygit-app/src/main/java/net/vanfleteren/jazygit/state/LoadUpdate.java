@@ -28,6 +28,7 @@ public final class LoadUpdate {
                 statusLoaded(
                         model,
                         done.mapRepo(repo -> repo.withStatus(repo.status().reload(status))));
+            case AllBranchesLoaded(var branches) -> allBranchesLoaded(model, branches);
             case BranchesLoaded(var branches) ->
                 branchesLoaded(
                         model,
@@ -94,6 +95,16 @@ public final class LoadUpdate {
         // an earlier one is in progress.
         List<Cmd> cmds = headMoved ? List.of(new LoadCommits()) : List.empty();
         return Update.reloadDiff(next, cmds);
+    }
+
+    /**
+     * Takes in the local branches, then the remote-tracking ones, with what each asks for, once: a divergence of a
+     * local and a remote branch that both moved is read again once.
+     */
+    private static Next allBranchesLoaded(Model model, AllBranches branches) {
+        Next local = update(model, new BranchesLoaded(branches.local()));
+        Next remote = update(local.model(), new RemoteBranchesLoaded(branches.remote()));
+        return new Next(remote.model(), local.cmds().appendAll(remote.cmds()).distinct());
     }
 
     private static Next branchesLoaded(Model before, Model next) {
@@ -233,8 +244,9 @@ public final class LoadUpdate {
             case LoadFileDiff(var files, var options)
             when !options.equals(model.preferences().diffOptions()) -> model;
             case Cmd.LoadStatus() -> model.mapRepo(repo -> repo.withStatus(new Failed<>(failure)));
-            case Cmd.LoadBranches() -> model.mapRepo(repo -> repo.withBranches(new Failed<>(failure)));
-            case Cmd.LoadRemoteBranches() -> model.mapRepo(repo -> repo.withRemoteBranches(new Failed<>(failure)));
+            case Cmd.LoadBranches() ->
+                model.mapRepo(
+                        repo -> repo.withBranches(new Failed<>(failure)).withRemoteBranches(new Failed<>(failure)));
             case Cmd.LoadStashes() -> model.mapRepo(repo -> repo.withStashes(new Failed<>(failure)));
             case Cmd.LoadWorktrees() -> model.mapRepo(repo -> repo.withWorktrees(new Failed<>(failure)));
             // Which worktrees have changes is a detail: when the whole read fails, what was read before stays, and

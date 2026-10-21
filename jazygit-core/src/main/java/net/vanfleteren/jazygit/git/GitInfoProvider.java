@@ -49,6 +49,13 @@ public interface GitInfoProvider {
     Either<ProcessError, List<RemoteRef>> remoteBranches();
 
     /**
+     * The local and the remote-tracking branches, read at the same moment.
+     */
+    default Either<ProcessError, AllBranches> allBranches() {
+        return branches().flatMap(local -> remoteBranches().map(remote -> new AllBranches(local, remote)));
+    }
+
+    /**
      * Deletes the branch {@code name}, locally and/or {@code remote}, the branch it is pushed to. With both, the
      * remote one goes first, so a failure leaves the local branch in place.
      */

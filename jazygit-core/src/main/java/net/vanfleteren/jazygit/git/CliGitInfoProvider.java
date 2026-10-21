@@ -21,11 +21,15 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 public final class CliGitInfoProvider implements GitInfoProvider {
 
     private final Path workTree;
+    // Where git keeps the files that tell what the repository is in the middle of, found once.
+    private final CliInProgress.Markers markers;
     // Asked each time git talks to a remote.
     private final Supplier<Map<String, String>> credentials;
 
-    private CliGitInfoProvider(Path workTree, Supplier<Map<String, String>> credentials) {
+    private CliGitInfoProvider(
+            Path workTree, CliInProgress.Markers markers, Supplier<Map<String, String>> credentials) {
         this.workTree = workTree;
+        this.markers = markers;
         this.credentials = credentials;
     }
 
@@ -48,7 +52,8 @@ public final class CliGitInfoProvider implements GitInfoProvider {
                                         startDir,
                                         GitCommand.reading("rev-parse", "--show-toplevel"),
                                         CliGitInfoProvider::path)))
-                        .map(workTree -> new CliGitInfoProvider(workTree, HashMap::empty));
+                        .flatMap(workTree -> Either.narrow(CliInProgress.markers(workTree)
+                                .map(markers -> new CliGitInfoProvider(workTree, markers, HashMap::empty))));
     }
 
     private static Either<UnexpectedOutput, Path> path(String raw) {
@@ -66,7 +71,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
      * whenever it talks to a remote, for a credential helper that reads them, such as gh's.
      */
     public CliGitInfoProvider withCredentials(Supplier<Map<String, String>> credentials) {
-        return new CliGitInfoProvider(workTree, credentials);
+        return new CliGitInfoProvider(workTree, markers, credentials);
     }
 
     @Override
@@ -81,7 +86,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<ProcessError, RepoStatus> status() {
-        return CliStatus.read(workTree);
+        return CliStatus.read(workTree, markers);
     }
 
     @Override
@@ -180,6 +185,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     @Override
     public Either<ProcessError, List<RemoteRef>> remoteBranches() {
         return CliBranch.remotes(workTree);
+    }
+
+    @Override
+    public Either<ProcessError, AllBranches> allBranches() {
+        return CliBranch.all(workTree);
     }
 
     @Override

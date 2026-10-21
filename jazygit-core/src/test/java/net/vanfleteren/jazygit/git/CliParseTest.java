@@ -20,12 +20,21 @@ class CliParseTest {
         return String.join("\u001f", fields) + "\n";
     }
 
+    /**
+     * A remote-tracking ref as {@code for-each-ref} lists it with the fields of the branches: no upstream, HEAD
+     * or worktree.
+     */
+    private static String remote(String name, String sha, String time, String symref) {
+        return ref(name, sha, time, "", "", "", "", symref, "", "");
+    }
+
     @Test
     void remoteBranchesAreTheMostRecentlyCommittedToFirstWithoutTheHeadOfARemote() {
-        String raw = ref("refs/remotes/origin/HEAD", A, "300", "refs/remotes/origin/trunk")
-                + ref("refs/remotes/origin/trunk", A, "300", "")
-                + ref("refs/remotes/upstream/feature/nested", B, "400", "")
-                + ref("refs/remotes/origin/old", B, "100", "");
+        String raw = remote("refs/remotes/origin/HEAD", A, "300", "refs/remotes/origin/trunk")
+                + remote("refs/remotes/origin/trunk", A, "300", "")
+                + remote("refs/remotes/upstream/feature/nested", B, "400", "")
+                + remote("refs/remotes/origin/old", B, "100", "")
+                + ref("refs/heads/main", A, "500", "*", "", "", "", "", "", "");
 
         assertEquals(
                 List.of(
@@ -41,10 +50,10 @@ class CliParseTest {
                                 new RemoteBranch("origin", new Branch.Name("old")),
                                 new Sha(B),
                                 Instant.ofEpochSecond(100))),
-                CliBranch.parseRemotes(raw).get());
+                CliBranch.parseAll(raw).get().remote());
         assertEquals(
-                new GitError.UnexpectedOutput("refs/remotes/origin/x"),
-                CliBranch.parseRemotes("refs/remotes/origin/x\n").getLeft());
+                List.of(new Branch.Name("main")),
+                CliBranch.parseAll(raw).get().local().map(Branch::name));
     }
 
     @Test

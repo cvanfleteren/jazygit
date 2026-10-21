@@ -27,16 +27,22 @@ final class CliStash {
     private CliStash() {}
 
     /**
-     * Runs {@code git stash list}, newest stash first.
+     * The stashes, newest first, as {@code git stash list} lists them: it runs this {@code git log} of the reflog of
+     * the stash itself, so running it directly takes one process instead of two. Without a stash, there is no
+     * reflog, which {@code --ignore-missing} makes an empty list rather than an error.
      */
     static Either<ProcessError, List<Stash>> list(Path workTree) {
         return GitProcess.read(
                 workTree,
                 GitCommand.reading(
-                        "stash",
-                        "list",
+                        "log",
+                        "--walk-reflogs",
+                        "--first-parent",
+                        "--ignore-missing",
                         "--format=%gd" + GitOutput.PRETTY_FIELD_SEPARATOR + "%H" + GitOutput.PRETTY_FIELD_SEPARATOR
-                                + "%gs"),
+                                + "%gs",
+                        "refs/stash",
+                        "--"),
                 CliStash::parse);
     }
 

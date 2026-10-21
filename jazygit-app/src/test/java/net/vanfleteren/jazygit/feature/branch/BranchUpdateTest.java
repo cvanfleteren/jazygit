@@ -872,11 +872,7 @@ class BranchUpdateTest {
                 loaded(), succeeded(new CheckoutCmd.Checkout(new Branch.Name("feature")), "git checkout feature"));
 
         assertEquals(
-                List.of(
-                        new LoadStatus(),
-                        new LoadBranches(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadStashes()),
+                List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadStashes()),
                 next.cmds());
         assertEquals(Option.none(), next.model().outcome().error());
     }
@@ -889,13 +885,7 @@ class BranchUpdateTest {
 
         assertEquals(
                 Option.of("Checkout of feature failed: local changes would be overwritten"), errorText(next.model()));
-        assertEquals(
-                List.of(
-                        new LoadStatus(),
-                        new LoadBranches(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(),
-                        new LoadStashes()),
-                next.cmds());
+        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new LoadStashes()), next.cmds());
     }
 
     @Test
