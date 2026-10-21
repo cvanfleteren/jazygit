@@ -67,7 +67,8 @@ public final class CommentsDialog implements PopupView {
 
     private final Consumer<Msg> dispatch;
     private final Clock clock;
-    private final ListElement<?> list = list().highlightSymbol("");
+    // Scrolls to keep the highlighted comment in view, when they do not all fit.
+    private final ListElement<?> list = list().highlightSymbol("").autoScroll();
     // The rows the list was last given, which know where they were drawn.
     private List<StyledElement<?>> rows = List.empty();
     private final MarkdownScroll scroll = new MarkdownScroll();
@@ -227,17 +228,25 @@ public final class CommentsDialog implements PopupView {
     }
 
     /**
-     * The first line of {@code markdown} with text, without what marks it as a heading, quote or list item.
+     * The first line of {@code markdown} with text, without what marks it as a heading, quote or list item: a marker
+     * followed by a space, so {@code **Note**} and {@code +1} keep theirs.
      */
     static String firstLine(String markdown) {
         return List.of(MarkdownScroll.withoutHtmlComments(markdown).split("\\R"))
-                .map(line -> line.replaceFirst("^[\\s#>*+-]+", "").strip())
+                .map(line -> line.replaceFirst("^\\s*(?:(?:#{1,6}|>|[*+-])\\s+)*", "")
+                        .strip())
                 .find(line -> !line.isEmpty())
                 .getOrElse("");
     }
 
-    private static String cut(String text, int width) {
-        return text.length() <= width ? text : text.substring(0, Math.max(0, width - CUT.length())) + CUT;
+    /**
+     * {@code text} cut to {@code width} characters, the last of which says it was cut. Characters, not UTF-16 units,
+     * so an emoji is not split in half.
+     */
+    static String cut(String text, int width) {
+        return text.codePointCount(0, text.length()) <= width
+                ? text
+                : text.substring(0, text.offsetByCodePoints(0, Math.max(0, width - CUT.length()))) + CUT;
     }
 
     private EventResult keys(CommentsPopup popup, KeyEvent event) {

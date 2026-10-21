@@ -4,9 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.tamboui.layout.Size;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.MouseButton;
+import dev.tamboui.tui.event.MouseEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -39,6 +42,9 @@ class CommentsDialogTest {
     private static final PullRequestPopup SHOWN = PullRequestPopup.loading(
                     new Branch.Name("feature"), new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED))
             .with(Either.right(StubGitHub.empty().pullRequestDetails(42).get()));
+    private static final Size WIDE = new Size(140, 30);
+    // Under 100 columns, the list is above the comment, a third of the popup high.
+    private static final Size NARROW = new Size(90, 24);
     private static final Instant AT = Instant.parse("2026-10-10T08:00:00Z");
     private static final PullRequestComment DESCRIPTION = comment(
             PullRequestComment.DESCRIPTION.value(), Kind.DESCRIPTION, "cvf", "Adds renaming.<!-- bot marker -->");
@@ -169,6 +175,78 @@ class CommentsDialogTest {
         assertEquals("quoted", CommentsDialog.firstLine("> quoted"));
         assertEquals("item", CommentsDialog.firstLine("  - item"));
         assertEquals("", CommentsDialog.firstLine(""));
+        // Only a marker followed by a space is one.
+        assertEquals("**Note**: x", CommentsDialog.firstLine("**Note**: x"));
+        assertEquals("+1", CommentsDialog.firstLine("+1"));
+        assertEquals("-1", CommentsDialog.firstLine("-1"));
+        assertEquals("nested", CommentsDialog.firstLine("> - nested"));
+    }
+
+    @Test
+    void cuttingNeverSplitsAnEmoji() {
+        assertEquals("ab👍…", CommentsDialog.cut("ab👍👍👍", 4));
+        assertEquals("ab👍👍", CommentsDialog.cut("ab👍👍", 4));
+    }
+
+    @Test
+    void clickingARowHighlightsIt() throws Exception {
+        try (ToolkitTestRunner runner = start(WIDE)) {
+            int[] description = at(RenderedText.ofSize(runner, this::view, WIDE.width(), WIDE.height()), "@cvf");
+
+            SettledPilot.of(runner).mousePress(MouseButton.LEFT, description[0], description[1]);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new CommentsMsg.Highlighted(DESCRIPTION.id())), dispatched);
+    }
+
+    @Test
+    void clickingARowOfAScrolledListHighlightsTheRowShownThere() throws Exception {
+        // On a narrow screen the list takes a third of the popup, too little for all of them; on the newest, it
+        // shows the last few.
+        model = reading(List.range(0, 20).map(i -> comment("IC_" + i, Kind.COMMENT, "user" + i, "comment " + i)));
+        try (ToolkitTestRunner runner = start(NARROW)) {
+            String screen = RenderedText.ofSize(runner, this::view, NARROW.width(), NARROW.height());
+            assertFalse(screen.contains("@user10 "), screen);
+            int[] shown = at(screen, "@user17 ");
+
+            SettledPilot.of(runner).mousePress(MouseButton.LEFT, shown[0], shown[1]);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new CommentsMsg.Highlighted(new PullRequestComment.Id("IC_17"))), dispatched);
+    }
+
+    @Test
+    void theWheelOverTheListMovesTheHighlightThreeComments() throws Exception {
+        model = reading(List.range(0, 6).map(i -> comment("IC_" + i, Kind.COMMENT, "user" + i, "comment " + i)));
+        model = model.openPopup(
+                model.popup(CommentsPopup.class).get().withHighlighted(Option.of(new PullRequestComment.Id("IC_0"))));
+        try (ToolkitTestRunner runner = start(WIDE)) {
+            int[] row = at(RenderedText.ofSize(runner, this::view, WIDE.width(), WIDE.height()), "@user1 ");
+
+            route(runner, MouseEvent.scrollDown(row[0], row[1]));
+        }
+
+        assertEquals(java.util.List.of(new CommentsMsg.Highlighted(new PullRequestComment.Id("IC_3"))), dispatched);
+    }
+
+    @Test
+    void theWheelOverTheCommentScrollsIt() throws Exception {
+        String body = List.range(1, 61).map(i -> "Paragraph " + i).mkString("\n\n");
+        model = reading(List.of(comment("IC_1", Kind.COMMENT, "bob", body)));
+        try (ToolkitTestRunner runner = start(WIDE)) {
+            String top = RenderedText.ofSize(runner, this::view, WIDE.width(), WIDE.height());
+            int[] text = at(top, "││Paragraph 3 ");
+
+            route(runner, MouseEvent.scrollDown(text[0] + 4, text[1]));
+            String scrolled = RenderedText.ofSize(runner, this::view, WIDE.width(), WIDE.height());
+
+            assertTrue(top.contains("││Paragraph 1 "), top);
+            assertFalse(scrolled.contains("││Paragraph 1 "), scrolled);
+            assertTrue(scrolled.contains("││Paragraph 3 "), scrolled);
+        }
+        assertEquals(java.util.List.of(), dispatched);
     }
 
     private static String line(String screen, String containing) {
@@ -177,10 +255,35 @@ class CommentsDialogTest {
                 .getOrElse("");
     }
 
+    /**
+     * Where {@code text} first shows on {@code screen}, as its column and line.
+     */
+    private static int[] at(String screen, String text) {
+        List<String> lines = List.of(screen.split("\n"));
+        int y = lines.indexWhere(line -> line.contains(text));
+        assertTrue(y >= 0, screen);
+        return new int[] {lines.get(y).indexOf(text), y};
+    }
+
+    private static void route(ToolkitTestRunner runner, MouseEvent event) {
+        runner.runner().runOnRenderThread(() -> runner.runner().eventRouter().route(event));
+        SettledPilot.settle(runner);
+    }
+
     private ToolkitTestRunner start() throws Exception {
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
         SettledPilot.focus(runner, CommentsDialog.ID);
         RenderedText.ofLarge(runner, this::view);
+        return runner;
+    }
+
+    /**
+     * A runner whose screen is {@code size}, as mouse events land where its last render put things.
+     */
+    private ToolkitTestRunner start(Size size) throws Exception {
+        ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view, size);
+        SettledPilot.focus(runner, CommentsDialog.ID);
+        SettledPilot.settle(runner);
         return runner;
     }
 
