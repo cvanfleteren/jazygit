@@ -48,7 +48,7 @@ class PullRequestDialogTest {
             Mergeable.MERGEABLE,
             Review.CHANGES_REQUESTED,
             5,
-            new ReviewThreads(5, 2, 12),
+            new ReviewThreads(5, 5, 2, 12),
             List.of("enhancement", "ui"),
             List.of(
                     new Reviewer("alice", ReviewerState.APPROVED),
@@ -137,7 +137,23 @@ class PullRequestDialogTest {
 
     @Test
     void saysWhenAllReviewThreadsAreResolved() throws Exception {
-        PullRequestDetails resolved = new PullRequestDetails(
+        String screen = screen(PullRequestPopup.loading(new Branch.Name("support_rename"), PR)
+                .with(Either.right(readyWith(new ReviewThreads(1, 1, 0, 1)))));
+
+        assertTrue(screen.contains("  Threads  1 with 1 comment, all resolved"), screen);
+    }
+
+    @Test
+    void doesNotSayAllAreResolvedWhenNotAllThreadsWereRead() throws Exception {
+        String screen = screen(PullRequestPopup.loading(new Branch.Name("support_rename"), PR)
+                .with(Either.right(readyWith(new ReviewThreads(130, 100, 0, 180)))));
+
+        assertTrue(screen.contains("  Threads  130 with 180 comments "), screen);
+        assertFalse(screen.contains("resolved"), screen);
+    }
+
+    private static PullRequestDetails readyWith(ReviewThreads threads) {
+        return new PullRequestDetails(
                 READY.number(),
                 READY.title(),
                 READY.author(),
@@ -152,15 +168,10 @@ class PullRequestDialogTest {
                 READY.mergeable(),
                 READY.review(),
                 READY.comments(),
-                new ReviewThreads(1, 0, 1),
+                threads,
                 READY.labels(),
                 READY.reviewers(),
                 READY.checks());
-
-        String screen = screen(
-                PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(resolved)));
-
-        assertTrue(screen.contains("  Threads  1 with 1 comment, all resolved"), screen);
     }
 
     @Test

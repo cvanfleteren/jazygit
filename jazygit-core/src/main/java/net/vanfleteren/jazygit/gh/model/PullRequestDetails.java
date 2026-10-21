@@ -111,12 +111,21 @@ public record PullRequestDetails(
      * The review threads of a pull request: the inline comments on lines of its diff, outdated ones too.
      *
      * @param threads    how many threads there are
-     * @param unresolved how many of them are not resolved
-     * @param comments   how many comments they hold, the replies too
+     * @param read       how many of them were read, the newest; fewer than {@code threads} on a pull request with
+     *                   too many to read them all
+     * @param unresolved how many of the ones read are not resolved
+     * @param comments   how many comments the ones read hold, the replies too
      */
-    public record ReviewThreads(int threads, int unresolved, int comments) {
+    public record ReviewThreads(int threads, int read, int unresolved, int comments) {
 
-        public static final ReviewThreads NONE = new ReviewThreads(0, 0, 0);
+        public static final ReviewThreads NONE = new ReviewThreads(0, 0, 0, 0);
+
+        /**
+         * Whether every thread was read, so that what is counted of them is all there is.
+         */
+        public boolean complete() {
+            return read == threads;
+        }
     }
 
     /**

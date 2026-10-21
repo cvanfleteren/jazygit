@@ -114,11 +114,11 @@ public final class CliGitHub implements GitHub {
             ... on Mannequin { login } ... on Team { name } } } } \
             commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes { __typename \
             ... on CheckRun { name status conclusion } ... on StatusContext { context state } } } } } } } \
-            reviewThreads(first: 100) { totalCount nodes { isResolved comments { totalCount } } } } } }""";
+            reviewThreads(last: 100) { totalCount nodes { isResolved comments { totalCount } } } } } }""";
     /*
      * Tab separated lines, each starting with what it is: one "pr" line with the fields of the pull request, one
-     * "threads" line with how many review threads it has, how many of them are unresolved and how many comments
-     * they hold, then a "label" line per label, a "review" line per latest review, a "requested" line per
+     * "threads" line with how many review threads it has, how many of them were read, and how many of those are
+     * unresolved and how many comments they hold, then a "label" line per label, a "review" line per latest review, a "requested" line per
      * requested reviewer and a "check" line per check, with its state as in JQ.
      */
     private static final String DETAILS_JQ = """
@@ -127,7 +127,7 @@ public final class CliGitHub implements GitHub {
             (.isDraft | tostring), .headRefName, .baseRefName, .createdAt, (.additions | tostring), \
             (.deletions | tostring), (.changedFiles | tostring), (.mergeable // ""), (.reviewDecision // ""), \
             (.comments.totalCount | tostring)] | @tsv), \
-            (.reviewThreads | ["threads", (.totalCount | tostring), \
+            (.reviewThreads | ["threads", (.totalCount | tostring), (.nodes | length | tostring), \
             ([.nodes[] | select(.isResolved | not)] | length | tostring), \
             ([.nodes[].comments.totalCount] | add // 0 | tostring)] | @tsv), \
             (.labels.nodes[]? | ["label", .name] | @tsv), \
@@ -386,7 +386,10 @@ public final class CliGitHub implements GitHub {
         List<String> labels = lines.filter(f -> f.head().equals("label")).map(f -> f.get(1));
         Option<ReviewThreads> threads = lines.find(f -> f.head().equals("threads"))
                 .flatMap(f -> Try.of(() -> new ReviewThreads(
-                                Integer.parseInt(f.get(1)), Integer.parseInt(f.get(2)), Integer.parseInt(f.get(3))))
+                                Integer.parseInt(f.get(1)),
+                                Integer.parseInt(f.get(2)),
+                                Integer.parseInt(f.get(3)),
+                                Integer.parseInt(f.get(4))))
                         .toOption());
         List<Check> checks = lines.filter(f -> f.head().equals("check"))
                 // A check without a state yet, like a status nobody set, is neither passing nor failing.
@@ -420,7 +423,7 @@ public final class CliGitHub implements GitHub {
             case "pr" -> fields.size() == DETAIL_FIELD_COUNT;
             case "label", "requested" -> fields.size() == 2;
             case "review", "check" -> fields.size() == 3;
-            case "threads" -> fields.size() == 4;
+            case "threads" -> fields.size() == 5;
             default -> false;
         };
     }

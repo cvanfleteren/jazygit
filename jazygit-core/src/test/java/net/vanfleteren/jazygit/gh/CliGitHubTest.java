@@ -282,7 +282,7 @@ class CliGitHubTest {
     void parsesTheDetailsOfAPullRequest() {
         String raw = "pr\t42\tAdd\\trename\tcvf\tOPEN\ttrue\tsupport_rename\tmain\t2026-10-10T08:00:00Z\t120\t34\t7"
                 + "\tMERGEABLE\tCHANGES_REQUESTED\t2\n"
-                + "threads\t5\t2\t12\n"
+                + "threads\t130\t100\t2\t12\n"
                 + "label\tui\n"
                 + "review\tbob\tCHANGES_REQUESTED\n"
                 + "review\tcarol\tAPPROVED\n"
@@ -308,7 +308,7 @@ class CliGitHubTest {
                         Mergeable.MERGEABLE,
                         Review.CHANGES_REQUESTED,
                         2,
-                        new ReviewThreads(5, 2, 12),
+                        new ReviewThreads(130, 100, 2, 12),
                         List.of("ui"),
                         List.of(
                                 new Reviewer("bob", ReviewerState.CHANGES_REQUESTED),
@@ -321,7 +321,7 @@ class CliGitHubTest {
     @Test
     void aMergedPullRequestWithoutChecksLabelsOrReviewers() {
         String raw = "pr\t5\tFix\t\tMERGED\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\n"
-                + "threads\t0\t0\t0\n";
+                + "threads\t0\t0\t0\t0\n";
 
         assertEquals(
                 Either.right(new PullRequestDetails(
@@ -358,7 +358,7 @@ class CliGitHubTest {
                 .isLeft());
         assertTrue(CliGitHub.parseDetails(
                         "pr\t5\tFix\t\tMERGED\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\n"
-                                + "threads\tx\t0\t0\n")
+                                + "threads\tx\t0\t0\t0\n")
                 .isLeft());
     }
 

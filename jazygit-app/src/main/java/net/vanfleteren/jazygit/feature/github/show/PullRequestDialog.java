@@ -304,13 +304,15 @@ public final class PullRequestDialog implements PopupView {
         if (threads.threads() == 0) {
             return "0";
         }
-        return threads.unresolved() == 0
-                ? Messages.get("dialog.pullRequest.threads.resolved", threads.threads(), threads.comments())
-                : Messages.get(
-                        "dialog.pullRequest.threads.unresolved",
-                        threads.threads(),
-                        threads.comments(),
-                        threads.unresolved());
+        if (threads.unresolved() == 0) {
+            // Unless every thread was read, one that was not may still be unresolved.
+            return Messages.get(
+                    threads.complete() ? "dialog.pullRequest.threads.resolved" : "dialog.pullRequest.threads.partial",
+                    threads.threads(),
+                    threads.comments());
+        }
+        return Messages.get(
+                "dialog.pullRequest.threads.unresolved", threads.threads(), threads.comments(), threads.unresolved());
     }
 
     private String created(PullRequestDetails pr, Instant now) {
