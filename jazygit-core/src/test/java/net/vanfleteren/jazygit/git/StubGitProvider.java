@@ -111,6 +111,12 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> addDetachedWorktree(
+            Path location, String startPoint) {
+        return ran();
+    }
+
+    @Override
     default Either<GitFailure<GitError>, List<ExecutedCommand>> removeWorktree(Path location, boolean force) {
         return ran();
     }

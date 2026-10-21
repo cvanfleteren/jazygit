@@ -185,6 +185,8 @@ public final class CliGitHub implements GitHub {
             | [$host, .login, (.active | tostring), .state] | @tsv""";
 
     private final Path workTree;
+    private final String executable;
+    private final GhToken token;
     private final GhProcess process;
     // As gh's own active accounts: with a token in the environment, gh only knows of that one.
     private final GhProcess unconfigured;
@@ -195,6 +197,8 @@ public final class CliGitHub implements GitHub {
      */
     public CliGitHub(Path workTree, String executable, GhToken token) {
         this.workTree = workTree;
+        this.executable = executable;
+        this.token = token;
         this.process = new GhProcess(workTree, executable, token);
         this.unconfigured = new GhProcess(workTree, executable, GhToken.NONE);
     }
@@ -681,6 +685,12 @@ public final class CliGitHub implements GitHub {
     @Override
     public Either<GhFailure, List<ExecutedCommand>> checkoutPullRequest(int number) {
         return process.log(gh("pr", "checkout", String.valueOf(number)));
+    }
+
+    @Override
+    public Either<GhFailure, List<ExecutedCommand>> checkoutPullRequest(int number, Path in) {
+        return new GhProcess(workTree.resolve(in).normalize(), executable, token)
+                .log(gh("pr", "checkout", String.valueOf(number)));
     }
 
     @Override

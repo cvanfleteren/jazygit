@@ -3,6 +3,9 @@ package net.vanfleteren.jazygit.feature.github.checkout;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.checkout.SwitchWorktreePopup;
 import net.vanfleteren.jazygit.feature.github.checkout.CheckoutPullRequestMsg.Requested;
+import net.vanfleteren.jazygit.feature.github.checkout.CheckoutPullRequestMsg.WorktreeRequested;
+import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeUpdate;
+import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.ChangeType;
@@ -21,7 +24,33 @@ public final class CheckoutPullRequestUpdate {
     public static Next update(Model model, CheckoutPullRequestMsg msg) {
         return switch (msg) {
             case Requested(PullRequestSummary pullRequest) -> checkout(model, pullRequest);
+            case WorktreeRequested(PullRequestSummary pullRequest) -> inWorktree(model, pullRequest);
         };
+    }
+
+    /**
+     * Asks where the new worktree that checks out {@code pullRequest} goes, if it is of the repository; the changes
+     * here stay here. When another worktree has its branch checked out, switching to it is offered instead, as
+     * checking it out in place does; when this one has, that is said.
+     */
+    private static Next inWorktree(Model model, PullRequestSummary pullRequest) {
+        String name = pullRequest.repository() + "#" + pullRequest.number();
+        boolean checkedOutHere = !pullRequest.fromFork()
+                && model.repo()
+                        .currentBranch()
+                        .exists(current -> current.name().value().equals(pullRequest.headBranch()));
+        return model.prOverview()
+                .ofThisRepository(pullRequest)
+                .fold(
+                        unknown -> Next.of(model.fail(unknown)),
+                        ofThis -> !ofThis
+                                ? Next.of(model.fail(new AppError.OtherRepository(name)))
+                                : checkedOutElsewhere(model, pullRequest)
+                                        .getOrElse(() -> checkedOutHere
+                                                ? Next.of(model.fail(new AppError.PullRequestCheckedOutHere(name)))
+                                                : AddWorktreeUpdate.ask(
+                                                        model.clearError(),
+                                                        new WorktreeSource.PullRequest(pullRequest))));
     }
 
     /**

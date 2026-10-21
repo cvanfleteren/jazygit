@@ -67,6 +67,8 @@ public final class ErrorText {
                 Messages.get("error.checkoutPr.otherRepository", pullRequest);
             case AppError.ChangesBeforeCheckout(String pullRequest) ->
                 Messages.get("error.checkoutPr.changes", pullRequest);
+            case AppError.PullRequestCheckedOutHere(String pullRequest) ->
+                Messages.get("error.checkoutPr.here", pullRequest);
             case AppError.ChangesBeforeMove(String target) -> Messages.get("error.moveCommits.changes", target);
             case AppError.DefaultBranch(String branch) -> Messages.get("error.deleteBranch.default", branch);
             case AppError.NotOnRemote(Branch.Name branch) -> Messages.get("error.browse.notOnRemote", branch.value());

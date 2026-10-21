@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.gh;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.nio.file.Path;
 import net.vanfleteren.jazygit.gh.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
@@ -84,6 +85,12 @@ public interface GitHub {
      * on a local branch of its own, which follows the branch it comes from.
      */
     Either<GhFailure, List<ExecutedCommand>> checkoutPullRequest(int number);
+
+    /**
+     * Checks out pull request {@code number} as {@link #checkoutPullRequest(int)} does, but in the worktree
+     * {@code in}, taken relative to the working tree of this one.
+     */
+    Either<GhFailure, List<ExecutedCommand>> checkoutPullRequest(int number, Path in);
 
     /**
      * Merges pull request {@code number} as {@code method} says, keeping its branch.

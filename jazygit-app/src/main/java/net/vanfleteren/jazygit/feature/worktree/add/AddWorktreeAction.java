@@ -6,7 +6,7 @@ import net.vanfleteren.jazygit.keys.Scopes;
 
 /**
  * Checking the selected branch out in a new worktree, or a new branch made from it, or from the selected remote
- * branch.
+ * branch; or, from the worktrees, a new worktree starting anywhere.
  */
 public final class AddWorktreeAction {
 
@@ -23,7 +23,10 @@ public final class AddWorktreeAction {
                             Binding.onSelected(
                                     "W",
                                     "help.branches.newBranchWorktree",
-                                    AddWorktreeMsg.NewBranchAtRemoteRequested::new)),
+                                    AddWorktreeMsg.NewBranchAtRemoteRequested::new))
+                    .add(
+                            Scopes.WORKTREES,
+                            Binding.always("n", "help.worktrees.new", AddWorktreeMsg.StartRequested::new)),
             AddWorktreeDialogs::popups);
 
     private AddWorktreeAction() {}

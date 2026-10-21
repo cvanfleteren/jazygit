@@ -24,6 +24,10 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
+import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeCmd;
+import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg;
+import net.vanfleteren.jazygit.feature.worktree.add.NewWorktreePopup;
+import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.gh.StubGitHub;
@@ -917,5 +921,108 @@ class PullRequestUpdateTest {
         assertEquals(
                 Option.of(new AppError.PullRequestsNotRead()),
                 refused.model().outcome().error());
+    }
+
+    private static PullRequestSummary own(String headBranch) {
+        PullRequestSummary fork = summary("owner/repo");
+        return new PullRequestSummary(
+                fork.repository(),
+                fork.number(),
+                fork.title(),
+                fork.author(),
+                headBranch,
+                false,
+                false,
+                fork.checks(),
+                fork.review(),
+                fork.updatedAt(),
+                fork.url());
+    }
+
+    /**
+     * The repository with {@code status}, its main worktree at {@code /repos/app}.
+     */
+    private static Model withMainWorktree(RepoStatus status) {
+        return Update.update(
+                        ofOwnerRepo(status),
+                        new LoadMsg.WorktreesLoaded(List.of(new Worktree(
+                                java.nio.file.Path.of("/repos/app"),
+                                Option.of(new Sha("aaaa")),
+                                Option.of(new Branch.Name("main")),
+                                true,
+                                true,
+                                Option.none(),
+                                false))))
+                .model();
+    }
+
+    @Test
+    void aPullRequestIsCheckedOutInANewWorktreeNamedAfterItsBranchOrForAForkItsNumberChangesOrNot() {
+        PullRequestSummary fork = summary("owner/repo");
+
+        Next asked = Update.update(withMainWorktree(DIRTY), new CheckoutPullRequestMsg.WorktreeRequested(fork));
+
+        assertEquals(List.empty(), asked.cmds());
+        assertEquals(
+                Option.of(new NewWorktreePopup(new WorktreeSource.PullRequest(fork), "/repos/app-pr-9")),
+                asked.model().popup());
+        assertEquals(
+                List.of(new AddWorktreeCmd(new WorktreeSource.PullRequest(fork), "/repos/app-pr-9")),
+                Update.update(asked.model(), new AddWorktreeMsg.Confirmed()).cmds());
+
+        RepoStatus changed = new RepoStatus(
+                RepoStatus.Head.onBranch(new Branch.Name("main"), new Sha("aaaa")),
+                List.of(new FileEntry("a.txt", ChangeType.MODIFIED)));
+        PullRequestSummary own = own("feature/login");
+        assertEquals(
+                Option.of(new NewWorktreePopup(new WorktreeSource.PullRequest(own), "/repos/app-feature-login")),
+                Update.update(withMainWorktree(changed), new CheckoutPullRequestMsg.WorktreeRequested(own))
+                        .model()
+                        .popup());
+    }
+
+    @Test
+    void aPullRequestWhoseBranchIsCheckedOutHereGetsNoWorktreeAndOneOfAnotherRepositoryNeither() {
+        Model onPatch = Update.update(
+                        withMainWorktree(CLEAN),
+                        new LoadMsg.BranchesLoaded(
+                                List.of(new Branch(new Branch.Name("patch-1"), true, new Sha("bbbb")))))
+                .model();
+
+        Next here = Update.update(onPatch, new CheckoutPullRequestMsg.WorktreeRequested(own("patch-1")));
+        assertEquals(Option.none(), here.model().popup(NewWorktreePopup.class));
+        assertEquals(
+                Option.of(new AppError.PullRequestCheckedOutHere("owner/repo#9")),
+                here.model().outcome().error());
+
+        Next other = Update.update(
+                withMainWorktree(CLEAN), new CheckoutPullRequestMsg.WorktreeRequested(summary("other/repo")));
+        assertEquals(Option.none(), other.model().popup(NewWorktreePopup.class));
+        assertEquals(
+                Option.of(new AppError.OtherRepository("other/repo#9")),
+                other.model().outcome().error());
+    }
+
+    @Test
+    void forAPullRequestWhoseBranchAnotherWorktreeHasSwitchingToItIsOfferedInsteadOfANewOne() {
+        Branch.Name patch = new Branch.Name("patch-1");
+        Model elsewhere = Update.update(
+                        withMainWorktree(CLEAN),
+                        new LoadMsg.BranchesLoaded(List.of(new Branch(
+                                patch,
+                                false,
+                                new Sha("bbbb"),
+                                Instant.EPOCH,
+                                false,
+                                false,
+                                new Tracking.None(),
+                                Option.of(java.nio.file.Path.of("/repos/linked"))))))
+                .model();
+
+        assertEquals(
+                Option.of(new SwitchWorktreePopup(patch, "/repos/linked")),
+                Update.update(elsewhere, new CheckoutPullRequestMsg.WorktreeRequested(own("patch-1")))
+                        .model()
+                        .popup());
     }
 }

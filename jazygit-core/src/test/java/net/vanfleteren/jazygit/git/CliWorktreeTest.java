@@ -297,4 +297,20 @@ class CliWorktreeTest {
         assertInstanceOf(GitError.CommandFailed.class, failure.error());
         assertFalse(Files.exists(main.resolveSibling("other")));
     }
+
+    @Test
+    void aDetachedWorktreeChecksOutAStartPointOnNoBranch() throws Exception {
+        assumeTrue(gitAvailable(), "git is not installed");
+        git(main, "init", "-q", "-b", "main");
+        git(main, "commit", "-q", "--allow-empty", "-m", "Initial commit");
+        git(main, "branch", "topic");
+        CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
+
+        assertTrue(provider.addDetachedWorktree(Path.of("../detached"), "topic").isRight());
+
+        Worktree detached = provider.worktrees().get().last();
+        assertEquals(main.resolveSibling("detached"), detached.path());
+        assertEquals(Option.none(), detached.branch());
+        assertTrue(detached.head().isDefined());
+    }
 }

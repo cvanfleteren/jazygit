@@ -115,6 +115,23 @@ final class CliWorktree {
     }
 
     /**
+     * Runs {@code git worktree add --quiet --detach <location> <startPoint>} in {@code workTree}: a new worktree
+     * with {@code startPoint} checked out, on no branch.
+     */
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> addDetached(
+            Path workTree, Path location, String startPoint) {
+        return GitProcess.log(
+                workTree,
+                git(
+                        "worktree",
+                        "add",
+                        "--quiet",
+                        "--detach",
+                        workTree.resolve(location).normalize().toString(),
+                        startPoint));
+    }
+
+    /**
      * Runs {@code git worktree add --quiet [--track] -b <name> <location> <startPoint>} in {@code workTree}: a new
      * branch, checked out in a new worktree. With {@code track}, the new branch follows {@code startPoint}, a
      * remote-tracking branch. A {@code parent} is recorded as the branch it came from, as a new branch records it.
