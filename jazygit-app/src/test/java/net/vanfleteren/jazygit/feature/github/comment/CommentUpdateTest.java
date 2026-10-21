@@ -16,6 +16,8 @@ import java.util.ArrayList;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.feature.github.comment.CommentCmd.AddComment;
 import net.vanfleteren.jazygit.feature.github.comment.CommentCmd.EditComment;
+import net.vanfleteren.jazygit.feature.github.comments.CommentsCmd.LoadComments;
+import net.vanfleteren.jazygit.feature.github.comments.CommentsPopup;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.LoadPullRequestDetails;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.SetDraft;
@@ -27,6 +29,7 @@ import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
@@ -177,7 +180,7 @@ class CommentUpdateTest {
 
         assertEquals(
                 Option.of(PullRequestPopup.loading(FEATURE, FEATURE_PR).with(Either.right(DETAILS))),
-                read.popup(CommentPopup.class).map(CommentPopup::shown));
+                read.popup(CommentPopup.class).map(CommentPopup::from));
         // Details of another pull request change nothing.
         assertEquals(
                 commenting,
@@ -220,6 +223,26 @@ class CommentUpdateTest {
         assertEquals(
                 Option.of(CommentPopup.on(SHOWN)),
                 Update.update(cancelled, new CommentMsg.Requested()).model().popup());
+    }
+
+    @Test
+    void aCommentSentFromTheCommentsGoesBackToThemReadsThemAgainAndHighlightsTheNewest() {
+        CommentsPopup comments = CommentsPopup.loading(SHOWN)
+                .read(Either.right(List.empty()))
+                .withHighlighted(Option.of(new PullRequestComment.Id("IC_1")));
+        Model commenting = loaded().openPopup(CommentPopup.on(comments).withText("Looks good"));
+        Next sending = Update.update(commenting, new CommentMsg.Confirmed());
+        AddComment cmd = (AddComment) sending.cmds().head();
+
+        Next sent = Update.update(
+                sending.model(), cmd.run(env(new StubGitProvider() {}, StubGitHub.empty(), Terminal.NONE)));
+
+        assertEquals(
+                Option.of(comments.withHighlighted(Option.none())), sent.model().popup());
+        assertTrue(
+                sent.cmds().contains(new LoadPullRequestDetails(42)),
+                sent.cmds().toString());
+        assertTrue(sent.cmds().contains(new LoadComments(42)), sent.cmds().toString());
     }
 
     @Test

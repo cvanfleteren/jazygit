@@ -53,6 +53,15 @@ public final class RenderedText {
         return of(testRunner, element, TALL);
     }
 
+    /**
+     * Like {@link #of(ToolkitTestRunner, Supplier)}, on a screen {@code width} by {@code height}, for popups that
+     * take the screen they get.
+     */
+    public static String ofSize(
+            ToolkitTestRunner testRunner, Supplier<? extends Element> element, int width, int height) throws Exception {
+        return of(testRunner, element, new Rect(0, 0, width, height));
+    }
+
     private static String text(Buffer buffer, Rect area) {
         StringBuilder text = new StringBuilder();
         for (int y = area.y(); y < area.y() + area.height(); y++) {

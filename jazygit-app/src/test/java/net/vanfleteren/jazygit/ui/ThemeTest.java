@@ -4,6 +4,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.css.Styleable;
 import dev.tamboui.style.Color;
+import dev.tamboui.style.ColorConverter;
+import dev.tamboui.style.Modifier;
+import dev.tamboui.style.ModifierConverter;
+import dev.tamboui.style.PropertyDefinition;
 import dev.tamboui.style.Style;
 import java.util.Set;
 import net.vanfleteren.jazygit.settings.ThemeName;
@@ -59,6 +63,31 @@ class ThemeTest {
                     engine.resolve(new Node("Panel", Set.of(Theme.Classes.FOCUSED)))
                             .borderColor(),
                     popup,
+                    name.id());
+        }
+    }
+
+    @Test
+    void everyThemeStylesTheMarkdownInItsOwnColours() {
+        for (ThemeName name : ThemeName.values()) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
+            var markdown = engine.resolve(new Node("MarkdownElement", Set.of()));
+
+            for (String element : java.util.List.of("heading-1", "heading-2", "link", "inline-code", "code-block")) {
+                assertTrue(
+                        markdown.get(PropertyDefinition.of(element + "-color", ColorConverter.INSTANCE))
+                                .isPresent(),
+                        name.id() + " " + element);
+            }
+            assertEquals(
+                    java.util.Optional.of(Set.of(Modifier.UNDERLINED)),
+                    markdown.get(PropertyDefinition.of("link-text-style", ModifierConverter.INSTANCE)),
+                    name.id());
+            assertTrue(
+                    markdown.get(PropertyDefinition.of("blockquote-text-style", ModifierConverter.INSTANCE))
+                            .filter(modifiers -> modifiers.contains(Modifier.ITALIC))
+                            .isPresent(),
                     name.id());
         }
     }

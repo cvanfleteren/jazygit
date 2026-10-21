@@ -2,30 +2,33 @@ package net.vanfleteren.jazygit.feature.github.comment;
 
 import lombok.With;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.feature.github.show.ShowsPullRequest;
 
 /**
- * Asking for a comment on the pull request {@code shown}. Only one popup is open at a time, so this one keeps the
- * pull request dialog it was opened from, to go back to.
+ * Asking for a comment on the pull request that {@code from} shows. Only one popup is open at a time, so this one keeps
+ * the popup it was opened from, the pull request dialog or the comments, to go back to.
  *
- * @param shown   the pull request dialog, as it was when the comment was asked for
+ * @param from    the popup it was opened from, as it was then
  * @param text    the comment as far as it was typed, or as it came back from the editor
  * @param sending whether it is being sent; it can then not be changed, nor sent again
  */
 @With
-public record CommentPopup(PullRequestPopup shown, String text, boolean sending) implements Popup {
+public record CommentPopup(ShowsPullRequest from, String text, boolean sending) implements ShowsPullRequest {
 
     /**
-     * The popup asking for a comment on the pull request {@code shown}, which starts out empty.
+     * The popup asking for a comment on the pull request {@code from} shows, which starts out empty.
      */
-    public static CommentPopup on(PullRequestPopup shown) {
-        return new CommentPopup(shown, "", false);
+    public static CommentPopup on(ShowsPullRequest from) {
+        return new CommentPopup(from, "", false);
     }
 
-    /**
-     * The number of the pull request the comment is on.
-     */
-    public int number() {
-        return shown.pullRequest().number();
+    @Override
+    public PullRequestPopup pullRequestPopup() {
+        return from.pullRequestPopup();
+    }
+
+    @Override
+    public CommentPopup withPullRequestPopup(PullRequestPopup dialog) {
+        return withFrom(from.withPullRequestPopup(dialog));
     }
 }

@@ -6,7 +6,6 @@ import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Failure;
-import net.vanfleteren.jazygit.state.Popup;
 
 /**
  * Showing the pull request of {@code branch}.
@@ -16,7 +15,7 @@ import net.vanfleteren.jazygit.state.Popup;
  */
 public record PullRequestPopup(
         Branch.Name branch, PullRequest pullRequest, Option<Either<Failure, PullRequestDetails>> details)
-        implements Popup {
+        implements ShowsPullRequest {
 
     /**
      * The popup while its details are being read.
@@ -67,6 +66,16 @@ public record PullRequestPopup(
                 && readDetails()
                         .exists(details ->
                                 !details.draft() && details.mergeable() != PullRequestDetails.Mergeable.CONFLICTING);
+    }
+
+    @Override
+    public PullRequestPopup pullRequestPopup() {
+        return this;
+    }
+
+    @Override
+    public PullRequestPopup withPullRequestPopup(PullRequestPopup dialog) {
+        return dialog;
     }
 
     private Option<PullRequestDetails> readDetails() {
