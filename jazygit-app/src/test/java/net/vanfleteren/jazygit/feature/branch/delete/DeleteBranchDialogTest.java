@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
@@ -84,9 +85,9 @@ class DeleteBranchDialogTest {
 
     @Test
     void remoteOptionsAreNotActionableForTheDefaultBranch() throws Exception {
-        Model model = Update.update(
+        Model model = TestModels.localBranchesRead(
                         TestModels.loaded(new SampleData()),
-                        new LoadMsg.BranchesLoaded(List.of(
+                        List.of(
                                 new Branch(new Branch.Name("x"), true, new Sha("1")),
                                 new Branch(
                                         new Branch.Name("trunk"),
@@ -94,7 +95,7 @@ class DeleteBranchDialogTest {
                                         new Sha("2"),
                                         java.time.Instant.EPOCH,
                                         true,
-                                        true))))
+                                        true)))
                 .model();
         Model open = Update.update(model, new DeleteBranchMsg.Requested(new Branch.Name("trunk")))
                 .model();

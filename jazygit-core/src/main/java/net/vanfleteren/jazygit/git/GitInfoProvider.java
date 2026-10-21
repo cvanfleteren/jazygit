@@ -39,21 +39,9 @@ public interface GitInfoProvider {
     // Listing, renaming and deleting branches, as git branch does.
 
     /**
-     * The local branches: the checked out one first, then the most recently committed to.
-     */
-    Either<ProcessError, List<Branch>> branches();
-
-    /**
-     * The remote-tracking branches, the most recently committed to first.
-     */
-    Either<ProcessError, List<RemoteRef>> remoteBranches();
-
-    /**
      * The local and the remote-tracking branches, read at the same moment.
      */
-    default Either<ProcessError, AllBranches> allBranches() {
-        return branches().flatMap(local -> remoteBranches().map(remote -> new AllBranches(local, remote)));
-    }
+    Either<ProcessError, AllBranches> allBranches();
 
     /**
      * Deletes the branch {@code name}, locally and/or {@code remote}, the branch it is pushed to. With both, the

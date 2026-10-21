@@ -10,8 +10,8 @@ import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.AppError;
-import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -43,7 +43,7 @@ class BrowseUpdateTest {
             new Tracking.Gone(new RemoteBranch("origin", new Branch.Name("gone"))));
 
     private static Model model() {
-        return Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(RENAMED, WITHOUT_UPSTREAM, LOCAL, GONE)))
+        return TestModels.localBranchesRead(loaded(), List.of(RENAMED, WITHOUT_UPSTREAM, LOCAL, GONE))
                 .model();
     }
 

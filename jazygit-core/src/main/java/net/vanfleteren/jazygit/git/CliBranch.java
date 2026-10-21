@@ -65,21 +65,6 @@ final class CliBranch {
     }
 
     /**
-     * The local branches: the checked out one first, then the most recently committed to.
-     */
-    static Either<ProcessError, List<Branch>> list(Path workTree) {
-        return all(workTree).map(AllBranches::local);
-    }
-
-    /**
-     * The remote-tracking branches, the most recently committed to first; not the {@code HEAD} of a remote,
-     * which only names one of the others.
-     */
-    static Either<ProcessError, List<RemoteRef>> remotes(Path workTree) {
-        return all(workTree).map(AllBranches::remote);
-    }
-
-    /**
      * Deletes the branch {@code name} where {@code scope} says: locally, and/or {@code remote}, the branch it is
      * pushed to. With both, the remote one goes first, so a failure leaves the local branch in place.
      */
@@ -114,10 +99,6 @@ final class CliBranch {
                 workTree,
                 git("push", remote.remote(), "--delete", remote.branch().value()),
                 credentials);
-    }
-
-    static Either<UnexpectedOutput, List<Branch>> parse(String raw) {
-        return parseAll(raw).map(AllBranches::local);
     }
 
     static Either<UnexpectedOutput, AllBranches> parseAll(String raw) {

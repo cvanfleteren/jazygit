@@ -28,8 +28,10 @@ final class CliStash {
 
     /**
      * The stashes, newest first, as {@code git stash list} lists them: it runs this {@code git log} of the reflog of
-     * the stash itself, so running it directly takes one process instead of two. Without a stash, there is no
-     * reflog, which {@code --ignore-missing} makes an empty list rather than an error.
+     * the stash itself, so running it directly takes one process instead of two. That the stashes are the reflog of
+     * {@code refs/stash} is how git's documentation of {@code git stash} describes them, not a detail of how it is
+     * built. Without a stash, there is no reflog, which {@code --ignore-missing} makes an empty list rather than an
+     * error.
      */
     static Either<ProcessError, List<Stash>> list(Path workTree) {
         return GitProcess.read(

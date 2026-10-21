@@ -48,6 +48,7 @@ import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import org.junit.jupiter.api.Test;
@@ -88,9 +89,9 @@ class WorktreeUpdateTest {
      * {@link #model()}, with {@code taken} also on its remote when {@code takenOnRemote}.
      */
     private static Model model(boolean takenOnRemote) {
-        Model branches = Update.update(
+        Model branches = TestModels.localBranchesRead(
                         loaded(),
-                        new LoadMsg.BranchesLoaded(List.of(
+                        List.of(
                                 new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
                                 new Branch(FEATURE, false, new Sha("ffff")),
                                 new Branch(
@@ -101,7 +102,7 @@ class WorktreeUpdateTest {
                                         takenOnRemote,
                                         false,
                                         new Tracking.None(),
-                                        Option.of(LINKED.path())))))
+                                        Option.of(LINKED.path()))))
                 .model();
         return Update.update(branches, new LoadMsg.WorktreesLoaded(List.of(MAIN, LINKED)))
                 .model();
@@ -159,10 +160,8 @@ class WorktreeUpdateTest {
     @Test
     void aNewBranchFromARemoteOneFollowsItAndStartsOutNamedAsIt() {
         RemoteBranch remote = new RemoteBranch("origin", new Branch.Name("shared"));
-        Model known = Update.update(
-                        model(),
-                        new LoadMsg.RemoteBranchesLoaded(
-                                List.of(new RemoteRef(remote, new Sha("5555"), Instant.EPOCH))))
+        Model known = TestModels.remoteBranchesRead(
+                        model(), List.of(new RemoteRef(remote, new Sha("5555"), Instant.EPOCH)))
                 .model();
 
         Next named = Update.update(known, new AddWorktreeMsg.NewBranchAtRemoteRequested(remote));
@@ -266,10 +265,8 @@ class WorktreeUpdateTest {
     @Test
     void fromARemoteBranchTheNewBranchFollowsItAndStartsOutNamedAsIt() {
         RemoteBranch remote = new RemoteBranch("origin", new Branch.Name("shared"));
-        Model known = Update.update(
-                        model(),
-                        new LoadMsg.RemoteBranchesLoaded(
-                                List.of(new RemoteRef(remote, new Sha("5555"), Instant.EPOCH))))
+        Model known = TestModels.remoteBranchesRead(
+                        model(), List.of(new RemoteRef(remote, new Sha("5555"), Instant.EPOCH)))
                 .model();
 
         assertEquals(

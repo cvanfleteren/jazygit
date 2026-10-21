@@ -27,6 +27,15 @@ import org.junit.jupiter.api.Test;
 class UpdateTest {
 
     @Test
+    void branchesThatCannotBeReadFailBothListsAsTheyAreReadTogether() {
+        Model failed = Update.update(loaded(), new LoadMsg.Failed(new LoadBranches(), refused("boom")))
+                .model();
+
+        assertInstanceOf(Failed.class, failed.repo().branches());
+        assertInstanceOf(Failed.class, failed.repo().remoteBranches());
+    }
+
+    @Test
     void initStartsLoadingStatusAndBranches() {
         Next next = Update.init("repo");
 
@@ -114,10 +123,7 @@ class UpdateTest {
 
         assertSame(
                 model.repo().branches(),
-                Update.update(model, new LoadMsg.BranchesLoaded(BRANCHES))
-                        .model()
-                        .repo()
-                        .branches());
+                localBranchesRead(model, BRANCHES).model().repo().branches());
         assertSame(
                 model.repo().commits(),
                 Update.update(model, new LoadMsg.CommitsLoaded(COMMITS))

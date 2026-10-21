@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.SelectionMsg;
+import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -47,12 +48,11 @@ class UpstreamUpdateTest {
     private static final Divergence DIVERGENCE = new Divergence(List.of(AHEAD), 1, List.of(), 0);
 
     private static Model with(Branch... branches) {
-        return Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(branches)))
-                .model();
+        return TestModels.localBranchesRead(loaded(), List.of(branches)).model();
     }
 
     private static Model withRemotes(Model model, List<RemoteRef> remotes) {
-        return Update.update(model, new LoadMsg.RemoteBranchesLoaded(remotes)).model();
+        return TestModels.remoteBranchesRead(model, remotes).model();
     }
 
     private static Model opened(Model model, Branch.Name highlighted) {
@@ -190,7 +190,27 @@ class UpstreamUpdateTest {
     void itIsReadAgainWhenTheUpstreamMoves() {
         List<RemoteRef> fetched = REMOTES.update(1, new RemoteRef(ORIGIN_FEATURE, new Sha("f1f1"), Instant.EPOCH));
 
-        Next next = Update.update(viewing(), new LoadMsg.RemoteBranchesLoaded(fetched));
+        Next next = TestModels.remoteBranchesRead(viewing(), fetched);
+
+        assertEquals(
+                List.of(new Cmd.LoadDivergence(FEATURE, new BranchRef.Remote(ORIGIN_FEATURE))),
+                next.cmds().filter(Cmd.LoadDivergence.class::isInstance));
+    }
+
+    @Test
+    void itIsReadAgainOnceWhenTheBranchAndItsUpstreamBothMove() {
+        Branch committed = new Branch(
+                FEATURE,
+                false,
+                new Sha("f2f2"),
+                Instant.EPOCH,
+                true,
+                false,
+                Option.of(new Upstream(ORIGIN_FEATURE, 2, 0)));
+        List<RemoteRef> fetched = REMOTES.update(1, new RemoteRef(ORIGIN_FEATURE, new Sha("f1f1"), Instant.EPOCH));
+
+        Next next = Update.update(
+                viewing(), new LoadMsg.BranchesLoaded(new AllBranches(List.of(TRACKING, committed), fetched)));
 
         assertEquals(
                 List.of(new Cmd.LoadDivergence(FEATURE, new BranchRef.Remote(ORIGIN_FEATURE))),
@@ -199,7 +219,7 @@ class UpstreamUpdateTest {
 
     @Test
     void itIsNotReadAgainWhenNothingMoved() {
-        Next next = Update.update(viewing(), new LoadMsg.RemoteBranchesLoaded(REMOTES));
+        Next next = TestModels.remoteBranchesRead(viewing(), REMOTES);
 
         assertEquals(List.of(), next.cmds().filter(Cmd.LoadDivergence.class::isInstance));
     }
@@ -209,7 +229,7 @@ class UpstreamUpdateTest {
         Branch gone = new Branch(
                 FEATURE, false, new Sha("ffff"), Instant.EPOCH, false, false, new Tracking.Gone(ORIGIN_FEATURE));
 
-        Next next = Update.update(viewing(), new LoadMsg.BranchesLoaded(List.of(TRACKING, gone)));
+        Next next = TestModels.localBranchesRead(viewing(), List.of(TRACKING, gone));
 
         assertEquals(Option.none(), next.model().repoView().divergence());
         assertEquals(
@@ -219,7 +239,7 @@ class UpstreamUpdateTest {
 
     @Test
     void itClosesQuietlyWhenTheBranchIsGone() {
-        Next next = Update.update(viewing(), new LoadMsg.BranchesLoaded(List.of(TRACKING)));
+        Next next = TestModels.localBranchesRead(viewing(), List.of(TRACKING));
 
         assertEquals(Option.none(), next.model().repoView().divergence());
         assertEquals(Option.none(), errorText(next.model()));

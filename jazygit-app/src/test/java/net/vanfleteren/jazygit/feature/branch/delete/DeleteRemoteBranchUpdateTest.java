@@ -9,6 +9,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchCmd.DeleteRemoteBranch;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
@@ -25,17 +26,16 @@ class DeleteRemoteBranchUpdateTest {
      * main locally, the default branch; origin/main, origin/feature and upstream/main on the remotes.
      */
     private static Model model() {
-        Model branches = Update.update(
+        Model branches = TestModels.localBranchesRead(
                         loaded(),
-                        new LoadMsg.BranchesLoaded(List.of(
-                                new Branch(new Branch.Name("main"), true, new Sha("aaaa"), Instant.EPOCH, true, true))))
+                        List.of(new Branch(new Branch.Name("main"), true, new Sha("aaaa"), Instant.EPOCH, true, true)))
                 .model();
-        return Update.update(
+        return TestModels.remoteBranchesRead(
                         branches,
-                        new LoadMsg.RemoteBranchesLoaded(List.of(
+                        List.of(
                                 new RemoteRef(ORIGIN_MAIN, new Sha("aaaa"), Instant.EPOCH),
                                 new RemoteRef(ORIGIN_FEATURE, new Sha("ffff"), Instant.EPOCH),
-                                new RemoteRef(UPSTREAM_MAIN, new Sha("bbbb"), Instant.EPOCH))))
+                                new RemoteRef(UPSTREAM_MAIN, new Sha("bbbb"), Instant.EPOCH)))
                 .model();
     }
 

@@ -133,7 +133,7 @@ public interface Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.git().allBranches().fold(this::failedWith, LoadMsg.AllBranchesLoaded::new);
+            return env.git().allBranches().fold(this::failedWith, LoadMsg.BranchesLoaded::new);
         }
     }
 

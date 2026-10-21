@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.TestModels;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -73,7 +74,7 @@ class BranchesPanelTest {
     }
 
     private static Model with(Model model, List<Branch> branches) {
-        return Update.update(model, new LoadMsg.BranchesLoaded(branches)).model();
+        return TestModels.localBranchesRead(model, branches).model();
     }
 
     @Test

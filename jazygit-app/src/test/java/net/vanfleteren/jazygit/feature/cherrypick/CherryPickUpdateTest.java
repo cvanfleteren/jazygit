@@ -42,11 +42,11 @@ class CherryPickUpdateTest {
      * {@code model} once the branch feature is checked out.
      */
     private static Model onFeature(Model model) {
-        Model branches = Update.update(
+        Model branches = TestModels.localBranchesRead(
                         model,
-                        new LoadMsg.BranchesLoaded(List.of(
+                        List.of(
                                 new Branch(new Branch.Name("main"), false, new Sha("aaaa")),
-                                new Branch(new Branch.Name("feature"), true, new Sha("ffff")))))
+                                new Branch(new Branch.Name("feature"), true, new Sha("ffff"))))
                 .model();
         return Update.update(branches, new LoadMsg.CommitsLoaded(TestModels.FEATURE_COMMITS))
                 .model();

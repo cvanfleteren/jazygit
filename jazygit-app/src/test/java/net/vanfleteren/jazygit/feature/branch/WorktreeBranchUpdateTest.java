@@ -22,8 +22,8 @@ import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Landing;
-import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -45,9 +45,9 @@ class WorktreeBranchUpdateTest {
      */
     private static Model elsewhere() {
         RemoteBranch upstream = new RemoteBranch("origin", FEATURE);
-        return Update.update(
+        return TestModels.localBranchesRead(
                         loaded(),
-                        new LoadMsg.BranchesLoaded(List.of(
+                        List.of(
                                 new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
                                 new Branch(
                                         FEATURE,
@@ -66,7 +66,7 @@ class WorktreeBranchUpdateTest {
                                         false,
                                         false,
                                         new Tracking.None(),
-                                        Option.of(LINKED)))))
+                                        Option.of(LINKED))))
                 .model();
     }
 

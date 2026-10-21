@@ -43,8 +43,7 @@ public final class TestModels {
     public static Model loaded() {
         Model model = Update.init("repo").model();
         model = Update.update(model, new LoadMsg.StatusLoaded(CLEAN)).model();
-        model = Update.update(model, new LoadMsg.BranchesLoaded(BRANCHES)).model();
-        model = Update.update(model, new LoadMsg.RemoteBranchesLoaded(io.vavr.collection.List.of()))
+        model = Update.update(model, new LoadMsg.BranchesLoaded(new AllBranches(BRANCHES, List.empty())))
                 .model();
         model = Update.update(model, new LoadMsg.StashesLoaded(io.vavr.collection.List.of()))
                 .model();
@@ -67,6 +66,28 @@ public final class TestModels {
                 Program.start(new Env(provider, StubGitHub.empty()), Runnable::run, Runnable::run, Runnable::run);
         program.dispatch(new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name(branch))));
         return program.model();
+    }
+
+    /**
+     * {@code model} after the branches were read again, finding the local branches {@code local} and the
+     * remote-tracking branches it had, for a test about the local ones.
+     */
+    public static Update.Next localBranchesRead(Model model, List<Branch> local) {
+        return Update.update(
+                model,
+                new LoadMsg.BranchesLoaded(
+                        new AllBranches(local, model.repo().remoteBranches().getOrElse(List.empty()))));
+    }
+
+    /**
+     * {@code model} after the branches were read again, finding the local branches it had and the remote-tracking
+     * branches {@code remote}, for a test about the remote ones.
+     */
+    public static Update.Next remoteBranchesRead(Model model, List<RemoteRef> remote) {
+        return Update.update(
+                model,
+                new LoadMsg.BranchesLoaded(
+                        new AllBranches(model.repo().branches().getOrElse(List.empty()), remote)));
     }
 
     /**

@@ -121,7 +121,7 @@ class CliParseTest {
                                 false,
                                 false,
                                 new Tracking.Gone(new RemoteBranch("origin", new Branch.Name("gone"))))),
-                CliBranch.parse(raw).get());
+                CliBranch.parseAll(raw).get().local());
     }
 
     @Test
@@ -139,7 +139,7 @@ class CliParseTest {
                         "")
                 + ref("refs/remotes/origin/elsewhere", A, "1", " ", "", "", "", "", "", "");
 
-        assertEquals(List.of(true), CliBranch.parse(raw).get().map(Branch::hasRemote));
+        assertEquals(List.of(true), CliBranch.parseAll(raw).get().local().map(Branch::hasRemote));
     }
 
     @Test
@@ -156,7 +156,7 @@ class CliParseTest {
                 "refs/remotes/my/fork/feature/x",
                 "");
 
-        Branch local = CliBranch.parse(raw).get().head();
+        Branch local = CliBranch.parseAll(raw).get().local().head();
         assertEquals(
                 Option.of(new RemoteBranch("my/fork", new Branch.Name("feature/x"))),
                 local.upstream().map(Upstream::branch));
@@ -171,14 +171,14 @@ class CliParseTest {
 
         assertEquals(
                 List.of(Option.none(), Option.of(java.nio.file.Path.of("/repos/linked dir")), Option.none()),
-                CliBranch.parse(raw).get().map(Branch::worktree));
+                CliBranch.parseAll(raw).get().local().map(Branch::worktree));
     }
 
     @Test
     void withoutOriginHeadMainOrMasterIsTheDefault() {
         String raw = ref("refs/heads/master", A, "1", "*", "", "", "", "", "", "");
 
-        assertEquals(List.of(true), CliBranch.parse(raw).get().map(Branch::isDefault));
+        assertEquals(List.of(true), CliBranch.parseAll(raw).get().local().map(Branch::isDefault));
     }
 
     @Test
@@ -214,10 +214,10 @@ class CliParseTest {
     void malformedOutputIsAnErrorRatherThanAnException() {
         assertEquals(
                 new GitError.UnexpectedOutput("refs/heads/main\u001f" + A),
-                CliBranch.parse(ref("refs/heads/main", A)).getLeft());
+                CliBranch.parseAll(ref("refs/heads/main", A)).getLeft());
         assertEquals(
                 new GitError.UnexpectedOutput("soon"),
-                CliBranch.parse(ref("refs/heads/main", A, "soon", "*", "", "", "", "", "", ""))
+                CliBranch.parseAll(ref("refs/heads/main", A, "soon", "*", "", "", "", "", "", ""))
                         .getLeft());
         assertEquals(
                 new GitError.UnexpectedOutput(" "),

@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
@@ -32,16 +33,16 @@ class ForcePushDialogTest {
     private final Model open = openModel();
 
     private static Model openModel() {
-        Model diverged = Update.update(
+        Model diverged = TestModels.localBranchesRead(
                         TestModels.loaded(),
-                        new LoadMsg.BranchesLoaded(List.of(new Branch(
+                        List.of(new Branch(
                                 new Branch.Name("main"),
                                 true,
                                 new Sha("aaaa"),
                                 Instant.EPOCH,
                                 true,
                                 false,
-                                Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("main")), 1, 2))))))
+                                Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("main")), 1, 2)))))
                 .model();
         return Update.update(diverged, new PushMsg.Requested(new Branch.Name("main")))
                 .model();
