@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.ui.TextWidth;
 import net.vanfleteren.jazygit.ui.Theme;
 
 /**
@@ -42,7 +43,6 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
     private static final String FILTERING_HINT = "dialog.hint.pickFiltering";
     // The columns between two cells of a row.
     private static final int GAP = 2;
-    private static final String CUT = "…";
     private final Spec<P, T> spec;
     private final Consumer<Msg> dispatch;
     private final ListElement<?> list;
@@ -132,7 +132,7 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
         return List.range(0, columns)
                 .map(column -> rows.flatMap(
                                 row -> row.cells().asPartialFunction().lift().apply(column))
-                        .map(cell -> cell.shown().length())
+                        .map(cell -> TextWidth.of(cell.shown()))
                         .max()
                         .getOrElse(0));
     }
@@ -254,7 +254,7 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
      * A cell of a row.
      *
      * @param cssClass the class it is drawn with, if any
-     * @param cap      the characters it shows at most, if any; past those it is cut
+     * @param cap      the columns it shows at most, if any; past those it is cut
      */
     public record Cell(String text, Option<String> cssClass, Option<Integer> cap) {
 
@@ -267,21 +267,21 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
         }
 
         /**
-         * This cell, cut past {@code cap} characters.
+         * This cell, cut past {@code cap} columns.
          */
         public Cell capped(int cap) {
             return new Cell(text, cssClass, Option.of(cap));
         }
 
         boolean isCut() {
-            return cap.exists(max -> text.length() > max);
+            return cap.exists(max -> TextWidth.of(text) > max);
         }
 
         /**
          * The text as shown: when it is cut, it ends in an ellipsis within the cap.
          */
         String shown() {
-            return isCut() ? text.substring(0, cap.get() - CUT.length()) + CUT : text;
+            return isCut() ? TextWidth.cut(text, cap.get()) : text;
         }
     }
 

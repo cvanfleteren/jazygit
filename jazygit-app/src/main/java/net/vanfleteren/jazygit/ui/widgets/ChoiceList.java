@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.ui.TextWidth;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 
@@ -136,7 +137,7 @@ public final class ChoiceList<P extends Popup> {
     public int width(Model model, P popup) {
         List<Row> rows = rows(model, popup);
         return allLines.map(line -> lineText(line, rows))
-                .map(String::length)
+                .map(TextWidth::of)
                 .max()
                 .getOrElse(0);
     }
@@ -164,7 +165,7 @@ public final class ChoiceList<P extends Popup> {
         return (filterable
                         ? List.of("dialog.hint.selectFilter", "dialog.hint.selectFiltering")
                         : List.of("dialog.hint.selectCancel"))
-                .map(key -> Messages.get(key).length())
+                .map(key -> TextWidth.of(Messages.get(key)))
                 .max()
                 .get();
     }

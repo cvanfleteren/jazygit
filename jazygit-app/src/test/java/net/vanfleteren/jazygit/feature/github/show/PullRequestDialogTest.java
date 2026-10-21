@@ -125,6 +125,36 @@ class PullRequestDialogTest {
     }
 
     @Test
+    void aTitleOfWideCharactersGetsTheLinesItTakes() throws Exception {
+        // 41 characters of two columns each: two lines of the 56 columns inside the dialog.
+        String title = "変更".repeat(19) + "終わり";
+        PullRequestDetails wide = new PullRequestDetails(
+                DETAILS.number(),
+                title,
+                DETAILS.author(),
+                DETAILS.state(),
+                DETAILS.draft(),
+                DETAILS.headBranch(),
+                DETAILS.baseBranch(),
+                DETAILS.createdAt(),
+                DETAILS.additions(),
+                DETAILS.deletions(),
+                DETAILS.changedFiles(),
+                DETAILS.mergeable(),
+                DETAILS.review(),
+                DETAILS.comments(),
+                DETAILS.labels(),
+                DETAILS.reviewers(),
+                DETAILS.checks());
+
+        String screen = screen(
+                PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(wide)));
+
+        assertTrue(screen.contains("終わり"), screen);
+        assertTrue(screen.contains("    State  Open · Draft"), screen);
+    }
+
+    @Test
     void manyChecksThatDidNotPassAreCut() throws Exception {
         List<Check> checks = List.range(0, 8).map(i -> new Check("check" + i, Checks.FAILING));
         PullRequestDetails details = new PullRequestDetails(

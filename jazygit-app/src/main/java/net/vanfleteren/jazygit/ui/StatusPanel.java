@@ -72,7 +72,8 @@ public final class StatusPanel {
         Panel panel = panel(unfinished
                         // The row would share its width out evenly, cutting off what is in progress.
                         .<StyledElement<?>>map(label -> row(
-                                repository.length(line.length()), text(label).addClass(Theme.Classes.IN_PROGRESS)))
+                                repository.length(TextWidth.of(line)),
+                                text(label).addClass(Theme.Classes.IN_PROGRESS)))
                         .getOrElse(repository))
                 .title(title(model.screen()))
                 .length(HEIGHT);

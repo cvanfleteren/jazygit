@@ -110,6 +110,18 @@ class PickDialogTest {
     }
 
     @Test
+    void cellsOfWideCharactersAreCutAndSizedInColumns() {
+        List<PickDialog.Row<String>> rows = List.of(
+                new PickDialog.Row<>("a", List.of(PickDialog.Cell.of("ab👍👍👍").capped(5))),
+                new PickDialog.Row<>("b", List.of(PickDialog.Cell.of("日本").capped(5))));
+
+        // Never half an emoji; the ellipsis within the five columns.
+        assertEquals("ab👍…", rows.head().cells().head().shown());
+        assertEquals("日本", rows.last().cells().head().shown());
+        assertEquals(List.of(5), PickDialog.widths(rows));
+    }
+
+    @Test
     void theHighlightedRowShowsInFullUnderThePopupWhenItIsCut() throws Exception {
         PickDialog<BranchPopup, String> columns = new PickDialog<>(
                 new PickDialog.Spec<>(
