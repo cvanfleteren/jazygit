@@ -16,12 +16,19 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Operation;
 
 /**
- * Checks {@code branch} out in a new worktree at {@code location}. The branch is busy meanwhile. Once added, it
- * tells where the worktree is, as git lists it.
+ * Checks {@code branch} out in a new worktree at {@code location}, creating it first when it is {@code creating}.
+ * The branch is busy meanwhile. Once added, it tells where the worktree is, as git lists it.
  */
-public record AddWorktreeCmd(Branch.Name branch, String location) implements WorktreeCmd {
+public record AddWorktreeCmd(Branch.Name branch, String location, Option<NewBranch> creating) implements WorktreeCmd {
 
     public static final Operation ADD_WORKTREE = Operation.of("log.title.addWorktree", "error.addWorktree.failed");
+
+    /**
+     * Checks {@code branch}, which exists, out in a new worktree at {@code location}.
+     */
+    public AddWorktreeCmd(Branch.Name branch, String location) {
+        this(branch, location, Option.none());
+    }
 
     @Override
     public Operation operation() {
@@ -40,7 +47,11 @@ public record AddWorktreeCmd(Branch.Name branch, String location) implements Wor
 
     @Override
     public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-        return git.addWorktree(WorktreeCmd.path(location), branch);
+        Path path = WorktreeCmd.path(location);
+        return creating.fold(
+                () -> git.addWorktree(path, branch),
+                created ->
+                        git.addWorktreeWithNewBranch(path, branch, created.start(), created.parent(), created.track()));
     }
 
     @Override

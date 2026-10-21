@@ -239,6 +239,50 @@ class CliWorktreeTest {
     }
 
     @Test
+    void aNewBranchIsCheckedOutInANewWorktreeFromABranchOrFollowingARemoteOne() throws Exception {
+        assumeTrue(gitAvailable(), "git is not installed");
+        Path origin = Files.createDirectories(main.resolveSibling("origin"));
+        git(origin, "init", "-q", "-b", "main");
+        git(origin, "commit", "-q", "--allow-empty", "-m", "Initial commit");
+        git(origin, "branch", "shared");
+        git(
+                main.getParent(),
+                "clone",
+                "-q",
+                origin.toString(),
+                main.getFileName().toString());
+        CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
+        Path fromLocal = main.resolveSibling("from-local");
+        Path fromRemote = main.resolveSibling("from-remote");
+
+        List<String> added = provider.addWorktreeWithNewBranch(
+                        fromLocal, new Branch.Name("topic"), "main", Option.of(new Branch.Name("main")), false)
+                .get()
+                .map(ExecutedCommand::line);
+        provider.addWorktreeWithNewBranch(
+                        fromRemote, new Branch.Name("shared"), "refs/remotes/origin/shared", Option.none(), true)
+                .get();
+
+        assertEquals("git worktree add --quiet -b topic " + fromLocal + " main", added.head());
+        assertEquals(
+                List.of(
+                        Option.of(new Branch.Name("main")),
+                        Option.of(new Branch.Name("topic")),
+                        Option.of(new Branch.Name("shared"))),
+                provider.worktrees().get().map(Worktree::branch));
+        assertEquals(
+                Option.of(new Branch.Name("main")),
+                CliConfig.parent(main, new Branch.Name("topic")).get());
+        assertEquals(
+                Option.of("origin/shared"),
+                provider.branches()
+                        .get()
+                        .find(branch -> branch.name().value().equals("shared"))
+                        .flatMap(branch -> branch.upstream())
+                        .map(upstream -> upstream.branch().shortName()));
+    }
+
+    @Test
     void aBranchThatIsCheckedOutAlreadyGetsNoWorktree() throws Exception {
         assumeTrue(gitAvailable(), "git is not installed");
         git(main, "init", "-q", "-b", "main");

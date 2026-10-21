@@ -116,11 +116,6 @@ public sealed interface AppError {
     record CheckedOutElsewhere(Operation operation, Branch.Name branch, String worktree) implements AppError {}
 
     /**
-     * A worktree was asked for the branch that is checked out here, which git keeps from being checked out twice.
-     */
-    record CheckedOutHere(Branch.Name branch) implements AppError {}
-
-    /**
      * The main worktree was asked to be removed, which holds the repository.
      *
      * @param worktree the name of its directory

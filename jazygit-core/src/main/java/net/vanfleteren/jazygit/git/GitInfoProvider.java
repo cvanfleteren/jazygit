@@ -399,6 +399,15 @@ public interface GitInfoProvider {
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktree(Path location, Branch.Name branch);
 
     /**
+     * Creates the branch {@code name} at {@code startPoint} and checks it out in a new worktree at {@code location},
+     * taken as {@link #addWorktree} takes it. With {@code track}, the new branch follows {@code startPoint}, a
+     * remote-tracking branch; a {@code parent} is recorded as the branch it was made from. Git refuses a name that
+     * is a branch already.
+     */
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktreeWithNewBranch(
+            Path location, Branch.Name name, String startPoint, Option<Branch.Name> parent, boolean track);
+
+    /**
      * Removes the linked worktree at {@code location}, its directory included; its branch stays. Without
      * {@code force}, git refuses one with modified or untracked files, which is a
      * {@link GitError.WorktreeHasChanges}.

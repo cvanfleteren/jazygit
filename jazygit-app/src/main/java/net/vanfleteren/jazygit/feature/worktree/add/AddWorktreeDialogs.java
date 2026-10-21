@@ -28,6 +28,18 @@ public final class AddWorktreeDialogs {
             AddWorktreeMsg.Cancelled::new);
 
     /**
+     * Asks for the name of the new branch to check out in a new worktree. A name that is no branch name keeps it
+     * open.
+     */
+    public static final TextInputDialog.Spec<NewWorktreeBranchPopup> NEW_WORKTREE_BRANCH = new TextInputDialog.Spec<>(
+            "new-worktree-branch",
+            NewWorktreeBranchPopup.class,
+            popup -> Messages.get("dialog.newWorktreeBranch.title", popup.label()),
+            Option.of(Messages.get("dialog.newBranch.placeholder")),
+            AddWorktreeMsg.NameConfirmed::new,
+            AddWorktreeMsg.NameCancelled::new);
+
+    /**
      * Tells that the worktree was added, and asks to switch to it.
      */
     public static final ConfirmDialog.Spec<SwitchToAddedPopup> SWITCH_TO_ADDED = new ConfirmDialog.Spec<>(
@@ -43,6 +55,7 @@ public final class AddWorktreeDialogs {
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
+                PopupSlot.returningTo(BranchesPanel.ID, new TextInputDialog<>(NEW_WORKTREE_BRANCH, dispatch)),
                 PopupSlot.returningTo(BranchesPanel.ID, new TextInputDialog<>(NEW_WORKTREE, dispatch)),
                 PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(SWITCH_TO_ADDED, dispatch)));
     }

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -14,6 +15,8 @@ import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg;
+import net.vanfleteren.jazygit.feature.worktree.add.NewBranch;
+import net.vanfleteren.jazygit.feature.worktree.add.NewWorktreeBranchPopup;
 import net.vanfleteren.jazygit.feature.worktree.add.NewWorktreePopup;
 import net.vanfleteren.jazygit.feature.worktree.add.SwitchToAddedPopup;
 import net.vanfleteren.jazygit.feature.worktree.lock.LockWorktreeCmd;
@@ -25,9 +28,13 @@ import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeMsg;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreePopup;
 import net.vanfleteren.jazygit.feature.worktree.switchto.SwitchWorktreeMsg;
+import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.keys.Scopes;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -95,14 +102,76 @@ class WorktreeUpdateTest {
     }
 
     @Test
-    void theCheckedOutBranchGetsNoWorktreeAndTheErrorSaysWhy() {
-        Next next = Update.update(model(), new AddWorktreeMsg.Requested(new Branch.Name("main")));
+    void forTheCheckedOutBranchANewBranchMadeFromItIsAskedFor() {
+        Branch.Name main = new Branch.Name("main");
 
-        assertEquals(Option.none(), next.model().popup(NewWorktreePopup.class));
+        Next next = Update.update(model(), new AddWorktreeMsg.Requested(main));
+
         assertEquals(
-                Option.of("Branch main is checked out here; check out another branch first to give it a worktree"
-                        + " of its own"),
-                errorText(next.model()));
+                Option.of(new NewWorktreeBranchPopup("main", "", new NewBranch("main", Option.of(main), false))),
+                next.model().popup());
+    }
+
+    @Test
+    void aNewBranchMadeFromABranchIsNamedThenGivenAWorktreeThatCreatesIt() {
+        Next named = Update.update(model(), new AddWorktreeMsg.NewBranchRequested(FEATURE));
+        NewBranch fromFeature = new NewBranch("feature", Option.of(FEATURE), false);
+        assertEquals(
+                Option.of(new NewWorktreeBranchPopup("feature", "", fromFeature)),
+                named.model().popup());
+
+        // A name that is no branch name keeps the dialog open.
+        Model blank = typed(named.model(), " ");
+        assertEquals(
+                blank.popup(),
+                Update.update(blank, new AddWorktreeMsg.NameConfirmed()).model().popup());
+        Next located = Update.update(typed(named.model(), "topic"), new AddWorktreeMsg.NameConfirmed());
+        Branch.Name topic = new Branch.Name("topic");
+        assertEquals(
+                Option.of(new NewWorktreePopup(topic, "/repos/app-topic", Option.of(fromFeature))),
+                located.model().popup());
+
+        assertEquals(
+                List.of(new AddWorktreeCmd(topic, "/repos/app-topic", Option.of(fromFeature))),
+                Update.update(located.model(), new AddWorktreeMsg.Confirmed()).cmds());
+    }
+
+    @Test
+    void aNewBranchFromARemoteOneFollowsItAndStartsOutNamedAsIt() {
+        RemoteBranch remote = new RemoteBranch("origin", new Branch.Name("shared"));
+        Model known = Update.update(
+                        model(),
+                        new LoadMsg.RemoteBranchesLoaded(
+                                List.of(new RemoteRef(remote, new Sha("5555"), Instant.EPOCH))))
+                .model();
+
+        Next named = Update.update(known, new AddWorktreeMsg.NewBranchAtRemoteRequested(remote));
+
+        assertEquals(
+                Option.of(new NewWorktreeBranchPopup(
+                        "origin/shared", "shared", new NewBranch("refs/remotes/origin/shared", Option.none(), true))),
+                named.model().popup());
+    }
+
+    @Test
+    void addingANewBranchRunsGitWithItsStartAndWhetherItFollowsIt() {
+        java.util.List<String> ran = new java.util.ArrayList<>();
+        GitInfoProvider git = new StubGitProvider() {
+            @Override
+            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktreeWithNewBranch(
+                    Path location, Branch.Name name, String startPoint, Option<Branch.Name> parent, boolean track) {
+                ran.add(location + " " + name.value() + " " + startPoint + " " + parent + " " + track);
+                return Either.right(List.empty());
+            }
+        };
+
+        new AddWorktreeCmd(
+                        new Branch.Name("topic"),
+                        "/repos/app-topic",
+                        Option.of(new NewBranch("feature", Option.of(FEATURE), false)))
+                .perform(git);
+
+        assertEquals(java.util.List.of("/repos/app-topic topic feature Some(Name[value=feature]) false"), ran);
     }
 
     @Test

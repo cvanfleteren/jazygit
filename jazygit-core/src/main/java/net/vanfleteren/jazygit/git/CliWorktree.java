@@ -111,6 +111,34 @@ final class CliWorktree {
     }
 
     /**
+     * Runs {@code git worktree add --quiet [--track] -b <name> <location> <startPoint>} in {@code workTree}: a new
+     * branch, checked out in a new worktree. With {@code track}, the new branch follows {@code startPoint}, a
+     * remote-tracking branch. A {@code parent} is recorded as the branch it came from, as a new branch records it.
+     */
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> addNewBranch(
+            Path workTree,
+            Path location,
+            Branch.Name name,
+            String startPoint,
+            Option<Branch.Name> parent,
+            boolean track) {
+        return GitFailure.sequence(
+                () -> GitProcess.log(
+                        workTree,
+                        git(List.of("worktree", "add", "--quiet")
+                                .appendAll(Option.when(track, "--track"))
+                                .appendAll(List.of(
+                                        "-b",
+                                        name.value(),
+                                        workTree.resolve(location).normalize().toString(),
+                                        startPoint)))),
+                () -> parent.map(p -> Either.<GitFailure<ProcessError>, List<ExecutedCommand>>right(
+                                CliConfig.setParent(workTree, name, p)
+                                        .fold(GitFailure::commands, commands -> commands)))
+                        .getOrElse(GitFailure::nothing));
+    }
+
+    /**
      * Runs {@code git worktree remove [--force] <location>} in {@code workTree}.
      *
      * @return the command lines that were run, or why git refused, {@link WorktreeHasChanges} when forcing it
