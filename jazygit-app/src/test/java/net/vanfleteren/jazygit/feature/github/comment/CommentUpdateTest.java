@@ -100,6 +100,7 @@ class CommentUpdateTest {
                         DETAILS.mergeable(),
                         DETAILS.review(),
                         DETAILS.comments(),
+                        DETAILS.reviewThreads(),
                         DETAILS.labels(),
                         DETAILS.reviewers(),
                         DETAILS.checks())));

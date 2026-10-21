@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
  * @param mergeable    whether it merges without conflicts
  * @param review       where its review stands
  * @param comments     how many comments it has
+ * @param reviewThreads its review threads, on lines of the diff
  * @param labels       its labels
  * @param reviewers    who reviewed it or is asked to
  * @param checks       its CI checks, one by one
@@ -41,6 +42,7 @@ public record PullRequestDetails(
         Mergeable mergeable,
         Review review,
         int comments,
+        ReviewThreads reviewThreads,
         List<String> labels,
         List<Reviewer> reviewers,
         List<Check> checks) {
@@ -64,6 +66,7 @@ public record PullRequestDetails(
                 mergeable,
                 review,
                 comments,
+                reviewThreads,
                 labels,
                 reviewers,
                 checks);
@@ -103,6 +106,18 @@ public record PullRequestDetails(
      * @param login their login, or the name of a team
      */
     public record Reviewer(String login, ReviewerState state) {}
+
+    /**
+     * The review threads of a pull request: the inline comments on lines of its diff, outdated ones too.
+     *
+     * @param threads    how many threads there are
+     * @param unresolved how many of them are not resolved
+     * @param comments   how many comments they hold, the replies too
+     */
+    public record ReviewThreads(int threads, int unresolved, int comments) {
+
+        public static final ReviewThreads NONE = new ReviewThreads(0, 0, 0);
+    }
 
     /**
      * One CI check.

@@ -48,6 +48,7 @@ class PullRequestDialogTest {
             Mergeable.MERGEABLE,
             Review.CHANGES_REQUESTED,
             5,
+            new ReviewThreads(5, 2, 12),
             List.of("enhancement", "ui"),
             List.of(
                     new Reviewer("alice", ReviewerState.APPROVED),
@@ -72,6 +73,7 @@ class PullRequestDialogTest {
             Mergeable.MERGEABLE,
             Review.APPROVED,
             0,
+            ReviewThreads.NONE,
             List.empty(),
             List.empty(),
             List.empty());
@@ -116,12 +118,49 @@ class PullRequestDialogTest {
         assertTrue(screen.contains("   Review  ✎ changes requested"), screen);
         assertTrue(screen.contains("Reviewers  @alice ✔  @bob ✎"), screen);
         assertTrue(screen.contains(" Comments  5"), screen);
+        assertTrue(screen.contains("  Threads  5 with 12 comments, 2 unresolved"), screen);
         assertTrue(screen.contains("   Labels  enhancement, ui"), screen);
         assertTrue(screen.contains("   Checks  ✗ 1 failed · ● 1 running · ✓ 1 passed"), screen);
         // The failed check first, then the running one; the passed one is only counted.
         assertTrue(screen.indexOf("✗ build") < screen.indexOf("● integration"), screen);
         assertFalse(screen.contains("✓ lint"), screen);
         assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
+    }
+
+    @Test
+    void countsNoReviewThreads() throws Exception {
+        String screen = screen(
+                PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(READY)));
+
+        assertTrue(screen.contains("  Threads  0 "), screen);
+    }
+
+    @Test
+    void saysWhenAllReviewThreadsAreResolved() throws Exception {
+        PullRequestDetails resolved = new PullRequestDetails(
+                READY.number(),
+                READY.title(),
+                READY.author(),
+                READY.state(),
+                READY.draft(),
+                READY.headBranch(),
+                READY.baseBranch(),
+                READY.createdAt(),
+                READY.additions(),
+                READY.deletions(),
+                READY.changedFiles(),
+                READY.mergeable(),
+                READY.review(),
+                READY.comments(),
+                new ReviewThreads(1, 0, 1),
+                READY.labels(),
+                READY.reviewers(),
+                READY.checks());
+
+        String screen = screen(
+                PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(resolved)));
+
+        assertTrue(screen.contains("  Threads  1 with 1 comment, all resolved"), screen);
     }
 
     @Test
@@ -143,6 +182,7 @@ class PullRequestDialogTest {
                 DETAILS.mergeable(),
                 DETAILS.review(),
                 DETAILS.comments(),
+                DETAILS.reviewThreads(),
                 DETAILS.labels(),
                 DETAILS.reviewers(),
                 DETAILS.checks());
@@ -172,6 +212,7 @@ class PullRequestDialogTest {
                 Mergeable.UNKNOWN,
                 Review.NONE,
                 0,
+                ReviewThreads.NONE,
                 List.empty(),
                 List.empty(),
                 checks);
@@ -215,6 +256,7 @@ class PullRequestDialogTest {
                 Mergeable.UNKNOWN,
                 Review.APPROVED,
                 0,
+                ReviewThreads.NONE,
                 List.of("ui"),
                 DETAILS.reviewers(),
                 checks);

@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewThreads;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
@@ -53,11 +54,11 @@ public final class PullRequestDialog implements PopupView {
     private static final int TITLE_LINES = 2;
     /*
      * The most lines the details take: the title and a blank line; state, author, branch, created, changes and
-     * mergeable, and a blank line; review, reviewers, comments and labels, and a blank line; the checks
+     * mergeable, and a blank line; review, reviewers, comments, threads and labels, and a blank line; the checks
      * counted, listed, and how many more there are. The dialog is always this high, so it keeps its size
      * when the details arrive.
      */
-    private static final int CONTENT_HEIGHT = TITLE_LINES + 1 + 6 + 1 + 4 + 1 + 1 + LISTED_CHECKS + 1;
+    private static final int CONTENT_HEIGHT = TITLE_LINES + 1 + 6 + 1 + 5 + 1 + 1 + LISTED_CHECKS + 1;
 
     private final Clock clock;
     private final ChoiceList<PullRequestPopup> actions;
@@ -290,12 +291,26 @@ public final class PullRequestDialog implements PopupView {
                         () -> Line.pieces(List.<StyledElement<?>>of(label("dialog.pullRequest.reviewers"))
                                 .appendAll(reviewers(pr)))))
                 .append(Line.labelled("dialog.pullRequest.comments", text(String.valueOf(pr.comments()))))
+                .append(Line.labelled("dialog.pullRequest.threads", text(threads(pr.reviewThreads()))))
                 .appendAll(Option.when(
                         !pr.labels().isEmpty(),
                         () -> Line.labelled(
                                 "dialog.pullRequest.labels", text(pr.labels().mkString(", ")))))
                 .append(Line.blank())
                 .appendAll(checks(pr.checks()));
+    }
+
+    private static String threads(ReviewThreads threads) {
+        if (threads.threads() == 0) {
+            return "0";
+        }
+        return threads.unresolved() == 0
+                ? Messages.get("dialog.pullRequest.threads.resolved", threads.threads(), threads.comments())
+                : Messages.get(
+                        "dialog.pullRequest.threads.unresolved",
+                        threads.threads(),
+                        threads.comments(),
+                        threads.unresolved());
     }
 
     private String created(PullRequestDetails pr, Instant now) {
