@@ -72,13 +72,7 @@ class MergeUpdateTest {
                 succeeded(
                         new MergeCmd(new Branch.Name("feature"), MergeMode.FAST_FORWARD),
                         "git merge --ff --no-edit feature"));
-        assertEquals(
-                List.of(
-                        new LoadStatus(),
-                        new LoadBranches(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(),
-                        new LoadStashes()),
-                done.cmds());
+        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new LoadStashes()), done.cmds());
         assertEquals(
                 executed("git merge --ff --no-edit feature"),
                 done.model().outcome().commandLog().last().commands());

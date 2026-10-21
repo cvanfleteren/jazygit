@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
+import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
@@ -33,11 +34,11 @@ class RemoteBranchUpdateTest {
      * main and feature locally, where feature follows nothing; origin/feature and origin/new on the remote.
      */
     private static Model withRemotes() {
-        return Update.update(
+        return TestModels.remoteBranchesRead(
                         loaded(),
-                        new LoadMsg.RemoteBranchesLoaded(List.of(
+                        List.of(
                                 new RemoteRef(ORIGIN_FEATURE, new Sha("ffff"), Instant.EPOCH),
-                                new RemoteRef(ORIGIN_NEW, new Sha("eeee"), Instant.EPOCH))))
+                                new RemoteRef(ORIGIN_NEW, new Sha("eeee"), Instant.EPOCH)))
                 .model();
     }
 
@@ -103,9 +104,9 @@ class RemoteBranchUpdateTest {
 
     @Test
     void checkingOutARemoteBranchThatALocalOneFollowsChecksOutThatOne() {
-        Model model = Update.update(
+        Model model = TestModels.localBranchesRead(
                         withRemotes(),
-                        new LoadMsg.BranchesLoaded(List.of(
+                        List.of(
                                 new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
                                 new Branch(
                                         new Branch.Name("mine"),
@@ -114,7 +115,7 @@ class RemoteBranchUpdateTest {
                                         Instant.EPOCH,
                                         true,
                                         false,
-                                        Option.of(new Upstream(ORIGIN_FEATURE, 0, 0))))))
+                                        Option.of(new Upstream(ORIGIN_FEATURE, 0, 0)))))
                 .model();
 
         assertEquals(
@@ -222,12 +223,10 @@ class RemoteBranchUpdateTest {
         Model model = Update.update(withRemotes(), new SelectionMsg.BranchSelected(remote))
                 .model();
 
-        Next moved = Update.update(
-                model,
-                new LoadMsg.RemoteBranchesLoaded(List.of(new RemoteRef(ORIGIN_NEW, new Sha("9999"), Instant.EPOCH))));
-        Next unmoved = Update.update(
-                model,
-                new LoadMsg.RemoteBranchesLoaded(List.of(new RemoteRef(ORIGIN_NEW, new Sha("eeee"), Instant.EPOCH))));
+        Next moved = TestModels.remoteBranchesRead(
+                model, List.of(new RemoteRef(ORIGIN_NEW, new Sha("9999"), Instant.EPOCH)));
+        Next unmoved = TestModels.remoteBranchesRead(
+                model, List.of(new RemoteRef(ORIGIN_NEW, new Sha("eeee"), Instant.EPOCH)));
 
         assertEquals(List.of(new LoadBranchLog(remote)), moved.cmds());
         assertEquals(List.of(), unmoved.cmds());

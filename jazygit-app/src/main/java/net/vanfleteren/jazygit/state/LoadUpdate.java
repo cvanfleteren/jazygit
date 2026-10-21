@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
@@ -31,12 +31,8 @@ public final class LoadUpdate {
             case BranchesLoaded(var branches) ->
                 branchesLoaded(
                         model,
-                        done.mapRepo(repo -> repo.withBranches(repo.branches().reload(branches))));
-            case RemoteBranchesLoaded(var branches) ->
-                remoteBranchesLoaded(
-                        model,
-                        done.mapRepo(repo ->
-                                repo.withRemoteBranches(repo.remoteBranches().reload(branches))));
+                        done.mapRepo(repo -> repo.withBranches(repo.branches().reload(branches.local()))
+                                .withRemoteBranches(repo.remoteBranches().reload(branches.remote()))));
             case StashesLoaded(var stashes) ->
                 Next.of(done.mapRepo(repo -> repo.withStashes(repo.stashes().reload(stashes))));
             case LoadMsg.WorktreesLoaded(var worktrees) ->
@@ -96,34 +92,13 @@ public final class LoadUpdate {
         return Update.reloadDiff(next, cmds);
     }
 
+    /**
+     * Reads what shows a branch again when the branch moved: the log of the highlighted one, and the divergence
+     * that is open, once however many of its branches moved.
+     */
     private static Next branchesLoaded(Model before, Model next) {
         return reloadDivergence(
-                before,
-                reloadMovedLog(
-                        next,
-                        branch -> branch instanceof BranchRef.Local(Branch.Name name)
-                                ? Option.of(tip(before.repo().branches(), name, Branch::name, Branch::tipOid)
-                                        .equals(tip(next.repo().branches(), name, Branch::name, Branch::tipOid)))
-                                : Option.none()));
-    }
-
-    private static Next remoteBranchesLoaded(Model before, Model next) {
-        return reloadDivergence(
-                before,
-                reloadMovedLog(
-                        next,
-                        branch -> branch instanceof BranchRef.Remote(RemoteBranch remote)
-                                ? Option.of(tip(
-                                                before.repo().remoteBranches(),
-                                                remote,
-                                                RemoteRef::branch,
-                                                RemoteRef::tipOid)
-                                        .equals(tip(
-                                                next.repo().remoteBranches(),
-                                                remote,
-                                                RemoteRef::branch,
-                                                RemoteRef::tipOid)))
-                                : Option.none()));
+                before, reloadMovedLog(next, branch -> !tipOf(before, branch).equals(tipOf(next, branch))));
     }
 
     /**
@@ -199,23 +174,15 @@ public final class LoadUpdate {
     /**
      * Reads the log of the highlighted branch again when it moved (a commit, reset, fetch...), as it is outdated.
      *
-     * @param unmoved whether the highlighted branch is where it was; none when the branches that were read do
-     *                not include it
+     * @param moved whether the highlighted branch is no longer where it was
      */
-    private static Next reloadMovedLog(Model next, Function<BranchRef, Option<Boolean>> unmoved) {
+    private static Next reloadMovedLog(Model next, Predicate<BranchRef> moved) {
         return next.repoView()
                 .branchLog()
                 .map(Preview::key)
-                .filter(branch -> unmoved.apply(branch).contains(false))
+                .filter(moved)
                 .map(branch -> Next.of(next, new LoadBranchLog(branch)))
                 .getOrElse(() -> Next.of(next));
-    }
-
-    private static <B, K> Option<Sha> tip(
-            Loadable<List<B>> branches, K key, Function<B, K> keyOf, Function<B, Sha> tipOf) {
-        return branches.getOrElse(List.empty())
-                .find(b -> keyOf.apply(b).equals(key))
-                .map(tipOf);
     }
 
     /**
@@ -233,8 +200,9 @@ public final class LoadUpdate {
             case LoadFileDiff(var files, var options)
             when !options.equals(model.preferences().diffOptions()) -> model;
             case Cmd.LoadStatus() -> model.mapRepo(repo -> repo.withStatus(new Failed<>(failure)));
-            case Cmd.LoadBranches() -> model.mapRepo(repo -> repo.withBranches(new Failed<>(failure)));
-            case Cmd.LoadRemoteBranches() -> model.mapRepo(repo -> repo.withRemoteBranches(new Failed<>(failure)));
+            case Cmd.LoadBranches() ->
+                model.mapRepo(
+                        repo -> repo.withBranches(new Failed<>(failure)).withRemoteBranches(new Failed<>(failure)));
             case Cmd.LoadStashes() -> model.mapRepo(repo -> repo.withStashes(new Failed<>(failure)));
             case Cmd.LoadWorktrees() -> model.mapRepo(repo -> repo.withWorktrees(new Failed<>(failure)));
             // Which worktrees have changes is a detail: when the whole read fails, what was read before stays, and

@@ -56,7 +56,6 @@ class OperationUpdateTest {
                 List.of(
                         new LoadStatus(),
                         new LoadBranches(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(),
                         new LoadStashes(),
                         new LoadPullRequests(),
                         new LoadBranchChecks()),
@@ -69,13 +68,7 @@ class OperationUpdateTest {
 
         Next next = Update.update(loaded(), succeeded(pull, "git pull"));
 
-        assertEquals(
-                List.of(
-                        new LoadStatus(),
-                        new LoadBranches(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(),
-                        new LoadStashes()),
-                next.cmds());
+        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new LoadStashes()), next.cmds());
     }
 
     @Test
@@ -188,13 +181,7 @@ class OperationUpdateTest {
                 next.model().outcome().commandLog());
         assertEquals(Option.none(), next.model().outcome().error());
         assertEquals(Option.of(notice), next.model().outcome().notice());
-        assertEquals(
-                List.of(
-                        new LoadStatus(),
-                        new LoadBranches(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(),
-                        new LoadStashes()),
-                next.cmds());
+        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new LoadStashes()), next.cmds());
     }
 
     @Test

@@ -126,19 +126,14 @@ public interface Cmd {
         }
     }
 
+    /**
+     * Reads the local and the remote-tracking branches, at once.
+     */
     record LoadBranches() implements Load {
 
         @Override
         public Msg run(Env env) {
-            return env.git().branches().fold(this::failedWith, LoadMsg.BranchesLoaded::new);
-        }
-    }
-
-    record LoadRemoteBranches() implements Load {
-
-        @Override
-        public Msg run(Env env) {
-            return env.git().remoteBranches().fold(this::failedWith, LoadMsg.RemoteBranchesLoaded::new);
+            return env.git().allBranches().fold(this::failedWith, LoadMsg.BranchesLoaded::new);
         }
     }
 

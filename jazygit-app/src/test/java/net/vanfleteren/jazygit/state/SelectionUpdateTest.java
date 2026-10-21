@@ -212,7 +212,6 @@ class SelectionUpdateTest {
                 List.of(
                         new LoadStatus(),
                         new LoadBranches(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(),
                         new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
                         new LoadBranchLog(new BranchRef.Local(new Branch.Name("feature")))),
                 Update.update(model, new Tick(Instant.EPOCH)).cmds());
@@ -228,24 +227,22 @@ class SelectionUpdateTest {
                         new LoadMsg.BranchLogLoaded(new BranchRef.Local(new Branch.Name("feature")), FEATURE_COMMITS))
                 .model();
 
+        assertEquals(List.of(), localBranchesRead(model, BRANCHES).cmds());
         assertEquals(
                 List.of(),
-                Update.update(model, new LoadMsg.BranchesLoaded(BRANCHES)).cmds());
-        assertEquals(
-                List.of(),
-                Update.update(
+                localBranchesRead(
                                 model,
-                                new LoadMsg.BranchesLoaded(List.of(
+                                List.of(
                                         new Branch(new Branch.Name("main"), true, new Sha("moved")),
-                                        new Branch(new Branch.Name("feature"), false, new Sha("ffff")))))
+                                        new Branch(new Branch.Name("feature"), false, new Sha("ffff"))))
                         .cmds());
         assertEquals(
                 List.of(new LoadBranchLog(new BranchRef.Local(new Branch.Name("feature")))),
-                Update.update(
+                localBranchesRead(
                                 model,
-                                new LoadMsg.BranchesLoaded(List.of(
+                                List.of(
                                         new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
-                                        new Branch(new Branch.Name("feature"), false, new Sha("moved")))))
+                                        new Branch(new Branch.Name("feature"), false, new Sha("moved"))))
                         .cmds());
     }
 

@@ -9,6 +9,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.model.AllBranches;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
@@ -80,7 +81,9 @@ public interface StubGitProvider extends GitInfoProvider {
         return Either.right(new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), List.empty()));
     }
 
-    @Override
+    /**
+     * The local branches {@link #allBranches()} reads, for a stub that only has those.
+     */
     default Either<ProcessError, List<Branch>> branches() {
         return Either.right(List.empty());
     }
@@ -174,9 +177,16 @@ public interface StubGitProvider extends GitInfoProvider {
         return Either.right(List.empty());
     }
 
-    @Override
+    /**
+     * The remote-tracking branches {@link #allBranches()} reads, for a stub that only has those.
+     */
     default Either<ProcessError, List<RemoteRef>> remoteBranches() {
         return Either.right(List.empty());
+    }
+
+    @Override
+    default Either<ProcessError, AllBranches> allBranches() {
+        return branches().flatMap(local -> remoteBranches().map(remote -> new AllBranches(local, remote)));
     }
 
     @Override

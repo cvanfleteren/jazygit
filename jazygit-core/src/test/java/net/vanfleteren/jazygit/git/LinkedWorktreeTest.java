@@ -8,6 +8,7 @@ import io.vavr.control.Option;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import net.vanfleteren.jazygit.git.model.AllBranches;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
@@ -84,7 +85,7 @@ class LinkedWorktreeTest {
 
         assertEquals(linked, provider.workTree());
         assertTrue(Files.isRegularFile(linked.resolve(".git")));
-        List<Branch> branches = provider.branches().get();
+        List<Branch> branches = provider.allBranches().map(AllBranches::local).get();
         assertEquals(
                 List.of("feature", "main"), branches.map(branch -> branch.name().value()));
         assertEquals(List.of(Option.none(), Option.of(main)), branches.map(Branch::worktree));
@@ -92,7 +93,11 @@ class LinkedWorktreeTest {
 
     @Test
     void theMainWorktreeSeesTheBranchCheckedOutInTheLinkedOne() {
-        List<Branch> branches = CliGitInfoProvider.open(main).get().branches().get();
+        List<Branch> branches = CliGitInfoProvider.open(main)
+                .get()
+                .allBranches()
+                .map(AllBranches::local)
+                .get();
 
         assertEquals(List.of(Option.none(), Option.of(linked)), branches.map(Branch::worktree));
         assertEquals(List.of(false, true), branches.map(Branch::checkedOutElsewhere));

@@ -88,12 +88,12 @@ class MoveUpdateTest {
                         new Tracking.None(),
                         Option.of(Path.of("/elsewhere"))));
         Model model = TestModels.loaded();
-        model = Update.update(model, new LoadMsg.BranchesLoaded(branches)).model();
-        model = Update.update(
+        model = TestModels.localBranchesRead(model, branches).model();
+        model = TestModels.remoteBranchesRead(
                         model,
-                        new LoadMsg.RemoteBranchesLoaded(List.of(
+                        List.of(
                                 new RemoteRef(ORIGIN_MAIN, ROOT.sha(), Instant.EPOCH),
-                                new RemoteRef(ORIGIN_FEATURE, MIDDLE.sha(), Instant.EPOCH))))
+                                new RemoteRef(ORIGIN_FEATURE, MIDDLE.sha(), Instant.EPOCH)))
                 .model();
         return Update.update(model, new LoadMsg.CommitsLoaded(List.of(TIP, MIDDLE, ROOT)))
                 .model();

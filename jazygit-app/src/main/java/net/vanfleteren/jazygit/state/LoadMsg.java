@@ -27,19 +27,14 @@ public sealed interface LoadMsg extends Msg {
         }
     }
 
-    record BranchesLoaded(List<Branch> branches) implements LoadMsg {
+    /**
+     * The local and the remote-tracking branches, read at the same moment.
+     */
+    record BranchesLoaded(AllBranches branches) implements LoadMsg {
 
         @Override
         public Cmd.Load cmd() {
             return new Cmd.LoadBranches();
-        }
-    }
-
-    record RemoteBranchesLoaded(List<RemoteRef> branches) implements LoadMsg {
-
-        @Override
-        public Cmd.Load cmd() {
-            return new Cmd.LoadRemoteBranches();
         }
     }
 

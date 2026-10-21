@@ -8,6 +8,7 @@ import io.vavr.control.Option;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import net.vanfleteren.jazygit.git.model.AllBranches;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Worktree;
@@ -276,7 +277,8 @@ class CliWorktreeTest {
                 CliConfig.parent(main, new Branch.Name("topic")).get());
         assertEquals(
                 Option.of("origin/shared"),
-                provider.branches()
+                provider.allBranches()
+                        .map(AllBranches::local)
                         .get()
                         .find(branch -> branch.name().value().equals("shared"))
                         .flatMap(branch -> branch.upstream())

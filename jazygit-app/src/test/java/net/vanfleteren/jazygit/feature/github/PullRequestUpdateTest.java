@@ -100,16 +100,14 @@ class PullRequestUpdateTest {
      */
     private static Model model() {
         // The default branch is listed last, to see it offered first.
-        Model branches = Update.update(
-                        loaded(), new LoadMsg.BranchesLoaded(List.of(RELEASE, PUSHED, UNPUSHED, AHEAD, MAIN)))
+        Model branches = localBranchesRead(loaded(), List.of(RELEASE, PUSHED, UNPUSHED, AHEAD, MAIN))
                 .model();
         return Update.update(branches, new PullRequestsMsg.Loaded(List.empty())).model();
     }
 
     @Test
     void beforeThePullRequestsAreReadNoneIsCreated() {
-        Model starting = Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(PUSHED, MAIN)))
-                .model();
+        Model starting = localBranchesRead(loaded(), List.of(PUSHED, MAIN)).model();
 
         Next asked = Update.update(starting, new PullRequestMsg.Requested(new Branch.Name("feature")));
 
@@ -164,8 +162,7 @@ class PullRequestUpdateTest {
 
     @Test
     void theParentReadOfABranchThatIsGoneAsksNothing() {
-        Model gone = Update.update(model(), new LoadMsg.BranchesLoaded(List.of(RELEASE, MAIN)))
-                .model();
+        Model gone = localBranchesRead(model(), List.of(RELEASE, MAIN)).model();
 
         Next next = Update.update(gone, new CreatePullRequestMsg.ParentRead(FEATURE, Option.none()));
 
@@ -853,9 +850,9 @@ class PullRequestUpdateTest {
     @Test
     void forAPullRequestWhoseBranchAnotherWorktreeHasSwitchingToThatWorktreeIsOffered() {
         Branch.Name patch = new Branch.Name("patch-1");
-        Model elsewhere = Update.update(
+        Model elsewhere = localBranchesRead(
                         ofOwnerRepo(CLEAN),
-                        new LoadMsg.BranchesLoaded(List.of(new Branch(
+                        List.of(new Branch(
                                 patch,
                                 false,
                                 new Sha("bbbb"),
@@ -863,7 +860,7 @@ class PullRequestUpdateTest {
                                 false,
                                 false,
                                 new Tracking.None(),
-                                Option.of(java.nio.file.Path.of("/repos/linked"))))))
+                                Option.of(java.nio.file.Path.of("/repos/linked")))))
                 .model();
         PullRequestSummary fork = summary("owner/repo");
         PullRequestSummary own = new PullRequestSummary(
@@ -988,10 +985,8 @@ class PullRequestUpdateTest {
 
     @Test
     void aPullRequestWhoseBranchIsCheckedOutHereGetsNoWorktreeAndOneOfAnotherRepositoryNeither() {
-        Model onPatch = Update.update(
-                        withMainWorktree(CLEAN),
-                        new LoadMsg.BranchesLoaded(
-                                List.of(new Branch(new Branch.Name("patch-1"), true, new Sha("bbbb")))))
+        Model onPatch = localBranchesRead(
+                        withMainWorktree(CLEAN), List.of(new Branch(new Branch.Name("patch-1"), true, new Sha("bbbb"))))
                 .model();
 
         Next here = Update.update(onPatch, new CheckoutPullRequestMsg.WorktreeRequested(own("patch-1")));
@@ -1011,9 +1006,9 @@ class PullRequestUpdateTest {
     @Test
     void forAPullRequestWhoseBranchAnotherWorktreeHasSwitchingToItIsOfferedInsteadOfANewOne() {
         Branch.Name patch = new Branch.Name("patch-1");
-        Model elsewhere = Update.update(
+        Model elsewhere = localBranchesRead(
                         withMainWorktree(CLEAN),
-                        new LoadMsg.BranchesLoaded(List.of(new Branch(
+                        List.of(new Branch(
                                 patch,
                                 false,
                                 new Sha("bbbb"),
@@ -1021,7 +1016,7 @@ class PullRequestUpdateTest {
                                 false,
                                 false,
                                 new Tracking.None(),
-                                Option.of(java.nio.file.Path.of("/repos/linked"))))))
+                                Option.of(java.nio.file.Path.of("/repos/linked")))))
                 .model();
 
         assertEquals(

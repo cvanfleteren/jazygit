@@ -26,15 +26,15 @@ final class CliStatus {
 
     /**
      * Runs {@code git status} in {@code workTree} and parses its output, and finds out what the repository is in
-     * the middle of.
+     * the middle of from the files at {@code markers}.
      */
-    static Either<ProcessError, RepoStatus> read(Path workTree) {
+    static Either<ProcessError, RepoStatus> read(Path workTree, CliInProgress.Markers markers) {
         return GitProcess.read(
                         workTree,
                         GitCommand.reading("status", "--porcelain=v2", "--branch", "-z", "--untracked-files=all")
                                 .withTimeout(TIMEOUT),
                         CliStatus::parse)
-                .flatMap(status -> CliInProgress.read(workTree).map(status::withInProgress));
+                .map(status -> status.withInProgress(CliInProgress.read(markers)));
     }
 
     /**

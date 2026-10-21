@@ -389,7 +389,7 @@ leaves a model that already has its value as it is. This is the only way the vie
 no message from a user's event did.
 
 Every 500 ms a `Msg.Tick` triggers `Update.refresh`, which re-reads the status, the local and remote
-branches, and the stashes.
+branches (one load, `LoadBranches`), the stashes and the worktrees.
 That keeps the screen in sync with changes made outside the app. A periodic load is skipped while an
 equal one is still running: `Model.refreshing` holds the loads that are running.
 
@@ -614,21 +614,32 @@ Every `Cli*` class runs git through `GitProcess`; only a few of those arrows are
   git itself does: its configuration, hooks, credentials and repository formats included.
   - **Reads:**
     - `CliStatus` reads `git status --porcelain=v2`.
-    - `CliBranches` runs one `git for-each-ref` for all branches, with their upstream and ahead/behind
-      counts and the other worktree each is checked out in (`%(worktreepath)`, `Branch.worktree`), and another
-      one for the remote-tracking branches, which the branches pane shows on its second tab
-      (`Model.branchesTab`, switched with `[` and `]`).
+    - `CliBranch` runs one `git for-each-ref` for the local and the remote-tracking branches together
+      (`AllBranches`), so both are read at the same moment and in one process. The local ones come with their
+      upstream and ahead/behind counts and the other worktree each is checked out in (`%(worktreepath)`,
+      `Branch.worktree`); they need the remote ones anyway, to tell which are pushed and which is the default.
+      The branches pane shows the remote-tracking ones on its second tab (`Model.branchesTab`, switched with `[`
+      and `]`).
     - `CliWorktree` reads `git worktree list --porcelain -z`, which the branches pane shows on its third tab.
     - **Linked worktrees** are read like any repository: nothing assumes `.git` is a directory. What lives in
       the repository's own directory, like the index or `MERGE_HEAD`, is found with `git rev-parse --git-path`.
+    - **What the repository is in the middle of** (a merge, rebase, cherry-pick or revert) is told by the files
+      git keeps meanwhile. Where they are is asked once, when the repository is opened, and kept on the
+      provider (`CliInProgress.Markers`): every status read then only looks at those files, without starting
+      git. This assumes they never move while a repository is open, which holds as a provider is for one working
+      tree, whose git directory stays where it is.
     - `CliLog` runs `git rev-parse` and `git log -z`.
-    - `CliStash` runs `git stash list`, and `CliRemote` reads the remotes.
+    - `CliStash` lists the stashes with the `git log --walk-reflogs … refs/stash` that `git stash list` runs
+      itself, which saves a process. The stashes are the reflog of `refs/stash`, as git's documentation of
+      `git stash` says. Without a stash there is no reflog, which `--ignore-missing` makes an empty list.
+    - `CliRemote` reads the remotes.
     - These each have a pure parser for git's output. `CliDiff` and `CliShow` return git's text, cut off
       when it is long.
   - **Writes:** `CliCheckout`, `CliBranch` (push, pull, delete), `CliIndex` (stage, commit, discard),
     `CliMerge`, `CliRebase`, `CliStash`, `CliRemote` (fetch) and `CliWorktree` (add, remove).
   - **Opening:** `CliGitInfoProvider.open` asks `git rev-parse` whether the directory is in a repository,
-    whether that is bare, and where its working tree is.
+    whether that is bare, where its working tree is, and where git keeps the files that tell what it is in the
+    middle of.
 - **`GitProcess.run(workTree, GitCommand)`** is the only place that starts git, through `process.Exec`:
   - A `GitCommand` is data: the arguments, the environment and a timeout.
   - Every command runs with `LC_ALL=C` (git's messages are matched in English), `GIT_TERMINAL_PROMPT=0`

@@ -51,9 +51,9 @@ class BranchUpdateTest {
      * The loaded model, with feature tracking origin/feature.
      */
     private static Model tracking() {
-        return Update.update(
+        return localBranchesRead(
                         loaded(),
-                        new LoadMsg.BranchesLoaded(List.of(
+                        List.of(
                                 new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
                                 new Branch(
                                         new Branch.Name("feature"),
@@ -63,7 +63,7 @@ class BranchUpdateTest {
                                         true,
                                         false,
                                         Option.of(new Upstream(
-                                                new RemoteBranch("origin", new Branch.Name("feature")), 0, 0))))))
+                                                new RemoteBranch("origin", new Branch.Name("feature")), 0, 0)))))
                 .model();
     }
 
@@ -71,9 +71,9 @@ class BranchUpdateTest {
      * The loaded model, with main checked out and feature not, both tracking their remote branch.
      */
     private static Model pullable(int mainAhead, int featureAhead) {
-        return Update.update(
+        return localBranchesRead(
                         loaded(),
-                        new LoadMsg.BranchesLoaded(List.of(
+                        List.of(
                                 new Branch(
                                         new Branch.Name("main"),
                                         true,
@@ -93,7 +93,7 @@ class BranchUpdateTest {
                                         Option.of(new Upstream(
                                                 new RemoteBranch("origin", new Branch.Name("feature")),
                                                 featureAhead,
-                                                1))))))
+                                                1)))))
                 .model();
     }
 
@@ -265,9 +265,9 @@ class BranchUpdateTest {
 
     @Test
     void aBranchThatFollowsALocalBranchIsPushedWhereTheUserSaysRatherThanOntoThatBranch() {
-        Model model = Update.update(
+        Model model = localBranchesRead(
                         loaded(),
-                        new LoadMsg.BranchesLoaded(List.of(
+                        List.of(
                                 new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
                                 new Branch(
                                         new Branch.Name("feature"),
@@ -276,8 +276,7 @@ class BranchUpdateTest {
                                         Instant.EPOCH,
                                         true,
                                         false,
-                                        Option.of(
-                                                new Upstream(new RemoteBranch(".", new Branch.Name("main")), 1, 0))))))
+                                        Option.of(new Upstream(new RemoteBranch(".", new Branch.Name("main")), 1, 0)))))
                 .model();
 
         Next asked = Update.update(model, new PushMsg.Requested(new Branch.Name("feature")));
@@ -351,9 +350,9 @@ class BranchUpdateTest {
 
     @Test
     void pushRequestOfADivergedBranchAsksForConfirmationInsteadOfPushing() {
-        Model diverged = Update.update(
+        Model diverged = localBranchesRead(
                         loaded(),
-                        new LoadMsg.BranchesLoaded(List.of(
+                        List.of(
                                 new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
                                 new Branch(
                                         new Branch.Name("feature"),
@@ -363,7 +362,7 @@ class BranchUpdateTest {
                                         true,
                                         false,
                                         Option.of(new Upstream(
-                                                new RemoteBranch("origin", new Branch.Name("feature")), 1, 2))))))
+                                                new RemoteBranch("origin", new Branch.Name("feature")), 1, 2)))))
                 .model();
 
         Next asked = Update.update(diverged, new PushMsg.Requested(new Branch.Name("feature")));
@@ -518,8 +517,7 @@ class BranchUpdateTest {
                 false,
                 false,
                 new Tracking.Gone(new RemoteBranch("origin", new Branch.Name("old"))));
-        Model model = Update.update(loaded(), new LoadMsg.BranchesLoaded(List.of(gone)))
-                .model();
+        Model model = localBranchesRead(loaded(), List.of(gone)).model();
 
         Next pulled = Update.update(model, new PullMsg.Requested(new Branch.Name("old")));
 
@@ -731,9 +729,9 @@ class BranchUpdateTest {
 
     @Test
     void remoteScopesAreRefusedForTheDefaultBranch() {
-        Model model = Update.update(
+        Model model = localBranchesRead(
                         loaded(),
-                        new LoadMsg.BranchesLoaded(List.of(
+                        List.of(
                                 new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
                                 new Branch(
                                         new Branch.Name("trunk"),
@@ -741,7 +739,7 @@ class BranchUpdateTest {
                                         new Sha("tttt"),
                                         java.time.Instant.EPOCH,
                                         true,
-                                        true))))
+                                        true)))
                 .model();
         Model open = Update.update(model, new DeleteBranchMsg.Requested(new Branch.Name("trunk")))
                 .model();
@@ -765,16 +763,16 @@ class BranchUpdateTest {
 
     @Test
     void choosingAScopeDeletesTheBranchAndClosesThePopup() {
-        Model withRemote = Update.update(
+        Model withRemote = localBranchesRead(
                         loaded(),
-                        new LoadMsg.BranchesLoaded(List.of(
+                        List.of(
                                 new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
                                 new Branch(
                                         new Branch.Name("feature"),
                                         false,
                                         new Sha("ffff"),
                                         java.time.Instant.EPOCH,
-                                        true))))
+                                        true)))
                 .model();
         Model open = Update.update(withRemote, new DeleteBranchMsg.Requested(new Branch.Name("feature")))
                 .model();
@@ -872,11 +870,7 @@ class BranchUpdateTest {
                 loaded(), succeeded(new CheckoutCmd.Checkout(new Branch.Name("feature")), "git checkout feature"));
 
         assertEquals(
-                List.of(
-                        new LoadStatus(),
-                        new LoadBranches(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadStashes()),
+                List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadStashes()),
                 next.cmds());
         assertEquals(Option.none(), next.model().outcome().error());
     }
@@ -889,22 +883,16 @@ class BranchUpdateTest {
 
         assertEquals(
                 Option.of("Checkout of feature failed: local changes would be overwritten"), errorText(next.model()));
-        assertEquals(
-                List.of(
-                        new LoadStatus(),
-                        new LoadBranches(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadRemoteBranches(),
-                        new LoadStashes()),
-                next.cmds());
+        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new LoadStashes()), next.cmds());
     }
 
     @Test
     void rebaseRequestOfAnotherBranchOpensTheChoiceForTheCheckedOutOne() {
-        Model model = Update.update(
+        Model model = localBranchesRead(
                         loaded(),
-                        new LoadMsg.BranchesLoaded(List.of(
+                        List.of(
                                 new Branch(new Branch.Name("main"), true, new Sha("1")),
-                                new Branch(new Branch.Name("feature"), false, new Sha("2")))))
+                                new Branch(new Branch.Name("feature"), false, new Sha("2"))))
                 .model();
 
         Next next = Update.update(model, new RebaseMsg.Requested(new Branch.Name("feature")));
@@ -917,11 +905,11 @@ class BranchUpdateTest {
 
     @Test
     void theCheckedOutBranchAndUnknownBranchesCannotBeRebasedOnto() {
-        Model model = Update.update(
+        Model model = localBranchesRead(
                         loaded(),
-                        new LoadMsg.BranchesLoaded(List.of(
+                        List.of(
                                 new Branch(new Branch.Name("main"), true, new Sha("1")),
-                                new Branch(new Branch.Name("feature"), false, new Sha("2")))))
+                                new Branch(new Branch.Name("feature"), false, new Sha("2"))))
                 .model();
 
         assertEquals(
@@ -938,11 +926,11 @@ class BranchUpdateTest {
 
     @Test
     void choosingARebaseClosesThePopupAndRebases() {
-        Model open = Update.update(
+        Model open = localBranchesRead(
                         loaded(),
-                        new LoadMsg.BranchesLoaded(List.of(
+                        List.of(
                                 new Branch(new Branch.Name("main"), true, new Sha("1")),
-                                new Branch(new Branch.Name("feature"), false, new Sha("2")))))
+                                new Branch(new Branch.Name("feature"), false, new Sha("2"))))
                 .model();
         open = Update.update(open, new RebaseMsg.Requested(new Branch.Name("feature")))
                 .model();

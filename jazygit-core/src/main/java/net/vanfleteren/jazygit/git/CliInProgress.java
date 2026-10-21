@@ -35,12 +35,25 @@ final class CliInProgress {
      * What the repository in {@code workTree} is in the middle of, if anything. Only asked, so not logged.
      */
     static Either<ProcessError, Option<InProgress>> read(Path workTree) {
+        return markers(workTree).map(CliInProgress::read);
+    }
+
+    /**
+     * What the repository whose files are at {@code markers} is in the middle of, if anything.
+     */
+    static Option<InProgress> read(Markers markers) {
+        return inProgress(markers.paths());
+    }
+
+    /**
+     * Where git keeps the files of the repository in {@code workTree} that tell what it is in the middle of. They
+     * stay there, so this is asked once, and {@link #read(Markers)} then only looks at the files.
+     */
+    static Either<ProcessError, Markers> markers(Path workTree) {
         return GitProcess.read(
-                        workTree,
-                        reading(MARKERS.flatMap(marker -> List.of("--git-path", marker))
-                                .prepend("rev-parse")),
-                        raw -> paths(raw, workTree))
-                .map(CliInProgress::inProgress);
+                workTree,
+                reading(MARKERS.flatMap(marker -> List.of("--git-path", marker)).prepend("rev-parse")),
+                raw -> paths(raw, workTree).map(Markers::new));
     }
 
     /**
@@ -134,4 +147,9 @@ final class CliInProgress {
                 .toOption()
                 .flatMap(lines -> Option.ofOptional(lines.stream().findFirst()));
     }
+
+    /**
+     * Where git keeps the files that tell what a repository is in the middle of, in the order of {@code MARKERS}.
+     */
+    record Markers(List<Path> paths) {}
 }
