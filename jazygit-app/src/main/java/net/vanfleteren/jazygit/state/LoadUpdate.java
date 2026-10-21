@@ -41,6 +41,8 @@ public final class LoadUpdate {
                 Next.of(done.mapRepo(repo -> repo.withStashes(repo.stashes().reload(stashes))));
             case LoadMsg.WorktreesLoaded(var worktrees) ->
                 Next.of(done.mapRepo(repo -> repo.withWorktrees(repo.worktrees().reload(worktrees))));
+            case WorktreeChangesLoaded(var worktrees, var changes) ->
+                Next.of(done.mapRepo(repo -> repo.withWorktreeChanges(changes)));
             // The log is only read again when HEAD moved, so the history the search runs on changed too.
             case CommitsLoaded(var commits) ->
                 new Next(
@@ -227,6 +229,8 @@ public final class LoadUpdate {
             case Cmd.LoadRemoteBranches() -> model.mapRepo(repo -> repo.withRemoteBranches(new Failed<>(failure)));
             case Cmd.LoadStashes() -> model.mapRepo(repo -> repo.withStashes(new Failed<>(failure)));
             case Cmd.LoadWorktrees() -> model.mapRepo(repo -> repo.withWorktrees(new Failed<>(failure)));
+            // Which worktrees have changes is a detail: what was read last stays, and the next tick tries again.
+            case Cmd.LoadWorktreeChanges(var worktrees) -> model;
             case LoadCommits() -> model.mapRepo(repo -> repo.withCommits(new Failed<>(failure)));
             case Cmd.SearchCommits(var query) ->
                 model.mapRepoView(repoView -> repoView.withCommitSearch(repoView.commitSearch()

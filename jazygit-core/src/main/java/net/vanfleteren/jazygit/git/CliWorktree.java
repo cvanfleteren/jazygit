@@ -39,6 +39,17 @@ final class CliWorktree {
     }
 
     /**
+     * Runs {@code git status --porcelain -z --untracked-files=normal} in {@code worktree}: it has changes when git
+     * lists any file.
+     */
+    static Either<ProcessError, Boolean> hasChanges(Path worktree) {
+        return GitProcess.read(
+                worktree,
+                GitCommand.reading("status", "--porcelain", "-z", "--untracked-files=normal"),
+                raw -> Either.right(!raw.isEmpty()));
+    }
+
+    /**
      * The worktrees in the output of {@code git worktree list --porcelain -z}: per worktree, one NUL-terminated
      * line per attribute, the first naming it, and an empty line after it. A bare repository is listed too, first,
      * and left out, as it has no working tree.

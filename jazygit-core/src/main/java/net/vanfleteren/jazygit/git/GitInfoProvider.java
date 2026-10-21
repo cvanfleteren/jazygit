@@ -399,6 +399,12 @@ public interface GitInfoProvider {
     Either<ProcessError, List<Worktree>> worktrees();
 
     /**
+     * Whether the worktree at {@code worktree} has changes that removing it would lose: staged, unstaged or
+     * untracked files, not ignored ones.
+     */
+    Either<ProcessError, Boolean> hasChanges(Path worktree);
+
+    /**
      * Checks {@code branch} out in a new worktree at {@code location}, which is taken relative to the working
      * tree of this one. Git refuses a branch that is checked out already, and a location that is not empty.
      */

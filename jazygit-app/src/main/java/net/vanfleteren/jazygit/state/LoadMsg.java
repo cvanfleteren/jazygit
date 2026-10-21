@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import net.vanfleteren.jazygit.git.model.*;
 
 /**
@@ -55,6 +56,17 @@ public sealed interface LoadMsg extends Msg {
         @Override
         public Cmd.Load cmd() {
             return new Cmd.LoadWorktrees();
+        }
+    }
+
+    /**
+     * Whether those of {@code worktrees} that could be read have changes, by their location.
+     */
+    record WorktreeChangesLoaded(List<String> worktrees, Map<String, Boolean> changes) implements LoadMsg {
+
+        @Override
+        public Cmd.Load cmd() {
+            return new Cmd.LoadWorktreeChanges(worktrees);
         }
     }
 

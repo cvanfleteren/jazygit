@@ -150,9 +150,32 @@ public final class Update {
                         .map(detail -> new LoadCommitDetail(
                                 detail.key(), model.preferences().diffOptions())));
         List<Cmd.Load> loads = PERIODIC.appendAll(retries)
-                .filter(cmd -> !model.jobs().refreshing().contains(cmd));
+                .filter(cmd -> !model.jobs().refreshing().contains(cmd))
+                .appendAll(worktreeChanges(model));
         return new Next(
                 model.mapJobs(jobs -> jobs.withRefreshing(jobs.refreshing().addAll(loads))), List.narrow(loads));
+    }
+
+    /**
+     * Reads which of the other worktrees have changes, if the branches pane shows the worktrees and that is not
+     * being read already.
+     */
+    public static Next readWorktreeChanges(Model model) {
+        Option<Cmd.Load> load = worktreeChanges(model);
+        return new Next(
+                model.mapJobs(jobs -> jobs.withRefreshing(jobs.refreshing().addAll(load))), List.narrow(load.toList()));
+    }
+
+    /**
+     * The load of which other worktrees have changes, while the branches pane shows the worktrees: none while it
+     * runs already, even for other worktrees, or when there are no others.
+     */
+    private static Option<Cmd.Load> worktreeChanges(Model model) {
+        List<String> others = model.repo().otherWorktrees();
+        return Option.<Cmd.Load>of(new LoadWorktreeChanges(others))
+                .filter(load -> model.repoView().branchesTab() == BranchesTab.WORKTREES
+                        && others.nonEmpty()
+                        && !model.jobs().refreshing().exists(running -> running instanceof LoadWorktreeChanges));
     }
 
     /**

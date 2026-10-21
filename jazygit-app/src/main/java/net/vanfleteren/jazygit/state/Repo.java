@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.*;
@@ -9,12 +11,14 @@ import net.vanfleteren.jazygit.git.model.*;
  * What git reports about the repository: each part is loading until it was read once, and the one read last when
  * reading it again failed.
  *
- * @param status         the working tree status and HEAD
- * @param branches       the local branches
- * @param remoteBranches the remote-tracking branches
- * @param commits        the commit log of HEAD
- * @param stashes        the stashes, newest first
- * @param worktrees      the worktrees of the repository, the one shown first
+ * @param status          the working tree status and HEAD
+ * @param branches        the local branches
+ * @param remoteBranches  the remote-tracking branches
+ * @param commits         the commit log of HEAD
+ * @param stashes         the stashes, newest first
+ * @param worktrees       the worktrees of the repository, the one shown first
+ * @param worktreeChanges whether the other worktrees have changes, by their location, as read last; one that was
+ *                        not read is not known
  */
 @With
 public record Repo(
@@ -23,7 +27,8 @@ public record Repo(
         Loadable<List<RemoteRef>> remoteBranches,
         Loadable<List<Commit>> commits,
         Loadable<List<Stash>> stashes,
-        Loadable<List<Worktree>> worktrees) {
+        Loadable<List<Worktree>> worktrees,
+        Map<String, Boolean> worktreeChanges) {
 
     public static final Repo LOADING = new Repo(
             Loadable.loading(),
@@ -31,7 +36,8 @@ public record Repo(
             Loadable.loading(),
             Loadable.loading(),
             Loadable.loading(),
-            Loadable.loading());
+            Loadable.loading(),
+            HashMap.empty());
 
     /**
      * The commit {@code sha} in the log of HEAD, if the log is loaded and has it.
@@ -95,5 +101,24 @@ public record Repo(
      */
     public Option<Worktree> currentWorktree() {
         return worktrees.toOption().flatMap(loaded -> loaded.find(Worktree::current));
+    }
+
+    /**
+     * Whether {@code worktree} has changes, if that is known: for the one shown, from its status.
+     */
+    public Option<Boolean> hasChanges(Worktree worktree) {
+        return worktree.current()
+                ? status.toOption().map(loaded -> loaded.files().nonEmpty())
+                : worktreeChanges.get(worktree.location());
+    }
+
+    /**
+     * The worktrees whose changes are read, once the worktrees are loaded: the others that are still on disk.
+     */
+    public List<String> otherWorktrees() {
+        return worktrees
+                .getOrElse(List.empty())
+                .filter(worktree -> !worktree.current() && !worktree.prunable())
+                .map(Worktree::location);
     }
 }

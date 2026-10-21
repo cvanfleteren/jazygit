@@ -255,35 +255,46 @@ public class BranchesPanel {
     }
 
     /**
-     * A worktree: marked when it is the one shown, the name of its directory, and what it has checked out; then
-     * whether it is the main one, locked, or gone from disk.
+     * A worktree of {@code repo}: marked when it is the one shown, the name of its directory, marked when it has
+     * changes, and what it has checked out, with how far its branch is from its upstream; then whether it is the
+     * main one, locked, or gone from disk.
      */
-    static LoadableList.Row worktreeRow(Worktree worktree) {
+    static LoadableList.Row worktreeRow(Repo repo, Worktree worktree) {
         String checkedOut = worktree.branch()
                 .map(Branch.Name::value)
                 .getOrElse(() -> Messages.get(
                         "worktrees.detached", worktree.head().map(Sha::shortSha).getOrElse("")));
         return new LoadableList.Row(List.of(
                         Option.of(LoadableList.Seg.of((worktree.current() ? "* " : "  ") + worktree.name() + " ")),
+                        Option.when(
+                                repo.hasChanges(worktree).contains(true),
+                                () -> LoadableList.Seg.styled("● ", Theme.Classes.UNSTAGED)),
                         Option.of(
                                 worktree.branch().isDefined()
                                         ? LoadableList.Seg.of(checkedOut)
-                                        : LoadableList.Seg.styled(checkedOut, Theme.Classes.DIM)),
-                        Option.when(
-                                worktree.main(),
-                                () -> LoadableList.Seg.styled(" " + Messages.get("worktrees.main"), Theme.Classes.DIM)),
-                        worktree.locked()
-                                .map(reason -> LoadableList.Seg.styled(
-                                        " "
-                                                + (reason.isBlank()
-                                                        ? Messages.get("worktrees.locked")
-                                                        : Messages.get("worktrees.lockedBecause", reason)),
-                                        Theme.Classes.DIM)),
-                        Option.when(
-                                worktree.prunable(),
-                                () -> LoadableList.Seg.styled(
-                                        " " + Messages.get("worktrees.missing"), Theme.Classes.GONE)))
-                .flatMap(segment -> segment));
+                                        : LoadableList.Seg.styled(checkedOut, Theme.Classes.DIM)))
+                .flatMap(segment -> segment)
+                .appendAll(worktree.branch()
+                        .flatMap(repo::branch)
+                        .map(BranchesPanel::sync)
+                        .getOrElse(List.empty()))
+                .appendAll(List.of(
+                                Option.when(
+                                        worktree.main(),
+                                        () -> LoadableList.Seg.styled(
+                                                " " + Messages.get("worktrees.main"), Theme.Classes.DIM)),
+                                worktree.locked()
+                                        .map(reason -> LoadableList.Seg.styled(
+                                                " "
+                                                        + (reason.isBlank()
+                                                                ? Messages.get("worktrees.locked")
+                                                                : Messages.get("worktrees.lockedBecause", reason)),
+                                                Theme.Classes.DIM)),
+                                Option.when(
+                                        worktree.prunable(),
+                                        () -> LoadableList.Seg.styled(
+                                                " " + Messages.get("worktrees.missing"), Theme.Classes.GONE)))
+                        .flatMap(segment -> segment)));
     }
 
     /**
@@ -457,7 +468,7 @@ public class BranchesPanel {
             case WORKTREES -> {
                 Panel worktrees = worktreeList.render(
                         model.repo().worktrees(),
-                        all -> all.map(BranchesPanel::worktreeRow),
+                        all -> all.map(worktree -> worktreeRow(model.repo(), worktree)),
                         focused,
                         active,
                         title(tab));
