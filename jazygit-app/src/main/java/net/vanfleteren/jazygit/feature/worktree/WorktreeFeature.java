@@ -3,15 +3,12 @@ package net.vanfleteren.jazygit.feature.worktree;
 import io.vavr.collection.List;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.feature.FeatureAction;
-import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeAction;
 import net.vanfleteren.jazygit.feature.worktree.lock.LockWorktreeAction;
 import net.vanfleteren.jazygit.feature.worktree.prune.PruneWorktreesAction;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeAction;
 import net.vanfleteren.jazygit.feature.worktree.switchto.SwitchWorktreeAction;
 import net.vanfleteren.jazygit.keys.Keymap;
-import net.vanfleteren.jazygit.keys.Keymap.Binding;
-import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 
@@ -22,23 +19,15 @@ import net.vanfleteren.jazygit.ui.PopupSlot;
 public final class WorktreeFeature {
 
     /**
-     * Switching from the worktrees to the other lists of the branches pane, as the branches do.
-     */
-    private static final FeatureAction TABS = FeatureAction.ofKeys(keys -> keys.add(
-            Scopes.WORKTREES,
-            Binding.always("[", "help.branches.previousTab", () -> new BranchesTabMsg.Switched(-1)),
-            Binding.always("]", "help.branches.nextTab", () -> new BranchesTabMsg.Switched(1))));
-
-    /**
-     * The operations, in the order their keys are listed in a panel.
+     * The operations, in the order their keys are listed in a panel. Switching from the worktrees to the other lists
+     * of the branches pane is the branch feature's, as deleting a branch removes a worktree.
      */
     private static final List<FeatureAction> ACTIONS = List.of(
             AddWorktreeAction.ACTION,
             SwitchWorktreeAction.ACTION,
             RemoveWorktreeAction.ACTION,
             PruneWorktreesAction.ACTION,
-            LockWorktreeAction.ACTION,
-            TABS);
+            LockWorktreeAction.ACTION);
 
     private WorktreeFeature() {}
 

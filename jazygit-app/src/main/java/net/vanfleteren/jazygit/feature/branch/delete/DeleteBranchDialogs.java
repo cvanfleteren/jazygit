@@ -40,7 +40,15 @@ public final class DeleteBranchDialogs {
                             'b',
                             "dialog.deleteBranch.both",
                             () -> new DeleteBranchMsg.Chosen(DeleteScope.BOTH),
-                            (model, popup) -> localDeletable(model, popup) && remoteDeletable(model, popup))),
+                            (model, popup) -> localDeletable(model, popup) && remoteDeletable(model, popup)),
+                    new Choice<>(
+                            'w',
+                            popup -> Messages.get(
+                                    "dialog.deleteBranch.withWorktree",
+                                    popup.worktree().getOrElse("")),
+                            DeleteBranchMsg.WithWorktreeChosen::new,
+                            (model, popup) -> DeleteBranchUpdate.removableWorktree(model, popup.branch())
+                                    .isDefined())),
             DeleteBranchMsg.Cancelled::new);
 
     /**
