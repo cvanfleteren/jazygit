@@ -84,14 +84,20 @@ class WorktreeUpdateTest {
     }
 
     @Test
-    void theCheckedOutBranchAndUnknownOrBusyBranchesGetNoWorktree() {
+    void theCheckedOutBranchGetsNoWorktreeAndTheErrorSaysWhy() {
+        Next next = Update.update(model(), new AddWorktreeMsg.Requested(new Branch.Name("main")));
+
+        assertEquals(Option.none(), next.model().popup(NewWorktreePopup.class));
+        assertEquals(
+                Option.of("Branch main is checked out here; check out another branch first to give it a worktree"
+                        + " of its own"),
+                errorText(next.model()));
+    }
+
+    @Test
+    void unknownOrBusyBranchesGetNoWorktree() {
         Model busy = model().withBusyBranch(new BranchRef.Local(FEATURE), PushCmd.PUSH);
 
-        assertEquals(
-                Option.none(),
-                Update.update(model(), new AddWorktreeMsg.Requested(new Branch.Name("main")))
-                        .model()
-                        .popup());
         assertEquals(
                 Option.none(),
                 Update.update(model(), new AddWorktreeMsg.Requested(new Branch.Name("nope")))
@@ -153,10 +159,9 @@ class WorktreeUpdateTest {
                         "/repos/app-taken", new Landing(BranchesTab.WORKTREES, Option.of(Scopes.BRANCHES.id())))),
                 Update.update(model(), new SwitchWorktreeMsg.Requested("/repos/app-taken"))
                         .cmds());
-        assertEquals(
-                List.of(),
-                Update.update(model(), new SwitchWorktreeMsg.Requested("/repos/app"))
-                        .cmds());
+        Next shown = Update.update(model(), new SwitchWorktreeMsg.Requested("/repos/app"));
+        assertEquals(List.of(), shown.cmds());
+        assertEquals(Option.of("Worktree app is the one shown already"), errorText(shown.model()));
         assertEquals(
                 List.of(),
                 Update.update(model(), new SwitchWorktreeMsg.Requested("/repos/unknown"))
@@ -171,11 +176,6 @@ class WorktreeUpdateTest {
                 Option.of(new RemoveWorktreePopup("/repos/app-taken", "app-taken")),
                 asked.model().popup());
         assertEquals(
-                Option.none(),
-                Update.update(model(), new RemoveWorktreeMsg.Requested("/repos/app"))
-                        .model()
-                        .popup());
-        assertEquals(
                 List.of(new RemoveWorktreeCmd("/repos/app-taken", false)),
                 Update.update(asked.model(), new RemoveWorktreeMsg.Confirmed()).cmds());
         assertEquals(
@@ -183,6 +183,41 @@ class WorktreeUpdateTest {
                 Update.update(asked.model(), new RemoveWorktreeMsg.Cancelled())
                         .model()
                         .popup());
+    }
+
+    @Test
+    void theMainWorktreeTheOneShownAndALockedOneAreNotRemovedAndTheErrorSaysWhy() {
+        Next main = Update.update(model(), new RemoveWorktreeMsg.Requested("/repos/app"));
+        assertEquals(Option.none(), main.model().popup(RemoveWorktreePopup.class));
+        assertEquals(
+                Option.of("Worktree app is the main one, which holds the repository; it cannot be removed"),
+                errorText(main.model()));
+
+        Worktree mainNotShown = new Worktree(MAIN.path(), MAIN.head(), MAIN.branch(), true, false, false, false);
+        Worktree shownLinked = new Worktree(
+                Path.of("/repos/app-shown"), Option.of(new Sha("2222")), Option.none(), false, true, false, false);
+        Next shown = Update.update(
+                worktrees(mainNotShown, shownLinked), new RemoveWorktreeMsg.Requested("/repos/app-shown"));
+        assertEquals(Option.none(), shown.model().popup(RemoveWorktreePopup.class));
+        assertEquals(
+                Option.of("Worktree app-shown is the one shown; switch to another one to remove it"),
+                errorText(shown.model()));
+
+        // Said before asking, rather than after git refuses.
+        Worktree lockedLinked = new Worktree(LINKED.path(), LINKED.head(), LINKED.branch(), false, false, true, false);
+        Next locked = Update.update(worktrees(MAIN, lockedLinked), new RemoveWorktreeMsg.Requested("/repos/app-taken"));
+        assertEquals(Option.none(), locked.model().popup(RemoveWorktreePopup.class));
+        assertEquals(
+                Option.of("Worktree app-taken is locked, which keeps it from being removed"),
+                errorText(locked.model()));
+    }
+
+    /**
+     * {@link #model()} with {@code worktrees} instead.
+     */
+    private static Model worktrees(Worktree... worktrees) {
+        return Update.update(model(), new LoadMsg.WorktreesLoaded(List.of(worktrees)))
+                .model();
     }
 
     @Test

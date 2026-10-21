@@ -16,12 +16,13 @@ public final class RemoveWorktreeUpdate {
     public static Next update(Model model, RemoveWorktreeMsg msg) {
         return switch (msg) {
             case Requested(String location) ->
-                Update.ask(
-                        model,
-                        model.repo()
-                                .worktree(location)
-                                .filter(RemoveWorktreeUpdate::removable)
-                                .map(worktree -> new RemoveWorktreePopup(worktree.location(), worktree.name())));
+                model.repo()
+                        .worktree(location)
+                        .map(worktree -> notRemovable(worktree)
+                                .map(error -> Next.of(model.fail(error)))
+                                .getOrElse(() -> Update.ask(
+                                        model, new RemoveWorktreePopup(worktree.location(), worktree.name()))))
+                        .getOrElse(() -> Next.of(model));
             case Cancelled() -> Next.of(model.withoutPopup(RemoveWorktreePopup.class));
             case Confirmed() ->
                 Update.confirm(
@@ -29,7 +30,7 @@ public final class RemoveWorktreeUpdate {
                         RemoveWorktreePopup.class,
                         popup -> model.repo()
                                 .worktree(popup.location())
-                                .filter(RemoveWorktreeUpdate::removable)
+                                .filter(worktree -> notRemovable(worktree).isEmpty())
                                 .map(worktree -> new RemoveWorktreeCmd(popup.location(), false)));
             // The removal ran, and failed; removing it anyway is offered instead of the failure.
             case NeedsForce(var cmd, var commands) ->
@@ -50,9 +51,14 @@ public final class RemoveWorktreeUpdate {
     }
 
     /**
-     * Whether {@code worktree} can be removed: neither the main one, where the repository lives, nor the one shown.
+     * Why {@code worktree} cannot be removed, if it cannot: it is the main one, where the repository lives, the one
+     * shown, or locked, which git refuses.
      */
-    private static boolean removable(Worktree worktree) {
-        return !worktree.main() && !worktree.current();
+    private static Option<AppError> notRemovable(Worktree worktree) {
+        return worktree.main()
+                ? Option.of(new AppError.MainWorktreeNotRemovable(worktree.name()))
+                : worktree.current()
+                        ? Option.of(new AppError.ShownWorktreeNotRemovable(worktree.name()))
+                        : Option.when(worktree.locked(), () -> new AppError.WorktreeLocked(worktree.name()));
     }
 }

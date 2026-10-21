@@ -33,24 +33,25 @@ public final class AddWorktreeUpdate {
     }
 
     /**
-     * Asks where to check out {@code branch}, a known branch that is not checked out and that no operation runs
-     * on, starting out next to the main worktree. One that another worktree has checked out git would refuse, so
-     * that is said instead.
+     * Asks where to check out {@code branch}, a known branch that no operation runs on, starting out next to the
+     * main worktree. One that this worktree or another one has checked out git would refuse, so that is said
+     * instead.
      */
     private static Next requested(Model model, Branch.Name branch) {
         return model.idleBranch(branch)
-                .filter(known -> !known.current())
-                .map(known -> known.worktreeLocation()
-                        .map(worktree -> Next.of(model.fail(
-                                new AppError.CheckedOutElsewhere(AddWorktreeCmd.ADD_WORKTREE, branch, worktree))))
-                        .getOrElse(() -> Update.ask(
-                                model,
-                                new NewWorktreePopup(
-                                        branch,
-                                        model.repo()
-                                                .mainWorktree()
-                                                .map(main -> main.siblingFor(branch))
-                                                .getOrElse("")))))
+                .map(known -> known.current()
+                        ? Next.of(model.fail(new AppError.CheckedOutHere(branch)))
+                        : known.worktreeLocation()
+                                .map(worktree -> Next.of(model.fail(new AppError.CheckedOutElsewhere(
+                                        AddWorktreeCmd.ADD_WORKTREE, branch, worktree))))
+                                .getOrElse(() -> Update.ask(
+                                        model,
+                                        new NewWorktreePopup(
+                                                branch,
+                                                model.repo()
+                                                        .mainWorktree()
+                                                        .map(main -> main.siblingFor(branch))
+                                                        .getOrElse("")))))
                 .getOrElse(() -> Next.of(model));
     }
 }

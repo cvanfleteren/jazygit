@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.worktree.switchto;
 
 import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.feature.worktree.switchto.SwitchWorktreeMsg.Requested;
+import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -20,13 +21,14 @@ public final class SwitchWorktreeUpdate {
 
     /**
      * Opens the worktree at {@code location} in place of this one, through the repositories the app knows; the
-     * one shown already stays.
+     * one shown already stays, which is said.
      */
     private static Next requested(Model model, String location) {
         return model.repo()
                 .worktree(location)
-                .filter(worktree -> !worktree.current())
-                .map(worktree -> Next.of(model.clearError(), RecentReposCmd.SwitchTo.worktree(location)))
+                .map(worktree -> worktree.current()
+                        ? Next.of(model.fail(new AppError.WorktreeShownAlready(worktree.name())))
+                        : Next.of(model.clearError(), RecentReposCmd.SwitchTo.worktree(location)))
                 .getOrElse(() -> Next.of(model));
     }
 }
