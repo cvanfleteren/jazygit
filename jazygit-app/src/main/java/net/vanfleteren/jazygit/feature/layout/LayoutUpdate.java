@@ -27,8 +27,12 @@ public final class LayoutUpdate {
             // The keys and the border work on the panes, not behind a popup.
             case LayoutMsg.Stepped stepped when model.popup().isDefined() -> Next.of(model);
             case LayoutMsg.Resized resized when model.popup().isDefined() -> Next.of(model);
+            // A step ends a drag, of which a release that the terminal did not report would keep the width dragged to.
             case LayoutMsg.Stepped(int by) ->
-                keep(model, model.screen(), model.preferences().leftWidth(model.screen()) + by);
+                keep(
+                        model.mapPreferences(preferences -> preferences.withDragged(Option.none())),
+                        model.screen(),
+                        model.preferences().leftWidth(model.screen()) + by);
             case LayoutMsg.Resized(Screen screen, int width) ->
                 Next.of(model.mapPreferences(preferences ->
                         preferences.withDragged(Option.of(new Dragged(screen, Settings.clampWidth(width))))));

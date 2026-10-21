@@ -67,7 +67,7 @@ final class GlobalKeys {
      * Whether {@code event} is the key that quits.
      */
     static boolean isQuitKey(KeyEvent event) {
-        return event.isChar('q') && !event.hasCtrl() && !event.hasAlt();
+        return isChar(event, 'q');
     }
 
     /**
@@ -82,7 +82,7 @@ final class GlobalKeys {
      * repository is in the middle of.
      */
     static boolean isInProgressKey(KeyEvent event) {
-        return event.isChar('M') && !event.hasCtrl() && !event.hasAlt();
+        return isChar(event, 'M');
     }
 
     /**

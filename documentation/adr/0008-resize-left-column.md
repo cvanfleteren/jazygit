@@ -22,9 +22,9 @@ The width is a percentage of the terminal width, so it keeps its share when the 
 15–70%, so neither side disappears. The repository screen and the pull requests screen each have their own width,
 both 30% by default.
 
-The width is in the `Model`, as the update clamps it (ADR 2). It is saved in the settings, as `repositoryWidth` and
-`pullRequestsWidth`; a width that is missing or out of range falls back to 30%, as an invalid theme falls back to
-the default one.
+The width is in the `Model`, as the update clamps it (ADR 2). It is saved in the settings file, as
+`repository-width` and `pull-requests-width` in its `[ui]` table; a width that is missing or out of range falls back
+to 30%, as an invalid theme falls back to the default one.
 
 ### Keys
 

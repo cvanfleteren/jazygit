@@ -341,24 +341,24 @@ public class JazygitApp extends ToolkitApp {
 
     /**
      * Whether {@code (x, y)} is on the border between the left column and the content panel, as the last frame drew
-     * them: the right edge of the panes, or the left edge of the content panel next to it.
+     * them.
      */
     private boolean onBorder(int x, int y) {
         return shownPanes
                 .flatMap(panes -> Option.of(panes.renderedArea()))
-                .filter(panes -> panes.contains(x, y))
-                .flatMap(panes -> shownLeft.flatMap(left -> Option.of(left.renderedArea())))
-                .exists(left -> x == left.right() - 1 || x == left.right());
+                .exists(panes -> shownLeft
+                        .flatMap(left -> Option.of(left.renderedArea()))
+                        .exists(left -> LeftBorder.contains(panes, left, x, y)));
     }
 
     /**
-     * How wide the left column is, in percent of the width of the panes, with its right edge at column {@code x}.
+     * How wide the left column is, in percent of the width of the panes the last frame drew, with its right edge at
+     * column {@code x}.
      */
     private Option<Integer> leftWidth(int x) {
         return shownPanes
                 .flatMap(panes -> Option.of(panes.renderedArea()))
-                .filter(panes -> panes.width() > 0)
-                .map(panes -> Math.round((x + 1 - panes.x()) * 100f / panes.width()));
+                .flatMap(panes -> LeftBorder.width(panes, x));
     }
 
     /**

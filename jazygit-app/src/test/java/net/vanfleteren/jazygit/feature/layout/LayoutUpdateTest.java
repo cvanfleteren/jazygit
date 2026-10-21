@@ -84,4 +84,26 @@ class LayoutUpdateTest {
         assertEquals(model, settled.model());
         assertEquals(List.of(), settled.cmds());
     }
+
+    @Test
+    void aStepEndsADragAndALateReleaseKeepsTheStep() {
+        Model dragged = Update.update(model, new LayoutMsg.Resized(Screen.REPOSITORY, 50))
+                .model();
+
+        Next stepped = Update.update(dragged, new LayoutMsg.Stepped(5));
+
+        assertEquals(55, stepped.model().preferences().leftWidth(Screen.REPOSITORY));
+        assertEquals(Option.none(), stepped.model().preferences().dragged());
+        Next released = Update.update(stepped.model(), new LayoutMsg.Settled(Screen.REPOSITORY));
+        assertEquals(Next.of(stepped.model()), released);
+    }
+
+    @Test
+    void lettingGoOfAnotherScreenOrOfNoDragDoesNothing() {
+        Model dragged = Update.update(model, new LayoutMsg.Resized(Screen.REPOSITORY, 50))
+                .model();
+
+        assertEquals(Next.of(dragged), Update.update(dragged, new LayoutMsg.Settled(Screen.PULL_REQUESTS)));
+        assertEquals(Next.of(model), Update.update(model, new LayoutMsg.Settled(Screen.REPOSITORY)));
+    }
 }
