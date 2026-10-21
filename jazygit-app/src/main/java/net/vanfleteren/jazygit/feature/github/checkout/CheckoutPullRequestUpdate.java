@@ -53,8 +53,8 @@ public final class CheckoutPullRequestUpdate {
      */
     private static Option<Next> checkedOutElsewhere(Model model, PullRequestSummary pullRequest) {
         Branch.Name branch = new Branch.Name(pullRequest.headBranch());
-        return Option.when(!pullRequest.fromFork(), () -> model.repo().branch(branch))
-                .flatMap(known -> known)
+        return Option.when(!pullRequest.fromFork(), branch)
+                .flatMap(model.repo()::branch)
                 .flatMap(Branch::worktreeLocation)
                 .map(worktree -> Update.ask(model, new SwitchWorktreePopup(branch, worktree)));
     }

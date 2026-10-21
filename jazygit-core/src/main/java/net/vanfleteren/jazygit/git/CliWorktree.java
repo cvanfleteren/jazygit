@@ -136,9 +136,7 @@ final class CliWorktree {
                                         name.value(),
                                         workTree.resolve(location).normalize().toString(),
                                         startPoint)))),
-                () -> parent.map(p -> Either.<GitFailure<ProcessError>, List<ExecutedCommand>>right(
-                                CliConfig.setParent(workTree, name, p)
-                                        .fold(GitFailure::commands, commands -> commands)))
+                () -> parent.map(p -> CliCheckout.recordParent(workTree, name, p))
                         .getOrElse(GitFailure::nothing));
     }
 

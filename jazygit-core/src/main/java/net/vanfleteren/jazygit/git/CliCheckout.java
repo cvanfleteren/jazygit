@@ -82,7 +82,7 @@ final class CliCheckout {
      * Records {@code parent} as the branch {@code name} came from; the command lines that were run, also when that
      * failed.
      */
-    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> recordParent(
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> recordParent(
             Path workTree, Branch.Name name, Branch.Name parent) {
         return Either.right(
                 CliConfig.setParent(workTree, name, parent).fold(GitFailure::commands, commands -> commands));

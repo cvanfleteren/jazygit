@@ -101,7 +101,11 @@ class RepositoryIdentityTest {
     }
 
     @Test
-    void aDirectoryWithoutAGitDirectoryBelongsToNone() {
-        assertEquals(Option.none(), RepositoryIdentity.read(dir));
+    void aDirectoryWithoutAGitDirectoryBelongsToNoneAndIsNamedAfterItself() throws Exception {
+        Path plain = Files.createDirectories(dir.resolve("plain"));
+
+        assertEquals(Option.none(), RepositoryIdentity.read(plain));
+        assertEquals("plain", RepositoryIdentity.labelOf(plain));
+        assertEquals("/", RepositoryIdentity.labelOf(Path.of("/")));
     }
 }

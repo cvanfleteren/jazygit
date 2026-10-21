@@ -43,6 +43,15 @@ public record RepositoryIdentity(Path commonDir, String name, Option<String> lin
     }
 
     /**
+     * How the repository of the working tree at {@code workTree} is named where it is shown, as {@link #label()}
+     * names it; the name of its directory when its git directory cannot be found. The one name the header and the
+     * recent repositories show.
+     */
+    public static String labelOf(Path workTree) {
+        return read(workTree).map(RepositoryIdentity::label).getOrElse(() -> name(workTree));
+    }
+
+    /**
      * The name of the repository whose common git directory is {@code common}.
      */
     private static String nameOf(Path common) {

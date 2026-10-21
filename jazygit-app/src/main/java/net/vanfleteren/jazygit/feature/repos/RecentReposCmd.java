@@ -36,14 +36,7 @@ public sealed interface RecentReposCmd extends Cmd {
             return new RecentReposMsg.Listed(recent.removeAll(gone)
                     .remove(env.git().workTree())
                     .map(directory -> new RecentRepo(
-                            directory.toString(),
-                            RepositoryIdentity.read(directory)
-                                    .map(RepositoryIdentity::label)
-                                    // The root directory has no name.
-                                    .getOrElse(() -> Option.of(directory.getFileName())
-                                            .map(Path::toString)
-                                            .getOrElse(directory::toString)),
-                            HeadFile.read(directory))));
+                            directory.toString(), RepositoryIdentity.labelOf(directory), HeadFile.read(directory))));
         }
 
         @Override
