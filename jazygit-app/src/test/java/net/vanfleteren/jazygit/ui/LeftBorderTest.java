@@ -5,8 +5,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import dev.tamboui.layout.Constraint;
 import dev.tamboui.layout.Layout;
 import dev.tamboui.layout.Rect;
+import io.vavr.collection.List;
 import io.vavr.control.Option;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class LeftBorderTest {
 
@@ -44,18 +47,17 @@ class LeftBorderTest {
         assertEquals(Option.none(), LeftBorder.width(new Rect(0, 0, 0, 20), 5));
     }
 
-    @Test
-    void theLayoutPutsTheBorderBackWhereTheMouseIsInPanesNarrowerThan100Columns() {
-        for (int panesWidth : new int[] {37, 80, 99}) {
-            Rect panes = new Rect(3, 0, panesWidth, 10);
-            for (int x = panes.x() + 1; x < panes.right() - 1; x++) {
-                int width = LeftBorder.width(panes, x).get();
-                Rect left = Layout.horizontal()
-                        .constraints(Constraint.percentage(width), Constraint.fill())
-                        .split(panes)
-                        .get(0);
-                assertEquals(x, left.right() - 1, "panes " + panesWidth + " wide, mouse at " + x);
-            }
-        }
+    @ParameterizedTest
+    @ValueSource(ints = {37, 80, 99})
+    void theLayoutPutsTheBorderBackWhereTheMouseIsInPanesNarrowerThan100Columns(int panesWidth) {
+        Rect panes = new Rect(3, 0, panesWidth, 10);
+        List.range(panes.x() + 1, panes.right() - 1).forEach(x -> {
+            Rect left = Layout.horizontal()
+                    .constraints(
+                            Constraint.percentage(LeftBorder.width(panes, x).get()), Constraint.fill())
+                    .split(panes)
+                    .get(0);
+            assertEquals(x, left.right() - 1, "mouse at " + x);
+        });
     }
 }
