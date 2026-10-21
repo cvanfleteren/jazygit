@@ -41,6 +41,7 @@ public final class CheckoutDialogs {
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
                 PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(STASH_CHECKOUT, dispatch)),
-                PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(SWITCH_WORKTREE, dispatch)));
+                // Checking out a pull request, on its own screen, offers it too.
+                PopupSlot.returningToFocus(new ConfirmDialog<>(SWITCH_WORKTREE, dispatch)));
     }
 }

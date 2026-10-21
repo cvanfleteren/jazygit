@@ -10,6 +10,7 @@ import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.feature.branch.checkout.SwitchWorktreePopup;
 import net.vanfleteren.jazygit.feature.fetch.FetchCmd;
 import net.vanfleteren.jazygit.feature.github.browse.BrowsePullRequestCmd;
 import net.vanfleteren.jazygit.feature.github.checkout.CheckoutPullRequestCmd;
@@ -838,6 +839,48 @@ class PullRequestUpdateTest {
 
         assertEquals(List.of(new CheckoutPullRequestCmd(pr)), checkingOut.cmds());
         assertEquals(Option.none(), checkingOut.model().outcome().error());
+    }
+
+    @Test
+    void forAPullRequestWhoseBranchAnotherWorktreeHasSwitchingToThatWorktreeIsOffered() {
+        Branch.Name patch = new Branch.Name("patch-1");
+        Model elsewhere = Update.update(
+                        ofOwnerRepo(CLEAN),
+                        new LoadMsg.BranchesLoaded(List.of(new Branch(
+                                patch,
+                                false,
+                                new Sha("bbbb"),
+                                Instant.EPOCH,
+                                false,
+                                false,
+                                new Tracking.None(),
+                                Option.of(java.nio.file.Path.of("/repos/linked"))))))
+                .model();
+        PullRequestSummary fork = summary("owner/repo");
+        PullRequestSummary own = new PullRequestSummary(
+                fork.repository(),
+                fork.number(),
+                fork.title(),
+                fork.author(),
+                "patch-1",
+                false,
+                false,
+                fork.checks(),
+                fork.review(),
+                fork.updatedAt(),
+                fork.url());
+
+        Next offered = Update.update(elsewhere, new CheckoutPullRequestMsg.Requested(own));
+
+        assertEquals(List.empty(), offered.cmds());
+        assertEquals(
+                Option.of(new SwitchWorktreePopup(patch, "/repos/linked")),
+                offered.model().popup());
+        // The branch of one from a fork has another name here, so it is checked out as ever.
+        assertEquals(
+                List.of(new CheckoutPullRequestCmd(fork)),
+                Update.update(elsewhere, new CheckoutPullRequestMsg.Requested(fork))
+                        .cmds());
     }
 
     @Test
