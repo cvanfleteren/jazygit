@@ -218,4 +218,46 @@ class SettingsFileTest {
         assertEquals(file(), saved.getLeft().file());
         assertInstanceOf(SettingsProblem.Unwritable.class, saved.getLeft());
     }
+
+    @Test
+    void readsTheWidthsOfTheLeftColumns() throws IOException {
+        write("""
+                [ui]
+                repository-width = 40
+                pull-requests-width = 55
+                """);
+
+        assertEquals(
+                new Loaded(Settings.DEFAULT.withRepositoryWidth(40).withPullRequestsWidth(55), Option.none()),
+                settingsFile().load());
+    }
+
+    @Test
+    void aWidthOutOfRangeOrNoWholeNumberIsInvalid() throws IOException {
+        write("""
+                [ui]
+                repository-width = 90
+                pull-requests-width = 40.5
+                """);
+
+        assertEquals(
+                new Loaded(
+                        Settings.DEFAULT,
+                        Option.of(new SettingsProblem.Invalid(
+                                file(), List.of("ui.repository-width", "ui.pull-requests-width")))),
+                settingsFile().load());
+    }
+
+    @Test
+    void savingAWidthAndGoingBackToTheDefaultRemovesIt() throws IOException {
+        Settings wide = Settings.DEFAULT.withPullRequestsWidth(50);
+        settingsFile().save(Settings.DEFAULT, wide);
+
+        assertEquals(wide, settingsFile().load().settings());
+        assertFalse(Files.readString(file()).contains("repository-width"), Files.readString(file()));
+
+        settingsFile().save(wide, Settings.DEFAULT);
+
+        assertFalse(Files.readString(file()).contains("width"), Files.readString(file()));
+    }
 }

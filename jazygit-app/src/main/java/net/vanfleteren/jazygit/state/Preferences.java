@@ -13,11 +13,14 @@ import net.vanfleteren.jazygit.settings.ThemeName;
  * @param themeOverride the theme asked for at startup, or highlighted in the theme dialog, for this session only,
  *                      until the user chooses one
  * @param diffOptions   how the diffs of the files and the commits are read, for this session only
+ * @param dragged       the width the left column of a screen is dragged to, which is kept once it is let go
  */
 @With
-public record Preferences(Settings settings, Option<ThemeName> themeOverride, DiffOptions diffOptions) {
+public record Preferences(
+        Settings settings, Option<ThemeName> themeOverride, DiffOptions diffOptions, Option<Dragged> dragged) {
 
-    public static final Preferences DEFAULT = new Preferences(Settings.DEFAULT, Option.none(), DiffOptions.DEFAULT);
+    public static final Preferences DEFAULT =
+            new Preferences(Settings.DEFAULT, Option.none(), DiffOptions.DEFAULT, Option.none());
 
     /**
      * The theme the UI is drawn in: the one asked for at startup, else the saved one.
@@ -25,4 +28,39 @@ public record Preferences(Settings settings, Option<ThemeName> themeOverride, Di
     public ThemeName theme() {
         return themeOverride.getOrElse(settings.theme());
     }
+
+    /**
+     * How wide the left column of {@code screen} is, in percent of the width: where it is dragged to, else the
+     * width kept.
+     */
+    public int leftWidth(Screen screen) {
+        return dragged.filter(drag -> drag.screen() == screen)
+                .map(Dragged::width)
+                .getOrElse(() -> keptWidth(screen));
+    }
+
+    /**
+     * How wide the left column of {@code screen} is kept, in percent of the width.
+     */
+    public int keptWidth(Screen screen) {
+        return switch (screen) {
+            case REPOSITORY -> settings.repositoryWidth();
+            case PULL_REQUESTS -> settings.pullRequestsWidth();
+        };
+    }
+
+    /**
+     * The settings with the left column of {@code screen} kept {@code width} wide.
+     */
+    public Settings keepingWidth(Screen screen, int width) {
+        return switch (screen) {
+            case REPOSITORY -> settings.withRepositoryWidth(width);
+            case PULL_REQUESTS -> settings.withPullRequestsWidth(width);
+        };
+    }
+
+    /**
+     * The left column of {@code screen}, dragged to {@code width} percent of the width.
+     */
+    public record Dragged(Screen screen, int width) {}
 }

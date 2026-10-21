@@ -6,6 +6,8 @@ import net.vanfleteren.jazygit.feature.cherrypick.CherryPickMsg;
 import net.vanfleteren.jazygit.feature.diff.DiffOptionsMsg;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.feature.inprogress.InProgressMsg;
+import net.vanfleteren.jazygit.feature.layout.LayoutMsg;
+import net.vanfleteren.jazygit.feature.layout.LayoutUpdate;
 import net.vanfleteren.jazygit.feature.repos.RecentReposMsg;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelMsg;
 import net.vanfleteren.jazygit.state.Msg;
@@ -41,6 +43,16 @@ final class GlobalKeys {
                         "esc", "help.global.cherryPickDrop", GlobalKeys::isEscape, CherryPickMsg.Dropped::new))
                 .global(new Keymap.Global.Dispatching(
                         "M", "help.global.inProgress", GlobalKeys::isInProgressKey, InProgressMsg.Requested::new))
+                .global(new Keymap.Global.Dispatching(
+                        "<",
+                        "help.global.narrower",
+                        event -> isChar(event, '<'),
+                        () -> new LayoutMsg.Stepped(-LayoutUpdate.STEP)))
+                .global(new Keymap.Global.Dispatching(
+                        ">",
+                        "help.global.wider",
+                        event -> isChar(event, '>'),
+                        () -> new LayoutMsg.Stepped(LayoutUpdate.STEP)))
                 .global(new Keymap.Global.Dispatching("q", "help.global.quit", GlobalKeys::isQuitKey, Msg.Quit::new));
     }
 
@@ -56,6 +68,13 @@ final class GlobalKeys {
      */
     static boolean isQuitKey(KeyEvent event) {
         return event.isChar('q') && !event.hasCtrl() && !event.hasAlt();
+    }
+
+    /**
+     * Whether {@code event} is the character {@code c}, without Ctrl or Alt.
+     */
+    static boolean isChar(KeyEvent event, char c) {
+        return event.isChar(c) && !event.hasCtrl() && !event.hasAlt();
     }
 
     /**

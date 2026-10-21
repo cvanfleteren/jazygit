@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.feature.diff.DiffOptionsMsg;
 import net.vanfleteren.jazygit.feature.github.browse.BrowseMsg;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.feature.inprogress.InProgressMsg;
+import net.vanfleteren.jazygit.feature.layout.LayoutMsg;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelMsg;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -44,6 +45,14 @@ class KeymapTest {
         assertEquals(Option.of(new InProgressMsg.Requested()), keymap.handleGlobal(KeyEvent.ofChar('M')));
         assertEquals(Option.none(), keymap.handleGlobal(KeyEvent.ofChar('m')));
         assertTrue(keymap.globals().exists(global -> global.label().equals("M")));
+    }
+
+    @Test
+    void lessAndGreaterThanMakeTheLeftColumnNarrowerAndWider() {
+        assertEquals(Option.of(new LayoutMsg.Stepped(-5)), keymap.handleGlobal(KeyEvent.ofChar('<')));
+        assertEquals(Option.of(new LayoutMsg.Stepped(5)), keymap.handleGlobal(KeyEvent.ofChar('>')));
+        assertEquals(Option.none(), keymap.handleGlobal(KeyEvent.ofChar('>', dev.tamboui.tui.event.KeyModifiers.ALT)));
+        assertTrue(keymap.globals().exists(global -> global.label().equals("<")));
     }
 
     @Test
