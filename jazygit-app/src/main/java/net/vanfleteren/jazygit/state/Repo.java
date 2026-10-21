@@ -18,7 +18,7 @@ import net.vanfleteren.jazygit.git.model.*;
  * @param stashes         the stashes, newest first
  * @param worktrees       the worktrees of the repository, the one shown first
  * @param worktreeChanges whether the other worktrees have changes, by their location, as read last; one that was
- *                        not read is not known
+ *                        not read, or could not be read the last time, is not known
  */
 @With
 public record Repo(

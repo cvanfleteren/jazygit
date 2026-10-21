@@ -29,14 +29,20 @@ shows nothing.
   from a worktree's path to whether it has changes, beside the list of worktrees, which stays one cheap
   `git worktree list`. A worktree missing from the map is not known and shows no marker, so the list shows at
   once and the markers follow. A worktree whose status cannot be read is left out quietly: no error, no retry.
-- It is read only while the branches pane shows the worktrees, whether the pane has the focus or not: on every
-  tick, and right after switching to them. As with the other periodic loads, it is not started again while one is
-  still running, which keeps it from piling up in a big repository.
+- A worktree that cannot be read in a read that otherwise succeeds is left out, so it loses what was known of it.
+  When the whole read fails, what was read before stays.
+- It is read only while the branches pane shows the worktrees, whether the pane has the focus or not: right after
+  switching to them, and then by a tick at least 3 s after the last read finished, failed or not. It is not
+  started again while one is still running.
+- It runs in the background, beside fetching and the GitHub loads rather than on the thread of the other loads
+  and of the user's operations. In a big repository, a git status per worktree can take longer than a tick, and
+  it would hold up staging, committing and diffs in the worktree shown.
 - The branch rows of branches checked out in another worktree get no marker, as the changes are only read while
   the worktrees are shown. Removing a worktree goes as before: git's refusal, not the marker, which may be a tick
   behind, decides whether removing it anyway is offered.
 
 ## Consequences
 
-- While the worktrees are shown, every tick runs one `git status` per other worktree.
+- While the worktrees are shown, one `git status` per other worktree runs every few seconds, in the background.
+  A marker can be a few seconds behind.
 - Comparing a worktree's branch with the default branch, rather than its upstream, is left for later.

@@ -140,9 +140,14 @@ public interface Cmd {
 
     /**
      * Reads whether each of {@code worktrees} has changes, one after the other. One that cannot be read is left
-     * out.
+     * out. It runs in the background, as it takes a git status per worktree, and nobody waits for it.
      */
     record LoadWorktreeChanges(List<String> worktrees) implements Load {
+
+        @Override
+        public boolean background() {
+            return true;
+        }
 
         @Override
         public Msg run(Env env) {

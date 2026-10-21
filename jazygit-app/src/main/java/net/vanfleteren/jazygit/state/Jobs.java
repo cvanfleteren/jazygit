@@ -5,6 +5,7 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
+import java.time.Instant;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 
@@ -16,12 +17,18 @@ import net.vanfleteren.jazygit.git.model.BranchRef;
  *                   they show a spinner, and take no other operation until it is done
  * @param fetching   the background fetch from the remotes that is running, if any; the next one waits
  * @param lastFetch  when a remote was last fetched from, and the remotes that failed the last time
+ * @param worktreeChangesRead when reading which worktrees have changes last finished, whatever came of it
  */
 @With
 public record Jobs(
-        Set<Cmd.Load> refreshing, Map<BranchRef, Operation> busy, Option<Fetching> fetching, Freshness lastFetch) {
+        Set<Cmd.Load> refreshing,
+        Map<BranchRef, Operation> busy,
+        Option<Fetching> fetching,
+        Freshness lastFetch,
+        Option<Instant> worktreeChangesRead) {
 
-    public static final Jobs IDLE = new Jobs(HashSet.empty(), HashMap.empty(), Option.none(), Freshness.NEVER);
+    public static final Jobs IDLE =
+            new Jobs(HashSet.empty(), HashMap.empty(), Option.none(), Freshness.NEVER, Option.none());
 
     /**
      * These jobs with {@code operation} running on {@code branch}.

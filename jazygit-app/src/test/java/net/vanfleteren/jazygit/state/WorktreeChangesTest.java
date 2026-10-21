@@ -4,9 +4,15 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
+import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
+import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.git.GitError;
+import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Worktree;
@@ -60,6 +66,56 @@ class WorktreeChangesTest {
         Model reading = Update.refresh(onWorktreesTab(withWorktrees())).model();
 
         assertFalse(Update.refresh(reading).cmds().exists(cmd -> cmd instanceof LoadWorktreeChanges));
+    }
+
+    @Test
+    void aTickWaitsAWhileAfterTheyWereReadBeforeReadingThemAgain() {
+        Instant read = Instant.parse("2026-10-21T10:00:00Z");
+        Model done = Update.update(
+                        Update.refresh(onWorktreesTab(withWorktrees()).withNow(read))
+                                .model(),
+                        new LoadMsg.WorktreeChangesLoaded(List.of(LINKED.toString()), HashMap.empty()))
+                .model();
+
+        assertFalse(Update.update(done, new Msg.Tick(read.plusMillis(500)))
+                .cmds()
+                .exists(cmd -> cmd instanceof LoadWorktreeChanges));
+        assertTrue(Update.update(done, new Msg.Tick(read.plus(Update.WORKTREE_CHANGES_INTERVAL)))
+                .cmds()
+                .contains(LOAD));
+    }
+
+    @Test
+    void failingToReadThemAlsoMakesATickWait() {
+        Instant read = Instant.parse("2026-10-21T10:00:00Z");
+        Model failed = Update.update(
+                        Update.refresh(onWorktreesTab(withWorktrees()).withNow(read))
+                                .model(),
+                        new LoadMsg.Failed(LOAD, new Failure.Git(new GitError.TimedOut("status", LINKED))))
+                .model();
+
+        assertFalse(Update.update(failed, new Msg.Tick(read.plusMillis(500)))
+                .cmds()
+                .exists(cmd -> cmd instanceof LoadWorktreeChanges));
+    }
+
+    @Test
+    void theyAreReadInTheBackgroundLeavingOutTheWorktreesThatCannotBeRead() {
+        Path broken = Path.of("/repos/app-broken");
+        GitInfoProvider git = new StubGitProvider() {
+            @Override
+            public Either<GitError.ProcessError, Boolean> hasChanges(Path worktree) {
+                return worktree.equals(broken)
+                        ? Either.left(new GitError.TimedOut("status", worktree))
+                        : Either.right(true);
+            }
+        };
+        LoadWorktreeChanges load = new LoadWorktreeChanges(List.of(broken.toString(), LINKED.toString()));
+
+        assertTrue(load.background());
+        assertEquals(
+                new LoadMsg.WorktreeChangesLoaded(load.worktrees(), HashMap.of(LINKED.toString(), true)),
+                load.run(new Env(git, StubGitHub.empty())));
     }
 
     @Test
