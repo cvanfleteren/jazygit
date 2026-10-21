@@ -270,6 +270,38 @@ class WorktreeUpdateTest {
     }
 
     @Test
+    void withoutAMainWorktreeANewOneStartsOutNextToTheOneShownAndATakenLocationGetsANumber() {
+        // Worktrees next to a bare repository: none is the main one.
+        Worktree shown = new Worktree(
+                Path.of("/repos/proj/main"),
+                Option.of(new Sha("aaaa")),
+                Option.of(new Branch.Name("main")),
+                false,
+                true,
+                Option.none(),
+                false);
+        assertEquals(
+                Option.of(new NewWorktreePopup(FEATURE, "/repos/proj/feature")),
+                Update.update(worktrees(shown, LINKED), new AddWorktreeMsg.Requested(FEATURE))
+                        .model()
+                        .popup());
+
+        Worktree taken = new Worktree(
+                Path.of("/repos/app-feature"),
+                Option.of(new Sha("3333")),
+                Option.none(),
+                false,
+                false,
+                Option.none(),
+                false);
+        assertEquals(
+                Option.of(new NewWorktreePopup(FEATURE, "/repos/app-feature-2")),
+                Update.update(worktrees(MAIN, LINKED, taken), new AddWorktreeMsg.Requested(FEATURE))
+                        .model()
+                        .popup());
+    }
+
+    @Test
     void aWorktreeWhoseDirectoryIsGoneIsNotSwitchedTo() {
         Worktree missing =
                 new Worktree(LINKED.path(), LINKED.head(), LINKED.branch(), false, false, Option.none(), true);

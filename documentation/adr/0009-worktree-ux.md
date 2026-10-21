@@ -64,18 +64,20 @@ as slice 1 does; cancelling stays.
 
 ### 5. Repository identity and the bare layout
 
-The name of the repository is read from `git rev-parse --git-common-dir`, as lazygit does: the name of the directory
-holding the common git directory (`…/jazygit/.git` → `jazygit`, `…/proj/.bare` → `proj`). A bare repository named
-`app.git` is `app`, where lazygit would take the directory above it.
+The repository a working tree belongs to is read from its files, as `HeadFile` reads HEAD (`RepositoryIdentity`):
+its `.git` file, then the `commondir` of the git directory it points to, which only a linked worktree has. Its name
+is the one lazygit gives: the directory of the main worktree, or for a linked one the name of the directory holding
+the common git directory (`…/jazygit/.git` → `jazygit`, `…/proj/.bare` → `proj`). A bare repository named `app.git`
+is `app`, where lazygit would take the directory above it.
 
-- The header shows a linked worktree as lazygit does: `jazygit(jazygit-wt-test-a) → wt-test-a`, the worktree name
-  in the dim style. The main worktree shows as now, `jazygit → main`.
+- The header shows a linked worktree as lazygit does: `jazygit(jazygit-wt-test-a) → wt-test-a`, in plain text as the
+  rest of the line. The main worktree shows as now, `jazygit → main`.
 - Without a main worktree, a new worktree starts out next to the one shown, named after the branch only
   (`…/proj/feature-login`), as worktrees are laid out next to a bare repository.
 - The recent repositories hold one entry per repository: opening a worktree replaces the entry of any other
-  worktree of the same repository, which is told from the files as `HeadFile` reads HEAD (the `.git` file, then the
-  `commondir` of the git directory it points to). The list names the entry as the header does. Removing the worktree
-  an entry names makes it name the worktree shown instead, so the repository does not drop off the list.
+  worktree of the same repository, told apart by their common git directory. The list names the entry as the header
+  does. The entry is always the worktree shown last, so removing another worktree leaves it as it is. The settings
+  know nothing of git: the app hands the recent repositories how to tell which repository a worktree belongs to.
 
 ### 6. A new branch in a new worktree
 
@@ -95,6 +97,8 @@ follows it, as checking it out does. `w` on the checked out branch starts the sa
 - Each slice has its update tests next to the existing `WorktreeUpdateTest`; the git commands (prune, lock, unlock,
   `add -b`, the common git directory) are tested against a real repository, as `CliWorktreeTest` does.
 - `Repositories.switchTo` changes signature; its three callers say where to land.
-- The recent repositories file keeps holding paths; which repository a path belongs to is read when it is opened,
+- The recent repositories file keeps holding paths; which repository a path belongs to is read when one is opened,
   not stored.
+- The location a new worktree starts out at, with a number appended when a worktree has it already, landed with
+  slice 5.
 - The model gains nothing for the focus beyond `focusedPane`, which it has already.

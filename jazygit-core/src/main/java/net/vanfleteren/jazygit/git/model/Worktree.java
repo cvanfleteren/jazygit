@@ -50,7 +50,19 @@ public record Worktree(
      * e.g. {@code /repos/app-feature-login} for {@code feature/login} next to {@code /repos/app}.
      */
     public String siblingFor(Branch.Name branch) {
-        return path.resolveSibling(name() + "-" + branch.value().replace('/', '-'))
-                .toString();
+        return path.resolveSibling(name() + "-" + directoryFor(branch)).toString();
+    }
+
+    /**
+     * Where a new worktree for {@code branch} goes next to this one when there is no main one to name it after, as
+     * next to a bare repository: named after the branch, e.g. {@code /repos/proj/feature-login} for
+     * {@code feature/login} next to {@code /repos/proj/main}.
+     */
+    public String nextTo(Branch.Name branch) {
+        return path.resolveSibling(directoryFor(branch)).toString();
+    }
+
+    private static String directoryFor(Branch.Name branch) {
+        return branch.value().replace('/', '-');
     }
 }

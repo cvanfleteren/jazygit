@@ -23,7 +23,8 @@ public interface GitInfoProvider {
     int MAX_COMMITS = 300;
 
     /**
-     * The name of the repository, i.e. the name of its working tree directory.
+     * The name of the repository, as {@link RepositoryIdentity#label()} has it: followed by the worktree in
+     * parentheses when this is a linked one.
      */
     String repositoryName();
 

@@ -89,4 +89,11 @@ public record Repo(
     public Option<Worktree> mainWorktree() {
         return worktrees.toOption().flatMap(loaded -> loaded.find(Worktree::main));
     }
+
+    /**
+     * The worktree shown, if the worktrees are loaded.
+     */
+    public Option<Worktree> currentWorktree() {
+        return worktrees.toOption().flatMap(loaded -> loaded.find(Worktree::current));
+    }
 }

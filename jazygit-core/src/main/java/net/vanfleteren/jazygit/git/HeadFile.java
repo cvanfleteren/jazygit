@@ -32,7 +32,11 @@ public final class HeadFile {
                 .flatMap(HeadFile::parse);
     }
 
-    private static Option<Path> gitDir(Path workTree) {
+    /**
+     * The git directory of the working tree at {@code workTree}: its {@code .git} directory, or where its
+     * {@code .git} file says, as for a linked worktree or a submodule.
+     */
+    static Option<Path> gitDir(Path workTree) {
         Path dotGit = workTree.resolve(GIT_DIR);
         return Files.isDirectory(dotGit)
                 ? Option.of(dotGit)
@@ -42,7 +46,7 @@ public final class HeadFile {
                                 line.substring(GIT_DIR_LINK.length()).strip()));
     }
 
-    private static Option<String> firstLine(Path file) {
+    static Option<String> firstLine(Path file) {
         return Try.of(() -> List.ofAll(Files.readAllLines(file))).toOption().flatMap(List::headOption);
     }
 

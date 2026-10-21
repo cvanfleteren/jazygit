@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.settings;
 
 import com.electronwill.nightconfig.core.CommentedConfig;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,9 +20,23 @@ public final class RecentRepositoriesFile implements RecentRepositories {
     static final String KEY = "recent-repositories";
 
     private final Path file;
+    // Which repository a worktree belongs to, so that one is kept once; none when that cannot be told.
+    private final Function<Path, Option<?>> repository;
 
+    /**
+     * Recent repositories that are told apart by their worktree only.
+     */
     public RecentRepositoriesFile(Path file) {
+        this(file, directory -> Option.none());
+    }
+
+    /**
+     * @param repository which repository the worktree at a path belongs to, so that a repository is kept once, by
+     *                   the worktree opened last; none when that cannot be told
+     */
+    public RecentRepositoriesFile(Path file, Function<Path, Option<?>> repository) {
         this.file = file;
+        this.repository = repository;
     }
 
     private static List<Path> paths(CommentedConfig config) {
@@ -44,7 +59,7 @@ public final class RecentRepositoriesFile implements RecentRepositories {
 
     @Override
     public Try<List<Path>> opened(Path workTree) {
-        return change(recent -> RecentRepositories.opened(recent, workTree));
+        return change(recent -> RecentRepositories.opened(recent, workTree, repository));
     }
 
     @Override

@@ -27,7 +27,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 class RecentReposUpdateTest {
 
-    private static final RecentRepo A = new RecentRepo("/repos/a", Option.none());
+    private static final RecentRepo A = new RecentRepo("/repos/a", "a", Option.none());
 
     @TempDir
     Path dir;
@@ -117,7 +117,8 @@ class RecentReposUpdateTest {
 
         Object listed = new RecentReposCmd.ListRecent().run(env(current, recent, Repositories.NONE));
 
-        assertEquals(new RecentReposMsg.Listed(List.of(new RecentRepo(other.toString(), Option.none()))), listed);
+        assertEquals(
+                new RecentReposMsg.Listed(List.of(new RecentRepo(other.toString(), "other", Option.none()))), listed);
         assertEquals(List.of(current, other), recent.load());
     }
 
@@ -133,7 +134,9 @@ class RecentReposUpdateTest {
 
         assertEquals(
                 new RecentReposMsg.Listed(List.of(new RecentRepo(
-                        other.toString(), Option.of(new Head.OnBranch(new Branch.Name("develop"), Option.none()))))),
+                        other.toString(),
+                        "other",
+                        Option.of(new Head.OnBranch(new Branch.Name("develop"), Option.none()))))),
                 listed);
     }
 

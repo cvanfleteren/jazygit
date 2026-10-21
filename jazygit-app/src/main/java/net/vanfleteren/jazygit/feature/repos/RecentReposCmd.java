@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.HeadFile;
+import net.vanfleteren.jazygit.git.RepositoryIdentity;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Cmd;
@@ -34,7 +35,15 @@ public sealed interface RecentReposCmd extends Cmd {
             }
             return new RecentReposMsg.Listed(recent.removeAll(gone)
                     .remove(env.git().workTree())
-                    .map(directory -> new RecentRepo(directory.toString(), HeadFile.read(directory))));
+                    .map(directory -> new RecentRepo(
+                            directory.toString(),
+                            RepositoryIdentity.read(directory)
+                                    .map(RepositoryIdentity::label)
+                                    // The root directory has no name.
+                                    .getOrElse(() -> Option.of(directory.getFileName())
+                                            .map(Path::toString)
+                                            .getOrElse(directory::toString)),
+                            HeadFile.read(directory))));
         }
 
         @Override

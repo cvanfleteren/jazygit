@@ -1,8 +1,10 @@
 package net.vanfleteren.jazygit.settings;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.nio.file.Path;
+import java.util.function.Function;
 
 /**
  * The repositories opened last, by the root of their working tree, the last one opened first. They are state
@@ -43,6 +45,7 @@ public interface RecentRepositories {
 
     /**
      * Keeps that the repository at {@code workTree} was opened just now, and gives the recent repositories then.
+     * A repository is kept once, by the worktree opened last.
      */
     Try<List<Path>> opened(Path workTree);
 
@@ -51,7 +54,19 @@ public interface RecentRepositories {
      * opened longest ago drop off past {@link #MAX}.
      */
     static List<Path> opened(List<Path> recent, Path workTree) {
-        return recent.remove(workTree).prepend(workTree).take(MAX);
+        return opened(recent, workTree, directory -> Option.none());
+    }
+
+    /**
+     * {@code recent} after the worktree at {@code workTree} was opened, as {@link #opened(List, Path)}; the other
+     * worktrees of its repository, as {@code repository} tells which one a worktree belongs to, give way to it.
+     */
+    static List<Path> opened(List<Path> recent, Path workTree, Function<Path, ? extends Option<?>> repository) {
+        Option<?> opened = repository.apply(workTree);
+        return recent.filter(other -> !other.equals(workTree)
+                        && !(opened.isDefined() && repository.apply(other).equals(opened)))
+                .prepend(workTree)
+                .take(MAX);
     }
 
     /**

@@ -56,6 +56,7 @@ import net.vanfleteren.jazygit.gh.CliGitHub;
 import net.vanfleteren.jazygit.gh.GhToken;
 import net.vanfleteren.jazygit.git.CliGitInfoProvider;
 import net.vanfleteren.jazygit.git.GitError;
+import net.vanfleteren.jazygit.git.RepositoryIdentity;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.settings.*;
@@ -225,7 +226,10 @@ public class JazygitApp extends ToolkitApp {
                         .mapLeft(failed ->
                                 Messages.get("theme.loadFailed", failed.theme(), ErrorText.reason(failed.cause())))
                         .map(engine -> {
-                            RecentRepositories recent = new RecentRepositoriesFile(SettingsPaths.stateFile());
+                            RecentRepositories recent = new RecentRepositoriesFile(
+                                    SettingsPaths.stateFile(),
+                                    directory ->
+                                            RepositoryIdentity.read(directory).map(RepositoryIdentity::commonDir));
                             recent.opened(provider.workTree()).onFailure(JazygitApp::logBug);
                             SettingsStore settings = new SettingsFile(SettingsPaths.configFile());
                             SettingsStore.Loaded loaded = settings.load();

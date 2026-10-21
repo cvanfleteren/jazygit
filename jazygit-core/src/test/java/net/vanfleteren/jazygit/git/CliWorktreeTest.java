@@ -165,6 +165,8 @@ class CliWorktreeTest {
 
         assertEquals("/repos/app-feature-login", app.siblingFor(new Branch.Name("feature/login")));
         assertEquals("app", app.name());
+        // Next to a bare repository, worktrees are named after their branch only.
+        assertEquals("/repos/feature-login", app.nextTo(new Branch.Name("feature/login")));
     }
 
     @Test

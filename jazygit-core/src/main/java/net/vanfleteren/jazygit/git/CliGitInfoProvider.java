@@ -76,8 +76,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public String repositoryName() {
-        // The root directory has no name.
-        return Option.of(workTree.getFileName()).map(Path::toString).getOrElse(workTree::toString);
+        return RepositoryIdentity.read(workTree)
+                .map(RepositoryIdentity::label)
+                // The root directory has no name.
+                .getOrElse(() ->
+                        Option.of(workTree.getFileName()).map(Path::toString).getOrElse(workTree::toString));
     }
 
     @Override
