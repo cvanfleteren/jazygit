@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.worktree.add;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg.*;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.*;
@@ -25,10 +26,21 @@ public final class AddWorktreeUpdate {
                         popup -> Option.of(popup.location().strip())
                                 .filter(text -> !text.isEmpty())
                                 .map(text -> new AddWorktreeCmd(popup.branch(), text)));
-            // The worktrees are shown, the new one among them, to switch to.
-            case Added(var cmd, var commands) ->
-                OperationUpdate.succeeded(
+            // The worktrees are shown, the new one among them, and switching to it is offered.
+            case Added(var cmd, String location, var commands) -> {
+                Next succeeded = OperationUpdate.succeeded(
                         model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.WORKTREES)), cmd, commands);
+                yield new Next(
+                        succeeded.model().openPopupIfFree(new SwitchToAddedPopup(cmd.branch(), location)),
+                        succeeded.cmds());
+            }
+            case SwitchCancelled() -> Next.of(model.withoutPopup(SwitchToAddedPopup.class));
+            case SwitchConfirmed() ->
+                model.popup(SwitchToAddedPopup.class)
+                        .map(popup -> Next.of(
+                                model.withoutPopup(SwitchToAddedPopup.class).clearError(),
+                                RecentReposCmd.SwitchTo.worktree(popup.location())))
+                        .getOrElse(() -> Next.of(model));
         };
     }
 

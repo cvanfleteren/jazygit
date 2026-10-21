@@ -63,6 +63,18 @@ class LoadableListTest {
     }
 
     @Test
+    void theSelectionGoesToTheOneItemAddedElseItFollowsItsItem() {
+        LoadableList.Reselect<List<String>> reselect = LoadableList.Reselect.followingOrAdded(item -> item);
+
+        // b was highlighted; c was added.
+        assertEquals(2, reselect.apply(List.of("a", "b"), List.of("a", "b", "c"), 1));
+        // b was highlighted; a was removed, so it moved up.
+        assertEquals(0, reselect.apply(List.of("a", "b"), List.of("b"), 1));
+        // A list of something else altogether, more than one added: none is chosen, b's place stays.
+        assertEquals(1, reselect.apply(List.of("a", "b"), List.of("x", "y", "z"), 1));
+    }
+
+    @Test
     void clickingBelowTheLastRowKeepsTheHighlight() throws Exception {
         Loadable<List<String>> items = new Loadable.Loaded<>(List.of("first", "second"));
 

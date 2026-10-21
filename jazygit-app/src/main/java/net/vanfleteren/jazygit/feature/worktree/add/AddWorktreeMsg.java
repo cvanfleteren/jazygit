@@ -30,7 +30,17 @@ public sealed interface AddWorktreeMsg extends Msg {
     record Confirmed() implements AddWorktreeMsg {}
 
     /**
-     * {@code cmd} ran {@code commands} and added the worktree.
+     * {@code cmd} ran {@code commands} and added the worktree, which is at {@code location}.
      */
-    record Added(AddWorktreeCmd cmd, List<ExecutedCommand> commands) implements AddWorktreeMsg {}
+    record Added(AddWorktreeCmd cmd, String location, List<ExecutedCommand> commands) implements AddWorktreeMsg {}
+
+    /**
+     * The user agreed to switch to the worktree that was added.
+     */
+    record SwitchConfirmed() implements AddWorktreeMsg {}
+
+    /**
+     * The user stays in the worktree shown.
+     */
+    record SwitchCancelled() implements AddWorktreeMsg {}
 }

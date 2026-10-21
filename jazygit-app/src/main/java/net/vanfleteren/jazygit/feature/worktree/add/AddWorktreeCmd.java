@@ -3,17 +3,21 @@ package net.vanfleteren.jazygit.feature.worktree.add;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import io.vavr.control.Try;
+import java.nio.file.Path;
 import net.vanfleteren.jazygit.feature.worktree.WorktreeCmd;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Operation;
 
 /**
- * Checks {@code branch} out in a new worktree at {@code location}. The branch is busy meanwhile.
+ * Checks {@code branch} out in a new worktree at {@code location}. The branch is busy meanwhile. Once added, it
+ * tells where the worktree is, as git lists it.
  */
 public record AddWorktreeCmd(Branch.Name branch, String location) implements WorktreeCmd {
 
@@ -40,7 +44,17 @@ public record AddWorktreeCmd(Branch.Name branch, String location) implements Wor
     }
 
     @Override
-    public Msg succeeded(List<ExecutedCommand> commands) {
-        return new AddWorktreeMsg.Added(this, commands);
+    public Msg run(Env env) {
+        return perform(env.git())
+                .fold(this::failedWith, commands -> new AddWorktreeMsg.Added(this, added(env), commands));
+    }
+
+    /**
+     * Where the worktree was added: {@code location} taken relative to the working tree, with its links
+     * resolved, as git lists it.
+     */
+    private String added(Env env) {
+        Path added = env.git().workTree().resolve(WorktreeCmd.path(location)).normalize();
+        return Try.of(added::toRealPath).getOrElse(added).toString();
     }
 }

@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg;
 import net.vanfleteren.jazygit.feature.worktree.add.NewWorktreePopup;
+import net.vanfleteren.jazygit.feature.worktree.add.SwitchToAddedPopup;
 import net.vanfleteren.jazygit.feature.worktree.lock.LockWorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.lock.LockWorktreeMsg;
 import net.vanfleteren.jazygit.feature.worktree.prune.PruneWorktreesCmd;
@@ -149,16 +150,47 @@ class WorktreeUpdateTest {
     }
 
     @Test
-    void anAddedWorktreeShowsTheWorktreesAndReadsTheRepositoryAgain() {
-        AddWorktreeCmd add = new AddWorktreeCmd(FEATURE, "/repos/app-feature");
+    void anAddedWorktreeShowsTheWorktreesReadsTheRepositoryAgainAndOffersToSwitchToIt() {
+        AddWorktreeCmd add = new AddWorktreeCmd(FEATURE, "../app-feature");
         Model adding = Update.start(model(), add).model();
 
         Next next = Update.update(
-                adding, add.succeeded(StubGitProvider.executed("git worktree add --quiet /repos/app-feature feature")));
+                adding,
+                new AddWorktreeMsg.Added(
+                        add,
+                        "/repos/app-feature",
+                        StubGitProvider.executed("git worktree add --quiet /repos/app-feature feature")));
 
         assertEquals(BranchesTab.WORKTREES, next.model().repoView().branchesTab());
         assertEquals(Option.none(), next.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
         assertTrue(next.cmds().contains(new Cmd.LoadWorktrees()), next.cmds().toString());
+        assertEquals(
+                Option.of(new SwitchToAddedPopup(FEATURE, "/repos/app-feature")),
+                next.model().popup());
+
+        assertEquals(
+                List.of(RecentReposCmd.SwitchTo.worktree("/repos/app-feature")),
+                Update.update(next.model(), new AddWorktreeMsg.SwitchConfirmed())
+                        .cmds());
+        Next stayed = Update.update(next.model(), new AddWorktreeMsg.SwitchCancelled());
+        assertEquals(List.of(), stayed.cmds());
+        assertEquals(Option.none(), stayed.model().popup());
+    }
+
+    @Test
+    void anAddedWorktreeIsWhereTheLocationTakenFromTheWorkingTreeIs() {
+        Env env = new Env(
+                new StubGitProvider() {
+                    @Override
+                    public Path workTree() {
+                        return Path.of("/repos/app");
+                    }
+                },
+                net.vanfleteren.jazygit.gh.StubGitHub.empty());
+
+        Msg added = new AddWorktreeCmd(FEATURE, "../app-feature").run(env);
+
+        assertEquals("/repos/app-feature", ((AddWorktreeMsg.Added) added).location());
     }
 
     @Test

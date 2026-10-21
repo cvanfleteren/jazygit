@@ -7,10 +7,11 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.BranchesPanel;
 import net.vanfleteren.jazygit.ui.PopupSlot;
+import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
 import net.vanfleteren.jazygit.ui.widgets.TextInputDialog;
 
 /**
- * The popup of adding a worktree.
+ * The popups of adding a worktree.
  */
 public final class AddWorktreeDialogs {
 
@@ -26,9 +27,23 @@ public final class AddWorktreeDialogs {
             AddWorktreeMsg.Confirmed::new,
             AddWorktreeMsg.Cancelled::new);
 
+    /**
+     * Tells that the worktree was added, and asks to switch to it.
+     */
+    public static final ConfirmDialog.Spec<SwitchToAddedPopup> SWITCH_TO_ADDED = new ConfirmDialog.Spec<>(
+            "switch-to-added-worktree",
+            SwitchToAddedPopup.class,
+            popup -> Messages.get(
+                    "dialog.switchToAddedWorktree.title", popup.branch().value()),
+            popup -> Messages.get("dialog.switchToAddedWorktree.message", popup.location()),
+            AddWorktreeMsg.SwitchConfirmed::new,
+            AddWorktreeMsg.SwitchCancelled::new);
+
     private AddWorktreeDialogs() {}
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return List.of(PopupSlot.returningTo(BranchesPanel.ID, new TextInputDialog<>(NEW_WORKTREE, dispatch)));
+        return List.of(
+                PopupSlot.returningTo(BranchesPanel.ID, new TextInputDialog<>(NEW_WORKTREE, dispatch)),
+                PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(SWITCH_TO_ADDED, dispatch)));
     }
 }

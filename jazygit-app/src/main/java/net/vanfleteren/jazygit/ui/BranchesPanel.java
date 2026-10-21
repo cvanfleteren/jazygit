@@ -114,7 +114,10 @@ public class BranchesPanel {
         remoteList.onKey(event ->
                 PaneKeys.sending(keymap.handle(Scopes.REMOTE_BRANCHES, event, selectedRemoteBranch()), dispatch));
         worktreeList = new LoadableList<>(
-                Messages.get("panel.worktrees.title"), ID, LoadableList.Reselect.following(Worktree::path), highlights);
+                Messages.get("panel.worktrees.title"),
+                ID,
+                LoadableList.Reselect.followingOrAdded(Worktree::path),
+                highlights);
         worktreeList.highlightSymbol("");
         worktreeList.whenEmpty(Messages.get("worktrees.empty"));
         worktreeList.onKey(
