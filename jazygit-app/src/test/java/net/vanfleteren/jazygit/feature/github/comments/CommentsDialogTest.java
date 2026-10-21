@@ -183,12 +183,6 @@ class CommentsDialogTest {
     }
 
     @Test
-    void cuttingNeverSplitsAnEmoji() {
-        assertEquals("ab👍…", CommentsDialog.cut("ab👍👍👍", 4));
-        assertEquals("ab👍👍", CommentsDialog.cut("ab👍👍", 4));
-    }
-
-    @Test
     void clickingARowHighlightsIt() throws Exception {
         try (ToolkitTestRunner runner = start(WIDE)) {
             int[] description = at(RenderedText.ofSize(runner, this::view, WIDE.width(), WIDE.height()), "@cvf");

@@ -9,6 +9,7 @@ import dev.tamboui.toolkit.elements.DialogElement;
 import dev.tamboui.widgets.paragraph.Paragraph;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.ui.TextWidth;
 import net.vanfleteren.jazygit.ui.Theme;
 
 /**
@@ -44,7 +45,7 @@ public final class DialogFrame {
      * The lines {@link #wrapped} takes.
      */
     public static int wrappedHeight(String text, int width, int maxLines) {
-        return Math.min(maxLines, ConfirmDialog.lines(text, width - FRAME));
+        return TextWidth.lines(text, width - FRAME, maxLines);
     }
 
     /**

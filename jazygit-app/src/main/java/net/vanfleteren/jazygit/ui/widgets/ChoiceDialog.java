@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.ui.TextWidth;
 
 /**
  * The standard popup offering a choice between several options, as a {@link ChoiceList} that {@code /} filters.
@@ -51,7 +52,7 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
                     spec.minWidth(),
                     Math.max(
                             Math.max(list.width(model, popup), list.hintWidth()) + DialogFrame.FRAME,
-                            title.length() + 2));
+                            TextWidth.of(title) + 2));
             List<StyledElement<?>> filter = list.filterField(model.listCursor()).toList();
             return DialogFrame.withHint(title, width, list.hintKey(model.listCursor()), filter.append(rows))
                     // The filter, the options whatever the filter, the blank line and the hint, plus the border.

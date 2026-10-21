@@ -30,6 +30,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.ErrorText;
 import net.vanfleteren.jazygit.ui.PullRequestSymbols;
+import net.vanfleteren.jazygit.ui.TextWidth;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.TimeText;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
@@ -62,7 +63,6 @@ public final class CommentsDialog implements PopupView {
     private static final int SYMBOL_WIDTH = 2;
     private static final int AUTHOR_WIDTH = 16;
     private static final int AGE_WIDTH = 5;
-    private static final String CUT = "…";
     private static final DateTimeFormatter WRITTEN = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private final Consumer<Msg> dispatch;
@@ -206,7 +206,7 @@ public final class CommentsDialog implements PopupView {
         int rest = Math.max(1, width - SYMBOL_WIDTH - AUTHOR_WIDTH - AGE_WIDTH);
         return row(
                 symbol.length(SYMBOL_WIDTH),
-                text(cut(author(comment), AUTHOR_WIDTH - 1)).length(AUTHOR_WIDTH),
+                text(TextWidth.cut(author(comment), AUTHOR_WIDTH - 1)).length(AUTHOR_WIDTH),
                 text(age).addClass(Theme.Classes.DIM).length(AGE_WIDTH),
                 summary(comment, rest));
     }
@@ -214,7 +214,7 @@ public final class CommentsDialog implements PopupView {
     private static StyledElement<?> summary(PullRequestComment comment, int width) {
         if (comment.hidden().isDefined()) {
             String reason = comment.hidden().get();
-            return text(cut(
+            return text(TextWidth.cut(
                             reason.isEmpty()
                                     ? Messages.get("dialog.comments.hidden")
                                     : Messages.get("dialog.comments.hiddenBecause", reason.toLowerCase()),
@@ -222,9 +222,10 @@ public final class CommentsDialog implements PopupView {
                     .addClass(Theme.Classes.DIM);
         }
         if (comment.kind() == PullRequestComment.Kind.DESCRIPTION) {
-            return text(cut(Messages.get("dialog.comments.description"), width)).addClass(Theme.Classes.DIM);
+            return text(TextWidth.cut(Messages.get("dialog.comments.description"), width))
+                    .addClass(Theme.Classes.DIM);
         }
-        return text(cut(firstLine(comment.body()), width));
+        return text(TextWidth.cut(firstLine(comment.body()), width));
     }
 
     /**
@@ -237,16 +238,6 @@ public final class CommentsDialog implements PopupView {
                         .strip())
                 .find(line -> !line.isEmpty())
                 .getOrElse("");
-    }
-
-    /**
-     * {@code text} cut to {@code width} characters, the last of which says it was cut. Characters, not UTF-16 units,
-     * so an emoji is not split in half.
-     */
-    static String cut(String text, int width) {
-        return text.codePointCount(0, text.length()) <= width
-                ? text
-                : text.substring(0, text.offsetByCodePoints(0, Math.max(0, width - CUT.length()))) + CUT;
     }
 
     private EventResult keys(CommentsPopup popup, KeyEvent event) {
