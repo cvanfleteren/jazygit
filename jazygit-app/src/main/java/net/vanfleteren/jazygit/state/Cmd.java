@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.Tuple;
 import io.vavr.collection.List;
+import java.nio.file.Path;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.git.GitError;
@@ -133,6 +135,30 @@ public interface Cmd {
         @Override
         public Msg run(Env env) {
             return env.git().worktrees().fold(this::failedWith, LoadMsg.WorktreesLoaded::new);
+        }
+    }
+
+    /**
+     * Reads whether each of {@code worktrees} has changes, one after the other. One that cannot be read is left
+     * out. It runs in the background, as it takes a git status per worktree, and nobody waits for it.
+     */
+    record LoadWorktreeChanges(List<String> worktrees) implements Load {
+
+        @Override
+        public boolean background() {
+            return true;
+        }
+
+        @Override
+        public Msg run(Env env) {
+            return new LoadMsg.WorktreeChangesLoaded(
+                    worktrees,
+                    worktrees
+                            .flatMap(location -> env.git()
+                                    .hasChanges(Path.of(location))
+                                    .toOption()
+                                    .map(changes -> Tuple.of(location, changes)))
+                            .toMap(entry -> entry));
         }
     }
 

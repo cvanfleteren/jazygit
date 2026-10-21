@@ -95,6 +95,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<ProcessError, Boolean> hasChanges(Path worktree) {
+        return CliWorktree.hasChanges(worktree);
+    }
+
+    @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktree(Path location, Branch.Name branch) {
         return CliWorktree.add(workTree, location, branch);
     }

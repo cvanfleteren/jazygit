@@ -106,6 +106,11 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
+    default Either<ProcessError, Boolean> hasChanges(Path worktree) {
+        return Either.right(false);
+    }
+
+    @Override
     default Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktree(Path location, Branch.Name branch) {
         return ran();
     }

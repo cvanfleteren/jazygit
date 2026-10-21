@@ -41,6 +41,8 @@ public final class LoadUpdate {
                 Next.of(done.mapRepo(repo -> repo.withStashes(repo.stashes().reload(stashes))));
             case LoadMsg.WorktreesLoaded(var worktrees) ->
                 Next.of(done.mapRepo(repo -> repo.withWorktrees(repo.worktrees().reload(worktrees))));
+            case WorktreeChangesLoaded loaded ->
+                Next.of(worktreeChangesRead(done).mapRepo(repo -> repo.withWorktreeChanges(loaded.changes())));
             // The log is only read again when HEAD moved, so the history the search runs on changed too.
             case CommitsLoaded(var commits) ->
                 new Next(
@@ -216,6 +218,14 @@ public final class LoadUpdate {
                 .map(tipOf);
     }
 
+    /**
+     * {@code model} with reading which worktrees have changes finished now, so that a tick waits before reading it
+     * again.
+     */
+    private static Model worktreeChangesRead(Model model) {
+        return model.mapJobs(jobs -> jobs.withWorktreeChangesRead(Option.of(model.now())));
+    }
+
     private static Model failed(Model model, Cmd.Load cmd, Failure failure) {
         return switch (cmd) {
             case LoadCommitDetail(Sha sha, var options)
@@ -227,6 +237,9 @@ public final class LoadUpdate {
             case Cmd.LoadRemoteBranches() -> model.mapRepo(repo -> repo.withRemoteBranches(new Failed<>(failure)));
             case Cmd.LoadStashes() -> model.mapRepo(repo -> repo.withStashes(new Failed<>(failure)));
             case Cmd.LoadWorktrees() -> model.mapRepo(repo -> repo.withWorktrees(new Failed<>(failure)));
+            // Which worktrees have changes is a detail: when the whole read fails, what was read before stays, and
+            // a later tick tries again. A single worktree that cannot be read is left out of a read that succeeds.
+            case Cmd.LoadWorktreeChanges _ -> worktreeChangesRead(model);
             case LoadCommits() -> model.mapRepo(repo -> repo.withCommits(new Failed<>(failure)));
             case Cmd.SearchCommits(var query) ->
                 model.mapRepoView(repoView -> repoView.withCommitSearch(repoView.commitSearch()

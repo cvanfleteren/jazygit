@@ -453,7 +453,8 @@ class BranchesPanelTest {
             SettledPilot.of(testRunner).quit();
 
             assertTrue(screen.contains("Branches │ Remotes │ Worktrees"), screen);
-            assertTrue(screen.contains("* app main (main)"), screen);
+            // The sample status has changes.
+            assertTrue(screen.contains("* app ● main (main)"), screen);
             assertTrue(screen.contains("  app-feature feature"), screen);
         }
 
@@ -481,14 +482,55 @@ class BranchesPanelTest {
 
         assertEquals(
                 "  x (detached at 1234567) locked missing",
-                BranchesPanel.worktreeRow(detached).text());
+                BranchesPanel.worktreeRow(Repo.LOADING, detached).text());
         assertEquals(
                 List.of(
                         Option.none(),
                         Option.of(Theme.Classes.DIM),
                         Option.of(Theme.Classes.DIM),
                         Option.of(Theme.Classes.GONE)),
-                BranchesPanel.worktreeRow(detached).segs().map(LoadableList.Seg::cssClass));
+                BranchesPanel.worktreeRow(Repo.LOADING, detached).segs().map(LoadableList.Seg::cssClass));
+    }
+
+    @Test
+    void aWorktreeWithChangesIsMarkedAndItsBranchSaysHowFarItIsFromItsUpstream() {
+        java.nio.file.Path path = java.nio.file.Path.of("/repos/x");
+        Worktree worktree = new Worktree(
+                path,
+                Option.of(new Sha("1234567890")),
+                Option.of(new Branch.Name("feature")),
+                false,
+                false,
+                Option.none(),
+                false);
+        Repo repo = Repo.LOADING
+                .withBranches(new Loadable.Loaded<>(List.of(new Branch(
+                        new Branch.Name("feature"),
+                        false,
+                        new Sha("1234567890"),
+                        java.time.Instant.EPOCH,
+                        true,
+                        false,
+                        Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("feature")), 2, 1))))))
+                .withWorktreeChanges(io.vavr.collection.HashMap.of(path.toString(), true));
+
+        LoadableList.Row row = BranchesPanel.worktreeRow(repo, worktree);
+
+        assertEquals("  x ● feature ↑2 ↓1", row.text());
+        assertEquals(
+                List.of(
+                        Option.none(),
+                        Option.of(Theme.Classes.UNSTAGED),
+                        Option.none(),
+                        Option.of(Theme.Classes.AHEAD),
+                        Option.of(Theme.Classes.BEHIND)),
+                row.segs().map(LoadableList.Seg::cssClass));
+        assertEquals(
+                "  x feature ↑2 ↓1",
+                BranchesPanel.worktreeRow(
+                                repo.withWorktreeChanges(io.vavr.collection.HashMap.of(path.toString(), false)),
+                                worktree)
+                        .text());
     }
 
     @Test
@@ -503,7 +545,8 @@ class BranchesPanelTest {
                 false);
 
         assertEquals(
-                "  x feature locked: on usb", BranchesPanel.worktreeRow(locked).text());
+                "  x feature locked: on usb",
+                BranchesPanel.worktreeRow(Repo.LOADING, locked).text());
     }
 
     @Test

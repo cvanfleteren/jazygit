@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.Duration;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
@@ -16,6 +17,12 @@ import net.vanfleteren.jazygit.state.Loadable.Failed;
  * {@link Msg} group.
  */
 public final class Update {
+
+    /**
+     * How long a tick waits after reading which worktrees have changes before reading that again: it takes a
+     * git status per worktree, too many to run on every tick.
+     */
+    static final Duration WORKTREE_CHANGES_INTERVAL = Duration.ofSeconds(3);
 
     /**
      * Loads that a tick repeats. They are skipped while a previous one is still running.
@@ -150,9 +157,36 @@ public final class Update {
                         .map(detail -> new LoadCommitDetail(
                                 detail.key(), model.preferences().diffOptions())));
         List<Cmd.Load> loads = PERIODIC.appendAll(retries)
-                .filter(cmd -> !model.jobs().refreshing().contains(cmd));
+                .filter(cmd -> !model.jobs().refreshing().contains(cmd))
+                .appendAll(worktreeChanges(model)
+                        .filter(load -> model.jobs()
+                                .worktreeChangesRead()
+                                .forAll(read -> !model.now().isBefore(read.plus(WORKTREE_CHANGES_INTERVAL)))));
         return new Next(
                 model.mapJobs(jobs -> jobs.withRefreshing(jobs.refreshing().addAll(loads))), List.narrow(loads));
+    }
+
+    /**
+     * Reads which of the other worktrees have changes right away, however recently that was read, if the branches
+     * pane shows the worktrees and that is not being read already.
+     */
+    public static Next readWorktreeChanges(Model model) {
+        Option<Cmd.Load> load = worktreeChanges(model);
+        return new Next(
+                model.mapJobs(jobs -> jobs.withRefreshing(jobs.refreshing().addAll(load))), List.narrow(load.toList()));
+    }
+
+    /**
+     * The load of which other worktrees have changes, while the branches pane shows the worktrees on screen: none
+     * while it runs already, even for other worktrees, or when there are no others.
+     */
+    private static Option<Cmd.Load> worktreeChanges(Model model) {
+        List<String> others = model.repo().otherWorktrees();
+        return Option.<Cmd.Load>of(new LoadWorktreeChanges(others))
+                .filter(load -> model.screen() == Screen.REPOSITORY
+                        && model.repoView().branchesTab() == BranchesTab.WORKTREES
+                        && others.nonEmpty()
+                        && !model.jobs().refreshing().exists(running -> running instanceof LoadWorktreeChanges));
     }
 
     /**
