@@ -46,6 +46,22 @@ class TextWidthTest {
     }
 
     @Test
+    void theStartKeepsWithinTheColumnsWithoutAnEllipsis() {
+        assertEquals("he", TextWidth.start("hello", 2));
+        assertEquals("日", TextWidth.start("日本", 3));
+        assertEquals("", TextWidth.start("日本", 1));
+        assertEquals("🇧🇪", TextWidth.start("🇧🇪🇧🇪", 3));
+        assertEquals("", TextWidth.start("hello", -1));
+    }
+
+    @Test
+    void aligningRightPadsToTheColumns() {
+        assertEquals("   ab", TextWidth.alignRight("ab", 5));
+        assertEquals(" 日本", TextWidth.alignRight("日本", 5));
+        assertEquals("hello", TextWidth.alignRight("hello", 3));
+    }
+
+    @Test
     void linesStopsAtTheMostAsked() {
         assertEquals(2, TextWidth.lines("one\ntwo\nthree", 56, 2));
         assertEquals(3, TextWidth.lines("x".repeat(120), 56, 5));

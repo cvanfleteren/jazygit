@@ -41,6 +41,21 @@ public final class TextWidth {
     }
 
     /**
+     * The start of {@code text} that fits in {@code width} columns, without an ellipsis. Characters are kept whole,
+     * also those of more than one code point, like a flag.
+     */
+    public static String start(String text, int width) {
+        return CharWidth.substringByWidth(text, Math.max(0, width));
+    }
+
+    /**
+     * {@code text} with spaces before it to take {@code width} columns, as it is when it is that wide or wider.
+     */
+    public static String alignRight(String text, int width) {
+        return " ".repeat(Math.max(0, width - of(text))) + text;
+    }
+
+    /**
      * How many lines {@code text} takes when wrapped on words at {@code width} columns, as a word wrapping
      * {@link Paragraph} shows it: each of its own lines starts a new one, and a word wider than the width is cut over
      * several. Measured by drawing it, so it is exactly what is shown.

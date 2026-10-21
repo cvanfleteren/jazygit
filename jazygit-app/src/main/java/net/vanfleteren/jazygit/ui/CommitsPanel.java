@@ -6,6 +6,8 @@ import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
@@ -29,6 +31,8 @@ import net.vanfleteren.jazygit.ui.widgets.Pane;
 public class CommitsPanel {
 
     public static final String ID = Scopes.COMMITS.id();
+    private static final int INITIALS_WIDTH = 2;
+    private static final Pattern LETTER = Pattern.compile("\\X");
 
     private final LoadableList<List<Commit>> list;
     private final Keymap keymap = Keymap.standard();
@@ -135,17 +139,23 @@ public class CommitsPanel {
 
     /**
      * The capitalized first letters of the first two words of {@code name}; a name of a single word gives
-     * its first two letters as they are.
+     * its first two letters as they are. No more than two columns: a CJK or emoji letter takes both.
      */
     static String initials(String name) {
         List<String> words = List.of(name.strip().split("\\s+")).filter(word -> !word.isEmpty());
         if (words.size() < 2) {
-            String word = name.strip();
-            return word.substring(0, word.offsetByCodePoints(0, Math.min(2, word.codePointCount(0, word.length()))));
+            return TextWidth.start(name.strip(), INITIALS_WIDTH);
         }
-        return words.take(2)
-                .map(word -> word.substring(0, word.offsetByCodePoints(0, 1)).toUpperCase())
-                .mkString();
+        return TextWidth.start(
+                words.take(2).map(word -> firstLetter(word).toUpperCase()).mkString(), INITIALS_WIDTH);
+    }
+
+    /**
+     * The first letter of {@code word} as it is seen: a whole emoji or flag, with the marks on it.
+     */
+    private static String firstLetter(String word) {
+        Matcher letter = LETTER.matcher(word);
+        return letter.lookingAt() ? letter.group() : "";
     }
 
     /**

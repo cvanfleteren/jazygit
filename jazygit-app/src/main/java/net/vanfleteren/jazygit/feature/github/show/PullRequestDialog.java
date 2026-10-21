@@ -27,6 +27,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.ErrorText;
 import net.vanfleteren.jazygit.ui.PullRequestSymbols;
 import net.vanfleteren.jazygit.ui.PullRequestSymbols.Symbol;
+import net.vanfleteren.jazygit.ui.TextWidth;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.TimeText;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
@@ -46,7 +47,6 @@ public final class PullRequestDialog implements PopupView {
     private static final int WIDTH = 60;
     // The labels right-aligned in a column of this many characters, then two spaces and the value.
     private static final int LABEL_COLUMN = 11;
-    private static final String LABEL_FORMAT = "%" + LABEL_COLUMN + "s  ";
     private static final String INDENT = " ".repeat(LABEL_COLUMN + 2);
     // The failed and running checks listed one by one; the rest are counted.
     private static final int LISTED_CHECKS = 5;
@@ -125,7 +125,8 @@ public final class PullRequestDialog implements PopupView {
     }
 
     private static StyledElement<?> label(String labelKey) {
-        return text(LABEL_FORMAT.formatted(Messages.get(labelKey))).addClass(Theme.Classes.DIM);
+        return text(TextWidth.alignRight(Messages.get(labelKey), LABEL_COLUMN) + "  ")
+                .addClass(Theme.Classes.DIM);
     }
 
     private static String state(PullRequestDetails pr) {
