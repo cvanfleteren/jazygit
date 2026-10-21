@@ -17,8 +17,8 @@ import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
 public final class RemoveWorktreeDialogs {
 
     /**
-     * Asks whether to remove a worktree, keeping its branch or deleting it too. Deleting it only applies when the
-     * worktree has a branch checked out that no operation runs on.
+     * Asks whether to remove a worktree, keeping its branch or deleting it too. Deleting it is only offered when the
+     * worktree has a branch checked out, and only applies when no operation runs on it.
      */
     public static final ChoiceDialog.Spec<RemoveWorktreePopup> REMOVE_WORKTREE = new ChoiceDialog.Spec<>(
             "remove-worktree",
@@ -26,13 +26,16 @@ public final class RemoveWorktreeDialogs {
             popup -> Messages.get("dialog.removeWorktree.title", popup.name()),
             List.of(
                     new Choice<>('r', "dialog.removeWorktree.keepBranch", () -> new RemoveWorktreeMsg.Chosen(false)),
-                    new Choice<>(
-                            'b',
-                            popup -> Messages.get(
-                                    "dialog.removeWorktree.deleteBranch",
-                                    popup.branch().map(Branch.Name::value).getOrElse("")),
-                            () -> new RemoveWorktreeMsg.Chosen(true),
-                            (model, popup) -> RemoveWorktreeUpdate.branchDeletable(model, popup))),
+                    new Choice<RemoveWorktreePopup>(
+                                    'b',
+                                    popup -> Messages.get(
+                                            "dialog.removeWorktree.deleteBranch",
+                                            popup.branch()
+                                                    .map(Branch.Name::value)
+                                                    .getOrElse("")),
+                                    () -> new RemoveWorktreeMsg.Chosen(true),
+                                    (model, popup) -> RemoveWorktreeUpdate.branchDeletable(model, popup))
+                            .shownWhen((model, popup) -> popup.branch().isDefined())),
             RemoveWorktreeMsg.Cancelled::new);
 
     /**

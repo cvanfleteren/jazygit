@@ -250,7 +250,7 @@ public final class PullRequestDialog implements PopupView {
                                     .map(Line::element)
                                     .append(actions.render(model, popup)))
                     // The lines, a blank line, the actions, the blank line and the hint, plus the border.
-                    .length(CONTENT_HEIGHT + 1 + actions.height() + 2 + 2);
+                    .length(CONTENT_HEIGHT + 1 + actions.height(model, popup) + 2 + 2);
         });
     }
 

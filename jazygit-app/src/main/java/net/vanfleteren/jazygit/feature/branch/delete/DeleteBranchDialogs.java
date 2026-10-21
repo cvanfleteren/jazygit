@@ -19,7 +19,8 @@ public final class DeleteBranchDialogs {
 
     /**
      * Asks where to delete a branch. The options that act on the remote only apply when the branch has a
-     * remote branch that can be deleted, the ones that act locally when no other worktree has it checked out.
+     * remote branch that can be deleted, the ones that act locally when no other worktree has it checked out. The
+     * one that removes that worktree first is only there when there is one that can be removed.
      */
     public static final ChoiceDialog.Spec<DeleteBranchPopup> DELETE_BRANCH = new ChoiceDialog.Spec<>(
             "delete-branch",
@@ -41,14 +42,15 @@ public final class DeleteBranchDialogs {
                             "dialog.deleteBranch.both",
                             () -> new DeleteBranchMsg.Chosen(DeleteScope.BOTH),
                             (model, popup) -> localDeletable(model, popup) && remoteDeletable(model, popup)),
-                    new Choice<>(
-                            'w',
-                            popup -> Messages.get(
-                                    "dialog.deleteBranch.withWorktree",
-                                    popup.worktree().getOrElse("")),
-                            DeleteBranchMsg.WithWorktreeChosen::new,
-                            (model, popup) -> DeleteBranchUpdate.removableWorktree(model, popup.branch())
-                                    .isDefined())),
+                    new Choice<DeleteBranchPopup>(
+                                    'w',
+                                    popup -> Messages.get(
+                                            "dialog.deleteBranch.withWorktree",
+                                            popup.worktree().getOrElse("")),
+                                    DeleteBranchMsg.WithWorktreeChosen::new,
+                                    (model, popup) -> DeleteBranchUpdate.removableWorktree(model, popup.branch())
+                                            .isDefined())
+                            .shownWhen((model, popup) -> popup.worktree().isDefined())),
             DeleteBranchMsg.Cancelled::new);
 
     /**
