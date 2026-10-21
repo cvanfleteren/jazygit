@@ -116,6 +116,52 @@ public sealed interface AppError {
     record CheckedOutElsewhere(Operation operation, Branch.Name branch, String worktree) implements AppError {}
 
     /**
+     * The main worktree was asked to be removed, which holds the repository.
+     *
+     * @param worktree the name of its directory
+     */
+    record MainWorktreeNotRemovable(String worktree) implements AppError {}
+
+    /**
+     * The worktree shown was asked to be removed.
+     *
+     * @param worktree the name of its directory
+     */
+    record ShownWorktreeNotRemovable(String worktree) implements AppError {}
+
+    /**
+     * A locked worktree was asked to be removed, which its lock keeps git from doing.
+     *
+     * @param worktree the name of its directory
+     * @param reason   why it was locked; empty when no reason was given
+     */
+    record WorktreeLocked(String worktree, String reason) implements AppError {}
+
+    /**
+     * The worktree shown was asked to be switched to.
+     *
+     * @param worktree the name of its directory
+     */
+    record WorktreeShownAlready(String worktree) implements AppError {}
+
+    /**
+     * A worktree whose directory is gone was asked to be switched to.
+     *
+     * @param worktree the name of its directory
+     */
+    record WorktreeMissing(String worktree) implements AppError {}
+
+    /**
+     * Pruning the worktrees was asked for, but none has its directory gone.
+     */
+    record NothingToPrune() implements AppError {}
+
+    /**
+     * The main worktree was asked to be locked or unlocked, which git refuses.
+     */
+    record MainWorktreeNotLockable() implements AppError {}
+
+    /**
      * A pull request was asked for, but the branch is not on its remote yet, or not with all its commits.
      */
     record NotPushed(Branch.Name branch) implements AppError {}

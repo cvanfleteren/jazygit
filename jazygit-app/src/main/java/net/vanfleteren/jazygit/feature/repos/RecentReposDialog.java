@@ -47,10 +47,7 @@ public final class RecentReposDialog {
         return new PickDialog.Row<>(
                 repo.directory(),
                 List.of(
-                        Cell.of(Option.of(directory.getFileName())
-                                        .map(Path::toString)
-                                        .getOrElse(repo.directory()))
-                                .capped(CAP),
+                        Cell.of(repo.label()).capped(CAP),
                         repo.head()
                                 .map(RecentReposDialog::head)
                                 .getOrElse(() -> Cell.of(""))

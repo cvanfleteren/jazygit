@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.repos;
 
 import net.vanfleteren.jazygit.state.AppError;
+import net.vanfleteren.jazygit.state.Landing;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -22,7 +23,8 @@ public final class RecentReposUpdate {
             when model.popup(RecentReposPopup.class).isDefined() ->
                 Next.of(
                         model.withoutPopup(RecentReposPopup.class).clearError(),
-                        new RecentReposCmd.SwitchTo(directory));
+                        // It starts out as the app does.
+                        new RecentReposCmd.SwitchTo(directory, Landing.START));
             case RecentReposMsg.Chosen(String directory) -> Next.of(model);
             // The app shows the other repository already; this one is not shown anymore.
             case RecentReposMsg.Switched(String directory) -> Next.of(model);

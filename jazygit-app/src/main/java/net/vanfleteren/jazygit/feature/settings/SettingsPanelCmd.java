@@ -61,16 +61,16 @@ public sealed interface SettingsPanelCmd extends Cmd {
 
     /**
      * Configures the repository to use the account {@code user}, none for gh's active one, and shows it again,
-     * so gh and git run as that account from now on.
+     * so gh and git run as that account from now on; it is shown where {@code landing} says, where it was.
      */
-    record SetAccount(Option<String> user) implements SettingsPanelCmd {
+    record SetAccount(Option<String> user, Landing landing) implements SettingsPanelCmd {
 
         @Override
         public Msg run(Env env) {
             return env.git()
                     .setLocalConfig(GitHubAccount.USER_KEY, user)
                     .map(commands -> env.repositories()
-                            .switchTo(env.git().workTree())
+                            .switchTo(env.git().workTree(), landing)
                             .fold(this::failedWith, reopened -> new SettingsPanelMsg.AccountSet()))
                     .getOrElseGet(this::failedWith);
         }
@@ -82,14 +82,15 @@ public sealed interface SettingsPanelCmd extends Cmd {
     }
 
     /**
-     * Shows the repository again, so gh runs as the settings say now.
+     * Shows the repository again, so gh runs as the settings say now; it is shown where {@code landing} says,
+     * where it was.
      */
-    record Reopen() implements SettingsPanelCmd {
+    record Reopen(Landing landing) implements SettingsPanelCmd {
 
         @Override
         public Msg run(Env env) {
             return env.repositories()
-                    .switchTo(env.git().workTree())
+                    .switchTo(env.git().workTree(), landing)
                     .fold(this::failedWith, reopened -> new SettingsPanelMsg.Reopened());
         }
 

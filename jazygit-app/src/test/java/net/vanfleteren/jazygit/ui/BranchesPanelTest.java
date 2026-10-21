@@ -47,7 +47,7 @@ class BranchesPanelTest {
                                 Option.of(new Branch.Name("main")),
                                 true,
                                 true,
-                                false,
+                                Option.none(),
                                 false),
                         new Worktree(
                                 java.nio.file.Path.of("/repos/app-feature"),
@@ -55,7 +55,7 @@ class BranchesPanelTest {
                                 Option.of(new Branch.Name("feature")),
                                 false,
                                 false,
-                                false,
+                                Option.none(),
                                 false)))));
     }
 
@@ -408,6 +408,34 @@ class BranchesPanelTest {
                 panel.selectionChange(remote));
     }
 
+    /**
+     * A popup about the worktree at {@code location}.
+     */
+    private record AboutWorktree(String location) implements WorktreePopup {}
+
+    @Test
+    void aWorktreeAddedOutsideTheAppLeavesTheHighlightButTheOneAPopupIsAboutGetsIt() {
+        BranchesPanel panel = new BranchesPanel(msg -> {}, tab -> {});
+        Model two = withWorktrees(before);
+        Worktree added = new Worktree(
+                java.nio.file.Path.of("/repos/app-other"),
+                Option.of(new Sha("3")),
+                Option.of(new Branch.Name("other")),
+                false,
+                false,
+                Option.none(),
+                false);
+        Model three = two.mapRepo(repo -> repo.withWorktrees(
+                new Loadable.Loaded<>(repo.worktrees().toOption().get().append(added))));
+
+        panel.render(two, BranchesPanel.ID);
+        panel.render(three, BranchesPanel.ID);
+        assertEquals("/repos/app", panel.selectedWorktree().get().location());
+
+        panel.render(three.openPopup(new AboutWorktree("/repos/app-other")), BranchesPanel.ID);
+        assertEquals("/repos/app-other", panel.selectedWorktree().get().location());
+    }
+
     @Test
     void theWorktreesTabListsTheWorktreesAndItsKeysActOnTheHighlightedOne() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
@@ -448,7 +476,7 @@ class BranchesPanelTest {
                 Option.none(),
                 false,
                 false,
-                true,
+                Option.of(""),
                 true);
 
         assertEquals(
@@ -461,6 +489,21 @@ class BranchesPanelTest {
                         Option.of(Theme.Classes.DIM),
                         Option.of(Theme.Classes.GONE)),
                 BranchesPanel.worktreeRow(detached).segs().map(LoadableList.Seg::cssClass));
+    }
+
+    @Test
+    void aWorktreeLockedForAReasonSaysWhy() {
+        Worktree locked = new Worktree(
+                java.nio.file.Path.of("/repos/x"),
+                Option.of(new Sha("1234567890")),
+                Option.of(new Branch.Name("feature")),
+                false,
+                false,
+                Option.of("on usb"),
+                false);
+
+        assertEquals(
+                "  x feature locked: on usb", BranchesPanel.worktreeRow(locked).text());
     }
 
     @Test

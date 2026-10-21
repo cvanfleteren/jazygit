@@ -44,7 +44,7 @@ public final class CheckoutUpdate {
                 model.popup(SwitchWorktreePopup.class)
                         .map(popup -> Next.of(
                                 model.withoutPopup(SwitchWorktreePopup.class).clearError(),
-                                new RecentReposCmd.SwitchTo(popup.worktree())))
+                                RecentReposCmd.SwitchTo.worktree(popup.worktree())))
                         .getOrElse(() -> Next.of(model));
         };
     }

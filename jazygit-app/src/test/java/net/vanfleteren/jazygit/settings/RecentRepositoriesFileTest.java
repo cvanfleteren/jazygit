@@ -47,6 +47,21 @@ class RecentRepositoriesFileTest {
     }
 
     @Test
+    void aRepositoryIsKeptOnceByTheWorktreeOpenedLast() {
+        Path main = Path.of("/repos/app");
+        Path linked = Path.of("/repos/app-feature");
+        Path other = Path.of("/repos/other");
+        // Both worktrees of app are of the same repository; other is of none that can be told.
+        java.util.function.Function<Path, io.vavr.control.Option<String>> repository =
+                directory -> directory.equals(other) ? io.vavr.control.Option.none() : io.vavr.control.Option.of("app");
+
+        List<Path> kept = RecentRepositories.opened(List.of(main, other), linked, repository);
+
+        assertEquals(List.of(linked, other), kept);
+        assertEquals(List.of(main, other), RecentRepositories.opened(kept, main, repository));
+    }
+
+    @Test
     void theOnesOpenedLongestAgoDropOff() {
         List<Path> many = List.range(0, RecentRepositories.MAX + 5).map(i -> Path.of("/repos/" + i));
 

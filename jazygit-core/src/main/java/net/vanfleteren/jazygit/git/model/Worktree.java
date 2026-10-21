@@ -11,7 +11,7 @@ import java.nio.file.Path;
  * @param branch   the branch it has checked out; none when its HEAD is detached
  * @param main     whether it is the main worktree, the one the repository lives in, which cannot be removed
  * @param current  whether it is the one the app shows
- * @param locked   whether it is locked, which keeps git from removing it
+ * @param locked   why it is locked, which keeps git from removing it, if it is; empty when no reason was given
  * @param prunable whether its directory is gone, so that git only remembers it
  */
 public record Worktree(
@@ -20,8 +20,15 @@ public record Worktree(
         Option<Branch.Name> branch,
         boolean main,
         boolean current,
-        boolean locked,
+        Option<String> locked,
         boolean prunable) {
+
+    /**
+     * Whether it is locked.
+     */
+    public boolean isLocked() {
+        return locked.isDefined();
+    }
 
     /**
      * Where it is, as text: what identifies it in messages and popups.
@@ -43,7 +50,19 @@ public record Worktree(
      * e.g. {@code /repos/app-feature-login} for {@code feature/login} next to {@code /repos/app}.
      */
     public String siblingFor(Branch.Name branch) {
-        return path.resolveSibling(name() + "-" + branch.value().replace('/', '-'))
-                .toString();
+        return path.resolveSibling(name() + "-" + directoryFor(branch)).toString();
+    }
+
+    /**
+     * Where a new worktree for {@code branch} goes next to this one when there is no main one to name it after, as
+     * next to a bare repository: named after the branch, e.g. {@code /repos/proj/feature-login} for
+     * {@code feature/login} next to {@code /repos/proj/main}.
+     */
+    public String nextTo(Branch.Name branch) {
+        return path.resolveSibling(directoryFor(branch)).toString();
+    }
+
+    private static String directoryFor(Branch.Name branch) {
+        return branch.value().replace('/', '-');
     }
 }

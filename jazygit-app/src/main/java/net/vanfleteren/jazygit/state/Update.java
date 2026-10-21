@@ -45,8 +45,18 @@ public final class Update {
      * if there is one.
      */
     public static Next init(String repositoryName, SettingsStore.Loaded settings, Option<ThemeName> themeOverride) {
+        return init(repositoryName, settings, themeOverride, Landing.START);
+    }
+
+    /**
+     * The start of a session as {@link #init(String, SettingsStore.Loaded, Option)} starts it, shown where
+     * {@code landing} says.
+     */
+    public static Next init(
+            String repositoryName, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, Landing landing) {
         // Commits are loaded once the first status tells us where HEAD is.
         return refresh(Model.initial(repositoryName)
+                .mapRepoView(landing::applyTo)
                 .mapPreferences(preferences ->
                         preferences.withSettings(settings.settings()).withThemeOverride(themeOverride))
                 .mapOutcome(outcome -> outcome.withError(settings.problem().map(AppError.SettingsNotLoaded::new))));

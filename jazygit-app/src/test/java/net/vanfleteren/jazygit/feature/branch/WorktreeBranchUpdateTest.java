@@ -78,7 +78,10 @@ class WorktreeBranchUpdateTest {
                 asked.model().popup());
 
         Next confirmed = Update.update(asked.model(), new CheckoutMsg.SwitchWorktreeConfirmed());
-        assertEquals(List.of(new RecentReposCmd.SwitchTo("/repos/linked")), confirmed.cmds());
+        // It is shown on the worktrees, focused, as switching from there shows it.
+        assertEquals(
+                List.of(new RecentReposCmd.SwitchTo("/repos/linked", RecentReposCmd.SwitchTo.WORKTREES)),
+                confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());
         assertEquals(
                 Option.none(),

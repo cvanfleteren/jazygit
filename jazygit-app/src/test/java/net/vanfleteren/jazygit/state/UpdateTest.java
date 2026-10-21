@@ -4,11 +4,13 @@ import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
@@ -39,6 +41,21 @@ class UpdateTest {
                         new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
                         new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
                 next.cmds());
+    }
+
+    @Test
+    void initShowsTheRepositoryWhereItLands() {
+        Landing landing = new Landing(BranchesTab.WORKTREES, Option.of("branches"));
+
+        Model started = Update.init("repo", SettingsStore.Loaded.DEFAULT, Option.none(), landing)
+                .model();
+
+        assertEquals(BranchesTab.WORKTREES, started.repoView().branchesTab());
+        assertEquals(Option.of("branches"), started.shownPane());
+        // Where the app starts: the local branches, and no pane yet, so the files get the focus.
+        Model fresh = Update.init("repo").model();
+        assertEquals(BranchesTab.LOCAL, fresh.repoView().branchesTab());
+        assertEquals(Option.none(), fresh.shownPane());
     }
 
     @Test

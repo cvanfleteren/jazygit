@@ -1,12 +1,17 @@
 package net.vanfleteren.jazygit.feature.repos;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.HeadFile;
+import net.vanfleteren.jazygit.git.RepositoryIdentity;
+import net.vanfleteren.jazygit.keys.Scopes;
+import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.Landing;
 import net.vanfleteren.jazygit.state.Msg;
 
 /**
@@ -30,7 +35,8 @@ public sealed interface RecentReposCmd extends Cmd {
             }
             return new RecentReposMsg.Listed(recent.removeAll(gone)
                     .remove(env.git().workTree())
-                    .map(directory -> new RecentRepo(directory.toString(), HeadFile.read(directory))));
+                    .map(directory -> new RecentRepo(
+                            directory.toString(), RepositoryIdentity.labelOf(directory), HeadFile.read(directory))));
         }
 
         @Override
@@ -40,16 +46,29 @@ public sealed interface RecentReposCmd extends Cmd {
     }
 
     /**
-     * Opens the repository at {@code directory} instead of the one shown, which makes it the last one opened. One
-     * that cannot be opened is not kept anymore.
+     * Opens the repository at {@code directory} instead of the one shown, shown where {@code landing} says, which
+     * makes it the last one opened. One that cannot be opened is not kept anymore.
      */
-    record SwitchTo(String directory) implements RecentReposCmd {
+    record SwitchTo(String directory, Landing landing) implements RecentReposCmd {
+
+        /**
+         * Where another worktree of the repository is shown: on the worktrees, focused, as switching to one is
+         * done from there.
+         */
+        public static final Landing WORKTREES = new Landing(BranchesTab.WORKTREES, Option.of(Scopes.BRANCHES.id()));
+
+        /**
+         * Opens the worktree at {@code location}, shown on the worktrees.
+         */
+        public static SwitchTo worktree(String location) {
+            return new SwitchTo(location, WORKTREES);
+        }
 
         @Override
         public Msg run(Env env) {
             Path chosen = Path.of(directory);
             return env.repositories()
-                    .switchTo(chosen)
+                    .switchTo(chosen, landing)
                     .fold(
                             error -> {
                                 env.recent().forget(List.of(chosen));

@@ -14,7 +14,7 @@ import net.vanfleteren.jazygit.git.model.*;
  * @param remoteBranches the remote-tracking branches
  * @param commits        the commit log of HEAD
  * @param stashes        the stashes, newest first
- * @param worktrees      the worktrees of the repository, the main one first
+ * @param worktrees      the worktrees of the repository, the one shown first
  */
 @With
 public record Repo(
@@ -88,5 +88,12 @@ public record Repo(
      */
     public Option<Worktree> mainWorktree() {
         return worktrees.toOption().flatMap(loaded -> loaded.find(Worktree::main));
+    }
+
+    /**
+     * The worktree shown, if the worktrees are loaded.
+     */
+    public Option<Worktree> currentWorktree() {
+        return worktrees.toOption().flatMap(loaded -> loaded.find(Worktree::current));
     }
 }

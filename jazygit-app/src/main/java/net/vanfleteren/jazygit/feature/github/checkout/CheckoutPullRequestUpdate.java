@@ -1,7 +1,10 @@
 package net.vanfleteren.jazygit.feature.github.checkout;
 
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.branch.checkout.SwitchWorktreePopup;
 import net.vanfleteren.jazygit.feature.github.checkout.CheckoutPullRequestMsg.Requested;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
@@ -24,7 +27,9 @@ public final class CheckoutPullRequestUpdate {
     /**
      * Checks out {@code pullRequest} in place, if it is of the repository and the working tree has no changes to
      * bring along; untracked files do not count, as git only stops for those that are in the way. Until it is
-     * known which repository this is, the user is told why it is not known yet.
+     * known which repository this is, the user is told why it is not known yet. When another worktree has its
+     * branch checked out, which git would refuse, switching to that worktree is offered instead, as checking out the
+     * branch offers it.
      */
     private static Next checkout(Model model, PullRequestSummary pullRequest) {
         String name = pullRequest.repository() + "#" + pullRequest.number();
@@ -35,8 +40,22 @@ public final class CheckoutPullRequestUpdate {
                         unknown -> Next.of(model.fail(unknown)),
                         ofThis -> !ofThis
                                 ? Next.of(model.fail(new AppError.OtherRepository(name)))
-                                : changed
-                                        ? Next.of(model.fail(new AppError.ChangesBeforeCheckout(name)))
-                                        : Update.start(model.clearError(), new CheckoutPullRequestCmd(pullRequest)));
+                                : checkedOutElsewhere(model, pullRequest)
+                                        .getOrElse(() -> changed
+                                                ? Next.of(model.fail(new AppError.ChangesBeforeCheckout(name)))
+                                                : Update.start(
+                                                        model.clearError(), new CheckoutPullRequestCmd(pullRequest))));
+    }
+
+    /**
+     * Offers to switch to the worktree that has the branch of {@code pullRequest} checked out, if another one has.
+     * The branch of one from a fork gh names after its owner, so it is not looked for.
+     */
+    private static Option<Next> checkedOutElsewhere(Model model, PullRequestSummary pullRequest) {
+        Branch.Name branch = new Branch.Name(pullRequest.headBranch());
+        return Option.when(!pullRequest.fromFork(), branch)
+                .flatMap(model.repo()::branch)
+                .flatMap(Branch::worktreeLocation)
+                .map(worktree -> Update.ask(model, new SwitchWorktreePopup(branch, worktree)));
     }
 }

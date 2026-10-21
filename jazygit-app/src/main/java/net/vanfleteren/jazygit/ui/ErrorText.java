@@ -50,6 +50,18 @@ public final class ErrorText {
                 Messages.get("error.fastForward.unpushed", branch.value());
             case AppError.CheckedOutElsewhere(var operation, Branch.Name branch, var worktree) ->
                 Messages.get(operation.errorKey(), branch.value(), Messages.get("error.checkedOutElsewhere", worktree));
+            case AppError.MainWorktreeNotRemovable(String worktree) ->
+                Messages.get("error.removeWorktree.main", worktree);
+            case AppError.ShownWorktreeNotRemovable(String worktree) ->
+                Messages.get("error.removeWorktree.shown", worktree);
+            case AppError.WorktreeLocked(String worktree, String reason) ->
+                reason.isBlank()
+                        ? Messages.get("error.removeWorktree.locked", worktree)
+                        : Messages.get("error.removeWorktree.lockedBecause", worktree, reason);
+            case AppError.WorktreeShownAlready(String worktree) -> Messages.get("error.switchWorktree.shown", worktree);
+            case AppError.WorktreeMissing(String worktree) -> Messages.get("error.switchWorktree.missing", worktree);
+            case AppError.NothingToPrune() -> Messages.get("error.pruneWorktrees.nothing");
+            case AppError.MainWorktreeNotLockable() -> Messages.get("error.lockWorktree.main");
             case AppError.NotPushed(Branch.Name branch) -> Messages.get("error.pullRequest.notPushed", branch.value());
             case AppError.OtherRepository(String pullRequest) ->
                 Messages.get("error.checkoutPr.otherRepository", pullRequest);

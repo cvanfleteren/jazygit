@@ -23,7 +23,8 @@ public interface GitInfoProvider {
     int MAX_COMMITS = 300;
 
     /**
-     * The name of the repository, i.e. the name of its working tree directory.
+     * The name of the repository, as {@link RepositoryIdentity#label()} has it: followed by the worktree in
+     * parentheses when this is a linked one.
      */
     String repositoryName();
 
@@ -387,7 +388,8 @@ public interface GitInfoProvider {
     // Listing, adding and removing the worktrees of the repository, as git worktree does.
 
     /**
-     * The worktrees, the main one first; none for a bare repository itself, which has no working tree.
+     * The worktrees, the one shown first, then the others as git lists them, the main one first; none for a bare
+     * repository itself, which has no working tree.
      */
     Either<ProcessError, List<Worktree>> worktrees();
 
@@ -398,11 +400,31 @@ public interface GitInfoProvider {
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktree(Path location, Branch.Name branch);
 
     /**
+     * Creates the branch {@code name} at {@code startPoint} and checks it out in a new worktree at {@code location},
+     * taken as {@link #addWorktree} takes it. With {@code track}, the new branch follows {@code startPoint}, a
+     * remote-tracking branch; a {@code parent} is recorded as the branch it was made from. Git refuses a name that
+     * is a branch already.
+     */
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktreeWithNewBranch(
+            Path location, Branch.Name name, String startPoint, Option<Branch.Name> parent, boolean track);
+
+    /**
      * Removes the linked worktree at {@code location}, its directory included; its branch stays. Without
      * {@code force}, git refuses one with modified or untracked files, which is a
      * {@link GitError.WorktreeHasChanges}.
      */
     Either<GitFailure<GitError>, List<ExecutedCommand>> removeWorktree(Path location, boolean force);
+
+    /**
+     * Forgets the worktrees whose directory is gone; their branches stay.
+     */
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> pruneWorktrees();
+
+    /**
+     * Locks the linked worktree at {@code location}, which keeps git from removing or pruning it, or unlocks it
+     * when not {@code lock}. Git refuses the main worktree, and one that is locked already or not locked.
+     */
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> lockWorktree(Path location, boolean lock);
 
     // Editing files, as git edits commit messages.
 

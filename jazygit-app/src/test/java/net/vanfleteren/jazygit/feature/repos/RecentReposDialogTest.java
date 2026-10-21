@@ -20,8 +20,8 @@ class RecentReposDialogTest {
     void aRepositoryShowsItsNameBranchAndWhereItIs() {
         String directory = HOME + "/repos/jazygit";
 
-        PickDialog.Row<String> row = RecentReposDialog.row(
-                new RecentRepo(directory, Option.of(new Head.OnBranch(new Branch.Name("main"), Option.none()))));
+        PickDialog.Row<String> row = RecentReposDialog.row(new RecentRepo(
+                directory, "jazygit", Option.of(new Head.OnBranch(new Branch.Name("main"), Option.none()))));
 
         assertEquals(directory, row.value());
         assertEquals(
@@ -33,17 +33,26 @@ class RecentReposDialogTest {
     }
 
     @Test
+    void aLinkedWorktreeShowsItsRepositoryAndItself() {
+        assertEquals(
+                Cell.of("jazygit(jazygit-feature)").capped(30),
+                RecentReposDialog.row(new RecentRepo("/srv/jazygit-feature", "jazygit(jazygit-feature)", Option.none()))
+                        .cells()
+                        .head());
+    }
+
+    @Test
     void aDetachedHeadShowsItsCommitAndAnUnreadableOneNothing() {
         Option<Head> detached = Option.of(new Head.Detached(new Sha("0123456789abcdef")));
 
         assertEquals(
                 Cell.styled("0123456", Theme.Classes.DIM).capped(30),
-                RecentReposDialog.row(new RecentRepo("/srv/repo", detached))
+                RecentReposDialog.row(new RecentRepo("/srv/repo", "repo", detached))
                         .cells()
                         .get(1));
         assertEquals(
                 Cell.of("").capped(30),
-                RecentReposDialog.row(new RecentRepo("/srv/repo", Option.none()))
+                RecentReposDialog.row(new RecentRepo("/srv/repo", "repo", Option.none()))
                         .cells()
                         .get(1));
     }
@@ -52,7 +61,7 @@ class RecentReposDialogTest {
     void aRepositoryOutsideTheHomeDirectoryIsShownInFull() {
         assertEquals(
                 Cell.styled("/srv", Theme.Classes.REPO_LOCATION),
-                RecentReposDialog.row(new RecentRepo("/srv/repo", Option.none()))
+                RecentReposDialog.row(new RecentRepo("/srv/repo", "repo", Option.none()))
                         .cells()
                         .get(2));
         assertEquals("~", RecentReposDialog.shown(HOME));

@@ -13,11 +13,11 @@ public interface Repositories {
     /**
      * Opens nothing: every directory is no repository.
      */
-    Repositories NONE = directory -> Either.left(new GitError.NotARepository(directory));
+    Repositories NONE = (directory, landing) -> Either.left(new GitError.NotARepository(directory));
 
     /**
-     * Opens the repository containing {@code directory} in place of the one shown, and gives the root of its
-     * working tree. When there is none, the app stays as it is.
+     * Opens the repository containing {@code directory} in place of the one shown, shown where {@code landing}
+     * says, and gives the root of its working tree. When there is none, the app stays as it is.
      */
-    Either<GitError, Path> switchTo(Path directory);
+    Either<GitError, Path> switchTo(Path directory, Landing landing);
 }

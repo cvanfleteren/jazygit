@@ -38,7 +38,8 @@ import net.vanfleteren.jazygit.ui.widgets.Pane;
  * local branch. Clicking the name of a list in the title shows that list.
  * <p>
  * The third list is the worktrees of the repository, the one shown marked. Space switches to the highlighted one,
- * d removes it. On the local branches, w checks the highlighted branch out in a new worktree.
+ * d removes it, L locks or unlocks it, and p forgets the ones whose directory is gone. On the local branches, w
+ * checks the highlighted branch out in a new worktree.
  * <p>
  * While a divergence is open, it is listed in place of the local branches: the commits only on the branch it is
  * compared with, then the ones only on the local branch, each under the name of their branch. Enter moves the
@@ -271,10 +272,13 @@ public class BranchesPanel {
                         Option.when(
                                 worktree.main(),
                                 () -> LoadableList.Seg.styled(" " + Messages.get("worktrees.main"), Theme.Classes.DIM)),
-                        Option.when(
-                                worktree.locked(),
-                                () -> LoadableList.Seg.styled(
-                                        " " + Messages.get("worktrees.locked"), Theme.Classes.DIM)),
+                        worktree.locked()
+                                .map(reason -> LoadableList.Seg.styled(
+                                        " "
+                                                + (reason.isBlank()
+                                                        ? Messages.get("worktrees.locked")
+                                                        : Messages.get("worktrees.lockedBecause", reason)),
+                                        Theme.Classes.DIM)),
                         Option.when(
                                 worktree.prunable(),
                                 () -> LoadableList.Seg.styled(
@@ -450,13 +454,17 @@ public class BranchesPanel {
                         focused,
                         active,
                         title(tab));
-            case WORKTREES ->
-                worktreeList.render(
+            case WORKTREES -> {
+                Panel worktrees = worktreeList.render(
                         model.repo().worktrees(),
-                        worktrees -> worktrees.map(BranchesPanel::worktreeRow),
+                        all -> all.map(BranchesPanel::worktreeRow),
                         focused,
                         active,
                         title(tab));
+                // Highlighted when drawn, after the render followed the highlighted one.
+                worktreeAsked(model).forEach(worktreeList::select);
+                yield worktrees;
+            }
         };
         return panel.onMouseEvent(event -> titleClick(panel.renderedArea(), event));
     }
@@ -549,6 +557,20 @@ public class BranchesPanel {
     private static Option<DivergenceView> divergence(Model model) {
         return Option.when(model.repoView().branchesTab() == BranchesTab.LOCAL, model.repoView()::divergence)
                 .flatMap(open -> open);
+    }
+
+    /**
+     * Where among the worktrees the one an open popup is about is, once they list it: the one the user acts on
+     * next, as the one just added. Only a popup moves the highlight; a worktree added outside the app does not.
+     */
+    static Option<Integer> worktreeAsked(Model model) {
+        return model.popup(WorktreePopup.class)
+                .flatMap(popup -> model.repo()
+                        .worktrees()
+                        .toOption()
+                        .map(worktrees -> worktrees.indexWhere(
+                                worktree -> worktree.location().equals(popup.location()))))
+                .filter(index -> index >= 0);
     }
 
     /**

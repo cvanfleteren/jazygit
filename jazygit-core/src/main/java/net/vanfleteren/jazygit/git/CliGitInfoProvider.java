@@ -76,8 +76,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public String repositoryName() {
-        // The root directory has no name.
-        return Option.of(workTree.getFileName()).map(Path::toString).getOrElse(workTree::toString);
+        return RepositoryIdentity.labelOf(workTree);
     }
 
     @Override
@@ -103,6 +102,22 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> removeWorktree(Path location, boolean force) {
         return CliWorktree.remove(workTree, location, force);
+    }
+
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktreeWithNewBranch(
+            Path location, Branch.Name name, String startPoint, Option<Branch.Name> parent, boolean track) {
+        return CliWorktree.addNewBranch(workTree, location, name, startPoint, parent, track);
+    }
+
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pruneWorktrees() {
+        return CliWorktree.prune(workTree);
+    }
+
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> lockWorktree(Path location, boolean lock) {
+        return CliWorktree.lock(workTree, location, lock);
     }
 
     @Override
