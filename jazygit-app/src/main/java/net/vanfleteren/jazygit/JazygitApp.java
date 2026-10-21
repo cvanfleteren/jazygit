@@ -84,6 +84,9 @@ public class JazygitApp extends ToolkitApp {
     private static final Path BUG_LOG = Path.of(System.getProperty("java.io.tmpdir"), "jazygit-bugs.log");
     private static final Duration REFRESH_INTERVAL = Duration.ofMillis(500);
     private static final Duration FETCH_INTERVAL = Duration.ofMinutes(1);
+    // How many background commands run at once: a fetch, the pull requests and a preview, but not so many git or
+    // gh processes that a burst of them slows the machine down or eats into GitHub's rate limit.
+    private static final int BACKGROUND_THREADS = 4;
 
     private final Env env;
     private final SettingsStore.Loaded settings;
@@ -177,23 +180,30 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
-     * Drops what {@code running} has queued, and stops its fetch half-way; the git command that runs is not
-     * interrupted, which would kill it half-way, say in the middle of a rebase.
+     * Drops what {@code running} has queued, and stops its background commands, like a fetch, half-way; the git
+     * command that runs is not interrupted, which would kill it half-way, say in the middle of a rebase.
      */
     private static void stop(Runtime running) {
         running.io().getQueue().clear();
         running.io().shutdown();
-        running.fetch().shutdownNow();
+        running.background().shutdownNow();
     }
 
     private static ThreadPoolExecutor singleThread(String name) {
+        return threads(1, Thread.ofPlatform().name(name));
+    }
+
+    /**
+     * {@code size} threads named after {@code name}, taking what they cannot run yet in turn.
+     */
+    private static ThreadPoolExecutor threads(int size, Thread.Builder.OfPlatform name) {
         return new ThreadPoolExecutor(
-                1,
-                1,
+                size,
+                size,
                 0,
                 TimeUnit.MILLISECONDS,
                 new LinkedBlockingQueue<>(),
-                Thread.ofPlatform().name(name).daemon().factory());
+                name.daemon().factory());
     }
 
     /**
@@ -413,10 +423,11 @@ public class JazygitApp extends ToolkitApp {
             Env env, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, Landing landing) {
         ToolkitRunner runner = runner();
         ThreadPoolExecutor io = singleThread("git-io");
-        ThreadPoolExecutor fetch = singleThread("git-fetch");
+        ThreadPoolExecutor background =
+                threads(BACKGROUND_THREADS, Thread.ofPlatform().name("git-background-", 1));
         Program program = Program.start(
-                env, settings, themeOverride, landing, io, fetch, runner::runOnRenderThread, JazygitApp::logBug);
-        runtime = Option.of(new Runtime(io, fetch, program));
+                env, settings, themeOverride, landing, io, background, runner::runOnRenderThread, JazygitApp::logBug);
+        runtime = Option.of(new Runtime(io, background, program));
         runner.focusManager().setFocus(PopupSlot.focusedPane(program.model()));
         // The model tells the time from the ticks; the first one is half a second off, and the ages it shows are
         // told from the start. The loads it would start are running already, so it starts none.
@@ -649,10 +660,10 @@ public class JazygitApp extends ToolkitApp {
      * The program and the threads it runs git on, which exist from the start of the app to its stop, or until
      * another repository is opened in its place.
      *
-     * @param io    where git is called
-     * @param fetch where git talks to the remotes
+     * @param io         where git is called
+     * @param background where the background commands run, like talking to the remotes and to GitHub
      */
-    private record Runtime(ThreadPoolExecutor io, ThreadPoolExecutor fetch, Program program) {}
+    private record Runtime(ThreadPoolExecutor io, ThreadPoolExecutor background, Program program) {}
 
     /**
      * A popup, and the pane that gets the focus back when it closes.

@@ -102,6 +102,33 @@ class SettingsPanelUpdateTest {
     }
 
     @Test
+    void onlyTheCheckOfTheGhExecutableEnteredLastDecidesInWhateverOrderTheChecksFinish() {
+        Model first = Update.update(
+                        typed(TestModels.loaded().openPopup(new GhExecutablePopup("")), "/old/gh"),
+                        new SettingsPanelMsg.GhExecutableEntered())
+                .model();
+        Model second = Update.update(
+                        typed(first.openPopup(new GhExecutablePopup("")), "/new/gh"),
+                        new SettingsPanelMsg.GhExecutableEntered())
+                .model();
+        Settings chosen = Settings.DEFAULT.withGhExecutable(Option.of("/new/gh"));
+
+        Next latestFirst = Update.update(
+                second, new SettingsPanelMsg.GhExecutableChecked(Option.of("/new/gh"), Either.right("2.102.0")));
+        Next olderAfter = Update.update(
+                latestFirst.model(),
+                new SettingsPanelMsg.GhExecutableChecked(Option.of("/old/gh"), Either.right("2.102.0")));
+        Next olderFirst = Update.update(
+                second, new SettingsPanelMsg.GhExecutableChecked(Option.of("/old/gh"), Either.right("2.102.0")));
+
+        assertEquals(chosen, latestFirst.model().preferences().settings());
+        assertEquals(chosen, olderAfter.model().preferences().settings());
+        assertEquals(List.empty(), olderAfter.cmds());
+        assertEquals(second, olderFirst.model());
+        assertEquals(List.empty(), olderFirst.cmds());
+    }
+
+    @Test
     void anEmptyGhExecutableIsTheOneOnThePath() {
         Model entering = TestModels.loaded().openPopup(new GhExecutablePopup("/opt/gh/bin/gh"));
 

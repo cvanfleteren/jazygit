@@ -2,7 +2,11 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.control.Option;
 import io.vavr.control.Try;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
@@ -13,8 +17,9 @@ import net.vanfleteren.jazygit.state.Update.Next;
  * {@link Update} asks for on the {@code io} executor, and feeds their outcome back as messages on
  * the {@code ui} executor.
  *
- * <p>The model is only read and replaced on the {@code ui} executor's thread, so it needs no
- * synchronisation. {@link #dispatch(Msg)} and {@link #model()} must be called on that thread.
+ * <p>The model, and the command started last per {@link Cmd.Slot slot}, are only read and replaced on the
+ * {@code ui} executor's thread, so they need no synchronisation. {@link #dispatch(Msg)} and {@link #model()} must
+ * be called on that thread.
  */
 public final class Program {
 
@@ -23,6 +28,8 @@ public final class Program {
     private final Executor background;
     private final Executor ui;
     private final Consumer<Throwable> bugs;
+    // The command started last for each slot, to cancel when a newer one comes.
+    private final Map<Cmd.Slot, Future<Void>> latest = new EnumMap<>(Cmd.Slot.class);
     private Model model;
 
     private Program(Env env, Executor io, Executor background, Executor ui, Consumer<Throwable> bugs) {
@@ -39,7 +46,7 @@ public final class Program {
      * @param env        what the commands run against
      * @param io         where git is called; a single thread keeps git commands from running concurrently
      * @param background where {@link Cmd#background() background} commands run, so they do not hold up the
-     *                   others
+     *                   others; several at once may
      * @param ui         the thread that owns the model, i.e. the render thread
      */
     public static Program start(Env env, Executor io, Executor background, Executor ui) {
@@ -93,11 +100,22 @@ public final class Program {
 
     private void apply(Next next) {
         model = next.model();
-        // Once the app stops, the executors take nothing anymore, and what is left is dropped.
-        next.cmds()
-                .forEach(cmd -> Try.run(() -> (cmd.background() ? background : io).execute(() -> {
+        next.cmds().forEach(this::launch);
+    }
+
+    /**
+     * Performs {@code cmd} on its executor. One that takes a slot cancels the one that took it before, if that
+     * one has not started yet: it is skipped, and reports nothing.
+     */
+    private void launch(Cmd cmd) {
+        FutureTask<Void> task = new FutureTask<>(
+                () -> {
                     Msg result = perform(env, cmd, bugs);
                     Try.run(() -> ui.execute(() -> dispatch(result)));
-                })));
+                },
+                null);
+        cmd.slot().forEach(slot -> Option.of(latest.put(slot, task)).forEach(older -> older.cancel(false)));
+        // Once the app stops, the executors take nothing anymore, and what is left is dropped.
+        Try.run(() -> (cmd.background() ? background : io).execute(task));
     }
 }

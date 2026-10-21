@@ -557,6 +557,74 @@ class ProgramTest {
         assertEquals(List.of(), program.model().outcome().commandLog());
     }
 
+    /**
+     * Asks for {@code cmds}, changing nothing else.
+     */
+    private record Asked(List<Cmd> cmds) implements Msg {
+
+        @Override
+        public Update.Next apply(Model model) {
+            return new Update.Next(model, cmds);
+        }
+    }
+
+    /**
+     * Notes in {@code heard} that the command {@code name} reported.
+     */
+    private record Heard(String name, java.util.List<String> heard) implements Msg {
+
+        @Override
+        public Update.Next apply(Model model) {
+            heard.add(name);
+            return Update.Next.of(model);
+        }
+    }
+
+    /**
+     * Notes in {@code ran} that it ran, and reports that it did to {@code heard}; it takes the preview's slot.
+     */
+    private record Latest(String name, java.util.List<String> ran, java.util.List<String> heard) implements Cmd {
+
+        @Override
+        public boolean background() {
+            return true;
+        }
+
+        @Override
+        public Option<Slot> slot() {
+            return Option.of(Slot.PULL_REQUEST_PREVIEW);
+        }
+
+        @Override
+        public Msg run(Env env) {
+            ran.add(name);
+            return new Heard(name, heard);
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return new Heard(name, heard);
+        }
+    }
+
+    @Test
+    void aCommandOfASlotThatHasNotStartedIsSkippedWhenANewerOneComes() {
+        settle();
+        java.util.List<String> ran = new ArrayList<>();
+        java.util.List<String> heard = new ArrayList<>();
+
+        program.dispatch(new Asked(List.of(new Latest("first", ran, heard))));
+        program.dispatch(new Asked(List.of(new Latest("second", ran, heard))));
+        program.dispatch(new Asked(List.of(new Latest("third", ran, heard))));
+        // The third one runs before a newer one comes, so it is not skipped.
+        drain(background);
+        program.dispatch(new Asked(List.of(new Latest("fourth", ran, heard))));
+        settle();
+
+        assertEquals(java.util.List.of("third", "fourth"), ran);
+        assertEquals(java.util.List.of("third", "fourth"), heard);
+    }
+
     private void settle() {
         while (!io.isEmpty() || !background.isEmpty() || !ui.isEmpty()) {
             drain(io);
