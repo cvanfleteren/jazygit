@@ -45,7 +45,7 @@ public final class DialogFrame {
      * The lines {@link #wrapped} takes.
      */
     public static int wrappedHeight(String text, int width, int maxLines) {
-        return Math.min(maxLines, TextWidth.lines(text, width - FRAME));
+        return TextWidth.lines(text, width - FRAME, maxLines);
     }
 
     /**
