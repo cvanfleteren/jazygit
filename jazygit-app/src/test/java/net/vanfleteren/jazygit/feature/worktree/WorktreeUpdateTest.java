@@ -22,7 +22,9 @@ import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg;
 import net.vanfleteren.jazygit.feature.worktree.add.NewBranch;
 import net.vanfleteren.jazygit.feature.worktree.add.NewWorktreeBranchPopup;
 import net.vanfleteren.jazygit.feature.worktree.add.NewWorktreePopup;
+import net.vanfleteren.jazygit.feature.worktree.add.NewWorktreeStartPopup;
 import net.vanfleteren.jazygit.feature.worktree.add.SwitchToAddedPopup;
+import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource;
 import net.vanfleteren.jazygit.feature.worktree.lock.LockWorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.lock.LockWorktreeMsg;
 import net.vanfleteren.jazygit.feature.worktree.prune.PruneWorktreesCmd;
@@ -32,6 +34,11 @@ import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeMsg;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreePopup;
 import net.vanfleteren.jazygit.feature.worktree.switchto.SwitchWorktreeMsg;
+import net.vanfleteren.jazygit.gh.GhError;
+import net.vanfleteren.jazygit.gh.GhFailure;
+import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.gh.model.PullRequest;
+import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
@@ -105,7 +112,7 @@ class WorktreeUpdateTest {
         Next asked = Update.update(model(), new AddWorktreeMsg.Requested(FEATURE));
 
         assertEquals(
-                Option.of(new NewWorktreePopup(FEATURE, "/repos/app-feature")),
+                Option.of(new NewWorktreePopup(new WorktreeSource.Existing(FEATURE), "/repos/app-feature")),
                 asked.model().popup());
         assertEquals(
                 Option.none(),
@@ -141,11 +148,11 @@ class WorktreeUpdateTest {
         Next located = Update.update(typed(named.model(), "topic"), new AddWorktreeMsg.NameConfirmed());
         Branch.Name topic = new Branch.Name("topic");
         assertEquals(
-                Option.of(new NewWorktreePopup(topic, "/repos/app-topic", Option.of(fromFeature))),
+                Option.of(new NewWorktreePopup(new WorktreeSource.Created(topic, fromFeature), "/repos/app-topic")),
                 located.model().popup());
 
         assertEquals(
-                List.of(new AddWorktreeCmd(topic, "/repos/app-topic", Option.of(fromFeature))),
+                List.of(new AddWorktreeCmd(new WorktreeSource.Created(topic, fromFeature), "/repos/app-topic")),
                 Update.update(located.model(), new AddWorktreeMsg.Confirmed()).cmds());
     }
 
@@ -179,12 +186,222 @@ class WorktreeUpdateTest {
         };
 
         new AddWorktreeCmd(
-                        new Branch.Name("topic"),
-                        "/repos/app-topic",
-                        Option.of(new NewBranch("feature", Option.of(FEATURE), false)))
-                .perform(git);
+                        new WorktreeSource.Created(
+                                new Branch.Name("topic"), new NewBranch("feature", Option.of(FEATURE), false)),
+                        "/repos/app-topic")
+                .run(new Env(git, net.vanfleteren.jazygit.gh.StubGitHub.empty()));
 
         assertEquals(java.util.List.of("/repos/app-topic topic feature Some(Name[value=feature]) false"), ran);
+    }
+
+    /**
+     * The worktrees asked for a new worktree, starting where {@code start} says.
+     */
+    private static Model startedAt(Model model, String start) {
+        Model asked = Update.update(model, new AddWorktreeMsg.StartRequested()).model();
+        return Update.update(typed(asked, start), new AddWorktreeMsg.StartConfirmed())
+                .model();
+    }
+
+    @Test
+    void aNewWorktreeFromTheWorktreesStartsAtTheCheckedOutBranchAndABlankStartKeepsTheDialogOpen() {
+        Next asked = Update.update(model(), new AddWorktreeMsg.StartRequested());
+
+        assertEquals(Option.of(new NewWorktreeStartPopup("main")), asked.model().popup());
+        Model blank = typed(asked.model(), "  ");
+        assertEquals(
+                blank.popup(),
+                Update.update(blank, new AddWorktreeMsg.StartConfirmed())
+                        .model()
+                        .popup());
+        assertEquals(
+                Option.none(),
+                Update.update(asked.model(), new AddWorktreeMsg.StartCancelled())
+                        .model()
+                        .popup());
+    }
+
+    @Test
+    void fromALocalBranchItIsOnANewBranchOrLeftBlankOnThatBranch() {
+        Model started = startedAt(model(), "feature");
+        NewBranch fromFeature = new NewBranch("feature", Option.of(FEATURE), false);
+
+        assertEquals(
+                Option.of(new NewWorktreeBranchPopup(
+                        "feature", "", fromFeature, Option.of(new WorktreeSource.Existing(FEATURE)))),
+                started.popup());
+        assertEquals(
+                Option.of(new NewWorktreePopup(new WorktreeSource.Existing(FEATURE), "/repos/app-feature")),
+                Update.update(started, new AddWorktreeMsg.NameConfirmed())
+                        .model()
+                        .popup());
+        Branch.Name topic = new Branch.Name("topic");
+        assertEquals(
+                Option.of(new NewWorktreePopup(new WorktreeSource.Created(topic, fromFeature), "/repos/app-topic")),
+                Update.update(typed(started, "topic"), new AddWorktreeMsg.NameConfirmed())
+                        .model()
+                        .popup());
+    }
+
+    @Test
+    void fromABranchCheckedOutSomewhereOrACommitItIsLeftBlankOnNoBranch() {
+        // The worktree of taken is at /repos/app-taken already.
+        for (var start : List.of(
+                io.vavr.Tuple.of("main", "/repos/app-main"),
+                io.vavr.Tuple.of("taken", "/repos/app-taken-2"),
+                io.vavr.Tuple.of("abc123", "/repos/app-abc123"))) {
+            Model started = startedAt(model(), start._1);
+
+            assertEquals(
+                    Option.of(new WorktreeSource.Detached(start._1)),
+                    started.popup(NewWorktreeBranchPopup.class).flatMap(NewWorktreeBranchPopup::ifBlank));
+            assertEquals(
+                    Option.of(new NewWorktreePopup(new WorktreeSource.Detached(start._1), start._2)),
+                    Update.update(started, new AddWorktreeMsg.NameConfirmed())
+                            .model()
+                            .popup());
+        }
+    }
+
+    @Test
+    void fromARemoteBranchTheNewBranchFollowsItAndStartsOutNamedAsIt() {
+        RemoteBranch remote = new RemoteBranch("origin", new Branch.Name("shared"));
+        Model known = Update.update(
+                        model(),
+                        new LoadMsg.RemoteBranchesLoaded(
+                                List.of(new RemoteRef(remote, new Sha("5555"), Instant.EPOCH))))
+                .model();
+
+        assertEquals(
+                Option.of(new NewWorktreeBranchPopup(
+                        "origin/shared",
+                        "shared",
+                        new NewBranch("refs/remotes/origin/shared", Option.none(), true),
+                        Option.of(new WorktreeSource.Detached("origin/shared")))),
+                startedAt(known, "origin/shared").popup());
+    }
+
+    private static PullRequestSummary pullRequest() {
+        return new PullRequestSummary(
+                "owner/repo",
+                9,
+                "Title",
+                "bob",
+                "patch-1",
+                false,
+                true,
+                PullRequest.Checks.NONE,
+                PullRequest.Review.NONE,
+                Instant.EPOCH,
+                "https://github.com/owner/repo/pull/9");
+    }
+
+    @Test
+    void aDetachedWorktreeAndOneForAPullRequestRunGitAndGhInTheNewWorktree() {
+        java.util.List<String> ran = new java.util.ArrayList<>();
+        GitInfoProvider git = new StubGitProvider() {
+            @Override
+            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addDetachedWorktree(
+                    Path location, String startPoint) {
+                ran.add("add " + location + " " + startPoint);
+                return Either.right(StubGitProvider.executed("git worktree add"));
+            }
+        };
+        StubGitHub gitHub = new StubGitHub() {
+            @Override
+            public Either<GhFailure, List<ExecutedCommand>> checkoutPullRequest(int number, Path in) {
+                ran.add("gh " + number + " " + in);
+                return Either.right(StubGitProvider.executed("gh pr checkout 9"));
+            }
+        };
+
+        new AddWorktreeCmd(new WorktreeSource.Detached("abc123"), "/repos/app-abc123").run(new Env(git, gitHub));
+        Msg added = new AddWorktreeCmd(new WorktreeSource.PullRequest(pullRequest()), "/repos/app-pr-9")
+                .run(new Env(git, gitHub));
+
+        assertEquals(
+                java.util.List.of("add /repos/app-abc123 abc123", "add /repos/app-pr-9 HEAD", "gh 9 /repos/app-pr-9"),
+                ran);
+        assertEquals(
+                List.of("git worktree add", "gh pr checkout 9"),
+                ((AddWorktreeMsg.Added) added).commands().map(ExecutedCommand::line));
+    }
+
+    @Test
+    void whenGhFailsTheWorktreeOfThePullRequestIsRemovedAgain() {
+        java.util.List<String> ran = new java.util.ArrayList<>();
+        GitInfoProvider git = new StubGitProvider() {
+            @Override
+            public Either<GitFailure<GitError>, List<ExecutedCommand>> removeWorktree(Path location, boolean force) {
+                ran.add("remove " + location + " " + force);
+                return Either.right(StubGitProvider.executed("git worktree remove --force"));
+            }
+        };
+        StubGitHub fails = new StubGitHub() {
+            @Override
+            public Either<GhFailure, List<ExecutedCommand>> checkoutPullRequest(int number, Path in) {
+                return Either.left(new GhFailure(
+                        new GhError.CommandFailed(Option.of("no such pull request"), 1),
+                        StubGitProvider.executed("gh pr checkout 9")));
+            }
+        };
+
+        Msg failed = new AddWorktreeCmd(new WorktreeSource.PullRequest(pullRequest()), "/repos/app-pr-9")
+                .run(new Env(git, fails));
+
+        assertEquals(java.util.List.of("remove /repos/app-pr-9 true"), ran);
+        assertTrue(failed instanceof OperationMsg.Failed, failed.toString());
+    }
+
+    @Test
+    void whenRemovingTheWorktreeOfThePullRequestFailsTooThatIsSaid() {
+        GitError.CommandFailed locked = new GitError.CommandFailed(Option.of("fatal: cannot remove"), 128, "");
+        GitInfoProvider git = new StubGitProvider() {
+            @Override
+            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addDetachedWorktree(
+                    Path location, String startPoint) {
+                return Either.right(StubGitProvider.executed("git worktree add"));
+            }
+
+            @Override
+            public Either<GitFailure<GitError>, List<ExecutedCommand>> removeWorktree(Path location, boolean force) {
+                return Either.left(new GitFailure<>(locked, StubGitProvider.executed("git worktree remove --force")));
+            }
+        };
+        StubGitHub fails = new StubGitHub() {
+            @Override
+            public Either<GhFailure, List<ExecutedCommand>> checkoutPullRequest(int number, Path in) {
+                return Either.left(new GhFailure(
+                        new GhError.CommandFailed(Option.of("no such pull request"), 1),
+                        StubGitProvider.executed("gh pr checkout 9")));
+            }
+        };
+
+        Msg failed = new AddWorktreeCmd(new WorktreeSource.PullRequest(pullRequest()), "/repos/app-pr-9")
+                .run(new Env(git, fails));
+
+        Failure failure = ((OperationMsg.Failed) failed).failure();
+        assertEquals(
+                List.of("git worktree add", "gh pr checkout 9", "git worktree remove --force"),
+                failure.commands().map(ExecutedCommand::line));
+        assertEquals(
+                new Failure.GitHub(
+                        new GhError.CommandFailed(Option.of("no such pull request"), 1),
+                        failure.commands(),
+                        Option.of(locked)),
+                failure);
+    }
+
+    @Test
+    void aStartThatGitWouldTakeForAnOptionKeepsTheDialogOpen() {
+        Model typed = typed(
+                Update.update(model(), new AddWorktreeMsg.StartRequested()).model(), "--no-checkout");
+
+        assertEquals(
+                typed.popup(),
+                Update.update(typed, new AddWorktreeMsg.StartConfirmed())
+                        .model()
+                        .popup());
     }
 
     @Test
@@ -224,7 +441,8 @@ class WorktreeUpdateTest {
                         .cmds());
         Next confirmed = Update.update(typed(asked, " ~/elsewhere "), new AddWorktreeMsg.Confirmed());
 
-        assertEquals(List.of(new AddWorktreeCmd(FEATURE, "~/elsewhere")), confirmed.cmds());
+        assertEquals(
+                List.of(new AddWorktreeCmd(new WorktreeSource.Existing(FEATURE), "~/elsewhere")), confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());
         assertEquals(
                 Option.of(AddWorktreeCmd.ADD_WORKTREE),
@@ -233,7 +451,7 @@ class WorktreeUpdateTest {
 
     @Test
     void anAddedWorktreeShowsTheWorktreesReadsTheRepositoryAgainAndOffersToSwitchToIt() {
-        AddWorktreeCmd add = new AddWorktreeCmd(FEATURE, "../app-feature");
+        AddWorktreeCmd add = new AddWorktreeCmd(new WorktreeSource.Existing(FEATURE), "../app-feature");
         Model adding = Update.start(model(), add).model();
 
         Next next = Update.update(
@@ -247,7 +465,7 @@ class WorktreeUpdateTest {
         assertEquals(Option.none(), next.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
         assertTrue(next.cmds().contains(new Cmd.LoadWorktrees()), next.cmds().toString());
         assertEquals(
-                Option.of(new SwitchToAddedPopup(FEATURE, "/repos/app-feature")),
+                Option.of(new SwitchToAddedPopup("feature", "/repos/app-feature")),
                 next.model().popup());
 
         assertEquals(
@@ -270,7 +488,7 @@ class WorktreeUpdateTest {
                 },
                 net.vanfleteren.jazygit.gh.StubGitHub.empty());
 
-        Msg added = new AddWorktreeCmd(FEATURE, "../app-feature").run(env);
+        Msg added = new AddWorktreeCmd(new WorktreeSource.Existing(FEATURE), "../app-feature").run(env);
 
         assertEquals("/repos/app-feature", ((AddWorktreeMsg.Added) added).location());
     }
@@ -514,7 +732,7 @@ class WorktreeUpdateTest {
                 Option.none(),
                 false);
         assertEquals(
-                Option.of(new NewWorktreePopup(FEATURE, "/repos/proj/feature")),
+                Option.of(new NewWorktreePopup(new WorktreeSource.Existing(FEATURE), "/repos/proj/feature")),
                 Update.update(worktrees(shown, LINKED), new AddWorktreeMsg.Requested(FEATURE))
                         .model()
                         .popup());
@@ -528,7 +746,7 @@ class WorktreeUpdateTest {
                 Option.none(),
                 false);
         assertEquals(
-                Option.of(new NewWorktreePopup(FEATURE, "/repos/app-feature-2")),
+                Option.of(new NewWorktreePopup(new WorktreeSource.Existing(FEATURE), "/repos/app-feature-2")),
                 Update.update(worktrees(MAIN, LINKED, taken), new AddWorktreeMsg.Requested(FEATURE))
                         .model()
                         .popup());

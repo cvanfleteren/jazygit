@@ -67,6 +67,8 @@ public final class ErrorText {
                 Messages.get("error.checkoutPr.otherRepository", pullRequest);
             case AppError.ChangesBeforeCheckout(String pullRequest) ->
                 Messages.get("error.checkoutPr.changes", pullRequest);
+            case AppError.PullRequestCheckedOutHere(String pullRequest) ->
+                Messages.get("error.checkoutPr.here", pullRequest);
             case AppError.ChangesBeforeMove(String target) -> Messages.get("error.moveCommits.changes", target);
             case AppError.DefaultBranch(String branch) -> Messages.get("error.deleteBranch.default", branch);
             case AppError.NotOnRemote(Branch.Name branch) -> Messages.get("error.browse.notOnRemote", branch.value());
@@ -91,7 +93,10 @@ public final class ErrorText {
                 cleanupFailed
                         .map(cleanup -> Messages.get("error.cleanupFailed", of(error), of(cleanup)))
                         .getOrElse(() -> of(error));
-            case Failure.GitHub(GhError error, var commands) -> of(error);
+            case Failure.GitHub(GhError error, var commands, var cleanupFailed) ->
+                cleanupFailed
+                        .map(cleanup -> Messages.get("error.cleanupFailed", of(error), of(cleanup)))
+                        .getOrElse(() -> of(error));
             case Failure.Settings(SettingsProblem problem) -> of(problem);
             case Failure.Bug(Throwable cause) -> Messages.get("error.bug", reason(cause));
         };

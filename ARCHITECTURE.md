@@ -162,9 +162,18 @@ The worktrees of the repository are read with the other periodic loads, into `Mo
 third tab of the branches pane (`feature.worktree`). The one shown is marked, and so are the main one, a locked
 one and one whose directory is gone.
 
-- **Adding:** `w` on a local branch asks where to check it out (`git worktree add <path> <branch>`), next to the
-  main worktree by default, as `<main>-<branch>`. A leading `~` is the home directory. Once added, the pane shows
-  the worktrees.
+- **Adding:** what a new worktree checks out is a `WorktreeSource`: an existing branch, a new branch, a revision on
+  no branch, or a pull request. Each way of adding one asks for it, then where the worktree goes, next to the main
+  worktree by default, as `<main>-<branch>`; a leading `~` is the home directory. Once added, the pane shows the
+  worktrees and switching to the new one is offered.
+  - `w` on a local branch checks it out (`git worktree add <path> <branch>`); `W` on a branch, local or remote, asks
+    for a new branch made from it (`-b`).
+  - `n` on the worktrees asks where to start, the checked out branch to begin with, then for a new branch, which
+    may be left blank: the worktree then checks out the local branch typed, when no worktree has it, or else what was
+    typed on no branch (`--detach`).
+  - `w` on a pull request of the repository adds a worktree on no branch and has `gh pr checkout` run in it, so a
+    pull request from a fork gets its branch as checking it out in place gives it; when gh fails, the worktree is
+    removed again. The changes of the worktree shown stay there.
 - **Switching:** space on a worktree opens it in place of the one shown, as switching to a recent repository
   does (`RecentReposCmd.SwitchTo`), which makes it a recent one too.
 - **Removing:** `d` removes a worktree other than the main one and the one shown (`git worktree remove`), keeping

@@ -179,6 +179,12 @@ public sealed interface AppError {
     record ChangesBeforeCheckout(String pullRequest) implements AppError {}
 
     /**
+     * The pull request {@code pullRequest}, as {@code owner/name#number}, gets no worktree of its own, as its branch
+     * is checked out here, which git checks out in one worktree at a time.
+     */
+    record PullRequestCheckedOutHere(String pullRequest) implements AppError {}
+
+    /**
      * Commits are not copied onto {@code target}, a branch, while the working tree has changes, which git would
      * refuse to cherry-pick onto.
      */

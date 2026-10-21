@@ -9,7 +9,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
 
 /**
- * Checking a branch out in a new worktree, the branch an existing one or a new one.
+ * Adding a worktree: for a branch, an existing one or a new one, for any revision, or for a pull request.
  */
 public sealed interface AddWorktreeMsg extends Msg {
 
@@ -33,6 +33,19 @@ public sealed interface AddWorktreeMsg extends Msg {
      * The user asked for a new branch that follows {@code remote}, checked out in a new worktree.
      */
     record NewBranchAtRemoteRequested(RemoteBranch remote) implements AddWorktreeMsg {}
+
+    /**
+     * The user asked for a new worktree from the worktrees; where it starts, whether on a new branch and where it
+     * goes are still to be entered.
+     */
+    record StartRequested() implements AddWorktreeMsg {}
+
+    record StartCancelled() implements AddWorktreeMsg {}
+
+    /**
+     * The user confirmed where the new worktree starts, as typed in the popup.
+     */
+    record StartConfirmed() implements AddWorktreeMsg {}
 
     record NameCancelled() implements AddWorktreeMsg {}
 

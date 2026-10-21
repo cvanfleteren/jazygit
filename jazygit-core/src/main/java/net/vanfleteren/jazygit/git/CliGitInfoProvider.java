@@ -100,6 +100,12 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addDetachedWorktree(
+            Path location, String startPoint) {
+        return CliWorktree.addDetached(workTree, location, startPoint);
+    }
+
+    @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> removeWorktree(Path location, boolean force) {
         return CliWorktree.remove(workTree, location, force);
     }

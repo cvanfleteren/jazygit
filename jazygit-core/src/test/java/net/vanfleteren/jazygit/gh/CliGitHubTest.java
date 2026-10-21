@@ -1,12 +1,15 @@
 package net.vanfleteren.jazygit.gh;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.BranchChecks;
 import net.vanfleteren.jazygit.gh.model.GhLogin;
@@ -20,7 +23,9 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.*;
 import net.vanfleteren.jazygit.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class CliGitHubTest {
 
@@ -427,5 +432,22 @@ class CliGitHubTest {
                 .isLeft());
         assertTrue(CliGitHub.parseComments("comment\tIC_1\tbob\tyesterday\tfalse\tfalse\t\tx\n")
                 .isLeft());
+    }
+
+    @Test
+    void aPullRequestIsCheckedOutInAWorktreeTakenRelativeToThisOne(@TempDir Path dir) throws Exception {
+        assumeTrue(Files.isExecutable(Path.of("/bin/sh")), "no POSIX shell");
+        Path main = Files.createDirectories(dir.resolve("main")).toRealPath();
+        Path other = Files.createDirectories(dir.resolve("other")).toRealPath();
+        // A gh that fails, telling where it ran and what with.
+        Path gh = Files.writeString(dir.resolve("gh"), "#!/bin/sh\necho \"$(pwd -P) $*\" >&2\nexit 1\n");
+        gh.toFile().setExecutable(true);
+
+        Either<GhFailure, List<ExecutedCommand>> outcome =
+                new CliGitHub(main, gh.toString(), GhToken.NONE).checkoutPullRequest(9, Path.of("../other"));
+
+        assertEquals(
+                new GhError.CommandFailed(Option.of(other + " pr checkout 9"), 1),
+                outcome.getLeft().error());
     }
 }

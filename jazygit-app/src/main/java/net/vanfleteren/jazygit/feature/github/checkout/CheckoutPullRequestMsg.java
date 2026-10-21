@@ -19,4 +19,10 @@ public sealed interface CheckoutPullRequestMsg extends Msg {
      * The user asked to check out a pull request listed on the pull requests screen.
      */
     record Requested(PullRequestSummary pullRequest) implements CheckoutPullRequestMsg {}
+
+    /**
+     * The user asked to check out a pull request listed on the pull requests screen in a new worktree; where it
+     * goes is still to be entered.
+     */
+    record WorktreeRequested(PullRequestSummary pullRequest) implements CheckoutPullRequestMsg {}
 }
