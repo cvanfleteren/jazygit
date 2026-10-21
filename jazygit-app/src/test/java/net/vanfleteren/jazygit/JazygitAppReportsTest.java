@@ -48,7 +48,7 @@ class JazygitAppReportsTest {
     @Test
     void theHighlightedCommitIsReportedAfterTheFrameAndThenNothing() throws Exception {
         App app = new App();
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, ticking())) {
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
             app.start(testRunner);
             SettledPilot.focus(testRunner, CommitsPanel.ID);
             awaitModel(testRunner, app, model -> shownCommit(model).contains(commits.get(0)));
@@ -65,7 +65,7 @@ class JazygitAppReportsTest {
     @Test
     void aClickOnAPaneWithoutTheFocusGivesItTheFocusAndHighlightsTheRowClickedOn() throws Exception {
         App app = new App();
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, ticking())) {
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
             app.start(testRunner);
             awaitModel(testRunner, app, model -> shownCommit(model).contains(commits.get(0)));
             Pilot pilot = SettledPilot.of(testRunner);
@@ -91,10 +91,10 @@ class JazygitAppReportsTest {
     }
 
     /**
-     * As the test runner sets the terminal up, but with ticks, as the app has: what reaches the render thread
-     * other than an event, like the reports, is only drawn on the next one.
+     * As the test runner sets the terminal up, and without ticks, as the app has: what reaches the render thread
+     * other than an event, like the loads and the reports, is only drawn when the app asks for a frame.
      */
-    private static TuiConfig ticking() {
+    private static TuiConfig tickless() {
         return TuiConfig.builder()
                 .rawMode(false)
                 .alternateScreen(false)
@@ -102,7 +102,7 @@ class JazygitAppReportsTest {
                 .mouseCapture(false)
                 .shutdownHook(false)
                 .pollTimeout(Duration.ofMillis(10))
-                .tickRate(Duration.ofMillis(40))
+                .noTick()
                 .backend(new TestBackend(SIZE.width(), SIZE.height()))
                 .build();
     }

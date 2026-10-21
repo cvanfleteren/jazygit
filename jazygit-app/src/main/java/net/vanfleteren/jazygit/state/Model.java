@@ -136,6 +136,15 @@ public record Model(
     }
 
     /**
+     * This model without what is kept only to start the loads, which no view draws: two models that draw the same
+     * screen are equal once drawn. Only what is surely not drawn is left out; what is left out too little costs a
+     * frame, what is left out too much would not be drawn when it changes.
+     */
+    public Model drawn() {
+        return mapJobs(jobs -> jobs.withRefreshing(HashSet.empty()).withWorktreeChangesRead(Option.none()));
+    }
+
+    /**
      * This model with {@code f} applied to how the user wants things shown, kept from one session to the next or for this one only.
      */
     public Model mapPreferences(UnaryOperator<Preferences> f) {

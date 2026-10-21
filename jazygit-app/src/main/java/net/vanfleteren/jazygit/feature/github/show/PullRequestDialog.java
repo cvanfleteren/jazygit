@@ -232,6 +232,14 @@ public final class PullRequestDialog implements PopupView {
         return List.of(ID);
     }
 
+    /**
+     * Whether the dialog shows a spinner in {@code model}: while the details of the pull request are read.
+     */
+    public static boolean showsSpinner(Model model) {
+        return model.popup(PullRequestPopup.class)
+                .exists(popup -> popup.details().isEmpty());
+    }
+
     @Override
     public Option<Element> render(Model model) {
         return model.popup(PullRequestPopup.class).map(popup -> {

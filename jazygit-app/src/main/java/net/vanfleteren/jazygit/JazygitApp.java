@@ -11,6 +11,7 @@ import dev.tamboui.toolkit.elements.Column;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.TuiConfig;
+import dev.tamboui.tui.event.Event;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
@@ -27,6 +28,7 @@ import java.nio.file.StandardOpenOption;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -137,6 +139,10 @@ public class JazygitApp extends ToolkitApp {
     private Option<Element> shownLeft = Option.none();
     // The screen whose left column the user drags the border of, while they do.
     private Option<Screen> dragging = Option.none();
+    // Whether a Redraw is queued that no frame has been drawn since; only touched on the render thread.
+    private boolean redrawPending;
+    // The focus the last frame was drawn with that was not empty, which a click on nothing that takes it clears.
+    private Option<String> lastFocus = Option.none();
 
     /**
      * @param env           what the repository the app starts in is read with; it opens other repositories in
@@ -318,7 +324,8 @@ public class JazygitApp extends ToolkitApp {
      *
      * <p>A move while dragging is not handled, though it resizes: TamboUI draws a frame after every event that is
      * handled, and the terminal reports a move for every cell the mouse crosses, which would draw every width in
-     * between, lagging behind the mouse. Not handled, the moves are only drawn on the next tick, the last one first.
+     * between, lagging behind the mouse. Not handled, the width it dispatches asks for a frame, which is drawn once,
+     * after the moves queued before it, with the last width.
      */
     private EventResult dragBorder(MouseEvent event) {
         if (dragging.isDefined() && event.kind() != MouseEventKind.PRESS) {
@@ -385,10 +392,26 @@ public class JazygitApp extends ToolkitApp {
         return pane.isDefined();
     }
 
+    /**
+     * Asks for a frame, for a change that draws none of its own: TamboUI draws one after an event that is handled,
+     * and on a resize, but not after what is run on the render thread otherwise. At most one is queued; a frame
+     * drawn for another reason before it comes takes its place. Called on the render thread.
+     */
+    void requestRedraw() {
+        if (!redrawPending) {
+            redrawPending = true;
+            runner().tuiRunner().dispatch(new Redraw());
+        }
+    }
+
     @Override
     protected void onStart() {
         ToolkitRunner runner = runner();
         runner.styleEngine(styleEngine);
+        // Handled, a Redraw draws a frame, unless one was drawn since it was queued.
+        runner.eventRouter()
+                .addGlobalHandler(event ->
+                        event instanceof Redraw && redrawPending ? EventResult.HANDLED : EventResult.UNHANDLED);
         runner.eventRouter()
                 .addGlobalHandler(event -> Option.of(event)
                         .filter(KeyEvent.class::isInstance)
@@ -400,6 +423,10 @@ public class JazygitApp extends ToolkitApp {
                         .getOrElse(EventResult.UNHANDLED));
         runner.eventRouter().addGlobalHandler(event -> {
             if (event instanceof MouseEvent mouse) {
+                // A press on nothing that takes the focus clears it, without drawing; the frame gives it back.
+                if (mouse.kind() == MouseEventKind.PRESS) {
+                    requestRedraw();
+                }
                 if (dragBorder(mouse).isHandled()) {
                     return EventResult.HANDLED;
                 }
@@ -414,6 +441,14 @@ public class JazygitApp extends ToolkitApp {
                 () -> runner.runOnRenderThread(() -> dispatch.accept(new FetchMsg.Tick())), FETCH_INTERVAL);
         runner.scheduleRepeating(
                 () -> runner.runOnRenderThread(() -> dispatch.accept(new PrOverviewMsg.Tick())), FETCH_INTERVAL);
+        // A spinner turns by being drawn.
+        runner.scheduleRepeating(
+                () -> runner.runOnRenderThread(() -> {
+                    if (Spinners.shown(model())) {
+                        requestRedraw();
+                    }
+                }),
+                TimeText.SPINNER_FRAME);
     }
 
     /**
@@ -426,7 +461,15 @@ public class JazygitApp extends ToolkitApp {
         ThreadPoolExecutor background =
                 threads(BACKGROUND_THREADS, Thread.ofPlatform().name("git-background-", 1));
         Program program = Program.start(
-                env, settings, themeOverride, landing, io, background, runner::runOnRenderThread, JazygitApp::logBug);
+                env,
+                settings,
+                themeOverride,
+                landing,
+                io,
+                background,
+                runner::runOnRenderThread,
+                JazygitApp::logBug,
+                this::requestRedraw);
         runtime = Option.of(new Runtime(io, background, program));
         runner.focusManager().setFocus(PopupSlot.focusedPane(program.model()));
         // The model tells the time from the ticks; the first one is half a second off, and the ages it shows are
@@ -467,6 +510,7 @@ public class JazygitApp extends ToolkitApp {
                     new SettingsStore.Loaded(last.preferences().settings(), Option.none()),
                     last.preferences().themeOverride(),
                     landing);
+            requestRedraw();
         });
     }
 
@@ -483,6 +527,7 @@ public class JazygitApp extends ToolkitApp {
                 onRenderThread(() -> {
                     Try.run(() -> handing.comeBack(config)).get();
                     runner().tuiRunner().terminal().clear();
+                    requestRedraw();
                 });
             }
         });
@@ -499,7 +544,8 @@ public class JazygitApp extends ToolkitApp {
     protected TuiConfig configure() {
         // Without a backend of its own, the app still runs, but cannot hand the terminal over.
         backend = Try.of(HandOverBackend::system).onFailure(JazygitApp::logBug).toOption();
-        TuiConfig.Builder builder = TuiConfig.builder().mouseCapture(true);
+        // Frames are drawn when something changed, not on ticks.
+        TuiConfig.Builder builder = TuiConfig.builder().mouseCapture(true).noTick();
         config = backend.map(builder::backend).getOrElse(builder).build();
         return config;
     }
@@ -528,13 +574,19 @@ public class JazygitApp extends ToolkitApp {
 
     @Override
     protected Element render() {
+        redrawPending = false;
         Model model = model();
         Theme.activate(styleEngine, model.preferences().theme());
+        // A click on nothing that takes the focus cleared it; what had it keeps it.
+        if (runner().focusManager().focusedId() == null) {
+            lastFocus.forEach(runner().focusManager()::setFocus);
+        }
         if (model.screen() != shownScreen) {
             shownScreen = model.screen();
             runner().focusManager().setFocus(PopupSlot.focusedPane(model));
         }
         String focusedId = runner().focusManager().focusedId();
+        lastFocus = Option.of(focusedId).orElse(lastFocus);
         String activeId = activePane(model, focusedId);
         Column left = (model.screen() == Screen.PULL_REQUESTS
                         ? pullRequestPanes(model, focusedId, activeId)
@@ -565,11 +617,25 @@ public class JazygitApp extends ToolkitApp {
                                 ? Option.<String>none()
                                 : p.ids().headOption())
                 .forEach(runner().focusManager()::setFocus);
+        redrawIfFocusMoves(focusedId);
         // What is behind an open popup is dimmed, so the popup stands out.
         Element screen = open.flatMap(Shown::element)
                 .<Element>map(d -> stack(new Dimmed(layout, Theme.backdrop(styleEngine)), d))
                 .getOrElse(layout);
         return new SelectedTextColoured(screen, Theme.selectedText(styleEngine));
+    }
+
+    /**
+     * Asks for another frame once the frame being rendered is drawn, if the focus is no longer {@code drawnWith} by
+     * then: a popup that opens or closes moves it, and TamboUI focuses the first pane after a frame drawn with no
+     * focus or with one that is gone. The model does not know the focus, so does not ask for the frame.
+     */
+    private void redrawIfFocusMoves(String drawnWith) {
+        runner().tuiRunner().runLater(() -> {
+            if (!Objects.equals(runner().focusManager().focusedId(), drawnWith)) {
+                requestRedraw();
+            }
+        });
     }
 
     /**
@@ -673,4 +739,9 @@ public class JazygitApp extends ToolkitApp {
      * A popup as rendered: its dialog while it is open.
      */
     private record Shown(Option<Element> element, List<String> ids, String returnTo) {}
+
+    /**
+     * Asks for a frame, as {@link #requestRedraw()} does.
+     */
+    private record Redraw() implements Event {}
 }

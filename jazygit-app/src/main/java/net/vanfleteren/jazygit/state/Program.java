@@ -28,16 +28,19 @@ public final class Program {
     private final Executor background;
     private final Executor ui;
     private final Consumer<Throwable> bugs;
+    private final Runnable modelChanged;
     // The command started last for each slot, to cancel when a newer one comes.
     private final Map<Cmd.Slot, Future<Void>> latest = new EnumMap<>(Cmd.Slot.class);
     private Model model;
 
-    private Program(Env env, Executor io, Executor background, Executor ui, Consumer<Throwable> bugs) {
+    private Program(
+            Env env, Executor io, Executor background, Executor ui, Consumer<Throwable> bugs, Runnable modelChanged) {
         this.env = env;
         this.io = io;
         this.background = background;
         this.ui = ui;
         this.bugs = bugs;
+        this.modelChanged = modelChanged;
     }
 
     /**
@@ -50,7 +53,16 @@ public final class Program {
      * @param ui         the thread that owns the model, i.e. the render thread
      */
     public static Program start(Env env, Executor io, Executor background, Executor ui) {
-        return start(env, SettingsStore.Loaded.DEFAULT, Option.none(), Landing.START, io, background, ui, bug -> {});
+        return start(
+                env,
+                SettingsStore.Loaded.DEFAULT,
+                Option.none(),
+                Landing.START,
+                io,
+                background,
+                ui,
+                bug -> {},
+                () -> {});
     }
 
     /**
@@ -60,6 +72,9 @@ public final class Program {
      * @param themeOverride the theme for this session instead of the saved one, if any
      * @param landing       where the repository is shown at first
      * @param bugs          told about every command that threw, which the user is only shown the message of
+     * @param modelChanged  told on the {@code ui} executor's thread whenever a message leaves a model that draws
+     *                      differently from the one before ({@link Model#drawn()}), starting with the first; the
+     *                      screen has to be drawn again
      */
     public static Program start(
             Env env,
@@ -69,8 +84,9 @@ public final class Program {
             Executor io,
             Executor background,
             Executor ui,
-            Consumer<Throwable> bugs) {
-        Program program = new Program(env, io, background, ui, bugs);
+            Consumer<Throwable> bugs,
+            Runnable modelChanged) {
+        Program program = new Program(env, io, background, ui, bugs, modelChanged);
         program.apply(Update.init(env.git().repositoryName(), settings, themeOverride, landing));
         return program;
     }
@@ -99,7 +115,11 @@ public final class Program {
     }
 
     private void apply(Next next) {
+        Model before = model;
         model = next.model();
+        if (before == null || !model.drawn().equals(before.drawn())) {
+            modelChanged.run();
+        }
         next.cmds().forEach(this::launch);
     }
 
