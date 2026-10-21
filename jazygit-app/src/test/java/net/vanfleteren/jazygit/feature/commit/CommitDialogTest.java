@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import net.vanfleteren.jazygit.feature.commit.create.CommitMsg;
 import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
 import net.vanfleteren.jazygit.feature.commit.create.CreateCommitCmd;
+import net.vanfleteren.jazygit.feature.commit.revert.RevertMsg;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordMsg;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordPopup;
 import net.vanfleteren.jazygit.git.model.Commit;
@@ -255,6 +256,28 @@ class CommitDialogTest {
 
         assertEquals(java.util.List.of(new RewordMsg.Confirmed()), dispatched);
         assertEquals(java.util.List.of(new CommitMessage(last.message(), last.body())), held);
+    }
+
+    @Test
+    void revertStartsOutWithGitsMessageAndConfirmsIt() throws Exception {
+        CommitDialog revert = CommitDialog.revert(this::dispatch);
+        Commit last = new SampleData().commits().get().head();
+        open = Update.update(TestModels.loaded(new SampleData()), new RevertMsg.Requested(last.sha()))
+                .model();
+
+        try (ToolkitTestRunner runner =
+                ToolkitTestRunner.runTest(() -> revert.render(open).get())) {
+            SettledPilot.focus(runner, CommitDialog.REVERT_ID);
+            String screen =
+                    RenderedText.ofLarge(runner, () -> revert.render(open).get());
+            assertTrue(screen.contains("Revert " + last.shortSha() + ": summary"), screen);
+            assertTrue(screen.contains("Revert \"" + last.message() + "\""), screen);
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new RevertMsg.Confirmed()), dispatched);
+        assertEquals(java.util.List.of(CommitMessage.revertOf(last)), held);
     }
 
     @Test

@@ -579,6 +579,87 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void revertCommitsTheInverseOfACommitWithTheGivenMessage() throws Exception {
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Add f");
+        Commit reverted = provider.commits().get().head();
+
+        List<String> executed = provider.revert(reverted, new CommitMessage("Undo f", "#123 broke it"))
+                .get()
+                .map(ExecutedCommand::line);
+
+        assertEquals(
+                List.of("git -c commit.cleanup=whitespace revert --edit "
+                        + reverted.sha().value()),
+                executed);
+        Commit revert = provider.commits().get().head();
+        assertEquals("Undo f", revert.message());
+        assertEquals("#123 broke it", revert.body());
+        assertTrue(!Files.exists(repo.resolve("f.txt")));
+    }
+
+    @Test
+    void aMergeIsRevertedAgainstItsFirstParent() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Feature work");
+        git("checkout", "-q", "main");
+        git("merge", "-q", "--no-ff", "-m", "Merge feature", "feature");
+        Commit merge = provider.commits().get().head();
+
+        List<String> executed =
+                provider.revert(merge, CommitMessage.revertOf(merge)).get().map(ExecutedCommand::line);
+
+        assertEquals(
+                List.of("git -c commit.cleanup=whitespace revert --edit -m 1 "
+                        + merge.sha().value()),
+                executed);
+        assertEquals("Revert \"Merge feature\"", provider.commits().get().head().message());
+        assertTrue(!Files.exists(repo.resolve("f.txt")));
+    }
+
+    @Test
+    void aConflictingRevertIsLeftForTheUserToResolveAndKeepsTheMessage() throws Exception {
+        Files.writeString(repo.resolve("README.md"), "first\n");
+        git("commit", "-q", "-am", "First edit");
+        Commit reverted = provider.commits().get().head();
+        Files.writeString(repo.resolve("README.md"), "second\n");
+        git("commit", "-q", "-am", "Second edit");
+
+        GitFailure<?> failure =
+                provider.revert(reverted, new CommitMessage("Undo first", "")).getLeft();
+
+        assertEquals(
+                new GitError.StoppedOnConflicts(Option.of(new InProgress.Reverting(reverted.sha())), 1),
+                failure.error());
+        assertTrue(gitSucceedsIn(repo, "rev-parse", "--verify", "--quiet", "REVERT_HEAD"));
+        assertEquals("Undo first\n", Files.readString(repo.resolve(".git/MERGE_MSG")));
+    }
+
+    @Test
+    void aRevertThatChangesNothingFailsAndLeavesTheBranchAlone() throws Exception {
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Add f");
+        Commit reverted = provider.commits().get().head();
+        git("rm", "-q", "f.txt");
+        git("commit", "-q", "-m", "Remove f");
+
+        assertInstanceOf(
+                GitError.CommandFailed.class,
+                provider.revert(reverted, CommitMessage.revertOf(reverted))
+                        .getLeft()
+                        .error());
+
+        assertEquals(
+                List.of("Remove f", "Add f", "Initial commit"),
+                provider.commits().get().map(Commit::message).toList());
+        assertTrue(!gitSucceedsIn(repo, "rev-parse", "--verify", "--quiet", "REVERT_HEAD"));
+    }
+
+    @Test
     void squashFoldsACommitIntoItsParentAndKeepsBothMessages() throws Exception {
         Files.writeString(repo.resolve("a.txt"), "a\n");
         git("add", "a.txt");

@@ -34,10 +34,11 @@ a commit action runs git, asks the user, and leaves a conflict for `M`.
 - On conflicts git does not call the editor, so `MERGE_MSG` holds git's message, which `M` → continue would
   commit. The user's message is written to `MERGE_MSG` (`git rev-parse --git-path MERGE_MSG`) when the revert
   stops on conflicts, so continuing keeps it.
-- A `feature/commit/revert` package, shaped like cherry-pick and reword: `RevertKeys`, `RevertMsg` (Requested,
-  Confirmed, Cancelled, Reverted), `RevertUpdate`, `RevertCmd` (a `GitOperationCmd`), `RevertDialogs`,
-  `RevertPopup`. Success goes through `OperationUpdate.succeeded`; a conflict through `OperationMsg.Stopped` and
-  its notice, as for cherry-pick.
+- A `feature/commit/revert` package, shaped like reword: `RevertAction`, `RevertMsg` (Requested, Confirmed,
+  Cancelled), `RevertUpdate`, `RevertCmd` (a `GitOperationCmd`), `RevertDialogs` (`CommitDialog.revert`) and
+  `RevertPopup` (a `MessagePopup`, so Ctrl+O edits it in the editor too). Success goes through the plain
+  `OperationMsg.Succeeded`, as reword's does; a conflict through `OperationMsg.Stopped` and its notice, as for
+  cherry-pick. The message is built by `CommitMessage.revertOf`, and the git side is `CliRevert`.
 
 ## Consequences
 

@@ -8,6 +8,28 @@ package net.vanfleteren.jazygit.git.model;
  */
 public record CommitMessage(String summary, String description) {
 
+    private static final String REVERT = "Revert \"";
+
+    /**
+     * The message git gives the revert of {@code commit}: {@code Revert "<summary>"}, or {@code Reapply "..."} for the
+     * revert of a revert, and which commit it reverts; for a merge, reverted against its first parent, also which
+     * changes it reverses.
+     */
+    public static CommitMessage revertOf(Commit commit) {
+        String subject = commit.message();
+        // Git leaves a revert of a revert of a revert alone, as reverts can nest arbitrarily deep.
+        String summary = subject.startsWith(REVERT) && !subject.startsWith(REVERT + REVERT)
+                ? "Reapply \"" + subject.substring(REVERT.length())
+                : REVERT + subject + "\"";
+        String reverts = "This reverts commit " + commit.sha().value();
+        return new CommitMessage(
+                summary,
+                commit.isMerge()
+                        ? reverts + ", reversing\nchanges made to "
+                                + commit.parents().head().value() + "."
+                        : reverts + ".");
+    }
+
     /**
      * The message {@code text} is, as git stores it: the first line is the summary, and what follows the blank lines
      * after it is the description.
