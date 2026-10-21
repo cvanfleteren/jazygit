@@ -8,6 +8,7 @@ package net.vanfleteren.jazygit.git.model;
  */
 public record CommitMessage(String summary, String description) {
 
+    // Not translated: these are what git itself writes in any locale, and what tools look for in history.
     private static final String REVERT = "Revert \"";
 
     /**
