@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.feature.theme.ThemeUpdate;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Cmd;
+import net.vanfleteren.jazygit.state.Landing;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -70,7 +71,7 @@ public final class SettingsPanelUpdate {
                                 : Next.of(
                                         model.withoutPopup(GitHubAccountPopup.class)
                                                 .clearError(),
-                                        new SettingsPanelCmd.SetAccount(user)))
+                                        new SettingsPanelCmd.SetAccount(user, Landing.of(model.repoView()))))
                         .getOrElse(Next.of(model));
             // The app shows the repository again already, with a model of its own.
             case SettingsPanelMsg.AccountSet(), SettingsPanelMsg.Reopened() -> Next.of(model);
@@ -92,6 +93,6 @@ public final class SettingsPanelUpdate {
                         model.mapPreferences(preferences -> preferences.withSettings(chosen)),
                         List.of(
                                 new Cmd.SaveSettings(model.preferences().settings(), chosen),
-                                new SettingsPanelCmd.Reopen()));
+                                new SettingsPanelCmd.Reopen(Landing.of(model.repoView()))));
     }
 }

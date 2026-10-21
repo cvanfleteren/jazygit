@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreePopup;
 import net.vanfleteren.jazygit.feature.worktree.switchto.SwitchWorktreeMsg;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -147,7 +148,9 @@ class WorktreeUpdateTest {
     @Test
     void switchingOpensAnotherWorktreeButNotTheOneShown() {
         assertEquals(
-                List.of(new RecentReposCmd.SwitchTo("/repos/app-taken")),
+                // It is shown on the worktrees, focused.
+                List.of(new RecentReposCmd.SwitchTo(
+                        "/repos/app-taken", new Landing(BranchesTab.WORKTREES, Option.of(Scopes.BRANCHES.id())))),
                 Update.update(model(), new SwitchWorktreeMsg.Requested("/repos/app-taken"))
                         .cmds());
         assertEquals(

@@ -43,7 +43,7 @@ public final class Program {
      * @param ui         the thread that owns the model, i.e. the render thread
      */
     public static Program start(Env env, Executor io, Executor background, Executor ui) {
-        return start(env, SettingsStore.Loaded.DEFAULT, Option.none(), io, background, ui, bug -> {});
+        return start(env, SettingsStore.Loaded.DEFAULT, Option.none(), Landing.START, io, background, ui, bug -> {});
     }
 
     /**
@@ -51,18 +51,20 @@ public final class Program {
      *
      * @param settings      the settings the session starts with
      * @param themeOverride the theme for this session instead of the saved one, if any
+     * @param landing       where the repository is shown at first
      * @param bugs          told about every command that threw, which the user is only shown the message of
      */
     public static Program start(
             Env env,
             SettingsStore.Loaded settings,
             Option<ThemeName> themeOverride,
+            Landing landing,
             Executor io,
             Executor background,
             Executor ui,
             Consumer<Throwable> bugs) {
         Program program = new Program(env, io, background, ui, bugs);
-        program.apply(Update.init(env.git().repositoryName(), settings, themeOverride));
+        program.apply(Update.init(env.git().repositoryName(), settings, themeOverride, landing));
         return program;
     }
 

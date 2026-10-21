@@ -6,7 +6,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
- * Switching to another worktree, which the app then shows as if it had been started there.
+ * Switching to another worktree, which the app then shows as if it had been started there, on the worktrees.
  */
 public final class SwitchWorktreeUpdate {
 
@@ -26,7 +26,7 @@ public final class SwitchWorktreeUpdate {
         return model.repo()
                 .worktree(location)
                 .filter(worktree -> !worktree.current())
-                .map(worktree -> Next.of(model.clearError(), new RecentReposCmd.SwitchTo(location)))
+                .map(worktree -> Next.of(model.clearError(), RecentReposCmd.SwitchTo.worktree(location)))
                 .getOrElse(() -> Next.of(model));
     }
 }

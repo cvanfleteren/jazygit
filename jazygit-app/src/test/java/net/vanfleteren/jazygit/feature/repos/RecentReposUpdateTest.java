@@ -3,6 +3,8 @@ package net.vanfleteren.jazygit.feature.repos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -90,7 +92,8 @@ class RecentReposUpdateTest {
         Next next = Update.update(open, new RecentReposMsg.Chosen("/repos/a"));
 
         assertEquals(Option.none(), next.model().popup());
-        assertEquals(List.of(new RecentReposCmd.SwitchTo("/repos/a")), next.cmds());
+        // A recent repository starts out as the app does.
+        assertEquals(List.of(new RecentReposCmd.SwitchTo("/repos/a", Landing.START)), next.cmds());
     }
 
     @Test
@@ -139,15 +142,17 @@ class RecentReposUpdateTest {
         Path current = repo("current");
         Path other = repo("other");
         InMemory recent = new InMemory(current, other);
-        java.util.List<Path> switched = new ArrayList<>();
+        Landing landing = new Landing(BranchesTab.WORKTREES, Option.of("branches"));
+        java.util.List<Tuple2<Path, Landing>> switched = new ArrayList<>();
 
-        Object msg = new RecentReposCmd.SwitchTo(other.toString()).run(env(current, recent, directory -> {
-            switched.add(directory);
-            return Either.right(directory);
-        }));
+        Object msg = new RecentReposCmd.SwitchTo(other.toString(), landing)
+                .run(env(current, recent, (directory, shownAt) -> {
+                    switched.add(Tuple.of(directory, shownAt));
+                    return Either.right(directory);
+                }));
 
         assertEquals(new RecentReposMsg.Switched(other.toString()), msg);
-        assertEquals(List.of(other), List.ofAll(switched));
+        assertEquals(List.of(Tuple.of(other, landing)), List.ofAll(switched));
         assertEquals(List.of(other, current), recent.load());
     }
 
@@ -157,7 +162,8 @@ class RecentReposUpdateTest {
         Path other = repo("other");
         InMemory recent = new InMemory(current, other);
 
-        Object msg = new RecentReposCmd.SwitchTo(other.toString()).run(env(current, recent, Repositories.NONE));
+        Object msg = new RecentReposCmd.SwitchTo(other.toString(), Landing.START)
+                .run(env(current, recent, Repositories.NONE));
 
         RecentReposMsg.NotSwitched notSwitched = assertInstanceOf(RecentReposMsg.NotSwitched.class, msg);
         assertEquals(other.toString(), notSwitched.directory());

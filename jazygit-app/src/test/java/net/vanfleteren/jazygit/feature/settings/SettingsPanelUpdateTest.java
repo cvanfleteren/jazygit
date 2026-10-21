@@ -120,7 +120,21 @@ class SettingsPanelUpdateTest {
 
         assertEquals(chosen, next.model().preferences().settings());
         assertEquals(
-                List.of(new Cmd.SaveSettings(Settings.DEFAULT, chosen), new SettingsPanelCmd.Reopen()), next.cmds());
+                List.of(new Cmd.SaveSettings(Settings.DEFAULT, chosen), new SettingsPanelCmd.Reopen(Landing.START)),
+                next.cmds());
+    }
+
+    @Test
+    void theRepositoryIsShownAgainWhereItWas() {
+        Model there = TestModels.loaded()
+                .mapRepoView(view -> view.withBranchesTab(BranchesTab.WORKTREES).withFocusedPane(Option.of("commits")));
+
+        Next next = Update.update(
+                there, new SettingsPanelMsg.GhExecutableChecked(Option.of("/opt/gh/bin/gh"), Either.right("2.102.0")));
+
+        assertEquals(
+                Option.of(new SettingsPanelCmd.Reopen(new Landing(BranchesTab.WORKTREES, Option.of("commits")))),
+                next.cmds().find(SettingsPanelCmd.Reopen.class::isInstance));
     }
 
     @Test
@@ -147,7 +161,7 @@ class SettingsPanelUpdateTest {
         Next next = Update.update(choosing, new SettingsPanelMsg.AccountChosen(Option.of("alice-work")));
 
         assertEquals(Option.none(), next.model().popup());
-        assertEquals(List.of(new SettingsPanelCmd.SetAccount(Option.of("alice-work"))), next.cmds());
+        assertEquals(List.of(new SettingsPanelCmd.SetAccount(Option.of("alice-work"), Landing.START)), next.cmds());
     }
 
     @Test
@@ -219,14 +233,18 @@ class SettingsPanelUpdateTest {
                 StubGitHub.empty(),
                 SettingsStore.NONE,
                 RecentRepositories.NONE,
-                directory -> {
-                    done.add("reopened " + directory);
+                (directory, landing) -> {
+                    done.add("reopened " + directory + " on " + landing.branchesTab());
                     return Either.right(directory);
                 });
 
-        Msg set = new SettingsPanelCmd.SetAccount(Option.of("alice-work")).run(env);
+        Msg set = new SettingsPanelCmd.SetAccount(
+                        Option.of("alice-work"), new Landing(BranchesTab.REMOTE, Option.none()))
+                .run(env);
 
         assertEquals(new SettingsPanelMsg.AccountSet(), set);
-        assertEquals(List.of("jazygit.githubUser=alice-work", "reopened " + Path.of("/repos/a")), List.ofAll(done));
+        assertEquals(
+                List.of("jazygit.githubUser=alice-work", "reopened " + Path.of("/repos/a") + " on REMOTE"),
+                List.ofAll(done));
     }
 }

@@ -393,7 +393,7 @@ public class JazygitApp extends ToolkitApp {
             }
             return EventResult.UNHANDLED;
         });
-        startRuntime(env, settings, themeOverride);
+        startRuntime(env, settings, themeOverride, Landing.START);
         runner.scheduleRepeating(
                 () -> runner.runOnRenderThread(() -> dispatch.accept(new Msg.Tick(Instant.now()))), REFRESH_INTERVAL);
         runner.scheduleRepeating(
@@ -403,17 +403,17 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
-     * Starts showing the repository {@code env} reads, from scratch.
+     * Starts showing the repository {@code env} reads, from scratch, where {@code landing} says.
      */
-    private void startRuntime(Env env, SettingsStore.Loaded settings, Option<ThemeName> themeOverride) {
+    private void startRuntime(
+            Env env, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, Landing landing) {
         ToolkitRunner runner = runner();
-        runner.focusManager().setFocus(FilesPanel.ID);
         ThreadPoolExecutor io = singleThread("git-io");
         ThreadPoolExecutor fetch = singleThread("git-fetch");
-        runtime = Option.of(new Runtime(
-                io,
-                fetch,
-                Program.start(env, settings, themeOverride, io, fetch, runner::runOnRenderThread, JazygitApp::logBug)));
+        Program program = Program.start(
+                env, settings, themeOverride, landing, io, fetch, runner::runOnRenderThread, JazygitApp::logBug);
+        runtime = Option.of(new Runtime(io, fetch, program));
+        runner.focusManager().setFocus(PopupSlot.focusedPane(program.model()));
         // The model tells the time from the ticks; the first one is half a second off, and the ages it shows are
         // told from the start. The loads it would start are running already, so it starts none.
         dispatch.accept(new Msg.Tick(Instant.now()));
@@ -425,17 +425,17 @@ public class JazygitApp extends ToolkitApp {
      * Opens the repository containing {@code directory} in place of the one shown, as {@link Repositories} asks;
      * called on the thread of a command.
      */
-    private Either<GitError, Path> switchTo(Path directory) {
+    private Either<GitError, Path> switchTo(Path directory, Landing landing) {
         return CliGitInfoProvider.open(directory)
-                .peek(provider -> runner().runOnRenderThread(() -> show(provider)))
+                .peek(provider -> runner().runOnRenderThread(() -> show(provider, landing)))
                 .map(CliGitInfoProvider::workTree);
     }
 
     /**
-     * Shows the repository {@code git} reads instead of the one shown, as if the app had been started there; the
-     * theme and the settings stay as they are in this session.
+     * Shows the repository {@code git} reads instead of the one shown, as if the app had been started there, where
+     * {@code landing} says; the theme and the settings stay as they are in this session.
      */
-    private void show(CliGitInfoProvider git) {
+    private void show(CliGitInfoProvider git, Landing landing) {
         runtime.forEach(running -> {
             Model last = running.program().model();
             // Not waiting for the command that runs keeps the UI going. It finishes by itself, in the other
@@ -450,7 +450,8 @@ public class JazygitApp extends ToolkitApp {
                             env.repositories(),
                             env.terminal()),
                     new SettingsStore.Loaded(last.preferences().settings(), Option.none()),
-                    last.preferences().themeOverride());
+                    last.preferences().themeOverride(),
+                    landing);
         });
     }
 
