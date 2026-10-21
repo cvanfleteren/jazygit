@@ -48,11 +48,15 @@ public final class SettingsPanelUpdate {
             case SettingsPanelMsg.GhExecutableCancelled() -> Next.of(model.withoutPopup(GhExecutablePopup.class));
             case SettingsPanelMsg.GhExecutableEntered() ->
                 model.popup(GhExecutablePopup.class)
-                        .map(popup -> Next.of(
-                                model.withoutPopup(GhExecutablePopup.class),
-                                new SettingsPanelCmd.CheckGhExecutable(
-                                        Option.of(popup.executable().strip()).filter(path -> !path.isEmpty()))))
+                        .map(popup -> Option.of(popup.executable().strip()).filter(path -> !path.isEmpty()))
+                        .map(executable -> Next.of(
+                                model.withoutPopup(GhExecutablePopup.class)
+                                        .mapJobs(jobs -> jobs.withGhExecutableEntered(Option.of(executable))),
+                                new SettingsPanelCmd.CheckGhExecutable(executable)))
                         .getOrElse(() -> Next.of(model));
+            // Another gh executable was entered since: the check of that one decides, whenever it finishes.
+            case SettingsPanelMsg.GhExecutableChecked(var executable, var version)
+            when model.jobs().ghExecutableEntered().exists(entered -> !entered.equals(executable)) -> Next.of(model);
             case SettingsPanelMsg.GhExecutableChecked(var executable, var version) ->
                 version.fold(
                         failure -> Next.of(model.fail(new AppError.GhExecutableUnusable(executable, failure))),

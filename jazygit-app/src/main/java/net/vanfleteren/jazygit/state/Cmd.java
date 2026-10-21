@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.Tuple;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
@@ -67,6 +68,25 @@ public interface Cmd {
      */
     default boolean background() {
         return false;
+    }
+
+    /**
+     * The slot this command takes, if it is only wanted until a newer one for that slot is asked for: the newer
+     * one cancels it when it has not started yet, and it then reports nothing. Only a command whose result the
+     * model drops once a newer one is asked for may take one, as nothing else may wait for its answer.
+     */
+    default Option<Slot> slot() {
+        return Option.none();
+    }
+
+    /**
+     * What a command can be the latest of.
+     */
+    enum Slot {
+        /**
+         * The preview of the highlighted pull request.
+         */
+        PULL_REQUEST_PREVIEW
     }
 
     /**

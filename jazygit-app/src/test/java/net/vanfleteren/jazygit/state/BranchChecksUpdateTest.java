@@ -103,17 +103,34 @@ class BranchChecksUpdateTest {
         assertEquals(List.empty(), again.cmds());
 
         assertEquals(
-                List.empty(),
+                HashSet.empty(),
                 Update.update(reading.model(), new BranchChecksMsg.Loaded(ON_ORIGIN))
                         .model()
                         .gitHub()
                         .reading());
         assertEquals(
-                List.empty(),
+                HashSet.empty(),
                 Update.update(reading.model(), new BranchChecksMsg.LoadFailed(refused("offline")))
                         .model()
                         .gitHub()
                         .reading());
+    }
+
+    @Test
+    void checksAskedForWhileARunningReadMayHaveMissedAChangeAreReadOnceThatOneIsDone() {
+        Next reading = BranchChecksUpdate.load(Next.of(loaded()));
+
+        Next asked = BranchChecksUpdate.loadAnyway(Next.of(reading.model()));
+        assertEquals(List.empty(), asked.cmds());
+
+        Next done = Update.update(asked.model(), new BranchChecksMsg.Loaded(ON_ORIGIN));
+        assertEquals(List.of(new LoadBranchChecks()), done.cmds());
+        assertEquals(Option.of(ON_ORIGIN), done.model().gitHub().branchChecks());
+
+        assertEquals(
+                List.empty(),
+                Update.update(done.model(), new BranchChecksMsg.Loaded(ON_ORIGIN))
+                        .cmds());
     }
 
     @Test
