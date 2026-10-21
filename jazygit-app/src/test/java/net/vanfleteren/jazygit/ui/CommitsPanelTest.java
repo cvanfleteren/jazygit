@@ -92,6 +92,16 @@ class CommitsPanelTest {
     }
 
     @Test
+    void initialsTakeNoMoreThanTwoColumnsAndKeepLettersWhole() {
+        assertEquals("张", CommitsPanel.initials("张 伟"));
+        assertEquals("张", CommitsPanel.initials("张伟"));
+        assertEquals("🇧🇪", CommitsPanel.initials("🇧🇪 fan"));
+        assertEquals("👨‍👩‍👧", CommitsPanel.initials("👨‍👩‍👧family"));
+        // A letter with a combining accent keeps its accent.
+        assertEquals("E\u0301L", CommitsPanel.initials("e\u0301mile lambert"));
+    }
+
+    @Test
     void theSelectionFollowsItsCommitWhenANewOneComesOnTop() throws Exception {
         List<Commit> log = List.of(commit("s1"), commit("s0"));
         java.util.concurrent.atomic.AtomicReference<Model> model = new java.util.concurrent.atomic.AtomicReference<>(

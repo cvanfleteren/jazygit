@@ -102,8 +102,7 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
             ListElement<?> rows =
                     view.all().isEmpty() ? empty.getOrElse(list) : view.shown().isEmpty() ? noMatches : list;
             // Wide enough for the hint, which would wrap otherwise.
-            int hint = Math.max(
-                    Messages.get(HINT).length(), Messages.get(FILTERING_HINT).length());
+            int hint = Math.max(TextWidth.of(Messages.get(HINT)), TextWidth.of(Messages.get(FILTERING_HINT)));
             Element frame = DialogFrame.withHint(
                             spec.title().apply(popup),
                             Math.max(DialogFrame.LIST_WIDTH, Math.max(width, hint) + DialogFrame.FRAME),
