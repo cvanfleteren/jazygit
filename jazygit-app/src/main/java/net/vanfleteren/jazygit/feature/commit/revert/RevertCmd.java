@@ -6,15 +6,14 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.GitOperationCmd;
 import net.vanfleteren.jazygit.state.Operation;
 
 /**
- * Commits the inverse of {@code commit} on top of the checked out branch, with {@code message}.
+ * Commits the inverse of {@code commit} on top of the checked out branch.
  */
-public record RevertCmd(Commit commit, CommitMessage message) implements GitOperationCmd {
+public record RevertCmd(Commit commit) implements GitOperationCmd {
 
     public static final Operation REVERT =
             Operation.of("log.title.revert", "error.revert.failed").waitingForUnfinished();
@@ -31,6 +30,6 @@ public record RevertCmd(Commit commit, CommitMessage message) implements GitOper
 
     @Override
     public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-        return git.revert(commit, message);
+        return git.revert(commit);
     }
 }

@@ -2,14 +2,12 @@ package net.vanfleteren.jazygit.feature.commit.revert;
 
 import static net.vanfleteren.jazygit.state.TestModels.errorText;
 import static net.vanfleteren.jazygit.state.TestModels.failed;
-import static net.vanfleteren.jazygit.state.TestModels.typed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
@@ -39,22 +37,25 @@ class RevertUpdateTest {
     }
 
     @Test
-    void requestingAsksForTheMessageGitWouldWrite() {
-        assertEquals(
-                Option.of(new RevertPopup(FIRST, new CommitMessage("Revert \"First\"", "This reverts commit aaaa."))),
-                asked().popup(RevertPopup.class));
+    void requestingAsksToConfirm() {
+        assertEquals(Option.of(new RevertPopup(FIRST)), asked().popup(RevertPopup.class));
     }
 
     @Test
-    void aMergeIsRevertedAgainstItsFirstParent() {
+    void theConfirmationSaysAMergeIsRevertedAgainstItsFirstParent() {
+        assertEquals(
+                "Are you sure you want to revert the merge mmmm \"Merge\" against its first parent?",
+                RevertDialogs.REVERT.message().apply(new RevertPopup(MERGE)));
+    }
+
+    @Test
+    void aMergeCanBeReverted() {
         Model model = Update.update(TestModels.loaded(), new LoadMsg.CommitsLoaded(List.of(MERGE)))
                 .model();
 
         Model next = Update.update(model, new RevertMsg.Requested(MERGE.sha())).model();
 
-        assertEquals(
-                Option.of("This reverts commit mmmm, reversing\nchanges made to aaaa."),
-                next.popup(RevertPopup.class).map(popup -> popup.message().description()));
+        assertEquals(Option.of(new RevertPopup(MERGE)), next.popup(RevertPopup.class));
     }
 
     @Test
@@ -67,31 +68,15 @@ class RevertUpdateTest {
     }
 
     @Test
-    void confirmingRevertsWithTheTypedMessage() {
-        Model model = typed(asked(), new CommitMessage(" Undo first ", "Broke it\n"));
-
-        Next next = Update.update(model, new RevertMsg.Confirmed());
+    void confirmingReverts() {
+        Next next = Update.update(asked(), new RevertMsg.Confirmed());
 
         assertEquals(Option.none(), next.model().popup(RevertPopup.class));
-        assertEquals(
-                new RevertCmd(FIRST, new CommitMessage("Undo first", "Broke it")),
-                next.cmds().head());
+        assertEquals(new RevertCmd(FIRST), next.cmds().head());
     }
 
     @Test
-    void aBlankSummaryKeepsTheDialogOpen() {
-        Model model = typed(asked(), new CommitMessage("  ", "Broke it"));
-
-        Next next = Update.update(model, new RevertMsg.Confirmed());
-
-        assertEquals(
-                Option.of(new CommitMessage("  ", "Broke it")),
-                next.model().popup(RevertPopup.class).map(RevertPopup::message));
-        assertEquals(List.of(), next.cmds());
-    }
-
-    @Test
-    void cancellingClosesTheDialog() {
+    void cancellingClosesThePopup() {
         Next next = Update.update(asked(), new RevertMsg.Cancelled());
 
         assertEquals(Option.none(), next.model().popup(RevertPopup.class));
@@ -100,10 +85,10 @@ class RevertUpdateTest {
 
     @Test
     void aFailureShowsTheError() {
-        RevertCmd cmd = new RevertCmd(FIRST, CommitMessage.revertOf(FIRST));
         Model running = Update.update(asked(), new RevertMsg.Confirmed()).model();
 
-        Model next = Update.update(running, failed(cmd, "nothing to commit")).model();
+        Model next = Update.update(running, failed(new RevertCmd(FIRST), "nothing to commit"))
+                .model();
 
         assertEquals(Option.of("Revert of aaaa failed: nothing to commit"), errorText(next));
     }

@@ -124,12 +124,12 @@ public interface GitInfoProvider {
     // Undoing a commit with a new one, as git revert does.
 
     /**
-     * Commits the inverse of {@code commit} on top of the checked out branch, with {@code message}; a merge is
-     * reverted against its first parent. A revert that stops on conflicts is left so, with {@code message} as the
-     * one continuing it commits, and fails with {@link GitError.StoppedOnConflicts}; one that fails otherwise is
-     * undone again, so the repository is left as it was.
+     * Commits the inverse of {@code commit} on top of the checked out branch, with the message git writes; a merge
+     * is reverted against its first parent. A revert that stops on conflicts is left so, and fails with
+     * {@link GitError.StoppedOnConflicts}; one that fails otherwise is undone again, so the repository is left as it
+     * was.
      */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> revert(Commit commit, CommitMessage message);
+    Either<GitFailure<GitError>, List<ExecutedCommand>> revert(Commit commit);
 
     // Going on with what the repository is in the middle of, as git merge, rebase, cherry-pick and revert do.
 

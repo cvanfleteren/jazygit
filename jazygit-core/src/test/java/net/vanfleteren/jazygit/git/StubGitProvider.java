@@ -394,7 +394,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> revert(Commit commit, CommitMessage message) {
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> revert(Commit commit) {
         return ran();
     }
 

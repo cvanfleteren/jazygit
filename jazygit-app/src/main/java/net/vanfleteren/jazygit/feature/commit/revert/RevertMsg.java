@@ -19,8 +19,5 @@ public sealed interface RevertMsg extends Msg {
 
     record Cancelled() implements RevertMsg {}
 
-    /**
-     * The user confirmed the message typed in the popup.
-     */
     record Confirmed() implements RevertMsg {}
 }

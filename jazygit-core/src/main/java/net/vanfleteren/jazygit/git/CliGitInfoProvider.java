@@ -263,8 +263,8 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> revert(Commit commit, CommitMessage message) {
-        return CliRevert.revert(workTree, commit, message);
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> revert(Commit commit) {
+        return CliRevert.revert(workTree, commit);
     }
 
     @Override

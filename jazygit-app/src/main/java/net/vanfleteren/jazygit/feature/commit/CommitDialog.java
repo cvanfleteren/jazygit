@@ -12,12 +12,9 @@ import dev.tamboui.widgets.input.TextInputState;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.feature.commit.create.CommitMsg;
 import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
-import net.vanfleteren.jazygit.feature.commit.revert.RevertMsg;
-import net.vanfleteren.jazygit.feature.commit.revert.RevertPopup;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordMsg;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordPopup;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
@@ -37,9 +34,8 @@ import net.vanfleteren.jazygit.ui.widgets.PopupView;
  * {@link MessageEdited} for every change. Only the carets, and where Up and Down are in the earlier summaries, are
  * kept here.
  *
- * <p>There are three flavours: {@link #commit} asks for the message of a new commit, {@link #reword}
- * for a new message of any commit, starting out with its current one, and {@link #revert} for the message of the
- * revert of a commit, starting out with the one git would write.
+ * <p>There are two flavours: {@link #commit} asks for the message of a new commit, {@link #reword}
+ * for a new message of any commit, starting out with its current one.
  */
 public final class CommitDialog implements PopupView {
 
@@ -51,8 +47,6 @@ public final class CommitDialog implements PopupView {
     public static final String DESCRIPTION_ID = "commit-description";
     public static final String REWORD_ID = "reword-summary";
     public static final String REWORD_DESCRIPTION_ID = "reword-description";
-    public static final String REVERT_ID = "revert-summary";
-    public static final String REVERT_DESCRIPTION_ID = "revert-description";
 
     // With Ctrl held, opens the message in the editor.
     private static final char EDITOR_KEY = 'o';
@@ -69,7 +63,6 @@ public final class CommitDialog implements PopupView {
     private final String summaryId;
     private final String descriptionId;
     private final Class<? extends MessagePopup> popupType;
-    private final Function<Model, String> summaryTitle;
     private final Supplier<Msg> confirmed;
     private final Supplier<Msg> cancelled;
     private final Consumer<Msg> dispatch;
@@ -78,14 +71,12 @@ public final class CommitDialog implements PopupView {
             String summaryId,
             String descriptionId,
             Class<? extends MessagePopup> popupType,
-            Function<Model, String> summaryTitle,
             Supplier<Msg> confirmed,
             Supplier<Msg> cancelled,
             Consumer<Msg> dispatch) {
         this.summaryId = summaryId;
         this.descriptionId = descriptionId;
         this.popupType = popupType;
-        this.summaryTitle = summaryTitle;
         this.confirmed = confirmed;
         this.cancelled = cancelled;
         this.dispatch = dispatch;
@@ -97,14 +88,7 @@ public final class CommitDialog implements PopupView {
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public CommitDialog(Consumer<Msg> dispatch) {
-        this(
-                ID,
-                DESCRIPTION_ID,
-                CommitPopup.class,
-                CommitDialog::summaryTitle,
-                CommitMsg.Confirmed::new,
-                CommitMsg.Cancelled::new,
-                dispatch);
+        this(ID, DESCRIPTION_ID, CommitPopup.class, CommitMsg.Confirmed::new, CommitMsg.Cancelled::new, dispatch);
     }
 
     /**
@@ -117,36 +101,9 @@ public final class CommitDialog implements PopupView {
                 REWORD_ID,
                 REWORD_DESCRIPTION_ID,
                 RewordPopup.class,
-                CommitDialog::summaryTitle,
                 RewordMsg.Confirmed::new,
                 RewordMsg.Cancelled::new,
                 dispatch);
-    }
-
-    /**
-     * The popup asking for the message of the revert of a commit; its title says when that is a merge, reverted
-     * against its first parent.
-     *
-     * @param dispatch receives the messages for the user's actions, on the render thread
-     */
-    public static CommitDialog revert(Consumer<Msg> dispatch) {
-        return new CommitDialog(
-                REVERT_ID,
-                REVERT_DESCRIPTION_ID,
-                RevertPopup.class,
-                model -> model.popup(RevertPopup.class)
-                        .map(RevertPopup::commit)
-                        .map(commit -> commit.isMerge()
-                                ? Messages.get("dialog.revert.mergeTitle", commit.shortSha())
-                                : Messages.get("dialog.revert.title", commit.shortSha()))
-                        .getOrElse(() -> summaryTitle(model)),
-                RevertMsg.Confirmed::new,
-                RevertMsg.Cancelled::new,
-                dispatch);
-    }
-
-    private static String summaryTitle(Model model) {
-        return Messages.get("dialog.commit.summary.title");
     }
 
     /**
@@ -183,7 +140,7 @@ public final class CommitDialog implements PopupView {
         return Option.of(dialog(
                         new LineEditInput(
                                         textInput(summary)
-                                                .title(summaryTitle.apply(model))
+                                                .title(Messages.get("dialog.commit.summary.title"))
                                                 .placeholder(Messages.get("dialog.commit.summary.placeholder"))
                                                 .length(INPUT_HEIGHT)
                                                 .onSubmit(this::confirm)
