@@ -20,6 +20,8 @@ import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchPopup;
 import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.state.BranchesTab;
+import net.vanfleteren.jazygit.state.Landing;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
@@ -77,10 +79,12 @@ class WorktreeBranchUpdateTest {
                 Option.of(new SwitchWorktreePopup(FEATURE, "/repos/linked")),
                 asked.model().popup());
 
-        Next confirmed = Update.update(asked.model(), new CheckoutMsg.SwitchWorktreeConfirmed());
-        // It is shown on the worktrees, focused, as switching from there shows it.
+        Model focused = asked.model().mapRepoView(view -> view.withFocusedPane(Option.of("branches")));
+        Next confirmed = Update.update(focused, new CheckoutMsg.SwitchWorktreeConfirmed());
+        // It is shown as a checkout here shows it: on the local branches, the focus staying where it was.
         assertEquals(
-                List.of(new RecentReposCmd.SwitchTo("/repos/linked", RecentReposCmd.SwitchTo.WORKTREES)),
+                List.of(new RecentReposCmd.SwitchTo(
+                        "/repos/linked", new Landing(BranchesTab.LOCAL, Option.of("branches")))),
                 confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());
         assertEquals(

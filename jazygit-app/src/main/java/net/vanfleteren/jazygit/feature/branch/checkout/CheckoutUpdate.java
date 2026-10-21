@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.BranchesTab;
+import net.vanfleteren.jazygit.state.Landing;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update;
@@ -40,11 +41,16 @@ public final class CheckoutUpdate {
                 Update.confirm(
                         model, StashCheckoutPopup.class, popup -> Option.of(new CheckoutWithStash(popup.branch())));
             case SwitchWorktreeCancelled() -> Next.of(model.withoutPopup(SwitchWorktreePopup.class));
+            // It is shown as a checkout here shows it: on the local branches, the focus where it was.
             case SwitchWorktreeConfirmed() ->
                 model.popup(SwitchWorktreePopup.class)
                         .map(popup -> Next.of(
                                 model.withoutPopup(SwitchWorktreePopup.class).clearError(),
-                                RecentReposCmd.SwitchTo.worktree(popup.worktree())))
+                                new RecentReposCmd.SwitchTo(
+                                        popup.worktree(),
+                                        new Landing(
+                                                BranchesTab.LOCAL,
+                                                model.repoView().focusedPane()))))
                         .getOrElse(() -> Next.of(model));
         };
     }
