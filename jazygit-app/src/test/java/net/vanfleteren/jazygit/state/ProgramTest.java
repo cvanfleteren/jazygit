@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicInteger;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg;
@@ -46,6 +47,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import org.junit.jupiter.api.Test;
@@ -263,6 +265,54 @@ class ProgramTest {
                         new Branch(new Branch.Name("other"), false, new Sha("other-tip"), Instant.EPOCH, true))),
                 model.repo().branches());
         assertEquals(1, provider.commitLoads);
+    }
+
+    @Test
+    void aMessageThatChangesTheModelSaysSoAndOneThatDoesNotSaysNothing() {
+        AtomicInteger changes = new AtomicInteger();
+        Program told = Program.start(
+                new Env(provider, StubGitHub.empty()),
+                SettingsStore.Loaded.DEFAULT,
+                Option.none(),
+                Landing.START,
+                Runnable::run,
+                Runnable::run,
+                Runnable::run,
+                bug -> {},
+                changes::incrementAndGet);
+        told.dispatch(new Msg.Focused("commits", false));
+        int focused = changes.get();
+
+        told.dispatch(new Msg.Focused("commits", false));
+        assertEquals(focused, changes.get());
+
+        told.dispatch(new Msg.Focused("files", false));
+        assertEquals(focused + 1, changes.get());
+    }
+
+    @Test
+    void loadsThatBringNothingNewDoNotSayTheModelChanged() {
+        AtomicInteger changes = new AtomicInteger();
+        Queue<Runnable> queued = new ArrayDeque<>();
+        Program told = Program.start(
+                new Env(provider, StubGitHub.empty()),
+                SettingsStore.Loaded.DEFAULT,
+                Option.none(),
+                Landing.START,
+                queued::add,
+                queued::add,
+                queued::add,
+                bug -> {},
+                changes::incrementAndGet);
+        told.dispatch(new Msg.Tick(Instant.EPOCH));
+        drain(queued);
+        int loaded = changes.get();
+
+        // Starting the periodic loads and their finishing only changes which loads run.
+        told.dispatch(new Msg.Tick(Instant.EPOCH));
+        drain(queued);
+
+        assertEquals(loaded, changes.get());
     }
 
     @Test

@@ -8,6 +8,7 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
 import dev.tamboui.tui.event.MouseButton;
+import dev.tamboui.tui.event.TickEvent;
 import dev.tamboui.tui.pilot.ElementNotFoundException;
 import dev.tamboui.tui.pilot.Pilot;
 import java.time.Duration;
@@ -43,12 +44,15 @@ public final class SettledPilot implements Pilot {
     }
 
     /**
-     * Focuses {@code id} on the render thread, so the auto-focus of a frame being drawn cannot undo it.
+     * Focuses {@code id} on the render thread, so the auto-focus of a frame being drawn cannot undo it, and draws a
+     * frame with it, which moving the focus does not by itself.
      */
     public static void focus(ToolkitTestRunner testRunner, String id) {
         testRunner
                 .runner()
                 .runOnRenderThread(() -> testRunner.runner().focusManager().setFocus(id));
+        // TamboUI draws a frame on a tick.
+        testRunner.runner().tuiRunner().dispatch(TickEvent.of(0));
         settle(testRunner);
     }
 

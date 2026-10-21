@@ -10,8 +10,12 @@ import net.vanfleteren.jazygit.i18n.Messages;
  */
 public final class TimeText {
 
+    /**
+     * How long a spinner shows each of its frames.
+     */
+    public static final Duration SPINNER_FRAME = Duration.ofMillis(120);
+
     private static final SpinnerStyle SPINNER = SpinnerStyle.BOUNCING_BAR;
-    private static final long SPINNER_FRAME_MILLIS = 120;
 
     private TimeText() {}
 
@@ -33,6 +37,6 @@ public final class TimeText {
      * The frame of the spinner of something that runs to show at {@code now}.
      */
     public static String spinnerFrame(Instant now) {
-        return SPINNER.frame((int) (now.toEpochMilli() / SPINNER_FRAME_MILLIS % SPINNER.frameCount()));
+        return SPINNER.frame((int) (now.toEpochMilli() / SPINNER_FRAME.toMillis() % SPINNER.frameCount()));
     }
 }

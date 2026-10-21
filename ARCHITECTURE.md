@@ -299,9 +299,10 @@ by itself (`BackendFactory.create()`, so `tamboui.backend` or `TAMBOUI_BACKEND` 
 - **Leaving**, on the render thread between two frames: it stops reading keys, then puts the terminal back as it
   was before the app started (no mouse capture or bracketed paste, cursor shown, main screen, cooked mode), and
   from then on drops what the app draws.
-- **Meanwhile** the app keeps running, as it does not block the render thread: TamboUI's ticks, which come every
-  40 ms, would otherwise pile up and be handled one by one afterwards. Loads and fetches carry on; what they draw
-  is dropped.
+- **Meanwhile** the app keeps running, as it does not block the render thread: the model's ticks and the outcome
+  of commands would otherwise pile up and be handled one by one afterwards. Loads and fetches carry on; what they
+  draw is dropped. Coming back asks for a frame, as nothing else might draw one (see
+  [When a frame is drawn](#when-a-frame-is-drawn)).
 - **Coming back**, on the render thread again: it sets the terminal up as before, reads keys again, and clears
   TamboUI's buffers, so the next frame draws the whole screen.
 
@@ -334,11 +335,12 @@ finishes by itself once the app is gone.
 ```mermaid
 flowchart LR
     subgraph render["render thread"]
-        Event["key event / tick"] --> Dispatch["Program.dispatch(msg)"]
+        Event["key / mouse event<br/>model tick"] --> Dispatch["Program.dispatch(msg)"]
         Dispatch --> Update["msg.apply(model)<br/><i>pure</i>"]
         Update --> Next["Next(model, cmds)"]
         Next --> Store["program.model = next.model"]
-        Store --> Render["JazygitApp.render()<br/>draws the Model"]
+        Store -- "model.drawn() changed:<br/>modelChanged → Redraw" --> Render["JazygitApp.render()<br/>draws the Model"]
+        Event -- "handled" --> Render
         Render -- "reports, after the frame" --> Dispatch
     end
     subgraph io["git-io thread"]
@@ -347,6 +349,26 @@ flowchart LR
     Next -- "each Cmd" --> Perform
     Result -- "ui.execute" --> Dispatch
 ```
+
+### When a frame is drawn
+
+TamboUI's own 40 ms tick is turned off (`noTick()`), so a frame is only drawn when something asks for one (see
+`documentation/adr/0014-redraw-on-change.md`):
+
+- **An event that is handled**, or a resize: TamboUI draws after those by itself.
+- **A model that draws differently**: `Program` calls `modelChanged` when a message leaves a model whose
+  `Model.drawn()` differs from the one before. `Model.drawn()` leaves out what only starts loads
+  (`Jobs.refreshing`, `Jobs.worktreeChangesRead`), so the periodic loads of an idle app draw nothing. This covers
+  the outcome of commands, the model's ticks and the reports of the widgets.
+- **`JazygitApp.requestRedraw()`**, for what the model does not see: a turning spinner (every 120 ms while
+  `Spinners.shown`), a frame that moved the focus (`redrawIfFocusMoves`), a mouse press (a click on nothing clears
+  the focus, which the next frame gives back to what had it), switching repositories and coming back from a
+  handed-over terminal.
+
+`modelChanged` calls `requestRedraw()` too. It dispatches a `Redraw` event, which a global handler handles, so
+TamboUI draws a frame. At most one is queued (`redrawPending`), and a frame drawn for another reason meanwhile makes
+it draw none: a burst of changes draws once. Anything that changes the screen without changing the model, or
+without an event that is handled, must ask for a frame itself; nothing else draws it.
 
 ### The view reports back
 

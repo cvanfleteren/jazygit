@@ -96,6 +96,13 @@ public final class CommentsDialog implements PopupView {
         return List.of(ID);
     }
 
+    /**
+     * Whether the dialog shows a spinner in {@code model}: while the comments are read.
+     */
+    public static boolean showsSpinner(Model model) {
+        return model.popup(CommentsPopup.class).exists(popup -> popup.comments().isEmpty());
+    }
+
     @Override
     public Option<Element> render(Model model) {
         return model.popup(CommentsPopup.class).map(popup -> {

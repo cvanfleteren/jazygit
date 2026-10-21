@@ -563,6 +563,22 @@ public class BranchesPanel {
     }
 
     /**
+     * Whether the pane shows a spinner in {@code model}: on a busy branch in the list it shows, which a divergence
+     * shown in its place hides.
+     */
+    public static boolean showsSpinner(Model model) {
+        BranchesTab tab = model.repoView().branchesTab();
+        return model.screen() == Screen.REPOSITORY
+                && divergence(model).isEmpty()
+                && model.jobs()
+                        .busy()
+                        .keySet()
+                        .exists(ref -> tab == BranchesTab.LOCAL
+                                ? ref instanceof BranchRef.Local
+                                : tab == BranchesTab.REMOTE && ref instanceof BranchRef.Remote);
+    }
+
+    /**
      * The divergence {@code model} lists in place of the local branches, if any.
      */
     private static Option<DivergenceView> divergence(Model model) {
