@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.github;
 
 import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.HashMap;
@@ -593,16 +594,20 @@ class PullRequestUpdateTest {
     }
 
     @Test
-    void aMergedPullRequestIsReadAgainEvenWhileAnEarlierReadRuns() {
+    void aMergedPullRequestIsReadAgainOnceAnEarlierReadIsDone() {
         MergePullRequest cmd = new MergePullRequest(new Branch.Name("feature"), 42, MergeMethod.MERGE);
         // The running read started before the merge, and would list the pull request as still open.
         Model merging = withPr().withBusyBranch(
                         new BranchRef.Local(new Branch.Name("feature")), PullRequestCmd.MERGE_PR)
-                .mapGitHub(gitHub -> gitHub.withReading(List.of(new LoadPullRequests())));
+                .mapGitHub(gitHub -> gitHub.withReading(io.vavr.collection.HashSet.of(new LoadPullRequests())));
 
         Next done = Update.update(merging, cmd.run(new Env(new StubGitProvider() {}, StubGitHub.empty())));
+        Next earlierRead = Update.update(done.model(), new PullRequestsMsg.Loaded(List.of()));
 
-        assertTrue(done.cmds().contains(new LoadPullRequests()), done.cmds().toString());
+        assertFalse(done.cmds().contains(new LoadPullRequests()), done.cmds().toString());
+        assertTrue(
+                earlierRead.cmds().contains(new LoadPullRequests()),
+                earlierRead.cmds().toString());
     }
 
     @Test

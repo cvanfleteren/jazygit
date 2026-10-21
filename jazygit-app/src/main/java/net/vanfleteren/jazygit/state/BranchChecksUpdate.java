@@ -14,9 +14,10 @@ public final class BranchChecksUpdate {
     public static Next update(Model model, BranchChecksMsg msg) {
         return switch (msg) {
             case BranchChecksMsg.Loaded(GitHubChecks checks) ->
-                Next.of(read(model).mapGitHub(gitHub -> gitHub.withBranchChecks(Option.of(checks))));
+                GitHubReads.done(
+                        model.mapGitHub(gitHub -> gitHub.withBranchChecks(Option.of(checks))), new LoadBranchChecks());
             // Like for the pull requests, a failure is no reason to bother the user: the checks read last stay.
-            case BranchChecksMsg.LoadFailed(var failure) -> Next.of(read(model));
+            case BranchChecksMsg.LoadFailed(var failure) -> GitHubReads.done(model, new LoadBranchChecks());
         };
     }
 
@@ -25,21 +26,14 @@ public final class BranchChecksUpdate {
      * state already.
      */
     static Next load(Next next) {
-        return next.model().gitHub().reading().contains(new LoadBranchChecks()) ? next : loadAnyway(next);
+        return GitHubReads.load(next, new LoadBranchChecks());
     }
 
     /**
-     * {@code next}, also reading the checks again, even when a read is still running: one that may have missed
-     * a change just made.
+     * {@code next}, also reading the checks again, as something changed on GitHub: when a read is still running,
+     * which may have missed that, once it is done.
      */
     static Next loadAnyway(Next next) {
-        return new Next(
-                next.model()
-                        .mapGitHub(gitHub -> gitHub.withReading(gitHub.reading().append(new LoadBranchChecks()))),
-                next.cmds().append(new LoadBranchChecks()));
-    }
-
-    private static Model read(Model model) {
-        return model.mapGitHub(gitHub -> gitHub.withReading(gitHub.reading().remove(new LoadBranchChecks())));
+        return GitHubReads.loadAnyway(next, new LoadBranchChecks());
     }
 }

@@ -20,19 +20,21 @@ public final class PullRequestsUpdate {
         return switch (msg) {
             case PullRequestsMsg.Refresh() -> load(Next.of(model));
             case PullRequestsMsg.Loaded(List<PullRequest> pullRequests) ->
-                Next.of(read(model)
-                        .mapGitHub(gitHub -> gitHub.withPullRequests(Option.of(byHeadBranch(pullRequests)))
-                                .withPullRequestsFailure(Option.none())));
+                GitHubReads.done(
+                        model.mapGitHub(gitHub -> gitHub.withPullRequests(Option.of(byHeadBranch(pullRequests)))
+                                .withPullRequestsFailure(Option.none())),
+                        new LoadPullRequests());
             // gh can be missing, logged out or offline, or the remote not on GitHub: then no pull requests show.
             // That is no reason to bother the user until they ask for a pull request. The account they chose for
             // the repository not being available is, once: gh is not run as another one.
             case PullRequestsMsg.LoadFailed(var failure) -> {
-                Model failed = read(model).mapGitHub(gitHub -> gitHub.withPullRequestsFailure(Option.of(failure)));
-                yield Next.of(
+                Model failed = model.mapGitHub(gitHub -> gitHub.withPullRequestsFailure(Option.of(failure)));
+                yield GitHubReads.done(
                         failure.accountUnavailable()
                                         && !model.gitHub().pullRequestsFailure().contains(failure)
                                 ? failed.fail(new AppError.PullRequestsUnavailable(failure))
-                                : failed);
+                                : failed,
+                        new LoadPullRequests());
             }
         };
     }
@@ -42,29 +44,15 @@ public final class PullRequestsUpdate {
      * running, which gets the latest state already.
      */
     public static Next load(Next next) {
-        return BranchChecksUpdate.load(
-                next.model().gitHub().reading().contains(new LoadPullRequests()) ? next : loadPullRequests(next));
+        return BranchChecksUpdate.load(GitHubReads.load(next, new LoadPullRequests()));
     }
 
     /**
-     * {@code next}, also reading the pull requests and the checks of the branches again, even when a read is
-     * still running: one that may have
-     * missed a change just made.
+     * {@code next}, also reading the pull requests and the checks of the branches again, as something changed on
+     * GitHub: when a read is still running, which may have missed that, once it is done.
      */
     public static Next loadAnyway(Next next) {
-        return BranchChecksUpdate.loadAnyway(loadPullRequests(next));
-    }
-
-    private static Next loadPullRequests(Next next) {
-        return new Next(reading(next.model()), next.cmds().append(new LoadPullRequests()));
-    }
-
-    private static Model reading(Model model) {
-        return model.mapGitHub(gitHub -> gitHub.withReading(gitHub.reading().append(new LoadPullRequests())));
-    }
-
-    private static Model read(Model model) {
-        return model.mapGitHub(gitHub -> gitHub.withReading(gitHub.reading().remove(new LoadPullRequests())));
+        return BranchChecksUpdate.loadAnyway(GitHubReads.loadAnyway(next, new LoadPullRequests()));
     }
 
     /**

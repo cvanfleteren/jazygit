@@ -17,8 +17,14 @@ remote, or behind the previews of the pull requests the user moved past.
 - The background commands run on a pool of 4 daemon threads, `git-background-N`, in place of `git-fetch`. That is
   enough for a fetch, the pull requests and a preview at once, and few enough that a burst does not start dozens
   of git or gh processes, nor eat into GitHub's rate limit. It is not a setting.
-- What must not overlap is kept from it by the model already: one fetch at a time, asking for each remote after
-  the last (`Jobs.fetching`), and a load not started again while it runs (`reading`, `refreshing`).
+- What must not overlap is kept from it by the model: one fetch at a time, asking for each remote after the last
+  (`Jobs.fetching`), and a load not started again while it runs (`reading`, `refreshing`).
+- The pull requests and the checks of the branches were read again while a read ran, after a change on GitHub
+  (a push, a pull request created, merged or closed), as the running read may have missed it. On one thread the
+  later read finished last; on the pool the earlier one could, and replace what the later one read until the
+  next refresh. Such a read now waits: it is kept in `GitHubState.again`, and starts once the running one is
+  done (`GitHubReads`), as a fetch asked for during a fetch does. However often it is asked for meanwhile, it
+  runs once.
 - Switching to another repository stops the pool (`shutdownNow`), as it stopped `git-fetch`.
 - `git-io` stays one thread. Writes take the index lock, and the model relies on its reads arriving in the order
   they were asked for. Reading the repository in parallel would need results to be ordered, and is left for when

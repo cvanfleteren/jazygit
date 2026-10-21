@@ -1,7 +1,8 @@
 package net.vanfleteren.jazygit.state;
 
-import io.vavr.collection.List;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.Map;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
@@ -18,19 +19,21 @@ import net.vanfleteren.jazygit.git.model.Upstream;
  * @param pullRequestsFailure why the pull requests could not be read the last time, if they could not
  * @param branchChecks        how the CI checks are doing on the branches on GitHub; none until they were read once,
  *                            and the ones read last when reading them again failed
- * @param reading             the reads from GitHub that are running, once for each: one can be started again while
- *                            it runs, not to miss a change just made; the line at the bottom says when the pull
+ * @param reading             the reads from GitHub that are running; the line at the bottom says when the pull
  *                            requests are read
+ * @param again               the running reads to start again once they are done, as they may have missed a change
+ *                            just made; see {@link GitHubReads}
  */
 @With
 public record GitHubState(
         Option<Map<Branch.Name, PullRequest>> pullRequests,
         Option<Failure> pullRequestsFailure,
         Option<GitHubChecks> branchChecks,
-        List<Cmd> reading) {
+        Set<Cmd> reading,
+        Set<Cmd> again) {
 
     public static final GitHubState NOT_READ =
-            new GitHubState(Option.none(), Option.none(), Option.none(), List.empty());
+            new GitHubState(Option.none(), Option.none(), Option.none(), HashSet.empty(), HashSet.empty());
 
     /**
      * The open pull request from {@code branch}: the one from the branch it follows on the remote, else from

@@ -37,7 +37,8 @@ class FetchLineTest {
 
     @Test
     void showsThePullRequestsBeingReadWhenNoRemoteIsBeingFetchedFrom() throws Exception {
-        Model reading = TestModels.loaded().mapGitHub(gitHub -> gitHub.withReading(List.of(new LoadPullRequests())));
+        Model reading = TestModels.loaded()
+                .mapGitHub(gitHub -> gitHub.withReading(io.vavr.collection.HashSet.of(new LoadPullRequests())));
 
         assertEquals("Reading pull requests from GitHub", rendered(reading));
         assertEquals(

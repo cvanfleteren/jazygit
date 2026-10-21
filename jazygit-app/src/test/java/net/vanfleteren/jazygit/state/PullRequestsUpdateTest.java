@@ -5,6 +5,7 @@ import static net.vanfleteren.jazygit.state.TestModels.refused;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.GhError;
@@ -95,23 +96,23 @@ class PullRequestsUpdateTest {
     void aReadOfThePullRequestsIsKeptWhileItRunsAndNotStartedTwice() {
         Next reading = Update.update(loaded(), new PullRequestsMsg.Refresh());
         assertEquals(
-                List.of(new LoadPullRequests(), new LoadBranchChecks()),
+                HashSet.of(new LoadPullRequests(), new LoadBranchChecks()),
                 reading.model().gitHub().reading());
 
         Next again = Update.update(reading.model(), new PullRequestsMsg.Refresh());
         assertEquals(List.empty(), again.cmds());
         assertEquals(
-                List.of(new LoadPullRequests(), new LoadBranchChecks()),
+                HashSet.of(new LoadPullRequests(), new LoadBranchChecks()),
                 again.model().gitHub().reading());
 
         assertEquals(
-                List.of(new LoadBranchChecks()),
+                HashSet.of(new LoadBranchChecks()),
                 Update.update(reading.model(), new PullRequestsMsg.Loaded(List.empty()))
                         .model()
                         .gitHub()
                         .reading());
         assertEquals(
-                List.of(new LoadBranchChecks()),
+                HashSet.of(new LoadBranchChecks()),
                 Update.update(reading.model(), new PullRequestsMsg.LoadFailed(refused("offline")))
                         .model()
                         .gitHub()
@@ -129,20 +130,53 @@ class PullRequestsUpdateTest {
     }
 
     @Test
-    void aReadIsStartedAnywayWhenAChangeMayHaveBeenMissed() {
+    void aReadAskedForWhileOneRunsAsAChangeMayHaveBeenMissedStartsOnceThatOneIsDone() {
         Next reading = Update.update(loaded(), new PullRequestsMsg.Refresh());
 
-        Next again = PullRequestsUpdate.loadAnyway(Next.of(reading.model()));
+        // Asked for twice while the first runs, as after a push and then the creation of a pull request.
+        Next asked = PullRequestsUpdate.loadAnyway(PullRequestsUpdate.loadAnyway(Next.of(reading.model())));
 
-        assertEquals(List.of(new LoadPullRequests(), new LoadBranchChecks()), again.cmds());
+        assertEquals(List.empty(), asked.cmds());
         assertEquals(
-                List.of(new LoadPullRequests(), new LoadBranchChecks(), new LoadPullRequests(), new LoadBranchChecks()),
-                again.model().gitHub().reading());
+                HashSet.of(new LoadPullRequests(), new LoadBranchChecks()),
+                asked.model().gitHub().again());
 
-        Model oneRead = Update.update(again.model(), new PullRequestsMsg.Loaded(List.empty()))
+        Next done = Update.update(asked.model(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)));
+
+        assertEquals(List.of(new LoadPullRequests()), done.cmds());
+        assertEquals(
+                HashSet.of(new LoadPullRequests(), new LoadBranchChecks()),
+                done.model().gitHub().reading());
+        assertEquals(HashSet.of(new LoadBranchChecks()), done.model().gitHub().again());
+        // What the first read read shows until the one started after the change is done.
+        assertEquals(
+                Option.of(FEATURE_PR),
+                done.model().gitHub().pullRequests().flatMap(open -> open.get(new Branch.Name("feature"))));
+
+        Next readAgain = Update.update(done.model(), new PullRequestsMsg.Loaded(List.empty()));
+
+        assertEquals(List.empty(), readAgain.cmds());
+        assertEquals(
+                Option.of(io.vavr.collection.HashMap.empty()),
+                readAgain.model().gitHub().pullRequests());
+    }
+
+    @Test
+    void aReadThatFailsStillStartsTheOneAskedForMeanwhile() {
+        Model asked = PullRequestsUpdate.loadAnyway(Update.update(loaded(), new PullRequestsMsg.Refresh()))
                 .model();
-        assertEquals(
-                List.of(new LoadBranchChecks(), new LoadPullRequests(), new LoadBranchChecks()),
-                oneRead.gitHub().reading());
+
+        Next failed = Update.update(asked, new PullRequestsMsg.LoadFailed(refused("offline")));
+
+        assertEquals(List.of(new LoadPullRequests()), failed.cmds());
+        assertEquals(HashSet.empty(), failed.model().gitHub().again().filter(LoadPullRequests.class::isInstance));
+    }
+
+    @Test
+    void aReadAskedForAnywayWhileNoneRunsStartsRightAway() {
+        Next asked = PullRequestsUpdate.loadAnyway(Next.of(loaded()));
+
+        assertEquals(List.of(new LoadPullRequests(), new LoadBranchChecks()), asked.cmds());
+        assertEquals(HashSet.empty(), asked.model().gitHub().again());
     }
 }
