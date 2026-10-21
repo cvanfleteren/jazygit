@@ -373,15 +373,14 @@ class WorktreeUpdateTest {
             }
 
             @Override
-            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(
-                    Branch.Name name, RemoteBranch remote, DeleteScope scope) {
-                ran.add("delete " + name.value() + " " + scope);
+            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(Branch.Name name) {
+                ran.add("delete " + name.value());
                 return Either.right(List.empty());
             }
         };
 
         new RemoveWorktreeCmd("/repos/app-taken", true, Option.of(TAKEN)).perform(git);
-        assertEquals(java.util.List.of("remove /repos/app-taken true", "delete taken LOCAL"), ran);
+        assertEquals(java.util.List.of("remove /repos/app-taken true", "delete taken"), ran);
 
         ran.clear();
         RemoveWorktreeCmd changed = new RemoveWorktreeCmd("/repos/app-changed", false, Option.of(TAKEN));

@@ -9,8 +9,6 @@ import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.git.model.DeleteScope;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Msg;
@@ -75,9 +73,8 @@ public record RemoveWorktreeCmd(String location, boolean force, Option<Branch.Na
     private Either<GitFailure<GitError>, List<ExecutedCommand>> removing(GitInfoProvider git) {
         return GitFailure.sequence(
                 () -> git.removeWorktree(WorktreeCmd.path(location), force),
-                // Only deleted locally, so the remote branch is not used.
-                () -> deleting.map(branch -> GitFailure.<GitError, List<ExecutedCommand>>widen(git.deleteBranch(
-                                branch, new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, branch), DeleteScope.LOCAL)))
+                () -> deleting.map(branch ->
+                                GitFailure.<GitError, List<ExecutedCommand>>widen(git.deleteLocalBranch(branch)))
                         .getOrElse(GitFailure::nothing));
     }
 }
