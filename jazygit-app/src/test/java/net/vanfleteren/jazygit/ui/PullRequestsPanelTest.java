@@ -37,14 +37,14 @@ class PullRequestsPanelTest {
     @Test
     void aRowShowsTheAgeTheNumberHowTheChecksAndReviewDoTheTitleAndTheAuthor() {
         assertEquals(
-                "  2d #12 ✗ 👍 Fix the login alice",
+                "  2d #12 ❌ 👍 Fix the login alice",
                 PullRequestsPanel.row(pr(false), Duration.ofDays(2), false).text());
     }
 
     @Test
     void aListOfAnyRepositoryNamesTheRepositoryOfEach() {
         assertEquals(
-                "  2d repo#12 ✗ 👍 Fix the login alice",
+                "  2d repo#12 ❌ 👍 Fix the login alice",
                 PullRequestsPanel.row(pr(false), Duration.ofDays(2), true).text());
     }
 

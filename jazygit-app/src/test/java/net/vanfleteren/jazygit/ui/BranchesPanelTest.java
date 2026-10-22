@@ -102,19 +102,19 @@ class BranchesPanelTest {
         assertEquals(
                 List.of(
                         LoadableList.Seg.styled(" #42", Theme.Classes.PULL_REQUEST),
-                        LoadableList.Seg.styled(" ✓", Theme.Classes.CHECKS_PASSED),
+                        LoadableList.Seg.styled(" ✅", Theme.Classes.CHECKS_PASSED),
                         LoadableList.Seg.styled(" 👍", Theme.Classes.REVIEW_APPROVED)),
                 BranchesPanel.pullRequest(Option.of(new PullRequest(42, "b", false, Checks.PASSING, Review.APPROVED))));
         assertEquals(
                 List.of(
                         LoadableList.Seg.styled(" #40", Theme.Classes.PULL_REQUEST),
-                        LoadableList.Seg.styled(" ✗", Theme.Classes.CHECKS_FAILED),
+                        LoadableList.Seg.styled(" ❌", Theme.Classes.CHECKS_FAILED),
                         LoadableList.Seg.styled(" ?", Theme.Classes.DIM)),
                 BranchesPanel.pullRequest(Option.of(new PullRequest(40, "b", false, Checks.FAILING, Review.REQUIRED))));
         assertEquals(
                 List.of(
                         LoadableList.Seg.styled(" #38", Theme.Classes.PULL_REQUEST),
-                        LoadableList.Seg.styled(" ●", Theme.Classes.CHECKS_RUNNING),
+                        LoadableList.Seg.styled(" ⏳", Theme.Classes.CHECKS_RUNNING),
                         LoadableList.Seg.styled(" 👎", Theme.Classes.REVIEW_CHANGES)),
                 BranchesPanel.pullRequest(
                         Option.of(new PullRequest(38, "b", false, Checks.PENDING, Review.CHANGES_REQUESTED))));
@@ -132,7 +132,7 @@ class BranchesPanelTest {
                 List.of(LoadableList.Seg.styled(" #42", Theme.Classes.PULL_REQUEST)),
                 BranchesPanel.gitHub(Option.of(pr), Option.of(Checks.FAILING)));
         assertEquals(
-                List.of(LoadableList.Seg.styled(" ✗", Theme.Classes.CHECKS_FAILED)),
+                List.of(LoadableList.Seg.styled(" ❌", Theme.Classes.CHECKS_FAILED)),
                 BranchesPanel.gitHub(Option.none(), Option.of(Checks.FAILING)));
         assertEquals(List.of(), BranchesPanel.gitHub(Option.none(), Option.of(Checks.NONE)));
         assertEquals(List.of(), BranchesPanel.gitHub(Option.none(), Option.none()));

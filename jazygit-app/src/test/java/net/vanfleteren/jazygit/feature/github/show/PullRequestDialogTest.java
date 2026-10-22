@@ -156,10 +156,10 @@ class PullRequestDialogTest {
         assertTrue(screen.contains(" Comments  5"), screen);
         assertTrue(screen.contains("  Threads  5 with 12 comments, 2 unresolved"), screen);
         assertTrue(screen.contains("   Labels  enhancement, ui"), screen);
-        assertTrue(screen.contains("   Checks  ✗ 1 failed · ● 1 running · ✓ 1 passed"), screen);
+        assertTrue(screen.contains("   Checks  ❌ 1 failed · ⏳ 1 running · ✅ 1 passed"), screen);
         // The failed check first, then the running one; the passed one is only counted.
-        assertTrue(screen.indexOf("✗ build") < screen.indexOf("● integration"), screen);
-        assertFalse(screen.contains("✓ lint"), screen);
+        assertTrue(screen.indexOf("❌ build") < screen.indexOf("⏳ integration"), screen);
+        assertFalse(screen.contains("✅ lint"), screen);
         assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
     }
 
