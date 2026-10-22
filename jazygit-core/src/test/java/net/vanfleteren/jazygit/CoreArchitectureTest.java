@@ -1,12 +1,19 @@
 package net.vanfleteren.jazygit;
 
+import static com.tngtech.archunit.base.DescribedPredicate.anyElementThat;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.assignableTo;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.*;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
+import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
+import java.util.Collection;
+import java.util.Map;
 
 /**
  * Rules about how the parts of jazygit-core depend on each other. That they know nothing of the application is
@@ -82,4 +89,18 @@ class CoreArchitectureTest {
             .resideInAnyPackage("..jazygit.git.model..", "..jazygit.gh.model..")
             .should()
             .beFinal();
+
+    private static final DescribedPredicate<JavaClass> JAVA_UTIL_COLLECTION =
+            assignableTo(Collection.class).or(assignableTo(Map.class));
+    /**
+     * Collections are Vavr's, which never change: no method takes or returns one of java.util's.
+     */
+    @ArchTest
+    static final ArchRule noJavaUtilCollections = noMethods()
+            .that()
+            .doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .should()
+            .haveRawReturnType(JAVA_UTIL_COLLECTION)
+            .orShould()
+            .haveRawParameterTypes(anyElementThat(JAVA_UTIL_COLLECTION));
 }
