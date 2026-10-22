@@ -423,13 +423,15 @@ public final class ContentPanel {
     }
 
     /**
-     * The pane {@code focusedId} is or belongs to; while a popup has the focus, the pane it was opened from.
+     * The pane {@code focusedId} is or belongs to; while a popup has the focus, the pane, or the pane of the area,
+     * it was opened from. Nothing has the focus before the first render.
      */
-    private static Mirrored mirrored(Model model, String focusedId) {
-        return Mirrored.of(focusedId)
-                .orElse(() -> isArea(focusedId)
-                        ? Option.none()
-                        : model.repoView().focusedPane().flatMap(Mirrored::of))
+    private Mirrored mirrored(Model model, String focusedId) {
+        Option<String> id = isArea(focusedId) || Mirrored.of(focusedId).isDefined()
+                ? Option.of(focusedId)
+                : model.repoView().focusedPane().orElse(Option.of(focusedId));
+        return id.map(known -> paneOfArea(model, known).getOrElse(known))
+                .flatMap(Mirrored::of)
                 .getOrElse(Mirrored.FILES);
     }
 
@@ -746,23 +748,23 @@ public final class ContentPanel {
     }
 
     /**
-     * The left pane whose highlight the content panel shows on the repository screen, with the ids that stand
-     * for it: the pane's own and those of its areas.
+     * The left pane whose highlight the content panel shows on the repository screen. Its areas are resolved to it
+     * by {@link #paneOfArea}.
      */
     private enum Mirrored {
-        FILES(FilesPanel.ID, "diff-staged", "diff-unstaged"),
-        BRANCHES(BranchesPanel.ID, DIVERGENCE_AREA_ID),
-        COMMITS(CommitsPanel.ID, COMMIT_AREA_ID),
-        STASH(StashPanel.ID, STASH_AREA_ID);
+        FILES(FilesPanel.ID),
+        BRANCHES(BranchesPanel.ID),
+        COMMITS(CommitsPanel.ID),
+        STASH(StashPanel.ID);
 
-        private final List<String> ids;
+        private final String id;
 
-        Mirrored(String... ids) {
-            this.ids = List.of(ids);
+        Mirrored(String id) {
+            this.id = id;
         }
 
         static Option<Mirrored> of(String id) {
-            return List.of(values()).find(mirrored -> mirrored.ids.contains(id));
+            return List.of(values()).find(mirrored -> mirrored.id.equals(id));
         }
     }
 }
