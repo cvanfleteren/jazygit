@@ -29,7 +29,7 @@ or, inside `nix develop` (or with direnv), just `python -m pytest acceptance`.
 
 ### Without Nix
 
-You need Python 3.10 or newer and Java 25. Install the dependencies in a virtualenv:
+You need Python 3.12 or newer and Java 25. Install the dependencies in a virtualenv:
 
 ```sh
 python3 -m venv .venv
@@ -70,6 +70,8 @@ Set up the repository with `repo(...)` (runs git) and `repo.write(...)`, start t
 
 - `app.press("space", "c", "enter", "ctrl+s", ...)` for keys, `app.type("text")` for text;
 - `app.wait_for("text")` to wait for something on screen, and fail showing the screen when it doesn't come;
-- `eventually(check, "description")` to wait for the repository to get where it should.
+- `app.eventually(check, "description")` to wait for the repository to get where it should.
+
+Every wait fails at once when the app has died, with its exit status and the last of its output.
 
 Assert on git state rather than on the screen where you can: it survives layout changes.

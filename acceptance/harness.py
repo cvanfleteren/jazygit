@@ -5,6 +5,7 @@ The tests only know the jar, the keys and git: nothing here imports or reads the
 """
 
 import os
+import re
 import subprocess
 import time
 from pathlib import Path
@@ -15,6 +16,9 @@ import pyte
 COLUMNS = 160
 LINES = 45
 TIMEOUT = 15.0
+# How much of the app's raw output to keep, for when it dies: a stack trace can leave no trace on the screen.
+OUTPUT_TAIL = 8192
+ESCAPE_SEQUENCE = re.compile(rb"\x1b(\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(\x07|\x1b\\)|[@-Z\\-_])")
 
 # What a terminal sends for the keys that are not plain characters.
 KEYS = {
@@ -76,25 +80,52 @@ class Git:
         file.write_text(content)
 
 
+class AppExited(AssertionError):
+    """The app ended while a test still expected it to run."""
+
+
 class App:
     """A running jazygit, with the screen it draws kept up to date by a terminal emulator."""
 
     def __init__(self, command: list, cwd: Path, env: dict):
         self.screen = pyte.Screen(COLUMNS, LINES)
         self.stream = pyte.ByteStream(self.screen)
+        self.output = b""
+        self.exited = False
         self.process = pexpect.spawn(
             command[0], command[1:], cwd=str(cwd), env=env, dimensions=(LINES, COLUMNS)
         )
 
     def pump(self):
-        """Feeds whatever the app wrote since the last call to the emulator."""
-        while True:
+        """Feeds whatever the app wrote since the last call to the emulator, and notes when it ended."""
+        while not self.exited:
             try:
-                self.stream.feed(self.process.read_nonblocking(65536, timeout=0))
+                data = self.process.read_nonblocking(65536, timeout=0)
             except pexpect.TIMEOUT:
                 return
             except pexpect.EOF:
+                self.process.close()
+                self.exited = True
                 return
+            self.stream.feed(data)
+            self.output = (self.output + data)[-OUTPUT_TAIL:]
+
+    def check_running(self):
+        """Fails with the exit status and the last of the app's output when it is no longer running."""
+        self.pump()
+        if self.exited:
+            status = (f"signal {self.process.signalstatus}" if self.process.signalstatus is not None
+                      else f"status {self.process.exitstatus}")
+            output = ESCAPE_SEQUENCE.sub(b"", self.output).decode(errors="replace").replace("\r", "").strip()
+            raise AppExited(f"jazygit exited with {status}\n--- last output ---\n{output}")
+
+    def eventually(self, check, description, timeout=TIMEOUT):
+        """Like the module's eventually, but fails at once when the app has died."""
+        def checked():
+            self.check_running()
+            return check()
+
+        return eventually(checked, description, timeout)
 
     def text(self) -> str:
         self.pump()
@@ -112,13 +143,17 @@ class App:
     def wait_for(self, text: str, timeout=TIMEOUT):
         """Waits until text shows anywhere on the screen."""
         try:
-            eventually(lambda: text in self.text(), f"{text!r} on screen", timeout)
+            self.eventually(lambda: text in self.text(), f"{text!r} on screen", timeout)
+        except AppExited:
+            raise
         except AssertionError as e:
             raise AssertionError(f"{e}\n--- screen ---\n{self.text()}") from None
 
     def wait_gone(self, text: str, timeout=TIMEOUT):
         try:
-            eventually(lambda: text not in self.text(), f"{text!r} to leave the screen", timeout)
+            self.eventually(lambda: text not in self.text(), f"{text!r} to leave the screen", timeout)
+        except AppExited:
+            raise
         except AssertionError as e:
             raise AssertionError(f"{e}\n--- screen ---\n{self.text()}") from None
 

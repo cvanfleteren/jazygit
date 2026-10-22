@@ -1,5 +1,3 @@
-from harness import eventually
-
 
 def test_commit_a_single_file_in_an_empty_repository(repo, jazygit):
     repo.write("foo.txt", "foo\n")
@@ -8,14 +6,14 @@ def test_commit_a_single_file_in_an_empty_repository(repo, jazygit):
     app.wait_for("foo.txt")
 
     app.press("space")
-    eventually(lambda: repo("diff", "--cached", "--name-only") == "foo.txt", "foo.txt to be staged")
+    app.eventually(lambda: repo("diff", "--cached", "--name-only") == "foo.txt", "foo.txt to be staged")
 
     app.press("c")
     app.wait_for("Commit summary")
     app.type("Add foo")
     app.press("enter")
 
-    eventually(repo.has_head, "a commit")
+    app.eventually(repo.has_head, "a commit")
     assert repo("log", "--format=%s") == "Add foo"
     assert repo("ls-tree", "-r", "--name-only", "HEAD") == "foo.txt"
     assert repo("show", "HEAD:foo.txt") == "foo"

@@ -903,4 +903,6 @@ flowchart TD
   (`CliStatus.parse`, `CliBranches.parse`, `CliLog.parse`) are tested on fixed git output in
   `CliStatusTest` and `CliParseTest`.
 - **UI tests** use TamboUI's `ToolkitTestRunner` and its pilot.
+- **Acceptance tests** (`acceptance/`, in Python) run the built jar in a pseudo terminal, press keys and check the
+  repository with git. They know nothing of the code; see [acceptance/README.md](acceptance/README.md).
 - **`ArchitectureTest`** checks the dependencies drawn under [Packages](#packages), and that updates are pure.
