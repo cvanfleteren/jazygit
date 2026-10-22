@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.ui.widgets;
 
 import dev.tamboui.layout.Constraint;
 import dev.tamboui.layout.Rect;
+import dev.tamboui.style.Style;
 import dev.tamboui.terminal.Frame;
 import dev.tamboui.toolkit.element.DefaultRenderContext;
 import dev.tamboui.toolkit.element.Element;
@@ -13,8 +14,9 @@ import net.vanfleteren.jazygit.ui.Theme.Highlights;
 
 /**
  * {@code list} with its selected row highlighted as in the left panes: as the theme's selection while the list has
- * the focus, and as its inactive selection while another field of the popup has it. The focus is only known as the
- * list is rendered, so it is told then.
+ * the focus, and as its inactive selection while another field of the popup has it. Unlike in a left pane, the row
+ * picked in a popup must always show, so a theme without an inactive selection highlights it as in use; the border of
+ * the field tells where the focus is. The focus is only known as the list is rendered, so it is told then.
  */
 public record FocusHighlighted(ListElement<?> list) implements Element {
 
@@ -23,7 +25,9 @@ public record FocusHighlighted(ListElement<?> list) implements Element {
         Highlights highlights = context instanceof DefaultRenderContext rendering
                 ? rendering.styleEngine().map(Theme::highlights).orElse(Highlights.DEFAULT)
                 : Highlights.DEFAULT;
-        list.highlightStyle(highlights.of(context.isFocused(list.id())));
+        Style inactive = highlights.of(false);
+        list.highlightStyle(
+                context.isFocused(list.id()) || inactive.equals(Style.EMPTY) ? highlights.of(true) : inactive);
         list.render(frame, area, context);
     }
 

@@ -14,7 +14,7 @@ import dev.tamboui.toolkit.focus.FocusManager;
 import org.junit.jupiter.api.Test;
 
 /**
- * A list in a popup, whose highlight shows as in use only while it has the focus.
+ * A list in a popup, whose picked row shows whether or not it has the focus.
  */
 class FocusHighlightedTest {
 
@@ -47,7 +47,7 @@ class FocusHighlightedTest {
     }
 
     @Test
-    void withTheFocusElsewhereTheSelectedRowIsHighlightedAsNotInUse() {
-        assertFalse(reversed(rendered("title")));
+    void withTheFocusElsewhereAndNoInactiveSelectionTheSelectedRowIsStillHighlighted() {
+        assertTrue(reversed(rendered("title")));
     }
 }
