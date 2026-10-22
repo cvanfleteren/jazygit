@@ -221,7 +221,7 @@ public class JazygitApp extends ToolkitApp {
         LoggerFactory.getLogger(JazygitApp.class).error("A command threw", bug);
         StringWriter trace = new StringWriter();
         bug.printStackTrace(new PrintWriter(trace));
-        Try.run(() -> Files.writeString(
+        Try<Void> _ = Try.run(() -> Files.writeString(
                 BUG_LOG,
                 Instant.now() + " " + trace + System.lineSeparator(),
                 StandardOpenOption.CREATE,

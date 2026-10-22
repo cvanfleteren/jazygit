@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.repos;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import io.vavr.control.Try;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.HeadFile;
@@ -31,7 +32,7 @@ public sealed interface RecentReposCmd extends Cmd {
             List<Path> recent = env.recent().load();
             List<Path> gone = recent.filter(directory -> !Files.isDirectory(directory));
             if (gone.nonEmpty()) {
-                env.recent().forget(gone);
+                Try<List<Path>> _ = env.recent().forget(gone);
             }
             return new RecentReposMsg.Listed(recent.removeAll(gone)
                     .remove(env.git().workTree())
@@ -71,11 +72,11 @@ public sealed interface RecentReposCmd extends Cmd {
                     .switchTo(chosen, landing)
                     .fold(
                             error -> {
-                                env.recent().forget(List.of(chosen));
+                                Try<List<Path>> _ = env.recent().forget(List.of(chosen));
                                 return failedWith(error);
                             },
                             workTree -> {
-                                env.recent().opened(workTree);
+                                Try<List<Path>> _ = env.recent().opened(workTree);
                                 return new RecentReposMsg.Switched(workTree.toString());
                             });
         }

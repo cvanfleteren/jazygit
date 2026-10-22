@@ -32,6 +32,7 @@
         <spotless.version>3.10.4</spotless.version>
         <palantir-java-format.version>2.102.0</palantir-java-format.version>
         <checkstyle.version>14.3.0</checkstyle.version>
+        <errorprone.version>2.50.0</errorprone.version>
         <native-maven-plugin.version>0.11.1</native-maven-plugin.version>
     </properties>
 
@@ -213,8 +214,28 @@
                                 <artifactId>lombok</artifactId>
                                 <version>${lombok.version}</version>
                             </path>
+                            <path>
+                                <groupId>com.google.errorprone</groupId>
+                                <artifactId>error_prone_core</artifactId>
+                                <version>${errorprone.version}</version>
+                            </path>
                         </annotationProcessorPaths>
                     </configuration>
+                    <executions>
+                        <!-- ErrorProne checks the main sources only; test-compile leaves -Xplugin out. -->
+                        <execution>
+                            <id>default-compile</id>
+                            <configuration>
+                                <compilerArgs combine.children="append">
+                                    <arg>-XDcompilePolicy=simple</arg>
+                                    <arg>--should-stop=ifError=FLOW</arg>
+                                    <!-- Every call into our code or Vavr must use its result, without annotating the code;
+                                         Vavr's side effects that return themselves to chain on are the exception. -->
+                                    <arg>-Xplugin:ErrorProne -XepOpt:CheckReturnValue:Packages=net.vanfleteren.jazygit,io.vavr -XepOpt:CheckReturnValue:ApiExclusionList=${maven.multiModuleProjectDirectory}/checkreturnvalue-exclusions.txt</arg>
+                                </compilerArgs>
+                            </configuration>
+                        </execution>
+                    </executions>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

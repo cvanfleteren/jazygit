@@ -49,7 +49,9 @@ final class TomlFile {
                     text.toString(),
                     StandardCharsets.UTF_8);
             return Try.of(() -> move(temp, file))
-                    .onFailure(failed -> Try.run(() -> Files.deleteIfExists(temp)))
+                    .onFailure(failed -> {
+                        Try<Void> _ = Try.run(() -> Files.deleteIfExists(temp));
+                    })
                     .get();
         });
     }
