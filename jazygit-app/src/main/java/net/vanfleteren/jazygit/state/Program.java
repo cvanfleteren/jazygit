@@ -117,7 +117,7 @@ public final class Program {
 
     public void dispatch(Msg msg) {
         // Only the type: a message can hold a whole repository's commits. The clock's ticks come too often to tell.
-        if (LOG.isDebugEnabled() && !(msg instanceof Msg.Tick)) {
+        if (LOG.isDebugEnabled() && !(msg instanceof Msg.Tick || msg instanceof Msg.Clock)) {
             LOG.debug(msg.getClass()
                     .getName()
                     .substring(msg.getClass().getPackageName().length() + 1));

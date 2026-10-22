@@ -87,6 +87,10 @@ public class JazygitApp extends ToolkitApp {
     private static final Path BUG_LOG = Path.of(System.getProperty("java.io.tmpdir"), "jazygit-bugs.log");
     // In milliseconds; the acceptance tests tick faster, as each of their steps waits for the app to see a change.
     private static final Duration REFRESH_INTERVAL = Duration.ofMillis(Long.getLong("jazygit.refreshInterval", 750));
+    // Divides a second, so each age in whole seconds shows for as long; with a refresh of 750ms, one in four showed
+    // twice
+    // as long as the others.
+    private static final Duration CLOCK_INTERVAL = Duration.ofMillis(500);
     private static final Duration FETCH_INTERVAL = Duration.ofMinutes(1);
     // How many background commands run at once: a fetch, the pull requests and a preview, but not so many git or
     // gh processes that a burst of them slows the machine down or eats into GitHub's rate limit.
@@ -352,7 +356,8 @@ public class JazygitApp extends ToolkitApp {
         runner.eventRouter().addGlobalHandler(this::handleGlobalKey);
         runner.eventRouter().addGlobalHandler(this::handleMouse);
         startRuntime(env, settings, themeOverride, Landing.START);
-        every(REFRESH_INTERVAL, () -> dispatch.accept(new Msg.Tick(Instant.now())));
+        every(CLOCK_INTERVAL, () -> dispatch.accept(new Msg.Clock(Instant.now())));
+        every(REFRESH_INTERVAL, () -> dispatch.accept(new Msg.Tick()));
         every(FETCH_INTERVAL, () -> dispatch.accept(new FetchMsg.Tick()));
         every(FETCH_INTERVAL, () -> dispatch.accept(new PrOverviewMsg.Tick()));
         every(FETCH_INTERVAL, () -> dispatch.accept(new PullRequestMsg.Tick()));
@@ -436,9 +441,8 @@ public class JazygitApp extends ToolkitApp {
                 this::requestRedraw);
         runtime = Option.of(new Runtime(io, background, program));
         runner.focusManager().setFocus(PopupSlot.focusedPane(program.model()));
-        // The model tells the time from the ticks; the first one is a while off, and the ages it shows are told from
-        // the start. The loads it would start are running already, so it only checks the files of the git directory.
-        dispatch.accept(new Msg.Tick(Instant.now()));
+        // The first tick of the clock is a while off, and the ages the model shows are told from the start.
+        dispatch.accept(new Msg.Clock(Instant.now()));
         // The first tick of the fetch is a while off, so it fetches now; the pull requests show from the start, not
         // only once the fetch is done.
         dispatch.accept(new FetchMsg.Tick());

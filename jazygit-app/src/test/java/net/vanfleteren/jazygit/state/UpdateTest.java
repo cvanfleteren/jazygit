@@ -81,12 +81,25 @@ class UpdateTest {
         // Started anew, the repository is read at once; a tick then only checks the files.
         assertEquals(
                 List.of(new Cmd.CheckMetadata()),
-                Update.update(model, new Tick(Instant.EPOCH)).cmds());
+                Update.update(model, new Tick()).cmds());
 
         Model statusDone = Update.update(model, new LoadMsg.StatusLoaded(CLEAN)).model();
         assertEquals(
                 List.of(new LoadStatus(), new Cmd.CheckMetadata()),
-                Update.update(statusDone, new Tick(Instant.EPOCH)).cmds());
+                Update.update(statusDone, new Tick()).cmds());
+    }
+
+    @Test
+    void theClockOnlyTellsTheTime() {
+        Model model = loaded();
+        Instant now = Instant.parse("2026-10-22T10:00:00Z");
+
+        Next next = Update.update(model, new Msg.Clock(now));
+
+        assertEquals(model.withNow(now), next.model());
+        assertEquals(List.empty(), next.cmds());
+        // A tick reads the repository again, but leaves the time to the clock.
+        assertEquals(now, Update.update(next.model(), new Tick()).model().now());
     }
 
     @Test
@@ -142,7 +155,7 @@ class UpdateTest {
         assertEquals(new Failed<>(refused("boom")), model.repo().commits());
         assertEquals(
                 List.of(new LoadStatus(), new Cmd.CheckMetadata(), new LoadCommits()),
-                Update.update(model, new Tick(Instant.EPOCH)).cmds());
+                Update.update(model, new Tick()).cmds());
 
         Model statusFailed = Update.update(
                         Update.init("repo").model(), new LoadMsg.Failed(new LoadStatus(), refused("no git")))
@@ -150,16 +163,16 @@ class UpdateTest {
         assertEquals(new Failed<>(refused("no git")), statusFailed.repo().status());
         assertEquals(
                 List.of(new LoadStatus(), new Cmd.CheckMetadata()),
-                Update.update(statusFailed, new Tick(Instant.EPOCH)).cmds());
+                Update.update(statusFailed, new Tick()).cmds());
     }
 
     @Test
     void aRetryThatIsStillRunningIsNotStartedAgain() {
         Model failed = Update.update(loaded(), new LoadMsg.Failed(new LoadCommits(), refused("boom")))
                 .model();
-        Model retrying = Update.update(failed, new Tick(Instant.EPOCH)).model();
+        Model retrying = Update.update(failed, new Tick()).model();
 
-        assertFalse(Update.update(retrying, new Tick(Instant.EPOCH)).cmds().contains(new LoadCommits()));
+        assertFalse(Update.update(retrying, new Tick()).cmds().contains(new LoadCommits()));
         Model retried =
                 Update.update(retrying, new LoadMsg.CommitsLoaded(COMMITS)).model();
         assertFalse(retried.jobs().refreshing().contains(new LoadCommits()));
