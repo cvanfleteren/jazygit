@@ -3,9 +3,11 @@ package net.vanfleteren.jazygit.git;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import io.vavr.control.Option;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.GitMetadata;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,8 +52,25 @@ class CliMetadataTest {
         }
     }
 
+    // Looked at a while after the changes, so that they tell; right after them they tell nothing.
     private static GitMetadata metadata(Path workTree) {
-        return CliGitInfoProvider.open(workTree).get().metadata().get();
+        return CliMetadata.read(
+                CliMetadata.locate(workTree).get(),
+                Instant.now().plus(CliMetadata.SETTLED).plusSeconds(1));
+    }
+
+    private static boolean reftableSupported(Path in) {
+        try {
+            return new ProcessExecutor("git", "init", "--quiet", "--ref-format=reftable", in.toString())
+                            .execute()
+                            .getExitValue()
+                    == 0;
+        } catch (IOException | java.util.concurrent.TimeoutException e) {
+            return false;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
     }
 
     private void commit(Path in, String file) throws Exception {
@@ -176,5 +195,86 @@ class CliMetadataTest {
         git(linked, "checkout", "other");
 
         assertNotEquals(before.branches(), metadata(main).branches());
+    }
+
+    @Test
+    void aStampWithAFileModifiedJustNowTellsNothing() throws Exception {
+        commit(main, "b.txt");
+
+        GitMetadata justNow = CliMetadata.read(CliMetadata.locate(main).get(), Instant.now());
+
+        assertEquals(Option.none(), justNow.branches());
+        assertEquals(Option.none(), justNow.worktrees());
+        assertTrue(metadata(main).branches().isDefined());
+    }
+
+    @Test
+    void aRemoteTrackingBranchThatMovesChangesTheBranches() throws Exception {
+        commit(main, "b.txt");
+        git(main, "update-ref", "refs/remotes/origin/main", "HEAD");
+        GitMetadata before = metadata(main);
+
+        git(main, "update-ref", "refs/remotes/origin/main", "HEAD~1");
+
+        assertNotEquals(before.branches(), metadata(main).branches());
+    }
+
+    @Test
+    void deletingABranchInADirectoryOfRefsChangesTheBranches() throws Exception {
+        git(main, "branch", "feature/deep/x");
+        GitMetadata before = metadata(main);
+
+        git(main, "branch", "-D", "feature/deep/x");
+
+        assertNotEquals(before.branches(), metadata(main).branches());
+    }
+
+    @Test
+    void clearingTheStashesChangesThem() throws Exception {
+        Files.writeString(main.resolve("a.txt"), "changed");
+        git(main, "stash", "push");
+        GitMetadata before = metadata(main);
+
+        git(main, "stash", "clear");
+
+        assertNotEquals(before.stashes(), metadata(main).stashes());
+    }
+
+    @Test
+    void unlockingAndRemovingAWorktreeChangesTheWorktrees() throws Exception {
+        Path linked = dir.resolve("linked");
+        git(main, "worktree", "add", "-b", "feature", linked.toString());
+        git(main, "worktree", "lock", linked.toString());
+        GitMetadata locked = metadata(main);
+
+        git(main, "worktree", "unlock", linked.toString());
+        GitMetadata unlocked = metadata(main);
+        git(main, "worktree", "remove", linked.toString());
+
+        assertNotEquals(locked.worktrees(), unlocked.worktrees());
+        assertNotEquals(unlocked.worktrees(), metadata(main).worktrees());
+    }
+
+    @Test
+    void aReftableRepositoryTellsItsCommitsAndStashes() throws Exception {
+        Path reftable = dir.resolve("reftable");
+        assumeTrue(reftableSupported(reftable));
+        commit(reftable, "a.txt");
+        GitMetadata before = metadata(reftable);
+
+        commit(reftable, "b.txt");
+        GitMetadata committed = metadata(reftable);
+        Files.writeString(reftable.resolve("a.txt"), "changed");
+        git(reftable, "stash", "push");
+
+        assertNotEquals(before.branches(), committed.branches());
+        assertNotEquals(committed.stashes(), metadata(reftable).stashes());
+    }
+
+    @Test
+    void aDirectoryWithoutAGitDirectoryHasNothingToLookAt() throws Exception {
+        Path plain = Files.createDirectories(dir.resolve("plain"));
+
+        assertEquals(Option.none(), CliMetadata.locate(plain));
     }
 }

@@ -23,6 +23,12 @@ other three change when a ref, a HEAD, the config or a worktree changes, and git
     each one's `gitdir` and `locked`.
 - Of the loose refs, only the directories are stamped. Git writes a ref to a lock file and renames it into place,
   which changes the directory it is in. A repository with many loose refs has far fewer directories.
+- A file system keeps modification times only so precisely: a few milliseconds on ext4, a second or two on FAT and
+  many network mounts. Two ref updates in one directory within that time, with a check in between, would leave it
+  looking the same, and the second would never be read. So a stamp with a file modified less than 2 seconds before
+  it was taken (`CliMetadata.SETTLED`) tells nothing, as git does not trust such a file in its index either: its
+  load runs, and keeps no stamp. An idle repository's files are older than that, so the saving stays; right after
+  a change, a load runs on every tick for those 2 seconds.
 - `Jobs.readAt` keeps, for each guarded load, the stamp it was last started with. Only a load whose stamp differs
   starts. It is left out of `Model.drawn()`, like the other jobs.
 - A load that still runs when its stamp changes is not started, and keeps its old stamp. It may have read before

@@ -153,9 +153,9 @@ public interface Cmd {
         public Msg run(Env env) {
             Option<GitMetadata> metadata = env.git().metadata();
             return new LoadMsg.MetadataChecked(List.of(
-                    Tuple.of((Load) new LoadBranches(), metadata.map(GitMetadata::branches)),
-                    Tuple.of(new LoadStashes(), metadata.map(GitMetadata::stashes)),
-                    Tuple.of(new LoadWorktrees(), metadata.map(GitMetadata::worktrees))));
+                    Tuple.of((Load) new LoadBranches(), metadata.flatMap(GitMetadata::branches)),
+                    Tuple.of(new LoadStashes(), metadata.flatMap(GitMetadata::stashes)),
+                    Tuple.of(new LoadWorktrees(), metadata.flatMap(GitMetadata::worktrees))));
         }
     }
 

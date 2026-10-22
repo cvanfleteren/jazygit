@@ -9,6 +9,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.stream.Stream;
 import net.vanfleteren.jazygit.git.model.GitMetadata;
@@ -22,8 +24,18 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp.State;
  *
  * <p>Git changes a ref by writing it anew and renaming it into place, so the directory it is in changes too: of the
  * loose refs, only the directories are looked at, which are much fewer.
+ *
+ * <p>A file system keeps when a file was modified only so precisely: some to the second or two. Two changes within
+ * that time can leave a directory looking the same, so a stamp with a file modified that recently tells nothing, as
+ * git's own index does not trust such a file either.
  */
 final class CliMetadata {
+
+    /**
+     * How long ago a file must have been modified for its stamp to tell a later change apart: the coarsest time a
+     * file system keeps, as FAT or many network mounts do.
+     */
+    static final Duration SETTLED = Duration.ofSeconds(2);
 
     private CliMetadata() {}
 
@@ -36,7 +48,10 @@ final class CliMetadata {
                         .map(identity -> new Locations(gitDir.toAbsolutePath(), identity.commonDir())));
     }
 
-    static GitMetadata read(Locations at) {
+    /**
+     * The stamps of the files at {@code at}, looked at {@code now}.
+     */
+    static GitMetadata read(Locations at, Instant now) {
         Path common = at.commonDir();
         List<Path> worktrees = children(common.resolve("worktrees"));
         // The upstreams are in the config, and the checked out branches in the HEAD of each worktree.
@@ -62,7 +77,19 @@ final class CliMetadata {
                                 .appendAll(worktrees.flatMap(
                                         worktree -> List.of(worktree.resolve("gitdir"), worktree.resolve("locked")))))
                         .entries()));
-        return new GitMetadata(branches, stashes, worktreeList);
+        return new GitMetadata(settled(branches, now), settled(stashes, now), settled(worktreeList, now));
+    }
+
+    /**
+     * {@code stamp}, unless one of its files was modified too shortly before {@code now} to tell a later change apart.
+     */
+    private static Option<MetadataStamp> settled(MetadataStamp stamp, Instant now) {
+        Instant recent = now.minus(SETTLED);
+        return Option.when(
+                stamp.entries()
+                        .forAll(entry -> entry.state()
+                                .forAll(state -> state.modified().toInstant().isBefore(recent))),
+                stamp);
     }
 
     private static MetadataStamp stamp(List<Path> paths) {

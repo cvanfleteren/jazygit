@@ -9,6 +9,7 @@ import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.git.GitError.*;
 import net.vanfleteren.jazygit.git.model.*;
@@ -98,7 +99,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Option<GitMetadata> metadata() {
-        return metadataAt.map(CliMetadata::read);
+        return metadataAt.map(at -> CliMetadata.read(at, Instant.now()));
     }
 
     @Override
