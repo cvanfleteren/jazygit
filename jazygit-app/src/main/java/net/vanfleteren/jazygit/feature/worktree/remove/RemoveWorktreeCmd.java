@@ -17,9 +17,11 @@ import net.vanfleteren.jazygit.state.Operation;
 /**
  * Removes the worktree at {@code location}; with {@code force}, also when it has changes. When it has changes and
  * this is not forced, the user is asked to force it instead of being told it failed. Once it is removed, the branch
- * it had checked out is deleted locally when it is {@code deleting}, which is busy meanwhile.
+ * it had checked out is deleted locally when it is {@code deleting}, which is busy meanwhile. When
+ * {@code unlocking}, it is unlocked first, as git does not remove a locked worktree.
  */
-public record RemoveWorktreeCmd(String location, boolean force, Option<Branch.Name> deleting) implements WorktreeCmd {
+public record RemoveWorktreeCmd(String location, boolean force, Option<Branch.Name> deleting, boolean unlocking)
+        implements WorktreeCmd {
 
     public static final Operation REMOVE_WORKTREE =
             Operation.of("log.title.removeWorktree", "error.removeWorktree.failed");
@@ -34,7 +36,15 @@ public record RemoveWorktreeCmd(String location, boolean force, Option<Branch.Na
     }
 
     /**
-     * The same removal, forced.
+     * Removes the worktree at {@code location}, which is not locked, deleting {@code deleting} with it if given.
+     */
+    public RemoveWorktreeCmd(String location, boolean force, Option<Branch.Name> deleting) {
+        this(location, force, deleting, false);
+    }
+
+    /**
+     * The same removal, forced. It is only asked for once removing failed, so a worktree it unlocks is unlocked by
+     * then.
      */
     public RemoveWorktreeCmd forced() {
         return new RemoveWorktreeCmd(location, true, deleting);
@@ -72,6 +82,9 @@ public record RemoveWorktreeCmd(String location, boolean force, Option<Branch.Na
 
     private Either<GitFailure<GitError>, List<ExecutedCommand>> removing(GitInfoProvider git) {
         return GitFailure.sequence(
+                () -> unlocking
+                        ? GitFailure.widen(git.lockWorktree(WorktreeCmd.path(location), false))
+                        : GitFailure.nothing(),
                 () -> git.removeWorktree(WorktreeCmd.path(location), force),
                 () -> deleting.map(branch ->
                                 GitFailure.<GitError, List<ExecutedCommand>>widen(git.deleteLocalBranch(branch)))

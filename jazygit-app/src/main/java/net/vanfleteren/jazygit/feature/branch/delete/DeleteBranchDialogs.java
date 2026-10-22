@@ -20,7 +20,8 @@ public final class DeleteBranchDialogs {
     /**
      * Asks where to delete a branch. The options that act on the remote only apply when the branch has a
      * remote branch that can be deleted, the ones that act locally when no other worktree has it checked out. The
-     * one that removes that worktree first is only there when there is one that can be removed.
+     * one that removes that worktree first is only there when there is one that can be removed; when it is locked,
+     * unlocking it is asked next.
      */
     public static final ChoiceDialog.Spec<DeleteBranchPopup> DELETE_BRANCH = new ChoiceDialog.Spec<>(
             "delete-branch",
@@ -54,6 +55,27 @@ public final class DeleteBranchDialogs {
             DeleteBranchMsg.Cancelled::new);
 
     /**
+     * Asks whether to unlock the locked worktree that has the branch checked out, to remove it and delete the
+     * branch.
+     */
+    public static final ConfirmDialog.Spec<UnlockWorktreePopup> UNLOCK_WORKTREE = new ConfirmDialog.Spec<>(
+            "unlock-worktree",
+            UnlockWorktreePopup.class,
+            popup -> Messages.get("dialog.unlockWorktree.title", popup.name()),
+            popup -> popup.reason().isBlank()
+                    ? Messages.get(
+                            "dialog.unlockWorktree.message",
+                            popup.location(),
+                            popup.branch().value())
+                    : Messages.get(
+                            "dialog.unlockWorktree.messageBecause",
+                            popup.location(),
+                            popup.branch().value(),
+                            popup.reason()),
+            DeleteBranchMsg.UnlockConfirmed::new,
+            DeleteBranchMsg.UnlockCancelled::new);
+
+    /**
      * Asks to confirm deleting a remote branch on its remote.
      */
     public static final ConfirmDialog.Spec<DeleteRemoteBranchPopup> DELETE_REMOTE_BRANCH = new ConfirmDialog.Spec<>(
@@ -71,6 +93,7 @@ public final class DeleteBranchDialogs {
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
                 PopupSlot.returningTo(BranchesPanel.ID, new ChoiceDialog<>(DELETE_BRANCH, dispatch)),
+                PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(UNLOCK_WORKTREE, dispatch)),
                 PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(DELETE_REMOTE_BRANCH, dispatch)));
     }
 

@@ -30,6 +30,14 @@ public sealed interface DeleteBranchMsg extends Msg {
     record WithWorktreeChosen() implements DeleteBranchMsg {}
 
     /**
+     * The user agreed to unlock the locked worktree that has the branch checked out, so that it can be removed and
+     * the branch deleted locally.
+     */
+    record UnlockConfirmed() implements DeleteBranchMsg {}
+
+    record UnlockCancelled() implements DeleteBranchMsg {}
+
+    /**
      * The user asked to delete a remote branch; that is still to be confirmed.
      */
     record RemoteRequested(RemoteBranch branch) implements DeleteBranchMsg {}
