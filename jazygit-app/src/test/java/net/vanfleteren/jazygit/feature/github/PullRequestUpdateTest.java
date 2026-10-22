@@ -465,6 +465,77 @@ class PullRequestUpdateTest {
     }
 
     @Test
+    void theDetailsReadShowOnTheBranchToo() {
+        Model shown =
+                Update.update(withPr(), new PullRequestMsg.Requested(FEATURE)).model();
+        PullRequestDetails details = StubGitHub.empty().pullRequestDetails(42).get();
+        PullRequestDetails failing = new PullRequestDetails(
+                42,
+                details.title(),
+                details.author(),
+                details.state(),
+                true,
+                details.headBranch(),
+                details.baseBranch(),
+                details.createdAt(),
+                0,
+                0,
+                0,
+                details.mergeable(),
+                Review.CHANGES_REQUESTED,
+                0,
+                details.reviewThreads(),
+                List.empty(),
+                List.empty(),
+                List.of(
+                        new PullRequestDetails.Check("build", Checks.PASSING),
+                        new PullRequestDetails.Check("test", Checks.FAILING)));
+
+        Model loaded = Update.update(shown, new PullRequestMsg.DetailsLoaded(42, failing))
+                .model();
+        // Also when the dialog was closed meanwhile.
+        Model closed = Update.update(
+                        Update.update(shown, new PullRequestMsg.InfoClosed()).model(),
+                        new PullRequestMsg.DetailsLoaded(42, failing))
+                .model();
+
+        PullRequest now = new PullRequest(42, "feature", true, Checks.FAILING, Review.CHANGES_REQUESTED);
+        assertEquals(Option.of(now), loaded.gitHub().pullRequest(PUSHED));
+        assertEquals(Option.of(now), closed.gitHub().pullRequest(PUSHED));
+    }
+
+    @Test
+    void aPullRequestTheDetailsShowMergedIsNoLongerOnTheBranch() {
+        Model shown =
+                Update.update(withPr(), new PullRequestMsg.Requested(FEATURE)).model();
+        PullRequestDetails details = StubGitHub.empty().pullRequestDetails(42).get();
+        PullRequestDetails merged = new PullRequestDetails(
+                42,
+                details.title(),
+                details.author(),
+                PullRequestDetails.State.MERGED,
+                details.draft(),
+                details.headBranch(),
+                details.baseBranch(),
+                details.createdAt(),
+                0,
+                0,
+                0,
+                details.mergeable(),
+                details.review(),
+                0,
+                details.reviewThreads(),
+                List.empty(),
+                List.empty(),
+                List.empty());
+
+        Model loaded = Update.update(shown, new PullRequestMsg.DetailsLoaded(42, merged))
+                .model();
+
+        assertEquals(Option.none(), loaded.gitHub().pullRequest(PUSHED));
+    }
+
+    @Test
     void failingToReadTheDetailsShowsWhyInThePopup() {
         Model shown = Update.update(withPr(), new PullRequestMsg.Requested(new Branch.Name("feature")))
                 .model();
@@ -664,8 +735,12 @@ class PullRequestUpdateTest {
                 errorText(failed.model()));
         assertEquals(Option.none(), failed.model().jobs().busy().get(new BranchRef.Local(new Branch.Name("feature"))));
         assertEquals(
-                Option.of(FEATURE_PR),
-                failed.model().gitHub().pullRequests().flatMap(open -> open.get(new Branch.Name("feature"))));
+                Option.of(42),
+                failed.model()
+                        .gitHub()
+                        .pullRequests()
+                        .flatMap(open -> open.get(new Branch.Name("feature")))
+                        .map(PullRequest::number));
     }
 
     @Test

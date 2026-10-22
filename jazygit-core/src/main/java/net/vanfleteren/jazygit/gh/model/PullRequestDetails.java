@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.gh.model;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -70,6 +71,25 @@ public record PullRequestDetails(
                 labels,
                 reviewers,
                 checks);
+    }
+
+    /**
+     * This pull request as a list of the open ones holds it; none when it is no longer open.
+     */
+    public Option<PullRequest> listed() {
+        return Option.when(
+                state == State.OPEN, () -> new PullRequest(number, headBranch, draft, combinedChecks(), review));
+    }
+
+    /**
+     * The combined state of its checks: failing when one failed, else pending when one is still running, else
+     * passing when there are any.
+     */
+    private Checks combinedChecks() {
+        List<Checks> states = checks.map(Check::state);
+        return states.contains(Checks.FAILING)
+                ? Checks.FAILING
+                : states.contains(Checks.PENDING) ? Checks.PENDING : states.isEmpty() ? Checks.NONE : Checks.PASSING;
     }
 
     public enum State {
