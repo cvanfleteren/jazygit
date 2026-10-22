@@ -99,9 +99,6 @@
                             <version>${picocli.version}</version>
                         </path>
                     </annotationProcessorPaths>
-                    <compilerArgs>
-                        <arg>-Aproject=${project.groupId}/${project.artifactId}</arg>
-                    </compilerArgs>
                 </configuration>
             </plugin>
             <plugin>
@@ -208,6 +205,7 @@
                             </metadataRepository>
                             <buildArgs>
                                 <buildArg>-march=compatibility</buildArg>
+                                <buildArg>--enable-preview</buildArg>
                                 <!-- jline loads its terminal library itself; without this it warns on every start. -->
                                 <buildArg>--enable-native-access=ALL-UNNAMED</buildArg>
                             </buildArgs>

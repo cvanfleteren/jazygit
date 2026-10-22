@@ -208,6 +208,8 @@
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.16.0</version>
                     <configuration>
+                        <!-- Preview language features; the JVM that runs the classes needs enable-preview as well. -->
+                        <enablePreview>true</enablePreview>
                         <annotationProcessorPaths>
                             <path>
                                 <groupId>org.projectlombok</groupId>
@@ -264,7 +266,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <argLine>-Duser.language=en -Duser.country=US</argLine>
+                    <argLine>--enable-preview -Duser.language=en -Duser.country=US</argLine>
                     <!-- One JVM per core, not JUnit's in-JVM parallelism: tamboui has a JVM-wide render thread. -->
                     <forkCount>1C</forkCount>
                     <reuseForks>true</reuseForks>

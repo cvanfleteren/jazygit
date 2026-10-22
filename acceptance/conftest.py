@@ -60,7 +60,7 @@ def java() -> str:
 
 
 # The app reads the status again every 100ms instead of 750ms, so that it sees sooner what a test wrote.
-JVM_OPTIONS = ["--enable-native-access=ALL-UNNAMED", "-Dtamboui.backend=panama", "-Djazygit.refreshInterval=100"]
+JVM_OPTIONS = ["--enable-preview", "--enable-native-access=ALL-UNNAMED", "-Dtamboui.backend=panama", "-Djazygit.refreshInterval=100"]
 
 
 @pytest.fixture(scope="session")
