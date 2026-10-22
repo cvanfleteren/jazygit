@@ -51,7 +51,9 @@ class Jazygit:
         self.caught_up()
 
     def _state(self):
-        return (self.repo("for-each-ref", "--format=%(refname) %(objectname)", "refs/heads"),
+        # The remote branches too, which a push moves, and the upstreams, which a push can set.
+        return (self.repo("for-each-ref", "--format=%(refname) %(objectname) %(upstream)", "refs/heads",
+                          "refs/remotes"),
                 self.repo.current_branch(),
                 self.repo.raw("status", "--porcelain", "-z"))
 
@@ -119,26 +121,66 @@ class FilesPane:
 
 
 class BranchesPane:
-    """The local branches."""
+    """The local branches, and on the tab next to them the remote ones: checking out, pushing and pulling them."""
 
     def __init__(self, ui: Jazygit):
         self.ui = ui
         self.app = ui.app
         self.repo = ui.repo
 
+    def tab(self) -> str:
+        """The list the pane shows: "Branches" or "Remotes", or "Worktrees"."""
+        return self.app.underlined_in_title("Branches")
+
     def shows_branches(self) -> bool:
-        shown = self.app.pane_text("Branches").split()
+        tab = self.tab()
+        if tab == "Remotes":
+            shown = self.app.pane_text("Branches").split()
+            return all(branch in shown for branch in self.repo.remote_branches())
+        if tab != "Branches":
+            return False
+        rows = self.app.pane_text("Branches").splitlines()
         current = self.repo.current_branch()
-        return (all(branch in shown for branch in self.repo.branches())
+        return (all(self._shows_sync(rows, branch) for branch in self.repo.branches())
                 and (not current or not self.repo.has_head() or f"* {current}" in self.app.pane_text("Branches")))
 
+    def _shows_sync(self, rows: list, branch: str) -> bool:
+        """Whether a row shows branch, with the commits it has to push and to pull, and whether its upstream is
+        gone, as git has them."""
+        row = next((row.split() for row in rows if branch in row.split()), None)
+        expected = [{"ahead": "↑", "behind": "↓"}[side] + count if count else side
+                    for part in self.repo.sync(branch).split(", ") if part
+                    for side, _, count in [part.partition(" ")]]
+        return row is not None and [word for word in row if word[0] in "↑↓" or word == "gone"] == expected
+
+    def show_tab(self, tab: str):
+        """Switches the focused pane to the list tab: "Branches" or "Remotes"."""
+        for _ in range(3):
+            shown = self.app.eventually(self.tab, "the list the branches pane shows")
+            if shown == tab:
+                return
+            self.app.press("]")
+            self.app.eventually(lambda: self.tab() != shown, f"the branches pane to show another list than {shown}")
+        raise AssertionError(f"no list {tab} in the branches pane\n--- screen ---\n{self.app.text()}")
+
     def select(self, branch: str):
-        """Focuses the pane and moves to branch."""
+        """Focuses the pane and moves to the local branch."""
         self.ui.caught_up()
         self.app.focus("Branches")
+        self.show_tab("Branches")
+        self.ui.caught_up()
         self.app.move_cursor("Branches", branch)
         # Its log shows once the app has taken it as the selected branch, which the keys then act on. The border
         # right after the name, so that "main" is not taken for "main-old".
+        self.app.wait_for(f"Log: {branch}─")
+
+    def select_remote(self, branch: str):
+        """Focuses the pane and moves to the remote branch, such as "origin/main", on the list of remote ones."""
+        self.ui.caught_up()
+        self.app.focus("Branches")
+        self.show_tab("Remotes")
+        self.ui.caught_up()
+        self.app.move_cursor("Branches", branch)
         self.app.wait_for(f"Log: {branch}─")
 
     def checkout(self, branch: str):
@@ -157,11 +199,79 @@ class BranchesPane:
         self.ui.changing_repo(f"{branch} renamed to {name}", lambda: (
             self.app.press("R"), self.ui.enter_text(f"Rename branch {branch}", name)))
 
-    def delete(self, branch: str):
-        """Deletes the local branch, merged or not."""
+    def delete(self, branch: str, where: str = "local"):
+        """Deletes the branch, merged or not: the "local" one, the one it tracks on the "remote", or "both"."""
+        key = {"local": "d", "remote": "r", "both": "b"}[where]
         self.select(branch)
         self.ui.changing_repo(f"{branch} to be deleted", lambda: (
-            self.app.press("d"), self.ui.confirm(f"Delete branch {branch}", key="d")))
+            self.app.press("d"), self.ui.confirm(f"Delete branch {branch}", key=key)))
+
+    def push(self, branch: str, upstream: str = None):
+        """Pushes the branch. One without an upstream is pushed to upstream, "<remote> <branch>", which it then
+        tracks; to the branch of the same name on origin, as the app offers, when not given."""
+        self.select(branch)
+        has_upstream = self.repo.upstream(branch) != ""
+
+        def keys():
+            self.app.press("P")
+            if has_upstream:
+                return
+            if upstream is None:
+                self.ui.confirm("Enter upstream as")
+            else:
+                self.ui.enter_text("Enter upstream as", upstream)
+
+        self.ui.changing_repo(f"{branch} to be pushed", keys)
+
+    def force_push(self, branch: str):
+        """Pushes the branch that diverged from its upstream, overwriting it, as the app asks to."""
+        self.select(branch)
+        self.ui.changing_repo(f"{branch} to be force pushed", lambda: (
+            self.app.press("P"), self.ui.confirm(f"Force push {branch}")))
+
+    def pull(self, branch: str):
+        """Pulls the checked out branch from its upstream, or fast-forwards another one to its upstream."""
+        self.select(branch)
+        self.ui.changing_repo(f"{branch} to be pulled", lambda: self.app.press("p"))
+
+    def try_to_pull(self, branch: str):
+        """Asks to pull the branch, for when the app is to refuse it: it does not wait for the repository to
+        change."""
+        self.select(branch)
+        self.app.press("p")
+
+    def reset_onto_upstream(self, mode: str = "hard"):
+        """Resets the checked out branch onto its upstream, keeping the changes since "soft" (staged), "mixed"
+        (unstaged) or not at all ("hard")."""
+        self.select(self.repo.current_branch())
+        key = {"soft": "s", "mixed": "m", "hard": "h"}[mode]
+        self.ui.changing_repo(f"{self.repo.current_branch()} reset onto its upstream", lambda: (
+            self.app.press("u"),
+            self.ui.confirm("Upstream options for", key="g"),
+            self.ui.confirm("Reset to", key=key)))
+
+    def checkout_remote(self, branch: str, name: str = None):
+        """Checks out the local branch that follows the remote branch, such as "origin/feature", creating it when
+        there is none. When the name it has on the remote is taken, the new branch is called name."""
+        self.select_remote(branch)
+
+        def keys():
+            self.app.press("space")
+            if name is not None:
+                self.ui.enter_text("New branch from", name)
+
+        self.ui.changing_repo(f"{branch} to be checked out", keys)
+
+    def delete_remote(self, branch: str):
+        """Deletes the remote branch, such as "origin/feature", on its remote."""
+        self.select_remote(branch)
+        self.ui.changing_repo(f"{branch} to be deleted", lambda: (
+            self.app.press("d"), self.ui.confirm(f"Delete {branch}")))
+
+    def try_to_delete_remote(self, branch: str):
+        """Asks to delete the remote branch, for when the app is to refuse it."""
+        self.select_remote(branch)
+        self.app.press("d")
 
 
 class CommitsPane:

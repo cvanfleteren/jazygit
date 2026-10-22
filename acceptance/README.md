@@ -84,6 +84,29 @@ Then check the repository with git: `repo.subjects()`, `repo.branches()`, `repo.
 `repo.find("subject")` and plain `repo(...)`. Assert on git state rather than on the screen where you can: it
 survives layout changes.
 
+### Remotes
+
+Take the `origin` fixture for a test that pushes or pulls: a bare repository, added to `repo` as its remote
+`origin`, and a `Git` of its own to check what reached it (`origin.branches()`, `origin.subjects("main")`). The
+`clone` fixture clones it for a teammate, whose commits reach `repo` by being pushed:
+
+```python
+repo("push", "--set-upstream", "origin", "main")
+teammate = clone()
+teammate.commit("Add theirs", **{"theirs.txt": "theirs\n"})
+teammate("push")
+repo("fetch")                                   # as the app does every minute, but not at its start
+ui.branches.pull("main")
+ui.branches.push("feature", upstream="origin shared-name")
+ui.branches.checkout_remote("origin/theirs")
+```
+
+`repo.upstream("main")`, `repo.sync("main")` (`"ahead 1, behind 2"`, `"gone"` or empty) and
+`repo.remote_branches()` tell how the branches stand to their remotes. The app fetches only once a minute, so a
+test fetches itself what it wants the app to know of. Before each operation the page objects also wait until the
+branches pane shows each branch's commits to push (↑) and to pull (↓) as git counts them: the app decides on
+them, such as whether a push must be forced.
+
 ### Page objects
 
 `pages.py` has a page object per pane of the left column, `ui.files`, `ui.branches` and `ui.commits`, with the
@@ -117,5 +140,6 @@ has taken it as selected.
 Every wait fails at once when the app has died, with its exit status and the last of its output, and shows the
 screen when it times out.
 
-`test_commits.py` and `test_branches.py` try one operation each, from a repository set up with git;
-`test_scenario.py` chains them in one session, from an empty repository to a tidied history on three branches.
+`test_commits.py`, `test_branches.py` and `test_remotes.py` try one operation each, from a repository set up
+with git; `test_scenario.py` chains them in one session: from an empty repository to a tidied history on three
+branches, and a feature worked on with a teammate through origin.

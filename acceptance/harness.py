@@ -121,6 +121,22 @@ class Git:
     def current_branch(self) -> str:
         return self("branch", "--show-current")
 
+    def upstream(self, branch: str) -> str:
+        """The remote branch that branch tracks, such as "origin/main"; empty when it tracks none."""
+        return self("for-each-ref", "--format=%(upstream:short)", f"refs/heads/{branch}")
+
+    def sync(self, branch: str) -> str:
+        """How branch stands to its upstream as this repository last fetched it, as git says it: "ahead 1,
+        behind 2", "gone", or empty when it is in sync or tracks nothing."""
+        return self("for-each-ref", "--format=%(upstream:track,nobracket)", f"refs/heads/{branch}")
+
+    def remote_branches(self) -> list:
+        """The remote branches as this repository last fetched them, such as "origin/main"; not origin/HEAD,
+        which only names one of them."""
+        return sorted(line for line in self(
+            "for-each-ref", "--format=%(if)%(symref)%(then)%(else)%(refname:short)%(end)", "refs/remotes")
+                      .splitlines() if line)
+
     def short(self, rev: str) -> str:
         """The abbreviated hash the app shows for rev."""
         return self("rev-parse", "--short=7", rev)
@@ -223,6 +239,16 @@ class App:
         width = lines[top].index("╮")
         bottom = next((y for y in range(top + 1, len(lines)) if lines[y].startswith("╰")), len(lines))
         return [(lines[y][1:width].rstrip(), self.screen.buffer[y][2].bg) for y in range(top + 1, bottom)]
+
+    def underlined_in_title(self, pane: str) -> str:
+        """What the title of the pane of the left column, by the first word of its title, shows underlined: of a
+        pane with several lists, such as "Branches │ Remotes │ Worktrees", the name of the one it shows."""
+        self.pump()
+        top = next((y for y, line in enumerate(self.screen.display) if line.startswith("╭" + pane)), None)
+        if top is None:
+            return ""
+        row = self.screen.buffer[top]
+        return "".join(row[x].data for x in range(self.screen.columns) if row[x].underscore).strip()
 
     def pane_text(self, pane: str) -> str:
         """What the pane of the left column shows inside its border."""

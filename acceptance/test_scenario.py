@@ -85,3 +85,67 @@ def test_a_feature_from_first_commit_to_tidy_history(repo, jazygit):
     assert repo("ls-tree", "-r", "--name-only", "parser").splitlines() == [
         "README.md", "conftest.py", "parser.py", "printer.py", "test_parser.py"]
     assert repo("status", "--porcelain") == ""
+
+
+def test_a_feature_worked_on_with_a_teammate_through_origin(repo, origin, clone, jazygit):
+    repo.write("README.md", "# Parser\n")
+    ui = jazygit()
+
+    # Start the history and publish it, then branch off for the feature and publish that too.
+    ui.files.commit("Initial commit")
+    ui.branches.push("main")
+    ui.branches.new("feature")
+    repo.write("parser.py", "def parse(text):\n    retrun text\n")
+    ui.files.commit("Add parser")
+    ui.branches.push("feature")
+    assert origin.subjects("feature") == ["Add parser", "Initial commit"]
+    assert repo.upstream("feature") == "origin/feature"
+
+    # A teammate adds tests to it; once fetched, as the app does every minute, they are pulled in.
+    teammate = clone()
+    teammate("switch", "feature")
+    teammate.commit("Add tests", **{"test_parser.py": "assert parse('a') == 'a'\n"})
+    teammate("push")
+    repo("fetch")
+    ui.branches.pull("feature")
+    assert repo.subjects() == ["Add tests", "Add parser", "Initial commit"]
+
+    # The typo is fixed in the commit that made it, which rewrites what was pushed: it takes a force push.
+    repo.write("parser.py", "def parse(text):\n    return text\n")
+    ui.files.commit("Fix typo")
+    ui.commits.fixup("Fix typo")
+    ui.commits.reword("Add parser", "Add the parser")
+    assert repo.sync("feature") == "ahead 2, behind 2"
+    ui.branches.force_push("feature")
+    assert origin.subjects("feature") == ["Add tests", "Add the parser", "Initial commit"]
+    assert origin("show", "feature:parser.py") == "def parse(text):\n    return text"
+
+    # The teammate starts on the docs, and asks for a hand with them.
+    teammate("switch", "main")
+    teammate("switch", "--create", "docs")
+    teammate.commit("Document the parser", **{"README.md": "# Parser\n\nParses text.\n"})
+    teammate("push", "--set-upstream", "origin", "docs")
+    repo("fetch")
+    ui.branches.checkout_remote("origin/docs")
+    assert repo.current_branch() == "docs"
+    repo.write("README.md", "# Parser\n\nParses text, and returns it.\n")
+    ui.files.commit("Say what it returns")
+    ui.branches.push("docs")
+    assert origin.subjects("docs") == ["Say what it returns", "Document the parser", "Initial commit"]
+
+    # Main moves on meanwhile; it is brought up to date without leaving the docs.
+    teammate("switch", "main")
+    teammate.commit("Add a licence", **{"LICENSE": "MIT\n"})
+    teammate("push")
+    repo("fetch")
+    ui.branches.pull("main")
+    assert repo.subjects("main") == ["Add a licence", "Initial commit"]
+    assert repo.current_branch() == "docs"
+
+    # The feature is merged elsewhere, and its branch is deleted here and on origin.
+    ui.branches.delete("feature", where="both")
+
+    assert repo.branches() == ["docs", "main"]
+    assert origin.branches() == ["docs", "main"]
+    assert [repo.sync(branch) for branch in repo.branches()] == ["", ""]
+    assert repo("status", "--porcelain") == ""

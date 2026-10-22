@@ -52,6 +52,30 @@ def repo(tmp_path, env) -> Git:
 
 
 @pytest.fixture
+def origin(tmp_path, env, repo) -> Git:
+    """An empty bare repository, the remote origin of the repository; push to it to give the branches an
+    upstream."""
+    path = tmp_path / "origin.git"
+    path.mkdir()
+    git = Git(path, env)
+    git("init", "--bare", "--initial-branch=main")
+    repo("remote", "add", "origin", str(path))
+    return git
+
+
+@pytest.fixture
+def clone(tmp_path, env, origin):
+    """Clones origin, as it is when called, the way someone else working on it would: their commits reach the
+    repository by being pushed to origin."""
+    def make(name="teammate") -> Git:
+        git = Git(tmp_path / name, env)
+        Git(tmp_path, env)("clone", str(origin.path), str(git.path))
+        return git
+
+    return make
+
+
+@pytest.fixture
 def jazygit(java, jar, repo, env):
     """Starts jazygit on the repository, and returns its page object; call it once the repository is set up."""
     apps = []
