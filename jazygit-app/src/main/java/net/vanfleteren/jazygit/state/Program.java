@@ -142,11 +142,11 @@ public final class Program {
         FutureTask<Void> task = new FutureTask<>(
                 () -> {
                     Msg result = perform(env, cmd, bugs);
-                    Try.run(() -> ui.execute(() -> dispatch(result)));
+                    Try<Void> _ = Try.run(() -> ui.execute(() -> dispatch(result)));
                 },
                 null);
         cmd.slot().forEach(slot -> Option.of(latest.put(slot, task)).forEach(older -> older.cancel(false)));
         // Once the app stops, the executors take nothing anymore, and what is left is dropped.
-        Try.run(() -> (cmd.background() ? background : io).execute(task));
+        Try<Void> _ = Try.run(() -> (cmd.background() ? background : io).execute(task));
     }
 }

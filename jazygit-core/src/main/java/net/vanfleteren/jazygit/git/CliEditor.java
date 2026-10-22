@@ -97,8 +97,8 @@ final class CliEditor {
                                             e -> tempFileFailed(e).after(commands))
                                     .map(saved -> Tuple.of(saved, commands)));
                     // A leftover temporary file is harmless.
-                    Try.run(() -> Files.deleteIfExists(file));
-                    Try.run(() -> Files.deleteIfExists(directory));
+                    Try<Void> _ = Try.run(() -> Files.deleteIfExists(file));
+                    Try<Void> _ = Try.run(() -> Files.deleteIfExists(directory));
                     return edited;
                 });
     }
