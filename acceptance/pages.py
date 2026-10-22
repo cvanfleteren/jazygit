@@ -12,6 +12,7 @@ operation starts from there. The tests assert what the operation should have don
 
 import re
 import subprocess
+from pathlib import Path
 
 from harness import App, AppExited, Git
 
@@ -28,6 +29,11 @@ class Jazygit:
         self.branches = BranchesPane(self)
         self.commits = CommitsPane(self)
         self.stash = StashPane(self)
+        self.worktrees = WorktreesPane(self)
+
+    def in_worktree(self, path: Path) -> "Jazygit":
+        """The app as it shows the worktree at path, once it switched to it."""
+        return Jazygit(self.app, Git(path, self.repo.env))
 
     def caught_up(self):
         """Waits until no git operation runs and the panes show the repository as git has it: the commits of the
@@ -35,8 +41,7 @@ class Jazygit:
         self.app.eventually(lambda: not self._busy() and self._shows_repo(), "the app to show the repository")
 
     def _busy(self) -> bool:
-        git = self.repo.path / ".git"
-        return any((git / name).exists() for name in ("rebase-merge", "rebase-apply", "index.lock"))
+        return any((self.repo.git_dir / name).exists() for name in ("rebase-merge", "rebase-apply", "index.lock"))
 
     def _shows_repo(self) -> bool:
         return self.commits.shows_history() and self.branches.shows_branches() and self.files.shows_changes()
@@ -74,13 +79,48 @@ class Jazygit:
             return False
 
     def _state(self):
-        # The remote branches too, which a push moves, and the upstreams, which a push can set; and the stashes,
-        # which dropping one changes and nothing else.
+        # The remote branches too, which a push moves, and the upstreams, which a push can set; the stashes, which
+        # dropping one changes and nothing else; and the worktrees, which adding, removing, locking or pruning one
+        # changes, the branches staying as they were.
         return (self.repo("for-each-ref", "--format=%(refname) %(objectname) %(upstream)", "refs/heads",
                           "refs/remotes"),
                 self.repo.current_branch(),
                 self.repo.raw("status", "--porcelain", "-z"),
-                self.repo("stash", "list", "--format=%H"))
+                self.repo("stash", "list", "--format=%H"),
+                self.repo.worktree_list())
+
+    def switching(self, path: Path, keys) -> "Jazygit":
+        """Runs keys, a function that presses them, and waits until the app shows the worktree at path instead of
+        this one; returns the app as it shows that one, for the operations that follow."""
+        self.caught_up()
+        keys()
+        shown = self.in_worktree(path)
+        shown.caught_up()
+        return shown
+
+    def adding_worktree(self, description: str, ask, location: Path = None, switch: bool = False) -> "Jazygit":
+        """Runs ask, a function that presses the keys up to the question where the new worktree goes, and answers
+        it: location, or where the app offers to put it when not given. Once it is added, the app offers to switch
+        to it, which it does when switch. Returns the app as it shows the worktree it shows then."""
+        before = set(self.repo.worktrees())
+
+        def keys():
+            ask()
+            if location is None:
+                self.confirm("New worktree for")
+            else:
+                self.enter_text("New worktree for", str(location))
+            self.confirm(" added", key="enter" if switch else "escape")
+
+        if not switch:
+            self.changing_repo(description, keys)
+            return self
+        self.caught_up()
+        keys()
+        added = self.app.eventually(lambda: set(self.repo.worktrees()) - before, description)
+        shown = self.in_worktree(added.pop())
+        shown.caught_up()
+        return shown
 
     def confirm(self, title: str, key="enter"):
         """Waits for the dialog with this title, and answers it with key."""
@@ -206,6 +246,8 @@ class BranchesPane:
         if tab == "Remotes":
             shown = self.app.pane_text("Branches").split()
             return all(branch in shown for branch in self.repo.remote_branches())
+        if tab == "Worktrees":
+            return self.ui.worktrees.shows_worktrees()
         if tab != "Branches":
             return False
         rows = self.app.pane_text("Branches").splitlines()
@@ -223,7 +265,7 @@ class BranchesPane:
         return row is not None and [word for word in row if word[0] in "↑↓" or word == "gone"] == expected
 
     def show_tab(self, tab: str):
-        """Switches the focused pane to the list tab: "Branches" or "Remotes"."""
+        """Switches the focused pane to the list tab: "Branches", "Remotes" or "Worktrees"."""
         for _ in range(3):
             shown = self.app.eventually(self.tab, "the list the branches pane shows")
             if shown == tab:
@@ -282,8 +324,9 @@ class BranchesPane:
             self.app.press("R"), self.ui.enter_text(f"Rename branch {branch}", name)))
 
     def delete(self, branch: str, where: str = "local"):
-        """Deletes the branch, merged or not: the "local" one, the one it tracks on the "remote", or "both"."""
-        key = {"local": "d", "remote": "r", "both": "b"}[where]
+        """Deletes the branch, merged or not: the "local" one, the one it tracks on the "remote", or "both"; or,
+        when another worktree has it checked out, the local one together with that "worktree"."""
+        key = {"local": "d", "remote": "r", "both": "b", "worktree": "w"}[where]
         self.select(branch)
         self.ui.changing_repo(f"{branch} to be deleted", lambda: (
             self.app.press("d"), self.ui.confirm(f"Delete branch {branch}", key=key)))
@@ -354,6 +397,41 @@ class BranchesPane:
         """Asks to delete the remote branch, for when the app is to refuse it."""
         self.select_remote(branch)
         self.app.press("d")
+
+    def new_worktree(self, branch: str, location: Path = None, switch: bool = False) -> Jazygit:
+        """Checks the branch, one not checked out anywhere, out in a new worktree at location, or where the app
+        offers to put it; switches to it when switch. Returns the app as it shows the worktree it shows then."""
+        self.select(branch)
+        return self.ui.adding_worktree(f"a worktree for {branch}", lambda: self.app.press("w"), location, switch)
+
+    def new_branch_worktree(self, start: str, name: str, location: Path = None, switch: bool = False) -> Jazygit:
+        """Creates the branch name from the branch start, and checks it out in a new worktree, as new_worktree
+        does."""
+        self.select(start)
+        return self.ui.adding_worktree(f"a worktree for the new branch {name}", lambda: (
+            self.app.press("W"), self.ui.enter_text("in a new worktree", name)), location, switch)
+
+    def new_branch_worktree_from_remote(self, remote: str, name: str = None, location: Path = None,
+                                        switch: bool = False) -> Jazygit:
+        """Creates a branch that follows the remote branch, such as "origin/feature", and checks it out in a new
+        worktree, as new_worktree does. It is called name, or as on the remote when not given."""
+        self.select_remote(remote)
+
+        def ask():
+            self.app.press("W")
+            if name is None:
+                self.ui.confirm("in a new worktree")
+            else:
+                self.ui.enter_text("in a new worktree", name)
+
+        return self.ui.adding_worktree(f"a worktree following {remote}", ask, location, switch)
+
+    def checkout_in_its_worktree(self, branch: str) -> Jazygit:
+        """Checks out the branch that another worktree has checked out, which switches to that worktree, as the
+        app offers to. Returns the app as it shows that worktree."""
+        self.select(branch)
+        path = next(path for path, checked_out in self.repo.worktrees().items() if checked_out == branch)
+        return self.ui.switching(path, lambda: (self.app.press("space"), self.ui.confirm(f"Checkout {branch}")))
 
 
 class CommitsPane:
@@ -495,3 +573,92 @@ class StashPane:
         self.select(message)
         self.ui.changing_repo(f"the stash {message!r} dropped", lambda: (
             self.app.press("d"), self.ui.confirm("Stash drop")))
+
+
+class WorktreesPane:
+    """The worktrees, on the tab of the branches pane after the remote branches: adding, switching to, removing,
+    locking and pruning them. A worktree is given by the name of its directory, as the pane shows it."""
+
+    def __init__(self, ui: Jazygit):
+        self.ui = ui
+        self.app = ui.app
+        self.repo = ui.repo
+
+    def shows_worktrees(self) -> bool:
+        """Whether the pane shows each worktree git has and no other, the one shown marked, and which are locked
+        and whose directory is gone."""
+        rows = [row for row in self.app.pane_text("Branches").splitlines() if row.strip()]
+        worktrees = self.repo.worktree_list()
+        return len(rows) == len(worktrees) and all(self._shows(rows, worktree) for worktree in worktrees)
+
+    def _shows(self, rows: list, worktree: dict) -> bool:
+        path = Path(worktree["worktree"])
+        marked = "* " if path == self.repo.path else "  "
+        row = next((row for row in rows if row.startswith(marked + path.name + " ")), None)
+        return (row is not None
+                and (" locked" in row) == ("locked" in worktree)
+                and (" missing" in row) == ("prunable" in worktree))
+
+    def path(self, name: str) -> Path:
+        """The path of the worktree whose directory is called name."""
+        return next(path for path in self.repo.worktrees() if path.name == name)
+
+    def show(self):
+        """Focuses the branches pane, on the worktrees."""
+        self.ui.caught_up()
+        self.app.focus("Branches")
+        self.ui.branches.show_tab("Worktrees")
+        self.ui.caught_up()
+
+    def select(self, name: str):
+        """Focuses the pane and moves to the worktree whose directory is called name: the keys act on the row the
+        cursor is drawn on."""
+        self.show()
+        self.app.move_cursor("Branches", name)
+
+    def new(self, start: str, branch: str = "", location: Path = None, switch: bool = False) -> Jazygit:
+        """Adds a worktree starting at start, a branch, remote branch or commit, on the new branch called branch;
+        left blank, on the local branch start itself when it can be checked out there, or else on no branch. It
+        goes at location, or where the app offers to put it, and is switched to when switch. Returns the app as it
+        shows the worktree it shows then."""
+        self.show()
+        return self.ui.adding_worktree(f"a worktree from {start}", lambda: (
+            self.app.press("n"),
+            self.ui.enter_text("New worktree from", start),
+            self.ui.enter_text("in a new worktree", branch)), location, switch)
+
+    def switch_to(self, name: str) -> Jazygit:
+        """Switches to the worktree; returns the app as it shows that one."""
+        self.select(name)
+        return self.ui.switching(self.path(name), lambda: self.app.press("space"))
+
+    def remove(self, name: str, branch: str = "keep", anyway: bool = False):
+        """Removes the worktree, and its directory, keeping its branch or, with "delete", deleting it too. One
+        with changes, which git refuses to remove, is removed anyway, as the app offers to, when anyway."""
+        key = {"keep": "r", "delete": "b"}[branch]
+        self.select(name)
+
+        def keys():
+            self.app.press("d")
+            self.ui.confirm(f"Remove worktree {name}", key=key)
+            if anyway:
+                # Titled as the question before, with a message that wraps where the path makes it: by its keys.
+                self.ui.confirm("(enter) confirm")
+
+        self.ui.changing_repo(f"the worktree {name} removed", keys)
+
+    def try_to_remove(self, name: str):
+        """Asks to remove the worktree, for when the app is to refuse it: it does not wait for the repository to
+        change."""
+        self.select(name)
+        self.app.press("d")
+
+    def lock(self, name: str):
+        """Locks the worktree, or unlocks it when it is locked."""
+        self.select(name)
+        self.ui.changing_repo(f"the worktree {name} locked or unlocked", lambda: self.app.press("L"))
+
+    def prune(self):
+        """Forgets the worktrees whose directory is gone."""
+        self.show()
+        self.ui.changing_repo("the missing worktrees pruned", lambda: self.app.press("p"))

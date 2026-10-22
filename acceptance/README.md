@@ -93,8 +93,23 @@ ui.commits.fixup("Fix typo", keep_message="below")
 
 Then check the repository with git: `repo.subjects()`, `repo.branches()`, `repo.current_branch()`,
 `repo.find("subject")`, `repo.status()` (each changed path with its `git status --short` code, such as `"M "` for
-staged or `"??"` for untracked), `repo.stashes()`, `repo.read("file")` and plain `repo(...)`. Assert on git state rather than on the screen where you can: it
-survives layout changes.
+staged or `"??"` for untracked), `repo.stashes()`, `repo.read("file")`, `repo.worktrees()` (each worktree's path with
+the branch it has checked out, `None` on no branch), `repo.locked_worktrees()` and plain `repo(...)`. Assert on git
+state rather than on the screen where you can: it survives layout changes.
+
+### Worktrees
+
+`ui.worktrees` is the Worktrees tab of the branches pane, which takes a worktree by the name of its directory. A new
+worktree goes where the app offers to put it, `<tmp>/repo-<branch>` next to the repository, unless given a
+`location`. An operation that ends with the app showing another worktree returns the page object for that one,
+whose `repo` is a `Git` in that worktree:
+
+```python
+there = ui.branches.new_worktree("feature", switch=True)   # or ui.worktrees.switch_to("repo-feature")
+there.repo.write("three.txt", "three\n")
+there.files.commit("Add three")
+assert repo.subjects("feature") == ["Add three", ...]
+```
 
 ### Remotes
 
@@ -122,6 +137,7 @@ them, such as whether a push must be forced.
 ### Page objects
 
 `pages.py` has a page object per pane of the left column, `ui.files`, `ui.branches`, `ui.commits` and `ui.stash`,
+and `ui.worktrees` for the worktrees tab of the branches pane,
 with the operations that pane has keys for, named the way a person says them and taking commits by subject and branches by
 name. The keys and dialog titles they take are only there, so a change to the UI is a change to that file. A new
 operation goes on the pane it is done from.
@@ -152,6 +168,6 @@ has taken it as selected.
 Every wait fails at once when the app has died, with its exit status and the last of its output, and shows the
 screen when it times out.
 
-`test_files.py` (staging and discarding), `test_stash.py`, `test_commits.py`, `test_reset.py`, `test_branches.py`
-and `test_remotes.py` try one operation each, from a repository set up with git; `test_scenario.py` chains them in one session: from an empty repository to a tidied history on three
+`test_files.py` (staging and discarding), `test_stash.py`, `test_commits.py`, `test_reset.py`, `test_branches.py`,
+`test_remotes.py` and `test_worktrees.py` try one operation each, from a repository set up with git; `test_scenario.py` chains them in one session: from an empty repository to a tidied history on three
 branches, and a feature worked on with a teammate through origin.

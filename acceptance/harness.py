@@ -8,6 +8,7 @@ import os
 import re
 import subprocess
 import time
+from functools import cached_property
 from pathlib import Path
 
 import pexpect
@@ -153,6 +154,30 @@ class Git:
         one stashed without, "WIP on <branch>: <commit>"."""
         return [subject.split(": ", 1)[1] if subject.startswith("On ") else subject
                 for subject in self("stash", "list", "--format=%gs").splitlines()]
+
+    @cached_property
+    def git_dir(self) -> Path:
+        """The git directory of this working tree: its .git, or for a linked worktree the directory git keeps for it
+        in the main one's, where a rebase it runs and its index lock are."""
+        return Path(self("rev-parse", "--absolute-git-dir"))
+
+    def worktree_list(self) -> list:
+        """The worktrees as git worktree list --porcelain has them: for each, its attributes by name, such as
+        "worktree" (its path), "branch" (refs/heads/...), "detached", "locked" (the reason, or empty) or
+        "prunable"."""
+        return [dict(attribute.partition(" ")[::2] for attribute in block.split("\0") if attribute)
+                for block in self.raw("worktree", "list", "--porcelain", "-z").split("\0\0") if block.strip("\0")]
+
+    def worktrees(self) -> dict:
+        """The worktrees, by their path, with the branch each has checked out; None for one on no branch."""
+        return {Path(worktree["worktree"]): worktree["branch"].removeprefix("refs/heads/")
+                if "branch" in worktree else None
+                for worktree in self.worktree_list()}
+
+    def locked_worktrees(self) -> dict:
+        """The locked worktrees, by their path, with the reason they are locked; empty when none was given."""
+        return {Path(worktree["worktree"]): worktree["locked"]
+                for worktree in self.worktree_list() if "locked" in worktree}
 
     def short(self, rev: str) -> str:
         """The abbreviated hash the app shows for rev."""
