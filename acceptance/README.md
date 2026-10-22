@@ -66,12 +66,25 @@ Python 3.12 and the dependencies from `requirements.txt`.
 
 ## Writing a test
 
-Set up the repository with `repo(...)` (runs git) and `repo.write(...)`, start the app with `jazygit()`, then:
+Set up the repository with `repo(...)` (runs git), `repo.write(...)` and `repo.commit("message", **files)`, start
+the app with `jazygit()`, then:
 
 - `app.press("space", "c", "enter", "ctrl+s", ...)` for keys, `app.type("text")` for text;
 - `app.wait_for("text")` to wait for something on screen, and fail showing the screen when it doesn't come;
+- `app.wait_in("Files", "text")` to wait for it in one pane of the left column: the same name can show in the
+  command log long before the files pane has it;
+- `app.focus("Commits")` to tab to a pane, which knows the focused pane by its border colour;
 - `app.eventually(check, "description")` to wait for the repository to get where it should.
+
+`steps.py` has the moves that take more than a key: `select_commit(app, repo, "subject")` and
+`select_branch(app, repo, "name")` (they wait for the diff pane to name it), `type_over(app, "text")` to replace the
+text of a field, and `stage_and_commit(app, repo, "summary", **files)`. `repo.subjects()`, `repo.branches()`,
+`repo.find("subject")` and friends read the result back.
 
 Every wait fails at once when the app has died, with its exit status and the last of its output.
 
-Assert on git state rather than on the screen where you can: it survives layout changes.
+Assert on git state rather than on the screen where you can: it survives layout changes. Wait for the app to show
+the result of one step before taking the next: a key pressed before it has caught up acts on what it showed before.
+
+`test_commits.py` and `test_branches.py` try one operation each, from a repository set up with git;
+`test_scenario.py` chains them in one session, from an empty repository to a tidied history on three branches.

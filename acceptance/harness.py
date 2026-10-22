@@ -79,6 +79,37 @@ class Git:
         file.parent.mkdir(parents=True, exist_ok=True)
         file.write_text(content)
 
+    def commit(self, message: str, **files: str):
+        """Writes files, by name, and commits them with all other changes."""
+        for name, content in files.items():
+            self.write(name, content)
+        self("add", "--all")
+        self("commit", "--message", message)
+
+    def subjects(self, rev="HEAD") -> list:
+        """The subjects of the commits of rev, the newest first."""
+        return self("log", "--format=%s", rev).splitlines()
+
+    def message(self, rev="HEAD") -> str:
+        return self("log", "-1", "--format=%B", rev)
+
+    def branches(self) -> list:
+        return sorted(self("for-each-ref", "--format=%(refname:short)", "refs/heads").splitlines())
+
+    def current_branch(self) -> str:
+        return self("branch", "--show-current")
+
+    def short(self, rev: str) -> str:
+        """The abbreviated hash the app shows for rev."""
+        return self("rev-parse", "--short=7", rev)
+
+    def find(self, subject: str, rev="HEAD") -> str:
+        """The full hash of the commit of rev with exactly this subject."""
+        matches = [line.split(" ", 1)[0] for line in self("log", "--format=%H %s", rev).splitlines()
+                   if line.split(" ", 1)[1] == subject]
+        assert len(matches) == 1, f"{len(matches)} commits with subject {subject!r} in {rev}"
+        return matches[0]
+
 
 class AppExited(AssertionError):
     """The app ended while a test still expected it to run."""
@@ -150,6 +181,70 @@ class App:
             raise
         except AssertionError as e:
             raise AssertionError(f"{e}\n--- screen ---\n{self.text()}") from None
+
+    def panes(self) -> dict:
+        """The panes of the left column, by the first word of their title, with the colour of their border."""
+        self.pump()
+        return {line[1:].split("─")[0].split(" ")[0]: self.screen.buffer[y][0].fg
+                for y, line in enumerate(self.screen.display) if line.startswith("╭")}
+
+    def pane_text(self, pane: str) -> str:
+        """What the pane of the left column, by the first word of its title, shows inside its border."""
+        lines = self.text().splitlines()
+        top = next((y for y, line in enumerate(lines) if line.startswith("╭" + pane)), None)
+        if top is None:
+            return ""
+        width = lines[top].index("╮")
+        inside = []
+        for line in lines[top + 1:]:
+            if line.startswith("╰"):
+                break
+            inside.append(line[1:width].rstrip())
+        return "\n".join(inside)
+
+    def wait_in(self, pane: str, text: str, timeout=TIMEOUT):
+        """Waits until text shows in the pane of the left column with this title."""
+        try:
+            self.eventually(lambda: text in self.pane_text(pane), f"{text!r} in {pane}", timeout)
+        except AppExited:
+            raise
+        except AssertionError as e:
+            raise AssertionError(f"{e}\n--- screen ---\n{self.text()}") from None
+
+    def focused_pane(self):
+        """The pane of the left column with the focus: the one whose border is drawn in a colour of its own."""
+        colours = list(self.panes().values())
+        odd = [name for name, colour in self.panes().items() if colours.count(colour) == 1]
+        return odd[0] if len(odd) == 1 else None
+
+    def focus(self, pane: str):
+        """Tabs through the panes until pane, such as "Files", "Branches" or "Commits", has the focus."""
+        try:
+            focused = self.eventually(self.focused_pane, "a pane to have the focus")
+            for _ in range(len(self.panes())):
+                if focused == pane:
+                    return
+                self.press("tab")
+                previous = focused
+                focused = self.eventually(lambda: (now := self.focused_pane()) != previous and now,
+                                          f"the focus to move on from {previous}")
+            raise AssertionError(f"no pane {pane} to focus")
+        except AppExited:
+            raise
+        except AssertionError as e:
+            raise AssertionError(f"{e}\n--- screen ---\n{self.text()}") from None
+
+    def press_until(self, name: str, text: str, limit=20):
+        """Presses a key, such as "down", until text shows on screen; fails when it hasn't after limit presses."""
+        for _ in range(limit):
+            try:
+                self.wait_for(text, timeout=0.5)
+                return
+            except AppExited:
+                raise
+            except AssertionError:
+                self.press(name)
+        self.wait_for(text, timeout=1)
 
     def wait_gone(self, text: str, timeout=TIMEOUT):
         try:
