@@ -50,6 +50,7 @@ jobs:
         with:
           name: fat-jar
           path: jazygit-app/target/jazygit-*-fat.jar
+          if-no-files-found: error
           retention-days: 1
 
   acceptance:

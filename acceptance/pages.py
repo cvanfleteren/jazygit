@@ -12,7 +12,7 @@ operation starts from there. The tests assert what the operation should have don
 
 import re
 
-from harness import App, Git, eventually
+from harness import App, Git
 
 SHA = re.compile(r"\b[0-9a-f]{7}\b")
 
@@ -30,12 +30,7 @@ class Jazygit:
     def caught_up(self):
         """Waits until no git operation runs and the panes show the repository as git has it: the commits of the
         checked out branch, the local branches with the checked out one marked, and the changed files."""
-        try:
-            self.app.eventually(lambda: not self._busy() and self._shows_repo(), "the app to show the repository")
-        except AssertionError as e:
-            if "--- screen ---" in str(e):
-                raise
-            raise AssertionError(f"{e}\n--- screen ---\n{self.app.text()}") from None
+        self.app.eventually(lambda: not self._busy() and self._shows_repo(), "the app to show the repository")
 
     def _busy(self) -> bool:
         git = self.repo.path / ".git"
@@ -50,13 +45,14 @@ class Jazygit:
         self.caught_up()
         before = self._state()
         keys()
-        eventually(lambda: not self._busy() and self._state() != before, description)
+        # The app's own wait: when it dies handling the keys, this fails at once, with what it last wrote.
+        self.app.eventually(lambda: not self._busy() and self._state() != before, description)
         self.caught_up()
 
     def _state(self):
         return (self.repo("for-each-ref", "--format=%(refname) %(objectname)", "refs/heads"),
                 self.repo.current_branch(),
-                self.repo("status", "--porcelain"))
+                self.repo.raw("status", "--porcelain", "-z"))
 
     def confirm(self, title: str, key="enter"):
         """Waits for the dialog with this title, and answers it with key."""
@@ -81,9 +77,7 @@ class FilesPane:
 
     def shows_changes(self) -> bool:
         shown = self.app.pane_text("Files")
-        paths = [line[3:].split(" -> ")[-1] for line in self.repo("status", "--porcelain",
-                                                                 "--untracked-files=all").splitlines()]
-        names = [path.rstrip("/").split("/")[-1] for path in paths]
+        names = [path.split("/")[-1] for path in self.repo.changed_paths()]
         return all(name in shown for name in names) and (names or not shown.strip())
 
     def focus(self):
@@ -93,10 +87,7 @@ class FilesPane:
     def stage(self, path: str):
         """Stages the changes to the file at path."""
         self.focus()
-        name = path.split("/")[-1]
-        self.app.press_until("down", lambda: any(
-            line.lstrip().startswith(">") and line.endswith(" " + name)
-            for line in self.app.pane_text("Files").splitlines()))
+        self.app.move_cursor("Files", path.split("/")[-1])
         self.ui.changing_repo(f"{path} to be staged", lambda: self.app.press("space"))
 
     def commit(self, summary: str, description: str = None):
@@ -144,13 +135,10 @@ class BranchesPane:
         """Focuses the pane and moves to branch."""
         self.ui.caught_up()
         self.app.focus("Branches")
-        # The border right after the name, so that "main" is not taken for "main-old".
-        title = f"Log: {branch}─"
-        count = len(self.repo.branches())
-        try:
-            self.app.press_until("down", title, limit=count)
-        except AssertionError:
-            self.app.press_until("up", title, limit=count)
+        self.app.move_cursor("Branches", branch)
+        # Its log shows once the app has taken it as the selected branch, which the keys then act on. The border
+        # right after the name, so that "main" is not taken for "main-old".
+        self.app.wait_for(f"Log: {branch}─")
 
     def checkout(self, branch: str):
         self.select(branch)
@@ -194,14 +182,10 @@ class CommitsPane:
         """Focuses the pane and moves to the commit with this subject."""
         self.ui.caught_up()
         self.app.focus("Commits")
-        title = f"Commit: {self.repo.short(self.repo.find(subject))}"
-        count = len(self.repo.subjects())
-        if title not in self.app.text():
-            self.app.press("down")
-        try:
-            self.app.press_until("down", title, limit=count)
-        except AssertionError:
-            self.app.press_until("up", title, limit=count)
+        short = self.repo.short(self.repo.find(subject))
+        self.app.move_cursor("Commits", short)
+        # Its diff shows once the app has taken it as the selected commit, which the keys then act on.
+        self.app.wait_for(f"Commit: {short}")
 
     def amend(self, subject: str):
         """Adds the staged changes to the commit with this subject."""

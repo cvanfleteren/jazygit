@@ -4,7 +4,7 @@ def test_commit_a_single_file_in_an_empty_repository(repo, jazygit):
 
     # The keys spelled out, as the page objects in pages.py press them for the other tests.
     app = jazygit().app
-    app.wait_for("foo.txt")
+    app.wait_in("Files", "foo.txt")
 
     app.press("space")
     app.eventually(lambda: repo("diff", "--cached", "--name-only") == "foo.txt", "foo.txt to be staged")

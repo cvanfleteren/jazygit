@@ -24,6 +24,22 @@ def test_add_commits_one_after_another(repo, jazygit):
     assert repo("status", "--porcelain") == ""
 
 
+def test_commit_files_with_spaces_and_accents_in_their_names(repo, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo.write("my notes.txt", "notes\n")
+    repo.write("café.txt", "coffee\n")
+    ui = jazygit()
+
+    ui.files.stage("my notes.txt")
+    ui.files.commit("Add notes")
+    ui.files.commit("Add café")
+
+    assert repo.subjects() == ["Add café", "Add notes", "Add one"]
+    assert repo("show", "--format=", "--name-only", "-z", "HEAD~").strip("\0") == "my notes.txt"
+    assert repo("show", "--format=", "--name-only", "-z", "HEAD").strip("\0") == "café.txt"
+    assert repo("status", "--porcelain") == ""
+
+
 def test_amend_the_last_commit_with_the_staged_changes(repo, jazygit):
     three_commits(repo)
     repo.write("three.txt", "three\nand a bit\n")

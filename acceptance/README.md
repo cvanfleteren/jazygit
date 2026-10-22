@@ -100,11 +100,18 @@ Under the page objects, and for what they don't cover, `ui.app` is the app itsel
 - `app.wait_in("Files", "text")` to wait for it in one pane of the left column: the same name can show in the
   command log long before the files pane has it;
 - `app.focus("Commits")` to tab to a pane, which knows the focused pane by its border colour;
+- `app.move_cursor("Commits", "abc1234")` to move the cursor of the focused pane to the row with that word,
+  which knows the cursor row by its background, and waits for each key to move it;
 - `app.eventually(check, "description")` to wait for the repository to get where it should.
 
 `test_commit.py` spells the keys out like this, for one commit.
 
-Every wait fails at once when the app has died, with its exit status and the last of its output.
+Go by the cursor, not by the title of the pane on the right, to know where the cursor is: while the next item
+loads, that pane keeps showing the one before. Once the cursor is there, the title naming the item says the app
+has taken it as selected.
+
+Every wait fails at once when the app has died, with its exit status and the last of its output, and shows the
+screen when it times out.
 
 `test_commits.py` and `test_branches.py` try one operation each, from a repository set up with git;
 `test_scenario.py` chains them in one session, from an empty repository to a tidied history on three branches.
