@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.Base;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.CreatePullRequest;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.ReadParent;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.ReadTitle;
+import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.RereadTitle;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestMsg.*;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -15,8 +16,9 @@ import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
- * Creating the pull request of a branch: reading the branch it came from, asking what it merges into, reading the
- * title it starts out with, and asking what it says.
+ * Creating the pull request of a branch: reading the branch it came from and the title it starts out with, then
+ * asking what it merges into and what it says, in one popup, where the title follows the base until the user types
+ * one.
  */
 public final class CreatePullRequestUpdate {
 
@@ -26,24 +28,28 @@ public final class CreatePullRequestUpdate {
         return switch (msg) {
             // The branch may have gone while its parent was read; then there is nothing to ask.
             case ParentRead(var branch, var parent) ->
-                Next.of(model.repo()
+                model.repo()
                         .branch(branch)
-                        .map(known -> model.clearError()
-                                .openPopupIfFree(new BasePopup(branch, parentFirst(bases(model, branch), parent))))
-                        .getOrElse(model));
-            case BaseChosen(Branch.Name base) ->
-                model.popup(BasePopup.class)
-                        .flatMap(popup -> model.repo().branch(popup.branch()))
-                        // The branch can have another name on its remote; gh needs that one.
-                        .map(known -> Next.of(
-                                model.withoutPopup(BasePopup.class),
-                                new ReadTitle(known.name(), known.pushTarget().branch(), base, baseRef(model, base))))
-                        .getOrElse(() -> Next.of(model.withoutPopup(BasePopup.class)));
-            case BaseCancelled() -> Next.of(model.withoutPopup(BasePopup.class));
+                        .map(known -> readTitle(model, known, parentFirst(bases(model, branch), parent)))
+                        .getOrElse(() -> Next.of(model));
             // Without a commit of its own to name it after, it is named after the branch, as gh would.
-            case TitleRead(var branch, var head, var base, var subject) ->
-                Next.of(model.openPopupIfFree(new NewPullRequestPopup(
-                        branch, head, base, new NewPullRequest(subject.getOrElse(branch::value), "", false))));
+            case TitleRead(var branch, var head, var bases, var subject) -> {
+                String title = subject.getOrElse(branch::value);
+                yield Next.of(model.clearError()
+                        .openPopupIfFree(new NewPullRequestPopup(
+                                branch, head, bases, bases.head(), title, new NewPullRequest(title, "", false))));
+            }
+            case BaseMoved(var cursor, var base) ->
+                model.popup(NewPullRequestPopup.class)
+                        .map(popup -> moved(model.withListCursor(cursor), popup, base))
+                        .getOrElse(() -> Next.of(model));
+            // A title read for a base no longer picked, or after the user typed one, is dropped.
+            case BaseTitleRead(var branch, var base, var subject) ->
+                Next.of(model.popup(NewPullRequestPopup.class)
+                        .filter(popup ->
+                                popup.branch().equals(branch) && popup.base().equals(base) && popup.titleUntouched())
+                        .map(popup -> model.openPopup(titled(popup, subject.getOrElse(branch::value))))
+                        .getOrElse(model));
             case PullRequestEdited(NewPullRequest pullRequest) ->
                 Next.of(model.popup(NewPullRequestPopup.class)
                         .map(popup -> model.openPopup(popup.withPullRequest(pullRequest)))
@@ -85,14 +91,53 @@ public final class CreatePullRequestUpdate {
     }
 
     /**
-     * Asks which branch the pull request of {@code branch}, which has none yet, merges into, once the branch it came
-     * from is read, which is offered first. With one to choose or none, there is nothing to read.
+     * {@code popup} with {@code title} read for its base, as the title too.
      */
-    public static Next askBase(Model model, Branch.Name branch) {
-        List<Branch.Name> bases = bases(model, branch);
+    private static NewPullRequestPopup titled(NewPullRequestPopup popup, String title) {
+        NewPullRequest pullRequest = popup.pullRequest();
+        return popup.withTitleRead(title)
+                .withPullRequest(new NewPullRequest(title, pullRequest.body(), pullRequest.draft()));
+    }
+
+    /**
+     * {@code model}, where the user moved in the list of bases of {@code popup} to {@code base}, if the filter shows
+     * any: that is the base then, and the title is read for it while it is the one read before.
+     */
+    private static Next moved(Model model, NewPullRequestPopup popup, Option<Branch.Name> base) {
+        return base.filter(picked -> !picked.equals(popup.base()))
+                .map(picked -> {
+                    Model picking = model.openPopup(popup.withBase(picked));
+                    return popup.titleUntouched()
+                            ? Next.of(picking, new RereadTitle(popup.branch(), picked, baseRef(model, picked)))
+                            : Next.of(picking);
+                })
+                .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * Asks what the pull request of {@code branch}, which has none yet, merges into and what it says, once the title
+     * it starts out with is read, and before that, with several to choose from, the branch it came from, which is
+     * offered first. With none to merge into, there is nothing to ask.
+     */
+    public static Next ask(Model model, Branch branch) {
+        List<Branch.Name> bases = bases(model, branch.name());
         return bases.size() < 2
-                ? Update.ask(model, new BasePopup(branch, bases))
-                : Next.of(model, new ReadParent(branch, bases.map(base -> new Base(base, baseRef(model, base)))));
+                ? readTitle(model, branch, bases)
+                : Next.of(
+                        model, new ReadParent(branch.name(), bases.map(base -> new Base(base, baseRef(model, base)))));
+    }
+
+    /**
+     * Reads the title the pull request of {@code branch} into the first of {@code bases} starts out with. The branch
+     * can have another name on its remote; gh needs that one. Without bases, which the branches read while the
+     * parent was can also leave, there is nothing to ask.
+     */
+    private static Next readTitle(Model model, Branch branch, List<Branch.Name> bases) {
+        return bases.headOption()
+                .map(first -> Next.of(
+                        model,
+                        new ReadTitle(branch.name(), branch.pushTarget().branch(), bases, baseRef(model, first))))
+                .getOrElse(() -> Next.of(model.fail(new AppError.NoBase(branch.name()))));
     }
 
     /**

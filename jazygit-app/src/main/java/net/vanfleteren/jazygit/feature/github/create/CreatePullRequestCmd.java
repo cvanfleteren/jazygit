@@ -16,13 +16,20 @@ import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Operation;
 
 /**
- * Creating the pull request of a branch: reading the branch it came from, reading the title it starts out with, and
- * creating it.
+ * Creating the pull request of a branch: reading the branch it came from, reading the title it starts out with for
+ * a base, and creating it.
  */
 public sealed interface CreatePullRequestCmd extends Cmd {
 
     Operation CREATE_PR =
             Operation.of("log.title.createPr", "error.createPr.failed").labelledWhenBusy("branches.busy.pullRequest");
+
+    /**
+     * The subject of the oldest commit of {@code branch} that is not on {@code baseRef}, if it could be read.
+     */
+    private static Option<String> firstSubject(Env env, Branch.Name branch, BranchRef baseRef) {
+        return env.git().firstSubject(new BranchRef.Local(branch), baseRef).getOrElse(Option.none());
+    }
 
     /**
      * A branch a pull request can merge into, as {@code name}, and {@code ref}, the branch it is on its remote.
@@ -72,20 +79,19 @@ public sealed interface CreatePullRequestCmd extends Cmd {
     }
 
     /**
-     * Reads the title a new pull request of {@code branch} into {@code base} starts out with: the subject of its
-     * oldest commit that is not on {@code baseRef}, the branch {@code base} is on its remote. Without it, the
-     * user still gets to enter one.
+     * Reads the title a new pull request of {@code branch} starts out with, to ask what it says: the subject of its
+     * oldest commit that is not on {@code baseRef}, the branch the first of {@code bases} is on its remote. Without
+     * it, the user still gets to enter one.
      *
-     * @param head the name the branch has on its remote
+     * @param head  the name the branch has on its remote
+     * @param bases the branches it can merge into, the one it is read for first
      */
-    record ReadTitle(Branch.Name branch, Branch.Name head, Branch.Name base, BranchRef baseRef)
+    record ReadTitle(Branch.Name branch, Branch.Name head, List<Branch.Name> bases, BranchRef baseRef)
             implements CreatePullRequestCmd {
 
         @Override
         public Msg run(Env env) {
-            return env.git()
-                    .firstSubject(new BranchRef.Local(branch), baseRef)
-                    .fold(error -> read(Option.none()), this::read);
+            return read(firstSubject(env, branch, baseRef));
         }
 
         @Override
@@ -94,7 +100,28 @@ public sealed interface CreatePullRequestCmd extends Cmd {
         }
 
         private Msg read(Option<String> subject) {
-            return new CreatePullRequestMsg.TitleRead(branch, head, base, subject);
+            return new CreatePullRequestMsg.TitleRead(branch, head, bases, subject);
+        }
+    }
+
+    /**
+     * Reads the title a new pull request of {@code branch} starts out with again, for {@code base}, which the user
+     * picked instead, as {@link ReadTitle} does.
+     */
+    record RereadTitle(Branch.Name branch, Branch.Name base, BranchRef baseRef) implements CreatePullRequestCmd {
+
+        @Override
+        public Msg run(Env env) {
+            return read(firstSubject(env, branch, baseRef));
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return read(Option.none());
+        }
+
+        private Msg read(Option<String> subject) {
+            return new CreatePullRequestMsg.BaseTitleRead(branch, base, subject);
         }
     }
 

@@ -4,16 +4,25 @@ import static dev.tamboui.toolkit.Toolkit.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.tamboui.buffer.Buffer;
+import dev.tamboui.layout.Rect;
+import dev.tamboui.terminal.Frame;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import dev.tamboui.toolkit.element.DefaultRenderContext;
 import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.toolkit.element.ElementRegistry;
 import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.toolkit.event.EventRouter;
+import dev.tamboui.toolkit.focus.FocusManager;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
+import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -25,8 +34,9 @@ import net.vanfleteren.jazygit.ui.widgets.Dimmed;
 import org.junit.jupiter.api.Test;
 
 /**
- * The popup asking what a new pull request says: the title starts out as given, the body empty and the draft box
- * below them unticked; Enter in the title or Ctrl+S anywhere creates it, Escape cancels.
+ * The popup asking what a new pull request merges into and what it says: the bases above, the base highlighted,
+ * the title starts out as given, the body empty and the draft box below them unticked; Enter in the title or Ctrl+S
+ * anywhere creates it, Escape cancels.
  */
 class NewPullRequestDialogTest {
 
@@ -35,12 +45,14 @@ class NewPullRequestDialogTest {
             .openPopup(new NewPullRequestPopup(
                     new Branch.Name("feature"),
                     new Branch.Name("feature"),
+                    List.of(new Branch.Name("main"), new Branch.Name("release"), new Branch.Name("ahead")),
                     new Branch.Name("main"),
+                    "Add login",
                     new NewPullRequest("Add login", "", false)));
-    // As in the app, an edit changes the model the popup shows; the other messages are only kept.
+    // As in the app, an edit or a move changes the model the popup shows; the other messages are only kept.
     private final NewPullRequestDialog dialog = new NewPullRequestDialog(msg -> {
         dispatched.add(msg);
-        if (msg instanceof CreatePullRequestMsg.PullRequestEdited) {
+        if (msg instanceof CreatePullRequestMsg.PullRequestEdited || msg instanceof CreatePullRequestMsg.BaseMoved) {
             model = Update.update(model, msg).model();
         }
     });
@@ -53,11 +65,15 @@ class NewPullRequestDialogTest {
     }
 
     @Test
-    void showsTheTitleTheBodyAndTheDraftBoxBelowThem() throws Exception {
+    void showsTheBasesThenTheTitleTheBodyAndTheDraftBox() throws Exception {
         try (ToolkitTestRunner runner = start()) {
             String screen = RenderedText.ofLarge(runner, this::view);
 
-            assertTrue(screen.contains("Create pull request: 'feature' into 'main'"), screen);
+            assertTrue(screen.contains("Create pull request: 'feature'"), screen);
+            assertTrue(screen.contains("Into: main"), screen);
+            assertTrue(screen.indexOf("main") < screen.indexOf("release"), screen);
+            assertTrue(screen.indexOf("release") < screen.indexOf("ahead"), screen);
+            assertTrue(screen.indexOf("ahead") < screen.indexOf("Title"), screen);
             assertTrue(screen.contains("Add login"), screen);
             assertTrue(screen.indexOf("Title") < screen.indexOf("Body"), screen);
             assertTrue(screen.indexOf("Body") < screen.indexOf("[ ] Draft?"), screen);
@@ -65,7 +81,7 @@ class NewPullRequestDialogTest {
             assertTrue(
                     screen.lines()
                             .anyMatch(line -> line.strip().startsWith("╰")
-                                    && line.contains("─tab: next field  space: tick draft╯")),
+                                    && line.contains("─tab: next field  ↑↓: base  type: filter  space: tick draft╯")),
                     screen);
             assertTrue(screen.indexOf("[ ] Draft?") < screen.indexOf("tab: next field"), screen);
         }
@@ -119,7 +135,7 @@ class NewPullRequestDialogTest {
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(screen::get)) {
             SettledPilot.focus(runner, NewPullRequestDialog.ID);
             RenderedText.ofLarge(runner, screen::get);
-            for (int i = 0; i < 3; i++) {
+            for (int i = 0; i < 4; i++) {
                 SettledPilot.of(runner).press(KeyCode.TAB);
                 SettledPilot.of(runner).pause();
                 focused.add(runner.runner().focusManager().focusedId());
@@ -133,8 +149,9 @@ class NewPullRequestDialogTest {
                 java.util.List.of(
                         NewPullRequestDialog.BODY_ID,
                         NewPullRequestDialog.DRAFT_ID,
+                        NewPullRequestDialog.BASES_ID,
                         NewPullRequestDialog.ID,
-                        NewPullRequestDialog.DRAFT_ID),
+                        NewPullRequestDialog.BASES_ID),
                 focused);
     }
 
@@ -152,6 +169,8 @@ class NewPullRequestDialogTest {
             SettledPilot.of(runner).press(KeyCode.ESCAPE);
             SettledPilot.focus(runner, NewPullRequestDialog.DRAFT_ID);
             SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.focus(runner, NewPullRequestDialog.BASES_ID);
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
             SettledPilot.of(runner).pause();
         }
 
@@ -159,8 +178,110 @@ class NewPullRequestDialogTest {
                 java.util.List.of(
                         new CreatePullRequestMsg.Cancelled(),
                         new CreatePullRequestMsg.Cancelled(),
+                        new CreatePullRequestMsg.Cancelled(),
                         new CreatePullRequestMsg.Cancelled()),
                 dispatched);
+    }
+
+    @Test
+    void theArrowsInTheBasesPickTheBase() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            SettledPilot.focus(runner, NewPullRequestDialog.BASES_ID);
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).pause();
+            String screen = RenderedText.ofLarge(runner, this::view);
+            assertTrue(screen.contains("Into: release"), screen);
+        }
+
+        assertEquals(
+                java.util.List.of(new CreatePullRequestMsg.BaseMoved(
+                        ListCursor.START.at(1), Option.of(new Branch.Name("release")))),
+                dispatched);
+    }
+
+    @Test
+    void typingInTheBasesFiltersThemAndPicksTheFirstShown() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            SettledPilot.focus(runner, NewPullRequestDialog.BASES_ID);
+            type(runner, "rel");
+            String screen = RenderedText.ofLarge(runner, this::view);
+
+            assertTrue(screen.contains("Into: release · filter: rel"), screen);
+            assertTrue(!screen.contains("main"), screen);
+            assertTrue(!screen.contains("ahead"), screen);
+        }
+
+        assertEquals(
+                Option.of(new Branch.Name("release")),
+                model.popup(NewPullRequestPopup.class).map(NewPullRequestPopup::base));
+    }
+
+    @Test
+    void aFilterThatShowsNoBaseKeepsTheBaseInTheBorder() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            SettledPilot.focus(runner, NewPullRequestDialog.BASES_ID);
+            type(runner, "zz");
+            String screen = RenderedText.ofLarge(runner, this::view);
+
+            assertTrue(screen.contains("Into: main · filter: zz"), screen);
+            assertTrue(screen.contains("No matches"), screen);
+        }
+
+        assertEquals(
+                Option.of(new Branch.Name("main")),
+                model.popup(NewPullRequestPopup.class).map(NewPullRequestPopup::base));
+    }
+
+    @Test
+    void theFilterOfTheBasesOnlyTakesWhatIsTypedAtItsEnd() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            SettledPilot.focus(runner, NewPullRequestDialog.BASES_ID);
+            type(runner, "rel");
+            // There is no cursor shown to move, so the arrows to the sides do nothing.
+            SettledPilot.of(runner).press(KeyCode.LEFT);
+            type(runner, "x");
+            String typed = RenderedText.ofLarge(runner, this::view);
+            SettledPilot.of(runner).press(KeyCode.BACKSPACE);
+            SettledPilot.of(runner).pause();
+            String erased = RenderedText.ofLarge(runner, this::view);
+            SettledPilot.of(runner).press('u', KeyModifiers.CTRL);
+            SettledPilot.of(runner).pause();
+            String cleared = RenderedText.ofLarge(runner, this::view);
+
+            assertTrue(typed.contains("filter: relx"), typed);
+            assertTrue(erased.contains("Into: release · filter: rel"), erased);
+            assertTrue(!cleared.contains("filter:"), cleared);
+            assertTrue(cleared.contains("main"), cleared);
+        }
+    }
+
+    @Test
+    void escapeInTheBasesClearsTheFilterBeforeItCancels() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            SettledPilot.focus(runner, NewPullRequestDialog.BASES_ID);
+            type(runner, "rel");
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).pause();
+            String screen = RenderedText.ofLarge(runner, this::view);
+
+            assertTrue(screen.contains("Into: release"), screen);
+            assertTrue(screen.contains("main"), screen);
+            assertTrue(!screen.contains("filter:"), screen);
+            assertTrue(dispatched.stream().noneMatch(CreatePullRequestMsg.Cancelled.class::isInstance), screen);
+        }
+    }
+
+    @Test
+    void enterInTheBasesGoesOnToTheTitle() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            SettledPilot.focus(runner, NewPullRequestDialog.BASES_ID);
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+
+            assertEquals(NewPullRequestDialog.ID, runner.runner().focusManager().focusedId());
+        }
+
+        assertEquals(java.util.List.of(), dispatched);
     }
 
     private ToolkitTestRunner start() throws Exception {
@@ -168,6 +289,38 @@ class NewPullRequestDialogTest {
         SettledPilot.focus(runner, NewPullRequestDialog.ID);
         RenderedText.ofLarge(runner, this::view);
         return runner;
+    }
+
+    @Test
+    void theBasesAreBorderedAsTheFieldsAreWhileTheTitleHasTheFocus() {
+        Rect area = new Rect(0, 0, 120, 30);
+        FocusManager focus = new FocusManager();
+        focus.setFocus(NewPullRequestDialog.ID);
+        DefaultRenderContext context = new DefaultRenderContext(focus, new EventRouter(focus, new ElementRegistry()));
+        context.setStyleEngine(Theme.createEngine().get());
+        Buffer buffer = Buffer.empty(area);
+        view().render(Frame.forTesting(buffer), area, context);
+
+        assertEquals(
+                cornerBefore(buffer, area, "Title").style().fg(),
+                cornerBefore(buffer, area, "Into: main").style().fg());
+    }
+
+    /**
+     * The cell left of where {@code text} starts on the screen: the corner of the border it is the title of.
+     */
+    private static dev.tamboui.buffer.Cell cornerBefore(Buffer buffer, Rect area, String text) {
+        for (int y = 0; y < area.height(); y++) {
+            StringBuilder line = new StringBuilder();
+            for (int x = 0; x < area.width(); x++) {
+                line.append(buffer.get(x, y).symbol());
+            }
+            int at = line.indexOf(text);
+            if (at > 0) {
+                return buffer.get(at - 1, y);
+            }
+        }
+        throw new AssertionError(text + " not shown");
     }
 
     private Element view() {

@@ -63,6 +63,7 @@ public final class ErrorText {
             case AppError.NothingToPrune() -> Messages.get("error.pruneWorktrees.nothing");
             case AppError.MainWorktreeNotLockable() -> Messages.get("error.lockWorktree.main");
             case AppError.NotPushed(Branch.Name branch) -> Messages.get("error.pullRequest.notPushed", branch.value());
+            case AppError.NoBase(Branch.Name branch) -> Messages.get("error.pullRequest.noBase", branch.value());
             case AppError.OtherRepository(String pullRequest) ->
                 Messages.get("error.checkoutPr.otherRepository", pullRequest);
             case AppError.ChangesBeforeCheckout(String pullRequest) ->
