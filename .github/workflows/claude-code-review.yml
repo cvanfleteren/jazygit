@@ -11,7 +11,8 @@ concurrency:
 
 jobs:
   claude-review:
-    if: github.event.pull_request.draft == false
+    # Dependabot's PRs don't get the repository secrets, so a review of them could only fail.
+    if: github.event.pull_request.draft == false && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
