@@ -67,7 +67,7 @@ public final class LoadUpdate {
                                         Preview.updated(repoView.branchLog(), branch, log -> log.reload(commits)))),
                                 branch)
                         : Next.of(done);
-            case AheadLoaded(var load, var ahead) -> Next.of(AheadUpdate.loaded(done, load, ahead));
+            case AheadLoaded(var load, var ahead) -> AheadUpdate.loaded(done, load, ahead);
             case DivergenceLoaded(var branch, var other, var divergence) ->
                 Next.of(done.mapRepoView(repoView -> repoView.withDivergence(repoView.divergence()
                         .map(view -> view.load().equals(msg.cmd())

@@ -153,9 +153,10 @@ public final class ContentPanel {
      * yellow. The commits on the base are dimmed instead, and the fork point is marked after its sha.
      */
     static Text logText(List<Commit> commits, ZoneId zone, AheadView ahead, Theme.SpanStyles styles) {
+        DateTimeFormatter dateTime = dateTime(zone);
         return styledText(CommitGraph.layout(commits).flatMap(node -> {
             Sha sha = node.commit().sha();
-            List<String> lines = logLines(node, zone, ahead.mark(sha));
+            List<String> lines = logLines(node, dateTime, ahead.mark(sha));
             return ahead.dimmed(sha)
                     ? lines.map(line -> Line.from(styled(line, Theme.Classes.DIM, styles)))
                     : lines.map(line -> line.startsWith("* ")
@@ -193,21 +194,21 @@ public final class ContentPanel {
      * indented.
      */
     static List<String> logLines(List<Commit> commits, ZoneId zone) {
-        return CommitGraph.layout(commits).flatMap(node -> logLines(node, zone, Option.none()));
+        DateTimeFormatter dateTime = dateTime(zone);
+        return CommitGraph.layout(commits).flatMap(node -> logLines(node, dateTime, Option.none()));
     }
 
     /**
      * The lines of the commit of {@code node} in {@link #logLines(List, ZoneId)}, with {@code mark} after its sha.
      */
-    private static List<String> logLines(CommitGraph.Node node, ZoneId zone, Option<String> mark) {
-        DateTimeFormatter dateTime = DateTimeFormatter.ofPattern(Messages.get("content.dateTimePattern"));
+    private static List<String> logLines(CommitGraph.Node node, DateTimeFormatter dateTime, Option<String> mark) {
         Commit c = node.commit();
         String rails = "| ".repeat(node.depth());
         List<String> lines = List.of(
                         Messages.get("content.commitSha", c.shortSha())
                                 + mark.map(text -> "  " + text).getOrElse(""),
                         Messages.get("content.author", c.authorName(), c.authorEmail()),
-                        dateTime.format(c.authorTime().atZone(zone)),
+                        dateTime.format(c.authorTime()),
                         "")
                 .appendAll(messageLines(c))
                 .append("");
@@ -225,6 +226,14 @@ public final class ContentPanel {
                 : lines.zipWithIndex((line, i) -> i == 0
                         ? rails + "* " + line
                         : node.closesBranch() ? closing + (i == 1 ? "|/  " : "|   ") + line : rails + "| " + line);
+    }
+
+    /**
+     * How the log shows when a commit was made, in {@code zone}.
+     */
+    private static DateTimeFormatter dateTime(ZoneId zone) {
+        return DateTimeFormatter.ofPattern(Messages.get("content.dateTimePattern"))
+                .withZone(zone);
     }
 
     /**

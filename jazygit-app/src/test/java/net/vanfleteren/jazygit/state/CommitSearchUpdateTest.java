@@ -157,7 +157,7 @@ class CommitSearchUpdateTest {
     @Test
     void whileOnlyTheCommitsNotOnTheBaseAreListedTheSearchLeavesOutTheBase() {
         BranchRef base = new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main")));
-        Ahead ahead = new Ahead(base, FOUND, false, Option.none());
+        Ahead ahead = new Ahead(COMMITS.head().sha(), base, FOUND, false, Option.none());
         Model model = Update.update(loaded(), new LoadMsg.AheadLoaded(AheadUpdate.ofHead(loaded()), Option.of(ahead)))
                 .model();
         Model searched = Update.update(typed(model, "fix"), new CommitSearchMsg.Submitted())
@@ -169,5 +169,27 @@ class CommitSearchUpdateTest {
         assertEquals(List.of(new Cmd.SearchCommits(CommitQuery.parse("fix"), Option.of(base))), only.cmds());
         Next whole = Update.update(only.model(), new AheadMsg.Toggled());
         assertEquals(List.of(new Cmd.SearchCommits(CommitQuery.parse("fix"), Option.none())), whole.cmds());
+    }
+
+    @Test
+    void theSearchFollowsTheBaseOfHeadOnceItIsReadOrAnotherOne() {
+        BranchRef main = new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main")));
+        BranchRef parent = new BranchRef.Local(new Branch.Name("parent"));
+        Model only = Update.update(loaded(), new AheadMsg.Toggled()).model();
+        Model searched = Update.update(typed(only, "fix"), new CommitSearchMsg.Submitted())
+                .model();
+        Cmd.LoadAhead load = AheadUpdate.ofHead(searched);
+
+        Next read = Update.update(
+                searched,
+                new LoadMsg.AheadLoaded(
+                        load, Option.of(new Ahead(COMMITS.head().sha(), main, FOUND, false, Option.none()))));
+        Next another = Update.update(
+                read.model(),
+                new LoadMsg.AheadLoaded(
+                        load, Option.of(new Ahead(COMMITS.head().sha(), parent, FOUND, false, Option.none()))));
+
+        assertEquals(List.of(new Cmd.SearchCommits(CommitQuery.parse("fix"), Option.of(main))), read.cmds());
+        assertEquals(List.of(new Cmd.SearchCommits(CommitQuery.parse("fix"), Option.of(parent))), another.cmds());
     }
 }

@@ -21,8 +21,14 @@ class AheadUpdateTest {
         return new BranchRef.Remote(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, new Branch.Name(name)));
     }
 
-    private static Ahead ahead(BranchRef base) {
-        return new Ahead(base, FEATURE_COMMITS, false, Option.none());
+    private static final Sha HEAD = new Sha("aaaa");
+    private static final Sha FEATURE_TIP = new Sha("ffff");
+
+    /**
+     * The commits read from {@code tip} that are not on {@code base}: those of the feature branch.
+     */
+    private static Ahead ahead(Sha tip, BranchRef base) {
+        return new Ahead(tip, base, FEATURE_COMMITS, false, Option.none());
     }
 
     @Test
@@ -60,9 +66,10 @@ class AheadUpdateTest {
         assertTrue(next.cmds().contains(AheadUpdate.ofHead(next.model())));
         Model read = Update.update(
                         next.model(),
-                        new LoadMsg.AheadLoaded(AheadUpdate.ofHead(next.model()), Option.of(ahead(origin("main")))))
+                        new LoadMsg.AheadLoaded(
+                                AheadUpdate.ofHead(next.model()), Option.of(ahead(HEAD, origin("main")))))
                 .model();
-        assertEquals(Option.of(ahead(origin("main"))), AheadUpdate.head(read));
+        assertEquals(Option.of(ahead(HEAD, origin("main"))), AheadUpdate.head(read));
         assertEquals(FEATURE_COMMITS.headOption(), read.commit(new Sha("ffff")));
     }
 
@@ -80,21 +87,24 @@ class AheadUpdateTest {
                 .model();
         Model otherRead =
                 Update.update(other, new LoadMsg.BranchLogLoaded(main, COMMITS)).model();
-        Model late = Update.update(otherRead, new LoadMsg.AheadLoaded(load, Option.of(ahead(origin("main")))))
+        Model late = Update.update(
+                        otherRead, new LoadMsg.AheadLoaded(load, Option.of(ahead(FEATURE_TIP, origin("main")))))
                 .model();
         assertEquals(Option.none(), AheadUpdate.branch(late, FEATURE_LOG));
         assertEquals(otherRead.repoView(), late.repoView());
 
-        Model read = Update.update(logRead.model(), new LoadMsg.AheadLoaded(load, Option.of(ahead(origin("main")))))
+        Model read = Update.update(
+                        logRead.model(), new LoadMsg.AheadLoaded(load, Option.of(ahead(FEATURE_TIP, origin("main")))))
                 .model();
-        assertEquals(Option.of(ahead(origin("main"))), AheadUpdate.branch(read, FEATURE_LOG));
+        assertEquals(Option.of(ahead(FEATURE_TIP, origin("main"))), AheadUpdate.branch(read, FEATURE_LOG));
     }
 
     @Test
     void theCommitsAreReadAgainWhenTheBaseMoved() {
         Model model = loaded();
         Cmd.LoadAhead load = AheadUpdate.ofHead(model);
-        Model read = Update.update(model, new LoadMsg.AheadLoaded(load, Option.of(ahead(new BranchRef.Local(FEATURE)))))
+        Model read = Update.update(
+                        model, new LoadMsg.AheadLoaded(load, Option.of(ahead(HEAD, new BranchRef.Local(FEATURE)))))
                 .model();
 
         Update.Next moved = localBranchesRead(
@@ -103,6 +113,49 @@ class AheadUpdateTest {
 
         assertTrue(moved.cmds().contains(load));
         assertFalse(still.cmds().contains(load));
+    }
+
+    @Test
+    void whatWasReadForAnotherHeadIsNotUsed() {
+        Model model = loaded();
+        Model stale = Update.update(
+                        model,
+                        new LoadMsg.AheadLoaded(
+                                AheadUpdate.ofHead(model), Option.of(ahead(new Sha("bbbb"), origin("main")))))
+                .model();
+
+        assertEquals(Option.none(), AheadUpdate.head(stale));
+        assertEquals(Option.none(), stale.commit(FEATURE_TIP));
+    }
+
+    @Test
+    void whatIsNotOnTheBaseIsNotReadTwiceWhenTheLogIsReadAgainAnyway() {
+        // HEAD moved to another branch: its log is read again, and what is not on its base after it.
+        Model moved = Update.update(loaded(), new LoadMsg.StatusLoaded(MOVED)).model();
+        Update.Next checkedOut = localBranchesRead(
+                moved, List.of(new Branch(MAIN, false, new Sha("aaaa")), new Branch(FEATURE, true, new Sha("bbbb"))));
+        assertFalse(
+                checkedOut.cmds().exists(Cmd.LoadAhead.class::isInstance),
+                checkedOut.cmds().toString());
+
+        // The highlighted branch moved: its log is read again, and what is not on its base after it.
+        Model selected = Update.update(loaded(), new SelectionMsg.BranchSelected(FEATURE_LOG))
+                .model();
+        Model logRead = Update.update(selected, new LoadMsg.BranchLogLoaded(FEATURE_LOG, FEATURE_COMMITS))
+                .model();
+        Update.Next branchMoved = localBranchesRead(
+                logRead, List.of(new Branch(MAIN, true, HEAD), new Branch(FEATURE, false, new Sha("eeee"))));
+        assertEquals(List.of(new Cmd.LoadBranchLog(FEATURE_LOG)), branchMoved.cmds());
+    }
+
+    @Test
+    void checkingOutABranchWhereHeadIsReadsWhatIsNotOnItsBase() {
+        Model model = loaded();
+
+        Update.Next checkedOut =
+                localBranchesRead(model, List.of(new Branch(MAIN, false, HEAD), new Branch(FEATURE, true, HEAD)));
+
+        assertTrue(checkedOut.cmds().contains(AheadUpdate.ofHead(checkedOut.model())));
     }
 
     @Test

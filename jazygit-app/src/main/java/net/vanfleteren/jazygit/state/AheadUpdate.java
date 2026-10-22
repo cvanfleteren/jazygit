@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Ahead;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -18,14 +19,15 @@ public final class AheadUpdate {
     public static Next update(Model model, AheadMsg msg) {
         return switch (msg) {
             case AheadMsg.Toggled() ->
-                toggled(model.mapRepoView(repoView -> repoView.withOnlyAhead(!repoView.onlyAhead())));
+                searchFollowed(model.mapRepoView(repoView -> repoView.withOnlyAhead(!repoView.onlyAhead())));
         };
     }
 
     /**
-     * Runs the search again when it now leaves out other commits.
+     * Runs the search again when it should leave out other commits than it does: after the logs were switched, or
+     * once the base of HEAD is known, or another one.
      */
-    private static Next toggled(Model model) {
+    private static Next searchFollowed(Model model) {
         Option<BranchRef> notOn = searchNotOn(model);
         return model.repoView()
                 .commitSearch()
@@ -46,21 +48,42 @@ public final class AheadUpdate {
     }
 
     /**
-     * The commits of HEAD that are not on its base, once they are read and it has one.
+     * The commits of HEAD that are not on its base, once they are read for the log shown and it has one. Those read
+     * for another HEAD, while its log is read anew or they are, are not: they would mark the wrong commits, and list
+     * commits that are not on HEAD to act on.
      */
     public static Option<Ahead> head(Model model) {
-        return model.repo().ahead().toOption().flatMap(ahead -> ahead);
+        return model.repo()
+                .ahead()
+                .toOption()
+                .flatMap(ahead -> ahead)
+                .filter(ahead -> readFor(ahead, model.repo().commits()));
     }
 
     /**
-     * The commits of {@code branch} that are not on its base, once they are read and it has one.
+     * The commits of {@code branch} that are not on its base, once they are read for the log of it shown and it has
+     * one.
      */
     public static Option<Ahead> branch(Model model, BranchRef branch) {
+        Loadable<List<Commit>> log = model.repoView()
+                .branchLog()
+                .map(Preview::shown)
+                .filter(shown -> shown.key().equals(branch))
+                .map(Preview::value)
+                .getOrElse(Loadable.loading());
         return model.repoView()
                 .branchAhead()
                 .filter(preview -> preview.key().equals(branch))
                 .flatMap(preview -> preview.value().toOption())
-                .flatMap(ahead -> ahead);
+                .flatMap(ahead -> ahead)
+                .filter(ahead -> readFor(ahead, log));
+    }
+
+    /**
+     * Whether {@code ahead} was read from the tip of {@code log}.
+     */
+    private static boolean readFor(Ahead ahead, Loadable<List<Commit>> log) {
+        return log.toOption().flatMap(List::headOption).exists(tip -> tip.sha().equals(ahead.tip()));
     }
 
     /**
@@ -89,14 +112,16 @@ public final class AheadUpdate {
     }
 
     /**
-     * Keeps what {@code load} read, unless it was for a branch no longer shown.
+     * Keeps what {@code load} read, unless it was for a branch no longer shown. For HEAD, the search follows its
+     * base.
      */
-    static Model loaded(Model model, Cmd.LoadAhead load, Option<Ahead> ahead) {
+    static Next loaded(Model model, Cmd.LoadAhead load, Option<Ahead> ahead) {
         return load.branch()
                 .fold(
-                        () -> model.mapRepo(repo -> repo.withAhead(repo.ahead().reload(ahead))),
-                        branch -> model.mapRepoView(repoView -> repoView.withBranchAhead(
-                                Preview.updated(repoView.branchAhead(), branch, preview -> preview.reload(ahead)))));
+                        () -> searchFollowed(model.mapRepo(
+                                repo -> repo.withAhead(repo.ahead().reload(ahead)))),
+                        branch -> Next.of(model.mapRepoView(repoView -> repoView.withBranchAhead(
+                                Preview.updated(repoView.branchAhead(), branch, preview -> preview.reload(ahead))))));
     }
 
     /**
@@ -112,21 +137,35 @@ public final class AheadUpdate {
 
     /**
      * The loads to run again once the branches were read: those whose base is another one now, or whose base moved.
+     * Not those whose log is read again anyway, as that reads them too: of HEAD, when it is not where its log was
+     * read; of the highlighted branch, when it moved.
      *
      * @param before the model before the branches were read
      */
     static List<Cmd> branchesLoaded(Model before, Model next) {
         Option<Cmd> head = Option.when(
-                next.repo().commits().toOption().isDefined()
-                        && (!ofHead(before).equals(ofHead(next)) || baseMoved(before, next, head(next))),
+                logOfHead(next) && (!ofHead(before).equals(ofHead(next)) || baseMoved(before, next, head(next))),
                 () -> ofHead(next));
         Option<Cmd> branch = next.repoView()
                 .branchAhead()
                 .map(Preview::key)
+                .filter(shown -> LoadUpdate.tipOf(before, shown).equals(LoadUpdate.tipOf(next, shown)))
                 .filter(shown -> !of(before, shown).equals(of(next, shown))
                         || baseMoved(before, next, AheadUpdate.branch(next, shown)))
                 .map(shown -> of(next, shown));
         return head.toList().appendAll(branch);
+    }
+
+    /**
+     * Whether the log read last is that of HEAD as the status read last has it, so that it is not read again.
+     */
+    private static boolean logOfHead(Model model) {
+        return model.repo()
+                .commits()
+                .toOption()
+                .exists(log -> log.headOption()
+                        .map(Commit::sha)
+                        .equals(model.repo().status().toOption().flatMap(status -> status.headCommit())));
     }
 
     /**

@@ -202,7 +202,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<GitError, Option<Ahead>> ahead(Option<BranchRef> branch, List<BranchRef> bases) {
-        return CliLog.ahead(worktree, branch, bases);
+        return CliLog.ahead(worktree, branch, bases, MAX_COMMITS);
     }
 
     @Override

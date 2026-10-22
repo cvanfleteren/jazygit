@@ -349,6 +349,35 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void moreCommitsNotOnTheBaseThanAreReadAreCountedAsMoreWithoutAForkPoint() throws Exception {
+        git("checkout", "-q", "-b", "side");
+        git("commit", "-q", "--allow-empty", "-m", "Side one");
+        git("commit", "-q", "--allow-empty", "-m", "Side two");
+        git("commit", "-q", "--allow-empty", "-m", "Side three");
+        List<BranchRef> main = List.of(new BranchRef.Local(new Branch.Name("main")));
+
+        Ahead three = CliLog.ahead(repo, Option.none(), main, 3).get().get();
+        Ahead two = CliLog.ahead(repo, Option.none(), main, 2).get().get();
+
+        assertFalse(three.more());
+        assertTrue(two.more());
+        assertEquals(List.of("Side three", "Side two"), two.commits().map(Commit::message));
+        assertEquals(provider.status().get().headCommit().get(), two.tip());
+    }
+
+    @Test
+    void historiesThatNeverMetHaveNoForkPoint() throws Exception {
+        git("checkout", "-q", "--orphan", "other");
+        git("commit", "-q", "--allow-empty", "-m", "Other root");
+        BranchRef main = new BranchRef.Local(new Branch.Name("main"));
+
+        Ahead ahead = provider.ahead(Option.none(), List.of(main)).get().get();
+
+        assertEquals(List.of("Other root"), ahead.commits().map(Commit::message));
+        assertEquals(Option.none(), ahead.forkPoint());
+    }
+
+    @Test
     void aSearchLeavesOutTheCommitsOnTheBase() throws Exception {
         git("checkout", "-q", "-b", "side");
         git("commit", "-q", "--allow-empty", "-m", "Side one");

@@ -6,12 +6,13 @@ import io.vavr.control.Option;
 /**
  * The commits of a branch that are not on its base, the branch it was made from.
  *
+ * @param tip       the commit of the branch they were read from
  * @param base      the branch compared with
  * @param commits   the newest commits only on the branch, newest first, at most a few hundred
  * @param more      whether there are more of them than {@code commits} holds
  * @param forkPoint the newest commit the branch and its base share, if they share one
  */
-public record Ahead(BranchRef base, List<Commit> commits, boolean more, Option<Commit> forkPoint) {
+public record Ahead(Sha tip, BranchRef base, List<Commit> commits, boolean more, Option<Commit> forkPoint) {
 
     /**
      * Whether {@code sha} is on the base too, as far as can be told: when there are more commits only on the branch
