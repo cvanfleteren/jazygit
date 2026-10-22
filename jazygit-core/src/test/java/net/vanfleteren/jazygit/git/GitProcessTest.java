@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.git;
 
 import static net.vanfleteren.jazygit.git.GitCommand.git;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.HashMap;
@@ -67,6 +68,26 @@ class GitProcessTest {
                 "error: patch failed: f:1\nerror: conflicts in index. Try without --index.\n");
 
         assertTrue(failed.says("Try without --index"));
+    }
+
+    @Test
+    void aQuestionGitSilentlyAnswersNoToIsNoneButARefusalStaysAFailure() {
+        GitProcess.run(dir, git("init", "-q", "-b", "main")).get();
+
+        assertEquals(
+                Option.none(),
+                GitProcess.ask(dir, git("config", "--get", "no.such")).get());
+        // Git exits with 1 for this one too, but says why.
+        CommandFailed failed = (CommandFailed)
+                GitProcess.ask(dir, git("config", "--get", "nokey")).getLeft().error();
+        assertTrue(failed.says("key does not contain a section"), failed.toString());
+    }
+
+    @Test
+    void onlyExitingWithOneWithoutSayingAnythingIsSilent() {
+        assertTrue(new CommandFailed(Option.none(), 1, "").silent());
+        assertFalse(new CommandFailed(Option.of("error: boom"), 1, "error: boom").silent());
+        assertFalse(new CommandFailed(Option.none(), 128, "").silent());
     }
 
     @Test
