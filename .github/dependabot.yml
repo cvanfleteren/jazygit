@@ -1,0 +1,28 @@
+version: 2
+
+# Weekly, with the minor and patch updates of each ecosystem grouped into one PR, so they don't flood the review queue.
+updates:
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      maven-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # The acceptance tests' requirements.
+  - package-ecosystem: pip
+    directory: /acceptance
+    schedule:
+      interval: weekly
+    groups:
+      pip-minor-and-patch:
+        update-types: [minor, patch]
