@@ -46,6 +46,7 @@ import net.vanfleteren.jazygit.feature.discard.DiscardDialog;
 import net.vanfleteren.jazygit.feature.error.ErrorDialog;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
 import net.vanfleteren.jazygit.feature.github.GitHubFeature;
+import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.feature.help.HelpDialog;
 import net.vanfleteren.jazygit.feature.inprogress.InProgressDialogs;
 import net.vanfleteren.jazygit.feature.layout.LayoutMsg;
@@ -448,6 +449,8 @@ public class JazygitApp extends ToolkitApp {
                 () -> runner.runOnRenderThread(() -> dispatch.accept(new FetchMsg.Tick())), FETCH_INTERVAL);
         runner.scheduleRepeating(
                 () -> runner.runOnRenderThread(() -> dispatch.accept(new PrOverviewMsg.Tick())), FETCH_INTERVAL);
+        runner.scheduleRepeating(
+                () -> runner.runOnRenderThread(() -> dispatch.accept(new PullRequestMsg.Tick())), FETCH_INTERVAL);
         // A spinner turns by being drawn.
         runner.scheduleRepeating(
                 () -> runner.runOnRenderThread(() -> {

@@ -710,6 +710,87 @@ class PullRequestUpdateTest {
                         .model());
     }
 
+    /**
+     * The pull request of the feature branch shown, with its details read.
+     */
+    private static Model showingDetails() {
+        Model shown =
+                Update.update(withPr(), new PullRequestMsg.Requested(FEATURE)).model();
+        return Update.update(shown, new LoadPullRequestDetails(42).run(env())).model();
+    }
+
+    @Test
+    void refreshingReadsTheDetailsAgainWhileTheyStayShown() {
+        Model shown = showingDetails();
+        PullRequestPopup before = shown.popup(PullRequestPopup.class).get();
+
+        Next refreshing = Update.update(shown, new PullRequestMsg.RefreshChosen());
+
+        PullRequestPopup popup =
+                refreshing.model().popup(PullRequestPopup.class).get();
+        assertEquals(before.details(), popup.details());
+        assertTrue(popup.refreshing());
+        assertEquals(List.of(new LoadPullRequestDetails(42)), refreshing.cmds());
+        // Once it is being read again, it is not read a second time.
+        assertEquals(
+                List.empty(),
+                Update.update(refreshing.model(), new PullRequestMsg.Tick()).cmds());
+    }
+
+    @Test
+    void theTickReadsTheDetailsAgainOnlyOnceTheFirstReadIsDone() {
+        Model reading =
+                Update.update(withPr(), new PullRequestMsg.Requested(FEATURE)).model();
+
+        assertEquals(
+                List.empty(), Update.update(reading, new PullRequestMsg.Tick()).cmds());
+        assertEquals(
+                List.of(new LoadPullRequestDetails(42)),
+                Update.update(showingDetails(), new PullRequestMsg.Tick()).cmds());
+        assertEquals(
+                List.empty(), Update.update(model(), new PullRequestMsg.Tick()).cmds());
+    }
+
+    @Test
+    void failingToReadTheDetailsAgainKeepsThemShownAsStale() {
+        Model refreshing = Update.update(showingDetails(), new PullRequestMsg.RefreshChosen())
+                .model();
+        var failure = refused("gh: offline");
+
+        PullRequestPopup failed = Update.update(refreshing, new PullRequestMsg.DetailsFailed(42, failure))
+                .model()
+                .popup(PullRequestPopup.class)
+                .get();
+
+        assertTrue(failed.detailsRead());
+        assertFalse(failed.refreshing());
+        assertEquals(Option.of(failure), failed.refreshFailed());
+
+        Model again = Update.update(
+                        Update.update(refreshing, new PullRequestMsg.DetailsFailed(42, failure))
+                                .model(),
+                        new PullRequestMsg.RefreshChosen())
+                .model();
+        PullRequestPopup recovered = Update.update(again, new LoadPullRequestDetails(42).run(env()))
+                .model()
+                .popup(PullRequestPopup.class)
+                .get();
+        assertEquals(Option.none(), recovered.refreshFailed());
+        assertFalse(recovered.refreshing());
+    }
+
+    @Test
+    void theTickDoesNotReadTheDetailsUnderThePopupOpenedFromIt() {
+        Model comments = Update.update(
+                        showingDetails(), new net.vanfleteren.jazygit.feature.github.comments.CommentsMsg.Requested())
+                .model();
+
+        assertTrue(comments.popup(net.vanfleteren.jazygit.feature.github.comments.CommentsPopup.class)
+                .isDefined());
+        assertEquals(
+                List.empty(), Update.update(comments, new PullRequestMsg.Tick()).cmds());
+    }
+
     @Test
     void choosingToMergeOrCloseStartsItOnceTheDetailsShowItCan() {
         Model shown = Update.update(withPr(), new PullRequestMsg.Requested(new Branch.Name("feature")))
@@ -995,10 +1076,9 @@ class PullRequestUpdateTest {
         Next shown = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryRequested(summary));
 
         assertEquals(
-                Option.of(new PullRequestPopup(
+                Option.of(PullRequestPopup.loading(
                         new Branch.Name("patch-1"),
-                        new PullRequest(9, "patch-1", true, Checks.FAILING, Review.REQUIRED),
-                        Option.none())),
+                        new PullRequest(9, "patch-1", true, Checks.FAILING, Review.REQUIRED))),
                 shown.model().popup(PullRequestPopup.class));
         assertEquals(List.of(new LoadPullRequestDetails(9)), shown.cmds());
     }

@@ -38,7 +38,9 @@ import net.vanfleteren.jazygit.ui.widgets.PopupView;
 /**
  * Popup showing the pull request of a branch: its title, state, branches, review and checks, as labelled
  * rows, and under them what can be done with it: open it in the browser, comment on it, read its comments, mark it
- * ready for review or turn it into a draft, merge it or close it. Whether it is open lives in the {@link Model}.
+ * ready for review or turn it into a draft, merge it or close it, or read it again. While it is read again, the
+ * details stay shown, with a spinner in the title; when that fails, the title says they are stale. Whether it is
+ * open lives in the {@link Model}.
  */
 public final class PullRequestDialog implements PopupView {
 
@@ -106,7 +108,12 @@ public final class PullRequestDialog implements PopupView {
                                 'x',
                                 "dialog.pullRequest.close",
                                 PullRequestMsg.CloseChosen::new,
-                                (model, popup) -> popup.open())),
+                                (model, popup) -> popup.open()),
+                        new Choice<>(
+                                'R',
+                                "dialog.pullRequest.refresh",
+                                PullRequestMsg.RefreshChosen::new,
+                                (model, popup) -> popup.refreshable())),
                 PullRequestMsg.InfoClosed::new,
                 dispatch);
     }
@@ -233,11 +240,12 @@ public final class PullRequestDialog implements PopupView {
     }
 
     /**
-     * Whether the dialog shows a spinner in {@code model}: while the details of the pull request are read.
+     * Whether the dialog shows a spinner in {@code model}: while the details of the pull request are read, the
+     * first time or again.
      */
     public static boolean showsSpinner(Model model) {
         return model.popup(PullRequestPopup.class)
-                .exists(popup -> popup.details().isEmpty());
+                .exists(popup -> popup.details().isEmpty() || popup.refreshing());
     }
 
     @Override
@@ -248,9 +256,7 @@ public final class PullRequestDialog implements PopupView {
                     .getOrElse(() -> loading(popup));
             int blanks = CONTENT_HEIGHT - lines.map(Line::height).sum().intValue();
             return DialogFrame.withHint(
-                            Messages.get(
-                                    "dialog.pullRequest.title",
-                                    String.valueOf(popup.pullRequest().number())),
+                            title(popup),
                             WIDTH,
                             "dialog.hint.selectCancel",
                             lines.appendAll(List.fill(Math.max(0, blanks), Line::blank))
@@ -260,6 +266,19 @@ public final class PullRequestDialog implements PopupView {
                     // The lines, a blank line, the actions, the blank line and the hint, plus the border.
                     .length(CONTENT_HEIGHT + 1 + actions.height(model, popup) + 2 + 2);
         });
+    }
+
+    /**
+     * The number of the pull request; then a spinner while it is read again, or a mark when that failed.
+     */
+    private String title(PullRequestPopup popup) {
+        String title = Messages.get(
+                "dialog.pullRequest.title", String.valueOf(popup.pullRequest().number()));
+        return popup.refreshing()
+                ? title + " " + TimeText.spinnerFrame(clock.instant())
+                : popup.refreshFailed()
+                        .map(failure -> title + " · " + Messages.get("dialog.pullRequest.stale"))
+                        .getOrElse(title);
     }
 
     private List<Line> loading(PullRequestPopup popup) {

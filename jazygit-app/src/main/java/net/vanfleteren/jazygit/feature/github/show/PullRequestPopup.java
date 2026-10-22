@@ -10,29 +10,61 @@ import net.vanfleteren.jazygit.state.Failure;
 /**
  * Showing the pull request of {@code branch}.
  *
- * @param pullRequest what is known of it from the list of pull requests
- * @param details     what was read about it, or why that failed; nothing while it is being read
+ * @param pullRequest   what is known of it from the list of pull requests
+ * @param details       what was read about it, or why that failed; nothing while it is first being read
+ * @param refreshing    whether it is being read again, while {@code details} stay shown
+ * @param refreshFailed why reading it again failed the last time, so the details shown are stale; nothing once a
+ *                      read succeeds
  */
 public record PullRequestPopup(
-        Branch.Name branch, PullRequest pullRequest, Option<Either<Failure, PullRequestDetails>> details)
+        Branch.Name branch,
+        PullRequest pullRequest,
+        Option<Either<Failure, PullRequestDetails>> details,
+        boolean refreshing,
+        Option<Failure> refreshFailed)
         implements ShowsPullRequest {
 
     /**
      * The popup while its details are being read.
      */
     public static PullRequestPopup loading(Branch.Name branch, PullRequest pullRequest) {
-        return new PullRequestPopup(branch, pullRequest, Option.none());
+        return new PullRequestPopup(branch, pullRequest, Option.none(), false, Option.none());
     }
 
+    /**
+     * The popup showing {@code read}: the details, or why reading them failed. Details that were read already
+     * stay shown when reading them again fails, marked stale.
+     */
     public PullRequestPopup with(Either<Failure, PullRequestDetails> read) {
-        return new PullRequestPopup(branch, pullRequest, Option.of(read));
+        return read.isLeft() && detailsRead()
+                ? new PullRequestPopup(branch, pullRequest, details, false, Option.of(read.getLeft()))
+                : new PullRequestPopup(branch, pullRequest, Option.of(read), false, Option.none());
+    }
+
+    /**
+     * The popup while its details are read again.
+     */
+    PullRequestPopup readingAgain() {
+        return new PullRequestPopup(branch, pullRequest, details, true, refreshFailed);
+    }
+
+    /**
+     * Whether its details can be read again: once the first read is done, and no other is running.
+     */
+    public boolean refreshable() {
+        return details.isDefined() && !refreshing;
     }
 
     /**
      * The popup once the pull request became a draft when {@code draft}, else ready for review.
      */
     PullRequestPopup withDraft(boolean draft) {
-        return new PullRequestPopup(branch, pullRequest, details.map(read -> read.map(pr -> pr.withDraft(draft))));
+        return new PullRequestPopup(
+                branch,
+                pullRequest,
+                details.map(read -> read.map(pr -> pr.withDraft(draft))),
+                refreshing,
+                refreshFailed);
     }
 
     /**

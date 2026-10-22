@@ -92,6 +92,14 @@ public final class PullRequestUpdate {
                 yield PrOverviewUpdate.reloadIfShown(
                         FetchUpdate.requested(PullRequestsUpdate.loadAnyway(new Next(ended, done.cmds()))));
             }
+            // Only the dialog itself is read again, not the one kept under a popup opened from it.
+            case PullRequestMsg.RefreshChosen(), PullRequestMsg.Tick() ->
+                model.popup(PullRequestPopup.class)
+                        .filter(PullRequestPopup::refreshable)
+                        .map(popup -> Next.of(
+                                model.openPopup(popup.readingAgain()),
+                                new LoadPullRequestDetails(popup.pullRequest().number())))
+                        .getOrElse(() -> Next.of(model));
             case PullRequestMsg.InfoClosed() -> Next.of(model.withoutPopup(PullRequestPopup.class));
         };
     }

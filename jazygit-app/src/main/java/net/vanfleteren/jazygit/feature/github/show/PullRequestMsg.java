@@ -70,5 +70,15 @@ public sealed interface PullRequestMsg extends Msg {
      */
     record Ended(PullRequestCmd.ChangingCmd cmd, List<ExecutedCommand> commands) implements PullRequestMsg {}
 
+    /**
+     * The user asked to read the pull request that is shown again.
+     */
+    record RefreshChosen() implements PullRequestMsg {}
+
+    /**
+     * Periodic prompt to read the pull request again, while it is shown.
+     */
+    record Tick() implements PullRequestMsg {}
+
     record InfoClosed() implements PullRequestMsg {}
 }
