@@ -265,10 +265,14 @@ class WorktreeUpdateTest {
     }
 
     @Test
-    void fromARemoteBranchTheNewBranchFollowsItAndStartsOutNamedAsIt() {
+    void fromARemoteBranchTheNewBranchFollowsItAndStartsOutNamedAsItButFromACommitItFollowsNone() {
+        RemoteBranch other = new RemoteBranch("origin", new Branch.Name("other"));
         RemoteBranch remote = new RemoteBranch("origin", new Branch.Name("shared"));
         Model known = TestModels.remoteBranchesRead(
-                        model(), List.of(new RemoteRef(remote, new Sha("5555"), Instant.EPOCH)))
+                        model(),
+                        List.of(
+                                new RemoteRef(other, new Sha("4444"), Instant.EPOCH),
+                                new RemoteRef(remote, new Sha("5555"), Instant.EPOCH)))
                 .model();
 
         assertEquals(
@@ -278,6 +282,13 @@ class WorktreeUpdateTest {
                         new NewBranch("refs/remotes/origin/shared", Option.none(), true),
                         Option.of(new WorktreeSource.Detached("origin/shared")))),
                 startedAt(known, "origin/shared").popup());
+        assertEquals(
+                Option.of(new NewWorktreeBranchPopup(
+                        "abc123",
+                        "",
+                        new NewBranch("abc123", Option.none(), false),
+                        Option.of(new WorktreeSource.Detached("abc123")))),
+                startedAt(known, "abc123").popup());
     }
 
     private static PullRequestSummary pullRequest() {

@@ -168,6 +168,20 @@ class MoveUpdateTest {
     }
 
     @Test
+    void aRangeOfAnotherBranchThanTheCheckedOutOneOrOfNoCommitsAsksNothing() {
+        Model model = model(true);
+
+        assertEquals(
+                model,
+                Update.update(model, new MoveMsg.RangeRead(MAIN, MIDDLE.sha(), UNPUSHED))
+                        .model());
+        assertEquals(
+                model,
+                Update.update(model, new MoveMsg.RangeRead(FEATURE, MIDDLE.sha(), new CommitRange(0, 0, 0)))
+                        .model());
+    }
+
+    @Test
     void aNewBranchAsksForItsNameWithTheBases() {
         assertEquals(
                 Option.of(List.of(PARENT, ONTO_MAIN, ONTO_UPSTREAM)),
