@@ -78,11 +78,14 @@ class UpdateTest {
     void tickDoesNotRepeatLoadsThatAreStillRunning() {
         Model model = Update.init("repo").model();
 
-        assertEquals(List.of(), Update.update(model, new Tick(Instant.EPOCH)).cmds());
+        // Started anew, the repository is read at once; a tick then only checks the files.
+        assertEquals(
+                List.of(new Cmd.CheckMetadata()),
+                Update.update(model, new Tick(Instant.EPOCH)).cmds());
 
         Model statusDone = Update.update(model, new LoadMsg.StatusLoaded(CLEAN)).model();
         assertEquals(
-                List.of(new LoadStatus()),
+                List.of(new LoadStatus(), new Cmd.CheckMetadata()),
                 Update.update(statusDone, new Tick(Instant.EPOCH)).cmds());
     }
 
@@ -138,11 +141,7 @@ class UpdateTest {
                 .model();
         assertEquals(new Failed<>(refused("boom")), model.repo().commits());
         assertEquals(
-                List.of(
-                        new LoadStatus(),
-                        new LoadBranches(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
-                        new LoadCommits()),
+                List.of(new LoadStatus(), new Cmd.CheckMetadata(), new LoadCommits()),
                 Update.update(model, new Tick(Instant.EPOCH)).cmds());
 
         Model statusFailed = Update.update(
@@ -150,7 +149,7 @@ class UpdateTest {
                 .model();
         assertEquals(new Failed<>(refused("no git")), statusFailed.repo().status());
         assertEquals(
-                List.of(new LoadStatus()),
+                List.of(new LoadStatus(), new Cmd.CheckMetadata()),
                 Update.update(statusFailed, new Tick(Instant.EPOCH)).cmds());
     }
 

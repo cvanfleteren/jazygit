@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Predicate;
@@ -33,6 +35,7 @@ public final class LoadUpdate {
                         model,
                         done.mapRepo(repo -> repo.withBranches(repo.branches().reload(branches.local()))
                                 .withRemoteBranches(repo.remoteBranches().reload(branches.remote()))));
+            case MetadataChecked(var stamps) -> metadataChecked(done, stamps);
             case StashesLoaded(var stashes) ->
                 Next.of(done.mapRepo(repo -> repo.withStashes(repo.stashes().reload(stashes))));
             case LoadMsg.WorktreesLoaded(var worktrees) ->
@@ -74,8 +77,33 @@ public final class LoadUpdate {
             case FileDiffLoaded(var files, var options, var diff) ->
                 Next.of(done.mapRepoView(repoView ->
                         repoView.withFileDiff(Preview.updated(repoView.fileDiff(), files, d -> d.reload(diff)))));
-            case LoadMsg.Failed(Cmd.Load cmd, Failure failure) -> Next.of(failed(done, cmd, failure));
+            // Without the files to tell, the loads they guard run, as they would without them.
+            case LoadMsg.Failed(Cmd.CheckMetadata cmd, var failure) ->
+                metadataChecked(done, Cmd.CheckMetadata.GUARDED.map(load -> Tuple.of(load, Option.none())));
+            case LoadMsg.Failed(Cmd.Load cmd, Failure failure) ->
+                Next.of(failed(
+                        done.mapJobs(jobs -> jobs.withReadAt(jobs.readAt().remove(cmd))), cmd, failure));
         };
+    }
+
+    /**
+     * Starts the loads of {@code stamps} whose files changed since they were last started, or that cannot tell, and
+     * keeps what their files look like now. One that still runs is left alone, with what it was started with: it may
+     * have read before the change, so the next tick looks again.
+     */
+    private static Next metadataChecked(Model model, List<Tuple2<Cmd.Load, Option<MetadataStamp>>> stamps) {
+        List<Tuple2<Cmd.Load, Option<MetadataStamp>>> changed = stamps.filter(
+                        stamp -> !model.jobs().refreshing().contains(stamp._1()))
+                .filter(stamp -> stamp._2().isEmpty()
+                        || !model.jobs().readAt().get(stamp._1()).equals(stamp._2()));
+        List<Cmd.Load> loads = changed.map(Tuple2::_1);
+        return new Next(
+                model.mapJobs(jobs -> jobs.withRefreshing(jobs.refreshing().addAll(loads))
+                        .withReadAt(changed.foldLeft(
+                                jobs.readAt(),
+                                (readAt, stamp) -> stamp._2()
+                                        .fold(() -> readAt.remove(stamp._1()), now -> readAt.put(stamp._1(), now))))),
+                List.narrow(loads));
     }
 
     private static Next statusLoaded(Model before, Model next) {
@@ -199,6 +227,7 @@ public final class LoadUpdate {
             when !options.equals(model.preferences().diffOptions()) -> model;
             case LoadFileDiff(var files, var options)
             when !options.equals(model.preferences().diffOptions()) -> model;
+            case Cmd.CheckMetadata() -> model;
             case Cmd.LoadStatus() -> model.mapRepo(repo -> repo.withStatus(new Failed<>(failure)));
             case Cmd.LoadBranches() ->
                 model.mapRepo(

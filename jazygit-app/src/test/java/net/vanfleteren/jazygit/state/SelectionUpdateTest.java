@@ -9,7 +9,6 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
-import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
@@ -211,8 +210,7 @@ class SelectionUpdateTest {
         assertEquals(
                 List.of(
                         new LoadStatus(),
-                        new LoadBranches(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
+                        new Cmd.CheckMetadata(),
                         new LoadBranchLog(new BranchRef.Local(new Branch.Name("feature")))),
                 Update.update(model, new Tick(Instant.EPOCH)).cmds());
     }

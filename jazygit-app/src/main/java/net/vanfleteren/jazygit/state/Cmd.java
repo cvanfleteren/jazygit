@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.CommitQuery;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.GitMetadata;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.settings.Settings;
 
@@ -134,6 +135,27 @@ public interface Cmd {
         @Override
         public Msg run(Env env) {
             return env.git().allBranches().fold(this::failedWith, LoadMsg.BranchesLoaded::new);
+        }
+    }
+
+    /**
+     * Looks at the files that the branches, the stashes and the worktrees are read from, so that a tick only reads
+     * again those that changed: that takes a git process each, this none.
+     */
+    record CheckMetadata() implements Load {
+
+        /**
+         * The loads that a stamp of {@link GitMetadata} tells to run again.
+         */
+        static final List<Load> GUARDED = List.of(new LoadBranches(), new LoadStashes(), new LoadWorktrees());
+
+        @Override
+        public Msg run(Env env) {
+            Option<GitMetadata> metadata = env.git().metadata();
+            return new LoadMsg.MetadataChecked(List.of(
+                    Tuple.of((Load) new LoadBranches(), metadata.flatMap(GitMetadata::branches)),
+                    Tuple.of(new LoadStashes(), metadata.flatMap(GitMetadata::stashes)),
+                    Tuple.of(new LoadWorktrees(), metadata.flatMap(GitMetadata::worktrees))));
         }
     }
 

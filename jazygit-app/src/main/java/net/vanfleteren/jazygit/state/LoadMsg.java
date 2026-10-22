@@ -1,7 +1,9 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.*;
 
 /**
@@ -35,6 +37,18 @@ public sealed interface LoadMsg extends Msg {
         @Override
         public Cmd.Load cmd() {
             return new Cmd.LoadBranches();
+        }
+    }
+
+    /**
+     * What each of the loads that {@link Cmd.CheckMetadata} guards is read from looks like now; none when that
+     * cannot be told, and the load is then to run anyway.
+     */
+    record MetadataChecked(List<Tuple2<Cmd.Load, Option<MetadataStamp>>> stamps) implements LoadMsg {
+
+        @Override
+        public Cmd.Load cmd() {
+            return new Cmd.CheckMetadata();
         }
     }
 

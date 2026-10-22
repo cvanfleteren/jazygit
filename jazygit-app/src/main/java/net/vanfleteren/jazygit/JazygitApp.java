@@ -84,7 +84,7 @@ public class JazygitApp extends ToolkitApp {
     private static final int MIN_STASH_HEIGHT = 3;
     // Where the commands that threw are written down.
     private static final Path BUG_LOG = Path.of(System.getProperty("java.io.tmpdir"), "jazygit-bugs.log");
-    private static final Duration REFRESH_INTERVAL = Duration.ofMillis(500);
+    private static final Duration REFRESH_INTERVAL = Duration.ofMillis(750);
     private static final Duration FETCH_INTERVAL = Duration.ofMinutes(1);
     // How many background commands run at once: a fetch, the pull requests and a preview, but not so many git or
     // gh processes that a burst of them slows the machine down or eats into GitHub's rate limit.
@@ -472,8 +472,8 @@ public class JazygitApp extends ToolkitApp {
                 this::requestRedraw);
         runtime = Option.of(new Runtime(io, background, program));
         runner.focusManager().setFocus(PopupSlot.focusedPane(program.model()));
-        // The model tells the time from the ticks; the first one is half a second off, and the ages it shows are
-        // told from the start. The loads it would start are running already, so it starts none.
+        // The model tells the time from the ticks; the first one is a while off, and the ages it shows are told from
+        // the start. The loads it would start are running already, so it only checks the files of the git directory.
         dispatch.accept(new Msg.Tick(Instant.now()));
         // The first fetch is a while off; the pull requests show from the start.
         dispatch.accept(new PullRequestsMsg.Refresh());
