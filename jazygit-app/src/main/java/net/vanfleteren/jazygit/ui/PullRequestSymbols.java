@@ -18,7 +18,7 @@ public final class PullRequestSymbols {
     private static final Symbol APPROVED = new Symbol("👍", Theme.Classes.REVIEW_APPROVED);
     private static final Symbol CHANGES = new Symbol("👎", Theme.Classes.REVIEW_CHANGES);
     private static final Symbol TO_REVIEW = new Symbol("?", Theme.Classes.DIM);
-    private static final Symbol COMMENTED = new Symbol("●", Theme.Classes.DIM);
+    private static final Symbol COMMENTED = new Symbol("💬", Theme.Classes.DIM);
     private static final Symbol DISMISSED = new Symbol("⊘", Theme.Classes.DIM);
 
     private PullRequestSymbols() {}
@@ -61,14 +61,14 @@ public final class PullRequestSymbols {
     }
 
     /**
-     * Nothing for a reviewer who only commented.
+     * How a reviewer's review went, or that it is still to do.
      */
-    public static Option<Symbol> reviewer(ReviewerState state) {
+    public static Symbol reviewer(ReviewerState state) {
         return switch (state) {
-            case APPROVED -> Option.of(APPROVED);
-            case CHANGES_REQUESTED -> Option.of(CHANGES);
-            case REQUESTED -> Option.of(TO_REVIEW);
-            case COMMENTED -> Option.none();
+            case APPROVED -> APPROVED;
+            case CHANGES_REQUESTED -> CHANGES;
+            case REQUESTED -> TO_REVIEW;
+            case COMMENTED -> COMMENTED;
         };
     }
 

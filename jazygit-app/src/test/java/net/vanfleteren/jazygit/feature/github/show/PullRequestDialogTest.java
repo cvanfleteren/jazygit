@@ -52,7 +52,9 @@ class PullRequestDialogTest {
             List.of("enhancement", "ui"),
             List.of(
                     new Reviewer("alice", ReviewerState.APPROVED),
-                    new Reviewer("bob", ReviewerState.CHANGES_REQUESTED)),
+                    new Reviewer("bob", ReviewerState.CHANGES_REQUESTED),
+                    new Reviewer("dave", ReviewerState.REQUESTED),
+                    new Reviewer("carol", ReviewerState.COMMENTED)),
             List.of(
                     new Check("lint", Checks.PASSING),
                     new Check("integration", Checks.PENDING),
@@ -152,7 +154,7 @@ class PullRequestDialogTest {
         assertTrue(screen.contains("  Changes  +120 −34 in 7 files"), screen);
         assertTrue(screen.contains("Mergeable  yes"), screen);
         assertTrue(screen.contains("   Review  👎 changes requested"), screen);
-        assertTrue(screen.contains("Reviewers  @alice 👍  @bob 👎"), screen);
+        assertTrue(screen.contains("Reviewers  👍 @alice  👎 @bob  ? @dave  💬 @carol"), screen);
         assertTrue(screen.contains(" Comments  5"), screen);
         assertTrue(screen.contains("  Threads  5 with 12 comments, 2 unresolved"), screen);
         assertTrue(screen.contains("   Labels  enhancement, ui"), screen);
