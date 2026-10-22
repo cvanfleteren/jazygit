@@ -121,7 +121,7 @@ final class CliMetadata {
      */
     private static List<Path> directories(Path root) {
         ArrayList<Path> found = new ArrayList<>();
-        Try<Void> _ = Try.run(() -> Files.walkFileTree(root, new SimpleFileVisitor<>() {
+        Try.run(() -> Files.walkFileTree(root, new SimpleFileVisitor<>() {
             @Override
             public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attributes) {
                 found.add(dir);

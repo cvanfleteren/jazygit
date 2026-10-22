@@ -230,8 +230,8 @@
                                     <arg>-XDcompilePolicy=simple</arg>
                                     <arg>--should-stop=ifError=FLOW</arg>
                                     <!-- Every call into our code or Vavr must use its result, without annotating the code;
-                                         Vavr's side effects that return themselves to chain on are the exception. -->
-                                    <arg>-Xplugin:ErrorProne -XepOpt:CheckReturnValue:Packages=net.vanfleteren.jazygit,io.vavr -XepOpt:CheckReturnValue:ApiExclusionList=${maven.multiModuleProjectDirectory}/checkreturnvalue-exclusions.txt</arg>
+                                         the calls in errorprone-ignorable-results.txt are the exception. -->
+                                    <arg>-Xplugin:ErrorProne -XepOpt:CheckReturnValue:Packages=net.vanfleteren.jazygit,io.vavr -XepOpt:CheckReturnValue:ApiExclusionList=${maven.multiModuleProjectDirectory}/errorprone-ignorable-results.txt</arg>
                                 </compilerArgs>
                             </configuration>
                         </execution>
