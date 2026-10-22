@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.ui.LineEditInput;
 import net.vanfleteren.jazygit.ui.SubmittableTextArea;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
 import net.vanfleteren.jazygit.ui.widgets.FilterLine;
+import net.vanfleteren.jazygit.ui.widgets.FocusHighlighted;
 import net.vanfleteren.jazygit.ui.widgets.HintedDialog;
 import net.vanfleteren.jazygit.ui.widgets.ListFilter;
 import net.vanfleteren.jazygit.ui.widgets.ListKeys;
@@ -147,7 +148,8 @@ public final class NewPullRequestDialog implements PopupView {
     }
 
     /**
-     * The list of the bases, those the filter shows, with the base highlighted, and named in its border.
+     * The list of the bases, those the filter shows, with the base highlighted, and named in its border. The
+     * highlight is that of a list in use only while the list has the focus.
      */
     private Element bases(Bases view) {
         ListElement<?> list = view.shown().isEmpty()
@@ -157,7 +159,7 @@ public final class NewPullRequestDialog implements PopupView {
                                 .toJavaArray(StyledElement[]::new))
                         .selected(view.selected());
         String base = view.popup().base().value();
-        return list.title(view.cursor()
+        list.title(view.cursor()
                         .filter()
                         .map(typed -> Messages.get("dialog.newPullRequest.baseFiltered", base, typed))
                         .getOrElse(() -> Messages.get("dialog.newPullRequest.base", base)))
@@ -169,6 +171,7 @@ public final class NewPullRequestDialog implements PopupView {
                         view.shown().size(),
                         line -> true,
                         line -> dispatch.accept(view.at(line))));
+        return view.shown().isEmpty() ? list : new FocusHighlighted(list);
     }
 
     /**
