@@ -348,49 +348,71 @@ public class JazygitApp extends ToolkitApp {
     protected void onStart() {
         ToolkitRunner runner = runner();
         runner.styleEngine(styleEngine);
-        // Handled, a Redraw draws a frame, unless one was drawn since it was queued.
-        runner.eventRouter()
-                .addGlobalHandler(event ->
-                        event instanceof Redraw && redrawPending ? EventResult.HANDLED : EventResult.UNHANDLED);
-        runner.eventRouter()
-                .addGlobalHandler(event -> Option.of(event)
-                        .filter(KeyEvent.class::isInstance)
-                        .flatMap(key -> Keymap.standard().handleGlobal((KeyEvent) key))
-                        .map(msg -> {
-                            dispatch.accept(msg);
-                            return EventResult.HANDLED;
-                        })
-                        .getOrElse(EventResult.UNHANDLED));
-        runner.eventRouter().addGlobalHandler(event -> {
-            if (event instanceof MouseEvent mouse) {
-                // A press on nothing that takes the focus clears it, without drawing; the frame gives it back.
-                if (mouse.kind() == MouseEventKind.PRESS) {
-                    requestRedraw();
-                }
-                if (borderDrag.handle(mouse, model()).isHandled()) {
-                    return EventResult.HANDLED;
-                }
-                focusClicked(mouse);
-            }
-            return EventResult.UNHANDLED;
-        });
+        runner.eventRouter().addGlobalHandler(this::handleRedraw);
+        runner.eventRouter().addGlobalHandler(this::handleGlobalKey);
+        runner.eventRouter().addGlobalHandler(this::handleMouse);
         startRuntime(env, settings, themeOverride, Landing.START);
-        runner.scheduleRepeating(
-                () -> runner.runOnRenderThread(() -> dispatch.accept(new Msg.Tick(Instant.now()))), REFRESH_INTERVAL);
-        runner.scheduleRepeating(
-                () -> runner.runOnRenderThread(() -> dispatch.accept(new FetchMsg.Tick())), FETCH_INTERVAL);
-        runner.scheduleRepeating(
-                () -> runner.runOnRenderThread(() -> dispatch.accept(new PrOverviewMsg.Tick())), FETCH_INTERVAL);
-        runner.scheduleRepeating(
-                () -> runner.runOnRenderThread(() -> dispatch.accept(new PullRequestMsg.Tick())), FETCH_INTERVAL);
-        // A spinner turns by being drawn.
-        runner.scheduleRepeating(
-                () -> runner.runOnRenderThread(() -> {
-                    if (Spinners.shown(model())) {
-                        requestRedraw();
-                    }
-                }),
-                TimeText.SPINNER_FRAME);
+        every(REFRESH_INTERVAL, () -> dispatch.accept(new Msg.Tick(Instant.now())));
+        every(FETCH_INTERVAL, () -> dispatch.accept(new FetchMsg.Tick()));
+        every(FETCH_INTERVAL, () -> dispatch.accept(new PrOverviewMsg.Tick()));
+        every(FETCH_INTERVAL, () -> dispatch.accept(new PullRequestMsg.Tick()));
+        every(TimeText.SPINNER_FRAME, this::turnSpinners);
+    }
+
+    /**
+     * Handled, a Redraw draws a frame, unless one was drawn since it was queued.
+     */
+    private EventResult handleRedraw(Event event) {
+        return event instanceof Redraw && redrawPending ? EventResult.HANDLED : EventResult.UNHANDLED;
+    }
+
+    /**
+     * Dispatches what a key means wherever the focus is, if it means something there.
+     */
+    private EventResult handleGlobalKey(Event event) {
+        return Option.of(event)
+                .filter(KeyEvent.class::isInstance)
+                .flatMap(key -> Keymap.standard().handleGlobal((KeyEvent) key))
+                .map(msg -> {
+                    dispatch.accept(msg);
+                    return EventResult.HANDLED;
+                })
+                .getOrElse(EventResult.UNHANDLED);
+    }
+
+    /**
+     * Drags the border between the columns, or else gives the focus to what a click lands on.
+     */
+    private EventResult handleMouse(Event event) {
+        if (!(event instanceof MouseEvent mouse)) {
+            return EventResult.UNHANDLED;
+        }
+        // A press on nothing that takes the focus clears it, without drawing; the frame gives it back.
+        if (mouse.kind() == MouseEventKind.PRESS) {
+            requestRedraw();
+        }
+        if (borderDrag.handle(mouse, model()).isHandled()) {
+            return EventResult.HANDLED;
+        }
+        focusClicked(mouse);
+        return EventResult.UNHANDLED;
+    }
+
+    /**
+     * Runs {@code action} on the render thread every {@code interval}.
+     */
+    private void every(Duration interval, Runnable action) {
+        ToolkitRunner runner = runner();
+        runner.scheduleRepeating(() -> runner.runOnRenderThread(action), interval);
+    }
+
+    /**
+     * A spinner turns by being drawn.
+     */
+    private void turnSpinners() {
+        if (Spinners.shown(model())) {
+            requestRedraw();
+        }
     }
 
     /**
