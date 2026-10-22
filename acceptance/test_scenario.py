@@ -3,6 +3,11 @@ A day's work in one session, from an empty repository: each step starts from whe
 repository and the app, the way it goes when a person uses it.
 """
 
+import pytest
+
+# By far the longest tests: they go first, so they are not what the run waits on at the end.
+pytestmark = pytest.mark.slow
+
 
 def test_a_feature_from_first_commit_to_tidy_history(repo, jazygit):
     repo.write("README.md", "# Parser\n")

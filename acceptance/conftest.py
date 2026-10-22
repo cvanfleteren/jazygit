@@ -13,6 +13,26 @@ def pytest_addoption(parser):
     parser.addoption("--jar", help="the jazygit fat jar to test; defaults to the newest in jazygit-app/target")
 
 
+def pytest_collection_modifyitems(config, items):
+    """Starts each slow test first, on a worker of its own: started late, or after another slow one, they would keep
+    the run going long after the others are done.
+
+    worksteal hands each worker an even, contiguous slice of the tests, and an idle worker steals from the end of
+    another's slice, so a slow test at the head of a slice runs first and the rest of the slice moves elsewhere."""
+    workers = getattr(config, "workerinput", {}).get("workercount", 1)
+    slow = [item for item in items if item.get_closest_marker("slow")]
+    rest = [item for item in items if not item.get_closest_marker("slow")]
+    heads = [slow[i::workers] for i in range(workers)]
+    ordered, remaining = [], len(items)
+    for i, head in enumerate(heads):
+        size = remaining // (workers - i)
+        fill = max(size - len(head), 0)
+        ordered += head + rest[:fill]
+        del rest[:fill]
+        remaining -= size
+    items[:] = ordered + rest
+
+
 @pytest.fixture(scope="session")
 def jar(request) -> Path:
     given = request.config.getoption("--jar")
