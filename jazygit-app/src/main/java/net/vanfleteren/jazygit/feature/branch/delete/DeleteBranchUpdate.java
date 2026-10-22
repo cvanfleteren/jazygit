@@ -40,7 +40,7 @@ public final class DeleteBranchUpdate {
                         popup -> removableWorktree(model, popup.branch())
                                 .filter(worktree -> worktree.location().equals(popup.location()))
                                 .map(worktree -> new RemoveWorktreeCmd(
-                                        worktree.location(), false, Option.of(popup.branch()), worktree.isLocked())));
+                                        worktree.location(), false, Option.of(popup.branch()), worktree.locked())));
             case DeleteBranchMsg.RemoteRequested(RemoteBranch branch) -> remoteRequested(model, branch);
             case DeleteBranchMsg.RemoteCancelled() -> Next.of(model.withoutPopup(DeleteRemoteBranchPopup.class));
             case DeleteBranchMsg.RemoteConfirmed() ->

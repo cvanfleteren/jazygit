@@ -202,6 +202,17 @@ final class CliWorktree {
                         workTree.resolve(location).normalize().toString()));
     }
 
+    /**
+     * Runs {@code git worktree lock --reason <reason> <location>} in {@code workTree}, or without a reason when
+     * {@code reason} is blank.
+     */
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> lock(Path workTree, Path location, String reason) {
+        String where = workTree.resolve(location).normalize().toString();
+        return GitProcess.log(
+                workTree,
+                reason.isBlank() ? git("worktree", "lock", where) : git("worktree", "lock", "--reason", reason, where));
+    }
+
     static GitError classify(ProcessError error) {
         return error instanceof CommandFailed failed && failed.says(HAS_CHANGES)
                 ? new WorktreeHasChanges(failed.explanation().getOrElse(""))

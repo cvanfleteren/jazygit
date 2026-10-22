@@ -153,6 +153,11 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> lockWorktree(Path location, String reason) {
+        return ran();
+    }
+
+    @Override
     default Either<GitFailure<GitError>, List<ExecutedCommand>> edit(List<String> files) {
         return ran();
     }
