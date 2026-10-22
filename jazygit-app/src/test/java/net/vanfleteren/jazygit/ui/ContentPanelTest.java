@@ -100,6 +100,22 @@ class ContentPanelTest {
     }
 
     @Test
+    void aPopupOpenedFromTheCommitChangesKeepsShowingTheCommit() throws Exception {
+        Model selected = Update.update(
+                        Update.update(TestModels.loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa")))
+                                .model(),
+                        new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffOptions.DEFAULT, DiffText.of("")))
+                .model();
+        // The area had the focus when the popup opened, so that is what the focus goes back to.
+        Model withPopup = selected.mapRepoView(repoView -> repoView.withFocusedPane(Option.of("commit-changes")))
+                .openPopup(new net.vanfleteren.jazygit.feature.help.HelpPopup("commit-changes", List.empty()));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(withPopup, "help"))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> content.render(withPopup, "help"));
+            assertTrue(screen.contains("Commit: aaaa"), screen);
+        }
+    }
+
+    @Test
     void branchesFocusedShowsLoadingBeforeABranchIsSelected() throws Exception {
         Model unselected = TestModels.loaded(new SampleData());
         try (ToolkitTestRunner testRunner =
@@ -130,6 +146,12 @@ class ContentPanelTest {
     @Test
     void unknownFocusFallsBackToFileStatusView() {
         StyledElement<?> panel = content.render(model, "unknown");
+        assertNotNull(panel);
+    }
+
+    @Test
+    void nothingFocusedBeforeTheFirstRenderFallsBackToFileStatusView() {
+        StyledElement<?> panel = content.render(model, null);
         assertNotNull(panel);
     }
 

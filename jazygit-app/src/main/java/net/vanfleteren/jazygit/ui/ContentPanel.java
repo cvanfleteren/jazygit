@@ -52,8 +52,6 @@ public final class ContentPanel {
     private static final String STASH_AREA_ID = "stash-changes";
     private static final String DIVERGENCE_AREA_ID = "divergence-commit";
     private static final String PULL_REQUEST_AREA_ID = "pull-request-preview";
-    private static final List<String> LEFT_PANES =
-            List.of(FilesPanel.ID, BranchesPanel.ID, CommitsPanel.ID, StashPanel.ID);
     private static final String MESSAGE_INDENT = "    ";
     /**
      * How the header lines of a diff start, before its first hunk.
@@ -404,27 +402,48 @@ public final class ContentPanel {
      * until the focus is given back.
      */
     public StyledElement<?> render(Model model, String focusedId) {
-        boolean inContent = focusableAreas.exists(area -> area.id().equals(focusedId));
-        focusableAreas.forEach(area -> area.tabbable(inContent));
+        tabbableWhileIn(focusedId);
         if (model.screen() == Screen.PULL_REQUESTS) {
             return pullRequestView(model, focusedId);
         }
-        boolean onPane = inContent || LEFT_PANES.contains(focusedId);
-        String pane = onPane ? focusedId : model.repoView().focusedPane().getOrElse(focusedId);
-        if (BranchesPanel.ID.equals(pane) || DIVERGENCE_AREA_ID.equals(pane)) {
-            return model.repoView()
-                    .divergence()
-                    .filter(view -> model.repoView().branchesTab() == BranchesTab.LOCAL)
-                    .<StyledElement<?>>map(view -> divergenceCommitView(model, focusedId, view))
-                    .getOrElse(() -> branchLogView(model, focusedId));
-        }
-        if (CommitsPanel.ID.equals(pane) || COMMIT_AREA_ID.equals(pane)) {
-            return commitDiffView(model, focusedId);
-        }
-        if (StashPanel.ID.equals(pane) || STASH_AREA_ID.equals(pane)) {
-            return stashDiffView(model, focusedId);
-        }
-        return fileDiffView(model, focusedId);
+        return switch (mirrored(model, focusedId)) {
+            case FILES -> fileDiffView(model, focusedId);
+            case BRANCHES -> branchesView(model, focusedId);
+            case COMMITS -> commitDiffView(model, focusedId);
+            case STASH -> stashDiffView(model, focusedId);
+        };
+    }
+
+    /**
+     * Lets Tab move between the focusable areas only while one of them, {@code focusedId}, has the focus.
+     */
+    private void tabbableWhileIn(String focusedId) {
+        boolean inContent = focusableAreas.exists(area -> area.id().equals(focusedId));
+        focusableAreas.forEach(area -> area.tabbable(inContent));
+    }
+
+    /**
+     * The pane {@code focusedId} is or belongs to; while a popup has the focus, the pane, or the pane of the area,
+     * it was opened from. Nothing has the focus before the first render.
+     */
+    private Mirrored mirrored(Model model, String focusedId) {
+        Option<String> id = isArea(focusedId) || Mirrored.of(focusedId).isDefined()
+                ? Option.of(focusedId)
+                : model.repoView().focusedPane().orElse(Option.of(focusedId));
+        return id.map(known -> paneOfArea(model, known).getOrElse(known))
+                .flatMap(Mirrored::of)
+                .getOrElse(Mirrored.FILES);
+    }
+
+    /**
+     * The commit highlighted in the divergence the local branches pane lists, or else the log of the branch.
+     */
+    private StyledElement<?> branchesView(Model model, String focusedId) {
+        return model.repoView()
+                .divergence()
+                .filter(view -> model.repoView().branchesTab() == BranchesTab.LOCAL)
+                .<StyledElement<?>>map(view -> divergenceCommitView(model, focusedId, view))
+                .getOrElse(() -> branchLogView(model, focusedId));
     }
 
     /**
@@ -725,6 +744,27 @@ public final class ContentPanel {
             RichTextState state = element.state();
             dispatch.accept(new Msg.ContentScrolled(id, new Scrolled(content, state.scrollRow(), state.scrollCol())));
             return EventResult.HANDLED;
+        }
+    }
+
+    /**
+     * The left pane whose highlight the content panel shows on the repository screen. Its areas are resolved to it
+     * by {@link #paneOfArea}.
+     */
+    private enum Mirrored {
+        FILES(FilesPanel.ID),
+        BRANCHES(BranchesPanel.ID),
+        COMMITS(CommitsPanel.ID),
+        STASH(StashPanel.ID);
+
+        private final String id;
+
+        Mirrored(String id) {
+            this.id = id;
+        }
+
+        static Option<Mirrored> of(String id) {
+            return List.of(values()).find(mirrored -> mirrored.id.equals(id));
         }
     }
 }
