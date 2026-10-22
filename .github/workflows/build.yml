@@ -25,3 +25,16 @@ jobs:
 
       - name: Build and test
         run: ./mvnw --batch-mode --no-transfer-progress verify
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: acceptance/requirements.txt
+
+      # Runs the fat jar that verify built, with the JDK set up above.
+      - name: Acceptance tests
+        run: |
+          pip install -r acceptance/requirements.txt
+          python -m pytest acceptance -v
