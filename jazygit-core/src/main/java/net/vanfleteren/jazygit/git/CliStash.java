@@ -28,6 +28,8 @@ final class CliStash {
     private static final Pattern BRANCH_PREFIX = Pattern.compile("^On [^:]+: ");
     // The branch a stash was made on, in the message git gives it with a message and without one.
     private static final Pattern STASHED_ON = Pattern.compile("^(?:WIP on|On) ([^:]+): ");
+    // What git names in place of the branch when a stash is made on a detached HEAD.
+    private static final String NO_BRANCH = "(no branch)";
 
     private CliStash() {}
 
@@ -71,7 +73,7 @@ final class CliStash {
 
     private static Option<String> branch(String message) {
         Matcher matcher = STASHED_ON.matcher(message);
-        return matcher.find() ? Option.of(matcher.group(1)) : Option.none();
+        return matcher.find() ? Option.of(matcher.group(1)).filter(branch -> !branch.equals(NO_BRANCH)) : Option.none();
     }
 
     /**
