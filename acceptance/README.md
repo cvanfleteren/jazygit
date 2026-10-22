@@ -61,8 +61,9 @@ three runs), so you can `cd` into it and look around, or start jazygit on it you
 
 ### In CI
 
-`.github/workflows/build.yml` runs them after `./mvnw verify`, on every pull request and before every publish, with
-Python 3.12 and the dependencies from `requirements.txt`.
+`.github/workflows/build.yml` runs them on every pull request and before every publish, with Python 3.12 and the
+dependencies from `requirements.txt`. A job builds the jar without tests, and the acceptance tests run on it while
+`./mvnw verify` runs in a job of its own, at the same time.
 
 ## Writing a test
 
