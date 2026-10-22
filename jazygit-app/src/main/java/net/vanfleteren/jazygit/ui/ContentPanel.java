@@ -55,6 +55,11 @@ public final class ContentPanel {
     private static final List<String> LEFT_PANES =
             List.of(FilesPanel.ID, BranchesPanel.ID, CommitsPanel.ID, StashPanel.ID);
     private static final String MESSAGE_INDENT = "    ";
+    /**
+     * How the header lines of a diff start, before its first hunk.
+     */
+    private static final List<String> DIFF_HEADER_PREFIXES = List.of("+++", "---", "diff ", "index ");
+
     private final Theme.SpanStyles styles;
     // The scrollable areas for the diffs, the branch log and the commit. Where they are scrolled to lives in the
     // model; the elements are kept between renders as they also lay out the text for the scrollbar. Only used from
@@ -179,13 +184,13 @@ public final class ContentPanel {
     }
 
     private static Option<String> diffClass(String line) {
-        return line.startsWith("+++") || line.startsWith("---") || line.startsWith("diff ") || line.startsWith("index ")
-                ? Option.of(Theme.Classes.DIFF_HEADER)
-                : line.startsWith("+")
-                        ? Option.of(Theme.Classes.DIFF_ADDED)
-                        : line.startsWith("-")
-                                ? Option.of(Theme.Classes.DIFF_REMOVED)
-                                : line.startsWith("@@") ? Option.of(Theme.Classes.DIFF_HUNK) : Option.none();
+        return switch (line) {
+            case String l when DIFF_HEADER_PREFIXES.exists(l::startsWith) -> Option.of(Theme.Classes.DIFF_HEADER);
+            case String l when l.startsWith("+") -> Option.of(Theme.Classes.DIFF_ADDED);
+            case String l when l.startsWith("-") -> Option.of(Theme.Classes.DIFF_REMOVED);
+            case String l when l.startsWith("@@") -> Option.of(Theme.Classes.DIFF_HUNK);
+            default -> Option.none();
+        };
     }
 
     /**
@@ -203,7 +208,6 @@ public final class ContentPanel {
      */
     private static List<String> logLines(CommitGraph.Node node, DateTimeFormatter dateTime, Option<String> mark) {
         Commit c = node.commit();
-        String rails = "| ".repeat(node.depth());
         List<String> lines = List.of(
                         Messages.get("content.commitSha", c.shortSha())
                                 + mark.map(text -> "  " + text).getOrElse(""),
@@ -212,20 +216,11 @@ public final class ContentPanel {
                         "")
                 .appendAll(messageLines(c))
                 .append("");
-        // Like git's graph: a merge opens a rail with a "\\" line, the last commit of a merged
-        // branch closes it with a "/" in place of its second line.
-        String closing = "| ".repeat(Math.max(0, node.depth() - 1));
-        return c.isMerge()
-                ? List.of(
-                                rails + "*   " + lines.head(),
-                                rails + "|\\  "
-                                        + Messages.get(
-                                                "content.merge",
-                                                c.parents().map(Sha::shortSha).mkString(" ")))
-                        .appendAll(lines.tail().map(line -> rails + "| | " + line))
-                : lines.zipWithIndex((line, i) -> i == 0
-                        ? rails + "* " + line
-                        : node.closesBranch() ? closing + (i == 1 ? "|/  " : "|   ") + line : rails + "| " + line);
+        return LogGraph.gutter(node)
+                .draw(
+                        lines,
+                        Messages.get(
+                                "content.merge", c.parents().map(Sha::shortSha).mkString(" ")));
     }
 
     /**

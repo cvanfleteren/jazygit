@@ -24,13 +24,12 @@ public final class TimeText {
      */
     public static String age(Duration since) {
         long seconds = Math.max(0, since.toSeconds());
-        return seconds < 60
-                ? Messages.get("branches.age.seconds", String.valueOf(seconds))
-                : seconds < 3600
-                        ? Messages.get("branches.age.minutes", String.valueOf(seconds / 60))
-                        : seconds < 86400
-                                ? Messages.get("branches.age.hours", String.valueOf(seconds / 3600))
-                                : Messages.get("branches.age.days", String.valueOf(seconds / 86400));
+        return switch (Long.valueOf(seconds)) {
+            case Long s when s < 60 -> Messages.get("branches.age.seconds", String.valueOf(s));
+            case Long s when s < 3600 -> Messages.get("branches.age.minutes", String.valueOf(s / 60));
+            case Long s when s < 86400 -> Messages.get("branches.age.hours", String.valueOf(s / 3600));
+            case Long s -> Messages.get("branches.age.days", String.valueOf(s / 86400));
+        };
     }
 
     /**

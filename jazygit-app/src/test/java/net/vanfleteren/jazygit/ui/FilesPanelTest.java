@@ -84,6 +84,21 @@ class FilesPanelTest {
     }
 
     @Test
+    void changesOnlyInTheWorkingTreeShowInTheUnstagedColumn() throws Exception {
+        // The rename only in the working tree follows intent-to-add of the new path.
+        Model model = TestModels.loaded(new FixedProvider(List.of(
+                new FileEntry("gone.txt", ChangeType.DELETED), FileEntry.renamed("b.txt", "a.txt", false, true))));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.ID))) {
+            String screen = RenderedText.of(testRunner, () -> panel.render(model, FilesPanel.ID));
+            assertTrue(screen.contains(" D gone.txt"), screen);
+            assertTrue(screen.contains(" R a.txt -> b.txt"), screen);
+
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
     void aPlaceholderRowIsNotASelection() throws Exception {
         Model loading = TestModels.loading("repo");
 

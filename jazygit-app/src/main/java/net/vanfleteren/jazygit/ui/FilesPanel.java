@@ -133,16 +133,23 @@ public class FilesPanel {
                 .getOrElse(() -> entry.staged() ? entry.type().marker() : " ");
         String unstaged = entry.conflict()
                 .map(conflict -> marker(conflict.theirs()))
-                .getOrElse(() -> !entry.unstaged()
-                        ? " "
-                        : entry.type() == ChangeType.DELETED
-                                ? "D"
-                                // A rename only in the working tree, after intent-to-add of the new path.
-                                : entry.type() == ChangeType.RENAMED && !entry.staged() ? "R" : "M");
+                .getOrElse(() -> entry.unstaged() ? unstagedMarker(entry) : " ");
         return Toolkit.row(
                 Toolkit.text(staged).addClass(Theme.Classes.STAGED),
                 Toolkit.text(unstaged).addClass(Theme.Classes.UNSTAGED),
                 Toolkit.text(" " + name(file)));
+    }
+
+    /**
+     * The marker of what changed in the working tree: a deletion, a rename made only there (after intent-to-add
+     * of the new path), or else a modification.
+     */
+    private static String unstagedMarker(FileEntry entry) {
+        return switch (entry.type()) {
+            case DELETED -> "D";
+            case RENAMED -> entry.staged() ? "M" : "R";
+            default -> "M";
+        };
     }
 
     /**
