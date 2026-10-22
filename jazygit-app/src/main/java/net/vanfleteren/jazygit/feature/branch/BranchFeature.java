@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.branch;
 import io.vavr.collection.List;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.feature.FeatureAction;
+import net.vanfleteren.jazygit.feature.ahead.AheadAction;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutAction;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchAction;
 import net.vanfleteren.jazygit.feature.branch.merge.MergeAction;
@@ -39,6 +40,7 @@ public final class BranchFeature {
             RenameBranchAction.ACTION,
             DeleteBranchAction.ACTION,
             UpstreamAction.ACTION,
+            AheadAction.BRANCHES,
             BranchesTabAction.ACTION);
 
     private BranchFeature() {}

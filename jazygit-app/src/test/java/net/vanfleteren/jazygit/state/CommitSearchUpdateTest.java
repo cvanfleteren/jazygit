@@ -6,8 +6,12 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.git.model.Ahead;
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitQuery;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
@@ -54,9 +58,9 @@ class CommitSearchUpdateTest {
 
         assertEquals(Option.none(), next.model().repoView().searchLine());
         assertEquals(
-                Option.of(CommitSearch.loading("fix author:bob")),
+                Option.of(CommitSearch.loading("fix author:bob", Option.none())),
                 next.model().repoView().commitSearch());
-        assertEquals(List.of(new Cmd.SearchCommits(CommitQuery.parse("fix author:bob"))), next.cmds());
+        assertEquals(List.of(new Cmd.SearchCommits(CommitQuery.parse("fix author:bob"), Option.none())), next.cmds());
     }
 
     @Test
@@ -106,7 +110,8 @@ class CommitSearchUpdateTest {
     void theResultsOfTheQueryThatRanAreShownAndTheCommitsFoundCanBeActedOn() {
         Model searched = run("fix").model();
 
-        Model found = Update.update(searched, new LoadMsg.CommitSearchLoaded(CommitQuery.parse("fix"), FOUND))
+        Model found = Update.update(
+                        searched, new LoadMsg.CommitSearchLoaded(CommitQuery.parse("fix"), Option.none(), FOUND))
                 .model();
 
         assertEquals(new Loaded<>(FOUND), found.repoView().commitSearch().get().results());
@@ -118,7 +123,8 @@ class CommitSearchUpdateTest {
     void theResultsOfAnotherQueryAreDropped() {
         Model searched = run("fix").model();
 
-        Model after = Update.update(searched, new LoadMsg.CommitSearchLoaded(CommitQuery.parse("other"), FOUND))
+        Model after = Update.update(
+                        searched, new LoadMsg.CommitSearchLoaded(CommitQuery.parse("other"), Option.none(), FOUND))
                 .model();
 
         assertEquals(searched.repoView(), after.repoView());
@@ -127,7 +133,7 @@ class CommitSearchUpdateTest {
     @Test
     void aFailedSearchIsShownAndReadAgainOnTheNextRefresh() {
         Model searched = run("path:x").model();
-        Cmd.SearchCommits load = new Cmd.SearchCommits(CommitQuery.parse("path:x"));
+        Cmd.SearchCommits load = new Cmd.SearchCommits(CommitQuery.parse("path:x"), Option.none());
 
         Model failed =
                 Update.update(searched, load.failed(refused("bad pathspec"))).model();
@@ -142,9 +148,48 @@ class CommitSearchUpdateTest {
 
         Next next = Update.update(searched, new LoadMsg.CommitsLoaded(FOUND));
 
-        assertEquals(List.of(new Cmd.SearchCommits(CommitQuery.parse("fix"))), next.cmds());
-        assertEquals(
-                List.of(),
-                Update.update(loaded(), new LoadMsg.CommitsLoaded(FOUND)).cmds());
+        assertTrue(next.cmds().contains(new Cmd.SearchCommits(CommitQuery.parse("fix"), Option.none())));
+        assertFalse(Update.update(loaded(), new LoadMsg.CommitsLoaded(FOUND))
+                .cmds()
+                .exists(Cmd.SearchCommits.class::isInstance));
+    }
+
+    @Test
+    void whileOnlyTheCommitsNotOnTheBaseAreListedTheSearchLeavesOutTheBase() {
+        BranchRef base = new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main")));
+        Ahead ahead = new Ahead(COMMITS.head().sha(), base, FOUND, false, Option.none());
+        Model model = Update.update(loaded(), new LoadMsg.AheadLoaded(AheadUpdate.ofHead(loaded()), Option.of(ahead)))
+                .model();
+        Model searched = Update.update(typed(model, "fix"), new CommitSearchMsg.Submitted())
+                .model();
+
+        Next only = Update.update(searched, new AheadMsg.Toggled());
+
+        assertTrue(only.model().repoView().onlyAhead());
+        assertEquals(List.of(new Cmd.SearchCommits(CommitQuery.parse("fix"), Option.of(base))), only.cmds());
+        Next whole = Update.update(only.model(), new AheadMsg.Toggled());
+        assertEquals(List.of(new Cmd.SearchCommits(CommitQuery.parse("fix"), Option.none())), whole.cmds());
+    }
+
+    @Test
+    void theSearchFollowsTheBaseOfHeadOnceItIsReadOrAnotherOne() {
+        BranchRef main = new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main")));
+        BranchRef parent = new BranchRef.Local(new Branch.Name("parent"));
+        Model only = Update.update(loaded(), new AheadMsg.Toggled()).model();
+        Model searched = Update.update(typed(only, "fix"), new CommitSearchMsg.Submitted())
+                .model();
+        Cmd.LoadAhead load = AheadUpdate.ofHead(searched);
+
+        Next read = Update.update(
+                searched,
+                new LoadMsg.AheadLoaded(
+                        load, Option.of(new Ahead(COMMITS.head().sha(), main, FOUND, false, Option.none()))));
+        Next another = Update.update(
+                read.model(),
+                new LoadMsg.AheadLoaded(
+                        load, Option.of(new Ahead(COMMITS.head().sha(), parent, FOUND, false, Option.none()))));
+
+        assertEquals(List.of(new Cmd.SearchCommits(CommitQuery.parse("fix"), Option.of(main))), read.cmds());
+        assertEquals(List.of(new Cmd.SearchCommits(CommitQuery.parse("fix"), Option.of(parent))), another.cmds());
     }
 }

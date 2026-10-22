@@ -178,12 +178,12 @@ class CliGitInfoProviderTest {
                 List.of(),
                 CliGitInfoProvider.open(empty)
                         .get()
-                        .search(CommitQuery.parse("x"))
+                        .search(CommitQuery.parse("x"), Option.none())
                         .get());
     }
 
     private List<String> messages(String query) {
-        return provider.search(CommitQuery.parse(query))
+        return provider.search(CommitQuery.parse(query), Option.none())
                 .get()
                 .map(Commit::message)
                 .toList();
@@ -320,6 +320,72 @@ class CliGitInfoProviderTest {
         assertEquals(
                 new GitError.UnknownBranch(gone),
                 provider.divergence(side, gone).getLeft());
+    }
+
+    @Test
+    void aheadListsTheCommitsNotOnTheFirstBaseThatExists() throws Exception {
+        Sha fork = provider.status().get().headCommit().get();
+        git("checkout", "-q", "-b", "side");
+        git("commit", "-q", "--allow-empty", "-m", "Side one");
+        git("checkout", "-q", "main");
+        git("commit", "-q", "--allow-empty", "-m", "Main one");
+        git("checkout", "-q", "side");
+        git("merge", "-q", "--no-edit", "main");
+        BranchRef main = new BranchRef.Local(new Branch.Name("main"));
+        BranchRef gone = new BranchRef.Local(new Branch.Name("gone"));
+
+        Ahead ahead = provider.ahead(Option.none(), List.of(gone, main)).get().get();
+
+        assertEquals(main, ahead.base());
+        assertEquals(
+                List.of("Merge branch 'main' into side", "Side one"),
+                ahead.commits().map(Commit::message));
+        assertFalse(ahead.more());
+        assertTrue(ahead.forkPoint().exists(commit -> commit.message().equals("Main one")));
+        assertFalse(ahead.shared(ahead.commits().head().sha()));
+        assertTrue(ahead.shared(fork));
+        assertEquals(
+                Option.none(), provider.ahead(Option.of(main), List.of(gone)).get());
+    }
+
+    @Test
+    void moreCommitsNotOnTheBaseThanAreReadAreCountedAsMoreWithoutAForkPoint() throws Exception {
+        git("checkout", "-q", "-b", "side");
+        git("commit", "-q", "--allow-empty", "-m", "Side one");
+        git("commit", "-q", "--allow-empty", "-m", "Side two");
+        git("commit", "-q", "--allow-empty", "-m", "Side three");
+        List<BranchRef> main = List.of(new BranchRef.Local(new Branch.Name("main")));
+
+        Ahead three = CliLog.ahead(repo, Option.none(), main, 3).get().get();
+        Ahead two = CliLog.ahead(repo, Option.none(), main, 2).get().get();
+
+        assertFalse(three.more());
+        assertTrue(two.more());
+        assertEquals(List.of("Side three", "Side two"), two.commits().map(Commit::message));
+        assertEquals(provider.status().get().headCommit().get(), two.tip());
+    }
+
+    @Test
+    void historiesThatNeverMetHaveNoForkPoint() throws Exception {
+        git("checkout", "-q", "--orphan", "other");
+        git("commit", "-q", "--allow-empty", "-m", "Other root");
+        BranchRef main = new BranchRef.Local(new Branch.Name("main"));
+
+        Ahead ahead = provider.ahead(Option.none(), List.of(main)).get().get();
+
+        assertEquals(List.of("Other root"), ahead.commits().map(Commit::message));
+        assertEquals(Option.none(), ahead.forkPoint());
+    }
+
+    @Test
+    void aSearchLeavesOutTheCommitsOnTheBase() throws Exception {
+        git("checkout", "-q", "-b", "side");
+        git("commit", "-q", "--allow-empty", "-m", "Side one");
+        BranchRef main = new BranchRef.Local(new Branch.Name("main"));
+
+        assertEquals(
+                List.of("Side one"),
+                provider.search(CommitQuery.parse("e"), Option.of(main)).get().map(Commit::message));
     }
 
     @Test

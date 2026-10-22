@@ -43,24 +43,31 @@ public final class LoadUpdate {
                 Next.of(done.mapRepo(repo -> repo.withWorktrees(repo.worktrees().reload(worktrees))));
             case WorktreeChangesLoaded loaded ->
                 Next.of(worktreeChangesRead(done).mapRepo(repo -> repo.withWorktreeChanges(loaded.changes())));
-            // The log is only read again when HEAD moved, so the history the search runs on changed too.
+            // The log is only read again when HEAD moved, so the history the search runs on changed too, and what
+            // is not on its base.
             case CommitsLoaded(var commits) ->
                 new Next(
                         done.mapRepo(repo -> repo.withCommits(repo.commits().reload(commits))),
-                        List.narrow(done.repoView()
-                                .commitSearch()
-                                .map(CommitSearch::load)
-                                .toList()));
+                        List.<Cmd>narrow(done.repoView()
+                                        .commitSearch()
+                                        .map(CommitSearch::load)
+                                        .toList())
+                                .append(AheadUpdate.ofHead(done)));
             // What arrives after another search was run, or after the search was cleared, is dropped.
-            case CommitSearchLoaded(var query, var commits) ->
+            case CommitSearchLoaded(var query, var notOn, var commits) ->
                 Next.of(done.mapRepoView(repoView -> repoView.withCommitSearch(repoView.commitSearch()
-                        .map(search -> search.query().equals(query)
+                        .map(search -> search.load().equals(msg.cmd())
                                 ? search.withResults(search.results().reload(commits))
                                 : search))));
             // What arrives after another item was highlighted, or after the diff options changed, is dropped.
             case BranchLogLoaded(var branch, var commits) ->
-                Next.of(done.mapRepoView(repoView -> repoView.withBranchLog(
-                        Preview.updated(repoView.branchLog(), branch, log -> log.reload(commits)))));
+                done.repoView().branchLog().exists(log -> log.key().equals(branch))
+                        ? AheadUpdate.branchLogLoaded(
+                                done.mapRepoView(repoView -> repoView.withBranchLog(
+                                        Preview.updated(repoView.branchLog(), branch, log -> log.reload(commits)))),
+                                branch)
+                        : Next.of(done);
+            case AheadLoaded(var load, var ahead) -> AheadUpdate.loaded(done, load, ahead);
             case DivergenceLoaded(var branch, var other, var divergence) ->
                 Next.of(done.mapRepoView(repoView -> repoView.withDivergence(repoView.divergence()
                         .map(view -> view.load().equals(msg.cmd())
@@ -131,8 +138,9 @@ public final class LoadUpdate {
      * that is open, once however many of its branches moved.
      */
     private static Next branchesLoaded(Model before, Model next) {
-        return reloadDivergence(
+        Next reloaded = reloadDivergence(
                 before, reloadMovedLog(next, branch -> !tipOf(before, branch).equals(tipOf(next, branch))));
+        return new Next(reloaded.model(), reloaded.cmds().appendAll(AheadUpdate.branchesLoaded(before, next)));
     }
 
     /**
@@ -182,7 +190,7 @@ public final class LoadUpdate {
     /**
      * The tip of {@code branch}, once the branches it is among are loaded: none when it is not one of them.
      */
-    private static Option<Option<Sha>> tipOf(Model model, BranchRef branch) {
+    static Option<Option<Sha>> tipOf(Model model, BranchRef branch) {
         return switch (branch) {
             case BranchRef.Local(Branch.Name name) ->
                 model.repo()
@@ -246,10 +254,11 @@ public final class LoadUpdate {
             // a later tick tries again. A single worktree that cannot be read is left out of a read that succeeds.
             case Cmd.LoadWorktreeChanges _ -> worktreeChangesRead(model);
             case LoadCommits() -> model.mapRepo(repo -> repo.withCommits(new Failed<>(failure)));
-            case Cmd.SearchCommits(var query) ->
+            case Cmd.SearchCommits load ->
                 model.mapRepoView(repoView -> repoView.withCommitSearch(repoView.commitSearch()
                         .map(search ->
-                                search.query().equals(query) ? search.withResults(new Failed<>(failure)) : search)));
+                                search.load().equals(load) ? search.withResults(new Failed<>(failure)) : search)));
+            case Cmd.LoadAhead load -> AheadUpdate.failed(model, load, failure);
             case LoadCommitDetail(Sha sha, var options) ->
                 withDetail(
                         model.mapRepoView(repoView -> repoView.withCommitDetail(

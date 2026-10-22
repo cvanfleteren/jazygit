@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
+import net.vanfleteren.jazygit.state.AheadUpdate;
 import net.vanfleteren.jazygit.state.CommitSearch;
 import net.vanfleteren.jazygit.state.CommitSearchMsg;
 import net.vanfleteren.jazygit.state.Model;
@@ -172,16 +173,47 @@ public class CommitsPanel {
     public Panel render(Model model, String focusedId, String activeId) {
         Option<Sha> copied = model.repoView().cherryPick().map(Commit::sha);
         Option<CommitSearch> search = model.repoView().commitSearch();
+        AheadView ahead =
+                new AheadView(AheadUpdate.head(model), model.repoView().onlyAhead());
         typing = model.repoView().searchLine();
         searching = search.isDefined();
         list.whenEmpty(search.map(found -> Messages.get("panel.commits.noMatches")));
         return list.render(
-                search.map(CommitSearch::results).getOrElse(model.repo().commits()),
-                commits -> search.isDefined() ? foundRows(commits, copied) : rows(CommitGraph.layout(commits), copied),
+                search.map(CommitSearch::results)
+                        .getOrElse(() -> model.repo().commits().map(ahead::shown)),
+                commits -> marked(
+                        search.isDefined() ? foundRows(commits, copied) : rows(CommitGraph.layout(commits), copied),
+                        commits,
+                        ahead),
                 ID.equals(focusedId),
                 ID.equals(activeId),
-                Pane.title(search.map(CommitsPanel::title).getOrElse(() -> Messages.get("panel.commits.title"))),
+                Pane.title(ahead.title(
+                        search.map(CommitsPanel::title).getOrElse(() -> Messages.get("panel.commits.title")))),
                 typing.map(searchLine::field));
+    }
+
+    /**
+     * {@code rows}, those of {@code commits}, with the commits on the base dimmed and the fork point marked.
+     */
+    static List<LoadableList.Row> marked(List<LoadableList.Row> rows, List<Commit> commits, AheadView ahead) {
+        return rows.zipWith(commits, (row, commit) -> marked(row, commit.sha(), ahead));
+    }
+
+    private static LoadableList.Row marked(LoadableList.Row row, Sha sha, AheadView ahead) {
+        // The mark goes before the message, the last piece of the row.
+        LoadableList.Row labelled = ahead.mark(sha)
+                .map(mark -> new LoadableList.Row(
+                        row.segs()
+                                .init()
+                                .append(LoadableList.Seg.of(mark + " "))
+                                .append(row.segs().last()),
+                        row.detail()))
+                .getOrElse(row);
+        return ahead.dimmed(sha)
+                ? new LoadableList.Row(
+                        labelled.segs().map(seg -> LoadableList.Seg.styled(seg.text(), Theme.Classes.DIM)),
+                        labelled.detail())
+                : labelled;
     }
 
     /**

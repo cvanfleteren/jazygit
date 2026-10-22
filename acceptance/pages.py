@@ -239,9 +239,8 @@ class BranchesPane:
         self.show_tab("Branches")
         self.ui.caught_up()
         self.app.move_cursor("Branches", branch)
-        # Its log shows once the app has taken it as the selected branch, which the keys then act on. The border
-        # right after the name, so that "main" is not taken for "main-old".
-        self.app.wait_for(f"Log: {branch}─")
+        # Its log shows once the app has taken it as the selected branch, which the keys then act on.
+        self.wait_for_log(branch)
 
     def select_remote(self, branch: str):
         """Focuses the pane and moves to the remote branch, such as "origin/main", on the list of remote ones."""
@@ -250,7 +249,14 @@ class BranchesPane:
         self.show_tab("Remotes")
         self.ui.caught_up()
         self.app.move_cursor("Branches", branch)
-        self.app.wait_for(f"Log: {branch}─")
+        self.wait_for_log(branch)
+
+    def wait_for_log(self, branch: str):
+        """Waits until the log of {branch} shows. Right after the name comes the border, or how many of its commits
+        are not on its base, so that "main" is not taken for "main-old"."""
+        self.app.eventually(
+            lambda: f"Log: {branch}─" in self.app.text() or f"Log: {branch} ·" in self.app.text(),
+            f"the log of {branch!r} on screen")
 
     def checkout(self, branch: str):
         self.select(branch)

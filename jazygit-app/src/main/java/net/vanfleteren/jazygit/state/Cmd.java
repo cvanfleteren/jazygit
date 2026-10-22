@@ -2,11 +2,13 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.Tuple;
 import io.vavr.collection.List;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.git.GitError;
+import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -14,6 +16,7 @@ import net.vanfleteren.jazygit.git.model.CommitQuery;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.GitMetadata;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.settings.Settings;
 
@@ -208,15 +211,50 @@ public interface Cmd {
     }
 
     /**
-     * Reads the commits of the log of HEAD that {@code query} finds.
+     * Reads the commits of the log of HEAD that {@code query} finds, leaving out those on {@code notOn}, if given.
      */
-    record SearchCommits(CommitQuery query) implements Load {
+    record SearchCommits(CommitQuery query, Option<BranchRef> notOn) implements Load {
 
         @Override
         public Msg run(Env env) {
             return env.git()
-                    .search(query)
-                    .fold(this::failedWith, commits -> new LoadMsg.CommitSearchLoaded(query, commits));
+                    .search(query, notOn)
+                    .fold(this::failedWith, commits -> new LoadMsg.CommitSearchLoaded(query, notOn, commits));
+        }
+    }
+
+    /**
+     * Reads the commits of {@code branch}, or of HEAD for none, that are not on its base: the branch {@code named}
+     * was made from, if that was recorded, else {@code main}. Of each, the remote-tracking one on
+     * {@link RemoteBranch#DEFAULT_REMOTE} when there is one, else the local one. The branch {@code named} is no base
+     * of itself.
+     *
+     * @param named the name of the branch, local or remote; none for a detached HEAD
+     * @param main  the main branch, once the branches are read and one is
+     */
+    record LoadAhead(Option<BranchRef> branch, Option<Branch.Name> named, Option<Branch.Name> main) implements Load {
+
+        @Override
+        public Msg run(Env env) {
+            return named.fold(
+                            () -> Either.<ProcessError, Option<Branch.Name>>right(Option.none()),
+                            env.git()::parentBranch)
+                    .<GitError>mapLeft(error -> error)
+                    .flatMap(parent -> env.git().ahead(branch, bases(parent)))
+                    .fold(this::failedWith, ahead -> new LoadMsg.AheadLoaded(this, ahead));
+        }
+
+        /**
+         * The branches to compare with, the first that exists counting.
+         */
+        List<BranchRef> bases(Option<Branch.Name> parent) {
+            return parent.toList()
+                    .appendAll(main)
+                    .filter(base -> !named.contains(base))
+                    .distinct()
+                    .flatMap(base -> List.<BranchRef>of(
+                            new BranchRef.Remote(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, base)),
+                            new BranchRef.Local(base)));
         }
     }
 

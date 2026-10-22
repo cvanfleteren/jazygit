@@ -14,6 +14,8 @@ import net.vanfleteren.jazygit.git.model.*;
  *                     branches pane lists in place of the local branches while it is open
  * @param branchLog    the log of the branch, local or remote, highlighted in the branches pane, once one is
  *                     highlighted
+ * @param branchAhead  the commits of the branch whose log is shown that are not on its base, keyed by the branch;
+ *                     none in it when the branch has no base
  * @param commitDetail what the commit highlighted in the commits pane changed (its files, a summary and its
  *                     diff), once one is highlighted
  * @param fileDiff     the diff of the node highlighted in the files pane, keyed by the changed files under
@@ -26,19 +28,22 @@ import net.vanfleteren.jazygit.git.model.*;
  * @param searchLine   the text of the line above the commits pane to type a search in, while it is open
  * @param commitSearch the search of the log of HEAD that was run last, which the commits pane lists in place of
  *                     the log until it is cleared
+ * @param onlyAhead    whether the logs list only the commits not on their base, and the commit they forked from
  */
 @With
 public record RepoView(
         BranchesTab branchesTab,
         Option<DivergenceView> divergence,
         Option<Preview<BranchRef, List<Commit>>> branchLog,
+        Option<Preview<BranchRef, Option<Ahead>>> branchAhead,
         Option<Preview<Sha, DiffText>> commitDetail,
         Option<Preview<List<FileEntry>, Diffs>> fileDiff,
         Option<Preview<Sha, DiffText>> stashDetail,
         Option<String> focusedPane,
         Option<Commit> cherryPick,
         Option<String> searchLine,
-        Option<CommitSearch> commitSearch) {
+        Option<CommitSearch> commitSearch,
+        boolean onlyAhead) {
 
     public static final RepoView INITIAL = new RepoView(
             BranchesTab.LOCAL,
@@ -50,5 +55,7 @@ public record RepoView(
             Option.none(),
             Option.none(),
             Option.none(),
-            Option.none());
+            Option.none(),
+            Option.none(),
+            false);
 }

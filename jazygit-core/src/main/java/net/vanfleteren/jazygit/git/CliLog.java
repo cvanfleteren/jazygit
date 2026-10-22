@@ -52,12 +52,16 @@ final class CliLog {
      * The commits of the log of HEAD that {@code query} finds, newest first; none in a repository without commits.
      * They are left as git lists them: with commits left out, merges and what they brought in no longer join up.
      */
-    static Either<ProcessError, List<Commit>> search(Path worktree, CommitQuery query) {
+    static Either<ProcessError, List<Commit>> search(Path worktree, CommitQuery query, Option<BranchRef> notOn) {
         return resolve(worktree, "HEAD")
                 .mapLeft(GitFailure::error)
                 .flatMap(head -> head.fold(
                         () -> Either.right(List.empty()),
-                        tip -> read(worktree, filters(query).append(tip.value()), query.paths())));
+                        tip -> read(
+                                worktree,
+                                filters(query).append(tip.value()).appendAll(notOn.map(base -> "^" + Refs.of(base))),
+                                query.paths(),
+                                MAX_COMMITS)));
     }
 
     /**
@@ -84,7 +88,7 @@ final class CliLog {
      * The newest commits reachable from {@code start}, newest first, laid out by {@link CommitGraph#arrange}.
      */
     static Either<ProcessError, List<Commit>> log(Path worktree, Sha start) {
-        return selected(worktree, List.of(start.value()));
+        return selected(worktree, List.of(start.value()), MAX_COMMITS);
     }
 
     /**
@@ -95,11 +99,76 @@ final class CliLog {
         return tip(worktree, branch)
                 .flatMap(ours -> tip(worktree, other)
                         .flatMap(theirs -> Either.narrow(counts(worktree, ours, theirs)
-                                .flatMap(counts -> selected(worktree, List.of(ours.value(), "^" + theirs.value()))
+                                .flatMap(counts -> selected(
+                                                worktree, List.of(ours.value(), "^" + theirs.value()), MAX_COMMITS)
                                         .flatMap(ahead -> selected(
-                                                        worktree, List.of(theirs.value(), "^" + ours.value()))
+                                                        worktree,
+                                                        List.of(theirs.value(), "^" + ours.value()),
+                                                        MAX_COMMITS)
                                                 .map(behind ->
                                                         new Divergence(ahead, counts._1, behind, counts._2)))))));
+    }
+
+    /**
+     * The commits of {@code branch}, or of HEAD for none, that are not on the first of {@code bases} that exists, at
+     * most {@code max} of them; none when none of the bases exists, or HEAD has no commits yet.
+     */
+    static Either<GitError, Option<Ahead>> ahead(
+            Path worktree, Option<BranchRef> branch, List<BranchRef> bases, int max) {
+        return branch.fold(
+                        () -> Either.<GitError, Option<Sha>>narrow(
+                                resolve(worktree, "HEAD").mapLeft(GitFailure::error)),
+                        named -> tip(worktree, named).map(Option::of))
+                .flatMap(tip -> tip.fold(
+                        () -> Either.right(Option.none()),
+                        ours -> firstExisting(worktree, bases)
+                                .flatMap(base -> base.fold(
+                                        () -> Either.right(Option.none()),
+                                        theirs -> Either.narrow(notOn(worktree, ours, theirs._1, theirs._2, max)
+                                                .map(Option::of))))));
+    }
+
+    /**
+     * The first of {@code bases} that exists, with its tip.
+     */
+    private static Either<GitError, Option<Tuple2<BranchRef, Sha>>> firstExisting(
+            Path worktree, List<BranchRef> bases) {
+        return bases.isEmpty()
+                ? Either.right(Option.none())
+                : Either.<GitError, Option<Sha>>narrow(
+                                resolve(worktree, Refs.of(bases.head())).mapLeft(GitFailure::error))
+                        .flatMap(tip -> tip.fold(
+                                () -> firstExisting(worktree, bases.tail()),
+                                found -> Either.right(Option.of(Tuple.of(bases.head(), found)))));
+    }
+
+    /**
+     * The commits from {@code ours} that are not on {@code base}, whose tip is {@code theirs}, at most {@code max}.
+     * They are only counted when there are that many, to tell whether there are more.
+     */
+    private static Either<ProcessError, Ahead> notOn(Path worktree, Sha ours, BranchRef base, Sha theirs, int max) {
+        List<String> revisions = List.of(ours.value(), "^" + theirs.value());
+        return selected(worktree, revisions, max)
+                .flatMap(commits -> (commits.size() < max
+                                ? Either.<ProcessError, Boolean>right(false)
+                                : count(worktree, revisions.prepend("--max-count=" + (max + 1)))
+                                        .map(count -> count > max))
+                        .flatMap(more -> forkPoint(worktree, ours, theirs)
+                                .map(fork -> new Ahead(ours, base, commits, more, fork))));
+    }
+
+    /**
+     * The best common ancestor of {@code ours} and {@code theirs}; none for histories that never met.
+     */
+    private static Either<ProcessError, Option<Commit>> forkPoint(Path worktree, Sha ours, Sha theirs) {
+        // merge-base exits with 1, saying nothing, when there is no common ancestor.
+        return GitProcess.ask(worktree, GitCommand.reading("merge-base", ours.value(), theirs.value()))
+                .mapLeft(GitFailure::error)
+                .flatMap(answer -> answer.fold(
+                        () -> Either.right(Option.none()),
+                        found -> Either.<ProcessError, Sha>narrow(GitOutput.sha(found.stdout()))
+                                .flatMap(sha -> read(worktree, List.of("--no-walk", sha.value()), List.empty(), 1))
+                                .map(List::headOption)));
     }
 
     /**
@@ -188,25 +257,26 @@ final class CliLog {
     }
 
     /**
-     * The newest commits {@code revisions} select, newest first, laid out by {@link CommitGraph#arrange}.
+     * The newest commits {@code revisions} select, at most {@code max}, newest first, laid out by
+     * {@link CommitGraph#arrange}.
      */
-    private static Either<ProcessError, List<Commit>> selected(Path worktree, List<String> revisions) {
-        return read(worktree, revisions, List.empty()).map(CommitGraph::arrange);
+    private static Either<ProcessError, List<Commit>> selected(Path worktree, List<String> revisions, int max) {
+        return read(worktree, revisions, List.empty(), max).map(CommitGraph::arrange);
     }
 
     /**
      * The newest commits {@code arguments} select that change one of {@code paths}, or any commit when there are
-     * none, as {@code git log} lists them.
+     * none, at most {@code max}, as {@code git log} lists them.
      */
-    private static Either<ProcessError, List<Commit>> read(Path worktree, List<String> arguments, List<String> paths) {
+    private static Either<ProcessError, List<Commit>> read(
+            Path worktree, List<String> arguments, List<String> paths, int max) {
         return GitProcess.read(
                 worktree,
-                GitCommand.reading(
-                        List.of("log", "--no-color", "--no-show-signature", "-z", "--max-count=" + MAX_COMMITS)
-                                .append("--format=" + FORMAT)
-                                .appendAll(arguments)
-                                .append("--")
-                                .appendAll(paths)),
+                GitCommand.reading(List.of("log", "--no-color", "--no-show-signature", "-z", "--max-count=" + max)
+                        .append("--format=" + FORMAT)
+                        .appendAll(arguments)
+                        .append("--")
+                        .appendAll(paths)),
                 CliLog::parse);
     }
 

@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.state.AheadUpdate;
 import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.DivergenceView;
 import net.vanfleteren.jazygit.state.Failure;
@@ -148,13 +149,20 @@ public final class ContentPanel {
     }
 
     /**
-     * The branch log: the {@code commit <sha>} part of each commit's first line is yellow.
+     * The branch log, each commit as {@link #logLines} lists it: the {@code commit <sha>} part of each commit's first line is
+     * yellow. The commits on the base are dimmed instead, and the fork point is marked after its sha.
      */
-    static Text logText(String content, Theme.SpanStyles styles) {
-        return styledText(lines(content)
-                .map(line -> line.startsWith("* ")
-                        ? Line.from(Span.raw("* "), styled(line.substring(2), Theme.Classes.CURRENT_BRANCH, styles))
-                        : Line.from(Span.raw(line))));
+    static Text logText(List<Commit> commits, ZoneId zone, AheadView ahead, Theme.SpanStyles styles) {
+        DateTimeFormatter dateTime = dateTime(zone);
+        return styledText(CommitGraph.layout(commits).flatMap(node -> {
+            Sha sha = node.commit().sha();
+            List<String> lines = logLines(node, dateTime, ahead.mark(sha));
+            return ahead.dimmed(sha)
+                    ? lines.map(line -> Line.from(styled(line, Theme.Classes.DIM, styles)))
+                    : lines.map(line -> line.startsWith("* ")
+                            ? Line.from(Span.raw("* "), styled(line.substring(2), Theme.Classes.CURRENT_BRANCH, styles))
+                            : Line.from(Span.raw(line)));
+        }));
     }
 
     static Text plainText(String content) {
@@ -186,34 +194,46 @@ public final class ContentPanel {
      * indented.
      */
     static List<String> logLines(List<Commit> commits, ZoneId zone) {
-        DateTimeFormatter dateTime = DateTimeFormatter.ofPattern(Messages.get("content.dateTimePattern"));
-        return CommitGraph.layout(commits).flatMap(node -> {
-            Commit c = node.commit();
-            String rails = "| ".repeat(node.depth());
-            List<String> lines = List.of(
-                            Messages.get("content.commitSha", c.shortSha()),
-                            Messages.get("content.author", c.authorName(), c.authorEmail()),
-                            dateTime.format(c.authorTime().atZone(zone)),
-                            "")
-                    .appendAll(messageLines(c))
-                    .append("");
-            // Like git's graph: a merge opens a rail with a "\\" line, the last commit of a merged
-            // branch closes it with a "/" in place of its second line.
-            String closing = "| ".repeat(Math.max(0, node.depth() - 1));
-            return c.isMerge()
-                    ? List.of(
-                                    rails + "*   " + lines.head(),
-                                    rails + "|\\  "
-                                            + Messages.get(
-                                                    "content.merge",
-                                                    c.parents()
-                                                            .map(Sha::shortSha)
-                                                            .mkString(" ")))
-                            .appendAll(lines.tail().map(line -> rails + "| | " + line))
-                    : lines.zipWithIndex((line, i) -> i == 0
-                            ? rails + "* " + line
-                            : node.closesBranch() ? closing + (i == 1 ? "|/  " : "|   ") + line : rails + "| " + line);
-        });
+        DateTimeFormatter dateTime = dateTime(zone);
+        return CommitGraph.layout(commits).flatMap(node -> logLines(node, dateTime, Option.none()));
+    }
+
+    /**
+     * The lines of the commit of {@code node} in {@link #logLines(List, ZoneId)}, with {@code mark} after its sha.
+     */
+    private static List<String> logLines(CommitGraph.Node node, DateTimeFormatter dateTime, Option<String> mark) {
+        Commit c = node.commit();
+        String rails = "| ".repeat(node.depth());
+        List<String> lines = List.of(
+                        Messages.get("content.commitSha", c.shortSha())
+                                + mark.map(text -> "  " + text).getOrElse(""),
+                        Messages.get("content.author", c.authorName(), c.authorEmail()),
+                        dateTime.format(c.authorTime()),
+                        "")
+                .appendAll(messageLines(c))
+                .append("");
+        // Like git's graph: a merge opens a rail with a "\\" line, the last commit of a merged
+        // branch closes it with a "/" in place of its second line.
+        String closing = "| ".repeat(Math.max(0, node.depth() - 1));
+        return c.isMerge()
+                ? List.of(
+                                rails + "*   " + lines.head(),
+                                rails + "|\\  "
+                                        + Messages.get(
+                                                "content.merge",
+                                                c.parents().map(Sha::shortSha).mkString(" ")))
+                        .appendAll(lines.tail().map(line -> rails + "| | " + line))
+                : lines.zipWithIndex((line, i) -> i == 0
+                        ? rails + "* " + line
+                        : node.closesBranch() ? closing + (i == 1 ? "|/  " : "|   ") + line : rails + "| " + line);
+    }
+
+    /**
+     * How the log shows when a commit was made, in {@code zone}.
+     */
+    private static DateTimeFormatter dateTime(ZoneId zone) {
+        return DateTimeFormatter.ofPattern(Messages.get("content.dateTimePattern"))
+                .withZone(zone);
     }
 
     /**
@@ -516,14 +536,17 @@ public final class ContentPanel {
                 .map(Preview::shown)
                 .<StyledElement<?>>map(log -> {
                     String title = Messages.get("panel.log.titleFor", log.key().name());
-                    return whenLoaded(title, log.value(), commits -> {
-                        String lines = logLines(commits, ZoneId.systemDefault()).mkString("\n");
+                    AheadView ahead = new AheadView(
+                            AheadUpdate.branch(model, log.key()),
+                            model.repoView().onlyAhead());
+                    return whenLoaded(ahead.title(title), log.value(), commits -> {
+                        List<Commit> shown = ahead.shown(commits);
                         return logArea.show(
                                 model,
                                 focusedId,
-                                title,
-                                new ScrolledContent.BranchLog(commits),
-                                logText(lines, styles));
+                                ahead.title(title),
+                                new ScrolledContent.BranchLog(shown),
+                                logText(shown, ZoneId.systemDefault(), ahead, styles));
                     });
                 })
                 .getOrElse(() -> loadingPanel(Messages.get("panel.log.title")));

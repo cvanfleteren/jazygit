@@ -163,10 +163,12 @@ public record Model(
 
     /**
      * The commit {@code sha} of the commits pane: in the log of HEAD, or else among the results of the search of
-     * it, which can find older commits than the log reads.
+     * it, which can find older commits than the log reads, or among the commits of HEAD that are not on its base.
      */
     public Option<Commit> commit(Sha sha) {
-        return repo.commit(sha).orElse(() -> repoView.commitSearch().flatMap(search -> search.commit(sha)));
+        return repo.commit(sha)
+                .orElse(() -> repoView.commitSearch().flatMap(search -> search.commit(sha)))
+                .orElse(() -> AheadUpdate.head(this).flatMap(ahead -> ahead.commit(sha)));
     }
 
     /**
