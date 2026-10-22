@@ -8,6 +8,8 @@ def test_commit_a_single_file_in_an_empty_repository(repo, jazygit):
 
     app.press("space")
     app.eventually(lambda: repo("diff", "--cached", "--name-only") == "foo.txt", "foo.txt to be staged")
+    # The app commits what it last read as staged; until it read the files again, it would offer to stage them.
+    app.wait_in("Files", "A  foo.txt")
 
     app.press("c")
     app.wait_for("Commit summary")
