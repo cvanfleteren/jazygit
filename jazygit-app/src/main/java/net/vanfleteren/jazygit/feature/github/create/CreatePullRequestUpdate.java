@@ -121,22 +121,23 @@ public final class CreatePullRequestUpdate {
      */
     public static Next ask(Model model, Branch branch) {
         List<Branch.Name> bases = bases(model, branch.name());
-        return bases.isEmpty()
-                ? Next.of(model.fail(new AppError.NoBase(branch.name())))
-                : bases.size() == 1
-                        ? readTitle(model, branch, bases)
-                        : Next.of(
-                                model,
-                                new ReadParent(branch.name(), bases.map(base -> new Base(base, baseRef(model, base)))));
+        return bases.size() < 2
+                ? readTitle(model, branch, bases)
+                : Next.of(
+                        model, new ReadParent(branch.name(), bases.map(base -> new Base(base, baseRef(model, base)))));
     }
 
     /**
      * Reads the title the pull request of {@code branch} into the first of {@code bases} starts out with. The branch
-     * can have another name on its remote; gh needs that one.
+     * can have another name on its remote; gh needs that one. Without bases, which the branches read while the
+     * parent was can also leave, there is nothing to ask.
      */
     private static Next readTitle(Model model, Branch branch, List<Branch.Name> bases) {
-        return Next.of(
-                model, new ReadTitle(branch.name(), branch.pushTarget().branch(), bases, baseRef(model, bases.head())));
+        return bases.headOption()
+                .map(first -> Next.of(
+                        model,
+                        new ReadTitle(branch.name(), branch.pushTarget().branch(), bases, baseRef(model, first))))
+                .getOrElse(() -> Next.of(model.fail(new AppError.NoBase(branch.name()))));
     }
 
     /**

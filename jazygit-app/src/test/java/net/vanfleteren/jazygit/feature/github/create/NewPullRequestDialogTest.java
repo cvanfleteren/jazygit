@@ -233,6 +233,29 @@ class NewPullRequestDialogTest {
     }
 
     @Test
+    void theFilterOfTheBasesOnlyTakesWhatIsTypedAtItsEnd() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            SettledPilot.focus(runner, NewPullRequestDialog.BASES_ID);
+            type(runner, "rel");
+            // There is no cursor shown to move, so the arrows to the sides do nothing.
+            SettledPilot.of(runner).press(KeyCode.LEFT);
+            type(runner, "x");
+            String typed = RenderedText.ofLarge(runner, this::view);
+            SettledPilot.of(runner).press(KeyCode.BACKSPACE);
+            SettledPilot.of(runner).pause();
+            String erased = RenderedText.ofLarge(runner, this::view);
+            SettledPilot.of(runner).press('u', KeyModifiers.CTRL);
+            SettledPilot.of(runner).pause();
+            String cleared = RenderedText.ofLarge(runner, this::view);
+
+            assertTrue(typed.contains("filter: relx"), typed);
+            assertTrue(erased.contains("Into: release · filter: rel"), erased);
+            assertTrue(!cleared.contains("filter:"), cleared);
+            assertTrue(cleared.contains("main"), cleared);
+        }
+    }
+
+    @Test
     void escapeInTheBasesClearsTheFilterBeforeItCancels() throws Exception {
         try (ToolkitTestRunner runner = start()) {
             SettledPilot.focus(runner, NewPullRequestDialog.BASES_ID);

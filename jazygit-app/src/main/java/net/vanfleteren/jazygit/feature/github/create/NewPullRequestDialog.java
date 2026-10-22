@@ -23,7 +23,6 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.LineEditInput;
 import net.vanfleteren.jazygit.ui.SubmittableTextArea;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
-import net.vanfleteren.jazygit.ui.widgets.FilterLine;
 import net.vanfleteren.jazygit.ui.widgets.FocusHighlighted;
 import net.vanfleteren.jazygit.ui.widgets.HintedDialog;
 import net.vanfleteren.jazygit.ui.widgets.ListFilter;
@@ -57,6 +56,8 @@ public final class NewPullRequestDialog implements PopupView {
 
     // With Ctrl held, creates the pull request from any field; Enter adds a line to the body.
     private static final char CONFIRM_KEY = 's';
+    // With Ctrl held, clears the filter of the bases, as it clears a line in readline.
+    private static final char CLEAR_KEY = 'u';
     private static final int WIDTH = 110;
     private static final int INPUT_HEIGHT = 3;
     private static final int BODY_HEIGHT = 10;
@@ -66,8 +67,6 @@ public final class NewPullRequestDialog implements PopupView {
 
     private final TextInputState title = new TextInputState();
     private final TextAreaState body = new TextAreaState();
-    // The filter of the bases is typed in the list, and shown in its border; this only edits it.
-    private final FilterLine filter = new FilterLine();
     private final ListElement<?> baseList = list().id(BASES_ID).focusable().highlightSymbol("");
     // Shown instead of the bases when the filter shows none: the same id, so it keeps the focus and the keys.
     private final ListElement<?> noMatches = list().id(BASES_ID)
@@ -178,7 +177,8 @@ public final class NewPullRequestDialog implements PopupView {
 
     /**
      * Escape clears the filter while there is one, and Enter goes on to the title; the other keys of every field
-     * come next, then those that edit the filter, then those that move the highlight.
+     * come next, then those that edit the filter, then those that move the highlight. The filter shows in the border
+     * of the list, where there is no cursor to move, so it only takes what is typed at its end.
      */
     private EventResult baseKeys(Bases view, KeyEvent event) {
         if (event.code() == KeyCode.ESCAPE && view.cursor().filter().isDefined()) {
@@ -193,7 +193,7 @@ public final class NewPullRequestDialog implements PopupView {
         if (common.isHandled()) {
             return common;
         }
-        Option<String> edited = filter.edit(view.cursor().filter().getOrElse(""), event);
+        Option<String> edited = filtered(view.cursor().filter().getOrElse(""), event);
         if (edited.isDefined()) {
             dispatch.accept(view.filtered(edited.filter(typed -> !typed.isEmpty())));
             return EventResult.HANDLED;
@@ -202,6 +202,23 @@ public final class NewPullRequestDialog implements PopupView {
                 ListKeys.move(event, view.selected(), view.shown().size(), line -> true);
         moved.filter(line -> line != view.selected()).forEach(line -> dispatch.accept(view.at(line)));
         return moved.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
+    }
+
+    /**
+     * The filter {@code typed} after {@code event}, if it edits it: a character typed goes at its end, Backspace
+     * takes the last one off, and Ctrl+U clears it.
+     */
+    static Option<String> filtered(String typed, KeyEvent event) {
+        if (event.code() == KeyCode.BACKSPACE) {
+            return Option.of(
+                    typed.isEmpty() ? typed : typed.substring(0, typed.offsetByCodePoints(typed.length(), -1)));
+        }
+        if (event.hasCtrl() && event.isChar(CLEAR_KEY)) {
+            return Option.of("");
+        }
+        return Option.when(
+                event.code() == KeyCode.CHAR && !event.hasCtrl() && !event.hasAlt() && event.codePoint() >= ' ',
+                () -> typed + event.string());
     }
 
     /**

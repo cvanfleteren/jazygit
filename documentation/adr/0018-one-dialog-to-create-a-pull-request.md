@@ -26,6 +26,9 @@ The header is `Create pull request: '<branch>'`; the base is in the list.
 - In the list, the arrows move the highlight, and typing filters it straight away: no `/` first, as no letter means
   anything else there. Enter moves to the title, so it does not create the pull request by accident; Escape clears
   the filter, and when there is none, cancels.
+- The filter shows only in the border, where there is no cursor, so it only grows and shrinks at its end: what is
+  typed goes at its end, Backspace takes the last character off, and Ctrl+U clears it. The arrows to the sides and
+  the other keys that move a cursor do nothing there.
 - Ctrl+S anywhere, and Enter in the title, create it. Escape in the fields cancels.
 - When the filter matches none, the list says so, and the base stays the one highlighted last, which its border
   still names. There is always a base.
@@ -35,7 +38,8 @@ The header is `Create pull request: '<branch>'`; the base is in the list.
 - The dialog opens once the parent and the title for the base offered first are read: `ReadParent`, then
   `ReadTitle`. Nothing moves or changes under the cursor once it shows, and nothing in it is loading.
 - With one base, there is no parent to read; it still shows in the list.
-- With none, there is no dialog: the error says there is no branch on the remote to merge into.
+- With none, there is no dialog: the error says there is no branch on the remote to merge into. That holds too when
+  the bases are gone by the time the parent is read, as when a fetch pruned them meanwhile.
 
 ### The title follows the base
 

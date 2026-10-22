@@ -194,6 +194,19 @@ class PullRequestUpdateTest {
     }
 
     @Test
+    void aParentReadOnceNoBaseIsLeftAsksNothing() {
+        // While the parent was read, the other branches left their remote.
+        Model left = localBranchesRead(model(), List.of(PUSHED, UNPUSHED)).model();
+
+        Next next = Update.update(left, new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(MAIN.name())));
+
+        assertEquals(
+                Option.of(new AppError.NoBase(FEATURE)), next.model().outcome().error());
+        assertEquals(Option.none(), next.model().popup(NewPullRequestPopup.class));
+        assertEquals(List.empty(), next.cmds());
+    }
+
+    @Test
     void theTitleReadDoesNotTakeAwayAnotherPopup() {
         Model busy = creating();
 
