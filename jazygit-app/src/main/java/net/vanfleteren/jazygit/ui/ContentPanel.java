@@ -280,7 +280,7 @@ public final class ContentPanel {
     }
 
     private static List<String> lines(String text) {
-        return List.ofAll(text.lines()::iterator);
+        return List.ofAll(text.lines());
     }
 
     private static Text styledText(List<Line> lines) {

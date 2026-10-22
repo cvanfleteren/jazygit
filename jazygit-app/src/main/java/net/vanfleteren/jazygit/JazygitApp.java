@@ -742,10 +742,6 @@ public class JazygitApp extends ToolkitApp {
     private record Runtime(ThreadPoolExecutor io, ThreadPoolExecutor background, Program program) {}
 
     /**
-     * A popup, and the pane that gets the focus back when it closes.
-     */
-
-    /**
      * A popup as rendered: its dialog while it is open.
      */
     private record Shown(Option<Element> element, List<String> ids, String returnTo) {}

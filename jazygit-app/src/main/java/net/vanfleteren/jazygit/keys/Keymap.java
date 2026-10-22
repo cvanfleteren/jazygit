@@ -198,6 +198,7 @@ public final class Keymap {
      * @param titleKey the message key of the panel's title
      * @param <S>      what is selected in the panel, which its keys act on
      */
+    @SuppressWarnings("UnusedTypeParameter")
     public record Scope<S>(String id, String titleKey) {}
 
     /**
