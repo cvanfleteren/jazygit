@@ -10,7 +10,6 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.event.EventResult;
-import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -94,8 +93,8 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
                             .onMouseEvent(event -> ListKeys.wheel(
                                     event,
                                     view.selected(),
-                                    view.shown().size(),
-                                    line -> true,
+                                    view.size(),
+                                    view::highlightable,
                                     line -> highlight(view, line))));
             ListCursor cursor = model.listCursor();
             int width = widths.sum().intValue() + GAP * Math.max(0, widths.size() - 1);
@@ -166,31 +165,33 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
     }
 
     private EventResult handleKey(View<T> view, KeyEvent event) {
-        Option<String> typed = view.cursor().filter();
-        if (typed.isDefined() && event.code() == KeyCode.ESCAPE) {
-            dispatch.accept(new Msg.ListCursorChanged(view.filtered(Option.none())));
-            return EventResult.HANDLED;
-        }
-        if (typed.isEmpty() && !view.all().isEmpty() && ListFilter.opens(event)) {
-            dispatch.accept(new Msg.ListCursorChanged(view.cursor().withFilter(Option.of(""))));
-            return EventResult.HANDLED;
-        }
-        Option<String> edited = typed.flatMap(text -> filter.edit(text, event));
-        if (edited.isDefined()) {
-            dispatch.accept(new Msg.ListCursorChanged(view.filtered(edited)));
-            return EventResult.HANDLED;
-        }
-        Option<Integer> moved =
-                ListKeys.move(event, view.selected(), view.shown().size(), line -> true);
-        if (moved.isDefined()) {
-            moved.filter(line -> line != view.selected()).forEach(line -> highlight(view, line));
-            return EventResult.HANDLED;
-        }
-        Option<Msg> msg = event.code() == KeyCode.ESCAPE
-                ? Option.of(spec.onCancel().get())
-                : event.isConfirm() ? view.highlighted().map(Row::value).map(spec.onPick()) : Option.none();
-        msg.forEach(dispatch);
-        return msg.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
+        return ListKeys.classify(event, view, !view.all().isEmpty(), filter)
+                .map(key -> switch (key) {
+                    case ListKey.CloseFilter() -> send(new Msg.ListCursorChanged(view.filtered(Option.none())));
+                    case ListKey.OpenFilter() ->
+                        send(new Msg.ListCursorChanged(
+                                view.cursor().at(view.selected()).withFilter(Option.of(""))));
+                    case ListKey.EditFilter(String text) ->
+                        send(new Msg.ListCursorChanged(view.filtered(Option.of(text))));
+                    case ListKey.Move(int line) -> {
+                        if (line != view.selected()) {
+                            highlight(view, line);
+                        }
+                        yield EventResult.HANDLED;
+                    }
+                    case ListKey.Cancel() -> send(spec.onCancel().get());
+                    // Without rows, there is nothing to pick.
+                    case ListKey.Confirm() ->
+                        view.highlighted()
+                                .map(row -> send(spec.onPick().apply(row.value())))
+                                .getOrElse(EventResult.UNHANDLED);
+                })
+                .getOrElse(EventResult.UNHANDLED);
+    }
+
+    private EventResult send(Msg msg) {
+        dispatch.accept(msg);
+        return EventResult.HANDLED;
     }
 
     private void highlight(View<T> view, int line) {
@@ -204,7 +205,18 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
      * @param shown    the rows that contain the filter
      * @param selected the line of the highlighted row among those shown
      */
-    private record View<T>(List<Row<T>> all, List<Row<T>> shown, int selected, ListCursor cursor) {
+    private record View<T>(List<Row<T>> all, List<Row<T>> shown, int selected, ListCursor cursor)
+            implements FilteredList {
+
+        @Override
+        public int size() {
+            return shown.size();
+        }
+
+        @Override
+        public boolean highlightable(int line) {
+            return true;
+        }
 
         static <T> View<T> of(List<Row<T>> all, ListCursor cursor) {
             List<Row<T>> shown = shown(all, cursor.filter());
