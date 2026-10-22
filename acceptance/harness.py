@@ -80,17 +80,23 @@ class Git:
     def changed_paths(self) -> list:
         """The paths with changes, staged, unstaged or untracked, as they are: not quoted, renames by their new
         path."""
+        return list(self.status())
+
+    def status(self) -> dict:
+        """The changed paths, as changed_paths has them, with their two letter status as git status --short
+        shows it: the staged change, then the unstaged one, such as "M " (staged), " M" (unstaged), "MM" (both)
+        or "??" (untracked)."""
         entries = self.raw("status", "--porcelain", "-z", "--untracked-files=all").split("\0")
 
-        def paths(rest):
+        def codes(rest):
             # A rename or copy is followed by an entry with the path it came from.
             if not rest or not rest[0]:
                 return []
             entry = rest[0]
             skip = 2 if entry[0] in "RC" else 1
-            return [entry[3:]] + paths(rest[skip:])
+            return [(entry[3:], entry[:2])] + codes(rest[skip:])
 
-        return paths(entries)
+        return dict(codes(entries))
 
     def has_head(self) -> bool:
         return subprocess.run(["git", "rev-parse", "--verify", "-q", "HEAD"], cwd=self.path, env=self.env,
@@ -100,6 +106,11 @@ class Git:
         file = self.path / name
         file.parent.mkdir(parents=True, exist_ok=True)
         file.write_text(content)
+
+    def read(self, name: str):
+        """The content of the file in the working tree; None when there is no such file."""
+        file = self.path / name
+        return file.read_text() if file.exists() else None
 
     def commit(self, message: str, **files: str):
         """Writes files, by name, and commits them with all other changes."""
@@ -136,6 +147,12 @@ class Git:
         return sorted(line for line in self(
             "for-each-ref", "--format=%(if)%(symref)%(then)%(else)%(refname:short)%(end)", "refs/remotes")
                       .splitlines() if line)
+
+    def stashes(self) -> list:
+        """The messages of the stashes, the newest first: the name they were stashed under, or what git names
+        one stashed without, "WIP on <branch>: <commit>"."""
+        return [subject.split(": ", 1)[1] if subject.startswith("On ") else subject
+                for subject in self("stash", "list", "--format=%gs").splitlines()]
 
     def short(self, rev: str) -> str:
         """The abbreviated hash the app shows for rev."""
@@ -262,9 +279,14 @@ class App:
     def cursor_row(self, pane: str):
         """The index of the row of the pane the cursor is on, the one drawn on a background of its own; None when
         there isn't one."""
-        backgrounds = [background for _, background in self.pane_rows(pane)]
+        rows = self.pane_rows(pane)
+        backgrounds = [background for _, background in rows]
         odd = [index for index, background in enumerate(backgrounds) if backgrounds.count(background) == 1]
-        return odd[0] if len(odd) == 1 and len(backgrounds) > 1 else None
+        if len(odd) == 1 and len(backgrounds) > 1:
+            return odd[0]
+        # With two rows, both backgrounds are odd ones; a focused pane also marks the cursor's row with a ">".
+        marked = [index for index, (text, _) in enumerate(rows) if text.startswith(">")]
+        return marked[0] if len(marked) == 1 else None
 
     def move_cursor(self, pane: str, word: str):
         """Moves the cursor of the focused pane, a key at a time, to the row with word in it, such as a short

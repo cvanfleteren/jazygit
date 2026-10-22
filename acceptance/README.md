@@ -81,7 +81,8 @@ ui.commits.fixup("Fix typo", keep_message="below")
 ```
 
 Then check the repository with git: `repo.subjects()`, `repo.branches()`, `repo.current_branch()`,
-`repo.find("subject")` and plain `repo(...)`. Assert on git state rather than on the screen where you can: it
+`repo.find("subject")`, `repo.status()` (each changed path with its `git status --short` code, such as `"M "` for
+staged or `"??"` for untracked), `repo.stashes()`, `repo.read("file")` and plain `repo(...)`. Assert on git state rather than on the screen where you can: it
 survives layout changes.
 
 ### Remotes
@@ -109,8 +110,8 @@ them, such as whether a push must be forced.
 
 ### Page objects
 
-`pages.py` has a page object per pane of the left column, `ui.files`, `ui.branches` and `ui.commits`, with the
-operations that pane has keys for, named the way a person says them and taking commits by subject and branches by
+`pages.py` has a page object per pane of the left column, `ui.files`, `ui.branches`, `ui.commits` and `ui.stash`,
+with the operations that pane has keys for, named the way a person says them and taking commits by subject and branches by
 name. The keys and dialog titles they take are only there, so a change to the UI is a change to that file. A new
 operation goes on the pane it is done from.
 
@@ -140,6 +141,6 @@ has taken it as selected.
 Every wait fails at once when the app has died, with its exit status and the last of its output, and shows the
 screen when it times out.
 
-`test_commits.py`, `test_branches.py` and `test_remotes.py` try one operation each, from a repository set up
-with git; `test_scenario.py` chains them in one session: from an empty repository to a tidied history on three
+`test_files.py` (staging and discarding), `test_stash.py`, `test_commits.py`, `test_reset.py`, `test_branches.py`
+and `test_remotes.py` try one operation each, from a repository set up with git; `test_scenario.py` chains them in one session: from an empty repository to a tidied history on three
 branches, and a feature worked on with a teammate through origin.

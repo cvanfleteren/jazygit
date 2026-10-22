@@ -51,11 +51,13 @@ class Jazygit:
         self.caught_up()
 
     def _state(self):
-        # The remote branches too, which a push moves, and the upstreams, which a push can set.
+        # The remote branches too, which a push moves, and the upstreams, which a push can set; and the stashes,
+        # which dropping one changes and nothing else.
         return (self.repo("for-each-ref", "--format=%(refname) %(objectname) %(upstream)", "refs/heads",
                           "refs/remotes"),
                 self.repo.current_branch(),
-                self.repo.raw("status", "--porcelain", "-z"))
+                self.repo.raw("status", "--porcelain", "-z"),
+                self.repo("stash", "list", "--format=%H"))
 
     def confirm(self, title: str, key="enter"):
         """Waits for the dialog with this title, and answers it with key."""
@@ -71,7 +73,10 @@ class Jazygit:
 
 
 class FilesPane:
-    """The changed files, and committing them."""
+    """The changed files: staging, discarding, stashing and committing them. A file or directory is given by its
+    path; ALL is the row above them all, that holds every change."""
+
+    ALL = "/"
 
     def __init__(self, ui: Jazygit):
         self.ui = ui
@@ -79,19 +84,60 @@ class FilesPane:
         self.repo = ui.repo
 
     def shows_changes(self) -> bool:
-        shown = self.app.pane_text("Files")
-        names = [path.split("/")[-1] for path in self.repo.changed_paths()]
-        return all(name in shown for name in names) and (names or not shown.strip())
+        rows = self.app.pane_text("Files").splitlines()
+        status = self.repo.status()
+        return (all(self._shows(rows, path, code) for path, code in status.items())
+                and bool(status or not "".join(rows).strip()))
+
+    @staticmethod
+    def _shows(rows: list, path: str, code: str) -> bool:
+        """Whether a row shows the file at path, staged and unstaged as git has it: the two columns before its
+        name are blank or not where git's are."""
+        name = path.split("/")[-1]
+        columns = [row[:-len(name) - 1][-2:] for row in rows if row.endswith(" " + name)]
+        # A rename shows the path it came from between the columns and its name.
+        return any(shown == "->" or (shown[:1] != " ", shown[1:] != " ") == (code[0] != " ", code[1] != " ")
+                   for shown in columns)
 
     def focus(self):
         self.ui.caught_up()
         self.app.focus("Files")
 
-    def stage(self, path: str):
-        """Stages the changes to the file at path."""
+    def select(self, path: str):
+        """Focuses the pane and moves to the file or directory at path, or to ALL."""
         self.focus()
-        self.app.move_cursor("Files", path.split("/")[-1])
+        self.app.move_cursor("Files", path.split("/")[-1] if path != self.ALL else path)
+
+    def stage(self, path: str):
+        """Stages the changes to the file or directory at path, or to ALL files, when some are not staged."""
+        self.select(path)
         self.ui.changing_repo(f"{path} to be staged", lambda: self.app.press("space"))
+
+    def unstage(self, path: str):
+        """Unstages the file or directory at path, or ALL files, when all its changes are staged."""
+        self.select(path)
+        self.ui.changing_repo(f"{path} to be unstaged", lambda: self.app.press("space"))
+
+    def discard(self, path: str, only_unstaged: bool = False):
+        """Throws away the changes to the file or directory at path, or to ALL files: all of them, or only the
+        unstaged ones."""
+        self.select(path)
+        self.ui.changing_repo(f"the changes to {path} discarded", lambda: (
+            self.app.press("d"),
+            self.ui.confirm("Discard all changes", key="u" if only_unstaged else "x")))
+
+    def stash(self, name: str = None):
+        """Stashes all changes, staged, unstaged and untracked, under name, or the name git gives them."""
+        self.focus()
+
+        def keys():
+            self.app.press("s")
+            self.app.wait_for("name (optional)")
+            if name is not None:
+                self.app.type(name)
+            self.app.press("enter")
+
+        self.ui.changing_repo("the changes to be stashed", keys)
 
     def commit(self, summary: str, description: str = None):
         """Commits the staged changes. With nothing staged, it stages all files first, as the app offers to."""
@@ -186,6 +232,13 @@ class BranchesPane:
     def checkout(self, branch: str):
         self.select(branch)
         self.ui.changing_repo(f"{branch} to be checked out", lambda: self.app.press("space"))
+
+    def checkout_bringing_changes(self, branch: str):
+        """Checks out the branch when it would overwrite the uncommitted changes, which the app stashes and pops
+        on it, as it offers to."""
+        self.select(branch)
+        self.ui.changing_repo(f"{branch} to be checked out", lambda: (
+            self.app.press("space"), self.ui.confirm(f"Checkout {branch}")))
 
     def new(self, name: str, start: str = None):
         """Creates the branch name from start, the checked out branch if not given, and checks it out."""
@@ -329,6 +382,22 @@ class CommitsPane:
         self.ui.changing_repo(f"{subject!r} dropped", lambda: (
             self.app.press("d"), self.ui.confirm("Drop commit")))
 
+    def reset(self, subject: str, mode: str = "mixed"):
+        """Resets the checked out branch to the commit with this subject, keeping the changes since "soft"
+        (staged), "mixed" (unstaged) or not at all ("hard"), which the app has confirmed when it discards
+        changes."""
+        key = {"soft": "s", "mixed": "m", "hard": "h"}[mode]
+        self.select(subject)
+        discards = mode == "hard" and any(code != "??" for code in self.repo.status().values())
+
+        def keys():
+            self.app.press("g")
+            self.ui.confirm("Reset to", key=key)
+            if discards:
+                self.ui.confirm("Hard reset to")
+
+        self.ui.changing_repo(f"the branch reset to {subject!r}", keys)
+
     def new_branch(self, subject: str, name: str):
         """Creates the branch name at the commit with this subject, and checks it out."""
         self.select(subject)
@@ -380,3 +449,19 @@ class StashPane:
                    if line.endswith(": " + message))
         # What it stashed shows once the app has taken it as the selected stash.
         self.app.wait_for(f"{ref}: {message}")
+
+    def pop(self, message: str):
+        """Brings back the changes of the stash with this message, unstaged, and removes it."""
+        self.select(message)
+        self.ui.changing_repo(f"the stash {message!r} popped", lambda: self.app.press("g"))
+
+    def try_to_pop(self, message: str):
+        """Asks to pop the stash, for when git is to refuse it: it does not wait for the repository to change."""
+        self.select(message)
+        self.app.press("g")
+
+    def drop(self, message: str):
+        """Deletes the stash with this message without applying it."""
+        self.select(message)
+        self.ui.changing_repo(f"the stash {message!r} dropped", lambda: (
+            self.app.press("d"), self.ui.confirm("Stash drop")))
