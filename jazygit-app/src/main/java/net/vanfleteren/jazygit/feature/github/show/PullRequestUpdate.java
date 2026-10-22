@@ -142,7 +142,7 @@ public final class PullRequestUpdate {
                                         .getOrElse(AppError.PullRequestsNotRead::new)))
                                 : known.remoteUpstream().isEmpty() || known.ahead() > 0
                                         ? Next.of(model.fail(new AppError.NotPushed(branch)))
-                                        : CreatePullRequestUpdate.askBase(model, branch)))
+                                        : CreatePullRequestUpdate.ask(model, known)))
                 .getOrElse(() -> Next.of(model));
     }
 

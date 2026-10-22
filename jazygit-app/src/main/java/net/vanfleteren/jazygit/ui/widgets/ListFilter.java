@@ -14,7 +14,7 @@ import net.vanfleteren.jazygit.ui.Theme;
  * the rows that contain it stay shown, until Escape closes it again. It ignores case, unless it has an uppercase
  * letter. Whether it is open, and its text, live in the {@link net.vanfleteren.jazygit.state.ListCursor}.
  */
-final class ListFilter {
+public final class ListFilter {
 
     static final char OPEN_KEY = '/';
 
@@ -32,7 +32,7 @@ final class ListFilter {
     /**
      * Whether a row showing {@code text} stays shown: always while there is no filter.
      */
-    static boolean matches(Option<String> filter, String text) {
+    public static boolean matches(Option<String> filter, String text) {
         return filter.forAll(typed -> matches(typed, text));
     }
 
@@ -46,7 +46,7 @@ final class ListFilter {
     /**
      * The dimmed line shown instead of the rows when none of them contains the filter.
      */
-    static StyledElement<?> noMatches() {
+    public static StyledElement<?> noMatches() {
         return text(Messages.get("dialog.filter.noMatches")).addClass(Theme.Classes.DIM);
     }
 }

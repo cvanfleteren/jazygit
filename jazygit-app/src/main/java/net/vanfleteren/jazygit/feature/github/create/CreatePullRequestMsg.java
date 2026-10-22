@@ -6,13 +6,14 @@ import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
 
 /**
- * Creating the pull request of a branch that has none: reading the branch it came from, choosing what it merges
- * into, then what it says.
+ * Creating the pull request of a branch that has none: reading the branch it came from and the title it starts out
+ * with, then asking what it merges into and what it says, in one popup.
  */
 public sealed interface CreatePullRequestMsg extends Msg {
 
@@ -27,19 +28,26 @@ public sealed interface CreatePullRequestMsg extends Msg {
     record ParentRead(Branch.Name branch, Option<Branch.Name> parent) implements CreatePullRequestMsg {}
 
     /**
-     * The user picked the branch the pull request merges into.
+     * The user moved in the list of bases, to {@code cursor}: the highlighted base, if the filter shows any, is the
+     * one the pull request merges into.
      */
-    record BaseChosen(Branch.Name base) implements CreatePullRequestMsg {}
-
-    record BaseCancelled() implements CreatePullRequestMsg {}
+    record BaseMoved(ListCursor cursor, Option<Branch.Name> base) implements CreatePullRequestMsg {}
 
     /**
-     * The title a new pull request of {@code branch} into {@code base} starts out with was read: the subject of
-     * its oldest commit, if one was found.
+     * The title a new pull request of {@code branch} starts out with was read, for the first of {@code bases}: the
+     * subject of its oldest commit not on it, if one was found.
      *
-     * @param head the name the branch has on its remote
+     * @param head  the name the branch has on its remote
+     * @param bases the branches it can merge into, the one it was read for first
      */
-    record TitleRead(Branch.Name branch, Branch.Name head, Branch.Name base, Option<String> subject)
+    record TitleRead(Branch.Name branch, Branch.Name head, List<Branch.Name> bases, Option<String> subject)
+            implements CreatePullRequestMsg {}
+
+    /**
+     * The title of the new pull request of {@code branch} was read again, for {@code base}, which the user picked
+     * instead.
+     */
+    record BaseTitleRead(Branch.Name branch, Branch.Name base, Option<String> subject)
             implements CreatePullRequestMsg {}
 
     /**

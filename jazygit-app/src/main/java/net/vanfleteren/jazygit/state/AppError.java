@@ -167,6 +167,11 @@ public sealed interface AppError {
     record NotPushed(Branch.Name branch) implements AppError {}
 
     /**
+     * A pull request was asked for, but no other branch is on the remote for it to merge into.
+     */
+    record NoBase(Branch.Name branch) implements AppError {}
+
+    /**
      * The pull request {@code pullRequest}, as {@code owner/name#number}, cannot be checked out, as it is of
      * another repository.
      */
