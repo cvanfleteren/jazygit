@@ -108,7 +108,7 @@ public class JazygitApp extends ToolkitApp {
             dispatch, this::showBranchesTab, () -> openContent(BranchesPanel.ID), Clock.systemUTC(), this::highlight);
     private final CommitsPanel commitsPanel =
             new CommitsPanel(dispatch, () -> openContent(CommitsPanel.ID), this::highlight);
-    private final StashPanel stashPanel = new StashPanel(dispatch, this::highlight);
+    private final StashPanel stashPanel = new StashPanel(dispatch, () -> openContent(StashPanel.ID), this::highlight);
     private final List<PullRequestsPanel> pullRequestsPanels =
             PullRequestsPanel.all(dispatch, this::openContent, this::highlight);
     // Every popup, with where the focus goes when it closes. At most one is open; errors come last.
@@ -686,7 +686,8 @@ public class JazygitApp extends ToolkitApp {
                 : List.of(
                                 branchesPanel.selectionChange(model),
                                 commitsPanel.selectionChange(model),
-                                filesPanel.selectionChange(model))
+                                filesPanel.selectionChange(model),
+                                stashPanel.selectionChange(model))
                         .flatMap(change -> change);
         // The framework knows no focus before the first render.
         Option<Msg> focused = Option.of(focusedId)

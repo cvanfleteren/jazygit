@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
 import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
+import net.vanfleteren.jazygit.state.Cmd.LoadStashDetail;
 import net.vanfleteren.jazygit.state.LoadMsg.*;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -73,6 +74,11 @@ public final class LoadUpdate {
                                 Preview.updated(repoView.commitDetail(), sha, d -> d.reload(changes)))),
                         sha,
                         d -> d.reload(changes)));
+            case StashDetailLoaded sl
+            when !sl.options().equals(done.preferences().diffOptions()) -> Next.of(done);
+            case StashDetailLoaded(Sha sha, var options, DiffText changes) ->
+                Next.of(done.mapRepoView(repoView -> repoView.withStashDetail(
+                        Preview.updated(repoView.stashDetail(), sha, d -> d.reload(changes)))));
             case FileDiffLoaded fl when !fl.options().equals(done.preferences().diffOptions()) -> Next.of(done);
             case FileDiffLoaded(var files, var options, var diff) ->
                 Next.of(done.mapRepoView(repoView ->
@@ -227,6 +233,8 @@ public final class LoadUpdate {
             when !options.equals(model.preferences().diffOptions()) -> model;
             case LoadFileDiff(var files, var options)
             when !options.equals(model.preferences().diffOptions()) -> model;
+            case LoadStashDetail(Sha sha, var options)
+            when !options.equals(model.preferences().diffOptions()) -> model;
             case Cmd.CheckMetadata() -> model;
             case Cmd.LoadStatus() -> model.mapRepo(repo -> repo.withStatus(new Failed<>(failure)));
             case Cmd.LoadBranches() ->
@@ -254,6 +262,9 @@ public final class LoadUpdate {
             case LoadFileDiff(var files, var options) ->
                 model.mapRepoView(repoView ->
                         repoView.withFileDiff(Preview.updated(repoView.fileDiff(), files, d -> d.failed(failure))));
+            case LoadStashDetail(Sha sha, var options) ->
+                model.mapRepoView(repoView ->
+                        repoView.withStashDetail(Preview.updated(repoView.stashDetail(), sha, d -> d.failed(failure))));
             case LoadBranchLog(var branch) ->
                 model.mapRepoView(repoView -> repoView.withBranchLog(
                         Preview.updated(repoView.branchLog(), branch, log -> log.failed(failure))));

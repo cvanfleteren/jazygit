@@ -171,6 +171,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<ProcessError, DiffText> stashChanges(Sha sha, DiffOptions options) {
+        return CliStash.changes(workTree, sha, options);
+    }
+
+    @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Stash stash) {
         return CliStash.drop(workTree, stash);
     }

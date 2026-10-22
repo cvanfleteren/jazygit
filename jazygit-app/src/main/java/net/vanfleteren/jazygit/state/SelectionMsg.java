@@ -34,4 +34,9 @@ public sealed interface SelectionMsg extends Msg {
      * The user highlighted a node of the files tree; {@code files} are the changed files under it.
      */
     record FilesSelected(List<FileEntry> files) implements SelectionMsg {}
+
+    /**
+     * The user highlighted the stash {@code sha} in the stash pane.
+     */
+    record StashSelected(Sha sha) implements SelectionMsg {}
 }

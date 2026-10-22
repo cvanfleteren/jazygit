@@ -227,8 +227,17 @@ class CliParseTest {
                 new GitError.UnexpectedOutput("stash@{0} without a separator"),
                 CliStash.parse("stash@{0} without a separator\n").getLeft());
         assertEquals(
-                List.of(new Stash("stash@{0}", new Sha(A), "work")),
-                CliStash.parse("stash@{0}\u001f" + A + "\u001fOn main: work\n").get());
+                List.of(
+                        new Stash("stash@{0}", new Sha(A), "work", Option.of("main"), Instant.ofEpochSecond(60)),
+                        new Stash(
+                                "stash@{1}",
+                                new Sha(B),
+                                "WIP on feature/x: abc1234 Add widget",
+                                Option.of("feature/x"),
+                                Instant.ofEpochSecond(61))),
+                CliStash.parse("stash@{0}\u001f" + A + "\u001fOn main: work\u001f60\n" + "stash@{1}\u001f" + B
+                                + "\u001fWIP on feature/x: abc1234 Add widget\u001f61\n")
+                        .get());
         assertEquals(
                 new GitError.UnexpectedOutput("1 M"),
                 CliStatus.parse("# branch.head main\0001 M\0").getLeft());

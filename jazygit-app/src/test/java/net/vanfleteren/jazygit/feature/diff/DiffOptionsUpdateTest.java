@@ -87,6 +87,32 @@ class DiffOptionsUpdateTest {
     }
 
     @Test
+    void togglingWhitespaceReadsTheShownStashAgainAndDropsWhatWasReadBefore() {
+        Sha stash = new Sha("5555");
+        Model model =
+                Update.update(loaded(), new SelectionMsg.StashSelected(stash)).model();
+        model = Update.update(model, new LoadMsg.StashDetailLoaded(stash, DiffOptions.DEFAULT, DiffText.of("changes")))
+                .model();
+
+        Next next = Update.update(model, new DiffOptionsMsg.WhitespaceToggled());
+
+        assertEquals(List.of(new Cmd.LoadStashDetail(stash, IGNORING)), next.cmds());
+        Preview<Sha, DiffText> detail = next.model().repoView().stashDetail().get();
+        assertEquals(new Loading<>(), detail.value());
+        assertEquals(new Loaded<>(DiffText.of("changes")), detail.shown().value());
+        assertEquals(
+                new Loading<>(),
+                Update.update(
+                                next.model(),
+                                new LoadMsg.StashDetailLoaded(stash, DiffOptions.DEFAULT, DiffText.of("stale")))
+                        .model()
+                        .repoView()
+                        .stashDetail()
+                        .get()
+                        .value());
+    }
+
+    @Test
     void theToggleDoesNothingWhileADialogIsOpen() {
         Model model = shown().openPopup(new AmendPopup(new AmendTarget.LastCommit()));
 

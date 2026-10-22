@@ -26,6 +26,7 @@ class Jazygit:
         self.files = FilesPane(self)
         self.branches = BranchesPane(self)
         self.commits = CommitsPane(self)
+        self.stash = StashPane(self)
 
     def caught_up(self):
         """Waits until no git operation runs and the panes show the repository as git has it: the commits of the
@@ -250,3 +251,22 @@ class CommitsPane:
             self.app.press("enter")
 
         self.ui.changing_repo(f"the commits moved onto {branch}", keys)
+
+
+class StashPane:
+    """The stashes, and what each one holds."""
+
+    def __init__(self, ui: Jazygit):
+        self.ui = ui
+        self.app = ui.app
+        self.repo = ui.repo
+
+    def select(self, message: str):
+        """Focuses the pane and moves to the stash stashed with this message, a single word."""
+        self.ui.caught_up()
+        self.app.focus("Stash")
+        self.app.move_cursor("Stash", message)
+        ref = next(line.split(" ")[0] for line in self.repo("stash", "list", "--format=%gd %gs").splitlines()
+                   if line.endswith(": " + message))
+        # What it stashed shows once the app has taken it as the selected stash.
+        self.app.wait_for(f"{ref}: {message}")

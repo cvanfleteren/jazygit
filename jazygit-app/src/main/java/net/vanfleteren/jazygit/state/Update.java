@@ -171,6 +171,11 @@ public final class Update {
                         .flatMap(DivergenceView::detail)
                         .filter(detail -> detail.value() instanceof Failed)
                         .map(detail -> new LoadCommitDetail(
+                                detail.key(), model.preferences().diffOptions())))
+                .appendAll(model.repoView()
+                        .stashDetail()
+                        .filter(detail -> detail.value() instanceof Failed)
+                        .map(detail -> new Cmd.LoadStashDetail(
                                 detail.key(), model.preferences().diffOptions())));
         List<Cmd.Load> loads = periodic.appendAll(retries)
                 .filter(cmd -> !model.jobs().refreshing().contains(cmd))

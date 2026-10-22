@@ -253,6 +253,16 @@ public interface Cmd {
         }
     }
 
+    record LoadStashDetail(Sha sha, DiffOptions options) implements Load {
+
+        @Override
+        public Msg run(Env env) {
+            return env.git()
+                    .stashChanges(sha, options)
+                    .fold(this::failedWith, changes -> new LoadMsg.StashDetailLoaded(sha, options, changes));
+        }
+    }
+
     record LoadFileDiff(List<FileEntry> files, DiffOptions options) implements Load {
 
         @Override

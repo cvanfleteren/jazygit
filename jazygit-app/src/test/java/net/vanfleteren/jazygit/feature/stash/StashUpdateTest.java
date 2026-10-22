@@ -18,11 +18,11 @@ import org.junit.jupiter.api.Test;
 
 class StashUpdateTest {
 
-    private static final net.vanfleteren.jazygit.git.model.Stash STASH =
-            new net.vanfleteren.jazygit.git.model.Stash("stash@{0}", new Sha("s0"), "x");
+    private static final net.vanfleteren.jazygit.git.model.Stash STASH = new net.vanfleteren.jazygit.git.model.Stash(
+            "stash@{0}", new Sha("s0"), "x", Option.none(), java.time.Instant.EPOCH);
     // Named like the listed one, as a stash that was added since; it is another one.
-    private static final net.vanfleteren.jazygit.git.model.Stash UNLISTED =
-            new net.vanfleteren.jazygit.git.model.Stash("stash@{0}", new Sha("s1"), "y");
+    private static final net.vanfleteren.jazygit.git.model.Stash UNLISTED = new net.vanfleteren.jazygit.git.model.Stash(
+            "stash@{0}", new Sha("s1"), "y", Option.none(), java.time.Instant.EPOCH);
 
     private static Model withChanges() {
         Model model = loaded();

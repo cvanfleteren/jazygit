@@ -100,6 +100,11 @@ public interface StubGitProvider extends GitInfoProvider {
         return Either.right(List.empty());
     }
 
+    @Override
+    default Either<ProcessError, DiffText> stashChanges(Sha sha, DiffOptions options) {
+        return Either.right(DiffText.of(""));
+    }
+
     /**
      * Only the main worktree, which is the one shown.
      */

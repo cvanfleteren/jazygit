@@ -18,6 +18,7 @@ import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.Tuple;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -41,12 +42,13 @@ import net.vanfleteren.jazygit.state.ScrolledContent;
 
 /**
  * The right-hand content panel: it always mirrors whichever left pane currently has focus,
- * showing the file diff, the branch log, or the commit diff/body; on the pull requests screen, the highlighted
- * pull request.
+ * showing the file diff, the branch log, the commit diff/body or what a stash stashed; on the pull requests screen,
+ * the highlighted pull request.
  */
 public final class ContentPanel {
 
     private static final String COMMIT_AREA_ID = "commit-changes";
+    private static final String STASH_AREA_ID = "stash-changes";
     private static final String DIVERGENCE_AREA_ID = "divergence-commit";
     private static final String PULL_REQUEST_AREA_ID = "pull-request-preview";
     private static final List<String> LEFT_PANES =
@@ -59,6 +61,7 @@ public final class ContentPanel {
     private final ScrollArea stagedArea;
     private final ScrollArea unstagedArea;
     private final ScrollArea commitArea;
+    private final ScrollArea stashArea;
     // The commit highlighted in the divergence the branches pane lists.
     private final ScrollArea divergenceArea;
     // Not focusable: clicking the log must not take the focus from the branches pane it mirrors.
@@ -92,17 +95,24 @@ public final class ContentPanel {
         stagedArea = area.apply("diff-staged");
         unstagedArea = area.apply("diff-unstaged");
         commitArea = area.apply(COMMIT_AREA_ID);
+        stashArea = area.apply(STASH_AREA_ID);
         divergenceArea = area.apply(DIVERGENCE_AREA_ID);
         logArea = area.apply("branch-log");
         pullRequestArea = area.apply(PULL_REQUEST_AREA_ID);
-        focusableAreas = List.of(stagedArea, unstagedArea, commitArea, divergenceArea, pullRequestArea);
+        focusableAreas = List.of(stagedArea, unstagedArea, commitArea, stashArea, divergenceArea, pullRequestArea);
     }
 
     /**
      * Whether {@code id} is an area of the content panel that can have the focus, rather than a pane.
      */
     public static boolean isArea(String id) {
-        return List.of("diff-staged", "diff-unstaged", COMMIT_AREA_ID, DIVERGENCE_AREA_ID, PULL_REQUEST_AREA_ID)
+        return List.of(
+                        "diff-staged",
+                        "diff-unstaged",
+                        COMMIT_AREA_ID,
+                        STASH_AREA_ID,
+                        DIVERGENCE_AREA_ID,
+                        PULL_REQUEST_AREA_ID)
                 .contains(id);
     }
 
@@ -223,23 +233,48 @@ public final class ContentPanel {
         return model.commit(sha);
     }
 
+    private static Option<Stash> stash(Model model, Sha sha) {
+        return model.repo()
+                .stashes()
+                .toOption()
+                .flatMap(stashes -> stashes.find(stash -> stash.sha().equals(sha)));
+    }
+
+    /**
+     * The {@code Date:} line of a commit or a stash, as {@code git show} has it.
+     */
+    private static Span dateLine(Instant time) {
+        DateTimeFormatter date = DateTimeFormatter.ofPattern(Messages.get("content.commitDatePattern"), Locale.ENGLISH);
+        return Span.raw(Messages.get("content.commitDate", date.format(time.atZone(ZoneId.systemDefault()))));
+    }
+
     /**
      * Like {@code git show}: the commit's header, its indented message, a {@code ---} line and then the changes.
      */
     static Text commitText(Commit commit, String changes, Theme.SpanStyles styles) {
-        DateTimeFormatter commitDate =
-                DateTimeFormatter.ofPattern(Messages.get("content.commitDatePattern"), Locale.ENGLISH);
         List<String> message = messageLines(commit);
         return styledText(List.of(
                         styled(Messages.get("content.commitSha", commit.sha().value()), Theme.Classes.SHA, styles),
                         Span.raw(Messages.get("content.commitAuthor", commit.authorName(), commit.authorEmail())),
-                        Span.raw(Messages.get(
-                                "content.commitDate",
-                                commitDate.format(commit.authorTime().atZone(ZoneId.systemDefault())))),
+                        dateLine(commit.authorTime()),
                         Span.raw(""),
                         styled(message.head(), Theme.Classes.BOLD, styles))
                 .map(Line::from)
                 .appendAll(message.tail().map(line -> Line.from(Span.raw(line))))
+                .append(Line.from(Span.raw("---")))
+                .appendAll(lines(changes).map(line -> diffLine(line, styles))));
+    }
+
+    /**
+     * Like {@link #commitText}: the stash's name and message, the branch it was stashed on if its message says, when
+     * it was stashed, a {@code ---} line and then the changes.
+     */
+    static Text stashText(Stash stash, String changes, Theme.SpanStyles styles) {
+        return styledText(List.of(styled(
+                        Messages.get("content.stashHeader", stash.ref(), stash.message()), Theme.Classes.SHA, styles))
+                .appendAll(stash.branch().map(branch -> Span.raw(Messages.get("content.stashBranch", branch))))
+                .append(dateLine(stash.time()))
+                .map(Line::from)
                 .append(Line.from(Span.raw("---")))
                 .appendAll(lines(changes).map(line -> diffLine(line, styles))));
     }
@@ -282,6 +317,7 @@ public final class ContentPanel {
         return switch (areaId) {
             case "diff-staged", "diff-unstaged" -> Option.of(FilesPanel.ID);
             case COMMIT_AREA_ID -> Option.of(CommitsPanel.ID);
+            case STASH_AREA_ID -> Option.of(StashPanel.ID);
             case DIVERGENCE_AREA_ID -> Option.of(BranchesPanel.ID);
             // It shows the pull request highlighted in whichever list of the pull requests screen is in use.
             case PULL_REQUEST_AREA_ID ->
@@ -316,6 +352,12 @@ public final class ContentPanel {
                         .map(Preview::shown)
                         .exists(detail -> detail.value().toOption().isDefined()
                                 && commit(model, detail.key()).isDefined());
+            case STASH_AREA_ID ->
+                model.repoView()
+                        .stashDetail()
+                        .map(Preview::shown)
+                        .exists(detail -> detail.value().toOption().isDefined()
+                                && stash(model, detail.key()).isDefined());
             case DIVERGENCE_AREA_ID ->
                 model.repoView()
                         .divergence()
@@ -363,6 +405,9 @@ public final class ContentPanel {
         }
         if (CommitsPanel.ID.equals(pane) || COMMIT_AREA_ID.equals(pane)) {
             return commitDiffView(model, focusedId);
+        }
+        if (StashPanel.ID.equals(pane) || STASH_AREA_ID.equals(pane)) {
+            return stashDiffView(model, focusedId);
         }
         return fileDiffView(model, focusedId);
     }
@@ -531,6 +576,34 @@ public final class ContentPanel {
                 .getOrElse(() -> model.repo().commits().toOption().exists(List::isEmpty)
                         ? panel(title, text(Messages.get("content.noCommits")))
                         : loadingPanel(title));
+    }
+
+    /**
+     * What the highlighted stash stashed, as {@link #stashText} shows it; the stash shown before stays while it is
+     * read. Without stashes, it says there are none.
+     */
+    private StyledElement<?> stashDiffView(Model model, String focusedId) {
+        DiffOptions options = model.preferences().diffOptions();
+        String title = Messages.get("panel.stash.title");
+        return model.repoView()
+                .stashDetail()
+                .map(Preview::shown)
+                .flatMap(detail -> stash(model, detail.key())
+                        .<StyledElement<?>>map(stash -> whenLoaded(
+                                title,
+                                detail.value(),
+                                (DiffText changes) -> stashArea.show(
+                                        model,
+                                        focusedId,
+                                        titled(Messages.get("panel.stash.titleFor", stash.ref()), options),
+                                        new ScrolledContent.StashChanges(stash.sha(), changes),
+                                        stashText(stash, shownChanges(changes, options), styles)))))
+                .getOrElse(() -> whenLoaded(
+                        title,
+                        model.repo().stashes(),
+                        stashes -> stashes.isEmpty()
+                                ? dimPanel(title, Messages.get("content.noStashes"))
+                                : loadingPanel(title)));
     }
 
     /**
