@@ -403,15 +403,19 @@ widgets. A report can come twice, when a frame is drawn before the first one is 
 leaves a model that already has its value as it is. This is the only way the view tells the model something
 no message from a user's event did.
 
-Every 750 ms a `Msg.Tick` triggers `Update.tick`, which re-reads the status, and checks the files of the git
-directory that the local and remote branches (one load, `LoadBranches`), the stashes and the worktrees are read
-from (`Cmd.CheckMetadata`). That check runs no git: it stamps the HEADs, the config, `packed-refs`, the
-directories of the loose refs, the stash reflog and the worktrees' admin files (`GitMetadata`). Only a load
-whose stamp differs from the one it was last started with (`Jobs.readAt`) runs again, so an idle app runs one
-git process per tick instead of four. An operation that is done reads all of them at once (`Update.refresh`),
-without waiting for the files to tell. That keeps the screen in sync with changes made outside the app. A
-periodic load is skipped while an equal one is still running: `Model.refreshing` holds the loads that are
+Every `jazygit.refreshInterval` (750 ms by default) a `Msg.Tick` triggers `Update.tick`, which re-reads the status,
+and checks the files of the git directory that the local and remote branches (one load, `LoadBranches`), the stashes
+and the worktrees are read from (`Cmd.CheckMetadata`). That check runs no git: it stamps the HEADs, the config,
+`packed-refs`, the directories of the loose refs, the stash reflog and the worktrees' admin files (`GitMetadata`).
+Only a load whose stamp differs from the one it was last started with (`Jobs.readAt`) runs again, so an idle app
+runs one git process per tick instead of four. An operation that is done reads all of them at once
+(`Update.refresh`), without waiting for the files to tell. That keeps the screen in sync with changes made outside
+the app. A periodic load is skipped while an equal one is still running: `Model.refreshing` holds the loads that are
 running. See `documentation/adr/0015-check-metadata-before-loading.md`.
+
+The model is told the time apart from that, every 5 s, by `Msg.Clock`, which only sets `Model.now`: the ages it
+shows are in minutes ("now" under one), so a slow clock is enough, and an idle app draws a frame every 5 s. See
+`documentation/adr/0021-a-clock-apart-from-the-refresh.md`.
 
 Every minute a `FetchMsg.Tick` fetches from the remotes in the background, unless the previous fetch is
 still running. `FetchUpdate` lists the remotes (those `git fetch --all` would fetch) and fetches them one after

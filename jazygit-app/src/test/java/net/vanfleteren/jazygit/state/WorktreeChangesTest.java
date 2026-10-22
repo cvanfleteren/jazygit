@@ -65,9 +65,8 @@ class WorktreeChangesTest {
     void aTickDoesNotReadThemWhileThePullRequestsAreShown() {
         Model pullRequests = onWorktreesTab(withWorktrees()).withScreen(Screen.PULL_REQUESTS);
 
-        assertFalse(Update.update(pullRequests, new Msg.Tick(Instant.parse("2026-10-21T10:00:00Z")))
-                .cmds()
-                .exists(cmd -> cmd instanceof LoadWorktreeChanges));
+        assertFalse(
+                Update.update(pullRequests, new Msg.Tick()).cmds().exists(cmd -> cmd instanceof LoadWorktreeChanges));
     }
 
     @Test
@@ -86,10 +85,10 @@ class WorktreeChangesTest {
                         new LoadMsg.WorktreeChangesLoaded(List.of(LINKED.toString()), HashMap.empty()))
                 .model();
 
-        assertFalse(Update.update(done, new Msg.Tick(read.plusMillis(500)))
+        assertFalse(Update.update(done.withNow(read.plusMillis(500)), new Msg.Tick())
                 .cmds()
                 .exists(cmd -> cmd instanceof LoadWorktreeChanges));
-        assertTrue(Update.update(done, new Msg.Tick(read.plus(Update.WORKTREE_CHANGES_INTERVAL)))
+        assertTrue(Update.update(done.withNow(read.plus(Update.WORKTREE_CHANGES_INTERVAL)), new Msg.Tick())
                 .cmds()
                 .contains(LOAD));
     }
@@ -103,7 +102,7 @@ class WorktreeChangesTest {
                         new LoadMsg.Failed(LOAD, new Failure.Git(new GitError.TimedOut("status", LINKED))))
                 .model();
 
-        assertFalse(Update.update(failed, new Msg.Tick(read.plusMillis(500)))
+        assertFalse(Update.update(failed.withNow(read.plusMillis(500)), new Msg.Tick())
                 .cmds()
                 .exists(cmd -> cmd instanceof LoadWorktreeChanges));
     }

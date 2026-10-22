@@ -27,14 +27,25 @@ public interface Msg {
 
     /**
      * Periodic prompt to check the repository for changes made outside the app.
-     *
-     * @param now the time it is
      */
-    record Tick(Instant now) implements Msg {
+    record Tick() implements Msg {
 
         @Override
         public Update.Next apply(Model model) {
-            return Update.tick(model.withNow(now));
+            return Update.tick(model);
+        }
+    }
+
+    /**
+     * The time it is, told apart from the refresh: often enough that an age shown in minutes turns soon after it should.
+     *
+     * @param now the time it is
+     */
+    record Clock(Instant now) implements Msg {
+
+        @Override
+        public Update.Next apply(Model model) {
+            return Update.Next.of(model.withNow(now));
         }
     }
 

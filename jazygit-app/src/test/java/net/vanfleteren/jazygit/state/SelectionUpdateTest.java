@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
@@ -109,7 +108,7 @@ class SelectionUpdateTest {
                 Option.of(new Preview<>(new Sha("aaaa"), new Failed<>(refused("boom")))),
                 model.repoView().commitDetail());
 
-        assertTrue(Update.update(model, new Tick(Instant.EPOCH))
+        assertTrue(Update.update(model, new Tick())
                 .cmds()
                 .contains(new LoadCommitDetail(new Sha("aaaa"), DiffOptions.DEFAULT)));
     }
@@ -176,7 +175,7 @@ class SelectionUpdateTest {
         assertEquals(
                 Option.of(new Preview<>(new Sha("5555"), new Failed<>(refused("boom")))),
                 failed.repoView().stashDetail());
-        assertTrue(Update.update(failed, new Tick(Instant.EPOCH))
+        assertTrue(Update.update(failed, new Tick())
                 .cmds()
                 .contains(new LoadStashDetail(new Sha("5555"), DiffOptions.DEFAULT)));
     }
@@ -280,7 +279,7 @@ class SelectionUpdateTest {
                         new LoadStatus(),
                         new Cmd.CheckMetadata(),
                         new LoadBranchLog(new BranchRef.Local(new Branch.Name("feature")))),
-                Update.update(model, new Tick(Instant.EPOCH)).cmds());
+                Update.update(model, new Tick()).cmds());
     }
 
     @Test
@@ -360,7 +359,7 @@ class SelectionUpdateTest {
                 .model();
 
         // The diff is read again once the status confirms that its files are still as they were.
-        Model refreshed = Update.update(model, new Tick(Instant.EPOCH)).model();
+        Model refreshed = Update.update(model, new Tick()).model();
         Next statusLoaded = Update.update(refreshed, new LoadMsg.StatusLoaded(DIRTY));
         assertTrue(statusLoaded.cmds().contains(new Cmd.LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT)));
 

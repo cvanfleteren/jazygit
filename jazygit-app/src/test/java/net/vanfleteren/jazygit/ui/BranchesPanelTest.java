@@ -135,7 +135,8 @@ class BranchesPanelTest {
 
     @Test
     void ageIsShownInTheLargestFittingUnit() {
-        assertEquals("45s", net.vanfleteren.jazygit.ui.TimeText.age(java.time.Duration.ofSeconds(45)));
+        assertEquals("now", net.vanfleteren.jazygit.ui.TimeText.age(java.time.Duration.ofSeconds(45)));
+        assertEquals("1m", net.vanfleteren.jazygit.ui.TimeText.age(java.time.Duration.ofSeconds(60)));
         assertEquals("2m", net.vanfleteren.jazygit.ui.TimeText.age(java.time.Duration.ofSeconds(150)));
         assertEquals("5m", net.vanfleteren.jazygit.ui.TimeText.age(java.time.Duration.ofMinutes(5)));
         assertEquals("3h", net.vanfleteren.jazygit.ui.TimeText.age(java.time.Duration.ofHours(3)));

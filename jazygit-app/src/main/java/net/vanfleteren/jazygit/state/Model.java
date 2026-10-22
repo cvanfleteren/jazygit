@@ -23,7 +23,7 @@ import net.vanfleteren.jazygit.state.prs.PrOverview;
  * @param listCursor     where the user is in the list of the popup, if it has one
  * @param scrolled       where the areas of the content panel were scrolled to, by the id of the area
  * @param preferences    how the user wants things shown, kept from one session to the next or for this one only
- * @param now            the time as of the last {@link Msg.Tick}, which tells how long ago things happened
+ * @param now            the time as of the last {@link Msg.Clock}, which tells how long ago things happened
  */
 @With
 public record Model(

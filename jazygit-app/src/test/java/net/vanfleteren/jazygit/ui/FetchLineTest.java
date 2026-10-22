@@ -86,4 +86,14 @@ class FetchLineTest {
 
         assertEquals("read 3h ago · last read failed", FetchLine.freshness(prs));
     }
+
+    @Test
+    void saysJustNowUnderAMinute() {
+        Model model = TestModels.loaded().withNow(NOW);
+
+        assertEquals(
+                "fetched just now",
+                FetchLine.freshness(model.mapJobs(
+                        jobs -> jobs.withLastFetch(Freshness.NEVER.succeeded("origin", NOW.minusSeconds(59))))));
+    }
 }

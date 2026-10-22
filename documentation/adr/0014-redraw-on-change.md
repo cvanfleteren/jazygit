@@ -67,3 +67,6 @@ the model, switching to another repository and coming back from a program the te
   the ticks, nothing else draws it. The tests run without ticks, as the app does, so they show such a gap.
 - To do in TamboUI: a call that asks for a frame, which replaces `Redraw`, and caching the rules and variables in
   `StyleEngine`, which makes every frame cheaper.
+
+Amended by ADR 21: the model is told the time every 5s by a clock of its own, `Msg.Clock`, apart from the
+refresh tick.

@@ -9,7 +9,6 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.nio.file.Path;
-import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.MetadataStamp;
 import net.vanfleteren.jazygit.state.Cmd.CheckMetadata;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
@@ -52,7 +51,7 @@ class MetadataGuardTest {
 
     @Test
     void aTickChecksTheFilesInsteadOfReadingWhatTheyGuard() {
-        List<Cmd> cmds = Update.update(idle(), new Msg.Tick(Instant.EPOCH)).cmds();
+        List<Cmd> cmds = Update.update(idle(), new Msg.Tick()).cmds();
 
         assertTrue(cmds.contains(new CheckMetadata()));
         assertFalse(cmds.exists(List.<Cmd>narrow(CheckMetadata.GUARDED)::contains));
