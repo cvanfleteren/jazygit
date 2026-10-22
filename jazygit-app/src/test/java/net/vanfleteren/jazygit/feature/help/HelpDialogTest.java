@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
+import net.vanfleteren.jazygit.ui.TextWidth;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -73,6 +74,18 @@ class HelpDialogTest {
         assertTrue(screen.contains("       space Checkout branch"), screen);
         assertTrue(screen.contains("           n New branch"), screen);
         assertTrue(screen.contains("           d Delete branch"), screen);
+    }
+
+    @Test
+    void theDescriptionsOfTheLegendLineUpWhateverTheWidthOfTheSymbols() throws Exception {
+        List<String> lines = List.of(screen(Scopes.BRANCHES.id()).split("\n"));
+        // #42 takes a column a character, the emoji of the checks and the review two.
+        List<Integer> columns = List.of("Pull request (dim: draft)", "CI passed", "Approved / changes")
+                .map(description -> {
+                    String line = lines.find(text -> text.contains(description)).get();
+                    return TextWidth.of(line.substring(0, line.indexOf(description)));
+                });
+        assertEquals(1, columns.distinct().size(), columns.toString());
     }
 
     @Test
