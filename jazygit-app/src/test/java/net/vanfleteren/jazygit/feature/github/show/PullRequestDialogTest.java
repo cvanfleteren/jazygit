@@ -42,6 +42,7 @@ class PullRequestDialogTest {
             "support_rename",
             "main",
             Instant.parse("2026-10-10T08:00:00Z"),
+            Instant.parse("2026-10-12T09:00:00Z"),
             120,
             34,
             7,
@@ -68,6 +69,7 @@ class PullRequestDialogTest {
             false,
             "support_rename",
             "main",
+            NOW,
             NOW,
             1,
             1,
@@ -151,6 +153,7 @@ class PullRequestDialogTest {
         assertTrue(screen.contains("   Author  @cvf"), screen);
         assertTrue(screen.contains("   Branch  support_rename → main"), screen);
         assertTrue(screen.contains("  Created  2026-10-10 (3d ago)"), screen);
+        assertTrue(screen.contains("   Pushed  2026-10-12 (1d ago)"), screen);
         assertTrue(screen.contains("  Changes  +120 −34 in 7 files"), screen);
         assertTrue(screen.contains("Mergeable  yes"), screen);
         assertTrue(screen.contains("   Review  👎 changes requested"), screen);
@@ -200,6 +203,7 @@ class PullRequestDialogTest {
                 READY.headBranch(),
                 READY.baseBranch(),
                 READY.createdAt(),
+                READY.createdAt(),
                 READY.additions(),
                 READY.deletions(),
                 READY.changedFiles(),
@@ -224,6 +228,7 @@ class PullRequestDialogTest {
                 DETAILS.draft(),
                 DETAILS.headBranch(),
                 DETAILS.baseBranch(),
+                DETAILS.createdAt(),
                 DETAILS.createdAt(),
                 DETAILS.additions(),
                 DETAILS.deletions(),
@@ -254,6 +259,7 @@ class PullRequestDialogTest {
                 false,
                 "a",
                 "b",
+                NOW,
                 NOW,
                 0,
                 0,
@@ -298,6 +304,7 @@ class PullRequestDialogTest {
                 false,
                 "a",
                 "b",
+                NOW,
                 NOW,
                 0,
                 0,

@@ -91,6 +91,7 @@ public interface StubGitHub extends GitHub {
                 "feature",
                 "main",
                 Instant.EPOCH,
+                Instant.EPOCH,
                 0,
                 0,
                 0,

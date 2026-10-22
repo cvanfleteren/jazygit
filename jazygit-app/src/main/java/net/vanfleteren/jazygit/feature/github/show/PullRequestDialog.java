@@ -299,7 +299,8 @@ public final class PullRequestDialog implements PopupView {
                         () -> Line.labelled("dialog.pullRequest.author", text("@" + pr.author()))))
                 .appendAll(List.of(
                         Line.labelled("dialog.pullRequest.branch", text(pr.headBranch() + " → " + pr.baseBranch())),
-                        Line.labelled("dialog.pullRequest.created", text(created(pr, now))),
+                        Line.labelled("dialog.pullRequest.created", text(when(pr.createdAt(), now))),
+                        Line.labelled("dialog.pullRequest.pushed", text(when(pr.pushedAt(), now))),
                         Line.labelled(
                                 "dialog.pullRequest.changes",
                                 text("+" + pr.additions()).addClass(Theme.Classes.DIFF_ADDED),
@@ -341,11 +342,11 @@ public final class PullRequestDialog implements PopupView {
                 "dialog.pullRequest.threads.unresolved", threads.threads(), threads.comments(), threads.unresolved());
     }
 
-    private String created(PullRequestDetails pr, Instant now) {
+    private String when(Instant at, Instant now) {
         return Messages.get(
-                "dialog.pullRequest.created.value",
-                LocalDate.ofInstant(pr.createdAt(), clock.getZone()).toString(),
-                TimeText.ago(Duration.between(pr.createdAt(), now)));
+                "dialog.pullRequest.when",
+                LocalDate.ofInstant(at, clock.getZone()).toString(),
+                TimeText.ago(Duration.between(at, now)));
     }
 
     /**
