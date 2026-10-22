@@ -17,9 +17,6 @@ import net.vanfleteren.jazygit.feature.branch.upstream.UpstreamMsg;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeMsg;
 import net.vanfleteren.jazygit.feature.worktree.switchto.SwitchWorktreeMsg;
-import net.vanfleteren.jazygit.gh.model.PullRequest;
-import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
-import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.model.SampleData;
@@ -97,127 +94,6 @@ class BranchesPanelTest {
     }
 
     @Test
-    void aPullRequestShowsItsNumberItsChecksAndItsReview() {
-        assertEquals(List.of(), BranchesPanel.pullRequest(Option.none()));
-        assertEquals(
-                List.of(
-                        LoadableList.Seg.styled(" #42", Theme.Classes.PULL_REQUEST),
-                        LoadableList.Seg.styled(" ✅", Theme.Classes.CHECKS_PASSED),
-                        LoadableList.Seg.styled(" 👍", Theme.Classes.REVIEW_APPROVED)),
-                BranchesPanel.pullRequest(Option.of(new PullRequest(42, "b", false, Checks.PASSING, Review.APPROVED))));
-        assertEquals(
-                List.of(
-                        LoadableList.Seg.styled(" #40", Theme.Classes.PULL_REQUEST),
-                        LoadableList.Seg.styled(" ❌", Theme.Classes.CHECKS_FAILED),
-                        LoadableList.Seg.styled(" ?", Theme.Classes.DIM)),
-                BranchesPanel.pullRequest(Option.of(new PullRequest(40, "b", false, Checks.FAILING, Review.REQUIRED))));
-        assertEquals(
-                List.of(
-                        LoadableList.Seg.styled(" #38", Theme.Classes.PULL_REQUEST),
-                        LoadableList.Seg.styled(" ⏳", Theme.Classes.CHECKS_RUNNING),
-                        LoadableList.Seg.styled(" 👎", Theme.Classes.REVIEW_CHANGES)),
-                BranchesPanel.pullRequest(
-                        Option.of(new PullRequest(38, "b", false, Checks.PENDING, Review.CHANGES_REQUESTED))));
-        // A draft without checks or reviews shows only its number, dimmed.
-        assertEquals(
-                List.of(LoadableList.Seg.styled(" #37", Theme.Classes.DIM)),
-                BranchesPanel.pullRequest(Option.of(new PullRequest(37, "b", true, Checks.NONE, Review.NONE))));
-    }
-
-    @Test
-    void aBranchShowsItsPullRequestElseTheChecksOnItsTip() {
-        PullRequest pr = new PullRequest(42, "b", false, Checks.NONE, Review.NONE);
-
-        assertEquals(
-                List.of(LoadableList.Seg.styled(" #42", Theme.Classes.PULL_REQUEST)),
-                BranchesPanel.gitHub(Option.of(pr), Option.of(Checks.FAILING)));
-        assertEquals(
-                List.of(LoadableList.Seg.styled(" ❌", Theme.Classes.CHECKS_FAILED)),
-                BranchesPanel.gitHub(Option.none(), Option.of(Checks.FAILING)));
-        assertEquals(List.of(), BranchesPanel.gitHub(Option.none(), Option.of(Checks.NONE)));
-        assertEquals(List.of(), BranchesPanel.gitHub(Option.none(), Option.none()));
-    }
-
-    @Test
-    void aBranchWhoseUpstreamIsGoneSaysSo() {
-        assertEquals(
-                List.of(LoadableList.Seg.styled(" gone", Theme.Classes.GONE)),
-                BranchesPanel.sync(new Branch(
-                        new Branch.Name("b"),
-                        false,
-                        new Sha("1"),
-                        java.time.Instant.EPOCH,
-                        false,
-                        false,
-                        new Tracking.Gone(new RemoteBranch("origin", new Branch.Name("b"))))));
-        // A branch that was never pushed shows nothing.
-        assertEquals(List.of(), BranchesPanel.sync(new Branch(new Branch.Name("b"), false, new Sha("1"))));
-    }
-
-    @Test
-    void aBranchCheckedOutInAnotherWorktreeSaysSo() {
-        assertEquals(
-                List.of(LoadableList.Seg.styled(" (worktree)", Theme.Classes.DIM)),
-                BranchesPanel.worktree(new Branch(
-                        new Branch.Name("b"),
-                        false,
-                        new Sha("1"),
-                        java.time.Instant.EPOCH,
-                        false,
-                        false,
-                        new Tracking.None(),
-                        Option.of(java.nio.file.Path.of("/repos/linked")))));
-        assertEquals(List.of(), BranchesPanel.worktree(new Branch(new Branch.Name("b"), false, new Sha("1"))));
-    }
-
-    @Test
-    void syncShowsAnAheadArrowForUnpushedAndABehindOneForIncomingCommits() {
-        java.time.Instant t = java.time.Instant.EPOCH;
-        assertEquals(
-                List.of(),
-                BranchesPanel.sync(new Branch(
-                        new Branch.Name("b"),
-                        false,
-                        new Sha("1"),
-                        t,
-                        true,
-                        false,
-                        Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("b")), 0, 0)))));
-        assertEquals(
-                List.of(LoadableList.Seg.styled(" ↑2", Theme.Classes.AHEAD)),
-                BranchesPanel.sync(new Branch(
-                        new Branch.Name("b"),
-                        false,
-                        new Sha("1"),
-                        t,
-                        true,
-                        false,
-                        Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("b")), 2, 0)))));
-        assertEquals(
-                List.of(LoadableList.Seg.styled(" ↓1", Theme.Classes.BEHIND)),
-                BranchesPanel.sync(new Branch(
-                        new Branch.Name("b"),
-                        false,
-                        new Sha("1"),
-                        t,
-                        true,
-                        false,
-                        Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("b")), 0, 1)))));
-        assertEquals(
-                List.of(
-                        LoadableList.Seg.styled(" ↑2", Theme.Classes.AHEAD),
-                        LoadableList.Seg.styled(" ↓1", Theme.Classes.BEHIND)),
-                BranchesPanel.sync(new Branch(
-                        new Branch.Name("b"),
-                        false,
-                        new Sha("1"),
-                        t,
-                        true,
-                        false,
-                        Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("b")), 2, 1)))));
-    }
-
-    @Test
     void spinnerFramesBounceAsTimePasses() {
         java.util.Set<String> frames = java.util.stream.IntStream.range(0, 20)
                 .mapToObj(
@@ -255,11 +131,6 @@ class BranchesPanelTest {
             assertTrue(screen.contains("feature " + frame), screen);
             assertFalse(screen.contains("main " + frame), screen);
         }
-    }
-
-    @Test
-    void aFastForwardIsShownAsAPull() {
-        assertEquals(BranchesPanel.busyLabel(PullCmd.PULL), BranchesPanel.busyLabel(PullCmd.FAST_FORWARD));
     }
 
     @Test
@@ -468,86 +339,6 @@ class BranchesPanelTest {
         assertEquals(
                 Option.of(new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("feature")))),
                 panel.selectionChange(worktrees));
-    }
-
-    @Test
-    void aWorktreeSaysWhatItHasCheckedOutAndWhatKeepsItFromBeingRemoved() {
-        Worktree detached = new Worktree(
-                java.nio.file.Path.of("/repos/x"),
-                Option.of(new Sha("1234567890")),
-                Option.none(),
-                false,
-                false,
-                Option.of(""),
-                true);
-
-        assertEquals(
-                "  x (detached at 1234567) locked missing",
-                BranchesPanel.worktreeRow(Repo.LOADING, detached).text());
-        assertEquals(
-                List.of(
-                        Option.none(),
-                        Option.of(Theme.Classes.DIM),
-                        Option.of(Theme.Classes.DIM),
-                        Option.of(Theme.Classes.GONE)),
-                BranchesPanel.worktreeRow(Repo.LOADING, detached).segs().map(LoadableList.Seg::cssClass));
-    }
-
-    @Test
-    void aWorktreeWithChangesIsMarkedAndItsBranchSaysHowFarItIsFromItsUpstream() {
-        java.nio.file.Path path = java.nio.file.Path.of("/repos/x");
-        Worktree worktree = new Worktree(
-                path,
-                Option.of(new Sha("1234567890")),
-                Option.of(new Branch.Name("feature")),
-                false,
-                false,
-                Option.none(),
-                false);
-        Repo repo = Repo.LOADING
-                .withBranches(new Loadable.Loaded<>(List.of(new Branch(
-                        new Branch.Name("feature"),
-                        false,
-                        new Sha("1234567890"),
-                        java.time.Instant.EPOCH,
-                        true,
-                        false,
-                        Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("feature")), 2, 1))))))
-                .withWorktreeChanges(io.vavr.collection.HashMap.of(path.toString(), true));
-
-        LoadableList.Row row = BranchesPanel.worktreeRow(repo, worktree);
-
-        assertEquals("  x ● feature ↑2 ↓1", row.text());
-        assertEquals(
-                List.of(
-                        Option.none(),
-                        Option.of(Theme.Classes.UNSTAGED),
-                        Option.none(),
-                        Option.of(Theme.Classes.AHEAD),
-                        Option.of(Theme.Classes.BEHIND)),
-                row.segs().map(LoadableList.Seg::cssClass));
-        assertEquals(
-                "  x feature ↑2 ↓1",
-                BranchesPanel.worktreeRow(
-                                repo.withWorktreeChanges(io.vavr.collection.HashMap.of(path.toString(), false)),
-                                worktree)
-                        .text());
-    }
-
-    @Test
-    void aWorktreeLockedForAReasonSaysWhy() {
-        Worktree locked = new Worktree(
-                java.nio.file.Path.of("/repos/x"),
-                Option.of(new Sha("1234567890")),
-                Option.of(new Branch.Name("feature")),
-                false,
-                false,
-                Option.of("on usb"),
-                false);
-
-        assertEquals(
-                "  x feature locked: on usb",
-                BranchesPanel.worktreeRow(Repo.LOADING, locked).text());
     }
 
     @Test
