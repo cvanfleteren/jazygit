@@ -13,12 +13,20 @@ import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Landing;
 import net.vanfleteren.jazygit.state.Msg;
+import org.slf4j.LoggerFactory;
 
 /**
  * The IO of switching to a recent repository. That the recent repositories could not be kept is not worth
  * telling: they are only a convenience.
  */
 public sealed interface RecentReposCmd extends Cmd {
+
+    /**
+     * Writes to the debug log that the recent repositories could not be kept, as the user is not told.
+     */
+    private static void notKept(Throwable failed) {
+        LoggerFactory.getLogger(RecentReposCmd.class).debug("The recent repositories could not be kept", failed);
+    }
 
     /**
      * Reads the recent repositories but the one shown, with what their HEAD points to. The ones whose directory
@@ -31,7 +39,7 @@ public sealed interface RecentReposCmd extends Cmd {
             List<Path> recent = env.recent().load();
             List<Path> gone = recent.filter(directory -> !Files.isDirectory(directory));
             if (gone.nonEmpty()) {
-                env.recent().forget(gone);
+                env.recent().forget(gone).onFailure(RecentReposCmd::notKept);
             }
             return new RecentReposMsg.Listed(recent.removeAll(gone)
                     .remove(env.git().workTree())
@@ -71,11 +79,11 @@ public sealed interface RecentReposCmd extends Cmd {
                     .switchTo(chosen, landing)
                     .fold(
                             error -> {
-                                env.recent().forget(List.of(chosen));
+                                env.recent().forget(List.of(chosen)).onFailure(RecentReposCmd::notKept);
                                 return failedWith(error);
                             },
                             workTree -> {
-                                env.recent().opened(workTree);
+                                env.recent().opened(workTree).onFailure(RecentReposCmd::notKept);
                                 return new RecentReposMsg.Switched(workTree.toString());
                             });
         }
