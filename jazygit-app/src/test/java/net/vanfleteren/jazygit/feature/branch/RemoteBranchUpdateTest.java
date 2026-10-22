@@ -108,6 +108,15 @@ class RemoteBranchUpdateTest {
                         withRemotes(),
                         List.of(
                                 new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
+                                // Another remote branch is followed by a branch listed first.
+                                new Branch(
+                                        new Branch.Name("other"),
+                                        false,
+                                        new Sha("eeee"),
+                                        Instant.EPOCH,
+                                        true,
+                                        false,
+                                        Option.of(new Upstream(ORIGIN_NEW, 0, 0))),
                                 new Branch(
                                         new Branch.Name("mine"),
                                         false,
