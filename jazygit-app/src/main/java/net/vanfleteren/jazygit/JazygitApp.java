@@ -475,7 +475,9 @@ public class JazygitApp extends ToolkitApp {
         // The model tells the time from the ticks; the first one is a while off, and the ages it shows are told from
         // the start. The loads it would start are running already, so it only checks the files of the git directory.
         dispatch.accept(new Msg.Tick(Instant.now()));
-        // The first fetch is a while off; the pull requests show from the start.
+        // The first tick of the fetch is a while off, so it fetches now; the pull requests show from the start, not
+        // only once the fetch is done.
+        dispatch.accept(new FetchMsg.Tick());
         dispatch.accept(new PullRequestsMsg.Refresh());
     }
 
