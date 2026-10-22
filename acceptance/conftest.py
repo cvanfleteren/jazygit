@@ -16,6 +16,8 @@ def pytest_addoption(parser):
     parser.addoption("--jar", help="the jazygit fat jar to test; defaults to the newest in jazygit-app/target")
 
 
+# Last, after -k and -m have deselected, so that the slices are those of the tests that run.
+@pytest.hookimpl(trylast=True)
 def pytest_collection_modifyitems(config, items):
     """Starts each slow test first, on a worker of its own: started late, or after another slow one, they would keep
     the run going long after the others are done.
@@ -85,10 +87,17 @@ def class_archive(java, jar, tmp_path_factory) -> list:
             repo.commit("Initial commit", **{"README.md": "# Archive\n"})
             app = App([java, f"-XX:ArchiveClassesAtExit={made}", *JVM_OPTIONS, "-jar", str(jar), str(repo.path)],
                       repo.path, env)
-            Jazygit(app, repo).caught_up()
-            app.press("q")
-            eventually(lambda: app.pump() or app.exited, "jazygit to quit and write the class data archive")
-            made.replace(archive)
+            try:
+                Jazygit(app, repo).caught_up()
+                app.press("q")
+                eventually(lambda: app.pump() or app.exited, "jazygit to quit and write the class data archive")
+            finally:
+                app.close()
+            # A JDK without an archive of its own (or run with -Xshare:off) writes none, and runs as it is.
+            if made.exists():
+                made.replace(archive)
+    if not archive.exists():
+        return []
     # The JVM tells on stdout, so on the app's screen, where an option differs from the JDK's own archive.
     return [f"-XX:SharedArchiveFile={archive}", "-Xlog:cds=off"]
 
