@@ -26,19 +26,14 @@ public final class AddWorktreeUpdate {
             case NewBranchRequested(Branch.Name base) ->
                 Update.ask(
                         model,
-                        model.idleBranch(base)
-                                .map(known -> new NewWorktreeBranchPopup(
-                                        base.value(), "", new NewBranch(base.value(), Option.of(base), false))));
+                        model.idleBranch(base).map(known -> NewWorktreeBranchPopup.fromLocal(base, Option.none())));
             // It starts out named as the remote branch, which it follows.
             case NewBranchAtRemoteRequested(RemoteBranch remote) ->
                 Update.ask(
                         model,
                         model.repo()
                                 .remoteBranch(remote)
-                                .map(known -> new NewWorktreeBranchPopup(
-                                        remote.shortName(),
-                                        remote.branch().value(),
-                                        new NewBranch(remote.trackingRef(), Option.none(), true))));
+                                .map(known -> NewWorktreeBranchPopup.followingRemote(remote, Option.none())));
             // It starts out at the branch checked out here, or on no branch at the commit checked out.
             case StartRequested() ->
                 Update.ask(
@@ -114,31 +109,38 @@ public final class AddWorktreeUpdate {
         return model.popup(NewWorktreeStartPopup.class)
                 .map(popup -> popup.start().strip())
                 .filter(start -> !start.isEmpty() && !start.startsWith("-"))
-                .map(start -> {
-                    Option<Branch> local = model.repo().branch(new Branch.Name(start));
-                    Option<RemoteBranch> remote = local.isDefined()
-                            ? Option.none()
-                            : model.repo()
-                                    .remoteBranches()
-                                    .toOption()
-                                    .flatMap(known -> known.map(RemoteRef::branch)
-                                            .find(branch -> branch.shortName().equals(start)));
-                    NewBranch from = remote.map(followed -> new NewBranch(followed.trackingRef(), Option.none(), true))
-                            .getOrElse(() -> new NewBranch(start, local.map(Branch::name), false));
-                    WorktreeSource ifBlank = local.filter(branch -> !branch.current() && !branch.checkedOutElsewhere())
-                            .flatMap(branch -> model.idleBranch(branch.name()))
-                            .<WorktreeSource>map(branch -> new WorktreeSource.Existing(branch.name()))
-                            .getOrElse(() -> new WorktreeSource.Detached(start));
-                    return Update.ask(
-                            model.withoutPopup(NewWorktreeStartPopup.class),
-                            new NewWorktreeBranchPopup(
-                                    start,
-                                    remote.map(followed -> followed.branch().value())
-                                            .getOrElse(""),
-                                    from,
-                                    Option.of(ifBlank)));
-                })
+                .map(start -> Update.ask(
+                        model.withoutPopup(NewWorktreeStartPopup.class),
+                        switch (resolve(model, start)) {
+                            case Start.Local(Branch.Name branch) ->
+                                NewWorktreeBranchPopup.fromLocal(
+                                        branch,
+                                        Option.of(model.idleBranch(branch)
+                                                .filter(known -> !known.current() && !known.checkedOutElsewhere())
+                                                .<WorktreeSource>map(known -> new WorktreeSource.Existing(branch))
+                                                .getOrElse(() -> new WorktreeSource.Detached(start))));
+                            case Start.Remote(RemoteBranch followed) ->
+                                NewWorktreeBranchPopup.followingRemote(
+                                        followed, Option.of(new WorktreeSource.Detached(start)));
+                            case Start.Revision(String revision) -> NewWorktreeBranchPopup.fromRevision(revision);
+                        }))
                 .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * What a typed start names: a local branch, else a remote branch by its short name, else any other revision.
+     */
+    private static Start resolve(Model model, String start) {
+        return model.repo()
+                .branch(new Branch.Name(start))
+                .<Start>map(local -> new Start.Local(local.name()))
+                .orElse(() -> model.repo()
+                        .remoteBranches()
+                        .toOption()
+                        .flatMap(known -> known.map(RemoteRef::branch)
+                                .find(branch -> branch.shortName().equals(start)))
+                        .map(Start.Remote::new))
+                .getOrElse(() -> new Start.Revision(start));
     }
 
     /**
@@ -172,5 +174,17 @@ public final class AddWorktreeUpdate {
                         .find(candidate -> !taken.contains(candidate))
                         .get())
                 .getOrElse("");
+    }
+
+    /**
+     * What a typed start names, as {@link #resolve} works it out.
+     */
+    private sealed interface Start {
+
+        record Local(Branch.Name branch) implements Start {}
+
+        record Remote(RemoteBranch branch) implements Start {}
+
+        record Revision(String start) implements Start {}
     }
 }
