@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.ui.widgets;
 
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.bindings.Actions;
+import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
@@ -38,6 +39,27 @@ public final class ListKeys {
                     Iterator.rangeBy(size - 1, -1, -1).find(highlightable::test).getOrElse(from));
         }
         return Option.none();
+    }
+
+    /**
+     * What {@code event} means to {@code list}, whose filter {@code line} edits; none if nothing. Escape closes the
+     * open filter, and otherwise cancels. {@code /} opens the filter when it is closed and {@code canFilter}. While it
+     * is open, it takes the keys that edit it before the highlight does, so the arrows to the sides move in it.
+     * Enter confirms.
+     */
+    static Option<ListKey> classify(KeyEvent event, FilteredList list, boolean canFilter, FilterLine line) {
+        Option<String> typed = list.cursor().filter();
+        if (event.code() == KeyCode.ESCAPE) {
+            return Option.of(typed.isDefined() ? new ListKey.CloseFilter() : new ListKey.Cancel());
+        }
+        if (typed.isEmpty() && canFilter && ListFilter.opens(event)) {
+            return Option.of(new ListKey.OpenFilter());
+        }
+        return typed.flatMap(text -> line.edit(text, event))
+                .<ListKey>map(ListKey.EditFilter::new)
+                .orElse(() -> move(event, list.selected(), list.size(), list::highlightable)
+                        .map(ListKey.Move::new))
+                .orElse(() -> Option.when(event.isConfirm(), ListKey.Confirm::new));
     }
 
     /**

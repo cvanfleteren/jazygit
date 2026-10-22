@@ -6,7 +6,6 @@ import static dev.tamboui.toolkit.Toolkit.text;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.event.EventResult;
-import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -117,7 +116,7 @@ public final class ChoiceList<P extends Popup> {
                 .selected(view.selected())
                 .onKeyEvent(event -> handleKey(view, event))
                 .onMouseEvent(event -> ListKeys.wheel(
-                        event, view.selected(), view.lines().size(), view::isOption, line -> highlight(view, line)));
+                        event, view.selected(), view.size(), view::highlightable, line -> highlight(view, line)));
         return list.length(height(model, popup));
     }
 
@@ -237,38 +236,32 @@ public final class ChoiceList<P extends Popup> {
     }
 
     private EventResult handleKey(View view, KeyEvent event) {
-        Option<String> typed = view.cursor().filter();
-        if (typed.isDefined() && event.code() == KeyCode.ESCAPE) {
-            refilter(view, Option.none());
-            return EventResult.HANDLED;
-        }
-        if (filterable && typed.isEmpty() && ListFilter.opens(event)) {
-            dispatch.accept(
-                    new Msg.ListCursorChanged(view.cursor().at(view.selected()).withFilter(Option.of(""))));
-            return EventResult.HANDLED;
-        }
-        Option<String> edited = typed.flatMap(text -> filter.edit(text, event));
-        if (edited.isDefined()) {
-            refilter(view, edited);
-            return EventResult.HANDLED;
-        }
-        // The list is not left to move the highlight, which would not skip headings, nor say it moved.
-        Option<Integer> moved =
-                ListKeys.move(event, view.selected(), view.lines().size(), view::isOption);
-        if (moved.isDefined()) {
-            moved.filter(line -> line != view.selected()).forEach(line -> highlight(view, line));
-            return EventResult.HANDLED;
-        }
-        if (event.code() == KeyCode.ESCAPE) {
-            dispatch.accept(onCancel.get());
-            return EventResult.HANDLED;
-        }
-        // While the filter is open, the letters are its own.
-        Option<Choice<P>> chosen = event.isConfirm()
-                ? view.option().map(choices::get)
-                : typed.isDefined() ? Option.none() : choices.find(choice -> event.isChar(choice.key()));
-        chosen.forEach(choice -> choose(view, choice));
-        return chosen.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
+        return ListKeys.classify(event, view, filterable, filter)
+                .map(key -> switch (key) {
+                    case ListKey.CloseFilter() -> refilter(view, Option.none());
+                    case ListKey.OpenFilter() -> {
+                        dispatch.accept(new Msg.ListCursorChanged(
+                                view.cursor().at(view.selected()).withFilter(Option.of(""))));
+                        yield EventResult.HANDLED;
+                    }
+                    case ListKey.EditFilter(String text) -> refilter(view, Option.of(text));
+                    // The list is not left to move the highlight, which would not skip headings, nor say it moved.
+                    case ListKey.Move(int line) -> {
+                        if (line != view.selected()) {
+                            highlight(view, line);
+                        }
+                        yield EventResult.HANDLED;
+                    }
+                    case ListKey.Cancel() -> {
+                        dispatch.accept(onCancel.get());
+                        yield EventResult.HANDLED;
+                    }
+                    case ListKey.Confirm() -> choose(view, view.option().map(choices::get));
+                })
+                // While the filter is open, the letters are its own.
+                .getOrElse(() -> view.cursor().filter().isDefined()
+                        ? EventResult.UNHANDLED
+                        : choose(view, choices.find(choice -> event.isChar(choice.key()))));
     }
 
     /**
@@ -283,7 +276,7 @@ public final class ChoiceList<P extends Popup> {
      * Shows the options that contain {@code filter}, keeping the highlighted one when it does, else highlighting the
      * first; when that is another option, says it moved.
      */
-    private void refilter(View view, Option<String> filter) {
+    private EventResult refilter(View view, Option<String> filter) {
         List<Line> lines = lines(choices, visible(view.rows(), filter));
         int line = view.option()
                 .map(index -> lines.indexOf(new OptionLine(index)))
@@ -294,18 +287,24 @@ public final class ChoiceList<P extends Popup> {
         if (!after.equals(view.option())) {
             preview(after);
         }
+        return EventResult.HANDLED;
     }
 
     private void preview(Option<Integer> option) {
         option.flatMap(index -> choices.get(index).onHighlight()).forEach(preview -> dispatch.accept(preview.get()));
     }
 
-    private void choose(View view, Choice<P> choice) {
-        // A disabled or left out option is not actionable.
-        Row row = view.rows().get(choices.indexOf(choice));
-        if (row.shown() && row.enabled()) {
-            dispatch.accept(choice.msg().get());
-        }
+    /**
+     * Chooses {@code chosen}, if any. A disabled or left out option is not actionable, but its key is still taken.
+     */
+    private EventResult choose(View view, Option<Choice<P>> chosen) {
+        chosen.forEach(choice -> {
+            Row row = view.rows().get(choices.indexOf(choice));
+            if (row.shown() && row.enabled()) {
+                dispatch.accept(choice.msg().get());
+            }
+        });
+        return chosen.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
     }
 
     private static Option<Integer> index(Line line) {
@@ -319,9 +318,19 @@ public final class ChoiceList<P extends Popup> {
      * @param lines    the lines shown, of the options that contain the filter
      * @param selected the highlighted line
      */
-    private record View(List<Row> rows, List<Line> lines, int selected, ListCursor cursor) {
+    private record View(List<Row> rows, List<Line> lines, int selected, ListCursor cursor) implements FilteredList {
 
-        boolean isOption(int line) {
+        @Override
+        public int size() {
+            return lines.size();
+        }
+
+        /**
+         * Whether {@code line} is an option, which a heading, a blank line, and the line saying nothing matches are
+         * not.
+         */
+        @Override
+        public boolean highlightable(int line) {
             return lines.get(line) instanceof OptionLine;
         }
 
