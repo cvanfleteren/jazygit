@@ -325,11 +325,20 @@ class BranchesPane:
 
     def delete(self, branch: str, where: str = "local"):
         """Deletes the branch, merged or not: the "local" one, the one it tracks on the "remote", or "both"; or,
-        when another worktree has it checked out, the local one together with that "worktree"."""
+        when another worktree has it checked out, the local one together with that "worktree", which is unlocked
+        first, as the app asks, when it is locked."""
         key = {"local": "d", "remote": "r", "both": "b", "worktree": "w"}[where]
         self.select(branch)
-        self.ui.changing_repo(f"{branch} to be deleted", lambda: (
-            self.app.press("d"), self.ui.confirm(f"Delete branch {branch}", key=key)))
+        locked = where == "worktree" and any(
+            self.repo.worktrees()[path] == branch for path in self.repo.locked_worktrees())
+
+        def keys():
+            self.app.press("d")
+            self.ui.confirm(f"Delete branch {branch}", key=key)
+            if locked:
+                self.ui.confirm("Unlock worktree")
+
+        self.ui.changing_repo(f"{branch} to be deleted", keys)
 
     def push(self, branch: str, upstream: str = None):
         """Pushes the branch. One without an upstream is pushed to upstream, "<remote> <branch>", which it then
@@ -398,11 +407,19 @@ class BranchesPane:
         self.select_remote(branch)
         self.app.press("d")
 
-    def new_worktree(self, branch: str, location: Path = None, switch: bool = False) -> Jazygit:
+    def new_worktree(self, branch: str, name: str = None, location: Path = None, switch: bool = False) -> Jazygit:
         """Checks the branch, one not checked out anywhere, out in a new worktree at location, or where the app
-        offers to put it; switches to it when switch. Returns the app as it shows the worktree it shows then."""
+        offers to put it; switches to it when switch. Returns the app as it shows the worktree it shows then. For
+        the checked out branch, which git checks out in one worktree only, the app asks for a new branch made from
+        it instead, called name."""
         self.select(branch)
-        return self.ui.adding_worktree(f"a worktree for {branch}", lambda: self.app.press("w"), location, switch)
+
+        def ask():
+            self.app.press("w")
+            if name is not None:
+                self.ui.enter_text("in a new worktree", name)
+
+        return self.ui.adding_worktree(f"a worktree for {branch}", ask, location, switch)
 
     def new_branch_worktree(self, start: str, name: str, location: Path = None, switch: bool = False) -> Jazygit:
         """Creates the branch name from the branch start, and checks it out in a new worktree, as new_worktree

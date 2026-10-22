@@ -59,8 +59,8 @@ def test_new_worktree_for_the_checked_out_branch_makes_a_new_branch(repo, tmp_pa
     two_commits(repo)
     ui = jazygit()
 
-    # git checks a branch out in one worktree only: the checked out one gets a new branch.
-    ui.branches.new_branch_worktree("main", "topic")
+    # git checks a branch out in one worktree only: for the checked out one, the app asks for a new branch.
+    ui.branches.new_worktree("main", name="topic")
 
     assert repo.worktrees() == {repo.path: "main", tmp_path / "repo-topic": "topic"}
     assert repo("rev-parse", "topic") == repo("rev-parse", "main")
@@ -82,6 +82,24 @@ def test_new_branch_in_a_new_worktree_following_a_remote_branch(repo, origin, cl
     assert repo.upstream("theirs") == "origin/theirs"
     assert repo.subjects("theirs") == ["Add theirs", "Add two", "Add one"]
     assert (tmp_path / "repo-theirs" / "theirs.txt").read_text() == "theirs\n"
+
+
+def test_new_worktree_from_the_worktrees_on_no_branch_at_a_remote_branch(repo, origin, clone, tmp_path, jazygit):
+    two_commits(repo)
+    repo("push", "--set-upstream", "origin", "main")
+    teammate = clone()
+    teammate("switch", "--create", "theirs")
+    teammate.commit("Add theirs", **{"theirs.txt": "theirs\n"})
+    teammate("push", "--set-upstream", "origin", "theirs")
+    repo("fetch")
+    ui = jazygit()
+
+    # No name: on no branch, at the commit of the remote branch.
+    ui.worktrees.new("origin/theirs", location=tmp_path / "review")
+
+    assert repo.worktrees() == {repo.path: "main", tmp_path / "review": None}
+    assert Git(tmp_path / "review", repo.env)("rev-parse", "HEAD") == repo("rev-parse", "origin/theirs")
+    assert repo.branches() == ["main"]
 
 
 def test_new_worktree_from_the_worktrees_on_a_new_branch_at_a_commit(repo, tmp_path, jazygit):
@@ -223,6 +241,20 @@ def test_remove_a_worktree_with_changes_anyway(repo, tmp_path, jazygit):
     assert repo.branches() == ["feature", "main"]
 
 
+def test_remove_a_worktree_with_changes_anyway_and_delete_its_branch(repo, tmp_path, jazygit):
+    two_commits(repo)
+    repo("branch", "feature")
+    there = worktree(repo, tmp_path, "feature")
+    there.write("new.txt", "new\n")
+    ui = jazygit()
+
+    ui.worktrees.remove("repo-feature", branch="delete", anyway=True)
+
+    assert repo.worktrees() == {repo.path: "main"}
+    assert not (tmp_path / "repo-feature").exists()
+    assert repo.branches() == ["main"]
+
+
 def test_the_main_worktree_is_not_removed(repo, tmp_path, jazygit):
     two_commits(repo)
     repo("branch", "feature")
@@ -285,6 +317,20 @@ def test_delete_a_branch_checked_out_in_another_worktree_with_that_worktree(repo
     two_commits(repo)
     repo("branch", "feature")
     worktree(repo, tmp_path, "feature")
+    ui = jazygit()
+
+    ui.branches.delete("feature", where="worktree")
+
+    assert repo.worktrees() == {repo.path: "main"}
+    assert not (tmp_path / "repo-feature").exists()
+    assert repo.branches() == ["main"]
+
+
+def test_delete_a_branch_with_its_locked_worktree_unlocks_it_first(repo, tmp_path, jazygit):
+    two_commits(repo)
+    repo("branch", "feature")
+    worktree(repo, tmp_path, "feature")
+    repo("worktree", "lock", "--reason", "on a stick", str(tmp_path / "repo-feature"))
     ui = jazygit()
 
     ui.branches.delete("feature", where="worktree")
