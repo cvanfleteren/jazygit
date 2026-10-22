@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.LineEditInput;
 import net.vanfleteren.jazygit.ui.SubmittableTextArea;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
+import net.vanfleteren.jazygit.ui.widgets.FocusBordered;
 import net.vanfleteren.jazygit.ui.widgets.FocusHighlighted;
 import net.vanfleteren.jazygit.ui.widgets.HintedDialog;
 import net.vanfleteren.jazygit.ui.widgets.ListFilter;
@@ -147,8 +148,8 @@ public final class NewPullRequestDialog implements PopupView {
     }
 
     /**
-     * The list of the bases, those the filter shows, with the base highlighted, and named in its border. The
-     * highlight is that of a list in use only while the list has the focus.
+     * The list of the bases, those the filter shows, with the base highlighted, and named in its border. The base
+     * stays highlighted while another field has the focus; the border shows whether the list has it.
      */
     private Element bases(Bases view) {
         ListElement<?> list = view.shown().isEmpty()
@@ -166,13 +167,15 @@ public final class NewPullRequestDialog implements PopupView {
                         line -> dispatch.accept(view.at(line))));
         String base = view.popup().base().value();
         // In a panel, which the themes give the border of the fields; a list's own border is not themed.
-        return panel(
-                        view.cursor()
-                                .filter()
-                                .map(typed -> Messages.get("dialog.newPullRequest.baseFiltered", base, typed))
-                                .getOrElse(() -> Messages.get("dialog.newPullRequest.base", base)),
-                        view.shown().isEmpty() ? list : new FocusHighlighted(list))
-                .length(BASE_ROWS + 2);
+        return new FocusBordered(
+                panel(
+                                view.cursor()
+                                        .filter()
+                                        .map(typed -> Messages.get("dialog.newPullRequest.baseFiltered", base, typed))
+                                        .getOrElse(() -> Messages.get("dialog.newPullRequest.base", base)),
+                                view.shown().isEmpty() ? list : new FocusHighlighted(list))
+                        .length(BASE_ROWS + 2),
+                BASES_ID);
     }
 
     /**

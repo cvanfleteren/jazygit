@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.buffer.Buffer;
 import dev.tamboui.layout.Rect;
+import dev.tamboui.style.Color;
 import dev.tamboui.terminal.Frame;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.DefaultRenderContext;
@@ -20,6 +21,7 @@ import dev.tamboui.tui.event.KeyModifiers;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.ArrayList;
+import java.util.Optional;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.ListCursor;
@@ -39,6 +41,8 @@ import org.junit.jupiter.api.Test;
  * anywhere creates it, Escape cancels.
  */
 class NewPullRequestDialogTest {
+
+    private static final Rect THEMED_AREA = new Rect(0, 0, 120, 30);
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private Model model = TestModels.loaded()
@@ -292,18 +296,31 @@ class NewPullRequestDialogTest {
     }
 
     @Test
-    void theBasesAreBorderedAsTheFieldsAreWhileTheTitleHasTheFocus() {
-        Rect area = new Rect(0, 0, 120, 30);
+    void theFieldWithTheFocusIsBorderedAsThePaneInUse() {
+        Buffer title = themed(NewPullRequestDialog.ID);
+        Buffer bases = themed(NewPullRequestDialog.BASES_ID);
+
+        assertEquals(Optional.of(Color.CYAN), border(title, "Title"));
+        assertEquals(Optional.of(Color.DARK_GRAY), border(title, "Into: main"));
+        assertEquals(Optional.of(Color.CYAN), border(bases, "Into: main"));
+        assertEquals(Optional.of(Color.DARK_GRAY), border(bases, "Title"));
+    }
+
+    /**
+     * The popup in the dark theme, while {@code focused} has the focus.
+     */
+    private Buffer themed(String focused) {
         FocusManager focus = new FocusManager();
-        focus.setFocus(NewPullRequestDialog.ID);
+        focus.setFocus(focused);
         DefaultRenderContext context = new DefaultRenderContext(focus, new EventRouter(focus, new ElementRegistry()));
         context.setStyleEngine(Theme.createEngine().get());
-        Buffer buffer = Buffer.empty(area);
-        view().render(Frame.forTesting(buffer), area, context);
+        Buffer buffer = Buffer.empty(THEMED_AREA);
+        view().render(Frame.forTesting(buffer), THEMED_AREA, context);
+        return buffer;
+    }
 
-        assertEquals(
-                cornerBefore(buffer, area, "Title").style().fg(),
-                cornerBefore(buffer, area, "Into: main").style().fg());
+    private static Optional<Color> border(Buffer buffer, String title) {
+        return cornerBefore(buffer, THEMED_AREA, title).style().fg();
     }
 
     /**
