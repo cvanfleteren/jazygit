@@ -74,10 +74,10 @@ class JazygitAppReportsTest {
         App app = new App();
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
             app.start(testRunner);
-            SettledPilot.focus(testRunner, CommitsPanel.ID);
+            SettledPilot.focus(testRunner, CommitsPanel.ID, app.drawnAt::size);
             awaitModel(testRunner, app, model -> shownCommit(model).contains(commits.get(0)));
 
-            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner, app.drawnAt::size).press(KeyCode.DOWN);
 
             awaitModel(testRunner, app, model -> shownCommit(model).contains(commits.get(1)));
             assertEquals(List.empty(), onRenderThread(testRunner, app::reports));
@@ -92,7 +92,7 @@ class JazygitAppReportsTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
             app.start(testRunner);
             awaitModel(testRunner, app, model -> shownCommit(model).contains(commits.get(0)));
-            Pilot pilot = SettledPilot.of(testRunner);
+            Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
             Rect list = pilot.findElement(CommitsPanel.ID);
 
             // The second commit.
@@ -115,9 +115,9 @@ class JazygitAppReportsTest {
         App app = new App();
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
             app.start(testRunner);
-            SettledPilot.focus(testRunner, CommitsPanel.ID);
+            SettledPilot.focus(testRunner, CommitsPanel.ID, app.drawnAt::size);
             awaitModel(testRunner, app, model -> shownCommit(model).contains(commits.get(0)));
-            Pilot pilot = SettledPilot.of(testRunner);
+            Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
 
             // The command log, which takes no focus.
             pilot.mousePress(MouseButton.LEFT, 150, SIZE.height() - 3);
@@ -136,8 +136,8 @@ class JazygitAppReportsTest {
         App app = new App();
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
             app.start(testRunner);
-            SettledPilot.focus(testRunner, CommitsPanel.ID);
-            Pilot pilot = SettledPilot.of(testRunner);
+            SettledPilot.focus(testRunner, CommitsPanel.ID, app.drawnAt::size);
+            Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
             pilot.press('?');
             assertEquals(HelpDialog.ID, onRenderThread(testRunner, () -> app.drawnWith));
             // The loads the popup's reports start each draw a frame once they are done, which would hide a missing one.
@@ -159,12 +159,12 @@ class JazygitAppReportsTest {
         App app = new App(new Env(new PullsSlowly(pulled), StubGitHub.empty()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
             app.start(testRunner);
-            SettledPilot.focus(testRunner, BranchesPanel.ID);
+            SettledPilot.focus(testRunner, BranchesPanel.ID, app.drawnAt::size);
             awaitModel(
                     testRunner,
                     app,
                     model -> model.repo().branches().toOption().exists(branches -> !branches.isEmpty()));
-            SettledPilot.of(testRunner).press('p');
+            SettledPilot.of(testRunner, app.drawnAt::size).press('p');
             awaitModel(testRunner, app, model -> model.jobs().busy().containsKey(new BranchRef.Local(MAIN)));
 
             Instant from = Instant.now();
@@ -285,7 +285,7 @@ class JazygitAppReportsTest {
                 runner.set(testRunner.runner());
                 onStart();
             });
-            SettledPilot.settle(testRunner);
+            SettledPilot.settle(testRunner, drawnAt::size);
         }
 
         /**
