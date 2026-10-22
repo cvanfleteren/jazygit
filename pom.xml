@@ -34,6 +34,9 @@
         <checkstyle.version>14.3.0</checkstyle.version>
         <errorprone.version>2.50.0</errorprone.version>
         <native-maven-plugin.version>1.1.14</native-maven-plugin.version>
+        <pitest.version>1.30.1</pitest.version>
+        <pitest-junit5-plugin.version>1.2.3</pitest-junit5-plugin.version>
+        <pitest.threads>8</pitest.threads>
     </properties>
 
     <repositories>
@@ -257,6 +260,40 @@
                     <artifactId>native-maven-plugin</artifactId>
                     <version>${native-maven-plugin.version}</version>
                 </plugin>
+                <plugin>
+                    <groupId>org.pitest</groupId>
+                    <artifactId>pitest-maven</artifactId>
+                    <version>${pitest.version}</version>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.pitest</groupId>
+                            <artifactId>pitest-junit5-plugin</artifactId>
+                            <version>${pitest-junit5-plugin.version}</version>
+                        </dependency>
+                    </dependencies>
+                    <configuration>
+                        <targetClasses>
+                            <param>net.vanfleteren.jazygit.*</param>
+                        </targetClasses>
+                        <targetTests>
+                            <param>net.vanfleteren.jazygit.*</param>
+                        </targetTests>
+                        <!-- ArchUnit checks the structure; it runs the code under no test and kills no mutant. -->
+                        <excludedTestClasses>
+                            <param>*ArchitectureTest</param>
+                        </excludedTestClasses>
+                        <jvmArgs>
+                            <value>-Duser.language=en</value>
+                            <value>-Duser.country=US</value>
+                        </jvmArgs>
+                        <threads>${pitest.threads}</threads>
+                        <timestampedReports>false</timestampedReports>
+                        <outputFormats>
+                            <param>HTML</param>
+                            <param>XML</param>
+                        </outputFormats>
+                    </configuration>
+                </plugin>
             </plugins>
         </pluginManagement>
         <plugins>
@@ -269,6 +306,11 @@
                     <forkCount>1C</forkCount>
                     <reuseForks>true</reuseForks>
                 </configuration>
+            </plugin>
+            <!-- Mutation testing on demand only, it's no part of verify: mvn test-compile pitest:mutationCoverage -->
+            <plugin>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
             </plugin>
             <plugin>
                 <groupId>com.diffplug.spotless</groupId>
