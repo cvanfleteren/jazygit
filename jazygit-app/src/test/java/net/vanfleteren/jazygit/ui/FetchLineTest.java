@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.Duration;
 import java.time.Instant;
 import net.vanfleteren.jazygit.state.Fetching;
 import net.vanfleteren.jazygit.state.Freshness;
@@ -88,12 +89,27 @@ class FetchLineTest {
     }
 
     @Test
-    void saysJustNowUnderAMinute() {
-        Model model = TestModels.loaded().withNow(NOW);
+    void countsBy10sUnderAMinute() {
+        assertEquals("fetched just now", fetchedAgo(Duration.ofSeconds(5)));
+        assertEquals("fetched 10s ago", fetchedAgo(Duration.ofSeconds(10)));
+        assertEquals("fetched 10s ago", fetchedAgo(Duration.ofSeconds(15)));
+        assertEquals("fetched 50s ago", fetchedAgo(Duration.ofSeconds(55)));
+        assertEquals("fetched 1m ago", fetchedAgo(Duration.ofSeconds(60)));
+    }
 
-        assertEquals(
-                "fetched just now",
-                FetchLine.freshness(model.mapJobs(
-                        jobs -> jobs.withLastFetch(Freshness.NEVER.succeeded("origin", NOW.minusSeconds(59))))));
+    @Test
+    void aClockThatRunsLateOrEarlyCountsTheSame() {
+        assertEquals("fetched 20s ago", fetchedAgo(Duration.ofMillis(20_300)));
+        assertEquals("fetched 20s ago", fetchedAgo(Duration.ofMillis(19_700)));
+        assertEquals("fetched 10s ago", fetchedAgo(Duration.ofMillis(15_300)));
+        assertEquals("fetched 10s ago", fetchedAgo(Duration.ofMillis(9_700)));
+        assertEquals("fetched just now", fetchedAgo(Duration.ofMillis(5_300)));
+        assertEquals("fetched 1m ago", fetchedAgo(Duration.ofMillis(59_700)));
+    }
+
+    private static String fetchedAgo(Duration since) {
+        return FetchLine.freshness(TestModels.loaded()
+                .withNow(NOW)
+                .mapJobs(jobs -> jobs.withLastFetch(Freshness.NEVER.succeeded("origin", NOW.minus(since)))));
     }
 }

@@ -414,8 +414,10 @@ the app. A periodic load is skipped while an equal one is still running: `Model.
 running. See `documentation/adr/0015-check-metadata-before-loading.md`.
 
 The model is told the time apart from that, every 5 s, by `Msg.Clock`, which only sets `Model.now`: the ages it
-shows are in minutes ("now" under one), so a slow clock is enough, and an idle app draws a frame every 5 s. See
-`documentation/adr/0021-a-clock-apart-from-the-refresh.md`.
+shows are in minutes ("now" under one), so a slow clock is enough, and an idle app draws a frame every 5 s. Only
+how long ago the remotes were fetched, or the pull requests read, counts in steps of 10 s under a minute; those
+reads are timed by the clock too, so each step shows for two clocks. See
+`documentation/adr/0021-a-clock-apart-from-the-refresh.md` and `documentation/adr/0022-fetched-ago-in-steps-of-10s.md`.
 
 Every minute a `FetchMsg.Tick` fetches from the remotes in the background, unless the previous fetch is
 still running. `FetchUpdate` lists the remotes (those `git fetch --all` would fetch) and fetches them one after

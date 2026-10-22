@@ -74,7 +74,8 @@ public final class FetchLine {
                         freshness
                                 .read()
                                 .map(at -> Messages.get(
-                                        "status." + kind + ".ago", TimeText.ago(Duration.between(at, model.now())))),
+                                        "status." + kind + ".ago",
+                                        TimeText.readAgo(Duration.between(at, model.now())))),
                         Option.when(freshness.stale(), () -> Messages.get("status." + kind + ".failed")))
                 .flatMap(part -> part)
                 .mkString(SEPARATOR);

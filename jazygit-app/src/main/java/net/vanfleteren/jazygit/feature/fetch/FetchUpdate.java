@@ -32,8 +32,11 @@ public final class FetchUpdate {
                         .withLastFetch(jobs.lastFetch().failed(LISTING))));
                 yield model.jobs().fetching().exists(Fetching::again) ? start(stopped) : stopped;
             }
-            case FetchMsg.Fetched(String remote, var at) ->
-                next(model.mapJobs(jobs -> jobs.withLastFetch(jobs.lastFetch().succeeded(remote, at))), queued(model));
+            case FetchMsg.Fetched(String remote) ->
+                next(
+                        model.mapJobs(
+                                jobs -> jobs.withLastFetch(jobs.lastFetch().succeeded(remote, model.now()))),
+                        queued(model));
             case FetchMsg.FetchFailed(String remote, var failure) ->
                 next(model.mapJobs(jobs -> jobs.withLastFetch(jobs.lastFetch().failed(remote))), queued(model));
         };

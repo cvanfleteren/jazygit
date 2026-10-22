@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.state.prs;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.state.Cmd;
@@ -38,16 +39,16 @@ public final class PrOverviewUpdate {
                 screen == model.screen() ? Next.of(model) : reloadIfShown(Next.of(model.withScreen(screen)));
             case PrOverviewMsg.Tick() -> reloadIfShown(Next.of(model));
             default -> {
-                Step step = update(model.prOverview(), msg);
+                Step step = update(model.prOverview(), msg, model.now());
                 yield new Next(model.withPrOverview(step.overview()), step.cmds());
             }
         };
     }
 
     /**
-     * What {@code msg} does to {@code overview}, whatever the rest of the model is.
+     * What {@code msg} does to {@code overview} at {@code now}, whatever the rest of the model is.
      */
-    static Step update(PrOverview overview, PrOverviewMsg msg) {
+    static Step update(PrOverview overview, PrOverviewMsg msg, Instant now) {
         return switch (msg) {
             // What failed to read before is read again too.
             case PrOverviewMsg.Refresh() -> {
@@ -57,18 +58,18 @@ public final class PrOverviewUpdate {
                         .map(preview -> preview(loaded.overview(), preview.key(), loaded.cmds()))
                         .getOrElse(loaded);
             }
-            case PrOverviewMsg.RepositoryLoaded(var read, var at) ->
+            case PrOverviewMsg.RepositoryLoaded(var read) ->
                 Step.of(done(overview, new LoadRepositoryPullRequests())
-                        .withFreshness(overview.freshness().succeeded(REPOSITORY, at))
+                        .withFreshness(overview.freshness().succeeded(REPOSITORY, now))
                         .withRepository(overview.repository().reload(newestFirst(read.open())))
                         .withRepositoryName(Option.of(read.repository())));
             case PrOverviewMsg.RepositoryLoadFailed(Failure failure) ->
                 Step.of(done(overview, new LoadRepositoryPullRequests())
                         .withFreshness(overview.freshness().failed(REPOSITORY))
                         .withRepository(failed(overview.repository(), failure)));
-            case PrOverviewMsg.MineLoaded(var read, var at) ->
+            case PrOverviewMsg.MineLoaded(var read) ->
                 Step.of(done(overview, new LoadMyPullRequests())
-                        .withFreshness(overview.freshness().succeeded(MINE, at))
+                        .withFreshness(overview.freshness().succeeded(MINE, now))
                         .withReviewRequested(overview.reviewRequested().reload(newestFirst(read.reviewRequested())))
                         .withAuthored(overview.authored().reload(newestFirst(read.authored()))));
             case PrOverviewMsg.MineLoadFailed(Failure failure) ->

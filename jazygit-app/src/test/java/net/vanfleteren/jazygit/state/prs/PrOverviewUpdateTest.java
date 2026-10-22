@@ -57,10 +57,8 @@ class PrOverviewUpdateTest {
     }
 
     private static PrOverviewMsg repositoryRead(PullRequestSummary... pullRequests) {
-        return new PrOverviewMsg.RepositoryLoaded(
-                new RepositoryPullRequests(
-                        "Owner/Repo", new PullRequestList(List.of(pullRequests), pullRequests.length)),
-                READ_AT);
+        return new PrOverviewMsg.RepositoryLoaded(new RepositoryPullRequests(
+                "Owner/Repo", new PullRequestList(List.of(pullRequests), pullRequests.length)));
     }
 
     @Test
@@ -140,11 +138,8 @@ class PrOverviewUpdateTest {
     void myPullRequestsFillBothListsWithHowManyMatch() {
         PrOverview read = Update.update(
                         toggled(loaded()).model(),
-                        new PrOverviewMsg.MineLoaded(
-                                new MyPullRequests(
-                                        new PullRequestList(List.of(ELSEWHERE), 52),
-                                        new PullRequestList(List.of(NEW), 1)),
-                                READ_AT))
+                        new PrOverviewMsg.MineLoaded(new MyPullRequests(
+                                new PullRequestList(List.of(ELSEWHERE), 52), new PullRequestList(List.of(NEW), 1))))
                 .model()
                 .prOverview();
 
@@ -251,9 +246,9 @@ class PrOverviewUpdateTest {
     }
 
     @Test
-    void theFreshnessSaysWhenTheyWereReadAndWhichReadFailedSince() {
-        Model read =
-                Update.update(toggled(loaded()).model(), repositoryRead(OLD)).model();
+    void theFreshnessSaysWhenByTheClockTheyWereReadAndWhichReadFailedSince() {
+        Model read = Update.update(toggled(loaded()).model().withNow(READ_AT), repositoryRead(OLD))
+                .model();
         assertEquals(Option.of(READ_AT), read.prOverview().freshness().read());
         assertFalse(read.prOverview().freshness().stale());
 

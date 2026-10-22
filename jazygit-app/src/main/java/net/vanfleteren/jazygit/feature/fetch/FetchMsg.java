@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.feature.fetch;
 
 import io.vavr.collection.List;
-import java.time.Instant;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -27,9 +26,9 @@ public sealed interface FetchMsg extends Msg {
     record ListingFailed(Failure failure) implements FetchMsg {}
 
     /**
-     * {@code remote} was fetched from, at {@code at}.
+     * {@code remote} was fetched from; the model's clock tells when.
      */
-    record Fetched(String remote, Instant at) implements FetchMsg {}
+    record Fetched(String remote) implements FetchMsg {}
 
     record FetchFailed(String remote, Failure failure) implements FetchMsg {}
 }

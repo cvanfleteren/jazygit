@@ -50,7 +50,7 @@ class FetchUpdateTest {
                 Option.of(new Fetching(Option.of("upstream"), List.empty())),
                 upstream.model().jobs().fetching());
 
-        Next done = Update.update(upstream.model(), new FetchMsg.Fetched("upstream", Instant.EPOCH));
+        Next done = Update.update(upstream.model(), new FetchMsg.Fetched("upstream"));
         assertEquals(Option.none(), done.model().jobs().fetching());
         assertTrue(done.cmds().contains(new LoadBranches()));
         assertTrue(done.cmds().contains(new LoadPullRequests()));
@@ -97,7 +97,7 @@ class FetchUpdateTest {
         assertEquals(List.of(), requested.cmds());
         assertTrue(requested.model().jobs().fetching().exists(Fetching::again));
 
-        Next done = Update.update(requested.model(), new FetchMsg.Fetched("origin", Instant.EPOCH));
+        Next done = Update.update(requested.model(), new FetchMsg.Fetched("origin"));
         assertTrue(done.cmds().contains(new LoadBranches()));
         assertTrue(done.cmds().contains(new FetchCmd.ListRemotes()), done.cmds().toString());
         assertEquals(Option.of(Fetching.LISTING), done.model().jobs().fetching());
@@ -107,7 +107,7 @@ class FetchUpdateTest {
                 .model();
         assertEquals(
                 Option.none(),
-                Update.update(listed, new FetchMsg.Fetched("origin", Instant.EPOCH))
+                Update.update(listed, new FetchMsg.Fetched("origin"))
                         .model()
                         .jobs()
                         .fetching());
@@ -126,15 +126,15 @@ class FetchUpdateTest {
     }
 
     @Test
-    void theLastFetchSaysWhenARemoteWasFetchedFromAndWhichFailedSince() {
+    void theLastFetchSaysWhenByTheClockARemoteWasFetchedFromAndWhichFailedSince() {
         Instant at = Instant.parse("2026-10-17T12:00:00Z");
         Model listed = Update.update(
                         Update.update(loaded(), new FetchMsg.Tick()).model(),
                         new FetchMsg.RemotesListed(List.of("origin", "upstream")))
                 .model();
 
-        Model fetched =
-                Update.update(listed, new FetchMsg.Fetched("origin", at)).model();
+        Model fetched = Update.update(listed.withNow(at), new FetchMsg.Fetched("origin"))
+                .model();
         assertEquals(Option.of(at), fetched.jobs().lastFetch().read());
         assertFalse(fetched.jobs().lastFetch().stale());
 
