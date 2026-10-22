@@ -201,7 +201,11 @@ class CliMetadataTest {
     void aStampWithAFileModifiedJustNowTellsNothing() throws Exception {
         commit(main, "b.txt");
 
-        GitMetadata justNow = CliMetadata.read(CliMetadata.locate(main).get(), Instant.now());
+        // Right when the commit moved the branch, however long the test took to get here.
+        Instant committed =
+                Files.getLastModifiedTime(main.resolve(".git/refs/heads")).toInstant();
+
+        GitMetadata justNow = CliMetadata.read(CliMetadata.locate(main).get(), committed);
 
         assertEquals(Option.none(), justNow.branches());
         assertEquals(Option.none(), justNow.worktrees());
@@ -276,5 +280,10 @@ class CliMetadataTest {
         Path plain = Files.createDirectories(dir.resolve("plain"));
 
         assertEquals(Option.none(), CliMetadata.locate(plain));
+    }
+
+    @Test
+    void anOpenedRepositoryTellsItsStamps() {
+        assertTrue(CliGitInfoProvider.open(main).get().metadata().isDefined());
     }
 }

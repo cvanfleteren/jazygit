@@ -45,5 +45,8 @@ other three change when a ref, a HEAD, the config or a worktree changes, and git
 - An idle app runs one git process per tick instead of four, and ticks 1.3 times a second instead of 2.
 - What changes the branches without changing a stamped file is only seen at the next change that does. For
   example, a worktree whose directory is deleted outside git (prunable) shows only after something else changes.
+- The modification times come from the file system's clock, and are compared with the app's. On a network mount
+  whose server clock is more than 2 seconds behind, a change right after another can be missed again; one whose
+  clock is ahead makes every stamp tell nothing, and every tick reads all three, as before this decision.
 - The status is still read on every tick. Telling working tree changes from files would take watching the whole
   tree.
