@@ -229,7 +229,9 @@ class CliWorktreeTest {
         provider.lockWorktree(linked, false).get();
         assertEquals(List.of(false, false), provider.worktrees().get().map(Worktree::isLocked));
 
-        git(main, "worktree", "lock", "--reason", "on usb", linked.toString());
+        assertEquals(
+                List.of("git worktree lock --reason 'on usb' " + linked),
+                provider.lockWorktree(linked, "on usb").get().map(ExecutedCommand::line));
         assertEquals(Option.of("on usb"), provider.worktrees().get().last().locked());
         git(main, "worktree", "unlock", linked.toString());
         deleteRecursively(linked);

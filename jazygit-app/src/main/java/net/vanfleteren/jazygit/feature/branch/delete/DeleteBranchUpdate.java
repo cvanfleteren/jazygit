@@ -31,13 +31,16 @@ public final class DeleteBranchUpdate {
             case Requested(Branch.Name branch) -> requested(model, branch);
             case Cancelled() -> Next.of(model.withoutPopup(DeleteBranchPopup.class));
             case Chosen(DeleteScope scope) -> chosen(model, scope);
-            case DeleteBranchMsg.WithWorktreeChosen() ->
+            case DeleteBranchMsg.WithWorktreeChosen() -> withWorktreeChosen(model);
+            case DeleteBranchMsg.UnlockCancelled() -> Next.of(model.withoutPopup(UnlockWorktreePopup.class));
+            case DeleteBranchMsg.UnlockConfirmed() ->
                 Update.confirm(
                         model,
-                        DeleteBranchPopup.class,
+                        UnlockWorktreePopup.class,
                         popup -> removableWorktree(model, popup.branch())
-                                .map(worktree ->
-                                        new RemoveWorktreeCmd(worktree.location(), false, Option.of(popup.branch()))));
+                                .filter(worktree -> worktree.location().equals(popup.location()))
+                                .map(worktree -> new RemoveWorktreeCmd(
+                                        worktree.location(), false, Option.of(popup.branch()), worktree.locked())));
             case DeleteBranchMsg.RemoteRequested(RemoteBranch branch) -> remoteRequested(model, branch);
             case DeleteBranchMsg.RemoteCancelled() -> Next.of(model.withoutPopup(DeleteRemoteBranchPopup.class));
             case DeleteBranchMsg.RemoteConfirmed() ->
@@ -52,16 +55,14 @@ public final class DeleteBranchUpdate {
     /**
      * Only a known branch that is not checked out can be deleted, and not while it is being pushed or deleted. One
      * that is checked out in another worktree can be deleted on its remote, or locally once that worktree is
-     * removed, when it can be; when neither is possible, that is said, naming the lock when that is what keeps the
-     * worktree.
+     * removed, when it can be; when neither is possible, that is said.
      */
     private static Next requested(Model model, Branch.Name branch) {
         Option<Worktree> worktree = removableWorktree(model, branch);
         return model.repo()
                 .branch(branch)
                 .filter(known -> !known.remoteDeletable() && worktree.isEmpty())
-                .flatMap(known -> lockedWorktree(model, branch)
-                        .orElse(() -> Branches.checkedOutElsewhere(model, DeleteBranchCmd.DELETE_BRANCH, branch)))
+                .flatMap(known -> Branches.checkedOutElsewhere(model, DeleteBranchCmd.DELETE_BRANCH, branch))
                 .map(error -> Next.of(model.fail(error)))
                 .getOrElse(() -> Update.ask(
                         model,
@@ -71,28 +72,43 @@ public final class DeleteBranchUpdate {
     }
 
     /**
-     * The other worktree that has {@code branch} checked out, if one does and it can be removed, so that the branch
-     * can be deleted once it is gone.
+     * The other worktree that has {@code branch} checked out, if one does and it can be removed, once unlocked when
+     * it is locked, so that the branch can be deleted once it is gone.
      */
     public static Option<Worktree> removableWorktree(Model model, Branch.Name branch) {
-        return model.repo()
-                .branch(branch)
-                .flatMap(Branch::worktreeLocation)
-                .flatMap(location -> model.repo().worktree(location))
-                .filter(worktree -> RemoveWorktreeUpdate.notRemovable(worktree).isEmpty());
+        return otherWorktree(model, branch)
+                .filter(worktree ->
+                        RemoveWorktreeUpdate.notRemovable(worktree).forAll(AppError.WorktreeLocked.class::isInstance));
     }
 
     /**
-     * Why {@code branch} cannot be deleted, when the other worktree that has it checked out is locked.
+     * The other worktree that has {@code branch} checked out, if one does.
      */
-    private static Option<AppError> lockedWorktree(Model model, Branch.Name branch) {
+    private static Option<Worktree> otherWorktree(Model model, Branch.Name branch) {
         return model.repo()
                 .branch(branch)
                 .flatMap(Branch::worktreeLocation)
-                .flatMap(location -> model.repo().worktree(location))
-                .flatMap(worktree -> worktree.locked()
-                        .map(reason -> new AppError.CheckedOutInLockedWorktree(
-                                DeleteBranchCmd.DELETE_BRANCH, branch, worktree.location(), reason)));
+                .flatMap(location -> model.repo().worktree(location));
+    }
+
+    /**
+     * Removes the worktree that has the branch checked out and deletes the branch locally once it is gone. When that
+     * worktree is locked, whether to unlock it is asked first.
+     */
+    private static Next withWorktreeChosen(Model model) {
+        return model.popup(DeleteBranchPopup.class)
+                .flatMap(popup -> removableWorktree(model, popup.branch())
+                        .flatMap(worktree -> worktree.locked()
+                                .map(reason -> Update.ask(
+                                        model.withoutPopup(DeleteBranchPopup.class),
+                                        new UnlockWorktreePopup(
+                                                popup.branch(), worktree.location(), worktree.name(), reason)))))
+                .getOrElse(() -> Update.confirm(
+                        model,
+                        DeleteBranchPopup.class,
+                        popup -> removableWorktree(model, popup.branch())
+                                .map(worktree ->
+                                        new RemoveWorktreeCmd(worktree.location(), false, Option.of(popup.branch())))));
     }
 
     private static Next chosen(Model model, DeleteScope scope) {

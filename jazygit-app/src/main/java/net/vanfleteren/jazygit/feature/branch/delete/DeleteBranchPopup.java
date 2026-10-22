@@ -7,7 +7,8 @@ import net.vanfleteren.jazygit.state.Popup;
 /**
  * Asking where to delete {@code branch}.
  *
- * @param worktree the name of the other worktree that has it checked out, if one does and it can be removed
+ * @param worktree the name of the other worktree that has it checked out, if one does and it can be removed, once
+ *                 unlocked when it is locked
  */
 public record DeleteBranchPopup(Branch.Name branch, Option<String> worktree) implements Popup {
 

@@ -454,6 +454,12 @@ public interface GitInfoProvider {
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> lockWorktree(Path location, boolean lock);
 
+    /**
+     * Locks the linked worktree at {@code location} for {@code reason}, or without one when it is blank. Git refuses
+     * the main worktree, and one that is locked already.
+     */
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> lockWorktree(Path location, String reason);
+
     // Editing files, as git edits commit messages.
 
     /**

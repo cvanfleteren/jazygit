@@ -4,6 +4,7 @@ import static net.vanfleteren.jazygit.state.TestModels.errorText;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static net.vanfleteren.jazygit.state.TestModels.typed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
@@ -15,6 +16,7 @@ import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchCmd;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchDialogs;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchPopup;
+import net.vanfleteren.jazygit.feature.branch.delete.UnlockWorktreePopup;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeCmd;
@@ -593,30 +595,176 @@ class WorktreeUpdateTest {
     }
 
     @Test
-    void aBranchWhoseWorktreeIsLockedIsNotDeletedAndTheErrorSaysWhereAndThatItIsLocked() {
-        Worktree locked =
-                new Worktree(LINKED.path(), LINKED.head(), LINKED.branch(), false, false, Option.of(""), false);
+    void aBranchWhoseWorktreeCannotBeRemovedIsStillNotDeletedAndTheErrorSaysWhere() {
+        Worktree mainElsewhere =
+                new Worktree(LINKED.path(), LINKED.head(), LINKED.branch(), true, false, Option.none(), false);
 
-        Next next = Update.update(worktrees(MAIN, locked), new DeleteBranchMsg.Requested(TAKEN));
+        Next next = Update.update(worktrees(MAIN, mainElsewhere), new DeleteBranchMsg.Requested(TAKEN));
 
         assertEquals(Option.none(), next.model().popup(DeleteBranchPopup.class));
         assertEquals(
-                Option.of("Deleting branch taken failed: it is checked out in the worktree at /repos/app-taken,"
-                        + " which is locked"),
+                Option.of("Deleting branch taken failed: it is checked out in the worktree at /repos/app-taken"),
                 errorText(next.model()));
     }
 
     @Test
-    void theErrorForABranchWhoseWorktreeIsLockedGivesWhyItWasLocked() {
+    void aBranchWhoseWorktreeIsLockedIsDeletedWithItOnceTheUserAgreesToUnlockIt() {
         Worktree locked = new Worktree(
                 LINKED.path(), LINKED.head(), LINKED.branch(), false, false, Option.of("on a usb stick"), false);
+        Model asked = Update.update(worktrees(MAIN, locked), new DeleteBranchMsg.Requested(TAKEN))
+                .model();
+        assertEquals(Option.of(new DeleteBranchPopup(TAKEN, Option.of("app-taken"))), asked.popup());
 
-        Next next = Update.update(worktrees(MAIN, locked), new DeleteBranchMsg.Requested(TAKEN));
+        Next chosen = Update.update(asked, new DeleteBranchMsg.WithWorktreeChosen());
+        UnlockWorktreePopup unlock = new UnlockWorktreePopup(TAKEN, "/repos/app-taken", "app-taken", "on a usb stick");
+        assertEquals(Option.of(unlock), chosen.model().popup());
+        assertEquals(List.of(), chosen.cmds());
+        assertEquals(
+                "The worktree at /repos/app-taken is locked: on a usb stick. Unlock it, so that it can be removed and"
+                        + " branch taken deleted?",
+                DeleteBranchDialogs.UNLOCK_WORKTREE.message().apply(unlock));
+
+        Next confirmed = Update.update(chosen.model(), new DeleteBranchMsg.UnlockConfirmed());
+        assertEquals(
+                List.of(new RemoveWorktreeCmd(
+                        "/repos/app-taken", false, Option.of(TAKEN), Option.of("on a usb stick"))),
+                confirmed.cmds());
+        assertEquals(Option.none(), confirmed.model().popup());
+
+        Next cancelled = Update.update(chosen.model(), new DeleteBranchMsg.UnlockCancelled());
+        assertEquals(List.of(), cancelled.cmds());
+        assertEquals(Option.none(), cancelled.model().popup());
+    }
+
+    @Test
+    void aPushedBranchWhoseWorktreeIsLockedCanBeDeletedOnTheRemoteOrWithThatWorktreeOnceUnlocked() {
+        Worktree locked =
+                new Worktree(LINKED.path(), LINKED.head(), LINKED.branch(), false, false, Option.of(""), false);
+        Model asked = Update.update(
+                        Update.update(model(true), new LoadMsg.WorktreesLoaded(List.of(MAIN, locked)))
+                                .model(),
+                        new DeleteBranchMsg.Requested(TAKEN))
+                .model();
+        DeleteBranchPopup popup = asked.popup(DeleteBranchPopup.class).get();
 
         assertEquals(
-                Option.of("Deleting branch taken failed: it is checked out in the worktree at /repos/app-taken,"
-                        + " which is locked: on a usb stick"),
-                errorText(next.model()));
+                List.of('r', 'w'),
+                DeleteBranchDialogs.DELETE_BRANCH
+                        .choices()
+                        .filter(choice -> choice.shown().test(asked, popup)
+                                && choice.enabled().test(asked, popup))
+                        .map(ChoiceDialog.Choice::key));
+        Next chosen = Update.update(asked, new DeleteBranchMsg.WithWorktreeChosen());
+        UnlockWorktreePopup unlock = new UnlockWorktreePopup(TAKEN, "/repos/app-taken", "app-taken", "");
+        assertEquals(Option.of(unlock), chosen.model().popup());
+        assertEquals(
+                "The worktree at /repos/app-taken is locked. Unlock it, so that it can be removed and branch taken"
+                        + " deleted?",
+                DeleteBranchDialogs.UNLOCK_WORKTREE.message().apply(unlock));
+        assertEquals(
+                List.of(new RemoveWorktreeCmd("/repos/app-taken", false, Option.of(TAKEN), Option.of(""))),
+                Update.update(chosen.model(), new DeleteBranchMsg.UnlockConfirmed())
+                        .cmds());
+    }
+
+    @Test
+    void aWorktreeIsUnlockedBeforeItIsRemovedAndForcingItUnlocksItAgain() {
+        java.util.List<String> ran = new java.util.ArrayList<>();
+        RemoveWorktreeCmd remove =
+                new RemoveWorktreeCmd("/repos/app-taken", false, Option.of(TAKEN), Option.of("on a usb stick"));
+
+        remove.perform(lockingGit(ran, Either.right(List.empty()), Either.right(List.empty())));
+
+        assertEquals(
+                java.util.List.of("unlock /repos/app-taken", "remove /repos/app-taken false", "delete taken"), ran);
+        assertEquals(
+                new RemoveWorktreeCmd("/repos/app-taken", true, Option.of(TAKEN), Option.of("on a usb stick")),
+                remove.forced());
+    }
+
+    @Test
+    void aWorktreeThatIsNotRemovedAfterItWasUnlockedIsLockedAgainForTheSameReason() {
+        java.util.List<String> ran = new java.util.ArrayList<>();
+        RemoveWorktreeCmd remove =
+                new RemoveWorktreeCmd("/repos/app-taken", false, Option.of(TAKEN), Option.of("on a usb stick"));
+        Env changed = new Env(
+                lockingGit(
+                        ran,
+                        Either.left(new GitFailure<>(
+                                new GitError.WorktreeHasChanges("changed"),
+                                StubGitProvider.executed("git worktree remove /repos/app-taken"))),
+                        StubGitProvider.ran("git worktree lock /repos/app-taken")),
+                net.vanfleteren.jazygit.gh.StubGitHub.empty());
+
+        assertEquals(
+                new RemoveWorktreeMsg.NeedsForce(
+                        remove,
+                        StubGitProvider.executed(
+                                "git worktree unlock /repos/app-taken",
+                                "git worktree remove /repos/app-taken",
+                                "git worktree lock /repos/app-taken")),
+                remove.run(changed));
+        assertEquals(
+                java.util.List.of(
+                        "unlock /repos/app-taken",
+                        "remove /repos/app-taken false",
+                        "lock /repos/app-taken on a usb stick"),
+                ran);
+    }
+
+    @Test
+    void whenTheWorktreeIsNotLockedAgainEitherThatFailsAndTheErrorSaysSo() {
+        RemoveWorktreeCmd remove =
+                new RemoveWorktreeCmd("/repos/app-taken", false, Option.of(TAKEN), Option.of("on a usb stick"));
+        Env changed = new Env(
+                lockingGit(
+                        new java.util.ArrayList<>(),
+                        Either.left(new GitFailure<>(new GitError.WorktreeHasChanges("changed"), List.empty())),
+                        StubGitProvider.refused("git worktree lock /repos/app-taken", "already locked")),
+                net.vanfleteren.jazygit.gh.StubGitHub.empty());
+
+        Msg failed = remove.run(changed);
+
+        assertInstanceOf(OperationMsg.Failed.class, failed);
+        assertEquals(
+                Option.of("Removing the worktree /repos/app-taken and deleting its branch failed: changed; cleaning up"
+                        + " afterwards failed too: already locked"),
+                errorText(Update.update(model(), failed).model()));
+    }
+
+    /**
+     * A git that records what it is asked to do, unlocking a worktree, removing it with {@code removed} as the
+     * outcome, locking it again with {@code locked} as the outcome, and deleting a branch.
+     */
+    private static GitInfoProvider lockingGit(
+            java.util.List<String> ran,
+            Either<GitFailure<GitError>, List<ExecutedCommand>> removed,
+            Either<GitFailure<ProcessError>, List<ExecutedCommand>> locked) {
+        return new StubGitProvider() {
+            @Override
+            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> lockWorktree(Path location, boolean lock) {
+                ran.add((lock ? "lock " : "unlock ") + location);
+                return StubGitProvider.ran("git worktree " + (lock ? "lock " : "unlock ") + location);
+            }
+
+            @Override
+            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> lockWorktree(Path location, String reason) {
+                ran.add("lock " + location + " " + reason);
+                return locked;
+            }
+
+            @Override
+            public Either<GitFailure<GitError>, List<ExecutedCommand>> removeWorktree(Path location, boolean force) {
+                ran.add("remove " + location + " " + force);
+                return removed;
+            }
+
+            @Override
+            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(Branch.Name name) {
+                ran.add("delete " + name.value());
+                return Either.right(List.empty());
+            }
+        };
     }
 
     @Test
