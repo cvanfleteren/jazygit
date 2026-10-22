@@ -35,16 +35,70 @@ class Jazygit:
         """The app as it shows the worktree at path, once it switched to it."""
         return Jazygit(self.app, Git(path, self.repo.env))
 
+    # How the status line names each operation in progress, by what Git.in_progress calls it.
+    IN_PROGRESS = {"merge": "MERGING", "rebase": "REBASING", "cherry-pick": "CHERRY-PICKING", "revert": "REVERTING"}
+
     def caught_up(self):
-        """Waits until no git operation runs and the panes show the repository as git has it: the commits of the
-        checked out branch, the local branches with the checked out one marked, and the changed files."""
+        """Waits until no git operation runs and the panes show the repository as git has it: the operation it is in
+        the middle of, the commits of the checked out branch, the local branches with the checked out one marked,
+        and the changed files."""
         self.app.eventually(lambda: not self._busy() and self._shows_repo(), "the app to show the repository")
 
     def _busy(self) -> bool:
-        return any((self.repo.git_dir / name).exists() for name in ("rebase-merge", "rebase-apply", "index.lock"))
+        """Whether git is running: it holds the index lock, or a rebase goes on. One that stopped, on conflicts, waits
+        for the user, with the commit it stopped at in REBASE_HEAD; git takes that away once it goes on."""
+        git_dir = self.repo.git_dir
+        rebasing = any((git_dir / name).exists() for name in ("rebase-merge", "rebase-apply"))
+        return (git_dir / "index.lock").exists() or (rebasing and not (git_dir / "REBASE_HEAD").exists())
 
     def _shows_repo(self) -> bool:
-        return self.commits.shows_history() and self.branches.shows_branches() and self.files.shows_changes()
+        return (self._shows_in_progress() and self.commits.shows_history() and self.branches.shows_branches()
+                and self.files.shows_changes())
+
+    def _shows_in_progress(self) -> bool:
+        """Whether the status line names the operation in progress, and no other. Its conflicts can be cut off, past
+        the width of the pane: the files pane shows them."""
+        shown = [word for word in self.IN_PROGRESS.values() if word in self.app.pane_text("Repo").split()]
+        in_progress = self.repo.in_progress()
+        return shown == ([self.IN_PROGRESS[in_progress]] if in_progress else [])
+
+    def continue_in_progress(self):
+        """Continues the merge, rebase, cherry-pick or revert that stopped, once its conflicts are resolved; a rebase
+        can stop again, on the conflicts of a later commit."""
+        self.changing_repo("the operation in progress continued", lambda: (
+            self.app.press("M"), self.confirm("What to do with the", key="c")), self._done_or_stopped)
+
+    def abort_in_progress(self):
+        """Aborts the operation in progress, which the app asks to confirm."""
+        kind = self.repo.in_progress()
+        self.changing_repo(f"the {kind} aborted", lambda: (
+            self.app.press("M"), self.confirm("What to do with the", key="a"), self.confirm(f"Abort the {kind}")),
+                           lambda: self.repo.in_progress() is None)
+
+    def skip_in_progress(self):
+        """Skips the commit the rebase, cherry-pick or revert stopped at, which the app asks to confirm."""
+        kind = self.repo.in_progress()
+        self.changing_repo(f"a commit of the {kind} skipped", lambda: (
+            self.app.press("M"), self.confirm("What to do with the", key="s"),
+            self.confirm(f"Skip a commit of the {kind}")), self._done_or_stopped)
+
+    def try_to_continue(self):
+        """Asks to continue the operation in progress, for when the app is to refuse it: it does not wait for the
+        repository to change."""
+        self.caught_up()
+        self.app.press("M")
+        self.confirm("What to do with the", key="c")
+
+    def try_to_skip(self):
+        """Asks to skip a commit of the operation in progress, for when the app is to refuse it: the dialog stays
+        open."""
+        self.caught_up()
+        self.app.press("M")
+        self.confirm("What to do with the", key="s")
+
+    def _done_or_stopped(self) -> bool:
+        """Whether the operation in progress is done, or stopped again on conflicts."""
+        return self.repo.in_progress() is None or bool(self.repo.conflicts())
 
     def changing_repo(self, description: str, keys, done=None):
         """Runs keys, a function that presses them, and waits until they changed the repository, and the app
@@ -383,6 +437,23 @@ class BranchesPane:
         self.select(branch)
         self.app.press("p")
 
+    def merge(self, branch: str, mode: str = "fast-forward"):
+        """Merges the branch into the checked out one: a regular merge that fast-forwards when it can
+        ("fast-forward"), or makes a "merge commit" anyway, or a squash merge, left uncommitted ("squash") or
+        committed ("squash and commit")."""
+        key = {"fast-forward": "m", "merge commit": "n", "squash": "s", "squash and commit": "S"}[mode]
+        into = self.repo.current_branch()
+        self.select(branch)
+        self.ui.changing_repo(f"{branch} merged into {into}", lambda: (
+            self.app.press("m"), self.ui.confirm(f"Merge '{branch}' into '{into}'", key=key)))
+
+    def rebase_onto(self, branch: str):
+        """Rebases the checked out branch onto the branch."""
+        checked_out = self.repo.current_branch()
+        self.select(branch)
+        self.ui.changing_repo(f"{checked_out} rebased onto {branch}", lambda: (
+            self.app.press("r"), self.ui.confirm(f"Rebase '{checked_out}'", key="s")))
+
     def reset_onto_upstream(self, mode: str = "hard"):
         """Resets the checked out branch onto its upstream, keeping the changes since "soft" (staged), "mixed"
         (unstaged) or not at all ("hard")."""
@@ -472,8 +543,9 @@ class CommitsPane:
         shown = [match.group() for line in self.app.pane_text("Commits").splitlines()
                  if (match := SHA.search(line))]
         history = self.repo("log", "--format=%h", "--abbrev=7").splitlines() if self.repo.has_head() else []
-        # The pane may be too short for all of them, but shows some as soon as there are any.
-        return shown == history[:len(shown)] and bool(shown) == bool(history)
+        # The pane may be too short for all of them, but shows some as soon as there are any. In any order: the commits
+        # all have the same date, and the app draws the parents of a merge in an order of its own.
+        return sorted(shown) == sorted(history[:len(shown)]) and bool(shown) == bool(history)
 
     def select(self, subject: str):
         """Focuses the pane and moves to the commit with this subject."""
@@ -530,6 +602,25 @@ class CommitsPane:
                 self.ui.confirm("Hard reset to")
 
         self.ui.changing_repo(f"the branch reset to {subject!r}", keys)
+
+    def revert(self, subject: str):
+        """Adds a commit that undoes the commit with this subject."""
+        self.select(subject)
+        self.ui.changing_repo(f"{subject!r} reverted", lambda: (
+            self.app.press("t"), self.ui.confirm("Revert commit")))
+
+    def copy(self, subject: str):
+        """Copies the commit with this subject, to cherry-pick it onto another branch."""
+        self.select(subject)
+        self.app.press("C")
+        self.app.wait_for(f"Copied {self.repo.short(self.repo.find(subject))} to cherry-pick")
+
+    def cherry_pick(self):
+        """Cherry-picks the copied commit onto the checked out branch."""
+        self.ui.caught_up()
+        self.app.focus("Commits")
+        self.ui.changing_repo("the copied commit cherry-picked", lambda: (
+            self.app.press("V"), self.ui.confirm("Cherry-pick commit")))
 
     def new_branch(self, subject: str, name: str):
         """Creates the branch name at the commit with this subject, and checks it out."""

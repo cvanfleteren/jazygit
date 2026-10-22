@@ -94,7 +94,8 @@ ui.commits.fixup("Fix typo", keep_message="below")
 Then check the repository with git: `repo.subjects()`, `repo.branches()`, `repo.current_branch()`,
 `repo.find("subject")`, `repo.status()` (each changed path with its `git status --short` code, such as `"M "` for
 staged or `"??"` for untracked), `repo.stashes()`, `repo.read("file")`, `repo.worktrees()` (each worktree's path with
-the branch it has checked out, `None` on no branch), `repo.locked_worktrees()` and plain `repo(...)`. Assert on git
+the branch it has checked out, `None` on no branch), `repo.locked_worktrees()`, `repo.in_progress()` (`"merge"`,
+`"rebase"`, `"cherry-pick"`, `"revert"` or `None`), `repo.conflicts()`, `repo.parents()` and plain `repo(...)`. Assert on git
 state rather than on the screen where you can: it survives layout changes.
 
 ### Worktrees
@@ -134,6 +135,21 @@ test fetches itself what it wants the app to know of. Before each operation the 
 branches pane shows each branch's commits to push (↑) and to pull (↓) as git counts them: the app decides on
 them, such as whether a push must be forced.
 
+### Conflicts
+
+An operation that stops on conflicts returns once the app shows it stopped: the status line names what is in
+progress, and the files pane the conflicted files. Resolve them with `repo.resolve("file", "content")`, which writes
+and stages the file, and go on from the app (M):
+
+```python
+ui.branches.merge("feature")                    # or rebase_onto, pull, commits.revert, commits.cherry_pick...
+repo.resolve("one.txt", "both\n")
+ui.continue_in_progress()                       # or abort_in_progress(), skip_in_progress()
+```
+
+A rebase that git stopped keeps its directory in `.git`, with the commit it stopped at in `REBASE_HEAD`: the page
+objects take it for running only without that.
+
 ### Page objects
 
 `pages.py` has a page object per pane of the left column, `ui.files`, `ui.branches`, `ui.commits` and `ui.stash`,
@@ -169,5 +185,6 @@ Every wait fails at once when the app has died, with its exit status and the las
 screen when it times out.
 
 `test_files.py` (staging and discarding), `test_stash.py`, `test_commits.py`, `test_reset.py`, `test_branches.py`,
-`test_remotes.py` and `test_worktrees.py` try one operation each, from a repository set up with git; `test_scenario.py` chains them in one session: from an empty repository to a tidied history on three
+`test_remotes.py`, `test_worktrees.py` and `test_conflicts.py` (operations that stop on conflicts, and continuing,
+skipping or aborting them) try one operation each, from a repository set up with git; `test_scenario.py` chains them in one session: from an empty repository to a tidied history on three
 branches, and a feature worked on with a teammate through origin.
