@@ -66,9 +66,28 @@ class Git:
         self.env = env
 
     def __call__(self, *args) -> str:
+        return self.raw(*args).strip()
+
+    def raw(self, *args) -> str:
+        """The output of git as it is, for when leading spaces or NUL separators matter."""
         return subprocess.run(
             ["git", *args], cwd=self.path, env=self.env, check=True, capture_output=True, text=True
-        ).stdout.strip()
+        ).stdout
+
+    def changed_paths(self) -> list:
+        """The paths with changes, staged, unstaged or untracked, as they are: not quoted, renames by their new
+        path."""
+        entries = self.raw("status", "--porcelain", "-z", "--untracked-files=all").split("\0")
+
+        def paths(rest):
+            # A rename or copy is followed by an entry with the path it came from.
+            if not rest or not rest[0]:
+                return []
+            entry = rest[0]
+            skip = 2 if entry[0] in "RC" else 1
+            return [entry[3:]] + paths(rest[skip:])
+
+        return paths(entries)
 
     def has_head(self) -> bool:
         return subprocess.run(["git", "rev-parse", "--verify", "-q", "HEAD"], cwd=self.path, env=self.env,
@@ -78,6 +97,37 @@ class Git:
         file = self.path / name
         file.parent.mkdir(parents=True, exist_ok=True)
         file.write_text(content)
+
+    def commit(self, message: str, **files: str):
+        """Writes files, by name, and commits them with all other changes."""
+        for name, content in files.items():
+            self.write(name, content)
+        self("add", "--all")
+        self("commit", "--message", message)
+
+    def subjects(self, rev="HEAD") -> list:
+        """The subjects of the commits of rev, the newest first."""
+        return self("log", "--format=%s", rev).splitlines()
+
+    def message(self, rev="HEAD") -> str:
+        return self("log", "-1", "--format=%B", rev)
+
+    def branches(self) -> list:
+        return sorted(self("for-each-ref", "--format=%(refname:short)", "refs/heads").splitlines())
+
+    def current_branch(self) -> str:
+        return self("branch", "--show-current")
+
+    def short(self, rev: str) -> str:
+        """The abbreviated hash the app shows for rev."""
+        return self("rev-parse", "--short=7", rev)
+
+    def find(self, subject: str, rev="HEAD") -> str:
+        """The full hash of the commit of rev with exactly this subject."""
+        matches = [line.split(" ", 1)[0] for line in self("log", "--format=%H %s", rev).splitlines()
+                   if line.split(" ", 1)[1] == subject]
+        assert len(matches) == 1, f"{len(matches)} commits with subject {subject!r} in {rev}"
+        return matches[0]
 
 
 class AppExited(AssertionError):
@@ -120,12 +170,18 @@ class App:
             raise AppExited(f"jazygit exited with {status}\n--- last output ---\n{output}")
 
     def eventually(self, check, description, timeout=TIMEOUT):
-        """Like the module's eventually, but fails at once when the app has died."""
+        """Like the module's eventually, but fails at once when the app has died, and shows the screen when it
+        times out."""
         def checked():
             self.check_running()
             return check()
 
-        return eventually(checked, description, timeout)
+        try:
+            return eventually(checked, description, timeout)
+        except AppExited:
+            raise
+        except AssertionError as e:
+            raise AssertionError(f"{e}\n--- screen ---\n{self.text()}") from None
 
     def text(self) -> str:
         self.pump()
@@ -144,20 +200,82 @@ class App:
 
     def wait_for(self, text: str, timeout=TIMEOUT):
         """Waits until text shows anywhere on the screen."""
-        try:
-            self.eventually(lambda: text in self.text(), f"{text!r} on screen", timeout)
-        except AppExited:
-            raise
-        except AssertionError as e:
-            raise AssertionError(f"{e}\n--- screen ---\n{self.text()}") from None
+        self.eventually(lambda: text in self.text(), f"{text!r} on screen", timeout)
+
+    def panes(self) -> dict:
+        """The panes of the left column, by the first word of their title, with the colour of their border."""
+        self.pump()
+        return {line[1:].split("─")[0].split(" ")[0]: self.screen.buffer[y][0].fg
+                for y, line in enumerate(self.screen.display) if line.startswith("╭")}
+
+    def pane_rows(self, pane: str) -> list:
+        """The rows inside the border of the pane of the left column, by the first word of its title: their text,
+        and the background they are drawn on."""
+        self.pump()
+        lines = self.screen.display
+        top = next((y for y, line in enumerate(lines) if line.startswith("╭" + pane)), None)
+        # Not there, or not drawn whole yet: the first frames can come in pieces.
+        if top is None or "╮" not in lines[top]:
+            return []
+        width = lines[top].index("╮")
+        bottom = next((y for y in range(top + 1, len(lines)) if lines[y].startswith("╰")), len(lines))
+        return [(lines[y][1:width].rstrip(), self.screen.buffer[y][2].bg) for y in range(top + 1, bottom)]
+
+    def pane_text(self, pane: str) -> str:
+        """What the pane of the left column shows inside its border."""
+        return "\n".join(text for text, _ in self.pane_rows(pane))
+
+    def wait_in(self, pane: str, text: str, timeout=TIMEOUT):
+        """Waits until text shows in the pane of the left column with this title: the same text can show
+        elsewhere, like a file name in the command log, before the pane has it."""
+        self.eventually(lambda: text in self.pane_text(pane), f"{text!r} in {pane}", timeout)
+
+    def cursor_row(self, pane: str):
+        """The index of the row of the pane the cursor is on, the one drawn on a background of its own; None when
+        there isn't one."""
+        backgrounds = [background for _, background in self.pane_rows(pane)]
+        odd = [index for index, background in enumerate(backgrounds) if backgrounds.count(background) == 1]
+        return odd[0] if len(odd) == 1 and len(backgrounds) > 1 else None
+
+    def move_cursor(self, pane: str, word: str):
+        """Moves the cursor of the focused pane, a key at a time, to the row with word in it, such as a short
+        hash or a branch name. Each key waits for the cursor to move: the cursor is drawn as soon as the app has
+        the key, unlike what it shows for the row, which can take a while to read."""
+        def target():
+            # A word of the row, or what it ends in, as with a file name with spaces in it.
+            return next((index for index, (text, _) in enumerate(self.pane_rows(pane))
+                         if word in text.split() or text.endswith(" " + word)), None)
+
+        self.eventually(lambda: target() is not None and self.cursor_row(pane) is not None,
+                        f"{word!r} and the cursor in {pane}")
+        for _ in range(len(self.pane_rows(pane))):
+            at = self.cursor_row(pane)
+            if at == target():
+                return
+            self.press("down" if at < target() else "up")
+            self.eventually(lambda: self.cursor_row(pane) not in (None, at), f"the cursor in {pane} to move")
+        self.eventually(lambda: self.cursor_row(pane) == target(), f"the cursor on {word!r} in {pane}", timeout=0)
+
+    def focused_pane(self):
+        """The pane of the left column with the focus: the one whose border is drawn in a colour of its own."""
+        colours = list(self.panes().values())
+        odd = [name for name, colour in self.panes().items() if colours.count(colour) == 1]
+        return odd[0] if len(odd) == 1 else None
+
+    def focus(self, pane: str):
+        """Tabs through the panes until pane, such as "Files", "Branches" or "Commits", has the focus."""
+        focused = self.eventually(self.focused_pane, "a pane to have the focus")
+        for _ in range(len(self.panes())):
+            if focused == pane:
+                return
+            self.press("tab")
+            previous = focused
+            focused = self.eventually(lambda: (now := self.focused_pane()) != previous and now,
+                                      f"the focus to move on from {previous}")
+        raise AssertionError(f"no pane {pane} to focus\n--- screen ---\n{self.text()}")
 
     def wait_gone(self, text: str, timeout=TIMEOUT):
-        try:
-            self.eventually(lambda: text not in self.text(), f"{text!r} to leave the screen", timeout)
-        except AppExited:
-            raise
-        except AssertionError as e:
-            raise AssertionError(f"{e}\n--- screen ---\n{self.text()}") from None
+        self.eventually(lambda: text not in self.text(), f"{text!r} to leave the screen", timeout)
 
     def close(self):
         if self.process.isalive():

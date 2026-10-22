@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from harness import App, Git, isolated_env
+from pages import Jazygit
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -52,14 +53,14 @@ def repo(tmp_path, env) -> Git:
 
 @pytest.fixture
 def jazygit(java, jar, repo, env):
-    """Starts jazygit on the repository; call it once the repository is set up."""
+    """Starts jazygit on the repository, and returns its page object; call it once the repository is set up."""
     apps = []
 
-    def start() -> App:
+    def start() -> Jazygit:
         app = App([java, "--enable-native-access=ALL-UNNAMED", "-Dtamboui.backend=panama", "-jar", str(jar), str(repo.path)],
                   repo.path, env)
         apps.append(app)
-        return app
+        return Jazygit(app, repo)
 
     yield start
     for app in apps:
