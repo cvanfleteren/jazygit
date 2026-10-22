@@ -73,7 +73,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Path workTree() {
+    default Path worktree() {
         return Path.of("/repos/repo");
     }
 
@@ -111,7 +111,7 @@ public interface StubGitProvider extends GitInfoProvider {
     @Override
     default Either<ProcessError, List<Worktree>> worktrees() {
         return Either.right(List.of(new Worktree(
-                workTree(),
+                worktree(),
                 Option.of(new Sha("aaaa")),
                 Option.of(new Branch.Name("main")),
                 true,

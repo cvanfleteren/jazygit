@@ -57,9 +57,9 @@ final class CliBranch {
      * The local and the remote-tracking branches, from a single {@code git for-each-ref}: the local branches need
      * the remote ones anyway, to tell which are pushed and which is the default.
      */
-    static Either<ProcessError, AllBranches> all(Path workTree) {
+    static Either<ProcessError, AllBranches> all(Path worktree) {
         return GitProcess.read(
-                workTree,
+                worktree,
                 GitCommand.reading("for-each-ref", "--format=" + FORMAT, HEADS, REMOTES),
                 CliBranch::parseAll);
     }
@@ -69,34 +69,34 @@ final class CliBranch {
      * pushed to. With both, the remote one goes first, so a failure leaves the local branch in place.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> delete(
-            Path workTree, Branch.Name name, RemoteBranch remote, DeleteScope scope, Map<String, String> credentials) {
+            Path worktree, Branch.Name name, RemoteBranch remote, DeleteScope scope, Map<String, String> credentials) {
         return GitFailure.sequence(
-                () -> scope.remote() ? deleteRemote(workTree, remote, credentials) : GitFailure.nothing(),
-                () -> scope.local() ? deleteLocal(workTree, name) : GitFailure.nothing());
+                () -> scope.remote() ? deleteRemote(worktree, remote, credentials) : GitFailure.nothing(),
+                () -> scope.local() ? deleteLocal(worktree, name) : GitFailure.nothing());
     }
 
     /**
-     * Runs {@code git branch -m <name> <newName>} in {@code workTree}, which refuses to overwrite a branch.
+     * Runs {@code git branch -m <name> <newName>} in {@code worktree}, which refuses to overwrite a branch.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> rename(
-            Path workTree, Branch.Name name, Branch.Name newName) {
-        return GitProcess.log(workTree, git("branch", "--move", name.value(), newName.value()));
+            Path worktree, Branch.Name name, Branch.Name newName) {
+        return GitProcess.log(worktree, git("branch", "--move", name.value(), newName.value()));
     }
 
     /**
-     * Runs {@code git branch -D <name>} in {@code workTree}.
+     * Runs {@code git branch -D <name>} in {@code worktree}.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocal(Path workTree, Branch.Name name) {
-        return GitProcess.log(workTree, git("branch", "--delete", "--force", name.value()));
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocal(Path worktree, Branch.Name name) {
+        return GitProcess.log(worktree, git("branch", "--delete", "--force", name.value()));
     }
 
     /**
-     * Runs {@code git push <remote> --delete <branch>} in {@code workTree}.
+     * Runs {@code git push <remote> --delete <branch>} in {@code worktree}.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemote(
-            Path workTree, RemoteBranch remote, Map<String, String> credentials) {
+            Path worktree, RemoteBranch remote, Map<String, String> credentials) {
         return CliRemote.run(
-                workTree,
+                worktree,
                 git("push", remote.remote(), "--delete", remote.branch().value()),
                 credentials);
     }

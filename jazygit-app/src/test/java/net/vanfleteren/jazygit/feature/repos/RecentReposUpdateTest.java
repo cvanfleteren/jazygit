@@ -36,7 +36,7 @@ class RecentReposUpdateTest {
         return new Env(
                 new StubGitProvider() {
                     @Override
-                    public Path workTree() {
+                    public Path worktree() {
                         return current;
                     }
                 },
@@ -190,14 +190,14 @@ class RecentReposUpdateTest {
         }
 
         @Override
-        public Try<List<Path>> opened(Path workTree) {
-            recent = RecentRepositories.opened(recent, workTree);
+        public Try<List<Path>> opened(Path worktree) {
+            recent = RecentRepositories.opened(recent, worktree);
             return Try.success(recent);
         }
 
         @Override
-        public Try<List<Path>> forget(List<Path> workTrees) {
-            recent = recent.removeAll(workTrees);
+        public Try<List<Path>> forget(List<Path> worktrees) {
+            recent = recent.removeAll(worktrees);
             return Try.success(recent);
         }
     }

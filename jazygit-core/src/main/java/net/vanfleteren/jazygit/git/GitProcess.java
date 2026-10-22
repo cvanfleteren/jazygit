@@ -19,33 +19,33 @@ final class GitProcess {
     private GitProcess() {}
 
     /**
-     * Runs {@code command} in {@code workTree}. A non-zero exit code is a {@link CommandFailed}.
+     * Runs {@code command} in {@code worktree}. A non-zero exit code is a {@link CommandFailed}.
      */
-    static Either<GitFailure<ProcessError>, Output> run(Path workTree, GitCommand command) {
-        return execute(workTree, command).mapLeft(error -> new GitFailure<>(error, List.of(command.executed())));
+    static Either<GitFailure<ProcessError>, Output> run(Path worktree, GitCommand command) {
+        return execute(worktree, command).mapLeft(error -> new GitFailure<>(error, List.of(command.executed())));
     }
 
     /**
      * Runs {@code command} for its effect, and returns the command log.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> log(Path workTree, GitCommand command) {
-        return run(workTree, command).map(Output::log);
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> log(Path worktree, GitCommand command) {
+        return run(worktree, command).map(Output::log);
     }
 
     /**
      * Runs {@code command} to read something, which {@code parse} makes of its output. Reads are not logged.
      */
     static <T> Either<ProcessError, T> read(
-            Path workTree, GitCommand command, Function<String, Either<UnexpectedOutput, T>> parse) {
-        return execute(workTree, command).flatMap(output -> Either.narrow(parse.apply(output.stdout())));
+            Path worktree, GitCommand command, Function<String, Either<UnexpectedOutput, T>> parse) {
+        return execute(worktree, command).flatMap(output -> Either.narrow(parse.apply(output.stdout())));
     }
 
     /**
      * Runs {@code command}, a question git answers "no" to by exiting with 1 without saying anything, like
      * {@code git diff --quiet} or {@code git config --get} for a key that is not set. That answer is none.
      */
-    static Either<GitFailure<ProcessError>, Option<Output>> ask(Path workTree, GitCommand command) {
-        return run(workTree, command)
+    static Either<GitFailure<ProcessError>, Option<Output>> ask(Path worktree, GitCommand command) {
+        return run(worktree, command)
                 .fold(
                         failure -> failure.error() instanceof CommandFailed failed && failed.silent()
                                 ? Either.right(Option.none())
@@ -53,11 +53,11 @@ final class GitProcess {
                         output -> Either.right(Option.of(output)));
     }
 
-    private static Either<ProcessError, Output> execute(Path workTree, GitCommand command) {
-        return Exec.run(workTree, command.commandLine(), command.environment(), command.timeout())
+    private static Either<ProcessError, Output> execute(Path worktree, GitCommand command) {
+        return Exec.run(worktree, command.commandLine(), command.environment(), command.timeout())
                 .<ProcessError>mapLeft(failure -> switch (failure) {
                     case ExecFailure.NotStarted(var cause) -> new GitUnavailable(cause);
-                    case ExecFailure.TimedOut() -> new TimedOut(command.operation(), workTree);
+                    case ExecFailure.TimedOut() -> new TimedOut(command.operation(), worktree);
                     case ExecFailure.Interrupted() -> new Interrupted(command.operation());
                     case ExecFailure.NonZero(int exitCode, String stderr, String stdout) ->
                         new CommandFailed(Exec.explanation(stderr, stdout), exitCode, stderr);

@@ -42,7 +42,7 @@ public sealed interface RecentReposCmd extends Cmd {
                 env.recent().forget(gone).onFailure(RecentReposCmd::notKept);
             }
             return new RecentReposMsg.Listed(recent.removeAll(gone)
-                    .remove(env.git().workTree())
+                    .remove(env.git().worktree())
                     .map(directory -> new RecentRepo(
                             directory.toString(), RepositoryIdentity.labelOf(directory), HeadFile.read(directory))));
         }
@@ -82,9 +82,9 @@ public sealed interface RecentReposCmd extends Cmd {
                                 env.recent().forget(List.of(chosen)).onFailure(RecentReposCmd::notKept);
                                 return failedWith(error);
                             },
-                            workTree -> {
-                                env.recent().opened(workTree).onFailure(RecentReposCmd::notKept);
-                                return new RecentReposMsg.Switched(workTree.toString());
+                            worktree -> {
+                                env.recent().opened(worktree).onFailure(RecentReposCmd::notKept);
+                                return new RecentReposMsg.Switched(worktree.toString());
                             });
         }
 

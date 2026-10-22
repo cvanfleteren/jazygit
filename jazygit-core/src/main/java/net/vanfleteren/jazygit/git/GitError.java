@@ -26,11 +26,15 @@ public sealed interface GitError {
     record GitUnavailable(IOException cause) implements ProcessError {}
 
     /**
+     * The git command did not finish in time.
+     *
      * @param operation the git subcommand, e.g. {@code checkout}
      */
-    record TimedOut(String operation, Path workTree) implements ProcessError {}
+    record TimedOut(String operation, Path worktree) implements ProcessError {}
 
     /**
+     * The git command was interrupted.
+     *
      * @param operation the git subcommand, e.g. {@code checkout}
      */
     record Interrupted(String operation) implements ProcessError {}
@@ -81,7 +85,7 @@ public sealed interface GitError {
      *
      * @param directory the directory the repository was looked for from
      */
-    record NoWorkTree(Path directory) implements GitError {}
+    record NoWorktree(Path directory) implements GitError {}
 
     /**
      * There is no such branch, local or remote-tracking.

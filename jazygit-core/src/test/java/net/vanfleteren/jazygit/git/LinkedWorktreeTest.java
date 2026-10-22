@@ -83,7 +83,7 @@ class LinkedWorktreeTest {
     void itOpensAtItsOwnRootAndListsItsOwnBranchAsTheCurrentOne() {
         CliGitInfoProvider provider = CliGitInfoProvider.open(linked).get();
 
-        assertEquals(linked, provider.workTree());
+        assertEquals(linked, provider.worktree());
         assertTrue(Files.isRegularFile(linked.resolve(".git")));
         List<Branch> branches = provider.allBranches().map(AllBranches::local).get();
         assertEquals(

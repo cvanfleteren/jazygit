@@ -91,7 +91,7 @@ public record AddWorktreeCmd(WorktreeSource source, String location) implements 
      * resolved, as git lists it.
      */
     private Msg added(Env env, List<ExecutedCommand> commands) {
-        Path added = env.git().workTree().resolve(WorktreeCmd.path(location)).normalize();
+        Path added = env.git().worktree().resolve(WorktreeCmd.path(location)).normalize();
         return new AddWorktreeMsg.Added(
                 this, Try.of(added::toRealPath).getOrElse(added).toString(), commands);
     }

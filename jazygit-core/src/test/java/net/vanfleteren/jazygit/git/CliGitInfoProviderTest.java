@@ -96,7 +96,7 @@ class CliGitInfoProviderTest {
         gitIn(elsewhere, "init", "-q", "--bare", bare.toString());
 
         assertInstanceOf(
-                GitError.NoWorkTree.class, CliGitInfoProvider.open(bare).getLeft());
+                GitError.NoWorktree.class, CliGitInfoProvider.open(bare).getLeft());
         assumeTrue(!gitSucceedsIn(plain, "rev-parse"), "the temporary directory is inside a repository");
         assertEquals(
                 new GitError.NotARepository(plain),

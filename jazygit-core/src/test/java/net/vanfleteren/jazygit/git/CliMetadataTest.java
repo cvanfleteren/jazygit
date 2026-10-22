@@ -53,9 +53,9 @@ class CliMetadataTest {
     }
 
     // Looked at a while after the changes, so that they tell; right after them they tell nothing.
-    private static GitMetadata metadata(Path workTree) {
+    private static GitMetadata metadata(Path worktree) {
         return CliMetadata.read(
-                CliMetadata.locate(workTree).get(),
+                CliMetadata.locate(worktree).get(),
                 Instant.now().plus(CliMetadata.SETTLED).plusSeconds(1));
     }
 

@@ -24,16 +24,16 @@ final class CliConfig {
     /**
      * The branch {@code branch} was made from, as {@code gh} records it to take as the base of its pull request.
      */
-    static Either<ProcessError, Option<Branch.Name>> parent(Path workTree, Branch.Name branch) {
-        return get(workTree, parentKey(branch)).map(value -> value.flatMap(Branch.Name::parse));
+    static Either<ProcessError, Option<Branch.Name>> parent(Path worktree, Branch.Name branch) {
+        return get(worktree, parentKey(branch)).map(value -> value.flatMap(Branch.Name::parse));
     }
 
     /**
      * Records {@code parent} as the branch {@code branch} was made from, where {@code gh} looks for it.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> setParent(
-            Path workTree, Branch.Name branch, Branch.Name parent) {
-        return set(workTree, parentKey(branch), Option.of(parent.value()));
+            Path worktree, Branch.Name branch, Branch.Name parent) {
+        return set(worktree, parentKey(branch), Option.of(parent.value()));
     }
 
     private static String parentKey(Branch.Name branch) {
@@ -44,9 +44,9 @@ final class CliConfig {
      * The value of {@code key} in the repository's own configuration, not the user's or the system's. Only looked
      * up, so not logged.
      */
-    static Either<ProcessError, Option<String>> get(Path workTree, String key) {
+    static Either<ProcessError, Option<String>> get(Path worktree, String key) {
         // git config --get exits with 1, saying nothing, when the key is not set.
-        return GitProcess.ask(workTree, GitCommand.reading("config", "--local", "--get", key))
+        return GitProcess.ask(worktree, GitCommand.reading("config", "--local", "--get", key))
                 .map(answer -> answer.map(output -> output.stdout().strip()))
                 .mapLeft(GitFailure::error);
     }
@@ -56,11 +56,11 @@ final class CliConfig {
      * key that is not set does nothing.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> set(
-            Path workTree, String key, Option<String> value) {
+            Path worktree, String key, Option<String> value) {
         return value.fold(
                 () -> {
                     GitCommand unset = git("config", "--local", "--unset-all", key);
-                    return GitProcess.log(workTree, unset)
+                    return GitProcess.log(worktree, unset)
                             .fold(
                                     failure -> failure.error() instanceof CommandFailed failed
                                                     && failed.exitCode() == NOT_SET
@@ -68,6 +68,6 @@ final class CliConfig {
                                             : Either.left(failure),
                                     Either::right);
                 },
-                set -> GitProcess.log(workTree, git("config", "--local", key, set)));
+                set -> GitProcess.log(worktree, git("config", "--local", key, set)));
     }
 }

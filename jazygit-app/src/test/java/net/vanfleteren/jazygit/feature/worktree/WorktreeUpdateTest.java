@@ -481,7 +481,7 @@ class WorktreeUpdateTest {
         Env env = new Env(
                 new StubGitProvider() {
                     @Override
-                    public Path workTree() {
+                    public Path worktree() {
                         return Path.of("/repos/app");
                     }
                 },

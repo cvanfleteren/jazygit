@@ -39,7 +39,7 @@ final class CliRebase {
      *
      * @return the command lines that were run
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> reword(Path workTree, Sha sha, CommitMessage message) {
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> reword(Path worktree, Sha sha, CommitMessage message) {
         // A merge in the todo list is "merge -C <commit>", which has to become "-c" for git to ask for a message.
         String sequenceEditor =
                 sequenceEditor(sha, List.of(new Tuple2<>("pick", "reword"), new Tuple2<>("merge -C", "merge -c")));
@@ -47,9 +47,9 @@ final class CliRebase {
                 "jazygit-message",
                 file -> Files.writeString(file, message.text()),
                 failed -> new GitFailure<GitError>(failed, List.empty()),
-                file -> GitFailure.<GitError, String>widen(base(workTree, sha.value()))
+                file -> GitFailure.<GitError, String>widen(base(worktree, sha.value()))
                         .flatMap(base -> rebase(
-                                workTree,
+                                worktree,
                                 interactive(
                                                 INTERACTIVE.append(base),
                                                 sequenceEditor,
@@ -66,8 +66,8 @@ final class CliRebase {
      *
      * @return the command lines that were run
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> onto(Path workTree, Branch.Name onto) {
-        return rebase(workTree, git(REBASE.append("--no-autosquash").append(onto.value())));
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> onto(Path worktree, Branch.Name onto) {
+        return rebase(worktree, git(REBASE.append("--no-autosquash").append(onto.value())));
     }
 
     /**
@@ -79,11 +79,11 @@ final class CliRebase {
      * @param sha the object id of a commit that has exactly one parent
      * @return the command lines that were run
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Path workTree, Sha sha, SquashMode mode) {
-        return GitFailure.<GitError, String>widen(GitProcess.run(workTree, git("rev-parse", sha.value() + "^"))
-                        .flatMap(parent -> base(workTree, parent.stdout().strip())))
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Path worktree, Sha sha, SquashMode mode) {
+        return GitFailure.<GitError, String>widen(GitProcess.run(worktree, git("rev-parse", sha.value() + "^"))
+                        .flatMap(parent -> base(worktree, parent.stdout().strip())))
                 .flatMap(base -> rebase(
-                        workTree,
+                        worktree,
                         interactive(
                                 INTERACTIVE.append("--no-autosquash").append(base),
                                 sequenceEditor(sha, List.of(new Tuple2<>("pick", mode.todoCommand()))),
@@ -99,12 +99,12 @@ final class CliRebase {
      * @param sha the object id of a commit before the last one that is not a merge
      * @return the command lines that were run
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> fixupInto(Path workTree, Sha sha) {
-        return GitFailure.<GitError, String>widen(GitProcess.run(workTree, git("rev-parse", "HEAD"))
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> fixupInto(Path worktree, Sha sha) {
+        return GitFailure.<GitError, String>widen(GitProcess.run(worktree, git("rev-parse", "HEAD"))
                         .map(head -> head.stdout().strip()))
-                .flatMap(head -> GitFailure.<GitError, String>widen(base(workTree, sha.value()))
+                .flatMap(head -> GitFailure.<GitError, String>widen(base(worktree, sha.value()))
                         .flatMap(base -> rebase(
-                                workTree,
+                                worktree,
                                 interactive(
                                         INTERACTIVE.append("--no-autosquash").append(base),
                                         moveUnder(sha, head),
@@ -119,10 +119,10 @@ final class CliRebase {
      * @param sha the object id of a commit that is not a merge
      * @return the command lines that were run
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Path workTree, Sha sha) {
-        return GitFailure.<GitError, String>widen(base(workTree, sha.value()))
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Path worktree, Sha sha) {
+        return GitFailure.<GitError, String>widen(base(worktree, sha.value()))
                 .flatMap(base -> rebase(
-                        workTree,
+                        worktree,
                         interactive(
                                 INTERACTIVE.append("--no-autosquash").append(base),
                                 sequenceEditor(sha, List.of(new Tuple2<>("pick", "drop"))),
@@ -175,16 +175,16 @@ final class CliRebase {
     /**
      * Runs {@code rebase}, and aborts it again when it stopped half-way, other than on conflicts.
      */
-    private static Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(Path workTree, GitCommand rebase) {
-        return Unfinished.runOrUndo(workTree, rebase, left -> Option.when(left.rebasing(), ABORT));
+    private static Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(Path worktree, GitCommand rebase) {
+        return Unfinished.runOrUndo(worktree, rebase, left -> Option.when(left.rebasing(), ABORT));
     }
 
     /**
      * What to rebase onto to rewrite {@code commit}: its parent, or {@code --root} for a root commit.
      */
-    private static Either<GitFailure<ProcessError>, String> base(Path workTree, String commit) {
+    private static Either<GitFailure<ProcessError>, String> base(Path worktree, String commit) {
         // "<sha> <parents...>": only the sha when it is a root commit.
-        return GitProcess.run(workTree, git("rev-list", "--parents", "-n", "1", commit))
+        return GitProcess.run(worktree, git("rev-list", "--parents", "-n", "1", commit))
                 .map(output -> output.stdout().strip().contains(" ") ? commit + "^" : "--root");
     }
 }

@@ -22,27 +22,27 @@ public final class HeadFile {
     private HeadFile() {}
 
     /**
-     * What HEAD of the repository at {@code workTree} points to; none when it cannot be read, or points to
+     * What HEAD of the repository at {@code worktree} points to; none when it cannot be read, or points to
      * something other than a local branch or a commit. The git directory of a linked worktree or a submodule is
      * where its {@code .git} file says.
      */
-    public static Option<Head> read(Path workTree) {
-        return gitDir(workTree)
+    public static Option<Head> read(Path worktree) {
+        return gitDir(worktree)
                 .flatMap(gitDir -> firstLine(gitDir.resolve("HEAD")))
                 .flatMap(HeadFile::parse);
     }
 
     /**
-     * The git directory of the working tree at {@code workTree}: its {@code .git} directory, or where its
+     * The git directory of the working tree at {@code worktree}: its {@code .git} directory, or where its
      * {@code .git} file says, as for a linked worktree or a submodule.
      */
-    static Option<Path> gitDir(Path workTree) {
-        Path dotGit = workTree.resolve(GIT_DIR);
+    static Option<Path> gitDir(Path worktree) {
+        Path dotGit = worktree.resolve(GIT_DIR);
         return Files.isDirectory(dotGit)
                 ? Option.of(dotGit)
                 : firstLine(dotGit)
                         .filter(line -> line.startsWith(GIT_DIR_LINK))
-                        .map(line -> workTree.resolve(
+                        .map(line -> worktree.resolve(
                                 line.substring(GIT_DIR_LINK.length()).strip()));
     }
 

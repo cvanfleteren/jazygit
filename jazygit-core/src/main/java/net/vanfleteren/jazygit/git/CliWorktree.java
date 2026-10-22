@@ -30,12 +30,12 @@ final class CliWorktree {
     private CliWorktree() {}
 
     /**
-     * Runs {@code git worktree list --porcelain -z}: the worktrees, {@code workTree}, the one that is current, first,
+     * Runs {@code git worktree list --porcelain -z}: the worktrees, {@code worktree}, the one that is current, first,
      * then the others as git lists them, the main one first.
      */
-    static Either<ProcessError, List<Worktree>> list(Path workTree) {
+    static Either<ProcessError, List<Worktree>> list(Path worktree) {
         return GitProcess.read(
-                workTree, GitCommand.reading("worktree", "list", "--porcelain", "-z"), raw -> parse(raw, workTree));
+                worktree, GitCommand.reading("worktree", "list", "--porcelain", "-z"), raw -> parse(raw, worktree));
     }
 
     /**
@@ -111,44 +111,44 @@ final class CliWorktree {
     }
 
     /**
-     * Runs {@code git worktree add --quiet <location> <branch>} in {@code workTree}.
+     * Runs {@code git worktree add --quiet <location> <branch>} in {@code worktree}.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> add(
-            Path workTree, Path location, Branch.Name branch) {
+            Path worktree, Path location, Branch.Name branch) {
         return GitProcess.log(
-                workTree,
+                worktree,
                 git(
                         "worktree",
                         "add",
                         "--quiet",
-                        workTree.resolve(location).normalize().toString(),
+                        worktree.resolve(location).normalize().toString(),
                         branch.value()));
     }
 
     /**
-     * Runs {@code git worktree add --quiet --detach <location> <startPoint>} in {@code workTree}: a new worktree
+     * Runs {@code git worktree add --quiet --detach <location> <startPoint>} in {@code worktree}: a new worktree
      * with {@code startPoint} checked out, on no branch.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> addDetached(
-            Path workTree, Path location, String startPoint) {
+            Path worktree, Path location, String startPoint) {
         return GitProcess.log(
-                workTree,
+                worktree,
                 git(
                         "worktree",
                         "add",
                         "--quiet",
                         "--detach",
-                        workTree.resolve(location).normalize().toString(),
+                        worktree.resolve(location).normalize().toString(),
                         startPoint));
     }
 
     /**
-     * Runs {@code git worktree add --quiet [--track] -b <name> <location> <startPoint>} in {@code workTree}: a new
+     * Runs {@code git worktree add --quiet [--track] -b <name> <location> <startPoint>} in {@code worktree}: a new
      * branch, checked out in a new worktree. With {@code track}, the new branch follows {@code startPoint}, a
      * remote-tracking branch. A {@code parent} is recorded as the branch it came from, as a new branch records it.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> addNewBranch(
-            Path workTree,
+            Path worktree,
             Path location,
             Branch.Name name,
             String startPoint,
@@ -156,60 +156,60 @@ final class CliWorktree {
             boolean track) {
         return GitFailure.sequence(
                 () -> GitProcess.log(
-                        workTree,
+                        worktree,
                         git(List.of("worktree", "add", "--quiet")
                                 .appendAll(Option.when(track, "--track"))
                                 .appendAll(List.of(
                                         "-b",
                                         name.value(),
-                                        workTree.resolve(location).normalize().toString(),
+                                        worktree.resolve(location).normalize().toString(),
                                         startPoint)))),
-                () -> parent.map(p -> CliCheckout.recordParent(workTree, name, p))
+                () -> parent.map(p -> CliCheckout.recordParent(worktree, name, p))
                         .getOrElse(GitFailure::nothing));
     }
 
     /**
-     * Runs {@code git worktree remove [--force] <location>} in {@code workTree}.
+     * Runs {@code git worktree remove [--force] <location>} in {@code worktree}.
      *
      * @return the command lines that were run, or why git refused, {@link WorktreeHasChanges} when forcing it
      * would let the removal go through
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> remove(Path workTree, Path location, boolean force) {
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> remove(Path worktree, Path location, boolean force) {
         return GitProcess.log(
-                        workTree,
+                        worktree,
                         git(List.of("worktree", "remove")
                                 .appendAll(Option.when(force, "--force"))
-                                .append(workTree.resolve(location).normalize().toString())))
+                                .append(worktree.resolve(location).normalize().toString())))
                 .mapLeft(failure -> failure.map(CliWorktree::classify));
     }
 
     /**
-     * Runs {@code git worktree prune} in {@code workTree}: forgets the worktrees whose directory is gone.
+     * Runs {@code git worktree prune} in {@code worktree}: forgets the worktrees whose directory is gone.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> prune(Path workTree) {
-        return GitProcess.log(workTree, git("worktree", "prune"));
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> prune(Path worktree) {
+        return GitProcess.log(worktree, git("worktree", "prune"));
     }
 
     /**
-     * Runs {@code git worktree lock <location>}, or {@code unlock} when not {@code lock}, in {@code workTree}.
+     * Runs {@code git worktree lock <location>}, or {@code unlock} when not {@code lock}, in {@code worktree}.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> lock(Path workTree, Path location, boolean lock) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> lock(Path worktree, Path location, boolean lock) {
         return GitProcess.log(
-                workTree,
+                worktree,
                 git(
                         "worktree",
                         lock ? "lock" : "unlock",
-                        workTree.resolve(location).normalize().toString()));
+                        worktree.resolve(location).normalize().toString()));
     }
 
     /**
-     * Runs {@code git worktree lock --reason <reason> <location>} in {@code workTree}, or without a reason when
+     * Runs {@code git worktree lock --reason <reason> <location>} in {@code worktree}, or without a reason when
      * {@code reason} is blank.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> lock(Path workTree, Path location, String reason) {
-        String where = workTree.resolve(location).normalize().toString();
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> lock(Path worktree, Path location, String reason) {
+        String where = worktree.resolve(location).normalize().toString();
         return GitProcess.log(
-                workTree,
+                worktree,
                 reason.isBlank() ? git("worktree", "lock", where) : git("worktree", "lock", "--reason", reason, where));
     }
 

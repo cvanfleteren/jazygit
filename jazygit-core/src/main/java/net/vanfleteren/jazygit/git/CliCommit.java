@@ -23,15 +23,15 @@ final class CliCommit {
     /**
      * {@code git commit -m <summary> [-m <description>]}: commits the index.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> commit(Path workTree, CommitMessage message) {
-        return run(workTree, List.of("commit", "--quiet").appendAll(messageArgs(message)));
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> commit(Path worktree, CommitMessage message) {
+        return run(worktree, List.of("commit", "--quiet").appendAll(messageArgs(message)));
     }
 
     /**
      * {@code git commit --amend --no-edit}: amends the last commit with the index.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> amend(Path workTree) {
-        return run(workTree, List.of("commit", "--quiet", "--amend", "--no-edit"));
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> amend(Path worktree) {
+        return run(worktree, List.of("commit", "--quiet", "--amend", "--no-edit"));
     }
 
     /**
@@ -41,18 +41,18 @@ final class CliCommit {
      *
      * @return the command lines that were run
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> amend(Path workTree, Sha sha) {
-        return GitFailure.<GitError, Option<Sha>>widen(CliLog.resolve(workTree, "HEAD"))
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> amend(Path worktree, Sha sha) {
+        return GitFailure.<GitError, Option<Sha>>widen(CliLog.resolve(worktree, "HEAD"))
                 .flatMap(head -> head.contains(sha)
-                        ? GitFailure.widen(amend(workTree))
+                        ? GitFailure.widen(amend(worktree))
                         : GitFailure.<GitError>sequence(
                                 () -> GitFailure.widen(
-                                        run(workTree, List.of("commit", "--quiet", "--fixup=" + sha.value()))),
-                                () -> CliRebase.fixupInto(workTree, sha)
+                                        run(worktree, List.of("commit", "--quiet", "--fixup=" + sha.value()))),
+                                () -> CliRebase.fixupInto(worktree, sha)
                                         .mapLeft(failure -> failure.error() instanceof GitError.StoppedOnConflicts
                                                 ? failure
                                                 : failure.followedBy(run(
-                                                        workTree, List.of("reset", "--quiet", "--soft", "HEAD^"))))));
+                                                        worktree, List.of("reset", "--quiet", "--soft", "HEAD^"))))));
     }
 
     /**
@@ -60,11 +60,11 @@ final class CliCommit {
      *
      * @return the command lines that were run
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> reword(Path workTree, Sha sha, CommitMessage message) {
-        return GitFailure.<GitError, Option<Sha>>widen(CliLog.resolve(workTree, "HEAD"))
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> reword(Path worktree, Sha sha, CommitMessage message) {
+        return GitFailure.<GitError, Option<Sha>>widen(CliLog.resolve(worktree, "HEAD"))
                 .flatMap(head -> head.contains(sha)
-                        ? GitFailure.widen(rewordHead(workTree, message))
-                        : CliRebase.reword(workTree, sha, message));
+                        ? GitFailure.widen(rewordHead(worktree, message))
+                        : CliRebase.reword(worktree, sha, message));
     }
 
     /**
@@ -73,8 +73,8 @@ final class CliCommit {
      * @param sha the object id of a commit that has exactly one parent
      * @return the command lines that were run
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Path workTree, Sha sha, SquashMode mode) {
-        return CliRebase.squash(workTree, sha, mode);
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Path worktree, Sha sha, SquashMode mode) {
+        return CliRebase.squash(worktree, sha, mode);
     }
 
     /**
@@ -82,9 +82,9 @@ final class CliCommit {
      * message of the last commit, whatever is staged.
      */
     private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> rewordHead(
-            Path workTree, CommitMessage message) {
+            Path worktree, CommitMessage message) {
         return run(
-                workTree,
+                worktree,
                 List.of("commit", "--quiet", "--allow-empty", "--amend", "--only")
                         .appendAll(messageArgs(message)));
     }
@@ -95,7 +95,7 @@ final class CliCommit {
                 : List.of("-m", message.summary());
     }
 
-    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> run(Path workTree, List<String> args) {
-        return GitProcess.log(workTree, git(args));
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> run(Path worktree, List<String> args) {
+        return GitProcess.log(worktree, git(args));
     }
 }

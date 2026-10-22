@@ -21,7 +21,7 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
  */
 public final class CliGitInfoProvider implements GitInfoProvider {
 
-    private final Path workTree;
+    private final Path worktree;
     // Where git keeps the files that tell what the repository is in the middle of, found once.
     private final CliInProgress.Markers markers;
     // Where the files are that tell whether the branches, the stashes or the worktrees changed, found once.
@@ -30,11 +30,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     private final Supplier<Map<String, String>> credentials;
 
     private CliGitInfoProvider(
-            Path workTree,
+            Path worktree,
             CliInProgress.Markers markers,
             Option<CliMetadata.Locations> metadataAt,
             Supplier<Map<String, String>> credentials) {
-        this.workTree = workTree;
+        this.worktree = worktree;
         this.markers = markers;
         this.metadataAt = metadataAt;
         this.credentials = credentials;
@@ -54,14 +54,14 @@ public final class CliGitInfoProvider implements GitInfoProvider {
                                         raw -> Either.right(raw.strip().equals("true")))
                                 .mapLeft(error -> notARepository(error, startDir)))
                         .flatMap(bare -> bare
-                                ? Either.left(new NoWorkTree(startDir))
+                                ? Either.left(new NoWorktree(startDir))
                                 : Either.narrow(GitProcess.read(
                                         startDir,
                                         GitCommand.reading("rev-parse", "--show-toplevel"),
                                         CliGitInfoProvider::path)))
-                        .flatMap(workTree -> Either.narrow(CliInProgress.markers(workTree)
+                        .flatMap(worktree -> Either.narrow(CliInProgress.markers(worktree)
                                 .map(markers -> new CliGitInfoProvider(
-                                        workTree, markers, CliMetadata.locate(workTree), HashMap::empty))));
+                                        worktree, markers, CliMetadata.locate(worktree), HashMap::empty))));
     }
 
     private static Either<UnexpectedOutput, Path> path(String raw) {
@@ -79,22 +79,22 @@ public final class CliGitInfoProvider implements GitInfoProvider {
      * whenever it talks to a remote, for a credential helper that reads them, such as gh's.
      */
     public CliGitInfoProvider withCredentials(Supplier<Map<String, String>> credentials) {
-        return new CliGitInfoProvider(workTree, markers, metadataAt, credentials);
+        return new CliGitInfoProvider(worktree, markers, metadataAt, credentials);
     }
 
     @Override
-    public Path workTree() {
-        return workTree;
+    public Path worktree() {
+        return worktree;
     }
 
     @Override
     public String repositoryName() {
-        return RepositoryIdentity.labelOf(workTree);
+        return RepositoryIdentity.labelOf(worktree);
     }
 
     @Override
     public Either<ProcessError, RepoStatus> status() {
-        return CliStatus.read(workTree, markers);
+        return CliStatus.read(worktree, markers);
     }
 
     @Override
@@ -104,7 +104,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<ProcessError, List<Worktree>> worktrees() {
-        return CliWorktree.list(workTree);
+        return CliWorktree.list(worktree);
     }
 
     @Override
@@ -114,318 +114,318 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktree(Path location, Branch.Name branch) {
-        return CliWorktree.add(workTree, location, branch);
+        return CliWorktree.add(worktree, location, branch);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addDetachedWorktree(
             Path location, String startPoint) {
-        return CliWorktree.addDetached(workTree, location, startPoint);
+        return CliWorktree.addDetached(worktree, location, startPoint);
     }
 
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> removeWorktree(Path location, boolean force) {
-        return CliWorktree.remove(workTree, location, force);
+        return CliWorktree.remove(worktree, location, force);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktreeWithNewBranch(
             Path location, Branch.Name name, String startPoint, Option<Branch.Name> parent, boolean track) {
-        return CliWorktree.addNewBranch(workTree, location, name, startPoint, parent, track);
+        return CliWorktree.addNewBranch(worktree, location, name, startPoint, parent, track);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pruneWorktrees() {
-        return CliWorktree.prune(workTree);
+        return CliWorktree.prune(worktree);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> lockWorktree(Path location, boolean lock) {
-        return CliWorktree.lock(workTree, location, lock);
+        return CliWorktree.lock(worktree, location, lock);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> lockWorktree(Path location, String reason) {
-        return CliWorktree.lock(workTree, location, reason);
+        return CliWorktree.lock(worktree, location, reason);
     }
 
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> edit(List<String> files) {
-        return CliEditor.edit(workTree, files);
+        return CliEditor.edit(worktree, files);
     }
 
     @Override
     public Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
             CommitMessage message) {
-        return CliEditor.editMessage(workTree, message);
+        return CliEditor.editMessage(worktree, message);
     }
 
     @Override
     public Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(String fileName, String text) {
-        return CliEditor.editText(workTree, fileName, text);
+        return CliEditor.editText(worktree, fileName, text);
     }
 
     @Override
     public Either<ProcessError, List<Stash>> stashes() {
-        return CliStash.list(workTree);
+        return CliStash.list(worktree);
     }
 
     @Override
     public Either<ProcessError, DiffText> stashChanges(Sha sha, DiffOptions options) {
-        return CliStash.changes(workTree, sha, options);
+        return CliStash.changes(worktree, sha, options);
     }
 
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Stash stash) {
-        return CliStash.drop(workTree, stash);
+        return CliStash.drop(worktree, stash);
     }
 
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> pop(Stash stash) {
-        return CliStash.pop(workTree, stash);
+        return CliStash.pop(worktree, stash);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> stash(Option<String> message) {
-        return CliStash.push(workTree, message);
+        return CliStash.push(worktree, message);
     }
 
     @Override
     public Either<ProcessError, List<Commit>> commits() {
-        return CliLog.commits(workTree);
+        return CliLog.commits(worktree);
     }
 
     @Override
     public Either<ProcessError, List<Commit>> search(CommitQuery query) {
-        return CliLog.search(workTree, query);
+        return CliLog.search(worktree, query);
     }
 
     @Override
     public Either<ProcessError, AllBranches> allBranches() {
-        return CliBranch.all(workTree);
+        return CliBranch.all(worktree);
     }
 
     @Override
     public Either<GitError, List<Commit>> log(BranchRef branch) {
-        return CliLog.log(workTree, branch);
+        return CliLog.log(worktree, branch);
     }
 
     @Override
     public Either<GitError, Divergence> divergence(BranchRef branch, BranchRef other) {
-        return CliLog.divergence(workTree, branch, other);
+        return CliLog.divergence(worktree, branch, other);
     }
 
     @Override
     public Either<GitError, Option<String>> firstSubject(BranchRef branch, BranchRef base) {
-        return CliLog.firstSubject(workTree, branch, base);
+        return CliLog.firstSubject(worktree, branch, base);
     }
 
     @Override
     public Either<ProcessError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
-        return CliLog.countNotOn(workTree, branch, base, max);
+        return CliLog.countNotOn(worktree, branch, base, max);
     }
 
     @Override
     public Either<GitError, CommitRange> commitRange(Branch.Name branch, Sha oldest, Option<RemoteBranch> upstream) {
-        return CliLog.range(workTree, branch, oldest, upstream);
+        return CliLog.range(worktree, branch, oldest, upstream);
     }
 
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> checkout(Branch.Name branch) {
-        return CliCheckout.checkout(workTree, branch);
+        return CliCheckout.checkout(worktree, branch);
     }
 
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> checkoutWithStash(Branch.Name branch) {
-        return CliCheckout.checkoutWithStash(workTree, branch);
+        return CliCheckout.checkoutWithStash(worktree, branch);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(
             Branch.Name name, String startPoint, Option<Branch.Name> parent) {
-        return CliCheckout.checkoutNewBranch(workTree, name, startPoint, parent);
+        return CliCheckout.checkoutNewBranch(worktree, name, startPoint, parent);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewTrackingBranch(
             Branch.Name name, RemoteBranch upstream) {
-        return CliCheckout.checkoutNewTrackingBranch(workTree, name, upstream);
+        return CliCheckout.checkoutNewTrackingBranch(worktree, name, upstream);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(
             Branch.Name branch, RemoteBranch upstream, PushMode mode) {
-        return CliPush.push(workTree, branch, upstream, mode, credentials.get());
+        return CliPush.push(worktree, branch, upstream, mode, credentials.get());
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(
             Branch.Name branch, RemoteBranch upstream) {
-        return CliPush.pushSettingUpstream(workTree, branch, upstream, credentials.get());
+        return CliPush.pushSettingUpstream(worktree, branch, upstream, credentials.get());
     }
 
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> pull() {
-        return CliPull.pull(workTree, credentials.get());
+        return CliPull.pull(worktree, credentials.get());
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(
             Branch.Name branch, RemoteBranch upstream) {
-        return CliFetch.fastForward(workTree, branch, upstream, credentials.get());
+        return CliFetch.fastForward(worktree, branch, upstream, credentials.get());
     }
 
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> merge(Branch.Name branch, MergeMode mode) {
-        return CliMerge.merge(workTree, branch, mode);
+        return CliMerge.merge(worktree, branch, mode);
     }
 
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> cherryPick(Sha sha) {
-        return CliCherryPick.cherryPick(workTree, sha);
+        return CliCherryPick.cherryPick(worktree, sha);
     }
 
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> revert(Commit commit) {
-        return CliRevert.revert(workTree, commit);
+        return CliRevert.revert(worktree, commit);
     }
 
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> continueOrAbort(
             InProgress inProgress, InProgressAction action) {
-        return CliInProgress.continueOrAbort(workTree, inProgress, action);
+        return CliInProgress.continueOrAbort(worktree, inProgress, action);
     }
 
     @Override
     public Either<ProcessError, List<String>> remotes() {
-        return CliRemote.remotes(workTree);
+        return CliRemote.remotes(worktree);
     }
 
     @Override
     public Either<ProcessError, Map<String, String>> remoteUrls() {
-        return CliRemote.remoteUrls(workTree);
+        return CliRemote.remoteUrls(worktree);
     }
 
     @Override
     public Either<ProcessError, Option<String>> localConfig(String key) {
-        return CliConfig.get(workTree, key);
+        return CliConfig.get(worktree, key);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> setLocalConfig(String key, Option<String> value) {
-        return CliConfig.set(workTree, key, value);
+        return CliConfig.set(worktree, key, value);
     }
 
     @Override
     public Either<ProcessError, Option<Branch.Name>> parentBranch(Branch.Name branch) {
-        return CliConfig.parent(workTree, branch);
+        return CliConfig.parent(worktree, branch);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(String remote) {
-        return CliFetch.fetch(workTree, remote, Option.of(System.getenv("GIT_SSH_COMMAND")), credentials.get());
+        return CliFetch.fetch(worktree, remote, Option.of(System.getenv("GIT_SSH_COMMAND")), credentials.get());
     }
 
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(Branch.Name onto) {
-        return CliRebase.onto(workTree, onto);
+        return CliRebase.onto(worktree, onto);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(
             Branch.Name name, RemoteBranch remote, DeleteScope scope) {
-        return CliBranch.delete(workTree, name, remote, scope, credentials.get());
+        return CliBranch.delete(worktree, name, remote, scope, credentials.get());
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(Branch.Name name) {
-        return CliBranch.deleteLocal(workTree, name);
+        return CliBranch.deleteLocal(worktree, name);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> renameBranch(Branch.Name name, Branch.Name newName) {
-        return CliBranch.rename(workTree, name, newName);
+        return CliBranch.rename(worktree, name, newName);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemoteBranch(RemoteBranch remote) {
-        return CliBranch.deleteRemote(workTree, remote, credentials.get());
+        return CliBranch.deleteRemote(worktree, remote, credentials.get());
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> stage(List<String> paths) {
-        return CliIndex.add(workTree, paths);
+        return CliIndex.add(worktree, paths);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> unstageNew(List<String> paths) {
-        return CliIndex.removeCached(workTree, paths);
+        return CliIndex.removeCached(worktree, paths);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> unstage(List<String> paths) {
-        return CliIndex.reset(workTree, paths);
+        return CliIndex.reset(worktree, paths);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> commit(CommitMessage message) {
-        return CliCommit.commit(workTree, message);
+        return CliCommit.commit(worktree, message);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> amendLastCommit() {
-        return CliCommit.amend(workTree);
+        return CliCommit.amend(worktree);
     }
 
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> amendCommit(Sha sha) {
-        return CliCommit.amend(workTree, sha);
+        return CliCommit.amend(worktree, sha);
     }
 
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message) {
-        return CliCommit.reword(workTree, sha, message);
+        return CliCommit.reword(worktree, sha, message);
     }
 
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode) {
-        return CliCommit.squash(workTree, sha, mode);
+        return CliCommit.squash(worktree, sha, mode);
     }
 
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> dropCommit(Sha sha) {
-        return CliRebase.drop(workTree, sha);
+        return CliRebase.drop(worktree, sha);
     }
 
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommits(
             Branch.Name from, Sha oldest, Branch.Name to, Option<BranchRef> onto) {
-        return CliMoveCommits.move(workTree, from, oldest, to, onto);
+        return CliMoveCommits.move(worktree, from, oldest, to, onto);
     }
 
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommitsTo(
             Branch.Name from, Sha oldest, Branch.Name to) {
-        return CliMoveCommits.moveTo(workTree, from, oldest, to);
+        return CliMoveCommits.moveTo(worktree, from, oldest, to);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> reset(ResetTarget target, ResetMode mode) {
-        return CliReset.reset(workTree, target, mode);
+        return CliReset.reset(worktree, target, mode);
     }
 
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> discard(DiscardPlan plan) {
-        return CliIndex.discard(workTree, plan);
+        return CliIndex.discard(worktree, plan);
     }
 
     @Override
     public Either<ProcessError, DiffText> commitChanges(Sha sha, DiffOptions options) {
-        return CliShow.changes(workTree, sha, options);
+        return CliShow.changes(worktree, sha, options);
     }
 
     @Override
     public Either<GitError, Diffs> diff(List<FileEntry> files, DiffOptions options) {
-        return CliDiff.diff(workTree, files, options);
+        return CliDiff.diff(worktree, files, options);
     }
 }

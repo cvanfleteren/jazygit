@@ -29,9 +29,9 @@ final class CliFetch {
      * @param credentials environment variables that tell the credential helper which account to use
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(
-            Path workTree, String remote, Option<String> environment, Map<String, String> credentials) {
-        return CliRemote.toRemote(workTree, git("fetch", "--quiet", "--prune", remote), environment, credentials)
-                .flatMap(fetch -> GitProcess.log(workTree, fetch));
+            Path worktree, String remote, Option<String> environment, Map<String, String> credentials) {
+        return CliRemote.toRemote(worktree, git("fetch", "--quiet", "--prune", remote), environment, credentials)
+                .flatMap(fetch -> GitProcess.log(worktree, fetch));
     }
 
     /**
@@ -39,9 +39,9 @@ final class CliFetch {
      * is not checked out, to {@code upstream}, the branch it tracks. Git refuses when that is not a fast-forward.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(
-            Path workTree, Branch.Name name, RemoteBranch upstream, Map<String, String> credentials) {
+            Path worktree, Branch.Name name, RemoteBranch upstream, Map<String, String> credentials) {
         return CliRemote.run(
-                workTree,
+                worktree,
                 git("fetch", upstream.remote(), Refs.head(upstream.branch()) + ":" + Refs.head(name)),
                 credentials);
     }

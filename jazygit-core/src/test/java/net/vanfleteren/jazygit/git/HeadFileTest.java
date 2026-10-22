@@ -21,10 +21,10 @@ class HeadFileTest {
     }
 
     private Path repo(String head) throws Exception {
-        Path workTree = Files.createDirectories(dir.resolve("repo"));
-        Files.createDirectories(workTree.resolve(".git"));
-        Files.writeString(workTree.resolve(".git/HEAD"), head);
-        return workTree;
+        Path worktree = Files.createDirectories(dir.resolve("repo"));
+        Files.createDirectories(worktree.resolve(".git"));
+        Files.writeString(worktree.resolve(".git/HEAD"), head);
+        return worktree;
     }
 
     @Test
@@ -43,20 +43,20 @@ class HeadFileTest {
     void followsTheGitFileOfALinkedWorktree() throws Exception {
         Path gitDir = Files.createDirectories(dir.resolve("main/.git/worktrees/linked"));
         Files.writeString(gitDir.resolve("HEAD"), "ref: refs/heads/linked\n");
-        Path workTree = Files.createDirectories(dir.resolve("linked"));
-        Files.writeString(workTree.resolve(".git"), "gitdir: " + gitDir + "\n");
+        Path worktree = Files.createDirectories(dir.resolve("linked"));
+        Files.writeString(worktree.resolve(".git"), "gitdir: " + gitDir + "\n");
 
-        assertEquals(onBranch("linked"), HeadFile.read(workTree));
+        assertEquals(onBranch("linked"), HeadFile.read(worktree));
     }
 
     @Test
     void followsARelativeGitFile() throws Exception {
         Path gitDir = Files.createDirectories(dir.resolve("main/.git/modules/sub"));
         Files.writeString(gitDir.resolve("HEAD"), "ref: refs/heads/main\n");
-        Path workTree = Files.createDirectories(dir.resolve("main/sub"));
-        Files.writeString(workTree.resolve(".git"), "gitdir: ../.git/modules/sub\n");
+        Path worktree = Files.createDirectories(dir.resolve("main/sub"));
+        Files.writeString(worktree.resolve(".git"), "gitdir: ../.git/modules/sub\n");
 
-        assertEquals(onBranch("main"), HeadFile.read(workTree));
+        assertEquals(onBranch("main"), HeadFile.read(worktree));
     }
 
     @Test

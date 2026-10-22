@@ -40,9 +40,9 @@ final class CliStash {
      * built. Without a stash, there is no reflog, which {@code --ignore-missing} makes an empty list rather than an
      * error.
      */
-    static Either<ProcessError, List<Stash>> list(Path workTree) {
+    static Either<ProcessError, List<Stash>> list(Path worktree) {
         return GitProcess.read(
-                workTree,
+                worktree,
                 GitCommand.reading(
                         "log",
                         "--walk-reflogs",
@@ -81,9 +81,9 @@ final class CliStash {
      * summary line, a blank line and the diff, read with {@code options}. Its untracked files are in it, whatever
      * the user's {@code stash.show*} settings say. Long output is cut off.
      */
-    static Either<ProcessError, DiffText> changes(Path workTree, Sha stash, DiffOptions options) {
+    static Either<ProcessError, DiffText> changes(Path worktree, Sha stash, DiffOptions options) {
         return GitProcess.read(
-                workTree,
+                worktree,
                 GitCommand.reading(List.of(
                                 "stash",
                                 "show",
@@ -102,15 +102,15 @@ final class CliStash {
      * {@code git stash pop <ref>} as {@link #popKeepingStaged} does. Git refuses e.g. when local changes would be
      * overwritten, or when the stash conflicts, which keeps it.
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> pop(Path workTree, Stash stash) {
-        return onStash(workTree, stash, ref -> popKeepingStaged(workTree, ref));
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> pop(Path worktree, Stash stash) {
+        return onStash(worktree, stash, ref -> popKeepingStaged(worktree, ref));
     }
 
     /**
      * Runs {@code git stash drop <ref>} for {@code stash}, under the name it has now.
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Path workTree, Stash stash) {
-        return onStash(workTree, stash, ref -> GitProcess.log(workTree, git("stash", "drop", ref)));
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Path worktree, Stash stash) {
+        return onStash(worktree, stash, ref -> GitProcess.log(worktree, git("stash", "drop", ref)));
     }
 
     /**
@@ -118,8 +118,8 @@ final class CliStash {
      * and its old name is another stash now. A stash that is gone is a {@link StashGone}.
      */
     private static Either<GitFailure<GitError>, List<ExecutedCommand>> onStash(
-            Path workTree, Stash stash, Function<String, Either<GitFailure<ProcessError>, List<ExecutedCommand>>> run) {
-        return list(workTree)
+            Path worktree, Stash stash, Function<String, Either<GitFailure<ProcessError>, List<ExecutedCommand>>> run) {
+        return list(worktree)
                 .<GitFailure<GitError>>mapLeft(error -> new GitFailure<>(error, List.empty()))
                 .flatMap(stashes -> stashes.find(listed -> listed.sha().equals(stash.sha()))
                         .map(current -> GitFailure.<GitError, List<ExecutedCommand>>widen(run.apply(current.ref())))
@@ -131,9 +131,9 @@ final class CliStash {
      * unstaged, and the untracked files. Without a message, git names the stash after the branch and its
      * commit, e.g. {@code WIP on main: abc1234 Add widget}.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Path workTree, Option<String> message) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Path worktree, Option<String> message) {
         return GitProcess.log(
-                workTree,
+                worktree,
                 git(List.of("stash", "push", "--include-untracked")
                         .appendAll(message.toList().flatMap(text -> List.of("--message", text)))));
     }
@@ -141,20 +141,20 @@ final class CliStash {
     /**
      * Runs {@code git stash push --quiet}: stashes the changes to tracked files, to take them elsewhere.
      */
-    static Either<GitFailure<ProcessError>, Stashed> pushQuietly(Path workTree) {
+    static Either<GitFailure<ProcessError>, Stashed> pushQuietly(Path worktree) {
         // Git succeeds without stashing when there is nothing to stash; then there is nothing to pop
         // either, and popping would apply an older, unrelated stash. Only the push is logged.
-        return count(workTree)
-                .flatMap(before -> GitProcess.log(workTree, git("stash", "push", "--quiet"))
-                        .flatMap(pushed -> count(workTree).map(after -> new Stashed(after > before, pushed))));
+        return count(worktree)
+                .flatMap(before -> GitProcess.log(worktree, git("stash", "push", "--quiet"))
+                        .flatMap(pushed -> count(worktree).map(after -> new Stashed(after > before, pushed))));
     }
 
     /**
      * Runs {@code git stash pop --index --quiet}: brings back what {@link #pushQuietly} stashed, as
      * {@link #popKeepingStaged} does.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> popQuietly(Path workTree) {
-        return popKeepingStaged(workTree, "--quiet");
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> popQuietly(Path worktree) {
+        return popKeepingStaged(worktree, "--quiet");
     }
 
     /**
@@ -163,17 +163,17 @@ final class CliStash {
      * instead, with {@code git stash pop <arg>}. With something staged already, git refuses {@code --index} and
      * unstages it, where a pop without it keeps it staged: then the stash is popped unstaged straight away.
      */
-    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> popKeepingStaged(Path workTree, String arg) {
-        return nothingStaged(workTree)
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> popKeepingStaged(Path worktree, String arg) {
+        return nothingStaged(worktree)
                 .flatMap(clean ->
-                        clean ? popWithIndex(workTree, arg) : GitProcess.log(workTree, git("stash", "pop", arg)));
+                        clean ? popWithIndex(worktree, arg) : GitProcess.log(worktree, git("stash", "pop", arg)));
     }
 
-    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> popWithIndex(Path workTree, String arg) {
-        return GitProcess.log(workTree, git("stash", "pop", "--index", arg))
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> popWithIndex(Path worktree, String arg) {
+        return GitProcess.log(worktree, git("stash", "pop", "--index", arg))
                 .fold(
                         failure -> failure.error() instanceof CommandFailed failed && failed.says(WITHOUT_INDEX)
-                                ? GitProcess.log(workTree, git("stash", "pop", arg))
+                                ? GitProcess.log(worktree, git("stash", "pop", arg))
                                         .map(failure.commands()::appendAll)
                                         .mapLeft(again -> again.after(failure.commands()))
                                 : Either.left(failure),
@@ -183,16 +183,16 @@ final class CliStash {
     /**
      * Whether the index is the same as {@code HEAD}: nothing is staged. Only asked, so not logged.
      */
-    private static Either<GitFailure<ProcessError>, Boolean> nothingStaged(Path workTree) {
-        return GitProcess.ask(workTree, git("diff", "--cached", "--quiet", "--no-ext-diff"))
+    private static Either<GitFailure<ProcessError>, Boolean> nothingStaged(Path worktree) {
+        return GitProcess.ask(worktree, git("diff", "--cached", "--quiet", "--no-ext-diff"))
                 .map(Option::isDefined);
     }
 
     /**
      * How many stashes there are. Only asked, so not logged.
      */
-    private static Either<GitFailure<ProcessError>, Integer> count(Path workTree) {
-        return list(workTree).map(List::size).mapLeft(error -> new GitFailure<>(error, List.empty()));
+    private static Either<GitFailure<ProcessError>, Integer> count(Path worktree) {
+        return list(worktree).map(List::size).mapLeft(error -> new GitFailure<>(error, List.empty()));
     }
 
     /**

@@ -19,9 +19,9 @@ final class CliShow {
      * The changed files with their change counts, a summary line, a blank line and the diff, in one
      * git call however many files the commit touches, read with {@code options}. Long output is cut off.
      */
-    static Either<ProcessError, DiffText> changes(Path workTree, Sha sha, DiffOptions options) {
+    static Either<ProcessError, DiffText> changes(Path worktree, Sha sha, DiffOptions options) {
         return GitProcess.read(
-                workTree,
+                worktree,
                 GitCommand.reading(List.of(
                                 "show",
                                 "--format=",

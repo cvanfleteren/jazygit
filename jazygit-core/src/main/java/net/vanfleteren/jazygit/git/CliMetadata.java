@@ -40,11 +40,11 @@ final class CliMetadata {
     private CliMetadata() {}
 
     /**
-     * Where the git directories of the working tree at {@code workTree} are; none when they cannot be found.
+     * Where the git directories of the working tree at {@code worktree} are; none when they cannot be found.
      */
-    static Option<Locations> locate(Path workTree) {
-        return HeadFile.gitDir(workTree)
-                .flatMap(gitDir -> RepositoryIdentity.read(workTree)
+    static Option<Locations> locate(Path worktree) {
+        return HeadFile.gitDir(worktree)
+                .flatMap(gitDir -> RepositoryIdentity.read(worktree)
                         .map(identity -> new Locations(gitDir.toAbsolutePath(), identity.commonDir())));
     }
 

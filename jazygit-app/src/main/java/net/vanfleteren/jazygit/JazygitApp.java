@@ -175,11 +175,11 @@ public class JazygitApp extends ToolkitApp {
             RecentRepositories recent,
             Repositories repositories,
             Terminal terminal) {
-        GhToken token = new GhToken(git.workTree(), settings.gh(), () -> GitHubAccount.configured(git));
+        GhToken token = new GhToken(git.worktree(), settings.gh(), () -> GitHubAccount.configured(git));
         // Without the token, git still talks to the remotes, as the credential helper's own account.
         return new Env(
                 git.withCredentials(() -> token.environment().getOrElse(HashMap.empty())),
-                new CliGitHub(git.workTree(), settings.gh(), token),
+                new CliGitHub(git.worktree(), settings.gh(), token),
                 store,
                 recent,
                 repositories,
@@ -252,7 +252,7 @@ public class JazygitApp extends ToolkitApp {
                                     SettingsPaths.stateFile(),
                                     directory ->
                                             RepositoryIdentity.read(directory).map(RepositoryIdentity::commonDir));
-                            recent.opened(provider.workTree()).onFailure(JazygitApp::logBug);
+                            recent.opened(provider.worktree()).onFailure(JazygitApp::logBug);
                             SettingsStore settings = new SettingsFile(SettingsPaths.configFile());
                             SettingsStore.Loaded loaded = settings.load();
                             Env env = env(
@@ -495,7 +495,7 @@ public class JazygitApp extends ToolkitApp {
     private Either<GitError, Path> switchTo(Path directory, Landing landing) {
         return CliGitInfoProvider.open(directory)
                 .peek(provider -> runner().runOnRenderThread(() -> show(provider, landing)))
-                .map(CliGitInfoProvider::workTree);
+                .map(CliGitInfoProvider::worktree);
     }
 
     /**

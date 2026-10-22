@@ -651,7 +651,7 @@ Every `Cli*` class runs git through `GitProcess`; only a few of those arrows are
   - **Opening:** `CliGitInfoProvider.open` asks `git rev-parse` whether the directory is in a repository,
     whether that is bare, where its working tree is, and where git keeps the files that tell what it is in the
     middle of.
-- **`GitProcess.run(workTree, GitCommand)`** is the only place that starts git, through `process.Exec`:
+- **`GitProcess.run(worktree, GitCommand)`** is the only place that starts git, through `process.Exec`:
   - A `GitCommand` is data: the arguments, the environment and a timeout.
   - Every command runs with `LC_ALL=C` (git's messages are matched in English), `GIT_TERMINAL_PROMPT=0`
     (fail rather than wait for credentials) and `GIT_EDITOR=false` (fail rather than open an editor on the
@@ -850,7 +850,7 @@ sequenceDiagram
    where `Reword.perform` is `git.reword(sha, message)`.
 
 6. **The git work**, in `CliRebase.rewordAny`.
-   - `CliLog.resolve(workTree, "HEAD")` runs `git rev-parse --verify --quiet HEAD^{commit}` to find out
+   - `CliLog.resolve(worktree, "HEAD")` runs `git rev-parse --verify --quiet HEAD^{commit}` to find out
      whether the commit is `HEAD`. If that fails, it's a `ProcessError`.
    - **The commit is `HEAD`:** `CliIndex.reword` runs `git commit --allow-empty --amend --only -m … [-m …]`.
      Its `ProcessError` is widened to a `GitError`.

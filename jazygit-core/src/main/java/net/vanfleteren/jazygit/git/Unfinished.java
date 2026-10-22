@@ -22,12 +22,12 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 record Unfinished(Option<InProgress> inProgress, int conflicts) {
 
     /**
-     * Reads what the repository in {@code workTree} is in the middle of. Only asked, so not logged.
+     * Reads what the repository in {@code worktree} is in the middle of. Only asked, so not logged.
      */
-    static Either<ProcessError, Unfinished> read(Path workTree) {
-        return CliInProgress.read(workTree)
+    static Either<ProcessError, Unfinished> read(Path worktree) {
+        return CliInProgress.read(worktree)
                 .flatMap(inProgress ->
-                        CliMerge.conflicts(workTree).map(conflicts -> new Unfinished(inProgress, conflicts)));
+                        CliMerge.conflicts(worktree).map(conflicts -> new Unfinished(inProgress, conflicts)));
     }
 
     /**
@@ -66,24 +66,24 @@ record Unfinished(Option<InProgress> inProgress, int conflicts) {
      * did, or why what was left could not be found out.
      */
     static Either<GitFailure<GitError>, List<ExecutedCommand>> runOrUndo(
-            Path workTree, GitCommand command, Function<Unfinished, Option<GitCommand>> undo) {
-        return read(workTree)
+            Path worktree, GitCommand command, Function<Unfinished, Option<GitCommand>> undo) {
+        return read(worktree)
                 .<GitFailure<GitError>>mapLeft(error -> new GitFailure<>(error, List.empty()))
-                .flatMap(before -> GitProcess.log(workTree, command)
+                .flatMap(before -> GitProcess.log(worktree, command)
                         .mapLeft(failure -> before.any()
                                 ? GitFailure.widen(failure)
-                                : uninterrupted(() -> read(workTree)
+                                : uninterrupted(() -> read(worktree)
                                         .<GitFailure<GitError>>fold(
                                                 error -> new GitFailure<>(
                                                         failure.error(), failure.commands(), Option.of(error)),
-                                                after -> left(workTree, failure, after, undo)))));
+                                                after -> left(worktree, failure, after, undo)))));
     }
 
     /**
      * Runs {@code command}, and leaves it as it stopped when it stops on conflicts; see {@link #runOrUndo}.
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> runOrStop(Path workTree, GitCommand command) {
-        return runOrUndo(workTree, command, after -> Option.none());
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> runOrStop(Path worktree, GitCommand command) {
+        return runOrUndo(worktree, command, after -> Option.none());
     }
 
     /**
@@ -91,14 +91,14 @@ record Unfinished(Option<InProgress> inProgress, int conflicts) {
      * followed by its {@code undo}.
      */
     private static GitFailure<GitError> left(
-            Path workTree,
+            Path worktree,
             GitFailure<ProcessError> failure,
             Unfinished after,
             Function<Unfinished, Option<GitCommand>> undo) {
         return after.conflicted()
                 ? after.stopped(failure)
                 : GitFailure.widen(undo.apply(after)
-                        .map(cleanup -> failure.followedBy(GitProcess.log(workTree, cleanup)))
+                        .map(cleanup -> failure.followedBy(GitProcess.log(worktree, cleanup)))
                         .getOrElse(failure));
     }
 
@@ -106,8 +106,8 @@ record Unfinished(Option<InProgress> inProgress, int conflicts) {
      * {@code failure} as the stop on conflicts it is, when it got past {@code from} and stopped on the conflicts
      * of a next step; else as it is.
      */
-    static GitFailure<GitError> stoppedAgain(Path workTree, InProgress from, GitFailure<ProcessError> failure) {
-        return read(workTree)
+    static GitFailure<GitError> stoppedAgain(Path worktree, InProgress from, GitFailure<ProcessError> failure) {
+        return read(worktree)
                 .toOption()
                 .filter(after -> after.conflicted() && after.inProgress().exists(now -> !now.equals(from)))
                 .map(after -> after.stopped(failure))

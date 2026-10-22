@@ -129,13 +129,13 @@ public final class ErrorText {
     public static String of(GitError error) {
         return switch (error) {
             case GitError.GitUnavailable(var cause) -> Messages.get("git.notInstalled");
-            case GitError.TimedOut(String operation, var workTree) -> Messages.get("git.timedOut", operation, workTree);
+            case GitError.TimedOut(String operation, var worktree) -> Messages.get("git.timedOut", operation, worktree);
             case GitError.Interrupted(String operation) -> Messages.get("git.interrupted", operation);
             case GitError.CommandFailed(var explanation, int exitCode, var output) ->
                 explanation.getOrElse(() -> Messages.get("git.exitedWithCode", String.valueOf(exitCode)));
             case GitError.UnexpectedOutput(String output) -> Messages.get("git.unexpectedOutput", output);
             case GitError.NotARepository(var directory) -> Messages.get("git.notRepository", directory);
-            case GitError.NoWorkTree(var directory) -> Messages.get("git.noWorkTree", directory);
+            case GitError.NoWorktree(var directory) -> Messages.get("git.noWorkTree", directory);
             case GitError.UnknownBranch(BranchRef branch) -> Messages.get("git.unknownBranch", branch.name());
             case GitError.LocalChanges(String explanation) -> explanation;
             case GitError.WorktreeHasChanges(String explanation) -> explanation;

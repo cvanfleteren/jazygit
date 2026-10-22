@@ -31,7 +31,7 @@ public interface GitInfoProvider {
     /**
      * The root of the working tree of the repository.
      */
-    Path workTree();
+    Path worktree();
 
     // What git status says about the working tree and the index.
     Either<ProcessError, RepoStatus> status();

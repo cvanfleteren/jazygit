@@ -24,9 +24,9 @@ final class CliPush {
      * Pushes {@code name} to {@code upstream}, the branch it tracks.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(
-            Path workTree, Branch.Name name, RemoteBranch upstream, PushMode mode, Map<String, String> credentials) {
+            Path worktree, Branch.Name name, RemoteBranch upstream, PushMode mode, Map<String, String> credentials) {
         return CliRemote.run(
-                workTree,
+                worktree,
                 git(List.of("push")
                         .appendAll(mode == PushMode.FORCE_WITH_LEASE ? List.of("--force-with-lease") : List.empty())
                         .append(upstream.remote())
@@ -39,9 +39,9 @@ final class CliPush {
      * which it then tracks. Git only sets the upstream when the push succeeds.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(
-            Path workTree, Branch.Name name, RemoteBranch upstream, Map<String, String> credentials) {
+            Path worktree, Branch.Name name, RemoteBranch upstream, Map<String, String> credentials) {
         return CliRemote.run(
-                workTree, git("push", "--set-upstream", upstream.remote(), refspec(name, upstream)), credentials);
+                worktree, git("push", "--set-upstream", upstream.remote(), refspec(name, upstream)), credentials);
     }
 
     /**

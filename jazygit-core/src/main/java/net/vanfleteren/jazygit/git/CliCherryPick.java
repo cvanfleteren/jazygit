@@ -27,8 +27,8 @@ final class CliCherryPick {
      *
      * @return the command lines that were run
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> cherryPick(Path workTree, Sha sha) {
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> cherryPick(Path worktree, Sha sha) {
         return Unfinished.runOrUndo(
-                workTree, git("cherry-pick", sha.value()), left -> Option.when(left.picking(), ABORT));
+                worktree, git("cherry-pick", sha.value()), left -> Option.when(left.picking(), ABORT));
     }
 }

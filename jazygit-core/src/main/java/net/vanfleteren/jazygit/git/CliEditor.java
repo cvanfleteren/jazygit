@@ -32,15 +32,15 @@ final class CliEditor {
     private CliEditor() {}
 
     /**
-     * Opens {@code files}, relative to {@code workTree}, in git's editor, and waits until it is closed. That editor
+     * Opens {@code files}, relative to {@code worktree}, in git's editor, and waits until it is closed. That editor
      * is the one {@code git var GIT_EDITOR} names: {@code $GIT_EDITOR}, {@code core.editor}, {@code $VISUAL},
      * {@code $EDITOR}, else {@code vi}. It runs on the terminal, which the caller must have handed over.
      *
      * <p>Fails with a {@link EditorNotStarted} or {@link EditorFailed}, or a {@link GitError.ProcessError} when git
      * names no editor, as it does on a dumb terminal without {@code $EDITOR}.
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> edit(Path workTree, List<String> files) {
-        return editor(workTree).flatMap(editor -> open(workTree, editor, files));
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> edit(Path worktree, List<String> files) {
+        return editor(worktree).flatMap(editor -> open(worktree, editor, files));
     }
 
     /**
@@ -51,16 +51,16 @@ final class CliEditor {
      * <p>Fails as {@link #editText} does.
      */
     static Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
-            Path workTree, CommitMessage message) {
-        return editor(workTree).flatMap(editor -> editMessage(workTree, editor, message));
+            Path worktree, CommitMessage message) {
+        return editor(worktree).flatMap(editor -> editMessage(worktree, editor, message));
     }
 
     /**
      * Opens {@code message} in {@code editor}, as git names it, as {@link #editMessage(Path, CommitMessage)} does.
      */
     static Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
-            Path workTree, String editor, CommitMessage message) {
-        return editText(workTree, editor, MESSAGE_FILE, message.text())
+            Path worktree, String editor, CommitMessage message) {
+        return editText(worktree, editor, MESSAGE_FILE, message.text())
                 .map(edited -> edited.map1(CommitMessage::parse));
     }
 
@@ -72,15 +72,15 @@ final class CliEditor {
      * <p>Fails as {@link #edit} does, or with a {@link TempFileFailed} when the file cannot be written or read.
      */
     static Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(
-            Path workTree, String fileName, String text) {
-        return editor(workTree).flatMap(editor -> editText(workTree, editor, fileName, text));
+            Path worktree, String fileName, String text) {
+        return editor(worktree).flatMap(editor -> editText(worktree, editor, fileName, text));
     }
 
     /**
      * Opens {@code text} in {@code editor}, as git names it, as {@link #editText(Path, String, String)} does.
      */
     static Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(
-            Path workTree, String editor, String fileName, String text) {
+            Path worktree, String editor, String fileName, String text) {
         return Try.of(() -> Files.createTempDirectory("jazygit"))
                 .toEither()
                 .<GitFailure<GitError>>mapLeft(CliEditor::tempFileFailed)
@@ -90,7 +90,7 @@ final class CliEditor {
                                     () -> Files.writeString(file, text))
                             .toEither()
                             .<GitFailure<GitError>>mapLeft(CliEditor::tempFileFailed)
-                            .flatMap(written -> open(workTree, editor, List.of(file.toString())))
+                            .flatMap(written -> open(worktree, editor, List.of(file.toString())))
                             .flatMap(commands -> Try.of(() -> Files.readString(file))
                                     .toEither()
                                     .<GitFailure<GitError>>mapLeft(
@@ -111,17 +111,17 @@ final class CliEditor {
      * The editor git uses: {@code git var GIT_EDITOR}, as the user's environment has it rather than as jazygit sets
      * it for git's own commands.
      */
-    private static Either<GitFailure<GitError>, String> editor(Path workTree) {
+    private static Either<GitFailure<GitError>, String> editor(Path worktree) {
         GitCommand editorCommand = GitCommand.reading("var", "GIT_EDITOR").withInheritedEnvironment("GIT_EDITOR");
-        return GitProcess.read(workTree, editorCommand, CliEditor::parseEditor)
+        return GitProcess.read(worktree, editorCommand, CliEditor::parseEditor)
                 .mapLeft(error -> new GitFailure<>(error, List.of(editorCommand.executed())));
     }
 
     /**
      * Opens {@code files} in {@code editor}, as git names it, and waits until it is closed.
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> open(Path workTree, String editor, List<String> files) {
-        return Exec.interactive(workTree, commandLine(editor, files))
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> open(Path worktree, String editor, List<String> files) {
+        return Exec.interactive(worktree, commandLine(editor, files))
                 .<GitFailure<GitError>>mapLeft(failure -> new GitFailure<>(error(editor, failure), List.empty()))
                 .map(List::of);
     }

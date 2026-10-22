@@ -26,14 +26,14 @@ final class CliCheckout {
     private CliCheckout() {}
 
     /**
-     * Runs {@code git checkout <branch>} in {@code workTree}.
+     * Runs {@code git checkout <branch>} in {@code worktree}.
      *
      * @return the command lines that were run, or why git refused, {@link LocalChanges} when stashing
      * the uncommitted changes would let the checkout go through
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> checkout(Path workTree, Branch.Name branch) {
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> checkout(Path worktree, Branch.Name branch) {
         // A trailing "--" keeps git from treating branch names as paths.
-        return GitProcess.log(workTree, git("checkout", "--quiet", branch.value(), "--"))
+        return GitProcess.log(worktree, git("checkout", "--quiet", branch.value(), "--"))
                 .mapLeft(failure -> failure.map(CliCheckout::classify));
     }
 
@@ -49,33 +49,33 @@ final class CliCheckout {
      * this method itself; only a conflict while popping on the new branch leaves them in the stash,
      * which is a {@link StashNotRestored}.
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> checkoutWithStash(Path workTree, Branch.Name branch) {
-        return GitFailure.<GitError, CliStash.Stashed>widen(CliStash.pushQuietly(workTree))
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> checkoutWithStash(Path worktree, Branch.Name branch) {
+        return GitFailure.<GitError, CliStash.Stashed>widen(CliStash.pushQuietly(worktree))
                 .flatMap(stashed -> GitFailure.sequence(
                         () -> Either.right(stashed.commands()),
-                        () -> GitFailure.<GitError, List<ExecutedCommand>>widen(checkout(workTree, branch))
+                        () -> GitFailure.<GitError, List<ExecutedCommand>>widen(checkout(worktree, branch))
                                 .mapLeft(failure ->
-                                        stashed.any() ? failure.followedBy(CliStash.popQuietly(workTree)) : failure),
-                        () -> stashed.any() ? restore(workTree) : GitFailure.nothing()));
+                                        stashed.any() ? failure.followedBy(CliStash.popQuietly(worktree)) : failure),
+                        () -> stashed.any() ? restore(worktree) : GitFailure.nothing()));
     }
 
     /**
      * Pops the changes that were stashed for the checkout.
      */
-    private static Either<GitFailure<GitError>, List<ExecutedCommand>> restore(Path workTree) {
-        return CliStash.popQuietly(workTree).mapLeft(failure -> failure.map(StashNotRestored::new));
+    private static Either<GitFailure<GitError>, List<ExecutedCommand>> restore(Path worktree) {
+        return CliStash.popQuietly(worktree).mapLeft(failure -> failure.map(StashNotRestored::new));
     }
 
     /**
-     * Runs {@code git checkout -b <name> <startPoint>} in {@code workTree}: creates the branch at
+     * Runs {@code git checkout -b <name> <startPoint>} in {@code worktree}: creates the branch at
      * {@code startPoint} and switches to it; then records {@code parent} as the branch it came from, if given.
      * The parent is only a hint, so failing to record it does not fail the branch, which is there.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(
-            Path workTree, Branch.Name name, String startPoint, Option<Branch.Name> parent) {
+            Path worktree, Branch.Name name, String startPoint, Option<Branch.Name> parent) {
         return GitFailure.sequence(
-                () -> GitProcess.log(workTree, git("checkout", "--quiet", "-b", name.value(), startPoint, "--")),
-                () -> parent.map(p -> recordParent(workTree, name, p)).getOrElse(GitFailure::nothing));
+                () -> GitProcess.log(worktree, git("checkout", "--quiet", "-b", name.value(), startPoint, "--")),
+                () -> parent.map(p -> recordParent(worktree, name, p)).getOrElse(GitFailure::nothing));
     }
 
     /**
@@ -83,19 +83,19 @@ final class CliCheckout {
      * failed.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> recordParent(
-            Path workTree, Branch.Name name, Branch.Name parent) {
+            Path worktree, Branch.Name name, Branch.Name parent) {
         return Either.right(
-                CliConfig.setParent(workTree, name, parent).fold(GitFailure::commands, commands -> commands));
+                CliConfig.setParent(worktree, name, parent).fold(GitFailure::commands, commands -> commands));
     }
 
     /**
-     * Runs {@code git checkout --track -b <name> <remote-tracking ref>} in {@code workTree}: creates the branch
+     * Runs {@code git checkout --track -b <name> <remote-tracking ref>} in {@code worktree}: creates the branch
      * at the remote-tracking branch of {@code upstream}, following it, and checks it out.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewTrackingBranch(
-            Path workTree, Branch.Name name, RemoteBranch upstream) {
+            Path worktree, Branch.Name name, RemoteBranch upstream) {
         return GitProcess.log(
-                workTree,
+                worktree,
                 git(
                         "checkout",
                         "--quiet",

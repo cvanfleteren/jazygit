@@ -29,9 +29,9 @@ final class CliLog {
      * The commit {@code revision} names; none when it names nothing, e.g. {@code HEAD} in a repository
      * without commits.
      */
-    static Either<GitFailure<ProcessError>, Option<Sha>> resolve(Path workTree, String revision) {
+    static Either<GitFailure<ProcessError>, Option<Sha>> resolve(Path worktree, String revision) {
         // rev-parse --verify --quiet exits with 1, saying nothing, when the revision names nothing.
-        return GitProcess.ask(workTree, GitCommand.reading("rev-parse", "--verify", "--quiet", revision + "^{commit}"))
+        return GitProcess.ask(worktree, GitCommand.reading("rev-parse", "--verify", "--quiet", revision + "^{commit}"))
                 .flatMap(answer -> answer.fold(
                         () -> Either.right(Option.none()),
                         found -> GitOutput.sha(found.stdout())
@@ -42,22 +42,22 @@ final class CliLog {
     /**
      * The log of HEAD, newest first; empty in a repository without commits.
      */
-    static Either<ProcessError, List<Commit>> commits(Path workTree) {
-        return resolve(workTree, "HEAD")
+    static Either<ProcessError, List<Commit>> commits(Path worktree) {
+        return resolve(worktree, "HEAD")
                 .mapLeft(GitFailure::error)
-                .flatMap(head -> head.fold(() -> Either.right(List.empty()), tip -> log(workTree, tip)));
+                .flatMap(head -> head.fold(() -> Either.right(List.empty()), tip -> log(worktree, tip)));
     }
 
     /**
      * The commits of the log of HEAD that {@code query} finds, newest first; none in a repository without commits.
      * They are left as git lists them: with commits left out, merges and what they brought in no longer join up.
      */
-    static Either<ProcessError, List<Commit>> search(Path workTree, CommitQuery query) {
-        return resolve(workTree, "HEAD")
+    static Either<ProcessError, List<Commit>> search(Path worktree, CommitQuery query) {
+        return resolve(worktree, "HEAD")
                 .mapLeft(GitFailure::error)
                 .flatMap(head -> head.fold(
                         () -> Either.right(List.empty()),
-                        tip -> read(workTree, filters(query).append(tip.value()), query.paths())));
+                        tip -> read(worktree, filters(query).append(tip.value()), query.paths())));
     }
 
     /**
@@ -76,28 +76,28 @@ final class CliLog {
     /**
      * The log of the branch {@code branch}, local or remote-tracking, newest first.
      */
-    static Either<GitError, List<Commit>> log(Path workTree, BranchRef branch) {
-        return tip(workTree, branch).flatMap(tip -> Either.narrow(log(workTree, tip)));
+    static Either<GitError, List<Commit>> log(Path worktree, BranchRef branch) {
+        return tip(worktree, branch).flatMap(tip -> Either.narrow(log(worktree, tip)));
     }
 
     /**
      * The newest commits reachable from {@code start}, newest first, laid out by {@link CommitGraph#arrange}.
      */
-    static Either<ProcessError, List<Commit>> log(Path workTree, Sha start) {
-        return selected(workTree, List.of(start.value()));
+    static Either<ProcessError, List<Commit>> log(Path worktree, Sha start) {
+        return selected(worktree, List.of(start.value()));
     }
 
     /**
      * The commits only on {@code branch} and the ones only on {@code other}: at most {@link #MAX_COMMITS} of
      * each, and how many there are in all.
      */
-    static Either<GitError, Divergence> divergence(Path workTree, BranchRef branch, BranchRef other) {
-        return tip(workTree, branch)
-                .flatMap(ours -> tip(workTree, other)
-                        .flatMap(theirs -> Either.narrow(counts(workTree, ours, theirs)
-                                .flatMap(counts -> selected(workTree, List.of(ours.value(), "^" + theirs.value()))
+    static Either<GitError, Divergence> divergence(Path worktree, BranchRef branch, BranchRef other) {
+        return tip(worktree, branch)
+                .flatMap(ours -> tip(worktree, other)
+                        .flatMap(theirs -> Either.narrow(counts(worktree, ours, theirs)
+                                .flatMap(counts -> selected(worktree, List.of(ours.value(), "^" + theirs.value()))
                                         .flatMap(ahead -> selected(
-                                                        workTree, List.of(theirs.value(), "^" + ours.value()))
+                                                        worktree, List.of(theirs.value(), "^" + ours.value()))
                                                 .map(behind ->
                                                         new Divergence(ahead, counts._1, behind, counts._2)))))));
     }
@@ -105,11 +105,11 @@ final class CliLog {
     /**
      * The subject of the oldest commit on {@code branch} that is not on {@code base}; none when there is none.
      */
-    static Either<GitError, Option<String>> firstSubject(Path workTree, BranchRef branch, BranchRef base) {
-        return tip(workTree, branch)
-                .flatMap(ours -> tip(workTree, base)
+    static Either<GitError, Option<String>> firstSubject(Path worktree, BranchRef branch, BranchRef base) {
+        return tip(worktree, branch)
+                .flatMap(ours -> tip(worktree, base)
                         .flatMap(theirs -> Either.narrow(GitProcess.read(
-                                workTree,
+                                worktree,
                                 GitCommand.reading(
                                         "log",
                                         "--no-color",
@@ -126,16 +126,16 @@ final class CliLog {
      * which lists each with its parents; and how many of them are on {@code upstream}, from how many are not.
      */
     static Either<GitError, CommitRange> range(
-            Path workTree, Branch.Name branch, Sha oldest, Option<RemoteBranch> upstream) {
+            Path worktree, Branch.Name branch, Sha oldest, Option<RemoteBranch> upstream) {
         List<String> revisions = List.of(Refs.head(branch), "^" + oldest.value() + "^");
         return Either.narrow(GitProcess.read(
-                        workTree,
+                        worktree,
                         GitCommand.reading(List.of("rev-list", "--parents")
                                 .appendAll(revisions)
                                 .append("--")),
                         raw -> Either.right(GitOutput.nonBlankLines(raw)))
                 .flatMap(lines -> upstream.map(remote ->
-                                count(workTree, revisions.append("^" + Refs.remote(remote.remote(), remote.branch()))))
+                                count(worktree, revisions.append("^" + Refs.remote(remote.remote(), remote.branch()))))
                         .getOrElse(() -> Either.right(lines.size()))
                         .map(unpushed -> new CommitRange(
                                 lines.size(),
@@ -146,33 +146,33 @@ final class CliLog {
     /**
      * How many commits are on {@code branch} and not on {@code base}, counting no further than {@code max}.
      */
-    static Either<ProcessError, Integer> countNotOn(Path workTree, BranchRef branch, BranchRef base, int max) {
-        return count(workTree, List.of("--max-count=" + max, Refs.of(branch), "^" + Refs.of(base)));
+    static Either<ProcessError, Integer> countNotOn(Path worktree, BranchRef branch, BranchRef base, int max) {
+        return count(worktree, List.of("--max-count=" + max, Refs.of(branch), "^" + Refs.of(base)));
     }
 
     /**
      * How many commits {@code revisions} select.
      */
-    private static Either<ProcessError, Integer> count(Path workTree, List<String> revisions) {
+    private static Either<ProcessError, Integer> count(Path worktree, List<String> revisions) {
         return GitProcess.read(
-                workTree,
+                worktree,
                 GitCommand.reading(
                         List.of("rev-list", "--count").appendAll(revisions).append("--")),
                 raw -> GitOutput.number(raw.strip()).map(Long::intValue));
     }
 
-    private static Either<GitError, Sha> tip(Path workTree, BranchRef branch) {
+    private static Either<GitError, Sha> tip(Path worktree, BranchRef branch) {
         return Either.<GitError, Option<Sha>>narrow(
-                        resolve(workTree, Refs.of(branch)).mapLeft(GitFailure::error))
+                        resolve(worktree, Refs.of(branch)).mapLeft(GitFailure::error))
                 .flatMap(tip -> tip.toEither(() -> new UnknownBranch(branch)));
     }
 
     /**
      * How many commits are only on {@code ours}, and how many only on {@code theirs}.
      */
-    private static Either<ProcessError, Tuple2<Integer, Integer>> counts(Path workTree, Sha ours, Sha theirs) {
+    private static Either<ProcessError, Tuple2<Integer, Integer>> counts(Path worktree, Sha ours, Sha theirs) {
         return GitProcess.read(
-                workTree,
+                worktree,
                 GitCommand.reading("rev-list", "--left-right", "--count", ours.value() + "..." + theirs.value(), "--"),
                 CliLog::counts);
     }
@@ -190,17 +190,17 @@ final class CliLog {
     /**
      * The newest commits {@code revisions} select, newest first, laid out by {@link CommitGraph#arrange}.
      */
-    private static Either<ProcessError, List<Commit>> selected(Path workTree, List<String> revisions) {
-        return read(workTree, revisions, List.empty()).map(CommitGraph::arrange);
+    private static Either<ProcessError, List<Commit>> selected(Path worktree, List<String> revisions) {
+        return read(worktree, revisions, List.empty()).map(CommitGraph::arrange);
     }
 
     /**
      * The newest commits {@code arguments} select that change one of {@code paths}, or any commit when there are
      * none, as {@code git log} lists them.
      */
-    private static Either<ProcessError, List<Commit>> read(Path workTree, List<String> arguments, List<String> paths) {
+    private static Either<ProcessError, List<Commit>> read(Path worktree, List<String> arguments, List<String> paths) {
         return GitProcess.read(
-                workTree,
+                worktree,
                 GitCommand.reading(
                         List.of("log", "--no-color", "--no-show-signature", "-z", "--max-count=" + MAX_COMMITS)
                                 .append("--format=" + FORMAT)

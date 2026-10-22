@@ -70,7 +70,7 @@ public sealed interface SettingsPanelCmd extends Cmd {
             return env.git()
                     .setLocalConfig(GitHubAccount.USER_KEY, user)
                     .map(commands -> env.repositories()
-                            .switchTo(env.git().workTree(), landing)
+                            .switchTo(env.git().worktree(), landing)
                             .fold(this::failedWith, reopened -> new SettingsPanelMsg.AccountSet()))
                     .getOrElseGet(this::failedWith);
         }
@@ -90,7 +90,7 @@ public sealed interface SettingsPanelCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return env.repositories()
-                    .switchTo(env.git().workTree(), landing)
+                    .switchTo(env.git().worktree(), landing)
                     .fold(this::failedWith, reopened -> new SettingsPanelMsg.Reopened());
         }
 

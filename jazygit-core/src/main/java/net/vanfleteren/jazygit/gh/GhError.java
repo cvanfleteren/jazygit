@@ -15,11 +15,15 @@ public sealed interface GhError {
     record GhUnavailable(IOException cause) implements GhError {}
 
     /**
+     * The {@code gh} command did not finish in time.
+     *
      * @param operation the gh command, e.g. {@code pr create}
      */
     record TimedOut(String operation) implements GhError {}
 
     /**
+     * The {@code gh} command was interrupted.
+     *
      * @param operation the gh command, e.g. {@code pr create}
      */
     record Interrupted(String operation) implements GhError {}

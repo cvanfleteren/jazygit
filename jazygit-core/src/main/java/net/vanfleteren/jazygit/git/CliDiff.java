@@ -33,7 +33,7 @@ final class CliDiff {
      * against the index), read with {@code options}. Untracked files are shown as entirely added. Long diffs
      * are cut off.
      */
-    static Either<GitError, Diffs> diff(Path workTree, List<FileEntry> files, DiffOptions options) {
+    static Either<GitError, Diffs> diff(Path worktree, List<FileEntry> files, DiffOptions options) {
         // A rename only shows as one when both of its paths are diffed.
         List<String> staged = files.filter(f -> f.staged() && f.type() != ChangeType.UNTRACKED)
                 .flatMap(f -> f.paths(true));
@@ -42,8 +42,8 @@ final class CliDiff {
         List<String> untracked = FileEntry.paths(files, f -> f.type() == ChangeType.UNTRACKED);
         List<String> unstagedDiff = UNSTAGED.appendAll(flags(options)).append("--");
         return Either.<GitError, String>narrow(
-                        tracked(workTree, STAGED.appendAll(flags(options)).append("--"), staged, HashMap.empty()))
-                .flatMap(stagedDiff -> unstagedAndUntracked(workTree, unstagedDiff, unstaged, untracked)
+                        tracked(worktree, STAGED.appendAll(flags(options)).append("--"), staged, HashMap.empty()))
+                .flatMap(stagedDiff -> unstagedAndUntracked(worktree, unstagedDiff, unstaged, untracked)
                         .map(unstagedText -> new Diffs(truncated(stagedDiff), truncated(unstagedText))));
     }
 
@@ -59,18 +59,18 @@ final class CliDiff {
      * shows them as entirely added next to the unstaged changes. The real index is left untouched.
      */
     private static Either<GitError, String> unstagedAndUntracked(
-            Path workTree, List<String> subcommand, List<String> unstaged, List<String> untracked) {
+            Path worktree, List<String> subcommand, List<String> unstaged, List<String> untracked) {
         return untracked.isEmpty()
-                ? Either.narrow(tracked(workTree, subcommand, unstaged, HashMap.empty()))
+                ? Either.narrow(tracked(worktree, subcommand, unstaged, HashMap.empty()))
                 : Either.<GitError, String>narrow(
-                                run(workTree, List.of("rev-parse", "--git-path", "index"), HashMap.empty()))
-                        .map(index -> workTree.resolve(index.strip()))
+                                run(worktree, List.of("rev-parse", "--git-path", "index"), HashMap.empty()))
+                        .map(index -> worktree.resolve(index.strip()))
                         .flatMap(index -> TempFiles.using(
                                 "jazygit-index",
                                 copy -> copyIndex(index, copy),
                                 failed -> failed,
                                 copy -> withUntracked(
-                                        workTree,
+                                        worktree,
                                         subcommand,
                                         unstaged,
                                         untracked,
@@ -91,18 +91,18 @@ final class CliDiff {
     }
 
     private static Either<ProcessError, String> withUntracked(
-            Path workTree,
+            Path worktree,
             List<String> subcommand,
             List<String> unstaged,
             List<String> untracked,
             Map<String, String> env) {
-        return run(workTree, List.of("add", "--intent-to-add", "--").appendAll(untracked), env)
-                .flatMap(added -> tracked(workTree, subcommand, unstaged.appendAll(untracked), env));
+        return run(worktree, List.of("add", "--intent-to-add", "--").appendAll(untracked), env)
+                .flatMap(added -> tracked(worktree, subcommand, unstaged.appendAll(untracked), env));
     }
 
     private static Either<ProcessError, String> tracked(
-            Path workTree, List<String> subcommand, List<String> paths, Map<String, String> env) {
-        return paths.isEmpty() ? Either.right("") : run(workTree, subcommand.appendAll(paths), env);
+            Path worktree, List<String> subcommand, List<String> paths, Map<String, String> env) {
+        return paths.isEmpty() ? Either.right("") : run(worktree, subcommand.appendAll(paths), env);
     }
 
     /**
@@ -115,7 +115,7 @@ final class CliDiff {
                 : new DiffText(lines.take(MAX_LINES).mkString("", "\n", "\n"), true);
     }
 
-    private static Either<ProcessError, String> run(Path workTree, List<String> args, Map<String, String> env) {
-        return GitProcess.read(workTree, reading(args).withEnvironment(env).withLiteralPaths(), Either::right);
+    private static Either<ProcessError, String> run(Path worktree, List<String> args, Map<String, String> env) {
+        return GitProcess.read(worktree, reading(args).withEnvironment(env).withLiteralPaths(), Either::right);
     }
 }

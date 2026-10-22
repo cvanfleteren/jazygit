@@ -30,18 +30,18 @@ public final class GhToken {
 
     private static final Duration SSH_TIMEOUT = Duration.ofSeconds(5);
 
-    private final Path workTree;
+    private final Path worktree;
     private final String executable;
     private final Supplier<Option<GhAccount>> account;
     // The variables, or why they could not be had; none until first asked.
     private Option<Either<GhError, Map<String, String>>> known = Option.none();
 
     /**
-     * The token of the {@code account} configured for the repository in {@code workTree}, if any, from the gh at
+     * The token of the {@code account} configured for the repository in {@code worktree}, if any, from the gh at
      * {@code executable}; the account is only looked up once the token is needed.
      */
-    public GhToken(Path workTree, String executable, Supplier<Option<GhAccount>> account) {
-        this.workTree = workTree;
+    public GhToken(Path worktree, String executable, Supplier<Option<GhAccount>> account) {
+        this.worktree = worktree;
         this.executable = executable;
         this.account = account;
     }
@@ -88,7 +88,7 @@ public final class GhToken {
     private Either<GhError, Map<String, String>> fetch(GhAccount configured) {
         String host = resolve(configured.host());
         GhAccount resolved = new GhAccount(host, configured.user());
-        return new GhProcess(workTree, executable, NONE)
+        return new GhProcess(worktree, executable, NONE)
                 .read(
                         gh("auth", "token", "--user", resolved.user(), "--hostname", resolved.host()),
                         raw -> Option.of(raw.strip())
@@ -105,7 +105,7 @@ public final class GhToken {
     private String resolve(String host) {
         return GhAccount.isGitHubCom(host)
                 ? host
-                : Exec.run(workTree, List.of("ssh", "-G", host), HashMap.empty(), SSH_TIMEOUT)
+                : Exec.run(worktree, List.of("ssh", "-G", host), HashMap.empty(), SSH_TIMEOUT)
                         .toOption()
                         .flatMap(GhToken::sshHostName)
                         .getOrElse(host);

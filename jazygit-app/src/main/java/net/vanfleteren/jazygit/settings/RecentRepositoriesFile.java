@@ -58,13 +58,13 @@ public final class RecentRepositoriesFile implements RecentRepositories {
     }
 
     @Override
-    public Try<List<Path>> opened(Path workTree) {
-        return change(recent -> RecentRepositories.opened(recent, workTree, repository));
+    public Try<List<Path>> opened(Path worktree) {
+        return change(recent -> RecentRepositories.opened(recent, worktree, repository));
     }
 
     @Override
-    public Try<List<Path>> forget(List<Path> workTrees) {
-        return change(recent -> recent.removeAll(workTrees));
+    public Try<List<Path>> forget(List<Path> worktrees) {
+        return change(recent -> recent.removeAll(worktrees));
     }
 
     /**

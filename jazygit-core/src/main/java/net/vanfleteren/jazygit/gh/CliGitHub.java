@@ -184,19 +184,19 @@ public final class CliGitHub implements GitHub {
             .hosts | to_entries[] | .key as $host | .value[] \
             | [$host, .login, (.active | tostring), .state] | @tsv""";
 
-    private final Path workTree;
+    private final Path worktree;
     private final GhProcess process;
     // As gh's own active accounts: with a token in the environment, gh only knows of that one.
     private final GhProcess unconfigured;
 
     /**
-     * GitHub for the repository in {@code workTree}, through the gh at {@code executable}, as the account of
+     * GitHub for the repository in {@code worktree}, through the gh at {@code executable}, as the account of
      * {@code token}.
      */
-    public CliGitHub(Path workTree, String executable, GhToken token) {
-        this.workTree = workTree;
-        this.process = new GhProcess(workTree, executable, token);
-        this.unconfigured = new GhProcess(workTree, executable, GhToken.NONE);
+    public CliGitHub(Path worktree, String executable, GhToken token) {
+        this.worktree = worktree;
+        this.process = new GhProcess(worktree, executable, token);
+        this.unconfigured = new GhProcess(worktree, executable, GhToken.NONE);
     }
 
     /**
@@ -525,7 +525,7 @@ public final class CliGitHub implements GitHub {
 
     @Override
     public Either<GhError, String> version(String executable) {
-        return new GhProcess(workTree, executable, GhToken.NONE).read(gh("--version"), CliGitHub::parseVersion);
+        return new GhProcess(worktree, executable, GhToken.NONE).read(gh("--version"), CliGitHub::parseVersion);
     }
 
     @Override

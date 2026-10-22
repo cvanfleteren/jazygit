@@ -14,15 +14,15 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
  */
 final class GhProcess {
 
-    private final Path workTree;
+    private final Path worktree;
     private final String executable;
     private final GhToken token;
 
     /**
-     * Runs gh at {@code executable} in {@code workTree}, as the account of {@code token}.
+     * Runs gh at {@code executable} in {@code worktree}, as the account of {@code token}.
      */
-    GhProcess(Path workTree, String executable, GhToken token) {
-        this.workTree = workTree;
+    GhProcess(Path worktree, String executable, GhToken token) {
+        this.worktree = worktree;
         this.executable = executable;
         this.token = token;
     }
@@ -31,7 +31,7 @@ final class GhProcess {
      * Runs the same gh, as the same account, in {@code directory}, taken relative to the working tree of this one.
      */
     GhProcess in(Path directory) {
-        return new GhProcess(workTree.resolve(directory).normalize(), executable, token);
+        return new GhProcess(worktree.resolve(directory).normalize(), executable, token);
     }
 
     /**
@@ -80,7 +80,7 @@ final class GhProcess {
 
     private Either<GhError, Output> execute(GhCommand command, Map<String, String> variables) {
         return Exec.run(
-                        workTree,
+                        worktree,
                         command.commandLine(executable),
                         command.environment().merge(variables),
                         command.timeout())

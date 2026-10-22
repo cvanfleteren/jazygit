@@ -27,10 +27,10 @@ final class CliRevert {
      *
      * @return the command lines that were run
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> revert(Path workTree, Commit commit) {
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> revert(Path worktree, Commit commit) {
         List<String> mainline = commit.isMerge() ? List.of("-m", "1") : List.of();
         return Unfinished.runOrUndo(
-                workTree,
+                worktree,
                 git(List.of("revert", "--no-edit")
                         .appendAll(mainline)
                         .append(commit.sha().value())),

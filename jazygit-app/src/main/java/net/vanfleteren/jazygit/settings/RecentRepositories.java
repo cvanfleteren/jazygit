@@ -28,12 +28,12 @@ public interface RecentRepositories {
         }
 
         @Override
-        public Try<List<Path>> opened(Path workTree) {
+        public Try<List<Path>> opened(Path worktree) {
             return Try.success(List.empty());
         }
 
         @Override
-        public Try<List<Path>> forget(List<Path> workTrees) {
+        public Try<List<Path>> forget(List<Path> worktrees) {
             return Try.success(List.empty());
         }
     };
@@ -44,33 +44,33 @@ public interface RecentRepositories {
     List<Path> load();
 
     /**
-     * Keeps that the repository at {@code workTree} was opened just now, and gives the recent repositories then.
+     * Keeps that the repository at {@code worktree} was opened just now, and gives the recent repositories then.
      * A repository is kept once, by the worktree opened last.
      */
-    Try<List<Path>> opened(Path workTree);
+    Try<List<Path>> opened(Path worktree);
 
     /**
-     * {@code recent} after the repository at {@code workTree} was opened: it comes first, once, and the ones
+     * {@code recent} after the repository at {@code worktree} was opened: it comes first, once, and the ones
      * opened longest ago drop off past {@link #MAX}.
      */
-    static List<Path> opened(List<Path> recent, Path workTree) {
-        return opened(recent, workTree, directory -> Option.none());
+    static List<Path> opened(List<Path> recent, Path worktree) {
+        return opened(recent, worktree, directory -> Option.none());
     }
 
     /**
-     * {@code recent} after the worktree at {@code workTree} was opened, as {@link #opened(List, Path)}; the other
+     * {@code recent} after the worktree at {@code worktree} was opened, as {@link #opened(List, Path)}; the other
      * worktrees of its repository, as {@code repository} tells which one a worktree belongs to, give way to it.
      */
-    static List<Path> opened(List<Path> recent, Path workTree, Function<Path, ? extends Option<?>> repository) {
-        Option<?> opened = repository.apply(workTree);
-        return recent.filter(other -> !other.equals(workTree)
+    static List<Path> opened(List<Path> recent, Path worktree, Function<Path, ? extends Option<?>> repository) {
+        Option<?> opened = repository.apply(worktree);
+        return recent.filter(other -> !other.equals(worktree)
                         && !(opened.isDefined() && repository.apply(other).equals(opened)))
-                .prepend(workTree)
+                .prepend(worktree)
                 .take(MAX);
     }
 
     /**
-     * Drops {@code workTrees}, which are no repositories anymore, and gives the recent repositories then.
+     * Drops {@code worktrees}, which are no repositories anymore, and gives the recent repositories then.
      */
-    Try<List<Path>> forget(List<Path> workTrees);
+    Try<List<Path>> forget(List<Path> worktrees);
 }

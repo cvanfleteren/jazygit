@@ -26,27 +26,27 @@ final class CliMerge {
      * @return the command lines that were run
      */
     static Either<GitFailure<GitError>, List<ExecutedCommand>> merge(
-            Path workTree, Branch.Name branch, MergeMode mode) {
+            Path worktree, Branch.Name branch, MergeMode mode) {
         return switch (mode) {
-            case FAST_FORWARD -> Unfinished.runOrStop(workTree, git("merge", "--ff", "--no-edit", branch.value()));
-            case MERGE_COMMIT -> Unfinished.runOrStop(workTree, git("merge", "--no-ff", "--no-edit", branch.value()));
-            case SQUASH -> squash(workTree, branch);
+            case FAST_FORWARD -> Unfinished.runOrStop(worktree, git("merge", "--ff", "--no-edit", branch.value()));
+            case MERGE_COMMIT -> Unfinished.runOrStop(worktree, git("merge", "--no-ff", "--no-edit", branch.value()));
+            case SQUASH -> squash(worktree, branch);
             case SQUASH_AND_COMMIT ->
-                GitFailure.sequence(() -> squash(workTree, branch), () -> GitFailure.widen(commitStaged(workTree)));
+                GitFailure.sequence(() -> squash(worktree, branch), () -> GitFailure.widen(commitStaged(worktree)));
         };
     }
 
-    private static Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Path workTree, Branch.Name branch) {
-        return Unfinished.runOrStop(workTree, git("merge", "--squash", branch.value()));
+    private static Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Path worktree, Branch.Name branch) {
+        return Unfinished.runOrStop(worktree, git("merge", "--squash", branch.value()));
     }
 
     /**
      * How many files in the index have conflicts. Only asked, so not logged.
      */
-    static Either<ProcessError, Integer> conflicts(Path workTree) {
+    static Either<ProcessError, Integer> conflicts(Path worktree) {
         // "<mode> <object> <stage>\t<path>", a line for each stage of each conflicted path.
         return GitProcess.read(
-                workTree,
+                worktree,
                 GitCommand.reading("ls-files", "--unmerged"),
                 raw -> Either.right(List.of(raw.split("\n"))
                         .filter(line -> line.contains("\t"))
@@ -59,11 +59,11 @@ final class CliMerge {
      * Commits what the squash staged, with git's message listing the squashed commits. A branch that had
      * nothing to squash staged nothing, and then nothing is committed.
      */
-    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> commitStaged(Path workTree) {
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> commitStaged(Path worktree) {
         // diff --cached --quiet exits with 1, saying nothing, when something is staged.
-        return GitProcess.ask(workTree, GitCommand.reading("diff", "--cached", "--quiet"))
+        return GitProcess.ask(worktree, GitCommand.reading("diff", "--cached", "--quiet"))
                 .flatMap(nothingStaged -> nothingStaged.isDefined()
                         ? GitFailure.nothing()
-                        : GitProcess.log(workTree, git("commit", "--quiet", "--no-edit")));
+                        : GitProcess.log(worktree, git("commit", "--quiet", "--no-edit")));
     }
 }

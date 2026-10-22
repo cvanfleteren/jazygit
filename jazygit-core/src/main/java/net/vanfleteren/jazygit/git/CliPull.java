@@ -25,12 +25,12 @@ final class CliPull {
      * conflicts is left so, for the user to resolve them; a rebase that stops otherwise is aborted again. One that
      * git refuses to start, as the repository is in the middle of something else, leaves that alone.
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> pull(Path workTree, Map<String, String> credentials) {
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> pull(Path worktree, Map<String, String> credentials) {
         return GitFailure.<GitError, GitCommand>widen(CliRemote.toRemote(
-                        workTree,
+                        worktree,
                         git("pull", "--no-edit").withEnvironment(HashMap.of("GIT_SEQUENCE_EDITOR", ":")),
                         credentials))
                 .flatMap(pull ->
-                        Unfinished.runOrUndo(workTree, pull, left -> Option.when(left.rebasing(), CliRebase.ABORT)));
+                        Unfinished.runOrUndo(worktree, pull, left -> Option.when(left.rebasing(), CliRebase.ABORT)));
     }
 }

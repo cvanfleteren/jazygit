@@ -32,10 +32,10 @@ final class CliInProgress {
     private CliInProgress() {}
 
     /**
-     * What the repository in {@code workTree} is in the middle of, if anything. Only asked, so not logged.
+     * What the repository in {@code worktree} is in the middle of, if anything. Only asked, so not logged.
      */
-    static Either<ProcessError, Option<InProgress>> read(Path workTree) {
-        return markers(workTree).map(CliInProgress::read);
+    static Either<ProcessError, Option<InProgress>> read(Path worktree) {
+        return markers(worktree).map(CliInProgress::read);
     }
 
     /**
@@ -46,14 +46,14 @@ final class CliInProgress {
     }
 
     /**
-     * Where git keeps the files of the repository in {@code workTree} that tell what it is in the middle of. They
+     * Where git keeps the files of the repository in {@code worktree} that tell what it is in the middle of. They
      * stay there, so this is asked once, and {@link #read(Markers)} then only looks at the files.
      */
-    static Either<ProcessError, Markers> markers(Path workTree) {
+    static Either<ProcessError, Markers> markers(Path worktree) {
         return GitProcess.read(
-                workTree,
+                worktree,
                 reading(MARKERS.flatMap(marker -> List.of("--git-path", marker)).prepend("rev-parse")),
-                raw -> paths(raw, workTree).map(Markers::new));
+                raw -> paths(raw, worktree).map(Markers::new));
     }
 
     /**
@@ -65,12 +65,12 @@ final class CliInProgress {
      * @return the command lines that were run
      */
     static Either<GitFailure<GitError>, List<ExecutedCommand>> continueOrAbort(
-            Path workTree, InProgress inProgress, InProgressAction action) {
+            Path worktree, InProgress inProgress, InProgressAction action) {
         GitCommand command = git(subcommand(inProgress), option(action));
         return action == InProgressAction.ABORT
-                ? GitFailure.widen(GitProcess.log(workTree, command))
-                : GitProcess.log(workTree, command.withEnvironment(HashMap.of("GIT_EDITOR", "true")))
-                        .mapLeft(failure -> Unfinished.stoppedAgain(workTree, inProgress, failure));
+                ? GitFailure.widen(GitProcess.log(worktree, command))
+                : GitProcess.log(worktree, command.withEnvironment(HashMap.of("GIT_EDITOR", "true")))
+                        .mapLeft(failure -> Unfinished.stoppedAgain(worktree, inProgress, failure));
     }
 
     private static String subcommand(InProgress inProgress) {
@@ -90,9 +90,9 @@ final class CliInProgress {
         };
     }
 
-    private static Either<UnexpectedOutput, List<Path>> paths(String raw, Path workTree) {
+    private static Either<UnexpectedOutput, List<Path>> paths(String raw, Path worktree) {
         List<Path> paths =
-                List.of(raw.split("\n")).filter(line -> !line.isEmpty()).map(workTree::resolve);
+                List.of(raw.split("\n")).filter(line -> !line.isEmpty()).map(worktree::resolve);
         return paths.size() == MARKERS.size() ? Either.right(paths) : Either.left(new UnexpectedOutput(raw));
     }
 

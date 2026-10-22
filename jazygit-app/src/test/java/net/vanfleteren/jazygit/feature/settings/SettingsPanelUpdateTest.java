@@ -253,7 +253,7 @@ class SettingsPanelUpdateTest {
                     }
 
                     @Override
-                    public Path workTree() {
+                    public Path worktree() {
                         return Path.of("/repos/a");
                     }
                 },

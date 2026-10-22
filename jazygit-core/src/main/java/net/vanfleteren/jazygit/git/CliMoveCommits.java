@@ -35,21 +35,21 @@ final class CliMoveCommits {
      * @return the command lines that were run
      */
     static Either<GitFailure<GitError>, List<ExecutedCommand>> move(
-            Path workTree, Branch.Name from, Sha oldest, Branch.Name to, Option<BranchRef> onto) {
+            Path worktree, Branch.Name from, Sha oldest, Branch.Name to, Option<BranchRef> onto) {
         return GitFailure.sequence(
                 () -> GitFailure.widen(CliCheckout.checkoutNewBranch(
-                        workTree,
+                        worktree,
                         to,
                         onto.map(Refs::of).getOrElse(from.value()),
                         Option.of(onto.map(CliMoveCommits::name).getOrElse(from)))),
                 () -> onto.isDefined()
-                        ? copy(workTree, from, oldest)
+                        ? copy(worktree, from, oldest)
                                 .mapLeft(failure -> undone(
                                         failure,
                                         () -> GitFailure.sequence(
-                                                () -> checkout(workTree, from), () -> delete(workTree, to))))
+                                                () -> checkout(worktree, from), () -> delete(worktree, to))))
                         : GitFailure.nothing(),
-                () -> moveBack(workTree, from, oldest));
+                () -> moveBack(worktree, from, oldest));
     }
 
     /**
@@ -62,11 +62,11 @@ final class CliMoveCommits {
      * @return the command lines that were run
      */
     static Either<GitFailure<GitError>, List<ExecutedCommand>> moveTo(
-            Path workTree, Branch.Name from, Sha oldest, Branch.Name to) {
+            Path worktree, Branch.Name from, Sha oldest, Branch.Name to) {
         return GitFailure.sequence(
-                () -> CliCheckout.checkout(workTree, to),
-                () -> copy(workTree, from, oldest).mapLeft(failure -> undone(failure, () -> checkout(workTree, from))),
-                () -> moveBack(workTree, from, oldest));
+                () -> CliCheckout.checkout(worktree, to),
+                () -> copy(worktree, from, oldest).mapLeft(failure -> undone(failure, () -> checkout(worktree, from))),
+                () -> moveBack(worktree, from, oldest));
     }
 
     /**
@@ -75,9 +75,9 @@ final class CliMoveCommits {
      * nothing to copy; one that was empty to begin with is copied as it is.
      */
     private static Either<GitFailure<GitError>, List<ExecutedCommand>> copy(
-            Path workTree, Branch.Name from, Sha oldest) {
+            Path worktree, Branch.Name from, Sha oldest) {
         return Unfinished.runOrUndo(
-                workTree,
+                worktree,
                 git("cherry-pick", "--empty=drop", "--allow-empty", parent(oldest) + ".." + Refs.head(from)),
                 left -> Option.when(left.picking(), ABORT));
     }
@@ -94,15 +94,15 @@ final class CliMoveCommits {
     /**
      * {@code git checkout <branch>}: checks out {@code branch} again, which the working tree came from.
      */
-    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkout(Path workTree, Branch.Name branch) {
-        return GitProcess.log(workTree, git("checkout", "--quiet", branch.value(), "--"));
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkout(Path worktree, Branch.Name branch) {
+        return GitProcess.log(worktree, git("checkout", "--quiet", branch.value(), "--"));
     }
 
     /**
      * {@code git branch -D <branch>}: deletes the new {@code branch}, which got none of the commits.
      */
-    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> delete(Path workTree, Branch.Name branch) {
-        return GitProcess.log(workTree, git("branch", "-D", branch.value()));
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> delete(Path worktree, Branch.Name branch) {
+        return GitProcess.log(worktree, git("branch", "-D", branch.value()));
     }
 
     /**
@@ -110,8 +110,8 @@ final class CliMoveCommits {
      * parent of {@code oldest}.
      */
     private static Either<GitFailure<GitError>, List<ExecutedCommand>> moveBack(
-            Path workTree, Branch.Name branch, Sha oldest) {
-        return GitFailure.widen(GitProcess.log(workTree, git("branch", "--force", branch.value(), parent(oldest))));
+            Path worktree, Branch.Name branch, Sha oldest) {
+        return GitFailure.widen(GitProcess.log(worktree, git("branch", "--force", branch.value(), parent(oldest))));
     }
 
     /**
