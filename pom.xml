@@ -33,7 +33,7 @@
         <palantir-java-format.version>2.102.0</palantir-java-format.version>
         <checkstyle.version>14.3.0</checkstyle.version>
         <errorprone.version>2.50.0</errorprone.version>
-        <native-maven-plugin.version>0.11.1</native-maven-plugin.version>
+        <native-maven-plugin.version>1.1.14</native-maven-plugin.version>
     </properties>
 
     <repositories>
