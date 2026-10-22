@@ -96,15 +96,22 @@ class CommentsDialogTest {
 
     @Test
     void theAuthorsLineUpAfterASymbolOfOneOrTwoColumns() throws Exception {
-        model = reading(List.of(APPROVAL, comment("PRR_2", Kind.DISMISSED, "dave", "Hmm")));
+        model = reading(List.of(
+                APPROVAL,
+                comment("PRR_2", Kind.DISMISSED, "dave", "Hmm"),
+                comment("PRR_3", Kind.COMMENTED, "erin", "Looks fine")));
         try (ToolkitTestRunner runner = start()) {
             String screen = RenderedText.ofSize(runner, this::view, 140, 30);
 
-            // The 👍 of an approval takes two columns, the ⊘ of a dismissed review one.
+            // The 👍 of an approval and the 💬 of a review that commented take two columns, the ⊘ of a dismissed
+            // review one.
             String approved = line(screen, "@carol  ");
-            String commented = line(screen, "@dave  ");
+            String dismissed = line(screen, "@dave  ");
+            String commented = line(screen, "@erin  ");
             assertTrue(approved.contains("👍 @carol"), screen);
-            assertEquals(column(approved, "@carol"), column(commented, "@dave"), screen);
+            assertTrue(commented.contains("💬 @erin"), screen);
+            assertEquals(column(approved, "@carol"), column(dismissed, "@dave"), screen);
+            assertEquals(column(approved, "@carol"), column(commented, "@erin"), screen);
         }
     }
 

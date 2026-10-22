@@ -63,12 +63,12 @@ public final class PullRequestSymbols {
     /**
      * How a reviewer's review went, or that it is still to do.
      */
-    public static Option<Symbol> reviewer(ReviewerState state) {
+    public static Symbol reviewer(ReviewerState state) {
         return switch (state) {
-            case APPROVED -> Option.of(APPROVED);
-            case CHANGES_REQUESTED -> Option.of(CHANGES);
-            case REQUESTED -> Option.of(TO_REVIEW);
-            case COMMENTED -> Option.of(COMMENTED);
+            case APPROVED -> APPROVED;
+            case CHANGES_REQUESTED -> CHANGES;
+            case REQUESTED -> TO_REVIEW;
+            case COMMENTED -> COMMENTED;
         };
     }
 
