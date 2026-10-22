@@ -130,15 +130,6 @@ public final class AddWorktreeUpdate {
     /**
      * What a typed start names: a local branch, else a remote branch by its short name, else any other revision.
      */
-    private sealed interface Start {
-
-        record Local(Branch.Name branch) implements Start {}
-
-        record Remote(RemoteBranch branch) implements Start {}
-
-        record Revision(String start) implements Start {}
-    }
-
     private static Start resolve(Model model, String start) {
         return model.repo()
                 .branch(new Branch.Name(start))
@@ -183,5 +174,17 @@ public final class AddWorktreeUpdate {
                         .find(candidate -> !taken.contains(candidate))
                         .get())
                 .getOrElse("");
+    }
+
+    /**
+     * What a typed start names, as {@link #resolve} works it out.
+     */
+    private sealed interface Start {
+
+        record Local(Branch.Name branch) implements Start {}
+
+        record Remote(RemoteBranch branch) implements Start {}
+
+        record Revision(String start) implements Start {}
     }
 }
