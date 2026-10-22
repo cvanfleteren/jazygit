@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.state.prs;
 
-import java.time.Instant;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
@@ -19,9 +18,7 @@ public record LoadMyPullRequests() implements Cmd {
 
     @Override
     public Msg run(Env env) {
-        return env.gitHub()
-                .myPullRequests()
-                .fold(this::failedWith, read -> new PrOverviewMsg.MineLoaded(read, Instant.now()));
+        return env.gitHub().myPullRequests().fold(this::failedWith, read -> new PrOverviewMsg.MineLoaded(read));
     }
 
     @Override

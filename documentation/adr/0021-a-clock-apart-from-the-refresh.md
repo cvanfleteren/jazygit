@@ -42,3 +42,6 @@ minutes, next to "last fetch failed". A branch committed to 37s ago says no more
   changes (ADR 15's `WORKTREE_CHANGES_INTERVAL`, 3s) is read again every 5s: both when they were read and when a
   tick looks are told by the clock, which moves in steps of 5s.
 - Tests that need a tick at some time set it on the model (`withNow`) rather than in the tick.
+
+Amended by ADR 22: how long ago the remotes were fetched, or the pull requests read, counts in steps of 10s
+under a minute.
