@@ -116,6 +116,16 @@ public sealed interface AppError {
     record CheckedOutElsewhere(Operation operation, Branch.Name branch, String worktree) implements AppError {}
 
     /**
+     * An operation was asked for on a branch that is checked out in another worktree, which is locked, so that it
+     * cannot be removed to free the branch either.
+     *
+     * @param worktree the root of the worktree the branch is checked out in
+     * @param reason   why it was locked; empty when no reason was given
+     */
+    record CheckedOutInLockedWorktree(Operation operation, Branch.Name branch, String worktree, String reason)
+            implements AppError {}
+
+    /**
      * The main worktree was asked to be removed, which holds the repository.
      *
      * @param worktree the name of its directory

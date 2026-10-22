@@ -52,14 +52,16 @@ public final class DeleteBranchUpdate {
     /**
      * Only a known branch that is not checked out can be deleted, and not while it is being pushed or deleted. One
      * that is checked out in another worktree can be deleted on its remote, or locally once that worktree is
-     * removed, when it can be; when neither is possible, that is said.
+     * removed, when it can be; when neither is possible, that is said, naming the lock when that is what keeps the
+     * worktree.
      */
     private static Next requested(Model model, Branch.Name branch) {
         Option<Worktree> worktree = removableWorktree(model, branch);
         return model.repo()
                 .branch(branch)
                 .filter(known -> !known.remoteDeletable() && worktree.isEmpty())
-                .flatMap(known -> Branches.checkedOutElsewhere(model, DeleteBranchCmd.DELETE_BRANCH, branch))
+                .flatMap(known -> lockedWorktree(model, branch)
+                        .orElse(() -> Branches.checkedOutElsewhere(model, DeleteBranchCmd.DELETE_BRANCH, branch)))
                 .map(error -> Next.of(model.fail(error)))
                 .getOrElse(() -> Update.ask(
                         model,
@@ -78,6 +80,19 @@ public final class DeleteBranchUpdate {
                 .flatMap(Branch::worktreeLocation)
                 .flatMap(location -> model.repo().worktree(location))
                 .filter(worktree -> RemoveWorktreeUpdate.notRemovable(worktree).isEmpty());
+    }
+
+    /**
+     * Why {@code branch} cannot be deleted, when the other worktree that has it checked out is locked.
+     */
+    private static Option<AppError> lockedWorktree(Model model, Branch.Name branch) {
+        return model.repo()
+                .branch(branch)
+                .flatMap(Branch::worktreeLocation)
+                .flatMap(location -> model.repo().worktree(location))
+                .flatMap(worktree -> worktree.locked()
+                        .map(reason -> new AppError.CheckedOutInLockedWorktree(
+                                DeleteBranchCmd.DELETE_BRANCH, branch, worktree.location(), reason)));
     }
 
     private static Next chosen(Model model, DeleteScope scope) {

@@ -593,7 +593,7 @@ class WorktreeUpdateTest {
     }
 
     @Test
-    void aBranchWhoseWorktreeCannotBeRemovedIsStillNotDeletedAndTheErrorSaysWhere() {
+    void aBranchWhoseWorktreeIsLockedIsNotDeletedAndTheErrorSaysWhereAndThatItIsLocked() {
         Worktree locked =
                 new Worktree(LINKED.path(), LINKED.head(), LINKED.branch(), false, false, Option.of(""), false);
 
@@ -601,7 +601,21 @@ class WorktreeUpdateTest {
 
         assertEquals(Option.none(), next.model().popup(DeleteBranchPopup.class));
         assertEquals(
-                Option.of("Deleting branch taken failed: it is checked out in the worktree at /repos/app-taken"),
+                Option.of("Deleting branch taken failed: it is checked out in the worktree at /repos/app-taken,"
+                        + " which is locked"),
+                errorText(next.model()));
+    }
+
+    @Test
+    void theErrorForABranchWhoseWorktreeIsLockedGivesWhyItWasLocked() {
+        Worktree locked = new Worktree(
+                LINKED.path(), LINKED.head(), LINKED.branch(), false, false, Option.of("on a usb stick"), false);
+
+        Next next = Update.update(worktrees(MAIN, locked), new DeleteBranchMsg.Requested(TAKEN));
+
+        assertEquals(
+                Option.of("Deleting branch taken failed: it is checked out in the worktree at /repos/app-taken,"
+                        + " which is locked: on a usb stick"),
                 errorText(next.model()));
     }
 

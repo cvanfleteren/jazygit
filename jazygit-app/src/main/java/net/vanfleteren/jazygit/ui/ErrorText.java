@@ -50,6 +50,13 @@ public final class ErrorText {
                 Messages.get("error.fastForward.unpushed", branch.value());
             case AppError.CheckedOutElsewhere(var operation, Branch.Name branch, var worktree) ->
                 Messages.get(operation.errorKey(), branch.value(), Messages.get("error.checkedOutElsewhere", worktree));
+            case AppError.CheckedOutInLockedWorktree(var operation, Branch.Name branch, var worktree, var reason) ->
+                Messages.get(
+                        operation.errorKey(),
+                        branch.value(),
+                        reason.isBlank()
+                                ? Messages.get("error.checkedOutInLockedWorktree", worktree)
+                                : Messages.get("error.checkedOutInLockedWorktreeBecause", worktree, reason));
             case AppError.MainWorktreeNotRemovable(String worktree) ->
                 Messages.get("error.removeWorktree.main", worktree);
             case AppError.ShownWorktreeNotRemovable(String worktree) ->
