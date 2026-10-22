@@ -94,6 +94,7 @@ class CommentUpdateTest {
                         DETAILS.headBranch(),
                         DETAILS.baseBranch(),
                         DETAILS.createdAt(),
+                        DETAILS.createdAt(),
                         DETAILS.additions(),
                         DETAILS.deletions(),
                         DETAILS.changedFiles(),

@@ -33,6 +33,7 @@ class GitHubStateTest {
                 headBranch,
                 "main",
                 Instant.EPOCH,
+                Instant.EPOCH,
                 0,
                 0,
                 0,

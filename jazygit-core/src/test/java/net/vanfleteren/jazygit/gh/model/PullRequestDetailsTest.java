@@ -23,6 +23,7 @@ class PullRequestDetailsTest {
                 "feature",
                 "main",
                 Instant.EPOCH,
+                Instant.EPOCH,
                 0,
                 0,
                 0,

@@ -17,6 +17,9 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
  * @param headBranch   the branch on the remote it merges from
  * @param baseBranch   the branch it merges into
  * @param createdAt    when it was opened
+ * @param pushedAt     when its branch was last pushed to, as near as GitHub tells: when it was opened, its latest
+ *                     commit or its latest force push, whichever is latest; a commit made before the pull request
+ *                     was opened was pushed by then
  * @param additions    the lines it adds
  * @param deletions    the lines it removes
  * @param changedFiles the files it changes
@@ -37,6 +40,7 @@ public record PullRequestDetails(
         String headBranch,
         String baseBranch,
         Instant createdAt,
+        Instant pushedAt,
         int additions,
         int deletions,
         int changedFiles,
@@ -61,6 +65,7 @@ public record PullRequestDetails(
                 headBranch,
                 baseBranch,
                 createdAt,
+                pushedAt,
                 additions,
                 deletions,
                 changedFiles,

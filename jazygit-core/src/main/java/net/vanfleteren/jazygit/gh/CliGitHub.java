@@ -104,7 +104,9 @@ public final class CliGitHub implements GitHub {
 
     /*
      * Everything about one pull request the dialog shows, its latest commit for its checks. gh fills in the
-     * repository of the working tree for {owner} and {repo}.
+     * repository of the working tree for {owner} and {repo}. GitHub no longer says when a commit was pushed, so the
+     * latest of when it was opened, its latest commit and its latest force push tells when it was last pushed to; as
+     * GitHub gives all three as UTC timestamps ending in Z, the latest of them sorts last as text.
      */
     private static final String DETAILS_QUERY = """
             query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { \
@@ -113,7 +115,9 @@ public final class CliGitHub implements GitHub {
             labels(first: 100) { nodes { name } } latestReviews(first: 100) { nodes { author { login } state } } \
             reviewRequests(first: 100) { nodes { requestedReviewer { ... on User { login } ... on Bot { login } \
             ... on Mannequin { login } ... on Team { name } } } } \
-            commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes { __typename \
+            timelineItems(last: 1, itemTypes: [HEAD_REF_FORCE_PUSHED_EVENT]) { nodes { \
+            ... on HeadRefForcePushedEvent { createdAt } } } \
+            commits(last: 1) { nodes { commit { committedDate statusCheckRollup { contexts(first: 100) { nodes { __typename \
             ... on CheckRun { name status conclusion } ... on StatusContext { context state } } } } } } } \
             reviewThreads(last: 100) { totalCount nodes { isResolved comments { totalCount } } } } } }""";
     /*
@@ -125,7 +129,9 @@ public final class CliGitHub implements GitHub {
     private static final String DETAILS_JQ = """
             .data.repository.pullRequest | \
             ((["pr", (.number | tostring), .title, (.author.login // ""), .state, \
-            (.isDraft | tostring), .headRefName, .baseRefName, .createdAt, (.additions | tostring), \
+            (.isDraft | tostring), .headRefName, .baseRefName, .createdAt, \
+            ([.createdAt, .commits.nodes[0].commit.committedDate, .timelineItems.nodes[0].createdAt] \
+            | map(select(. != null)) | max), (.additions | tostring), \
             (.deletions | tostring), (.changedFiles | tostring), (.mergeable // ""), (.reviewDecision // ""), \
             (.comments.totalCount | tostring)] | @tsv), \
             (.reviewThreads | ["threads", (.totalCount | tostring), (.nodes | length | tostring), \
@@ -138,7 +144,7 @@ public final class CliGitHub implements GitHub {
             (.commits.nodes[0].commit.statusCheckRollup.contexts.nodes[]? | ["check", \
             ((if .__typename == "CheckRun" then .name else .context end) // ""), \
             %s] | @tsv))""".formatted(CHECK_STATE);
-    private static final int DETAIL_FIELD_COUNT = 15;
+    private static final int DETAIL_FIELD_COUNT = 16;
 
     /*
      * Tab separated lines, one per part of the conversation: what it is ("description", "comment", or the state of
@@ -413,12 +419,13 @@ public final class CliGitHub implements GitHub {
                                 f.get(6),
                                 f.get(7),
                                 Instant.parse(f.get(8)),
-                                Integer.parseInt(f.get(9)),
+                                Instant.parse(f.get(9)),
                                 Integer.parseInt(f.get(10)),
                                 Integer.parseInt(f.get(11)),
-                                mergeable(f.get(12)),
-                                review(f.get(13)),
-                                Integer.parseInt(f.get(14)),
+                                Integer.parseInt(f.get(12)),
+                                mergeable(f.get(13)),
+                                review(f.get(14)),
+                                Integer.parseInt(f.get(15)),
                                 reviewThreads,
                                 labels,
                                 reviewers,

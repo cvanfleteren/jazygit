@@ -46,21 +46,21 @@ public final class PullRequestDialog implements PopupView {
 
     public static final String ID = "pull-request";
 
-    private static final int WIDTH = 60;
+    private static final int WIDTH = 80;
     // The labels right-aligned in a column of this many characters, then two spaces and the value.
     private static final int LABEL_COLUMN = 11;
     private static final String INDENT = " ".repeat(LABEL_COLUMN + 2);
     // The failed and running checks listed one by one; the rest are counted.
-    private static final int LISTED_CHECKS = 5;
+    private static final int LISTED_CHECKS = 8;
     // A longer title is cut.
-    private static final int TITLE_LINES = 2;
+    private static final int TITLE_LINES = 3;
     /*
-     * The most lines the details take: the title and a blank line; state, author, branch, created, changes and
-     * mergeable, and a blank line; review, reviewers, comments, threads and labels, and a blank line; the checks
+     * The most lines the details take: the title and a blank line; state, author, branch, created, pushed, changes
+     * and mergeable, and a blank line; review, reviewers, comments, threads and labels, and a blank line; the checks
      * counted, listed, and how many more there are. The dialog is always this high, so it keeps its size
      * when the details arrive.
      */
-    private static final int CONTENT_HEIGHT = TITLE_LINES + 1 + 6 + 1 + 5 + 1 + 1 + LISTED_CHECKS + 1;
+    private static final int CONTENT_HEIGHT = TITLE_LINES + 1 + 7 + 1 + 5 + 1 + 1 + LISTED_CHECKS + 1;
 
     private final Clock clock;
     private final ChoiceList<PullRequestPopup> actions;
@@ -299,7 +299,8 @@ public final class PullRequestDialog implements PopupView {
                         () -> Line.labelled("dialog.pullRequest.author", text("@" + pr.author()))))
                 .appendAll(List.of(
                         Line.labelled("dialog.pullRequest.branch", text(pr.headBranch() + " → " + pr.baseBranch())),
-                        Line.labelled("dialog.pullRequest.created", text(created(pr, now))),
+                        Line.labelled("dialog.pullRequest.created", text(when(pr.createdAt(), now))),
+                        Line.labelled("dialog.pullRequest.pushed", text(when(pr.pushedAt(), now))),
                         Line.labelled(
                                 "dialog.pullRequest.changes",
                                 text("+" + pr.additions()).addClass(Theme.Classes.DIFF_ADDED),
@@ -341,11 +342,11 @@ public final class PullRequestDialog implements PopupView {
                 "dialog.pullRequest.threads.unresolved", threads.threads(), threads.comments(), threads.unresolved());
     }
 
-    private String created(PullRequestDetails pr, Instant now) {
+    private String when(Instant at, Instant now) {
         return Messages.get(
-                "dialog.pullRequest.created.value",
-                LocalDate.ofInstant(pr.createdAt(), clock.getZone()).toString(),
-                TimeText.ago(Duration.between(pr.createdAt(), now)));
+                "dialog.pullRequest.when",
+                LocalDate.ofInstant(at, clock.getZone()).toString(),
+                TimeText.ago(Duration.between(at, now)));
     }
 
     /**
