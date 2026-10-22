@@ -74,6 +74,19 @@ class AheadUpdateTest {
     }
 
     @Test
+    void aRetryThatCameBackIsNoLongerRunning() {
+        Cmd.LoadAhead load = AheadUpdate.ofHead(loaded());
+        Model failed = Update.update(loaded(), new LoadMsg.Failed(load, refused("boom")))
+                .model();
+        Model retrying = Update.update(failed, new Msg.Tick()).model();
+        assertTrue(retrying.jobs().refreshing().contains(load));
+
+        Model retried = Update.update(retrying, new LoadMsg.AheadLoaded(load, Option.of(ahead(HEAD, origin("main")))))
+                .model();
+        assertFalse(retried.jobs().refreshing().contains(load));
+    }
+
+    @Test
     void whatIsReadForABranchNoLongerHighlightedIsDropped() {
         Model selected = Update.update(loaded(), new SelectionMsg.BranchSelected(FEATURE_LOG))
                 .model();
