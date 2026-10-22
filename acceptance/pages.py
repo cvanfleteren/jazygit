@@ -11,6 +11,7 @@ operation starts from there. The tests assert what the operation should have don
 """
 
 import re
+import subprocess
 
 from harness import App, Git
 
@@ -47,8 +48,17 @@ class Jazygit:
         before = self._state()
         keys()
         # The app's own wait: when it dies handling the keys, this fails at once, with what it last wrote.
-        self.app.eventually(lambda: not self._busy() and self._state() != before, description)
+        self.app.eventually(lambda: not self._busy() and self._changed_from(before), description)
         self.caught_up()
+
+    def _changed_from(self, before) -> bool:
+        """Whether the repository changed since it was before. The app can still be changing it: until it shows
+        that it is busy, the keys are only just pressed. A read of git that fails meanwhile, as git stash list does
+        when the stash it lists is popped under it ("bad revision 'refs/stash'"), means it has not settled yet."""
+        try:
+            return self._state() != before
+        except subprocess.CalledProcessError:
+            return False
 
     def _state(self):
         # The remote branches too, which a push moves, and the upstreams, which a push can set; and the stashes,
