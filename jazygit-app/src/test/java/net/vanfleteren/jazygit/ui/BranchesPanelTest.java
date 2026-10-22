@@ -103,7 +103,7 @@ class BranchesPanelTest {
                 List.of(
                         LoadableList.Seg.styled(" #42", Theme.Classes.PULL_REQUEST),
                         LoadableList.Seg.styled(" ✓", Theme.Classes.CHECKS_PASSED),
-                        LoadableList.Seg.styled(" ✔", Theme.Classes.REVIEW_APPROVED)),
+                        LoadableList.Seg.styled(" 👍", Theme.Classes.REVIEW_APPROVED)),
                 BranchesPanel.pullRequest(Option.of(new PullRequest(42, "b", false, Checks.PASSING, Review.APPROVED))));
         assertEquals(
                 List.of(
