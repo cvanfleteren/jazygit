@@ -170,16 +170,16 @@ public final class PullRequestDialog implements PopupView {
     }
 
     /**
-     * Each reviewer, followed by the symbol of their review; two spaces in between.
+     * Each reviewer, preceded by the symbol of their review like the review line; two spaces in between.
      */
     private static List<StyledElement<?>> reviewers(PullRequestDetails pr) {
         return pr.reviewers()
                 .zipWithIndex()
-                .flatMap(indexed -> List.<StyledElement<?>>of(
-                                text((indexed._2 > 0 ? "  " : "") + "@" + indexed._1.login()))
+                .flatMap(indexed -> List.<StyledElement<?>>of(text(indexed._2 > 0 ? "  " : ""))
                         .appendAll(PullRequestSymbols.reviewer(indexed._1.state())
-                                .map(symbol -> List.of(text(" "), symbol(symbol)))
-                                .getOrElse(List.empty())));
+                                .map(symbol -> List.of(symbol(symbol), text(" ")))
+                                .getOrElse(List.empty()))
+                        .append(text("@" + indexed._1.login())));
     }
 
     /**
