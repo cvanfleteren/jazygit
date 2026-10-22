@@ -13,7 +13,7 @@ operation starts from there. The tests assert what the operation should have don
 import re
 import subprocess
 
-from harness import App, Git
+from harness import App, AppExited, Git
 
 SHA = re.compile(r"\b[0-9a-f]{7}\b")
 
@@ -47,17 +47,30 @@ class Jazygit:
         self.caught_up()
         before = self._state()
         keys()
-        # The app's own wait: when it dies handling the keys, this fails at once, with what it last wrote.
-        self.app.eventually(lambda: not self._busy() and self._changed_from(before), description)
+        failures = []
+        try:
+            # The app's own wait: when it dies handling the keys, this fails at once, with what it last wrote.
+            self.app.eventually(lambda: not self._busy() and self._changed_from(before, failures), description)
+        except AppExited:
+            raise
+        except AssertionError as e:
+            if not failures:
+                raise
+            # A read that kept failing is likely why it never settled, so the timeout says what git said.
+            failed = failures[-1]
+            raise AssertionError(
+                f"{e}\n--- last git error ---\n{' '.join(failed.cmd)}: {failed.stderr.strip()}") from None
         self.caught_up()
 
-    def _changed_from(self, before) -> bool:
+    def _changed_from(self, before, failures: list) -> bool:
         """Whether the repository changed since it was before. The app can still be changing it: until it shows
         that it is busy, the keys are only just pressed. A read of git that fails meanwhile, as git stash list does
-        when the stash it lists is popped under it ("bad revision 'refs/stash'"), means it has not settled yet."""
+        when the stash it lists is popped under it ("bad revision 'refs/stash'"), means it has not settled yet; it
+        goes in failures, for the timeout to tell."""
         try:
             return self._state() != before
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as e:
+            failures.append(e)
             return False
 
     def _state(self):
