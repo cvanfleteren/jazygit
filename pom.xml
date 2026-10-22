@@ -23,10 +23,10 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <tamboui.version>0.6.0</tamboui.version>
         <junit.version>5.14.4</junit.version>
-        <lombok.version>1.18.46</lombok.version>
-        <slf4j.version>2.0.17</slf4j.version>
+        <lombok.version>1.18.48</lombok.version>
+        <slf4j.version>2.0.20</slf4j.version>
         <zt-exec.version>1.13.0</zt-exec.version>
-        <archunit.version>1.4.1</archunit.version>
+        <archunit.version>1.5.1</archunit.version>
         <night-config.version>3.9.0</night-config.version>
         <picocli.version>4.7.7</picocli.version>
         <spotless.version>3.10.4</spotless.version>
