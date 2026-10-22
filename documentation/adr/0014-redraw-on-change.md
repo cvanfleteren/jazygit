@@ -30,8 +30,8 @@ the model, switching to another repository and coming back from a program the te
   little costs a frame, too much leaves a change undrawn.
 - A report that changes nothing in the model asks for no frame. Comparing by reference would have: every frame
   would report, and every report would draw a frame.
-- The model tells the time every 500ms (`Msg.Clock`, apart from the refresh), so an idle app still draws 2 frames a
-  second, which keeps the ages it shows up to date. That costs about 2% of a core and is accepted.
+- The model tells the time every 500ms (`Msg.Tick`), so an idle app still draws 2 frames a second, which keeps the
+  ages it shows up to date. That costs about 2% of a core and is accepted.
 
 ### Asking for a frame
 
