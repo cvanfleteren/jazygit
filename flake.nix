@@ -16,7 +16,7 @@
               jdk
               (pkgs.maven.override { jdk_headless = jdk; })
               # For the acceptance tests in acceptance/.
-              (pkgs.python3.withPackages (p: [ p.pexpect p.pyte p.pytest ]))
+              (pkgs.python3.withPackages (p: [ p.pexpect p.pyte p.pytest p.pytest-xdist ]))
             ];
             JAVA_HOME = jdk.home;
           };

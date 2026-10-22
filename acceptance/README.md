@@ -44,7 +44,11 @@ python -m pytest acceptance -v                          # list each test as it r
 python -m pytest acceptance/test_commit.py              # one file
 python -m pytest acceptance -k empty_repository         # tests whose name matches
 python -m pytest acceptance --jar path/to/jazygit.jar   # another jar than the newest in jazygit-app/target
+python -m pytest acceptance -n 0                        # one by one, instead of two at a time
 ```
+
+`pytest.ini` runs two tests at a time with pytest-xdist (`-n 2`): each has its own repository, `HOME` and app, so
+they don't see each other. More workers start more JVMs at once, and on a busy machine their waits can time out.
 
 The java that runs the jar is `JAZYGIT_JAVA` if set, else `$JAVA_HOME/bin/java`, else `java` on the `PATH`. Nix's
 JDK starts processes slowly, which makes the app slow to load, so on NixOS a plain JDK is quicker:
