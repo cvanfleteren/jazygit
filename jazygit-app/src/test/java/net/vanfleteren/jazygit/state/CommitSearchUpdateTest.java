@@ -23,8 +23,9 @@ import org.junit.jupiter.api.Test;
  */
 class CommitSearchUpdateTest {
 
-    private static final List<Commit> FOUND =
-            List.of(new Commit(new Sha("0123"), "Bob", "bob@example.com", Instant.EPOCH, "Fix it", ""));
+    private static final List<Commit> FOUND = List.of(
+            new Commit(new Sha("0123"), "Bob", "bob@example.com", Instant.EPOCH, "Fix it", ""),
+            new Commit(new Sha("4567"), "Bob", "bob@example.com", Instant.EPOCH, "Fix it again", ""));
 
     private static Model typed(Model model, String text) {
         return Update.update(
@@ -116,6 +117,7 @@ class CommitSearchUpdateTest {
 
         assertEquals(new Loaded<>(FOUND), found.repoView().commitSearch().get().results());
         assertEquals(FOUND.headOption(), found.commit(new Sha("0123")));
+        assertEquals(FOUND.lastOption(), found.commit(new Sha("4567")));
         assertEquals(COMMITS.headOption(), found.commit(new Sha("aaaa")));
     }
 
