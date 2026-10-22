@@ -44,11 +44,21 @@ python -m pytest acceptance -v                          # list each test as it r
 python -m pytest acceptance/test_commit.py              # one file
 python -m pytest acceptance -k empty_repository         # tests whose name matches
 python -m pytest acceptance --jar path/to/jazygit.jar   # another jar than the newest in jazygit-app/target
-python -m pytest acceptance -n 0                        # one by one, instead of two at a time
+python -m pytest acceptance -n 0                        # one by one, instead of four at a time
 ```
 
-`pytest.ini` runs two tests at a time with pytest-xdist (`-n 2`): each has its own repository, `HOME` and app, so
-they don't see each other. More workers start more JVMs at once, and on a busy machine their waits can time out.
+`pytest.ini` runs four tests at a time with pytest-xdist (`-n 4`): each has its own repository, `HOME` and app, so
+they don't see each other. More workers start more JVMs at once, and on a busy machine their waits can time out. To
+run more on your own machine, set `PYTEST_ADDOPTS`, for instance in a `.envrc.local` at the root, which direnv reads
+and git ignores:
+
+```sh
+export PYTEST_ADDOPTS="-n 12"
+```
+
+The tests marked `slow` (the scenarios) start first, each on a worker of its own, and the run takes about as long as
+the slowest of them: past six workers or so, more don't make it quicker. The apps start from a class data archive of
+the jar, which the first run after a build makes next to it.
 
 The java that runs the jar is `JAZYGIT_JAVA` if set, else `$JAVA_HOME/bin/java`, else `java` on the `PATH`. Nix's
 JDK starts processes slowly, which makes the app slow to load, so on NixOS a plain JDK is quicker:

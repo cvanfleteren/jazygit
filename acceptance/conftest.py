@@ -1,9 +1,12 @@
+import fcntl
+import hashlib
 import os
+import shutil
 from pathlib import Path
 
 import pytest
 
-from harness import App, Git, isolated_env
+from harness import App, Git, eventually, isolated_env
 from pages import Jazygit
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -54,6 +57,41 @@ def java() -> str:
     return "java"
 
 
+JVM_OPTIONS = ["--enable-native-access=ALL-UNNAMED", "-Dtamboui.backend=panama"]
+
+
+@pytest.fixture(scope="session")
+def class_archive(java, jar, tmp_path_factory) -> list:
+    """The JVM options that start the app from a class data archive of this jar and java, made once, next to the jar:
+    starting a dozen apps at once, the JVMs are slow to load and verify the classes each for itself.
+
+    The first worker to get here makes it, from an app that starts and quits, while the others wait; the apps only
+    ever read a whole archive, since a JVM that writes one while others map it can crash them."""
+    java_path = os.path.realpath(shutil.which(java))
+    key = hashlib.sha256(f"{java_path} {jar.stat().st_mtime_ns} {jar.stat().st_size}".encode())
+    archive = jar.with_name(f"{jar.stem}-{key.hexdigest()[:12]}.jsa")
+    with open(jar.with_name(f"{jar.stem}.jsa.lock"), "w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        if not archive.exists():
+            for stale in jar.parent.glob(f"{jar.stem}-*.jsa"):
+                stale.unlink()
+            made = archive.with_suffix(".partial")
+            path = tmp_path_factory.mktemp("archive")
+            env = isolated_env(path)
+            repo = Git(path / "repo", env)
+            repo.path.mkdir()
+            repo("init", "--initial-branch=main")
+            repo.commit("Initial commit", **{"README.md": "# Archive\n"})
+            app = App([java, f"-XX:ArchiveClassesAtExit={made}", *JVM_OPTIONS, "-jar", str(jar), str(repo.path)],
+                      repo.path, env)
+            Jazygit(app, repo).caught_up()
+            app.press("q")
+            eventually(lambda: app.pump() or app.exited, "jazygit to quit and write the class data archive")
+            made.replace(archive)
+    # The JVM tells on stdout, so on the app's screen, where an option differs from the JDK's own archive.
+    return [f"-XX:SharedArchiveFile={archive}", "-Xlog:cds=off"]
+
+
 @pytest.fixture
 def env(tmp_path) -> dict:
     home = tmp_path / "home"
@@ -96,15 +134,13 @@ def clone(tmp_path, env, origin):
 
 
 @pytest.fixture
-def jazygit(java, jar, repo, env):
+def jazygit(java, jar, class_archive, repo, env):
     """Starts jazygit on the repository, with the options args, and returns its page object; call it once the
     repository is set up."""
     apps = []
 
     def start(*args) -> Jazygit:
-        app = App([java, "--enable-native-access=ALL-UNNAMED", "-Dtamboui.backend=panama", "-jar", str(jar), *args,
-                   str(repo.path)],
-                  repo.path, env)
+        app = App([java, *class_archive, *JVM_OPTIONS, "-jar", str(jar), *args, str(repo.path)], repo.path, env)
         apps.append(app)
         return Jazygit(app, repo)
 
