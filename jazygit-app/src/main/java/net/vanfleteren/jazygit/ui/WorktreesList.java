@@ -39,41 +39,61 @@ class WorktreesList implements BranchesTabList {
      * main one, locked, or gone from disk.
      */
     static LoadableList.Row row(Repo repo, Worktree worktree) {
-        String checkedOut = worktree.branch()
-                .map(Branch.Name::value)
-                .getOrElse(() -> Messages.get(
-                        "worktrees.detached", worktree.head().map(Sha::shortSha).getOrElse("")));
-        return new LoadableList.Row(List.of(
-                        Option.of(LoadableList.Seg.of((worktree.current() ? "* " : "  ") + worktree.name() + " ")),
+        return new LoadableList.Row(List.of(LoadableList.Seg.of((worktree.current() ? "* " : "  ") + worktree.name()))
+                .appendAll(changes(repo, worktree))
+                .append(checkedOut(worktree))
+                .appendAll(worktree.branch().flatMap(repo::branch).toList().flatMap(BranchSegs::sync))
+                .appendAll(flags(worktree)));
+    }
+
+    /**
+     * That the worktree has changes, with a leading space; nothing for one without, or whose changes are not read
+     * yet.
+     */
+    private static List<LoadableList.Seg> changes(Repo repo, Worktree worktree) {
+        return Option.when(
+                        repo.hasChanges(worktree).contains(true),
+                        () -> LoadableList.Seg.styled(" ●", Theme.Classes.UNSTAGED))
+                .toList();
+    }
+
+    /**
+     * What the worktree has checked out, with a leading space: its branch, else the commit of its detached HEAD,
+     * dimmed.
+     */
+    private static LoadableList.Seg checkedOut(Worktree worktree) {
+        return worktree.branch()
+                .fold(
+                        () -> note(
+                                Messages.get(
+                                        "worktrees.detached",
+                                        worktree.head().map(Sha::shortSha).getOrElse("")),
+                                Theme.Classes.DIM),
+                        name -> LoadableList.Seg.of(" " + name.value()));
+    }
+
+    /**
+     * What keeps the worktree from being removed, each with a leading space: that it is the main one, locked, or
+     * gone from disk.
+     */
+    private static List<LoadableList.Seg> flags(Worktree worktree) {
+        return List.of(
+                        Option.when(worktree.main(), () -> note(Messages.get("worktrees.main"), Theme.Classes.DIM)),
+                        worktree.locked().map(reason -> note(locked(reason), Theme.Classes.DIM)),
                         Option.when(
-                                repo.hasChanges(worktree).contains(true),
-                                () -> LoadableList.Seg.styled("● ", Theme.Classes.UNSTAGED)),
-                        Option.of(
-                                worktree.branch().isDefined()
-                                        ? LoadableList.Seg.of(checkedOut)
-                                        : LoadableList.Seg.styled(checkedOut, Theme.Classes.DIM)))
-                .flatMap(segment -> segment)
-                .appendAll(worktree.branch()
-                        .flatMap(repo::branch)
-                        .map(BranchSegs::sync)
-                        .getOrElse(List.empty()))
-                .appendAll(List.of(
-                                Option.when(
-                                        worktree.main(),
-                                        () -> LoadableList.Seg.styled(
-                                                " " + Messages.get("worktrees.main"), Theme.Classes.DIM)),
-                                worktree.locked()
-                                        .map(reason -> LoadableList.Seg.styled(
-                                                " "
-                                                        + (reason.isBlank()
-                                                                ? Messages.get("worktrees.locked")
-                                                                : Messages.get("worktrees.lockedBecause", reason)),
-                                                Theme.Classes.DIM)),
-                                Option.when(
-                                        worktree.prunable(),
-                                        () -> LoadableList.Seg.styled(
-                                                " " + Messages.get("worktrees.missing"), Theme.Classes.GONE)))
-                        .flatMap(segment -> segment)));
+                                worktree.prunable(), () -> note(Messages.get("worktrees.missing"), Theme.Classes.GONE)))
+                .flatMap(flag -> flag);
+    }
+
+    /**
+     * That the worktree is locked, with why when a reason was given.
+     */
+    private static String locked(String reason) {
+        return reason.isBlank() ? Messages.get("worktrees.locked") : Messages.get("worktrees.lockedBecause", reason);
+    }
+
+    private static LoadableList.Seg note(String text, String cssClass) {
+        return LoadableList.Seg.styled(" " + text, cssClass);
     }
 
     /**
