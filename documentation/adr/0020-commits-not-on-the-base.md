@@ -51,7 +51,9 @@ read.
 `GitInfoProvider.ahead(Option<BranchRef> branch, List<BranchRef> bases)` takes the first of `bases` that exists, and
 reads for it `git log <tip> ^<base>`, laid out by `CommitGraph.arrange`, at most 300; whether there are more
 (`rev-list --count --max-count=301`); and the fork point, `git merge-base` then that one commit. That gives
-`Ahead(base, commits, more, forkPoint)`.
+`Ahead(tip, base, commits, more, forkPoint)`. It only counts for a log whose newest commit is its `tip`: between
+reading a log anew and what is not on its base, the panes show the log unmarked, rather than mark it, or list
+commits to act on, by what was read for another HEAD.
 
 - `Cmd.LoadAhead` reads the parent of the branch, makes the list of bases, and asks for it. It is run once the log
   it goes with is read (`CommitsLoaded`, `BranchLogLoaded`), and again when the tip of its base moved, e.g. after a
