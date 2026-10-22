@@ -16,6 +16,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.git.model.*;
@@ -409,75 +410,101 @@ public class BranchesPanel {
      * @param activeId the id of the left pane in use, whose highlighted row shows
      */
     public Panel render(Model model, String focusedId, String activeId) {
-        BranchesTab tab = model.repoView().branchesTab();
         boolean focused = ID.equals(focusedId);
         boolean active = ID.equals(activeId);
         Option<DivergenceView> divergence = divergence(model);
-        if (divergence.isDefined()) {
-            DivergenceView view = divergence.get();
-            if (!divergenceShown.contains(view.load())) {
-                // A divergence just opened starts at its first commit.
-                divergenceShown = Option.of(view.load());
-                divergenceList.select(0);
-                divergenceSelected = 0;
-            }
-            Panel panel = divergenceList.render(
-                    view.commits(),
-                    commits -> entries(commits).map(entry -> divergenceRow(view, entry)),
-                    focused,
-                    active,
-                    Pane.title(Messages.get(
-                            "panel.divergence.titleFor",
-                            view.branch().value(),
-                            view.other().name())));
-            skipToCommit(view);
-            return panel;
+        followDivergence(divergence);
+        return divergence
+                .map(view -> divergencePanel(view, focused, active))
+                .getOrElse(() -> tabPanel(model, focused, active));
+    }
+
+    /**
+     * Remembers which divergence is shown; one just opened starts at its first commit.
+     */
+    private void followDivergence(Option<DivergenceView> divergence) {
+        Option<Cmd.LoadDivergence> shown = divergence.map(DivergenceView::load);
+        if (shown.isDefined() && !shown.equals(divergenceShown)) {
+            divergenceList.select(0);
+            divergenceSelected = 0;
         }
-        divergenceShown = Option.none();
-        Instant frame = clock.instant();
-        Map<BranchRef, Operation> busy = model.jobs().busy();
-        Panel panel = switch (tab) {
-            case LOCAL ->
-                list.render(
-                        model.repo().branches(),
-                        branches -> branches.map(b -> row(
-                                b,
-                                Duration.between(b.tipTime(), model.now()),
-                                gitHub(
-                                        model.gitHub().pullRequest(b),
-                                        model.gitHub().checks(b)),
-                                busy.get(new BranchRef.Local(b.name())).map(operation -> spinner(operation, frame)))),
-                        focused,
-                        active,
-                        title(tab));
-            case REMOTE ->
-                remoteList.render(
-                        model.repo().remoteBranches(),
-                        refs -> refs.map(ref -> remoteRow(
-                                ref,
-                                Duration.between(ref.tipTime(), model.now()),
-                                model.repo().trackingBranch(ref.branch()).isDefined(),
-                                gitHub(
-                                        model.gitHub().pullRequest(ref.branch()),
-                                        model.gitHub().checks(ref.branch())),
-                                busy.get(new BranchRef.Remote(ref.branch()))
-                                        .map(operation -> spinner(operation, frame)))),
-                        focused,
-                        active,
-                        title(tab));
-            case WORKTREES -> {
-                Panel worktrees = worktreeList.render(
-                        model.repo().worktrees(),
-                        all -> all.map(worktree -> worktreeRow(model.repo(), worktree)),
-                        focused,
-                        active,
-                        title(tab));
-                // Highlighted when drawn, after the render followed the highlighted one.
-                worktreeAsked(model).forEach(worktreeList::select);
-                yield worktrees;
-            }
+        divergenceShown = shown;
+    }
+
+    private Panel divergencePanel(DivergenceView view, boolean focused, boolean active) {
+        Panel panel = divergenceList.render(
+                view.commits(),
+                commits -> entries(commits).map(entry -> divergenceRow(view, entry)),
+                focused,
+                active,
+                Pane.title(Messages.get(
+                        "panel.divergence.titleFor",
+                        view.branch().value(),
+                        view.other().name())));
+        skipToCommit(view);
+        return panel;
+    }
+
+    private Panel tabPanel(Model model, boolean focused, boolean active) {
+        Function<BranchRef, Option<String>> spinnerOf = spinners(model);
+        Panel panel = switch (model.repoView().branchesTab()) {
+            case LOCAL -> localPanel(model, spinnerOf, focused, active);
+            case REMOTE -> remotePanel(model, spinnerOf, focused, active);
+            case WORKTREES -> worktreePanel(model, focused, active);
         };
         return panel.onMouseEvent(event -> titleClick(panel.renderedArea(), event));
+    }
+
+    /**
+     * The spinner of each busy branch, all at the same frame.
+     */
+    private Function<BranchRef, Option<String>> spinners(Model model) {
+        Instant frame = clock.instant();
+        Map<BranchRef, Operation> busy = model.jobs().busy();
+        return ref -> busy.get(ref).map(operation -> spinner(operation, frame));
+    }
+
+    private Panel localPanel(
+            Model model, Function<BranchRef, Option<String>> spinnerOf, boolean focused, boolean active) {
+        return list.render(
+                model.repo().branches(),
+                branches -> branches.map(b -> row(
+                        b,
+                        Duration.between(b.tipTime(), model.now()),
+                        gitHub(model.gitHub().pullRequest(b), model.gitHub().checks(b)),
+                        spinnerOf.apply(new BranchRef.Local(b.name())))),
+                focused,
+                active,
+                title(BranchesTab.LOCAL));
+    }
+
+    private Panel remotePanel(
+            Model model, Function<BranchRef, Option<String>> spinnerOf, boolean focused, boolean active) {
+        return remoteList.render(
+                model.repo().remoteBranches(),
+                refs -> refs.map(ref -> remoteRow(
+                        ref,
+                        Duration.between(ref.tipTime(), model.now()),
+                        model.repo().trackingBranch(ref.branch()).isDefined(),
+                        gitHub(
+                                model.gitHub().pullRequest(ref.branch()),
+                                model.gitHub().checks(ref.branch())),
+                        spinnerOf.apply(new BranchRef.Remote(ref.branch())))),
+                focused,
+                active,
+                title(BranchesTab.REMOTE));
+    }
+
+    private Panel worktreePanel(Model model, boolean focused, boolean active) {
+        Panel panel = worktreeList.render(
+                model.repo().worktrees(),
+                all -> all.map(worktree -> worktreeRow(model.repo(), worktree)),
+                focused,
+                active,
+                title(BranchesTab.WORKTREES));
+        // Highlighted when drawn, after the render followed the highlighted one.
+        worktreeAsked(model).forEach(worktreeList::select);
+        return panel;
     }
 
     /**
