@@ -4,9 +4,16 @@ import static dev.tamboui.toolkit.Toolkit.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.tamboui.buffer.Buffer;
+import dev.tamboui.layout.Rect;
+import dev.tamboui.terminal.Frame;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import dev.tamboui.toolkit.element.DefaultRenderContext;
 import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.toolkit.element.ElementRegistry;
 import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.toolkit.event.EventRouter;
+import dev.tamboui.toolkit.focus.FocusManager;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
@@ -259,6 +266,38 @@ class NewPullRequestDialogTest {
         SettledPilot.focus(runner, NewPullRequestDialog.ID);
         RenderedText.ofLarge(runner, this::view);
         return runner;
+    }
+
+    @Test
+    void theBasesAreBorderedAsTheFieldsAreWhileTheTitleHasTheFocus() {
+        Rect area = new Rect(0, 0, 120, 30);
+        FocusManager focus = new FocusManager();
+        focus.setFocus(NewPullRequestDialog.ID);
+        DefaultRenderContext context = new DefaultRenderContext(focus, new EventRouter(focus, new ElementRegistry()));
+        context.setStyleEngine(Theme.createEngine().get());
+        Buffer buffer = Buffer.empty(area);
+        view().render(Frame.forTesting(buffer), area, context);
+
+        assertEquals(
+                cornerBefore(buffer, area, "Title").style().fg(),
+                cornerBefore(buffer, area, "Into: main").style().fg());
+    }
+
+    /**
+     * The cell left of where {@code text} starts on the screen: the corner of the border it is the title of.
+     */
+    private static dev.tamboui.buffer.Cell cornerBefore(Buffer buffer, Rect area, String text) {
+        for (int y = 0; y < area.height(); y++) {
+            StringBuilder line = new StringBuilder();
+            for (int x = 0; x < area.width(); x++) {
+                line.append(buffer.get(x, y).symbol());
+            }
+            int at = line.indexOf(text);
+            if (at > 0) {
+                return buffer.get(at - 1, y);
+            }
+        }
+        throw new AssertionError(text + " not shown");
     }
 
     private Element view() {

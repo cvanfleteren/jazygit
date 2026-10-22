@@ -158,20 +158,22 @@ public final class NewPullRequestDialog implements PopupView {
                                 .<StyledElement<?>>map(base -> text(base.value()))
                                 .toJavaArray(StyledElement[]::new))
                         .selected(view.selected());
-        String base = view.popup().base().value();
-        list.title(view.cursor()
-                        .filter()
-                        .map(typed -> Messages.get("dialog.newPullRequest.baseFiltered", base, typed))
-                        .getOrElse(() -> Messages.get("dialog.newPullRequest.base", base)))
-                .length(BASE_ROWS + 2)
-                .onKeyEvent(event -> baseKeys(view, event))
+        list.onKeyEvent(event -> baseKeys(view, event))
                 .onMouseEvent(event -> ListKeys.wheel(
                         event,
                         view.selected(),
                         view.shown().size(),
                         line -> true,
                         line -> dispatch.accept(view.at(line))));
-        return view.shown().isEmpty() ? list : new FocusHighlighted(list);
+        String base = view.popup().base().value();
+        // In a panel, which the themes give the border of the fields; a list's own border is not themed.
+        return panel(
+                        view.cursor()
+                                .filter()
+                                .map(typed -> Messages.get("dialog.newPullRequest.baseFiltered", base, typed))
+                                .getOrElse(() -> Messages.get("dialog.newPullRequest.base", base)),
+                        view.shown().isEmpty() ? list : new FocusHighlighted(list))
+                .length(BASE_ROWS + 2);
     }
 
     /**
