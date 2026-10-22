@@ -113,7 +113,16 @@ jobs:
               - Findings grouped by severity, each with a file:line reference.
               - On re-reviews, a "Since last review" section: what was fixed and what is still open.
               - The reviewed commit: ${{ github.event.pull_request.head.sha }}.
+            - Finally, submit a formal review whose status matches the verdict. Keep its body to the
+              verdict line plus "See the summary comment for details." and pass it with --body-file:
+              - "Ready to merge":
+                `gh pr review ${{ github.event.pull_request.number }} --approve --body-file <file>`
+              - "Merge after minor fixes" or "Needs changes":
+                `gh pr review ${{ github.event.pull_request.number }} --request-changes --body-file <file>`
+              Submit a new review on every run, also on re-reviews, so the latest one reflects the
+              current state of the PR. If GitHub refuses because you authored the PR, fall back to
+              `gh pr review ${{ github.event.pull_request.number }} --comment --body-file <file>`.
           claude_args: |
             --model claude-opus-5-5
             --max-turns 80
-            --allowedTools "mcp__github_inline_comment__create_inline_comment,Read,Glob,Grep,Write,Edit,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git blame:*),Bash(git status:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(gh pr comment:*),Bash(gh issue view:*),Bash(gh api:*),Bash(./mvnw:*)"
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Read,Glob,Grep,Write,Edit,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git blame:*),Bash(git status:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(gh pr comment:*),Bash(gh pr review:*),Bash(gh issue view:*),Bash(gh api:*),Bash(./mvnw:*)"
