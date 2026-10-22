@@ -2,18 +2,23 @@ package net.vanfleteren.jazygit.feature.diff;
 
 import static net.vanfleteren.jazygit.state.TestModels.DIRTY;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
+import static net.vanfleteren.jazygit.state.TestModels.refused;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendPopup;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendTarget;
+import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Cmd;
+import net.vanfleteren.jazygit.state.DivergenceView;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Loadable.Loading;
@@ -73,6 +78,34 @@ class DiffOptionsUpdateTest {
     }
 
     @Test
+    void failuresAndCommitChangesReadBeforeTheToggleAreDropped() {
+        Model toggled =
+                Update.update(shown(), new DiffOptionsMsg.WhitespaceToggled()).model();
+
+        assertDropped(
+                toggled, new LoadMsg.Failed(new Cmd.LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT), refused("boom")));
+        assertDropped(toggled, new LoadMsg.Failed(new Cmd.LoadCommitDetail(SHA, DiffOptions.DEFAULT), refused("boom")));
+        assertDropped(toggled, new LoadMsg.CommitDetailLoaded(SHA, DiffOptions.DEFAULT, DiffText.of("stale")));
+    }
+
+    @Test
+    void whatWasReadForTheCommitOfADivergenceBeforeTheToggleIsDropped() {
+        Model model = loaded().mapRepoView(repoView -> repoView.withDivergence(Option.of(DivergenceView.loading(
+                new Branch.Name("main"),
+                new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main"))),
+                DivergenceView.Against.UPSTREAM))));
+        model = Update.update(model, new SelectionMsg.DivergenceCommitSelected(SHA))
+                .model();
+        model = Update.update(model, new LoadMsg.CommitDetailLoaded(SHA, DiffOptions.DEFAULT, DiffText.of("changes")))
+                .model();
+        Model toggled =
+                Update.update(model, new DiffOptionsMsg.WhitespaceToggled()).model();
+
+        assertDropped(toggled, new LoadMsg.Failed(new Cmd.LoadCommitDetail(SHA, DiffOptions.DEFAULT), refused("boom")));
+        assertDropped(toggled, new LoadMsg.CommitDetailLoaded(SHA, DiffOptions.DEFAULT, DiffText.of("stale")));
+    }
+
+    @Test
     void highlightingAfterTheToggleReadsWithTheNewOptions() {
         Model toggled =
                 Update.update(loaded(), new DiffOptionsMsg.WhitespaceToggled()).model();
@@ -110,6 +143,9 @@ class DiffOptionsUpdateTest {
                         .stashDetail()
                         .get()
                         .value());
+
+        assertDropped(
+                next.model(), new LoadMsg.Failed(new Cmd.LoadStashDetail(stash, DiffOptions.DEFAULT), refused("boom")));
     }
 
     @Test
@@ -119,6 +155,21 @@ class DiffOptionsUpdateTest {
         Next next = Update.update(model, new DiffOptionsMsg.WhitespaceToggled());
 
         assertSame(model, next.model());
+        assertEquals(List.of(), next.cmds());
+    }
+
+    /**
+     * Asserts that {@code msg}, read with options the model no longer has, changes nothing but that its load is no
+     * longer running.
+     */
+    private static void assertDropped(Model model, LoadMsg msg) {
+        Model running =
+                model.mapJobs(jobs -> jobs.withRefreshing(jobs.refreshing().add(msg.cmd())));
+
+        Next next = Update.update(running, msg);
+
+        assertEquals(model.repoView(), next.model().repoView());
+        assertFalse(next.model().jobs().refreshing().contains(msg.cmd()));
         assertEquals(List.of(), next.cmds());
     }
 
