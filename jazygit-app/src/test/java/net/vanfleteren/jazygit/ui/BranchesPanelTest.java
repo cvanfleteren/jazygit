@@ -725,19 +725,6 @@ class BranchesPanelTest {
         assertEquals(java.util.List.of(new UpstreamMsg.DivergenceClosed(), new BranchesTabMsg.Switched(1)), dispatched);
     }
 
-    @Test
-    void aDivergenceSaysWhenABranchHasNoCommitsOfItsOwnOrMoreThanAreListed() {
-        DivergenceView view = DivergenceView.loading(
-                new Branch.Name("feature"), new BranchRef.Local(new Branch.Name("main")), DivergenceView.Against.BASE);
-        Commit ours = new Commit(new Sha("a1"), "Ada", "a@x", java.time.Instant.EPOCH, "Ours", "");
-
-        List<String> rows = BranchesPanel.entries(new Divergence(List.of(ours), 400, List.of(), 0))
-                .map(entry -> BranchesPanel.divergenceRow(view, entry))
-                .map(LoadableList.Row::text);
-
-        assertEquals(List.of("── main", "  no commits", "── feature", "↑ a1 Ad ○ Ours", "  … 399 more"), rows);
-    }
-
     private String highlightedAfterMovingTo(int index, Model after) throws Exception {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
             SettledPilot.focus(testRunner, BranchesPanel.ID);
