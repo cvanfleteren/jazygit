@@ -15,8 +15,9 @@ import net.vanfleteren.jazygit.ui.Theme.Highlights;
 /**
  * {@code list} with its selected row highlighted as in the left panes: as the theme's selection while the list has
  * the focus, and as its inactive selection while another field of the popup has it. Unlike in a left pane, the row
- * picked in a popup must always show, so a theme without an inactive selection highlights it as in use; the border of
- * the field tells where the focus is. The focus is only known as the list is rendered, so it is told then.
+ * picked in a popup must always show, so a theme without an inactive selection highlights it as in use; put the list
+ * in a {@link FocusBordered} panel to show whether it has the focus. The focus is only known as the list is rendered,
+ * so it is told then.
  */
 public record FocusHighlighted(ListElement<?> list) implements Element {
 
