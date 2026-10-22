@@ -167,6 +167,42 @@ class FilesPanelTest {
     }
 
     @Test
+    void whenTheSelectedFileIsGoneTheNextOneIsSelected() throws Exception {
+        assertEquals("c.txt", selectedAfter("b.txt", List.of("a.txt", "b.txt", "c.txt"), List.of("a.txt", "c.txt")));
+    }
+
+    @Test
+    void whenTheSelectedFileIsGoneAndWasLastThePreviousOneIsSelected() throws Exception {
+        assertEquals("b.txt", selectedAfter("c.txt", List.of("a.txt", "b.txt", "c.txt"), List.of("a.txt", "b.txt")));
+    }
+
+    @Test
+    void whenTheSelectedFileIsGoneItsNeighbourIsSelectedEvenWhenFilesAboveAreGoneToo() throws Exception {
+        List<String> names = List.of("a.txt", "b.txt", "c.txt", "d.txt", "e.txt");
+        assertEquals("d.txt", selectedAfter("c.txt", names, List.of("b.txt", "d.txt", "e.txt")));
+    }
+
+    /**
+     * The name of the file selected once only the {@code remaining} files are changed, when {@code selected}
+     * was, among the changed {@code names}.
+     */
+    private String selectedAfter(String selected, List<String> names, List<String> remaining) throws Exception {
+        Model before = TestModels.loaded(new FixedProvider(names.map(n -> new FileEntry(n, ChangeType.MODIFIED))));
+        Model after = TestModels.loaded(new FixedProvider(remaining.map(n -> new FileEntry(n, ChangeType.MODIFIED))));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, FilesPanel.ID))) {
+            RenderedText.of(testRunner, () -> panel.render(before, FilesPanel.ID));
+            // Below the root.
+            RenderedText.of(testRunner, () -> panel.tree().selected(names.indexOf(selected) + 1));
+            RenderedText.of(testRunner, () -> panel.render(after, FilesPanel.ID));
+            String name = ((FileTree.File) panel.tree().selectedNode().data()).name();
+
+            SettledPilot.of(testRunner).quit();
+            return name;
+        }
+    }
+
+    @Test
     void clickingANodeHighlightsIt() throws Exception {
         Model model = TestModels.loaded(new FixedProvider(
                 List.of(new FileEntry("a.txt", ChangeType.MODIFIED), new FileEntry("b.txt", ChangeType.MODIFIED))));

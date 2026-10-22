@@ -25,7 +25,7 @@ import net.vanfleteren.jazygit.ui.widgets.Pane;
 /**
  * Left-side panel showing the changed files, as in {@code git status}, as a directory tree. The tree
  * widget keeps its own selection and expansion, so it is only rebuilt when the status changes, and
- * then keeps the collapsed directories and the selected path.
+ * then keeps the collapsed directories and the selected path, or the nearest one when that is gone.
  */
 public class FilesPanel {
 
@@ -251,16 +251,28 @@ public class FilesPanel {
 
     @SuppressWarnings("unchecked")
     private void rebuild(Loadable<RepoStatus> status) {
-        Set<String> collapsed = nodes(roots)
-                .filter(n -> !n.isExpanded())
-                .map(n -> n.data())
-                .filter(FileTree.Dir.class::isInstance)
-                .map(FileTree.Dir.class::cast)
-                .map(FileTree.Dir::path)
-                .toSet();
-        Option<String> selected = selected().map(FilesPanel::path);
+        List<Option<String>> before = paths(visible(roots));
+        int previous = tree.selected();
+        roots = roots(status, collapsed(roots));
+        tree.roots(roots.toJavaArray(TreeNode[]::new));
+        tree.selected(restored(before, previous, paths(visible(roots))));
+    }
 
-        roots = switch (status) {
+    /**
+     * The paths of the collapsed directories.
+     */
+    private static Set<String> collapsed(List<TreeNode<FileTree>> roots) {
+        return nodes(roots)
+                .filter(n -> !n.isExpanded())
+                .flatMap(n -> n.data() instanceof FileTree.Dir dir ? Option.of(dir.path()) : Option.none())
+                .toSet();
+    }
+
+    /**
+     * The tree's roots for {@code status}, keeping the {@code collapsed} directories collapsed.
+     */
+    private static List<TreeNode<FileTree>> roots(Loadable<RepoStatus> status, Set<String> collapsed) {
+        return switch (status) {
             case Loadable.Loading<RepoStatus>() ->
                 List.of(TreeNode.<FileTree>of(Placeholders.loading()).leaf());
             case Loadable.Failed<RepoStatus>(Failure failure) ->
@@ -270,15 +282,34 @@ public class FilesPanel {
             case Loadable.Loaded<RepoStatus>(RepoStatus value) ->
                 List.of(node(new FileTree.Dir(ROOT_NAME, "", FileTree.of(value.files())), collapsed));
         };
-        tree.roots(roots.toJavaArray(TreeNode[]::new));
+    }
 
-        // Placeholders have no path.
-        List<Option<String>> visible =
-                visible(roots).map(n -> Option.of(n.data()).map(FilesPanel::path));
-        int fallback = Math.min(Math.max(0, tree.selected()), Math.max(0, visible.size() - 1));
-        tree.selected(selected.map(path -> visible.indexOf(Option.of(path)))
-                .filter(i -> i >= 0)
-                .getOrElse(fallback));
+    /**
+     * The path of each node; placeholders have none.
+     */
+    private static List<Option<String>> paths(List<TreeNode<FileTree>> nodes) {
+        return nodes.map(n -> Option.of(n.data()).map(FilesPanel::path));
+    }
+
+    /**
+     * The row of {@code after} to select when row {@code previous} of {@code before} was: the same path, or
+     * else the nearest one still there, below before above, or else the same row, kept inside the tree.
+     */
+    private static int restored(List<Option<String>> before, int previous, List<Option<String>> after) {
+        return List.range(0, before.size())
+                .sortBy(i -> 2 * Math.abs(i - previous) + (i < previous ? 1 : 0))
+                .iterator()
+                .flatMap(before::get)
+                .map(path -> after.indexOf(Option.of(path)))
+                .find(i -> i >= 0)
+                .getOrElse(() -> clamp(previous, after.size()));
+    }
+
+    /**
+     * {@code index}, kept between the first and last of {@code size} rows; 0 when there are none.
+     */
+    private static int clamp(int index, int size) {
+        return Math.max(0, Math.min(index, size - 1));
     }
 
     /**
