@@ -64,14 +64,6 @@ three runs), so you can `cd` into it and look around, or start jazygit on it you
 `.github/workflows/build.yml` runs them after `./mvnw verify`, on every pull request and before every publish, with
 Python 3.12 and the dependencies from `requirements.txt`.
 
-```sh
-./mvnw -DskipTests package                 # builds jazygit-app/target/jazygit-*-fat.jar
-nix develop -c python -m pytest acceptance  # or: pip install -r acceptance/requirements.txt
-```
-
-- `--jar PATH` tests another jar than the newest in `jazygit-app/target`.
-- `JAZYGIT_JAVA` picks the java that runs it (else `$JAVA_HOME/bin/java`, else `java`).
-
 ## Writing a test
 
 Set up the repository with `repo(...)` (runs git) and `repo.write(...)`, start the app with `jazygit()`, then:
