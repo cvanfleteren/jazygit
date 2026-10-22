@@ -174,12 +174,12 @@ public final class PullRequestDialog implements PopupView {
      */
     private static List<StyledElement<?>> reviewers(PullRequestDetails pr) {
         return pr.reviewers()
+                .map(reviewer -> PullRequestSymbols.reviewer(reviewer.state())
+                        .map(symbol -> List.<StyledElement<?>>of(symbol(symbol), text(" ")))
+                        .getOrElse(List.empty())
+                        .append(text("@" + reviewer.login())))
                 .zipWithIndex()
-                .flatMap(indexed -> List.<StyledElement<?>>of(text(indexed._2 > 0 ? "  " : ""))
-                        .appendAll(PullRequestSymbols.reviewer(indexed._1.state())
-                                .map(symbol -> List.of(symbol(symbol), text(" ")))
-                                .getOrElse(List.empty()))
-                        .append(text("@" + indexed._1.login())));
+                .flatMap(indexed -> indexed._2 > 0 ? indexed._1.prepend(text("  ")) : indexed._1);
     }
 
     /**
