@@ -12,7 +12,12 @@
         let jdk = pkgs.graalvmPackages.graalvm-ce;
         in {
           default = pkgs.mkShell {
-            packages = [ jdk (pkgs.maven.override { jdk_headless = jdk; }) ];
+            packages = [
+              jdk
+              (pkgs.maven.override { jdk_headless = jdk; })
+              # For the acceptance tests in acceptance/.
+              (pkgs.python3.withPackages (p: [ p.pexpect p.pyte p.pytest ]))
+            ];
             JAVA_HOME = jdk.home;
           };
         });

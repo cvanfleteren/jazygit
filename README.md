@@ -16,5 +16,7 @@ To build from source:
 
 - **JDK 25** and **Maven**: `mvn verify` builds and tests both modules, and `./run.sh` builds the jar when needed and
   runs it.
+- **Python 3.12 or newer**, for the acceptance tests that drive the built jar in a terminal; see
+  [acceptance/README.md](acceptance/README.md).
 - **GraalVM 25**, for the native image, plus a C compiler and the static zlib it links against. The Nix dev shell
   (`flake.nix`) provides GraalVM and Maven.
