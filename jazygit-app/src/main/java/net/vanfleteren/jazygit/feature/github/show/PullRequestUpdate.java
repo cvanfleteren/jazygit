@@ -92,16 +92,38 @@ public final class PullRequestUpdate {
                 yield PrOverviewUpdate.reloadIfShown(
                         FetchUpdate.requested(PullRequestsUpdate.loadAnyway(new Next(ended, done.cmds()))));
             }
+            // Only the dialog itself is read again, not the one kept under a popup opened from it.
+            case PullRequestMsg.RefreshChosen(), PullRequestMsg.Tick() ->
+                model.popup(PullRequestPopup.class)
+                        .filter(popup -> refreshable(model, popup))
+                        .map(popup -> Next.of(
+                                model.openPopup(popup.readingAgain()),
+                                new LoadPullRequestDetails(popup.pullRequest().number())))
+                        .getOrElse(() -> Next.of(model));
             case PullRequestMsg.InfoClosed() -> Next.of(model.withoutPopup(PullRequestPopup.class));
         };
     }
 
     /**
      * Whether the pull request {@code popup} shows can be turned into a draft, or marked ready for review: it is
-     * open, and its branch is not busy, e.g. with doing that already.
+     * open, and its branch is not busy, e.g. with doing that already. Nor while it is read again: a read that
+     * started before the change could come back after it, and show it undone.
      */
     static boolean draftChangeable(Model model, PullRequestPopup popup) {
-        return popup.open() && !model.jobs().busy().containsKey(new BranchRef.Local(popup.branch()));
+        return popup.open() && !popup.refreshing() && !busy(model, popup);
+    }
+
+    /**
+     * Whether the pull request {@code popup} shows can be read again: once the first read is done, no other is
+     * running, and its branch is not busy, e.g. with turning it into a draft, which a read running meanwhile could
+     * miss, and then show undone.
+     */
+    static boolean refreshable(Model model, PullRequestPopup popup) {
+        return popup.refreshable() && !busy(model, popup);
+    }
+
+    private static boolean busy(Model model, PullRequestPopup popup) {
+        return model.jobs().busy().containsKey(new BranchRef.Local(popup.branch()));
     }
 
     /**

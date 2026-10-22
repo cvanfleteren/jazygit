@@ -104,6 +104,42 @@ class PullRequestDialogTest {
     }
 
     @Test
+    void whileReadAgainTheDetailsStayWithASpinnerInTheTitle() throws Exception {
+        String screen = screen(PullRequestPopup.loading(new Branch.Name("support_rename"), PR)
+                .with(Either.right(DETAILS))
+                .readingAgain());
+
+        assertTrue(
+                screen.contains("Pull request #42 " + net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(NOW)), screen);
+        assertTrue(screen.contains("Add rename support to the files panel"), screen);
+        assertTrue(screen.contains("(R) Refresh"), screen);
+    }
+
+    @Test
+    void detailsThatFailedToBeReadAgainAreMarkedStale() throws Exception {
+        String screen = screen(PullRequestPopup.loading(new Branch.Name("support_rename"), PR)
+                .with(Either.right(DETAILS))
+                .readingAgain()
+                .with(Either.left(refused("gh: offline"))));
+
+        assertTrue(screen.contains("Pull request #42 · not up to date"), screen);
+        assertTrue(screen.contains("Add rename support to the files panel"), screen);
+    }
+
+    @Test
+    void refreshIsChosenWithCapitalR() throws Exception {
+        Model model = TestModels.loaded()
+                .openPopup(PullRequestPopup.loading(new Branch.Name("support_rename"), PR)
+                        .with(Either.right(DETAILS)));
+        try (ToolkitTestRunner runner = start(model)) {
+            SettledPilot.of(runner).press('R');
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new PullRequestMsg.RefreshChosen()), dispatched);
+    }
+
+    @Test
     void showsTheDetailsAsLabelledRows() throws Exception {
         String screen = screen(
                 PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(DETAILS)));
