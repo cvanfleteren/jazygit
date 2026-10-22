@@ -8,36 +8,19 @@ import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.collection.List;
-import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.function.Consumer;
-import java.util.function.Function;
-import net.vanfleteren.jazygit.gh.model.PullRequest;
-import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
 
 /**
- * Left-side panel listing the local branches, with the current branch marked. Space checks out
- * the highlighted branch, P pushes it, R asks for a new name for it, d asks where to delete it, n asks for the
- * name of a new branch starting at it.
- * A branch with a pull request shows its number, its CI checks and its review; one without shows the CI checks
- * of the branch it follows on GitHub.
- * <p>
- * {@code [} and {@code ]} go through the lists of the pane: the local branches, the remote-tracking ones and the
- * worktrees, in the same pane, so the focus moves through it as one. Space checks out the highlighted remote branch, n starts a new branch at it. A remote branch
- * that a local branch follows is dimmed. A remote branch on GitHub shows its pull request or its CI checks, like a
- * local branch. Clicking the name of a list in the title shows that list.
- * <p>
- * The third list is the worktrees of the repository, the one shown marked. Space switches to the highlighted one,
- * d removes it, L locks or unlocks it, and p forgets the ones whose directory is gone. On the local branches, w
- * checks the highlighted branch out in a new worktree.
+ * Left-side pane with three lists, one at a time: the {@link LocalBranchesList local branches}, the
+ * {@link RemoteBranchesList remote-tracking ones} and the {@link WorktreesList worktrees}. {@code [} and {@code ]}
+ * go through them, in the same pane, so the focus moves through it as one. Clicking the name of a list in the title
+ * shows that list.
  * <p>
  * While a divergence is open, it is listed in place of the local branches, by a {@link DivergenceList}; Escape goes
  * back to the branches.
@@ -48,13 +31,11 @@ public class BranchesPanel {
 
     private static final String TITLE_SEPARATOR = " │ ";
 
-    private final LoadableList<List<Branch>> list;
-    private final LoadableList<List<RemoteRef>> remoteList;
-    private final LoadableList<List<Worktree>> worktreeList;
+    private final LocalBranchesList localList;
+    private final RemoteBranchesList remoteList;
+    private final WorktreesList worktreeList;
     private final DivergenceList divergenceList;
-    private final Keymap keymap = Keymap.standard();
     private final Consumer<BranchesTab> tabClicked;
-    private final Clock clock;
 
     /**
      * @param dispatch   receives the messages for the user's actions, on the render thread
@@ -90,60 +71,12 @@ public class BranchesPanel {
             Clock clock,
             Theme.Highlights highlights) {
         this.tabClicked = tabClicked;
-        this.clock = clock;
         // Only the list shown is rendered, that of the tab or the divergence in place of the local branches, so
         // only it gets keys: TamboUI routes them to the elements of the last frame.
-        list = new LoadableList<>(Messages.get("panel.branches.title"), ID, BranchesPanel::reselect, highlights);
-        // The highlight alone marks the selection; a symbol would indent the rows.
-        list.highlightSymbol("");
-        list.onKey(event -> PaneKeys.sending(keymap.handle(Scopes.BRANCHES, event, selectedBranch()), dispatch));
-        remoteList = new LoadableList<>(
-                Messages.get("panel.remoteBranches.title"),
-                ID,
-                LoadableList.Reselect.following(RemoteRef::branch),
-                highlights);
-        remoteList.highlightSymbol("");
-        remoteList.whenEmpty(Messages.get("remoteBranches.empty"));
-        remoteList.onKey(event ->
-                PaneKeys.sending(keymap.handle(Scopes.REMOTE_BRANCHES, event, selectedRemoteBranch()), dispatch));
-        worktreeList = new LoadableList<>(
-                Messages.get("panel.worktrees.title"), ID, LoadableList.Reselect.following(Worktree::path), highlights);
-        worktreeList.highlightSymbol("");
-        worktreeList.whenEmpty(Messages.get("worktrees.empty"));
-        worktreeList.onKey(
-                event -> PaneKeys.sending(keymap.handle(Scopes.WORKTREES, event, selectedWorktree()), dispatch));
+        localList = new LocalBranchesList(ID, dispatch, clock, highlights);
+        remoteList = new RemoteBranchesList(ID, dispatch, clock, highlights);
+        worktreeList = new WorktreesList(ID, dispatch, highlights);
         divergenceList = new DivergenceList(ID, dispatch, openCommit, highlights);
-    }
-
-    /**
-     * What a busy branch shows on the left of its spinner: what is being done to it, for the operations that
-     * talk to its remote.
-     */
-    static Option<String> busyLabel(Operation operation) {
-        return operation.busyKey().map(Messages::get);
-    }
-
-    /**
-     * @param spinner the label and the spinner frame of a busy branch, as one text
-     */
-    private static LoadableList.Row row(
-            Branch b, Duration since, List<LoadableList.Seg> gitHub, Option<String> spinner) {
-        return new LoadableList.Row(List.of(LoadableList.Seg.of("%4s ".formatted(TimeText.age(since))
-                        + (b.current() ? "* " : "  ")
-                        + b.name().value()))
-                .appendAll(worktree(b))
-                .appendAll(sync(b))
-                .appendAll(gitHub)
-                .appendAll(spinner.map(text -> LoadableList.Seg.styled(" " + text, Theme.Classes.SPINNER))));
-    }
-
-    private static LoadableList.Row remoteRow(
-            RemoteRef ref, Duration since, boolean tracked, List<LoadableList.Seg> gitHub, Option<String> spinner) {
-        String text = "%4s   ".formatted(TimeText.age(since)) + ref.branch().shortName();
-        return new LoadableList.Row(
-                List.of(tracked ? LoadableList.Seg.styled(text, Theme.Classes.DIM) : LoadableList.Seg.of(text))
-                        .appendAll(gitHub)
-                        .appendAll(spinner.map(frame -> LoadableList.Seg.styled(" " + frame, Theme.Classes.SPINNER))));
     }
 
     /**
@@ -188,149 +121,6 @@ public class BranchesPanel {
     }
 
     /**
-     * A worktree of {@code repo}: marked when it is the one shown, the name of its directory, marked when it has
-     * changes, and what it has checked out, with how far its branch is from its upstream; then whether it is the
-     * main one, locked, or gone from disk.
-     */
-    static LoadableList.Row worktreeRow(Repo repo, Worktree worktree) {
-        String checkedOut = worktree.branch()
-                .map(Branch.Name::value)
-                .getOrElse(() -> Messages.get(
-                        "worktrees.detached", worktree.head().map(Sha::shortSha).getOrElse("")));
-        return new LoadableList.Row(List.of(
-                        Option.of(LoadableList.Seg.of((worktree.current() ? "* " : "  ") + worktree.name() + " ")),
-                        Option.when(
-                                repo.hasChanges(worktree).contains(true),
-                                () -> LoadableList.Seg.styled("● ", Theme.Classes.UNSTAGED)),
-                        Option.of(
-                                worktree.branch().isDefined()
-                                        ? LoadableList.Seg.of(checkedOut)
-                                        : LoadableList.Seg.styled(checkedOut, Theme.Classes.DIM)))
-                .flatMap(segment -> segment)
-                .appendAll(worktree.branch()
-                        .flatMap(repo::branch)
-                        .map(BranchesPanel::sync)
-                        .getOrElse(List.empty()))
-                .appendAll(List.of(
-                                Option.when(
-                                        worktree.main(),
-                                        () -> LoadableList.Seg.styled(
-                                                " " + Messages.get("worktrees.main"), Theme.Classes.DIM)),
-                                worktree.locked()
-                                        .map(reason -> LoadableList.Seg.styled(
-                                                " "
-                                                        + (reason.isBlank()
-                                                                ? Messages.get("worktrees.locked")
-                                                                : Messages.get("worktrees.lockedBecause", reason)),
-                                                Theme.Classes.DIM)),
-                                Option.when(
-                                        worktree.prunable(),
-                                        () -> LoadableList.Seg.styled(
-                                                " " + Messages.get("worktrees.missing"), Theme.Classes.GONE)))
-                        .flatMap(segment -> segment)));
-    }
-
-    /**
-     * The spinner of a branch that {@code operation} runs on, preceded by its label if it has one.
-     */
-    static String spinner(Operation operation, Instant now) {
-        return busyLabel(operation).map(label -> label + " ").getOrElse("") + TimeText.spinnerFrame(now);
-    }
-
-    /**
-     * That the branch is checked out in another worktree, dimmed and with a leading space; nothing for one that
-     * is not.
-     */
-    static List<LoadableList.Seg> worktree(Branch branch) {
-        return Option.when(
-                        branch.checkedOutElsewhere(),
-                        () -> LoadableList.Seg.styled(" " + Messages.get("branches.worktree"), Theme.Classes.DIM))
-                .toList();
-    }
-
-    /**
-     * The commits not yet pushed in green and not yet pulled in red, as an arrow and a count each,
-     * with a leading space; "gone" when its upstream was deleted on the remote; nothing for a branch that is
-     * in sync, or that has no upstream.
-     */
-    static List<LoadableList.Seg> sync(Branch branch) {
-        return List.of(
-                        Option.of(branch.ahead())
-                                .filter(n -> n > 0)
-                                .map(n -> LoadableList.Seg.styled(" ↑" + n, Theme.Classes.AHEAD)),
-                        Option.of(branch.behind())
-                                .filter(n -> n > 0)
-                                .map(n -> LoadableList.Seg.styled(" ↓" + n, Theme.Classes.BEHIND)),
-                        branch.goneUpstream()
-                                .map(upstream -> LoadableList.Seg.styled(
-                                        " " + Messages.get("branches.gone"), Theme.Classes.GONE)))
-                .flatMap(o -> o);
-    }
-
-    /**
-     * The pull request of a branch, with a leading space: its number (dimmed for a draft), how its CI checks
-     * are doing and where its review stands, each as a coloured symbol; nothing for a branch without one.
-     */
-    static List<LoadableList.Seg> pullRequest(Option<PullRequest> pullRequest) {
-        return pullRequest
-                .toList()
-                .flatMap(pr -> List.of(
-                                Option.of(LoadableList.Seg.styled(
-                                        " #" + pr.number(),
-                                        pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST)),
-                                PullRequestSymbols.checks(pr.checks()).map(BranchesPanel::symbol),
-                                PullRequestSymbols.review(pr.review()).map(BranchesPanel::symbol))
-                        .flatMap(o -> o));
-    }
-
-    /**
-     * How a branch is doing on GitHub, with a leading space: its pull request, if it has one, else how the CI
-     * checks on its tip are doing; nothing for a branch with neither.
-     */
-    static List<LoadableList.Seg> gitHub(Option<PullRequest> pullRequest, Option<Checks> checks) {
-        return pullRequest.isDefined()
-                ? pullRequest(pullRequest)
-                : checks.flatMap(PullRequestSymbols::checks)
-                        .map(BranchesPanel::symbol)
-                        .toList();
-    }
-
-    private static LoadableList.Seg symbol(PullRequestSymbols.Symbol symbol) {
-        return LoadableList.Seg.styled(" " + symbol.text(), symbol.cssClass());
-    }
-
-    /**
-     * The selection follows its branch when the list is reordered, also when it was renamed: when it is gone and
-     * one branch came in its place. After a checkout it goes to the new current branch, which is listed first.
-     */
-    private static int reselect(List<Branch> previous, List<Branch> next, int selected) {
-        Option<Branch.Name> before = current(previous);
-        Option<Branch.Name> target = before.equals(current(next))
-                ? Option.of(selected)
-                        .filter(i -> i < previous.size())
-                        .map(i -> previous.get(i).name())
-                        .map(name -> renamed(previous, next, name))
-                : current(next);
-        return target.map(name -> next.indexWhere(b -> b.name().equals(name)))
-                .filter(i -> i >= 0)
-                .getOrElse(selected);
-    }
-
-    /**
-     * The name {@code name} has in {@code next}: its own while it is there, else the only one that is new there.
-     */
-    private static Branch.Name renamed(List<Branch> previous, List<Branch> next, Branch.Name name) {
-        List<Branch.Name> before = previous.map(Branch::name);
-        List<Branch.Name> after = next.map(Branch::name);
-        List<Branch.Name> added = after.removeAll(before);
-        return after.contains(name) || added.size() != 1 ? name : added.head();
-    }
-
-    private static Option<Branch.Name> current(List<Branch> branches) {
-        return branches.find(Branch::current).map(Branch::name);
-    }
-
-    /**
      * @param focusedId the id of the currently focused left pane, as reported by
      *                  {@code runner().focusManager().focusedId()}
      */
@@ -350,65 +140,20 @@ public class BranchesPanel {
     }
 
     private Panel tabPanel(Model model, boolean focused, boolean active) {
-        Function<BranchRef, Option<String>> spinnerOf = spinners(model);
-        Panel panel = switch (model.repoView().branchesTab()) {
-            case LOCAL -> localPanel(model, spinnerOf, focused, active);
-            case REMOTE -> remotePanel(model, spinnerOf, focused, active);
-            case WORKTREES -> worktreePanel(model, focused, active);
-        };
+        BranchesTab tab = model.repoView().branchesTab();
+        Panel panel = list(tab).render(model, focused, active, title(tab));
         return panel.onMouseEvent(event -> titleClick(panel.renderedArea(), event));
     }
 
     /**
-     * The spinner of each busy branch, all at the same frame.
+     * The list {@code tab} shows.
      */
-    private Function<BranchRef, Option<String>> spinners(Model model) {
-        Instant frame = clock.instant();
-        Map<BranchRef, Operation> busy = model.jobs().busy();
-        return ref -> busy.get(ref).map(operation -> spinner(operation, frame));
-    }
-
-    private Panel localPanel(
-            Model model, Function<BranchRef, Option<String>> spinnerOf, boolean focused, boolean active) {
-        return list.render(
-                model.repo().branches(),
-                branches -> branches.map(b -> row(
-                        b,
-                        Duration.between(b.tipTime(), model.now()),
-                        gitHub(model.gitHub().pullRequest(b), model.gitHub().checks(b)),
-                        spinnerOf.apply(new BranchRef.Local(b.name())))),
-                focused,
-                active,
-                title(BranchesTab.LOCAL));
-    }
-
-    private Panel remotePanel(
-            Model model, Function<BranchRef, Option<String>> spinnerOf, boolean focused, boolean active) {
-        return remoteList.render(
-                model.repo().remoteBranches(),
-                refs -> refs.map(ref -> remoteRow(
-                        ref,
-                        Duration.between(ref.tipTime(), model.now()),
-                        model.repo().trackingBranch(ref.branch()).isDefined(),
-                        gitHub(
-                                model.gitHub().pullRequest(ref.branch()),
-                                model.gitHub().checks(ref.branch())),
-                        spinnerOf.apply(new BranchRef.Remote(ref.branch())))),
-                focused,
-                active,
-                title(BranchesTab.REMOTE));
-    }
-
-    private Panel worktreePanel(Model model, boolean focused, boolean active) {
-        Panel panel = worktreeList.render(
-                model.repo().worktrees(),
-                all -> all.map(worktree -> worktreeRow(model.repo(), worktree)),
-                focused,
-                active,
-                title(BranchesTab.WORKTREES));
-        // Highlighted when drawn, after the render followed the highlighted one.
-        worktreeAsked(model).forEach(worktreeList::select);
-        return panel;
+    private BranchesTabList list(BranchesTab tab) {
+        return switch (tab) {
+            case LOCAL -> localList;
+            case REMOTE -> remoteList;
+            case WORKTREES -> worktreeList;
+        };
     }
 
     /**
@@ -434,28 +179,30 @@ public class BranchesPanel {
      * The index of the currently highlighted branch in the list {@code model} shows, never negative.
      */
     public int selectedIndex(Model model) {
-        if (divergence(model).isDefined()) {
-            return divergenceList.selectedIndex();
-        }
-        return switch (model.repoView().branchesTab()) {
-            case LOCAL -> list.selectedIndex();
-            case REMOTE -> remoteList.selectedIndex();
-            case WORKTREES -> worktreeList.selectedIndex();
-        };
+        return divergence(model).isDefined()
+                ? divergenceList.selectedIndex()
+                : list(model.repoView().branchesTab()).selectedIndex();
     }
 
     /**
      * The name of the highlighted branch, once the branches are shown.
      */
     public Option<Branch.Name> selectedBranch() {
-        return list.selected(branches -> branches).map(Branch::name);
+        return localList.selectedBranch();
     }
 
     /**
      * The highlighted remote branch, once the remote branches are shown.
      */
     public Option<RemoteBranch> selectedRemoteBranch() {
-        return remoteList.selected(refs -> refs).map(RemoteRef::branch);
+        return remoteList.selectedRemoteBranch();
+    }
+
+    /**
+     * The highlighted worktree, once the worktrees are shown.
+     */
+    public Option<Worktree> selectedWorktree() {
+        return worktreeList.selectedWorktree();
     }
 
     /**
@@ -483,27 +230,6 @@ public class BranchesPanel {
     }
 
     /**
-     * Where among the worktrees the one an open popup is about is, once they list it: the one the user acts on
-     * next, as the one just added. Only a popup moves the highlight; a worktree added outside the app does not.
-     */
-    static Option<Integer> worktreeAsked(Model model) {
-        return model.popup(WorktreePopup.class)
-                .flatMap(popup -> model.repo()
-                        .worktrees()
-                        .toOption()
-                        .map(worktrees -> worktrees.indexWhere(
-                                worktree -> worktree.location().equals(popup.location()))))
-                .filter(index -> index >= 0);
-    }
-
-    /**
-     * The highlighted worktree, once the worktrees are shown.
-     */
-    public Option<Worktree> selectedWorktree() {
-        return worktreeList.selected(worktrees -> worktrees);
-    }
-
-    /**
      * The message to send when the highlighted branch of the list shown is not the one whose log {@code model}
      * holds.
      */
@@ -512,12 +238,9 @@ public class BranchesPanel {
     }
 
     private Option<Msg> tabSelectionChange(Model model) {
-        Option<BranchRef> selected = switch (model.repoView().branchesTab()) {
-            case LOCAL -> selectedBranch().map(BranchRef.Local::new);
-            case REMOTE -> selectedRemoteBranch().map(BranchRef.Remote::new);
-            // The log of the branch the worktree has checked out; a detached one leaves the log as it is.
-            case WORKTREES -> selectedWorktree().flatMap(Worktree::branch).map(BranchRef.Local::new);
-        };
-        return PaneKeys.selectionChange(selected, model.repoView().branchLog(), SelectionMsg.BranchSelected::new);
+        return PaneKeys.selectionChange(
+                list(model.repoView().branchesTab()).selectedRef(),
+                model.repoView().branchLog(),
+                SelectionMsg.BranchSelected::new);
     }
 }
