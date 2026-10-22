@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.commit;
 import io.vavr.collection.List;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.feature.FeatureAction;
+import net.vanfleteren.jazygit.feature.ahead.AheadAction;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendAction;
 import net.vanfleteren.jazygit.feature.commit.create.CreateCommitAction;
 import net.vanfleteren.jazygit.feature.commit.drop.DropAction;
@@ -18,7 +19,7 @@ import net.vanfleteren.jazygit.ui.PopupSlot;
 
 /**
  * The commit operations: committing, amending (the last or any commit), rewording, squashing, fixing up, dropping,
- * reverting, resetting, and searching them. Adding one is adding its subpackage, and listing its action here.
+ * reverting, resetting, searching them, and listing only those not on the base. Adding one is adding its subpackage, and listing its action here.
  */
 public final class CommitFeature {
 
@@ -34,7 +35,8 @@ public final class CommitFeature {
             DropAction.ACTION,
             RevertAction.ACTION,
             ResetAction.ACTION,
-            CommitSearchAction.ACTION);
+            CommitSearchAction.ACTION,
+            AheadAction.COMMITS);
 
     private CommitFeature() {}
 

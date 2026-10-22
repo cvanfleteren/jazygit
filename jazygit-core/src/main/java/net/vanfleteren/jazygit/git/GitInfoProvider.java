@@ -227,8 +227,17 @@ public interface GitInfoProvider {
     /**
      * The commits of the log of HEAD that {@code query} finds, newest first, as many as {@link #commits} reads at
      * most; none in a repository without commits.
+     *
+     * @param notOn the branch whose commits are left out, if any
      */
-    Either<ProcessError, List<Commit>> search(CommitQuery query);
+    Either<ProcessError, List<Commit>> search(CommitQuery query, Option<BranchRef> notOn);
+
+    /**
+     * The commits of {@code branch}, or of HEAD for none, that are not on the first of {@code bases} that exists:
+     * at most as many as {@link #commits} reads, laid out as a log; and the commit they forked from. None when none
+     * of {@code bases} exists, or HEAD has no commits yet.
+     */
+    Either<GitError, Option<Ahead>> ahead(Option<BranchRef> branch, List<BranchRef> bases);
 
     /**
      * The log of the branch {@code branch}, local or remote-tracking, newest first.

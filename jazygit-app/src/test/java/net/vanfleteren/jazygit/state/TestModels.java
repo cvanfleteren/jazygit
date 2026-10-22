@@ -97,7 +97,7 @@ public final class TestModels {
         model = Update.update(model, new CommitSearchMsg.Opened()).model();
         model = Update.update(model, new CommitSearchMsg.Edited(text)).model();
         model = Update.update(model, new CommitSearchMsg.Submitted()).model();
-        return Update.update(model, new LoadMsg.CommitSearchLoaded(CommitQuery.parse(text), found))
+        return Update.update(model, new LoadMsg.CommitSearchLoaded(CommitQuery.parse(text), Option.none(), found))
                 .model();
     }
 

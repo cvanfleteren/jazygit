@@ -222,6 +222,15 @@ See ADR 4.
 The search runs again each time the log is read again, so it stays right after an operation, and the commit
 operations find the commits it found through `Model.commit`, also those older than the log reads.
 
+## The commits not on the base
+
+The commits pane and the log of the highlighted branch dim the commits that are on the base of their branch: the
+branch it was made from (`gh-merge-base`), else the main branch, `origin/` first. Their titles count the others.
+`b`, in either pane, lists only those and the fork point (`RepoView.onlyAhead`), and a search then leaves the base
+out. `Cmd.LoadAhead` reads it, once the log it goes with is read and again when the base moves, into `Repo.ahead`
+for HEAD and `RepoView.branchAhead` for the highlighted branch; `state.AheadUpdate` decides what to read, and
+`ui.AheadView` how the panes show it. `feature.ahead` only declares the keys. See ADR 20.
+
 ## The pull requests screen
 
 Ctrl+P switches the left of the screen between the repository and the pull requests (`Model.screen`, `state.Screen`);

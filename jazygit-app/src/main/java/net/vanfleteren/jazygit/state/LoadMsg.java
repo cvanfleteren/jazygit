@@ -87,11 +87,22 @@ public sealed interface LoadMsg extends Msg {
         }
     }
 
-    record CommitSearchLoaded(CommitQuery query, List<Commit> commits) implements LoadMsg {
+    record CommitSearchLoaded(CommitQuery query, Option<BranchRef> notOn, List<Commit> commits) implements LoadMsg {
 
         @Override
         public Cmd.Load cmd() {
-            return new Cmd.SearchCommits(query);
+            return new Cmd.SearchCommits(query, notOn);
+        }
+    }
+
+    /**
+     * The commits {@code load} read: none when there was no base to compare with.
+     */
+    record AheadLoaded(Cmd.LoadAhead load, Option<Ahead> ahead) implements LoadMsg {
+
+        @Override
+        public Cmd.Load cmd() {
+            return load;
         }
     }
 

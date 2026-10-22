@@ -195,7 +195,7 @@ class CommitsPanelTest {
 
     @Test
     void theTitleSaysWhatWasSearchedAndWhenThereWereMoreThanItLists() {
-        CommitSearch search = CommitSearch.loading("fix");
+        CommitSearch search = CommitSearch.loading("fix", Option.none());
 
         assertEquals("Commits: /fix", CommitsPanel.title(search));
         assertEquals(
@@ -238,7 +238,9 @@ class CommitsPanelTest {
                     List.ofAll(sent));
             assertEquals(Option.of("d"), model.get().repoView().commitSearch().map(CommitSearch::text));
             model.set(Update.update(
-                            model.get(), new LoadMsg.CommitSearchLoaded(CommitQuery.parse("d"), List.of(commit("s0"))))
+                            model.get(),
+                            new LoadMsg.CommitSearchLoaded(
+                                    CommitQuery.parse("d"), Option.none(), List.of(commit("s0"))))
                     .model());
             String shown = RenderedText.of(testRunner, () -> panel.render(model.get(), CommitsPanel.ID));
             assertTrue(shown.contains("Commits: /d"), shown);
@@ -256,8 +258,9 @@ class CommitsPanelTest {
     @Test
     void aSearchThatFindsNothingSaysSo() throws Exception {
         Model model = TestModels.loaded(new SampleData())
-                .mapRepoView(repoView -> repoView.withCommitSearch(
-                        Option.of(CommitSearch.loading("nothing").withResults(new Loadable.Loaded<>(List.empty())))));
+                .mapRepoView(
+                        repoView -> repoView.withCommitSearch(Option.of(CommitSearch.loading("nothing", Option.none())
+                                .withResults(new Loadable.Loaded<>(List.empty())))));
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.ID))) {

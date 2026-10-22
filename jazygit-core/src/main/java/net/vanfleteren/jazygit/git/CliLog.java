@@ -52,12 +52,15 @@ final class CliLog {
      * The commits of the log of HEAD that {@code query} finds, newest first; none in a repository without commits.
      * They are left as git lists them: with commits left out, merges and what they brought in no longer join up.
      */
-    static Either<ProcessError, List<Commit>> search(Path worktree, CommitQuery query) {
+    static Either<ProcessError, List<Commit>> search(Path worktree, CommitQuery query, Option<BranchRef> notOn) {
         return resolve(worktree, "HEAD")
                 .mapLeft(GitFailure::error)
                 .flatMap(head -> head.fold(
                         () -> Either.right(List.empty()),
-                        tip -> read(worktree, filters(query).append(tip.value()), query.paths())));
+                        tip -> read(
+                                worktree,
+                                filters(query).append(tip.value()).appendAll(notOn.map(base -> "^" + Refs.of(base))),
+                                query.paths())));
     }
 
     /**
@@ -100,6 +103,67 @@ final class CliLog {
                                                         worktree, List.of(theirs.value(), "^" + ours.value()))
                                                 .map(behind ->
                                                         new Divergence(ahead, counts._1, behind, counts._2)))))));
+    }
+
+    /**
+     * The commits of {@code branch}, or of HEAD for none, that are not on the first of {@code bases} that exists;
+     * none when none of them exists, or HEAD has no commits yet.
+     */
+    static Either<GitError, Option<Ahead>> ahead(Path worktree, Option<BranchRef> branch, List<BranchRef> bases) {
+        return branch.fold(
+                        () -> Either.<GitError, Option<Sha>>narrow(
+                                resolve(worktree, "HEAD").mapLeft(GitFailure::error)),
+                        named -> tip(worktree, named).map(Option::of))
+                .flatMap(tip -> tip.fold(
+                        () -> Either.right(Option.none()),
+                        ours -> firstExisting(worktree, bases)
+                                .flatMap(base -> base.fold(
+                                        () -> Either.right(Option.none()),
+                                        theirs -> Either.narrow(notOn(worktree, ours, theirs._1, theirs._2)
+                                                .map(Option::of))))));
+    }
+
+    /**
+     * The first of {@code bases} that exists, with its tip.
+     */
+    private static Either<GitError, Option<Tuple2<BranchRef, Sha>>> firstExisting(
+            Path worktree, List<BranchRef> bases) {
+        return bases.isEmpty()
+                ? Either.right(Option.none())
+                : Either.<GitError, Option<Sha>>narrow(
+                                resolve(worktree, Refs.of(bases.head())).mapLeft(GitFailure::error))
+                        .flatMap(tip -> tip.fold(
+                                () -> firstExisting(worktree, bases.tail()),
+                                found -> Either.right(Option.of(Tuple.of(bases.head(), found)))));
+    }
+
+    /**
+     * The commits from {@code ours} that are not on {@code base}, whose tip is {@code theirs}. They are only counted
+     * when they fill a log, to tell whether there are more.
+     */
+    private static Either<ProcessError, Ahead> notOn(Path worktree, Sha ours, BranchRef base, Sha theirs) {
+        List<String> revisions = List.of(ours.value(), "^" + theirs.value());
+        return selected(worktree, revisions)
+                .flatMap(commits -> (commits.size() < MAX_COMMITS
+                                ? Either.<ProcessError, Boolean>right(false)
+                                : count(worktree, revisions.prepend("--max-count=" + (MAX_COMMITS + 1)))
+                                        .map(count -> count > MAX_COMMITS))
+                        .flatMap(more ->
+                                forkPoint(worktree, ours, theirs).map(fork -> new Ahead(base, commits, more, fork))));
+    }
+
+    /**
+     * The best common ancestor of {@code ours} and {@code theirs}; none for histories that never met.
+     */
+    private static Either<ProcessError, Option<Commit>> forkPoint(Path worktree, Sha ours, Sha theirs) {
+        // merge-base exits with 1, saying nothing, when there is no common ancestor.
+        return GitProcess.ask(worktree, GitCommand.reading("merge-base", ours.value(), theirs.value()))
+                .mapLeft(GitFailure::error)
+                .flatMap(answer -> answer.fold(
+                        () -> Either.right(Option.none()),
+                        found -> Either.<ProcessError, Sha>narrow(GitOutput.sha(found.stdout()))
+                                .flatMap(sha -> read(worktree, List.of("--no-walk", sha.value()), List.empty()))
+                                .map(List::headOption)));
     }
 
     /**

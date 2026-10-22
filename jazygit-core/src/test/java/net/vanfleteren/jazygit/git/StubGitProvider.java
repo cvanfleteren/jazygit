@@ -9,6 +9,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.model.Ahead;
 import net.vanfleteren.jazygit.git.model.AllBranches;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -190,8 +191,13 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<ProcessError, List<Commit>> search(CommitQuery query) {
+    default Either<ProcessError, List<Commit>> search(CommitQuery query, Option<BranchRef> notOn) {
         return Either.right(List.empty());
+    }
+
+    @Override
+    default Either<GitError, Option<Ahead>> ahead(Option<BranchRef> branch, List<BranchRef> bases) {
+        return Either.right(Option.none());
     }
 
     /**

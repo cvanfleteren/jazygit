@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.git.model.*;
  * @param branches        the local branches
  * @param remoteBranches  the remote-tracking branches
  * @param commits         the commit log of HEAD
+ * @param ahead           the commits of HEAD that are not on its base, none when it has no base
  * @param stashes         the stashes, newest first
  * @param worktrees       the worktrees of the repository, the one shown first
  * @param worktreeChanges whether the other worktrees have changes, by their location, as read last; one that was
@@ -26,11 +27,13 @@ public record Repo(
         Loadable<List<Branch>> branches,
         Loadable<List<RemoteRef>> remoteBranches,
         Loadable<List<Commit>> commits,
+        Loadable<Option<Ahead>> ahead,
         Loadable<List<Stash>> stashes,
         Loadable<List<Worktree>> worktrees,
         Map<String, Boolean> worktreeChanges) {
 
     public static final Repo LOADING = new Repo(
+            Loadable.loading(),
             Loadable.loading(),
             Loadable.loading(),
             Loadable.loading(),

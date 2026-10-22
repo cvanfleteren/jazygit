@@ -196,8 +196,13 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<ProcessError, List<Commit>> search(CommitQuery query) {
-        return CliLog.search(worktree, query);
+    public Either<ProcessError, List<Commit>> search(CommitQuery query, Option<BranchRef> notOn) {
+        return CliLog.search(worktree, query, notOn);
+    }
+
+    @Override
+    public Either<GitError, Option<Ahead>> ahead(Option<BranchRef> branch, List<BranchRef> bases) {
+        return CliLog.ahead(worktree, branch, bases);
     }
 
     @Override

@@ -149,6 +149,7 @@ public final class Update {
     private static Next reload(Model model, List<Cmd.Load> periodic) {
         List<Cmd.Load> retries = List.<Cmd.Load>empty()
                 .appendAll(Option.when(model.repo().commits() instanceof Failed, LoadCommits::new))
+                .appendAll(AheadUpdate.retries(model))
                 .appendAll(model.repoView()
                         .commitSearch()
                         .filter(search -> search.results() instanceof Failed)
