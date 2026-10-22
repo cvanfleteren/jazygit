@@ -218,8 +218,8 @@ class PullRequestDialogTest {
 
     @Test
     void aTitleOfWideCharactersGetsTheLinesItTakes() throws Exception {
-        // 41 characters of two columns each: two lines of the 56 columns inside the dialog.
-        String title = "変更".repeat(19) + "終わり";
+        // 81 characters of two columns each: three lines of the 76 columns inside the dialog.
+        String title = "変更".repeat(39) + "終わり";
         PullRequestDetails wide = new PullRequestDetails(
                 DETAILS.number(),
                 title,
@@ -250,7 +250,7 @@ class PullRequestDialogTest {
 
     @Test
     void manyChecksThatDidNotPassAreCut() throws Exception {
-        List<Check> checks = List.range(0, 8).map(i -> new Check("check" + i, Checks.FAILING));
+        List<Check> checks = List.range(0, 11).map(i -> new Check("check" + i, Checks.FAILING));
         PullRequestDetails details = new PullRequestDetails(
                 42,
                 "t",
@@ -275,8 +275,8 @@ class PullRequestDialogTest {
         String screen =
                 screen(PullRequestPopup.loading(new Branch.Name("a"), PR).with(Either.right(details)));
 
-        assertTrue(screen.contains("check4"), screen);
-        assertFalse(screen.contains("check5"), screen);
+        assertTrue(screen.contains("check7"), screen);
+        assertFalse(screen.contains("check8"), screen);
         assertTrue(screen.contains("… 3 more"), screen);
         assertFalse(screen.contains("Author"), screen);
         assertFalse(screen.contains("Reviewers"), screen);
@@ -294,11 +294,13 @@ class PullRequestDialogTest {
 
     @Test
     void keepsItsSizeWhenTheDetailsArrive() throws Exception {
-        List<Check> checks = List.range(0, 8).map(i -> new Check("check" + i, Checks.FAILING));
+        List<Check> checks = List.range(0, 12).map(i -> new Check("check" + i, Checks.FAILING));
         PullRequestDetails fullest = new PullRequestDetails(
                 42,
-                "A title long enough to need more than two lines "
-                        + "at the width of the dialog, so that it must be cut to keep the dialog from growing",
+                "A title long enough to need more than three lines at the width of the dialog, so that it must be "
+                        + "cut to keep the dialog from growing, which takes quite a few words when the dialog is "
+                        + "as wide as it is, so here are some more of them, and then a few more still, to be sure "
+                        + "that it really does not fit",
                 "cvf",
                 State.OPEN,
                 false,
@@ -321,7 +323,10 @@ class PullRequestDialogTest {
         int hintLine = hintLine(screen(loading));
 
         assertEquals(hintLine, hintLine(screen(loading.with(Either.right(DETAILS)))));
-        assertEquals(hintLine, hintLine(screen(loading.with(Either.right(fullest)))));
+        String fullestScreen = screen(loading.with(Either.right(fullest)));
+        assertEquals(hintLine, hintLine(fullestScreen));
+        // The last action still fits under the tallest details.
+        assertTrue(fullestScreen.contains("(R) Refresh"), fullestScreen);
         assertEquals(hintLine, hintLine(screen(loading.with(Either.left(refused("offline"))))));
     }
 
@@ -402,7 +407,8 @@ class PullRequestDialogTest {
     private String screen(PullRequestPopup popup) throws Exception {
         Model model = TestModels.loaded().withNow(NOW).openPopup(popup);
         try (ToolkitTestRunner runner = start(model)) {
-            return RenderedText.ofTall(runner, () -> view(model));
+            // About a terminal filling a 1920x1080 screen.
+            return RenderedText.ofSize(runner, () -> view(model), 120, 50);
         }
     }
 

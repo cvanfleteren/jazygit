@@ -104,8 +104,9 @@ public final class CliGitHub implements GitHub {
 
     /*
      * Everything about one pull request the dialog shows, its latest commit for its checks. gh fills in the
-     * repository of the working tree for {owner} and {repo}. GitHub no longer says when a commit was pushed, so its
-     * latest commit and latest force push are what tell when it was last pushed to.
+     * repository of the working tree for {owner} and {repo}. GitHub no longer says when a commit was pushed, so the
+     * latest of when it was opened, its latest commit and its latest force push tells when it was last pushed to; as
+     * GitHub gives all three as UTC timestamps ending in Z, the latest of them sorts last as text.
      */
     private static final String DETAILS_QUERY = """
             query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { \
@@ -129,8 +130,8 @@ public final class CliGitHub implements GitHub {
             .data.repository.pullRequest | \
             ((["pr", (.number | tostring), .title, (.author.login // ""), .state, \
             (.isDraft | tostring), .headRefName, .baseRefName, .createdAt, \
-            (([.commits.nodes[0].commit.committedDate, .timelineItems.nodes[0].createdAt] | map(select(. != null)) \
-            | max) // .createdAt), (.additions | tostring), \
+            ([.createdAt, .commits.nodes[0].commit.committedDate, .timelineItems.nodes[0].createdAt] \
+            | map(select(. != null)) | max), (.additions | tostring), \
             (.deletions | tostring), (.changedFiles | tostring), (.mergeable // ""), (.reviewDecision // ""), \
             (.comments.totalCount | tostring)] | @tsv), \
             (.reviewThreads | ["threads", (.totalCount | tostring), (.nodes | length | tostring), \
