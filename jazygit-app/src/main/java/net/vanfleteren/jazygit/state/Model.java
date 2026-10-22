@@ -141,7 +141,9 @@ public record Model(
      * frame, what is left out too much would not be drawn when it changes.
      */
     public Model drawn() {
-        return mapJobs(jobs -> jobs.withRefreshing(HashSet.empty()).withWorktreeChangesRead(Option.none()));
+        return mapJobs(jobs -> jobs.withRefreshing(HashSet.empty())
+                .withWorktreeChangesRead(Option.none())
+                .withReadAt(HashMap.empty()));
     }
 
     /**

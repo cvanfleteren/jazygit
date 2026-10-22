@@ -23,13 +23,19 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     private final Path workTree;
     // Where git keeps the files that tell what the repository is in the middle of, found once.
     private final CliInProgress.Markers markers;
+    // Where the files are that tell whether the branches, the stashes or the worktrees changed, found once.
+    private final Option<CliMetadata.Locations> metadataAt;
     // Asked each time git talks to a remote.
     private final Supplier<Map<String, String>> credentials;
 
     private CliGitInfoProvider(
-            Path workTree, CliInProgress.Markers markers, Supplier<Map<String, String>> credentials) {
+            Path workTree,
+            CliInProgress.Markers markers,
+            Option<CliMetadata.Locations> metadataAt,
+            Supplier<Map<String, String>> credentials) {
         this.workTree = workTree;
         this.markers = markers;
+        this.metadataAt = metadataAt;
         this.credentials = credentials;
     }
 
@@ -53,7 +59,8 @@ public final class CliGitInfoProvider implements GitInfoProvider {
                                         GitCommand.reading("rev-parse", "--show-toplevel"),
                                         CliGitInfoProvider::path)))
                         .flatMap(workTree -> Either.narrow(CliInProgress.markers(workTree)
-                                .map(markers -> new CliGitInfoProvider(workTree, markers, HashMap::empty))));
+                                .map(markers -> new CliGitInfoProvider(
+                                        workTree, markers, CliMetadata.locate(workTree), HashMap::empty))));
     }
 
     private static Either<UnexpectedOutput, Path> path(String raw) {
@@ -71,7 +78,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
      * whenever it talks to a remote, for a credential helper that reads them, such as gh's.
      */
     public CliGitInfoProvider withCredentials(Supplier<Map<String, String>> credentials) {
-        return new CliGitInfoProvider(workTree, markers, credentials);
+        return new CliGitInfoProvider(workTree, markers, metadataAt, credentials);
     }
 
     @Override
@@ -87,6 +94,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     @Override
     public Either<ProcessError, RepoStatus> status() {
         return CliStatus.read(workTree, markers);
+    }
+
+    @Override
+    public Option<GitMetadata> metadata() {
+        return metadataAt.map(CliMetadata::read);
     }
 
     @Override

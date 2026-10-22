@@ -25,10 +25,16 @@ public final class Update {
     static final Duration WORKTREE_CHANGES_INTERVAL = Duration.ofSeconds(3);
 
     /**
-     * Loads that a tick repeats. They are skipped while a previous one is still running.
+     * Loads that reading the repository again repeats. They are skipped while a previous one is still running.
      */
     private static final List<Cmd.Load> PERIODIC =
-            List.of(new LoadStatus(), new LoadBranches(), new Cmd.LoadStashes(), new Cmd.LoadWorktrees());
+            List.<Cmd.Load>of(new LoadStatus()).appendAll(CheckMetadata.GUARDED);
+
+    /**
+     * Loads that a tick repeats: the status, and those that {@link CheckMetadata} guards only once their files
+     * changed.
+     */
+    private static final List<Cmd.Load> TICKED = List.of(new LoadStatus(), new CheckMetadata());
 
     private Update() {}
 
@@ -124,9 +130,23 @@ public final class Update {
 
     /**
      * Reads the repository again: the periodic loads, and whatever failed to load before. A load that is still
-     * running is not started again.
+     * running is not started again. What an operation changed is read at once this way, without waiting for the
+     * files to tell.
      */
     public static Next refresh(Model model) {
+        return reload(model, PERIODIC);
+    }
+
+    /**
+     * Reads the repository again on a tick, as {@link #refresh(Model)} does, but the branches, the stashes and the
+     * worktrees only once the files they are read from changed: each takes a git process, and they hardly change
+     * while the user does nothing.
+     */
+    public static Next tick(Model model) {
+        return reload(model, TICKED);
+    }
+
+    private static Next reload(Model model, List<Cmd.Load> periodic) {
         List<Cmd.Load> retries = List.<Cmd.Load>empty()
                 .appendAll(Option.when(model.repo().commits() instanceof Failed, LoadCommits::new))
                 .appendAll(model.repoView()
@@ -152,7 +172,7 @@ public final class Update {
                         .filter(detail -> detail.value() instanceof Failed)
                         .map(detail -> new LoadCommitDetail(
                                 detail.key(), model.preferences().diffOptions())));
-        List<Cmd.Load> loads = PERIODIC.appendAll(retries)
+        List<Cmd.Load> loads = periodic.appendAll(retries)
                 .filter(cmd -> !model.jobs().refreshing().contains(cmd))
                 .appendAll(worktreeChanges(model)
                         .filter(load -> model.jobs()

@@ -8,6 +8,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.MetadataStamp;
 
 /**
  * What runs in the background, and when the remotes were last fetched from.
@@ -18,6 +19,9 @@ import net.vanfleteren.jazygit.git.model.BranchRef;
  * @param fetching   the background fetch from the remotes that is running, if any; the next one waits
  * @param lastFetch  when a remote was last fetched from, and the remotes that failed the last time
  * @param worktreeChangesRead when reading which worktrees have changes last finished, whatever came of it
+ * @param readAt     for each load that {@link Cmd.CheckMetadata} guards, what the files it reads looked like when it
+ *                   was last started; it is not started again until they change. A load that fails is forgotten,
+ *                   so the next tick tries again
  * @param ghExecutableEntered the gh executable the user entered last, to be checked before it is used, if any:
  *                            none inside for the one on the PATH. Checks can finish in another order than they
  *                            were asked for; only the check of this one decides
@@ -29,10 +33,17 @@ public record Jobs(
         Option<Fetching> fetching,
         Freshness lastFetch,
         Option<Instant> worktreeChangesRead,
+        Map<Cmd.Load, MetadataStamp> readAt,
         Option<Option<String>> ghExecutableEntered) {
 
-    public static final Jobs IDLE =
-            new Jobs(HashSet.empty(), HashMap.empty(), Option.none(), Freshness.NEVER, Option.none(), Option.none());
+    public static final Jobs IDLE = new Jobs(
+            HashSet.empty(),
+            HashMap.empty(),
+            Option.none(),
+            Freshness.NEVER,
+            Option.none(),
+            HashMap.empty(),
+            Option.none());
 
     /**
      * These jobs with {@code operation} running on {@code branch}.

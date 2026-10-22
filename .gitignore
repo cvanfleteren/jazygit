@@ -2,3 +2,5 @@ target/
 *.class
 .direnv/
 .claude/worktrees/
+__pycache__/
+.pytest_cache/

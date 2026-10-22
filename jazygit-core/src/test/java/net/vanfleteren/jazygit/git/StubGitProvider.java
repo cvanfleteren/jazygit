@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.git.model.Divergence;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.GitMetadata;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.InProgressAction;
 import net.vanfleteren.jazygit.git.model.MergeMode;
@@ -79,6 +80,12 @@ public interface StubGitProvider extends GitInfoProvider {
     @Override
     default Either<ProcessError, RepoStatus> status() {
         return Either.right(new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), List.empty()));
+    }
+
+    // No files to look at, so what the stub says is read every time.
+    @Override
+    default Option<GitMetadata> metadata() {
+        return Option.none();
     }
 
     /**

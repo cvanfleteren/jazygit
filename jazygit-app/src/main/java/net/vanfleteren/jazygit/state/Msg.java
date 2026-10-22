@@ -34,7 +34,7 @@ public interface Msg {
 
         @Override
         public Update.Next apply(Model model) {
-            return Update.refresh(model.withNow(now));
+            return Update.tick(model.withNow(now));
         }
     }
 
