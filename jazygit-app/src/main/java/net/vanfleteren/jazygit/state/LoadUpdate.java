@@ -27,6 +27,8 @@ public final class LoadUpdate {
     public static Next update(Model model, LoadMsg msg) {
         Model done = model.mapJobs(jobs -> jobs.withRefreshing(jobs.refreshing().remove(msg.cmd())));
         return switch (msg) {
+            // What was read with other diff options than the ones now chosen is dropped, whatever came of it.
+            case LoadMsg m when stale(done, m.cmd()) -> Next.of(done);
             case StatusLoaded(RepoStatus status) ->
                 statusLoaded(
                         model,
@@ -73,20 +75,15 @@ public final class LoadUpdate {
                         .map(view -> view.load().equals(msg.cmd())
                                 ? view.withCommits(view.commits().reload(divergence))
                                 : view))));
-            case CommitDetailLoaded cl
-            when !cl.options().equals(done.preferences().diffOptions()) -> Next.of(done);
             case CommitDetailLoaded(Sha sha, var options, DiffText changes) ->
                 Next.of(withDetail(
                         done.mapRepoView(repoView -> repoView.withCommitDetail(
                                 Preview.updated(repoView.commitDetail(), sha, d -> d.reload(changes)))),
                         sha,
                         d -> d.reload(changes)));
-            case StashDetailLoaded sl
-            when !sl.options().equals(done.preferences().diffOptions()) -> Next.of(done);
             case StashDetailLoaded(Sha sha, var options, DiffText changes) ->
                 Next.of(done.mapRepoView(repoView -> repoView.withStashDetail(
                         Preview.updated(repoView.stashDetail(), sha, d -> d.reload(changes)))));
-            case FileDiffLoaded fl when !fl.options().equals(done.preferences().diffOptions()) -> Next.of(done);
             case FileDiffLoaded(var files, var options, var diff) ->
                 Next.of(done.mapRepoView(repoView ->
                         repoView.withFileDiff(Preview.updated(repoView.fileDiff(), files, d -> d.reload(diff)))));
@@ -97,6 +94,14 @@ public final class LoadUpdate {
                 Next.of(failed(
                         done.mapJobs(jobs -> jobs.withReadAt(jobs.readAt().remove(cmd))), cmd, failure));
         };
+    }
+
+    /**
+     * Whether {@code load} read with other diff options than the ones now chosen, so that what came of it is outdated.
+     */
+    private static boolean stale(Model model, Cmd.Load load) {
+        return load instanceof Cmd.DiffLoad diff
+                && !diff.options().equals(model.preferences().diffOptions());
     }
 
     /**
@@ -237,12 +242,6 @@ public final class LoadUpdate {
 
     private static Model failed(Model model, Cmd.Load cmd, Failure failure) {
         return switch (cmd) {
-            case LoadCommitDetail(Sha sha, var options)
-            when !options.equals(model.preferences().diffOptions()) -> model;
-            case LoadFileDiff(var files, var options)
-            when !options.equals(model.preferences().diffOptions()) -> model;
-            case LoadStashDetail(Sha sha, var options)
-            when !options.equals(model.preferences().diffOptions()) -> model;
             case Cmd.CheckMetadata() -> model;
             case Cmd.LoadStatus() -> model.mapRepo(repo -> repo.withStatus(new Failed<>(failure)));
             case Cmd.LoadBranches() ->

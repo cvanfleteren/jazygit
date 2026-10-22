@@ -105,6 +105,14 @@ public interface Cmd {
     }
 
     /**
+     * A load whose result depends on the diff options it was started with.
+     */
+    sealed interface DiffLoad extends Load {
+
+        DiffOptions options();
+    }
+
+    /**
      * Keeps {@code next}, which the user changed from {@code previous}, for the next session.
      */
     record SaveSettings(Settings previous, Settings next) implements Cmd {
@@ -281,7 +289,7 @@ public interface Cmd {
         }
     }
 
-    record LoadCommitDetail(Sha sha, DiffOptions options) implements Load {
+    record LoadCommitDetail(Sha sha, DiffOptions options) implements DiffLoad {
 
         @Override
         public Msg run(Env env) {
@@ -291,7 +299,7 @@ public interface Cmd {
         }
     }
 
-    record LoadStashDetail(Sha sha, DiffOptions options) implements Load {
+    record LoadStashDetail(Sha sha, DiffOptions options) implements DiffLoad {
 
         @Override
         public Msg run(Env env) {
@@ -301,7 +309,7 @@ public interface Cmd {
         }
     }
 
-    record LoadFileDiff(List<FileEntry> files, DiffOptions options) implements Load {
+    record LoadFileDiff(List<FileEntry> files, DiffOptions options) implements DiffLoad {
 
         @Override
         public Msg run(Env env) {
