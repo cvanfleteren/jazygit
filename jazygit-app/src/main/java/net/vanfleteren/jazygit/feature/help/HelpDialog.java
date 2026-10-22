@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.PopupSlot;
+import net.vanfleteren.jazygit.ui.TextWidth;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
 import net.vanfleteren.jazygit.ui.widgets.ListKeys;
@@ -44,9 +45,8 @@ public final class HelpDialog implements PopupView {
 
     private static final int WIDTH = 70;
 
-    // The key right-aligned in a column of this many characters, then a space and the description.
+    // The key right-aligned in a column this many screen columns wide, then a space and the description.
     private static final int KEY_COLUMN = 12;
-    private static final String KEY_FORMAT = "%" + KEY_COLUMN + "s %s";
 
     // A key has details when the messages have this after the key of its description.
     private static final String DETAILS_SUFFIX = ".details";
@@ -60,8 +60,8 @@ public final class HelpDialog implements PopupView {
                     Tuple.of(Messages.get("branches.gone"), "help.branches.legend.gone"),
                     Tuple.of(Messages.get("branches.worktree"), "help.branches.legend.worktree"),
                     Tuple.of("#42", "help.branches.legend.pullRequest"),
-                    Tuple.of("✓ ✗ ●", "help.branches.legend.checks"),
-                    Tuple.of("✔ ✎ ?", "help.branches.legend.review")));
+                    Tuple.of("✅ ❌ ⏳", "help.branches.legend.checks"),
+                    Tuple.of("👍 👎 ?", "help.branches.legend.review")));
 
     private final Consumer<Msg> dispatch;
     private final Keymap keymap;
@@ -115,7 +115,7 @@ public final class HelpDialog implements PopupView {
     }
 
     private static String line(String key, String descriptionKey) {
-        return KEY_FORMAT.formatted(key, Messages.get(descriptionKey));
+        return TextWidth.alignRight(key, KEY_COLUMN) + " " + Messages.get(descriptionKey);
     }
 
     private static Option<String> details(Key key) {

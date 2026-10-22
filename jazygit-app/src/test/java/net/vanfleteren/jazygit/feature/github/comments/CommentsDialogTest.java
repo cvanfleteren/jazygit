@@ -31,6 +31,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
+import net.vanfleteren.jazygit.ui.TextWidth;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -90,6 +91,20 @@ class CommentsDialogTest {
             int title = lines.indexWhere(text -> text.contains("@carol · 2026-10-10 08:00 · approved"));
             assertTrue(carol >= 0 && title > carol, screen);
             assertTrue(screen.contains("No text."), screen);
+        }
+    }
+
+    @Test
+    void theAuthorsLineUpAfterASymbolOfOneOrTwoColumns() throws Exception {
+        model = reading(List.of(APPROVAL, comment("PRR_2", Kind.COMMENTED, "dave", "Hmm")));
+        try (ToolkitTestRunner runner = start()) {
+            String screen = RenderedText.ofSize(runner, this::view, 140, 30);
+
+            // The 👍 of an approval takes two columns, the ● of a review that commented one.
+            String approved = line(screen, "@carol  ");
+            String commented = line(screen, "@dave  ");
+            assertTrue(approved.contains("👍 @carol"), screen);
+            assertEquals(column(approved, "@carol"), column(commented, "@dave"), screen);
         }
     }
 
@@ -247,6 +262,13 @@ class CommentsDialogTest {
         return List.of(screen.split("\n"))
                 .find(text -> text.contains(containing))
                 .getOrElse("");
+    }
+
+    /**
+     * The screen column {@code text} first shows at on {@code line}, counting a wide character as the columns it takes.
+     */
+    private static int column(String line, String text) {
+        return TextWidth.of(line.substring(0, line.indexOf(text)));
     }
 
     /**

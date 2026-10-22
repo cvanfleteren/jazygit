@@ -12,11 +12,11 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewerState;
  */
 public final class PullRequestSymbols {
 
-    private static final Symbol PASSED = new Symbol("✓", Theme.Classes.CHECKS_PASSED);
-    private static final Symbol FAILED = new Symbol("✗", Theme.Classes.CHECKS_FAILED);
-    private static final Symbol RUNNING = new Symbol("●", Theme.Classes.CHECKS_RUNNING);
-    private static final Symbol APPROVED = new Symbol("✔", Theme.Classes.REVIEW_APPROVED);
-    private static final Symbol CHANGES = new Symbol("✎", Theme.Classes.REVIEW_CHANGES);
+    private static final Symbol PASSED = new Symbol("✅", Theme.Classes.CHECKS_PASSED);
+    private static final Symbol FAILED = new Symbol("❌", Theme.Classes.CHECKS_FAILED);
+    private static final Symbol RUNNING = new Symbol("⏳", Theme.Classes.CHECKS_RUNNING);
+    private static final Symbol APPROVED = new Symbol("👍", Theme.Classes.REVIEW_APPROVED);
+    private static final Symbol CHANGES = new Symbol("👎", Theme.Classes.REVIEW_CHANGES);
     private static final Symbol TO_REVIEW = new Symbol("?", Theme.Classes.DIM);
     private static final Symbol COMMENTED = new Symbol("●", Theme.Classes.DIM);
     private static final Symbol DISMISSED = new Symbol("⊘", Theme.Classes.DIM);

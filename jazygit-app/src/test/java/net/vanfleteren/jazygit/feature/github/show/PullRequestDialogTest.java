@@ -151,15 +151,15 @@ class PullRequestDialogTest {
         assertTrue(screen.contains("  Created  2026-10-10 (3d ago)"), screen);
         assertTrue(screen.contains("  Changes  +120 −34 in 7 files"), screen);
         assertTrue(screen.contains("Mergeable  yes"), screen);
-        assertTrue(screen.contains("   Review  ✎ changes requested"), screen);
-        assertTrue(screen.contains("Reviewers  @alice ✔  @bob ✎"), screen);
+        assertTrue(screen.contains("   Review  👎 changes requested"), screen);
+        assertTrue(screen.contains("Reviewers  @alice 👍  @bob 👎"), screen);
         assertTrue(screen.contains(" Comments  5"), screen);
         assertTrue(screen.contains("  Threads  5 with 12 comments, 2 unresolved"), screen);
         assertTrue(screen.contains("   Labels  enhancement, ui"), screen);
-        assertTrue(screen.contains("   Checks  ✗ 1 failed · ● 1 running · ✓ 1 passed"), screen);
+        assertTrue(screen.contains("   Checks  ❌ 1 failed · ⏳ 1 running · ✅ 1 passed"), screen);
         // The failed check first, then the running one; the passed one is only counted.
-        assertTrue(screen.indexOf("✗ build") < screen.indexOf("● integration"), screen);
-        assertFalse(screen.contains("✓ lint"), screen);
+        assertTrue(screen.indexOf("❌ build") < screen.indexOf("⏳ integration"), screen);
+        assertFalse(screen.contains("✅ lint"), screen);
         assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
     }
 

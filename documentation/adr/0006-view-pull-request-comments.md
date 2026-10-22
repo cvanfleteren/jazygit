@@ -44,7 +44,7 @@ The popup is as big as the screen allows while still showing it is a popup: the 
 and 1 line above and under, at most 160 columns wide, so lines of text stay readable.
 
 - On the left, the list: one row per comment, at most 56 columns or two fifths of the popup wide. A row has a symbol,
-  the author, how long ago, and the first line of the text, cut to fit. The symbol is ✔ for an approval, ✎ for
+  the author, how long ago, and the first line of the text, cut to fit. The symbol is 👍 for an approval, 👎 for
   changes asked, ● for a review that commented, ⊘ for a dismissed review, and none for a comment. The description
   says "description" instead of its first line. A comment GitHub hides (outdated, resolved, off-topic, spam…) is a
   dimmed "hidden · reason", and still shows in full on the right.
