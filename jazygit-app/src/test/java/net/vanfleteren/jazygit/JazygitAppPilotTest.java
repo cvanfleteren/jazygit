@@ -13,6 +13,7 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyModifiers;
 import dev.tamboui.tui.pilot.Pilot;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
@@ -183,18 +184,18 @@ class JazygitAppPilotTest {
 
             Pilot pilot = SettledPilot.of(testRunner);
             pilot.pause();
-            assertEquals(0, fixture.branches().selectedIndex(fixture.model()));
+            assertEquals(fixture.selecting(0), fixture.branches().selectionChange(fixture.model()));
 
             pilot.press(KeyCode.UP);
             pilot.pause();
             assertEquals(
-                    0,
-                    fixture.branches().selectedIndex(fixture.model()),
+                    fixture.selecting(0),
+                    fixture.branches().selectionChange(fixture.model()),
                     "selection should not go below the first item");
 
             pilot.press(KeyCode.DOWN);
             pilot.pause();
-            assertEquals(1, fixture.branches().selectedIndex(fixture.model()));
+            assertEquals(fixture.selecting(1), fixture.branches().selectionChange(fixture.model()));
 
             int branchCount = fixture.data().branches().get().size();
             for (int i = 0; i < branchCount + 5; i++) {
@@ -202,8 +203,8 @@ class JazygitAppPilotTest {
             }
             pilot.pause();
             assertEquals(
-                    branchCount - 1,
-                    fixture.branches().selectedIndex(fixture.model()),
+                    fixture.selecting(branchCount - 1),
+                    fixture.branches().selectionChange(fixture.model()),
                     "selection should clamp at the last item");
 
             assertEquals(0, fixture.commits().selectedIndex(), "an unfocused pane's selection should be unaffected");
@@ -384,6 +385,14 @@ class JazygitAppPilotTest {
                     new CommitsPanel(dispatched::add, () -> {}),
                     new StashPanel(dispatched::add),
                     new AtomicReference<>());
+        }
+
+        /**
+         * What the branches pane sends when the {@code index}th branch gets highlighted.
+         */
+        Option<Msg> selecting(int index) {
+            return Option.of(new SelectionMsg.BranchSelected(
+                    new BranchRef.Local(data.branches().get().get(index).name())));
         }
 
         Supplier<Element> renderer() {

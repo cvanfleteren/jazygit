@@ -123,11 +123,6 @@ class WorktreesList implements BranchesTabList {
         return panel;
     }
 
-    @Override
-    public int selectedIndex() {
-        return list.selectedIndex();
-    }
-
     /**
      * The branch the highlighted worktree has checked out; a detached one leaves the log as it is.
      */

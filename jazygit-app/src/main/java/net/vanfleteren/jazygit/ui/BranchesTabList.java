@@ -17,11 +17,6 @@ interface BranchesTabList {
     Panel render(Model model, boolean focused, boolean active, Line title);
 
     /**
-     * The index of the highlighted row, never negative.
-     */
-    int selectedIndex();
-
-    /**
      * The branch whose log the highlighted row shows, if any.
      */
     Option<BranchRef> selectedRef();
