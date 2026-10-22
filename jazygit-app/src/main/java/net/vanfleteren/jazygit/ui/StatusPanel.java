@@ -86,9 +86,7 @@ public final class StatusPanel {
      */
     private static EventResult titleClick(Rect area, MouseEvent event, Consumer<Screen> screenClicked) {
         return Option.when(
-                        event.kind() == MouseEventKind.PRESS
-                                && event.isLeftButton()
-                                && event.y() == area.top(),
+                        event.kind() == MouseEventKind.PRESS && event.isLeftButton() && event.y() == area.top(),
                         event.x() - area.left() - 1)
                 .flatMap(StatusPanel::screenAt)
                 .map(clicked -> {

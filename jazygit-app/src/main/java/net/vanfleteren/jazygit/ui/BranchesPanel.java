@@ -162,12 +162,10 @@ public class BranchesPanel {
      */
     private static EventResult titleClick(Rect area, MouseEvent event, Consumer<BranchesTab> tabClicked) {
         return Option.when(
-                        event.kind() == MouseEventKind.PRESS
-                                && event.isLeftButton()
-                                && event.y() == area.top(),
+                        event.kind() == MouseEventKind.PRESS && event.isLeftButton() && event.y() == area.top(),
                         event.x() - area.left() - 1)
                 .flatMap(BranchesPanel::tabAt)
-                .map(clicked -> {   
+                .map(clicked -> {
                     tabClicked.accept(clicked);
                     return EventResult.HANDLED;
                 })
