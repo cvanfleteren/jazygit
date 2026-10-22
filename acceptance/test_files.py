@@ -1,6 +1,8 @@
 """Staging and discarding the changed files, one file, a directory or all of them."""
 
-ALL = "/"
+from pages import FilesPane
+
+ALL = FilesPane.ALL
 
 
 def test_stage_a_file_leaves_the_others_unstaged(repo, jazygit):

@@ -50,11 +50,14 @@ def test_stash_without_a_name_is_named_by_git(repo, jazygit):
     assert repo.stashes() == ["WIP on main: " + repo.short("HEAD") + " Add one"]
 
 
-def test_pop_a_stash_brings_its_changes_back_and_removes_it(repo, jazygit):
-    repo.commit("Add files", **{"one.txt": "one\n", "two.txt": "two\n"})
+def test_pop_a_stash_brings_its_changes_back_as_they_were_staged_and_removes_it(repo, jazygit):
+    repo.commit("Add files", **{"one.txt": "one\n", "two.txt": "two\n", "three.txt": "three\n"})
     repo.write("one.txt", "one\nolder\n")
     repo("stash", "push", "--message", "older")
-    repo.write("two.txt", "two\nnewer\n")
+    repo.write("two.txt", "two\nstaged\n")
+    repo("add", "two.txt")
+    repo.write("two.txt", "two\nstaged\nunstaged\n")
+    repo.write("three.txt", "three\nunstaged\n")
     repo.write("new.txt", "new\n")
     repo("stash", "push", "--include-untracked", "--message", "newer")
     ui = jazygit()
@@ -62,8 +65,41 @@ def test_pop_a_stash_brings_its_changes_back_and_removes_it(repo, jazygit):
     ui.stash.pop("newer")
 
     assert repo.stashes() == ["older"]
-    assert repo.status() == {"two.txt": " M", "new.txt": "??"}
-    assert repo.read("two.txt") == "two\nnewer\n"
+    assert repo.status() == {"two.txt": "MM", "three.txt": " M", "new.txt": "??"}
+    assert repo("show", ":two.txt") == "two\nstaged"
+    assert repo.read("two.txt") == "two\nstaged\nunstaged\n"
+
+
+def test_pop_brings_staged_changes_back_unstaged_when_they_no_longer_apply_staged(repo, jazygit):
+    repo.commit("Add eight lines", **{"one.txt": "1\n2\n3\n4\n5\n6\n7\n8\n"})
+    repo.write("one.txt", "1\n2\n3\n4\nstaged\n6\n7\n8\n")
+    repo("add", "one.txt")
+    repo("stash", "push", "--message", "stashed")
+    # A change two lines away: the staged change no longer applies to what is staged, but merges cleanly.
+    repo.commit("Change line three", **{"one.txt": "1\n2\nlater\n4\n5\n6\n7\n8\n"})
+    ui = jazygit()
+
+    ui.stash.pop("stashed")
+
+    assert repo.stashes() == []
+    assert repo.status() == {"one.txt": " M"}
+    assert repo.read("one.txt") == "1\n2\nlater\n4\nstaged\n6\n7\n8\n"
+
+
+def test_pop_with_something_staged_brings_the_stash_back_unstaged_and_keeps_what_is_staged(repo, jazygit):
+    repo.commit("Add files", **{"one.txt": "one\n", "two.txt": "two\n"})
+    repo.write("one.txt", "one\nstashed\n")
+    repo("add", "one.txt")
+    repo("stash", "push", "--message", "stashed")
+    repo.write("two.txt", "two\nstaged\n")
+    repo("add", "two.txt")
+    ui = jazygit()
+
+    ui.stash.pop("stashed")
+
+    assert repo.stashes() == []
+    assert repo.status() == {"one.txt": " M", "two.txt": "M "}
+    assert repo.read("one.txt") == "one\nstashed\n"
 
 
 def test_pop_an_older_stash_leaves_the_newer_one(repo, jazygit):

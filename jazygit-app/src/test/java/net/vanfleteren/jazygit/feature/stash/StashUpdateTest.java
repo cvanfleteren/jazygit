@@ -153,9 +153,9 @@ class StashUpdateTest {
 
     @Test
     void poppedLogsTheCommandsAndFailureIsReported() {
-        Next popped = Update.update(loaded(), succeeded(new StashCmd.Pop(STASH), "git stash pop stash@{0}"));
+        Next popped = Update.update(loaded(), succeeded(new StashCmd.Pop(STASH), "git stash pop --index stash@{0}"));
         assertEquals(
-                List.of(new LogEntry(StashCmd.STASH_POP, executed("git stash pop stash@{0}"))),
+                List.of(new LogEntry(StashCmd.STASH_POP, executed("git stash pop --index stash@{0}"))),
                 popped.model().outcome().commandLog());
 
         Next failed = Update.update(loaded(), failed(new StashCmd.Pop(STASH), "conflict"));

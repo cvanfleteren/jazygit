@@ -451,7 +451,8 @@ class StashPane:
         self.app.wait_for(f"{ref}: {message}")
 
     def pop(self, message: str):
-        """Brings back the changes of the stash with this message, unstaged, and removes it."""
+        """Brings back the changes of the stash with this message, staged and unstaged as they were where they
+        still apply, and removes it."""
         self.select(message)
         self.ui.changing_repo(f"the stash {message!r} popped", lambda: self.app.press("g"))
 

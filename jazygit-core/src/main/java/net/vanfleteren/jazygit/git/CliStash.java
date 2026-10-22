@@ -98,31 +98,31 @@ final class CliStash {
     }
 
     /**
-     * Runs {@code git stash pop <ref>} for {@code stash}, under the name it has now. Git refuses e.g. when local
-     * changes would be overwritten, or when the stash conflicts, which keeps it.
+     * Runs {@code git stash pop --index <ref>} for {@code stash}, under the name it has now, or
+     * {@code git stash pop <ref>} as {@link #popKeepingStaged} does. Git refuses e.g. when local changes would be
+     * overwritten, or when the stash conflicts, which keeps it.
      */
     static Either<GitFailure<GitError>, List<ExecutedCommand>> pop(Path workTree, Stash stash) {
-        return onStash(workTree, stash, ref -> git("stash", "pop", ref));
+        return onStash(workTree, stash, ref -> popKeepingStaged(workTree, ref));
     }
 
     /**
      * Runs {@code git stash drop <ref>} for {@code stash}, under the name it has now.
      */
     static Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Path workTree, Stash stash) {
-        return onStash(workTree, stash, ref -> git("stash", "drop", ref));
+        return onStash(workTree, stash, ref -> GitProcess.log(workTree, git("stash", "drop", ref)));
     }
 
     /**
-     * Runs the {@code command} of the name {@code stash} has now: a stash added or removed since it was listed
-     * renamed it, and its old name is another stash now. A stash that is gone is a {@link StashGone}.
+     * Runs {@code run} on the name {@code stash} has now: a stash added or removed since it was listed renamed it,
+     * and its old name is another stash now. A stash that is gone is a {@link StashGone}.
      */
     private static Either<GitFailure<GitError>, List<ExecutedCommand>> onStash(
-            Path workTree, Stash stash, Function<String, GitCommand> command) {
+            Path workTree, Stash stash, Function<String, Either<GitFailure<ProcessError>, List<ExecutedCommand>>> run) {
         return list(workTree)
                 .<GitFailure<GitError>>mapLeft(error -> new GitFailure<>(error, List.empty()))
                 .flatMap(stashes -> stashes.find(listed -> listed.sha().equals(stash.sha()))
-                        .map(current -> GitFailure.<GitError, List<ExecutedCommand>>widen(
-                                GitProcess.log(workTree, command.apply(current.ref()))))
+                        .map(current -> GitFailure.<GitError, List<ExecutedCommand>>widen(run.apply(current.ref())))
                         .getOrElse(() -> Either.left(new GitFailure<>(new StashGone(stash.message()), List.empty()))));
     }
 
@@ -150,19 +150,42 @@ final class CliStash {
     }
 
     /**
-     * Runs {@code git stash pop --index --quiet}: brings back what {@link #pushQuietly} stashed, staged changes
-     * staged again. When the staged changes do not apply where they are popped, git pops nothing, and they are
-     * popped unstaged instead, with {@code git stash pop --quiet}.
+     * Runs {@code git stash pop --index --quiet}: brings back what {@link #pushQuietly} stashed, as
+     * {@link #popKeepingStaged} does.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> popQuietly(Path workTree) {
-        return GitProcess.log(workTree, git("stash", "pop", "--index", "--quiet"))
+        return popKeepingStaged(workTree, "--quiet");
+    }
+
+    /**
+     * Runs {@code git stash pop --index <arg>}: brings back a stash with its staged changes staged again. When
+     * the staged changes do not apply where they are popped, git pops nothing, and they are popped unstaged
+     * instead, with {@code git stash pop <arg>}. With something staged already, git refuses {@code --index} and
+     * unstages it, where a pop without it keeps it staged: then the stash is popped unstaged straight away.
+     */
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> popKeepingStaged(Path workTree, String arg) {
+        return nothingStaged(workTree)
+                .flatMap(clean ->
+                        clean ? popWithIndex(workTree, arg) : GitProcess.log(workTree, git("stash", "pop", arg)));
+    }
+
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> popWithIndex(Path workTree, String arg) {
+        return GitProcess.log(workTree, git("stash", "pop", "--index", arg))
                 .fold(
                         failure -> failure.error() instanceof CommandFailed failed && failed.says(WITHOUT_INDEX)
-                                ? GitProcess.log(workTree, git("stash", "pop", "--quiet"))
+                                ? GitProcess.log(workTree, git("stash", "pop", arg))
                                         .map(failure.commands()::appendAll)
                                         .mapLeft(again -> again.after(failure.commands()))
                                 : Either.left(failure),
                         Either::right);
+    }
+
+    /**
+     * Whether the index is the same as {@code HEAD}: nothing is staged. Only asked, so not logged.
+     */
+    private static Either<GitFailure<ProcessError>, Boolean> nothingStaged(Path workTree) {
+        return GitProcess.ask(workTree, git("diff", "--cached", "--quiet", "--no-ext-diff"))
+                .map(Option::isDefined);
     }
 
     /**

@@ -86,7 +86,7 @@ class ProgramTest {
 
         @Override
         public Either<GitFailure<GitError>, List<ExecutedCommand>> pop(Stash stash) {
-            return StubGitProvider.ran("git stash pop " + stash.ref());
+            return StubGitProvider.ran("git stash pop --index " + stash.ref());
         }
 
         @Override

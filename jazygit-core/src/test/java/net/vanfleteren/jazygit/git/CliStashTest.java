@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.zeroturnaround.exec.ProcessExecutor;
@@ -80,6 +81,77 @@ class CliStashTest {
 
         assertTrue(lines.contains("+two"));
         assertFalse(lines.exists(line -> line.contains("b.txt")));
+    }
+
+    @Test
+    void popBringsStagedChangesBackStaged() throws Exception {
+        init();
+        Files.writeString(repo.resolve("a.txt"), "one\nstaged\n");
+        git("add", "a.txt");
+        Files.writeString(repo.resolve("b.txt"), "x\nunstaged\n");
+        git("stash", "push", "-q");
+
+        assertTrue(CliStash.pop(repo, CliStash.list(repo).get().head()).isRight());
+
+        assertEquals("M  a.txt\n M b.txt\n", git("status", "--porcelain"));
+        assertEquals("", git("stash", "list"));
+    }
+
+    @Test
+    void popBringsStagedChangesBackUnstagedWhenTheyDoNotApplyStaged() throws Exception {
+        init();
+        Files.writeString(repo.resolve("a.txt"), "1\n2\n3\n4\n5\n6\n7\n8\n");
+        git("commit", "-qam", "eight lines");
+        Files.writeString(repo.resolve("a.txt"), "1\n2\n3\n4\nstaged\n6\n7\n8\n");
+        git("add", "a.txt");
+        git("stash", "push", "-q");
+        // A change two lines away: the staged patch no longer applies to the index, but merges cleanly.
+        Files.writeString(repo.resolve("a.txt"), "1\n2\nlater\n4\n5\n6\n7\n8\n");
+        git("commit", "-qam", "later");
+
+        var commands = CliStash.pop(repo, CliStash.list(repo).get().head()).get();
+
+        assertEquals(
+                List.of("git stash pop --index 'stash@{0}'", "git stash pop 'stash@{0}'"),
+                commands.map(ExecutedCommand::line));
+        assertEquals(" M a.txt\n", git("status", "--porcelain"));
+        assertEquals("1\n2\nlater\n4\nstaged\n6\n7\n8\n", Files.readString(repo.resolve("a.txt")));
+        assertEquals("", git("stash", "list"));
+    }
+
+    @Test
+    void popWithSomethingStagedBringsTheStashBackUnstagedAndKeepsWhatIsStaged() throws Exception {
+        init();
+        Files.writeString(repo.resolve("a.txt"), "one\nstashed\n");
+        git("add", "a.txt");
+        git("stash", "push", "-q");
+        // Git refuses --index with anything staged, and unstages it.
+        Files.writeString(repo.resolve("b.txt"), "x\nstaged\n");
+        git("add", "b.txt");
+
+        var commands = CliStash.pop(repo, CliStash.list(repo).get().head()).get();
+
+        assertEquals(List.of("git stash pop 'stash@{0}'"), commands.map(ExecutedCommand::line));
+        assertEquals(" M a.txt\nM  b.txt\n", git("status", "--porcelain"));
+        assertEquals("", git("stash", "list"));
+    }
+
+    @Test
+    void popKeepsTheStashWhenItConflictsUnstagedToo() throws Exception {
+        init();
+        Files.writeString(repo.resolve("a.txt"), "stashed\n");
+        git("add", "a.txt");
+        git("stash", "push", "-q");
+        Files.writeString(repo.resolve("a.txt"), "committed\n");
+        git("commit", "-qam", "conflicting");
+
+        var failure = CliStash.pop(repo, CliStash.list(repo).get().head()).getLeft();
+
+        assertEquals(
+                List.of("git stash pop --index 'stash@{0}'", "git stash pop 'stash@{0}'"),
+                failure.commands().map(ExecutedCommand::line));
+        assertEquals("UU a.txt\n", git("status", "--porcelain"));
+        assertEquals(1, git("stash", "list").lines().count());
     }
 
     private void init() throws Exception {
