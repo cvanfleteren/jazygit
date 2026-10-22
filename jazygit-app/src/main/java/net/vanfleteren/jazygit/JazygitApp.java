@@ -49,7 +49,6 @@ import net.vanfleteren.jazygit.feature.github.GitHubFeature;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.feature.help.HelpDialog;
 import net.vanfleteren.jazygit.feature.inprogress.InProgressDialogs;
-import net.vanfleteren.jazygit.feature.layout.LayoutMsg;
 import net.vanfleteren.jazygit.feature.repos.RecentReposDialog;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelDialogs;
 import net.vanfleteren.jazygit.feature.stash.StashDialogs;
@@ -137,11 +136,8 @@ public class JazygitApp extends ToolkitApp {
     private Option<HandOverBackend> backend = Option.none();
     // The screen the last frame showed; when the model shows another one, its pane gets the focus back.
     private Screen shownScreen = Screen.REPOSITORY;
-    // The panes and the left column of the last frame, which tell where the border between them is.
-    private Option<Element> shownPanes = Option.none();
-    private Option<Element> shownLeft = Option.none();
-    // The screen whose left column the user drags the border of, while they do.
-    private Option<Screen> dragging = Option.none();
+    // The border between the left column and the content panel, which the user drags.
+    private final BorderDrag borderDrag = new BorderDrag(dispatch);
     // Whether a Redraw is queued that no frame has been drawn since; only touched on the render thread.
     private boolean redrawPending;
     // The focus the last frame was drawn with that was not empty, which a click on nothing that takes it clears.
@@ -327,71 +323,6 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
-     * Drags the border between the left column and the content panel: a left press on it starts, unless a popup is
-     * open, and the release lets go. A press lets go too, for a release the terminal did not report. The press and
-     * the release are handled, so the press does not move the focus and the release draws the width kept.
-     *
-     * <p>A move while dragging is not handled, though it resizes: TamboUI draws a frame after every event that is
-     * handled, and the terminal reports a move for every cell the mouse crosses, which would draw every width in
-     * between, lagging behind the mouse. Not handled, the width it dispatches asks for a frame, which is drawn once,
-     * after the moves queued before it, with the last width.
-     */
-    private EventResult dragBorder(MouseEvent event) {
-        if (dragging.isDefined() && event.kind() != MouseEventKind.PRESS) {
-            Screen screen = dragging.get();
-            if (event.kind() == MouseEventKind.DRAG || event.kind() == MouseEventKind.RELEASE) {
-                leftWidth(event.x())
-                        .filter(width -> width != model().preferences().leftWidth(screen))
-                        .forEach(width -> dispatch.accept(new LayoutMsg.Resized(screen, width)));
-            }
-            if (event.kind() == MouseEventKind.RELEASE) {
-                settle();
-                return EventResult.HANDLED;
-            }
-            return EventResult.UNHANDLED;
-        }
-        settle();
-        if (event.kind() == MouseEventKind.PRESS
-                && event.isLeftButton()
-                && model().popup().isEmpty()
-                && onBorder(event.x(), event.y())) {
-            dragging = Option.of(model().screen());
-            return EventResult.HANDLED;
-        }
-        return EventResult.UNHANDLED;
-    }
-
-    /**
-     * Lets go of the border that is dragged, if one is.
-     */
-    private void settle() {
-        dragging.forEach(screen -> dispatch.accept(new LayoutMsg.Settled(screen)));
-        dragging = Option.none();
-    }
-
-    /**
-     * Whether {@code (x, y)} is on the border between the left column and the content panel, as the last frame drew
-     * them.
-     */
-    private boolean onBorder(int x, int y) {
-        return shownPanes
-                .flatMap(panes -> Option.of(panes.renderedArea()))
-                .exists(panes -> shownLeft
-                        .flatMap(left -> Option.of(left.renderedArea()))
-                        .exists(left -> LeftBorder.contains(panes, left, x, y)));
-    }
-
-    /**
-     * How wide the left column is, in percent of the width of the panes the last frame drew, with its right edge at
-     * column {@code x}.
-     */
-    private Option<Integer> leftWidth(int x) {
-        return shownPanes
-                .flatMap(panes -> Option.of(panes.renderedArea()))
-                .flatMap(panes -> LeftBorder.width(panes, x));
-    }
-
-    /**
      * Gives the focus back to the pane whose content has it, and says whether there was one.
      */
     private boolean leaveScrollArea() {
@@ -436,7 +367,7 @@ public class JazygitApp extends ToolkitApp {
                 if (mouse.kind() == MouseEventKind.PRESS) {
                     requestRedraw();
                 }
-                if (dragBorder(mouse).isHandled()) {
+                if (borderDrag.handle(mouse, model()).isHandled()) {
                     return EventResult.HANDLED;
                 }
                 focusClicked(mouse);
@@ -613,8 +544,7 @@ public class JazygitApp extends ToolkitApp {
                         .fill());
         // The fetch line keeps its row under the panes, also when nothing is fetched, so they do not move.
         Element layout = column(panes.fill(), FetchLine.render(model).length(FetchLine.HEIGHT));
-        shownPanes = Option.of(panes);
-        shownLeft = Option.of(left);
+        borderDrag.shown(panes, left);
         // The open popup takes the focus, and gives it back to where it was opened from.
         List<Shown> shown = popups.map(slot -> new Shown(
                 slot.view().render(model), slot.view().ids(), slot.returnTo().apply(model)));
