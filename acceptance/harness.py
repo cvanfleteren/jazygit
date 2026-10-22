@@ -340,6 +340,8 @@ def isolated_env(home: Path) -> dict:
         **keep,
         "HOME": str(home),
         "XDG_CONFIG_HOME": str(home / ".config"),
+        # Java takes the home directory from the user database, not HOME, so the state needs its own.
+        "XDG_STATE_HOME": str(home / ".local" / "state"),
         "TERM": "xterm-256color",
         "GIT_CONFIG_GLOBAL": "/dev/null",
         "GIT_CONFIG_NOSYSTEM": "1",
