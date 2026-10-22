@@ -113,7 +113,7 @@ public final class PullRequestDialog implements PopupView {
                                 'R',
                                 "dialog.pullRequest.refresh",
                                 PullRequestMsg.RefreshChosen::new,
-                                (model, popup) -> popup.refreshable())),
+                                PullRequestUpdate::refreshable)),
                 PullRequestMsg.InfoClosed::new,
                 dispatch);
     }

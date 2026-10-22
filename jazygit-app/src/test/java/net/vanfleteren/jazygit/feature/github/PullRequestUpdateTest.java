@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
+import net.vanfleteren.jazygit.feature.github.show.ShowsPullRequest;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg;
 import net.vanfleteren.jazygit.feature.worktree.add.NewWorktreePopup;
@@ -789,6 +790,82 @@ class PullRequestUpdateTest {
                 .isDefined());
         assertEquals(
                 List.empty(), Update.update(comments, new PullRequestMsg.Tick()).cmds());
+    }
+
+    @Test
+    void aDraftIsNotChangedWhileTheDetailsAreReadAgain() {
+        // A read that started before the change could come back after it, and show it undone.
+        Model refreshing = Update.update(showingDetails(), new PullRequestMsg.RefreshChosen())
+                .model();
+
+        assertEquals(
+                List.empty(),
+                Update.update(refreshing, new PullRequestMsg.DraftChosen()).cmds());
+
+        Model read = Update.update(refreshing, new LoadPullRequestDetails(42).run(env()))
+                .model();
+        assertEquals(
+                List.of(new SetDraft(FEATURE, 42, true)),
+                Update.update(read, new PullRequestMsg.DraftChosen()).cmds());
+    }
+
+    @Test
+    void theDetailsAreNotReadAgainWhileTheBranchIsBusy() {
+        // A read running while it becomes a draft could miss that, and show it undone.
+        Next drafting = Update.update(showingDetails(), new PullRequestMsg.DraftChosen());
+        SetDraft cmd = (SetDraft) drafting.cmds().head();
+
+        assertEquals(
+                List.empty(),
+                Update.update(drafting.model(), new PullRequestMsg.RefreshChosen())
+                        .cmds());
+        assertEquals(
+                List.empty(),
+                Update.update(drafting.model(), new PullRequestMsg.Tick()).cmds());
+
+        Model done = Update.update(drafting.model(), cmd.run(env())).model();
+        assertEquals(
+                List.of(new LoadPullRequestDetails(42)),
+                Update.update(done, new PullRequestMsg.Tick()).cmds());
+    }
+
+    @Test
+    void detailsReadAgainWhileTheCommentsAreOpenShowOnceTheDialogIsBack() {
+        Model refreshing = Update.update(showingDetails(), new PullRequestMsg.RefreshChosen())
+                .model();
+        Model comments = Update.update(
+                        refreshing, new net.vanfleteren.jazygit.feature.github.comments.CommentsMsg.Requested())
+                .model();
+        PullRequestDetails details = StubGitHub.empty().pullRequestDetails(42).get();
+
+        Model read = Update.update(comments, new PullRequestMsg.DetailsLoaded(42, details.withDraft(true)))
+                .model();
+
+        PullRequestPopup kept = read.popup(net.vanfleteren.jazygit.feature.github.comments.CommentsPopup.class)
+                .map(ShowsPullRequest::pullRequestPopup)
+                .get();
+        assertFalse(kept.refreshing());
+        assertEquals(Option.of(true), kept.draft());
+    }
+
+    @Test
+    void aFailedFirstReadIsTriedAgainAndASecondFailureReplacesIt() {
+        Model shown =
+                Update.update(withPr(), new PullRequestMsg.Requested(FEATURE)).model();
+        Model failed = Update.update(shown, new PullRequestMsg.DetailsFailed(42, refused("gh: offline")))
+                .model();
+
+        Next again = Update.update(failed, new PullRequestMsg.Tick());
+        assertEquals(List.of(new LoadPullRequestDetails(42)), again.cmds());
+
+        var second = refused("gh: not logged in");
+        PullRequestPopup popup = Update.update(again.model(), new PullRequestMsg.DetailsFailed(42, second))
+                .model()
+                .popup(PullRequestPopup.class)
+                .get();
+        assertEquals(Option.of(Either.left(second)), popup.details());
+        assertEquals(Option.none(), popup.refreshFailed());
+        assertFalse(popup.refreshing());
     }
 
     @Test

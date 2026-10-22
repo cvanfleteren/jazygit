@@ -27,6 +27,18 @@ The dialog reads its pull request again, both by hand and by itself.
   every minute.
 - `PullRequestPopup` keeps this as `refreshing`, next to `details`.
 
+### Not while it changes
+
+A read that runs while the pull request is changed can come back with how it was before, after the change was
+shown, and show it undone, in the dialog and on the branch. So the two wait for each other:
+
+- Turning it into a draft, or marking it ready, is disabled while it is read again, which takes a second or so.
+- It is not read again, by `R` or the tick, while its branch is busy: turning it into a draft or back, merging or
+  closing it.
+
+Ignoring a read that started before a change instead would take keeping a count of the reads in the popup, to save
+waiting that second.
+
 ### When reading again fails
 
 - Details that were read stay shown, and the title says they are stale: `Pull request #42 · not up to date`. The
