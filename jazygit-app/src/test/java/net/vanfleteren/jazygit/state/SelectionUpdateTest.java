@@ -283,6 +283,21 @@ class SelectionUpdateTest {
     }
 
     @Test
+    void aRetriedLogThatCameBackIsNoLongerRunning() {
+        BranchRef feature = new BranchRef.Local(new Branch.Name("feature"));
+        Model selected = Update.update(loaded(), new SelectionMsg.BranchSelected(feature))
+                .model();
+        Model failed = Update.update(selected, new LoadMsg.Failed(new LoadBranchLog(feature), refused("boom")))
+                .model();
+        Model retrying = Update.update(failed, new Tick()).model();
+        assertTrue(retrying.jobs().refreshing().contains(new LoadBranchLog(feature)));
+
+        Model retried = Update.update(retrying, new LoadMsg.BranchLogLoaded(feature, FEATURE_COMMITS))
+                .model();
+        assertFalse(retried.jobs().refreshing().contains(new LoadBranchLog(feature)));
+    }
+
+    @Test
     void movedTipOfTheSelectedBranchReloadsItsLog() {
         Model model = Update.update(
                         loaded(), new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("feature"))))

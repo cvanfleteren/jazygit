@@ -9,6 +9,7 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.nio.file.Path;
+import net.vanfleteren.jazygit.git.model.AllBranches;
 import net.vanfleteren.jazygit.git.model.MetadataStamp;
 import net.vanfleteren.jazygit.state.Cmd.CheckMetadata;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
@@ -43,10 +44,24 @@ class MetadataGuardTest {
     }
 
     /**
-     * {@code model} once the loads that {@code next} started are done.
+     * {@code model} once the loads that {@code next} started came back.
      */
     private static Model finished(Next next) {
-        return next.model().mapJobs(jobs -> jobs.withRefreshing(HashSet.empty()));
+        return finished(next.model(), next.cmds());
+    }
+
+    private static Model finished(Model model, List<Cmd> loads) {
+        return loads.foldLeft(
+                model, (done, load) -> Update.update(done, cameBack(load)).model());
+    }
+
+    private static Msg cameBack(Cmd cmd) {
+        return switch (cmd) {
+            case LoadBranches() -> new LoadMsg.BranchesLoaded(new AllBranches(TestModels.BRANCHES, List.empty()));
+            case LoadStashes() -> new LoadMsg.StashesLoaded(List.empty());
+            case LoadWorktrees() -> new LoadMsg.WorktreesLoaded(List.empty());
+            default -> throw new IllegalArgumentException("Not guarded: " + cmd);
+        };
     }
 
     @Test
@@ -55,6 +70,16 @@ class MetadataGuardTest {
 
         assertTrue(cmds.contains(new CheckMetadata()));
         assertFalse(cmds.exists(List.<Cmd>narrow(CheckMetadata.GUARDED)::contains));
+    }
+
+    @Test
+    void aTickChecksAgainOnceTheLastCheckCameBack() {
+        Next checking = Update.update(idle(), new Msg.Tick());
+
+        assertFalse(Update.update(checking.model(), new Msg.Tick()).cmds().contains(new CheckMetadata()));
+
+        Model answered = finished(Update.update(checking.model(), checked("b1", "s1", "w1")));
+        assertTrue(Update.update(answered, new Msg.Tick()).cmds().contains(new CheckMetadata()));
     }
 
     @Test
@@ -80,13 +105,13 @@ class MetadataGuardTest {
 
     @Test
     void aLoadThatStillRunsIsLookedAtAgainOnTheNextCheck() {
-        Model running = Update.update(idle(), checked("b1", "s1", "w1")).model();
+        Next running = Update.update(idle(), checked("b1", "s1", "w1"));
 
         // It may have read before the branches changed.
-        Next whileRunning = Update.update(running, checked("b2", "s1", "w1"));
+        Next whileRunning = Update.update(running.model(), checked("b2", "s1", "w1"));
         assertEquals(List.of(), whileRunning.cmds());
 
-        Next after = Update.update(finished(whileRunning), checked("b2", "s1", "w1"));
+        Next after = Update.update(finished(whileRunning.model(), running.cmds()), checked("b2", "s1", "w1"));
         assertEquals(List.of(BRANCHES), after.cmds());
     }
 
@@ -127,7 +152,7 @@ class MetadataGuardTest {
         Model model = idle();
         List<Tuple2<Cmd.Load, Option<MetadataStamp>>> none = List.empty();
 
-        Model read = finished(Update.update(model, checked("b1", "s1", "w1")));
+        Model read = Update.update(model, checked("b1", "s1", "w1")).model();
 
         assertNotEquals(model, read);
         assertEquals(model.drawn(), read.drawn());
