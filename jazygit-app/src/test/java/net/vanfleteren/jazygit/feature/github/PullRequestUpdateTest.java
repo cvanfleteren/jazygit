@@ -735,12 +735,8 @@ class PullRequestUpdateTest {
                 errorText(failed.model()));
         assertEquals(Option.none(), failed.model().jobs().busy().get(new BranchRef.Local(new Branch.Name("feature"))));
         assertEquals(
-                Option.of(42),
-                failed.model()
-                        .gitHub()
-                        .pullRequests()
-                        .flatMap(open -> open.get(new Branch.Name("feature")))
-                        .map(PullRequest::number));
+                StubGitHub.empty().pullRequestDetails(42).get().listed(),
+                failed.model().gitHub().pullRequests().flatMap(open -> open.get(new Branch.Name("feature"))));
     }
 
     @Test

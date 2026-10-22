@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.gh.model;
 
+import io.vavr.collection.List;
+
 /**
  * An open pull request on GitHub.
  *
@@ -30,7 +32,18 @@ public record PullRequest(int number, String headBranch, boolean draft, Checks c
         /**
          * At least one check failed.
          */
-        FAILING
+        FAILING;
+
+        /**
+         * The combined state of checks that are doing as {@code states} say: failing when one failed, else pending
+         * when one is still running, else passing when there are any.
+         */
+        public static Checks combined(List<Checks> states) {
+            List<Checks> some = states.removeAll(NONE);
+            return some.contains(FAILING)
+                    ? FAILING
+                    : some.contains(PENDING) ? PENDING : some.isEmpty() ? NONE : PASSING;
+        }
     }
 
     /**

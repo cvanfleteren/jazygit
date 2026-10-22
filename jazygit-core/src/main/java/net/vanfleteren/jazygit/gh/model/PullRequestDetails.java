@@ -78,18 +78,8 @@ public record PullRequestDetails(
      */
     public Option<PullRequest> listed() {
         return Option.when(
-                state == State.OPEN, () -> new PullRequest(number, headBranch, draft, combinedChecks(), review));
-    }
-
-    /**
-     * The combined state of its checks: failing when one failed, else pending when one is still running, else
-     * passing when there are any.
-     */
-    private Checks combinedChecks() {
-        List<Checks> states = checks.map(Check::state);
-        return states.contains(Checks.FAILING)
-                ? Checks.FAILING
-                : states.contains(Checks.PENDING) ? Checks.PENDING : states.isEmpty() ? Checks.NONE : Checks.PASSING;
+                state == State.OPEN,
+                () -> new PullRequest(number, headBranch, draft, Checks.combined(checks.map(Check::state)), review));
     }
 
     public enum State {

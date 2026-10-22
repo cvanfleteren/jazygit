@@ -507,13 +507,11 @@ public final class CliGitHub implements GitHub {
     }
 
     /**
-     * The combined state of the checks with {@code states}: failing when one failed, else pending when one is
-     * still running, else passing when there are any.
+     * The combined state of the checks with {@code states}, as {@link Checks#combined} combines them.
      */
     static Checks checks(List<String> states) {
-        return states.exists(FAILED::contains)
-                ? Checks.FAILING
-                : states.exists(RUNNING::contains) ? Checks.PENDING : states.isEmpty() ? Checks.NONE : Checks.PASSING;
+        return Checks.combined(states.map(state ->
+                FAILED.contains(state) ? Checks.FAILING : RUNNING.contains(state) ? Checks.PENDING : Checks.PASSING));
     }
 
     static Review review(String decision) {
