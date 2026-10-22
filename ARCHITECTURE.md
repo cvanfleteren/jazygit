@@ -275,8 +275,9 @@ follow it there.
 - `GitInfoProvider.diff` and `commitChanges` take the options, which `CliDiff.flags` turns into git's
   (`--ignore-all-space`). A file whose changes are all whitespace is then left out of the diff entirely, also from
   the files `git show --stat` lists.
-- `Cmd.LoadFileDiff` and `Cmd.LoadCommitDetail` carry the options, and so do the messages they send back. What
-  was read with other options than the model's arrives too late and is dropped, as what was read for another
+- `Cmd.LoadFileDiff`, `Cmd.LoadCommitDetail` and `Cmd.LoadStashDetail` carry the options, and so do the messages
+  they send back. They are the `Cmd.DiffLoad`s: what one of them read with other options than the model's, or
+  failed to, arrives too late and is dropped by `LoadUpdate.update` in one place, as what was read for another
   highlighted item is.
 - Toggling reads the diffs shown again (the files, the commit and the commit of a divergence), which keep showing
   as they were until they are read.
