@@ -212,7 +212,7 @@ public final class ContentPanel {
                         "")
                 .appendAll(messageLines(c))
                 .append("");
-        return node.gutter()
+        return LogGraph.gutter(node)
                 .draw(
                         lines,
                         Messages.get(

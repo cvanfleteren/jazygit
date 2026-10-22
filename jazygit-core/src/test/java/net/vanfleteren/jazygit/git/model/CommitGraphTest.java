@@ -69,20 +69,4 @@ class CommitGraphTest {
                 List.of(0, 1, 2, 1, 0, 0),
                 CommitGraph.layout(arranged).map(CommitGraph.Node::depth).toList());
     }
-
-    @Test
-    void theGutterDrawsRailsLikeGitLogGraph() {
-        // main: a - b - m (merges f), feature: a - f.
-        List<CommitGraph.Node> nodes = CommitGraph.layout(
-                CommitGraph.arrange(List.of(commit("m", "b", "f"), commit("f", "a"), commit("b", "a"), commit("a"))));
-        List<String> lines = List.of("first", "second", "third");
-
-        assertEquals(
-                List.of(
-                        List.of("*   first", "|\\  Merge", "| | second", "| | third"),
-                        List.of("| * first", "|/  second", "|   third"),
-                        List.of("* first", "| second", "| third"),
-                        List.of("* first", "| second", "| third")),
-                nodes.map(node -> node.gutter().draw(lines, "Merge")).toList());
-    }
 }
