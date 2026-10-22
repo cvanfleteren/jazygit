@@ -192,7 +192,8 @@ class App:
         """What the pane of the left column, by the first word of its title, shows inside its border."""
         lines = self.text().splitlines()
         top = next((y for y, line in enumerate(lines) if line.startswith("╭" + pane)), None)
-        if top is None:
+        # Not there, or not drawn whole yet: the first frames can come in pieces.
+        if top is None or "╮" not in lines[top]:
             return ""
         width = lines[top].index("╮")
         inside = []
@@ -234,17 +235,20 @@ class App:
         except AssertionError as e:
             raise AssertionError(f"{e}\n--- screen ---\n{self.text()}") from None
 
-    def press_until(self, name: str, text: str, limit=20):
-        """Presses a key, such as "down", until text shows on screen; fails when it hasn't after limit presses."""
-        for _ in range(limit):
+    def press_until(self, name: str, until, limit=20):
+        """Presses a key, such as "down", until a text shows on screen, or until() is true when until is a
+        function; fails when it hasn't after limit presses."""
+        check, description = ((until, "the screen to change") if callable(until)
+                              else (lambda: until in self.text(), f"{until!r} on screen"))
+        for _ in range(limit + 1):
             try:
-                self.wait_for(text, timeout=0.5)
+                self.eventually(check, description, timeout=0.5)
                 return
             except AppExited:
                 raise
             except AssertionError:
                 self.press(name)
-        self.wait_for(text, timeout=1)
+        raise AssertionError(f"{description} after pressing {name} {limit} times\n--- screen ---\n{self.text()}")
 
     def wait_gone(self, text: str, timeout=TIMEOUT):
         try:

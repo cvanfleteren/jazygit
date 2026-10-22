@@ -66,8 +66,33 @@ Python 3.12 and the dependencies from `requirements.txt`.
 
 ## Writing a test
 
-Set up the repository with `repo(...)` (runs git), `repo.write(...)` and `repo.commit("message", **files)`, start
-the app with `jazygit()`, then:
+Set up the repository with `repo(...)` (runs git), `repo.write(...)` and `repo.commit("message", **files)`, then
+start the app with `ui = jazygit()` and say what to do with it:
+
+```python
+ui.files.commit("Add parser")                 # stages all files first when nothing is staged
+ui.branches.rename("feature", "parser")
+ui.commits.fixup("Fix typo", keep_message="below")
+```
+
+Then check the repository with git: `repo.subjects()`, `repo.branches()`, `repo.current_branch()`,
+`repo.find("subject")` and plain `repo(...)`. Assert on git state rather than on the screen where you can: it
+survives layout changes.
+
+### Page objects
+
+`pages.py` has a page object per pane of the left column, `ui.files`, `ui.branches` and `ui.commits`, with the
+operations that pane has keys for, named the way a person says them and taking commits by subject and branches by
+name. The keys and dialog titles they take are only there, so a change to the UI is a change to that file. A new
+operation goes on the pane it is done from.
+
+Every operation first waits until the app has caught up with the repository (`ui.caught_up()`): no rebase running,
+and the panes showing the commits, branches and changed files that git has. A key pressed before then acts on what
+the app showed before. It returns once the repository changed and the app shows that, so the next one can follow.
+
+### Keys
+
+Under the page objects, and for what they don't cover, `ui.app` is the app itself:
 
 - `app.press("space", "c", "enter", "ctrl+s", ...)` for keys, `app.type("text")` for text;
 - `app.wait_for("text")` to wait for something on screen, and fail showing the screen when it doesn't come;
@@ -76,15 +101,9 @@ the app with `jazygit()`, then:
 - `app.focus("Commits")` to tab to a pane, which knows the focused pane by its border colour;
 - `app.eventually(check, "description")` to wait for the repository to get where it should.
 
-`steps.py` has the moves that take more than a key: `select_commit(app, repo, "subject")` and
-`select_branch(app, repo, "name")` (they wait for the diff pane to name it), `type_over(app, "text")` to replace the
-text of a field, and `stage_and_commit(app, repo, "summary", **files)`. `repo.subjects()`, `repo.branches()`,
-`repo.find("subject")` and friends read the result back.
+`test_commit.py` spells the keys out like this, for one commit.
 
 Every wait fails at once when the app has died, with its exit status and the last of its output.
-
-Assert on git state rather than on the screen where you can: it survives layout changes. Wait for the app to show
-the result of one step before taking the next: a key pressed before it has caught up acts on what it showed before.
 
 `test_commits.py` and `test_branches.py` try one operation each, from a repository set up with git;
 `test_scenario.py` chains them in one session, from an empty repository to a tidied history on three branches.

@@ -2,7 +2,8 @@
 def test_commit_a_single_file_in_an_empty_repository(repo, jazygit):
     repo.write("foo.txt", "foo\n")
 
-    app = jazygit()
+    # The keys spelled out, as the page objects in pages.py press them for the other tests.
+    app = jazygit().app
     app.wait_for("foo.txt")
 
     app.press("space")
