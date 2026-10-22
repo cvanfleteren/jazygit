@@ -34,4 +34,7 @@ interface StartupArgs {
             completionCandidates = ThemeIds.class,
             descriptionKey = "theme")
     Optional<ThemeName> theme();
+
+    @Option(names = "--debug", descriptionKey = "debug")
+    boolean debug();
 }

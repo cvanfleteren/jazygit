@@ -22,6 +22,7 @@ public final class SettingsPaths {
     private static final String APP = "jazygit";
     private static final String FILE = "config.toml";
     private static final String STATE_FILE = "state.toml";
+    private static final String DEBUG_LOG = "debug.log";
 
     private SettingsPaths() {}
 
@@ -80,6 +81,20 @@ public final class SettingsPaths {
                 .getOrElse(() -> standardStateDir(osName.toLowerCase(Locale.ROOT), env, home)
                         .resolve(APP))
                 .resolve(STATE_FILE);
+    }
+
+    /**
+     * The debug log of the user running this, which {@code --debug} writes.
+     */
+    public static Path debugLog() {
+        return debugLog(stateFile());
+    }
+
+    /**
+     * The debug log that goes with the state file {@code stateFile}: next to it, as it is not edited either.
+     */
+    public static Path debugLog(Path stateFile) {
+        return stateFile.resolveSibling(DEBUG_LOG);
     }
 
     private static Path standardStateDir(String os, Function<String, Option<String>> env, Path home) {

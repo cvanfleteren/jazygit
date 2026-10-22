@@ -12,6 +12,14 @@ A lazygit-style terminal UI for git, written in Java on [TamboUI](https://github
   run through it, logged in with `gh auth login`. Without it, everything else works. Another gh than the one on the
   `PATH` can be set in the settings (Ctrl+S).
 
+## Reporting a bug
+
+Run `jazygit --debug` and do what goes wrong again. On exit, jazygit prints where its debug log is: the git and gh
+commands it ran and what it handled, which helps to find what went wrong. Look it over before attaching it, as the
+commands name your paths, branches and commit messages.
+
+## Building
+
 To build from source:
 
 - **JDK 25** and **Maven**: `mvn verify` builds and tests both modules, and `./run.sh` builds the jar when needed and

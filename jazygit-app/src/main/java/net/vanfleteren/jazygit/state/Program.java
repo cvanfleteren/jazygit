@@ -11,6 +11,8 @@ import java.util.function.Consumer;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Update.Next;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The runtime around {@link Update}: holds the current {@link Model}, performs the commands
@@ -22,6 +24,9 @@ import net.vanfleteren.jazygit.state.Update.Next;
  * be called on that thread.
  */
 public final class Program {
+
+    // The messages handled, for the debug log.
+    private static final Logger LOG = LoggerFactory.getLogger(Program.class);
 
     private final Env env;
     private final Executor io;
@@ -111,6 +116,12 @@ public final class Program {
     }
 
     public void dispatch(Msg msg) {
+        // Only the type: a message can hold a whole repository's commits. The clock's ticks come too often to tell.
+        if (LOG.isDebugEnabled() && !(msg instanceof Msg.Tick)) {
+            LOG.debug(msg.getClass()
+                    .getName()
+                    .substring(msg.getClass().getPackageName().length() + 1));
+        }
         apply(Update.update(model, msg));
     }
 

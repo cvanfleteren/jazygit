@@ -53,10 +53,10 @@
             <groupId>info.picocli</groupId>
             <artifactId>picocli</artifactId>
         </dependency>
-        <!-- Silences SLF4J's "no provider" warning, which would otherwise corrupt the TUI. -->
+        <!-- Writes the debug log. DebugLog sets it up before anything logs, so nothing reaches the TUI's terminal. -->
         <dependency>
             <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-nop</artifactId>
+            <artifactId>slf4j-simple</artifactId>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>

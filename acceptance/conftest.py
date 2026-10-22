@@ -77,11 +77,13 @@ def clone(tmp_path, env, origin):
 
 @pytest.fixture
 def jazygit(java, jar, repo, env):
-    """Starts jazygit on the repository, and returns its page object; call it once the repository is set up."""
+    """Starts jazygit on the repository, with the options args, and returns its page object; call it once the
+    repository is set up."""
     apps = []
 
-    def start() -> Jazygit:
-        app = App([java, "--enable-native-access=ALL-UNNAMED", "-Dtamboui.backend=panama", "-jar", str(jar), str(repo.path)],
+    def start(*args) -> Jazygit:
+        app = App([java, "--enable-native-access=ALL-UNNAMED", "-Dtamboui.backend=panama", "-jar", str(jar), *args,
+                   str(repo.path)],
                   repo.path, env)
         apps.append(app)
         return Jazygit(app, repo)

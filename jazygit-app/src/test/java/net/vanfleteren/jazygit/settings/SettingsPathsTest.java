@@ -106,6 +106,13 @@ class SettingsPathsTest {
     }
 
     @Test
+    void theDebugLogIsNextToTheState() {
+        assertEquals(
+                Path.of("/xdg-state/jazygit/debug.log"),
+                SettingsPaths.debugLog(stateFile("Linux", HashMap.of("XDG_STATE_HOME", "/xdg-state"))));
+    }
+
+    @Test
     void theStateOverrideWinsEverywhere() {
         Map<String, String> env =
                 HashMap.of("JAZYGIT_STATE_DIR", "/mine", "XDG_STATE_HOME", "/xdg", "LOCALAPPDATA", "C:\\AppData");

@@ -25,26 +25,35 @@ class StartupCliTest {
 
     @Test
     void withoutArgumentsTheCurrentDirectoryOpensInTheSavedTheme() {
-        assertEquals(Either.right(new StartupOptions(Option.none(), Option.none())), parse());
+        assertEquals(Either.right(new StartupOptions(Option.none(), Option.none(), false)), parse());
     }
 
     @Test
     void aPathIsWhereToOpen() {
         assertEquals(
-                Either.right(new StartupOptions(Option.of(Path.of("src/main")), Option.none())), parse("src/main"));
+                Either.right(new StartupOptions(Option.of(Path.of("src/main")), Option.none(), false)),
+                parse("src/main"));
     }
 
     @ParameterizedTest
     @EnumSource(ThemeName.class)
     void everyThemeCanBeAskedForByItsName(ThemeName theme) {
-        assertEquals(Either.right(new StartupOptions(Option.none(), Option.of(theme))), parse("--theme", theme.id()));
+        assertEquals(
+                Either.right(new StartupOptions(Option.none(), Option.of(theme), false)), parse("--theme", theme.id()));
     }
 
     @Test
     void aPathAndATheme() {
         assertEquals(
-                Either.right(new StartupOptions(Option.of(Path.of("repo")), Option.of(ThemeName.LIGHT))),
+                Either.right(new StartupOptions(Option.of(Path.of("repo")), Option.of(ThemeName.LIGHT), false)),
                 parse("--theme=light", "repo"));
+    }
+
+    @Test
+    void debugAsksForTheDebugLog() {
+        assertEquals(
+                Either.right(new StartupOptions(Option.of(Path.of("repo")), Option.none(), true)),
+                parse("--debug", "repo"));
     }
 
     @Test

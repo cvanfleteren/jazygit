@@ -56,7 +56,7 @@ public final class StartupCli {
     }
 
     private static StartupOptions options(StartupArgs args) {
-        return new StartupOptions(Option.ofOptional(args.path()), Option.ofOptional(args.theme()));
+        return new StartupOptions(Option.ofOptional(args.path()), Option.ofOptional(args.theme()), args.debug());
     }
 
     /**

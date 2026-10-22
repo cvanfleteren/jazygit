@@ -66,6 +66,7 @@ import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.ui.*;
 import net.vanfleteren.jazygit.ui.widgets.*;
+import org.slf4j.LoggerFactory;
 
 /**
  * Entry point for jazygit, a lazygit-style terminal UI for Git built with TamboUI.
@@ -213,9 +214,11 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
-     * Writes how a command threw to {@link #BUG_LOG}, as the terminal is the TUI's; failing that, it is lost.
+     * Writes how a command threw to {@link #BUG_LOG}, as the terminal is the TUI's; failing that, it is lost. The
+     * debug log gets it too, after what led up to it.
      */
     private static void logBug(Throwable bug) {
+        LoggerFactory.getLogger(JazygitApp.class).error("A command threw", bug);
         StringWriter trace = new StringWriter();
         bug.printStackTrace(new PrintWriter(trace));
         Try.run(() -> Files.writeString(
@@ -236,8 +239,11 @@ public class JazygitApp extends ToolkitApp {
 
     private static void start(StartupOptions options) {
         Path start = options.path().getOrElse(Path.of("")).toAbsolutePath();
-        Either<String, JazygitApp> app = CliGitInfoProvider.open(start)
-                .mapLeft(ErrorText::of)
+        Option<Path> debugLog = Option.when(options.debug(), SettingsPaths::debugLog);
+        Either<String, JazygitApp> app = DebugLog.start(debugLog)
+                .toEither()
+                .mapLeft(failed -> Messages.get("debugLog.failed", debugLog.get(), ErrorText.reason(failed)))
+                .flatMap(logging -> CliGitInfoProvider.open(start).mapLeft(ErrorText::of))
                 .flatMap(provider -> Theme.createEngine()
                         .mapLeft(failed ->
                                 Messages.get("theme.loadFailed", failed.theme(), ErrorText.reason(failed.cause())))
@@ -258,6 +264,7 @@ public class JazygitApp extends ToolkitApp {
                     System.err.println(problem);
                     System.exit(1);
                 });
+        debugLog.forEach(log -> System.err.println(Messages.get("debugLog.written", log)));
     }
 
     /**

@@ -328,6 +328,12 @@ Every command answers with a `Msg`, also one that throws. `Program.perform` turn
 `Failure.Bug`, and writes the stack trace to `jazygit-bugs.log` in the temporary directory, as the terminal
 belongs to the TUI. Without an answer, the command's load would keep running, or its branch would stay busy.
 
+`--debug` writes a debug log, `debug.log` next to the state file, through SLF4J's simple logger: every program
+`Exec` runs, with its directory, duration and how it ended, the type of every message `Program` handles but the
+clock's ticks, and the stack traces of the bugs. `DebugLog` sets the logger up before anything logs; without
+`--debug` it logs nothing, so nothing reaches the TUI's terminal. The environment of a command is never logged,
+as it can hold the gh token.
+
 When the app stops, the commands still queued on `git-io` are dropped. The one that runs is not interrupted,
 which would kill git half-way, say in the middle of a rebase. It gets two seconds to finish, and otherwise
 finishes by itself once the app is gone.

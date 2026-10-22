@@ -11,6 +11,8 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.zeroturnaround.exec.ProcessExecutor;
 import org.zeroturnaround.exec.ProcessResult;
 
@@ -21,6 +23,8 @@ public final class Exec {
 
     // How git starts the lines that say what went wrong.
     private static final List<String> ERROR_PREFIXES = List.of("fatal:", "error:", "CONFLICT");
+    // What ran, for the debug log; never the environment, which may hold a token.
+    private static final Logger LOG = LoggerFactory.getLogger(Exec.class);
 
     private Exec() {}
 
@@ -30,6 +34,12 @@ public final class Exec {
      * @return what it printed on its standard output, when it exited with 0
      */
     public static Either<ExecFailure, String> run(
+            Path directory, List<String> commandLine, Map<String, String> environment, Duration timeout) {
+        long started = System.nanoTime();
+        return logged(directory, commandLine, started, execute(directory, commandLine, environment, timeout));
+    }
+
+    private static Either<ExecFailure, String> execute(
             Path directory, List<String> commandLine, Map<String, String> environment, Duration timeout) {
         ByteArrayOutputStream stderr = new ByteArrayOutputStream();
         try {
@@ -64,6 +74,11 @@ public final class Exec {
      * @return the command as it was run, when it exited with 0
      */
     public static Either<ExecFailure, ExecutedCommand> interactive(Path directory, List<String> commandLine) {
+        long started = System.nanoTime();
+        return logged(directory, commandLine, started, handOver(directory, commandLine));
+    }
+
+    private static Either<ExecFailure, ExecutedCommand> handOver(Path directory, List<String> commandLine) {
         try {
             Process process = new ProcessBuilder(commandLine.toJavaList())
                     .directory(directory.toFile())
@@ -79,6 +94,33 @@ public final class Exec {
             Thread.currentThread().interrupt();
             return Either.left(new ExecFailure.Interrupted());
         }
+    }
+
+    /**
+     * Writes {@code commandLine}, which started at {@code started} in {@code directory}, to the debug log with how
+     * it ended in {@code result}.
+     */
+    private static <T> Either<ExecFailure, T> logged(
+            Path directory, List<String> commandLine, long started, Either<ExecFailure, T> result) {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(
+                    "{} in {}, {} ms: {}",
+                    CommandLine.format(commandLine),
+                    directory,
+                    Duration.ofNanos(System.nanoTime() - started).toMillis(),
+                    result.fold(Exec::outcome, done -> "ok"));
+        }
+        return result;
+    }
+
+    private static String outcome(ExecFailure failure) {
+        return switch (failure) {
+            case ExecFailure.NonZero(int exitCode, String stderr, String stdout) ->
+                "exit " + exitCode + (stderr.isBlank() ? "" : System.lineSeparator() + stderr.strip());
+            case ExecFailure.NotStarted(IOException cause) -> "not started: " + cause.getMessage();
+            case ExecFailure.TimedOut() -> "timed out";
+            case ExecFailure.Interrupted() -> "interrupted";
+        };
     }
 
     /**
