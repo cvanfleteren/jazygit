@@ -179,13 +179,14 @@ public final class ContentPanel {
     }
 
     private static Option<String> diffClass(String line) {
-        return line.startsWith("+++") || line.startsWith("---") || line.startsWith("diff ") || line.startsWith("index ")
-                ? Option.of(Theme.Classes.DIFF_HEADER)
-                : line.startsWith("+")
-                        ? Option.of(Theme.Classes.DIFF_ADDED)
-                        : line.startsWith("-")
-                                ? Option.of(Theme.Classes.DIFF_REMOVED)
-                                : line.startsWith("@@") ? Option.of(Theme.Classes.DIFF_HUNK) : Option.none();
+        return switch (line) {
+            case String l
+            when List.of("+++", "---", "diff ", "index ").exists(l::startsWith) -> Option.of(Theme.Classes.DIFF_HEADER);
+            case String l when l.startsWith("+") -> Option.of(Theme.Classes.DIFF_ADDED);
+            case String l when l.startsWith("-") -> Option.of(Theme.Classes.DIFF_REMOVED);
+            case String l when l.startsWith("@@") -> Option.of(Theme.Classes.DIFF_HUNK);
+            default -> Option.none();
+        };
     }
 
     /**
