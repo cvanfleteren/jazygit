@@ -103,11 +103,6 @@ class LocalBranchesList implements BranchesTabList {
     }
 
     @Override
-    public int selectedIndex() {
-        return list.selectedIndex();
-    }
-
-    @Override
     public Option<BranchRef> selectedRef() {
         return selectedBranch().map(BranchRef.Local::new);
     }

@@ -79,11 +79,6 @@ class RemoteBranchesList implements BranchesTabList {
     }
 
     @Override
-    public int selectedIndex() {
-        return list.selectedIndex();
-    }
-
-    @Override
     public Option<BranchRef> selectedRef() {
         return selectedRemoteBranch().map(BranchRef.Remote::new);
     }

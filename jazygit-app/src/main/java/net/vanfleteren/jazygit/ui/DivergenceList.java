@@ -157,13 +157,6 @@ class DivergenceList {
     }
 
     /**
-     * The index of the highlighted row, never negative.
-     */
-    int selectedIndex() {
-        return list.selectedIndex();
-    }
-
-    /**
      * The highlighted commit, once a divergence is shown.
      */
     Option<Commit> selectedCommit() {

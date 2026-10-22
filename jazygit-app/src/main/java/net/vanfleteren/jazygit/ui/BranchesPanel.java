@@ -173,36 +173,6 @@ public class BranchesPanel {
     }
 
     /**
-     * The index of the currently highlighted branch in the list {@code model} shows, never negative.
-     */
-    public int selectedIndex(Model model) {
-        return divergence(model).isDefined()
-                ? divergenceList.selectedIndex()
-                : list(model.repoView().branchesTab()).selectedIndex();
-    }
-
-    /**
-     * The name of the highlighted branch, once the branches are shown.
-     */
-    public Option<Branch.Name> selectedBranch() {
-        return localList.selectedBranch();
-    }
-
-    /**
-     * The highlighted remote branch, once the remote branches are shown.
-     */
-    public Option<RemoteBranch> selectedRemoteBranch() {
-        return remoteList.selectedRemoteBranch();
-    }
-
-    /**
-     * The highlighted worktree, once the worktrees are shown.
-     */
-    public Option<Worktree> selectedWorktree() {
-        return worktreeList.selectedWorktree();
-    }
-
-    /**
      * Whether the pane shows a spinner in {@code model}: on a busy branch in the list it shows, which a divergence
      * shown in its place hides.
      */

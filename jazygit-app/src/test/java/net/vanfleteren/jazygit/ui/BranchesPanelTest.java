@@ -83,14 +83,14 @@ class BranchesPanelTest {
                         new Branch(new Branch.Name("main"), false, new Sha("1")),
                         FEATURE));
 
-        assertEquals("old", highlightedAfterMovingTo(2, after));
+        assertEquals(selecting("old"), highlightedAfterMovingTo(2, after));
     }
 
     @Test
     void aReorderingWithoutCheckoutKeepsTheSameBranchHighlighted() throws Exception {
         Model after = with(before, List.of(MAIN, OLD, FEATURE));
 
-        assertEquals("feature", highlightedAfterMovingTo(1, after));
+        assertEquals(selecting("feature"), highlightedAfterMovingTo(1, after));
     }
 
     @Test
@@ -150,7 +150,7 @@ class BranchesPanelTest {
     void aRenamedBranchStaysHighlightedUnderItsNewName() throws Exception {
         Model after = with(before, List.of(MAIN, OLD, new Branch(new Branch.Name("topic"), false, new Sha("2"))));
 
-        assertEquals("topic", highlightedAfterMovingTo(1, after));
+        assertEquals(selecting("topic"), highlightedAfterMovingTo(1, after));
     }
 
     @Test
@@ -302,10 +302,10 @@ class BranchesPanelTest {
 
         panel.render(two, BranchesPanel.ID);
         panel.render(three, BranchesPanel.ID);
-        assertEquals("/repos/app", panel.selectedWorktree().get().location());
+        assertEquals(selecting("main"), panel.selectionChange(three));
 
         panel.render(three.openPopup(new AboutWorktree("/repos/app-other")), BranchesPanel.ID);
-        assertEquals("/repos/app-other", panel.selectedWorktree().get().location());
+        assertEquals(selecting("other"), panel.selectionChange(three));
     }
 
     @Test
@@ -483,20 +483,17 @@ class BranchesPanelTest {
                 () -> opened.add("commit"),
                 java.time.Clock.systemUTC(),
                 Theme.Highlights.DEFAULT);
-        java.util.List<Integer> highlighted = new java.util.ArrayList<>();
+        java.util.List<Option<Msg>> highlighted = new java.util.ArrayList<>();
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(diverged, BranchesPanel.ID))) {
             SettledPilot.focus(testRunner, BranchesPanel.ID);
             String screen = RenderedText.ofLarge(testRunner, () -> panel.render(diverged, BranchesPanel.ID));
-            highlighted.add(panel.selectedIndex(diverged));
-            assertEquals(
-                    Option.of(new SelectionMsg.DivergenceCommitSelected(new Sha("b1"))),
-                    panel.selectionChange(diverged));
+            highlighted.add(panel.selectionChange(diverged));
             SettledPilot.of(testRunner).press(KeyCode.DOWN);
             SettledPilot.of(testRunner).pause();
-            highlighted.add(panel.selectedIndex(diverged));
+            highlighted.add(panel.selectionChange(diverged));
             SettledPilot.of(testRunner).press(KeyCode.UP);
             SettledPilot.of(testRunner).pause();
-            highlighted.add(panel.selectedIndex(diverged));
+            highlighted.add(panel.selectionChange(diverged));
             SettledPilot.of(testRunner).press(KeyCode.ENTER);
             SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
             SettledPilot.of(testRunner).press(']');
@@ -511,12 +508,24 @@ class BranchesPanelTest {
             assertFalse(screen.contains(" old"), screen);
         }
         // The rows are: origin/feature, Theirs, feature, Ours two, Ours one.
-        assertEquals(java.util.List.of(1, 3, 1), highlighted);
+        assertEquals(
+                java.util.List.of(
+                        Option.of(new SelectionMsg.DivergenceCommitSelected(new Sha("b1"))),
+                        Option.of(new SelectionMsg.DivergenceCommitSelected(new Sha("a2"))),
+                        Option.of(new SelectionMsg.DivergenceCommitSelected(new Sha("b1")))),
+                highlighted);
         assertEquals(java.util.List.of("commit"), opened);
         assertEquals(java.util.List.of(new UpstreamMsg.DivergenceClosed(), new BranchesTabMsg.Switched(1)), dispatched);
     }
 
-    private String highlightedAfterMovingTo(int index, Model after) throws Exception {
+    /**
+     * What the panel sends when the local branch {@code name} gets highlighted.
+     */
+    private static Option<Msg> selecting(String name) {
+        return Option.of(new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name(name))));
+    }
+
+    private Option<Msg> highlightedAfterMovingTo(int index, Model after) throws Exception {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
             SettledPilot.focus(testRunner, BranchesPanel.ID);
             RenderedText.of(testRunner, () -> panel.render(before, BranchesPanel.ID));
@@ -524,11 +533,12 @@ class BranchesPanelTest {
                 SettledPilot.of(testRunner).press(KeyCode.DOWN);
             }
             SettledPilot.of(testRunner).pause();
-            assertEquals(index, panel.selectedIndex(before));
+            assertEquals(
+                    selecting(List.of(MAIN, FEATURE, OLD).get(index).name().value()), panel.selectionChange(before));
 
             RenderedText.of(testRunner, () -> panel.render(after, BranchesPanel.ID));
             SettledPilot.of(testRunner).quit();
-            return panel.selectedBranch().get().value();
+            return panel.selectionChange(after);
         }
     }
 }
