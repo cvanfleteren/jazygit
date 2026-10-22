@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit;
 
+import static com.tngtech.archunit.base.DescribedPredicate.anyElementThat;
 import static com.tngtech.archunit.base.DescribedPredicate.not;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.*;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.*;
@@ -7,11 +8,16 @@ import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.sli
 
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaMethod;
+import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.core.importer.Location;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
+import java.util.Collection;
+import java.util.Map;
+import java.util.stream.Stream;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Program;
 
@@ -177,6 +183,36 @@ class ArchitectureTest {
             .haveNameNotMatching(DIALOGS)
             .should()
             .beFinal();
+    /**
+     * Collections are Vavr's, which never change: no method takes or returns one of java.util's, but where a
+     * library's interface says so.
+     */
+    @ArchTest
+    static final ArchRule noJavaUtilCollections = noMethods()
+            .that()
+            .doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .and(not(implementALibraryMethod()))
+            .should()
+            .haveRawReturnType(javaUtilCollections())
+            .orShould()
+            .haveRawParameterTypes(anyElementThat(javaUtilCollections()));
+
+    private static DescribedPredicate<JavaClass> javaUtilCollections() {
+        return assignableTo(Collection.class).or(assignableTo(Map.class));
+    }
+
+    private static DescribedPredicate<JavaMethod> implementALibraryMethod() {
+        return DescribedPredicate.describe("implement a method of a library", method -> {
+            JavaClass owner = method.getOwner();
+            String[] parameters = method.getRawParameterTypes().stream()
+                    .map(JavaClass::getName)
+                    .toArray(String[]::new);
+            return Stream.concat(owner.getAllRawSuperclasses().stream(), owner.getAllRawInterfaces().stream())
+                    .filter(type -> !type.getPackageName().startsWith("net.vanfleteren.jazygit"))
+                    .anyMatch(type ->
+                            type.tryGetMethod(method.getName(), parameters).isPresent());
+        });
+    }
 
     private static DescribedPredicate<JavaClass> runsGitOrGh() {
         return resideInAnyPackage("..jazygit.git", "..jazygit.gh")
