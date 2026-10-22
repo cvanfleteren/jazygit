@@ -44,7 +44,14 @@ class RemoteBranchesList implements BranchesTabList {
                 PaneKeys.sending(keymap.handle(Scopes.REMOTE_BRANCHES, event, selectedRemoteBranch()), dispatch));
     }
 
-    private static LoadableList.Row row(
+    /**
+     * A remote branch: how long ago its tip was committed and its name, dimmed when a local branch follows it; then
+     * how it is doing on GitHub and its spinner while it is busy.
+     *
+     * @param tracked whether a local branch follows it
+     * @param spinner the label and the spinner frame of a busy branch, as one text
+     */
+    static LoadableList.Row row(
             RemoteRef ref, Duration since, boolean tracked, List<LoadableList.Seg> gitHub, Option<String> spinner) {
         String text = "%4s   ".formatted(TimeText.age(since)) + ref.branch().shortName();
         return new LoadableList.Row(

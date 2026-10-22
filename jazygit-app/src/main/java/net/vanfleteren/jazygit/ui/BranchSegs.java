@@ -30,7 +30,7 @@ final class BranchSegs {
     /**
      * The spinner of a branch that {@code operation} runs on, preceded by its label if it has one.
      */
-    static String spinner(Operation operation, Instant now) {
+    private static String spinner(Operation operation, Instant now) {
         return busyLabel(operation).map(label -> label + " ").getOrElse("") + TimeText.spinnerFrame(now);
     }
 
