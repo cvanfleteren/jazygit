@@ -282,6 +282,12 @@ public interface GitInfoProvider {
     Either<ProcessError, List<Stash>> stashes();
 
     /**
+     * What the stash {@code sha} stashed, like {@code git stash show}: the changed files, untracked ones too, a
+     * summary of the changes, a blank line and the diff, read with {@code options}. Long output is cut off.
+     */
+    Either<ProcessError, DiffText> stashChanges(Sha sha, DiffOptions options);
+
+    /**
      * Stashes the changes, staged and unstaged, and the untracked files, under the name {@code message}.
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> stash(Option<String> message);

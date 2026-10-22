@@ -9,6 +9,8 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
+import java.time.Instant;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
@@ -28,9 +30,11 @@ class StashDropDialogTest {
     private final Model open = Update.update(
                     Update.update(
                                     TestModels.loaded(),
-                                    new LoadMsg.StashesLoaded(List.of(new Stash("stash@{0}", new Sha("s0"), "x"))))
+                                    new LoadMsg.StashesLoaded(List.of(
+                                            new Stash("stash@{0}", new Sha("s0"), "x", Option.none(), Instant.EPOCH))))
                             .model(),
-                    new StashMsg.DropRequested(new Stash("stash@{0}", new Sha("s0"), "x")))
+                    new StashMsg.DropRequested(
+                            new Stash("stash@{0}", new Sha("s0"), "x", Option.none(), Instant.EPOCH)))
             .model();
 
     @Test

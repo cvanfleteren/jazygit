@@ -119,6 +119,14 @@ public sealed interface LoadMsg extends Msg {
         }
     }
 
+    record StashDetailLoaded(Sha sha, DiffOptions options, DiffText changes) implements LoadMsg {
+
+        @Override
+        public Cmd.Load cmd() {
+            return new Cmd.LoadStashDetail(sha, options);
+        }
+    }
+
     record FileDiffLoaded(List<FileEntry> files, DiffOptions options, Diffs diff) implements LoadMsg {
 
         @Override

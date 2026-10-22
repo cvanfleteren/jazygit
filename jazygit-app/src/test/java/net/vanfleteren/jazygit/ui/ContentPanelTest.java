@@ -245,6 +245,56 @@ class ContentPanelTest {
     }
 
     @Test
+    void stashFocusedShowsTheHighlightedStashUnderAHeaderWhichCanBeFocused() throws Exception {
+        Stash stash = new Stash("stash@{0}", new Sha("5555"), "my work", Option.of("main"), Instant.EPOCH);
+        Model stashed = Update.update(TestModels.loaded(), new LoadMsg.StashesLoaded(List.of(stash)))
+                .model();
+        Model selected = Update.update(
+                        Update.update(stashed, new SelectionMsg.StashSelected(stash.sha()))
+                                .model(),
+                        new LoadMsg.StashDetailLoaded(
+                                stash.sha(), DiffOptions.DEFAULT, DiffText.of(" a.txt | 1 +\n\n+added line\n")))
+                .model();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(selected, StashPanel.ID))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> content.render(selected, StashPanel.ID));
+            assertTrue(screen.contains("Stash: stash@{0}"), screen);
+            assertTrue(screen.contains("stash@{0}: my work"), screen);
+            assertTrue(screen.contains("Branch: main"), screen);
+            assertTrue(screen.contains("Date: "), screen);
+            assertTrue(screen.contains(" a.txt | 1 +"), screen);
+            assertTrue(screen.contains("+added line"), screen);
+        }
+
+        String area = content.areaOfPane(selected, StashPanel.ID).get();
+        assertTrue(ContentPanel.isArea(area));
+        assertEquals(Option.of(StashPanel.ID), content.paneOfArea(selected, area));
+    }
+
+    @Test
+    void stashFocusedWithoutStashesSaysSo() throws Exception {
+        Model clean = Update.update(TestModels.loaded(), new LoadMsg.StashesLoaded(List.of()))
+                .model();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(clean, StashPanel.ID))) {
+            String screen = RenderedText.of(testRunner, () -> content.render(clean, StashPanel.ID));
+            assertTrue(screen.contains("No stash entries"), screen);
+            assertFalse(screen.contains("Unstaged changes"), screen);
+        }
+        assertEquals(Option.none(), content.areaOfPane(clean, StashPanel.ID));
+    }
+
+    @Test
+    void stashFocusedWhileTheStashesLoadSaysSo() throws Exception {
+        Model loading = TestModels.loading("repo");
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(loading, StashPanel.ID))) {
+            String screen = RenderedText.of(testRunner, () -> content.render(loading, StashPanel.ID));
+            assertTrue(screen.contains(Placeholders.loading()), screen);
+        }
+    }
+
+    @Test
     void scrollingTellsTheModelAndTheAreaShowsWhereTheModelHasIt() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         ContentPanel scrolling = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);

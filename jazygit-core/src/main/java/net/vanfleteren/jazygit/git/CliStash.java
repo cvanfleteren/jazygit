@@ -8,8 +8,11 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.util.function.Function;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.git.GitError.*;
+import net.vanfleteren.jazygit.git.model.DiffOptions;
+import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -19,10 +22,14 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
  */
 final class CliStash {
 
-    // What git prefixes the message of a stash with when it is given one.
     // What git says when the staged changes of a stash do not apply.
     private static final String WITHOUT_INDEX = "Try without --index";
+    // What git prefixes the message of a stash with when it is given one.
     private static final Pattern BRANCH_PREFIX = Pattern.compile("^On [^:]+: ");
+    // The branch a stash was made on, in the message git gives it with a message and without one.
+    private static final Pattern STASHED_ON = Pattern.compile("^(?:WIP on|On) ([^:]+): ");
+    // What git names in place of the branch when a stash is made on a detached HEAD.
+    private static final String NO_BRANCH = "(no branch)";
 
     private CliStash() {}
 
@@ -42,7 +49,7 @@ final class CliStash {
                         "--first-parent",
                         "--ignore-missing",
                         "--format=%gd" + GitOutput.PRETTY_FIELD_SEPARATOR + "%H" + GitOutput.PRETTY_FIELD_SEPARATOR
-                                + "%gs",
+                                + "%gs" + GitOutput.PRETTY_FIELD_SEPARATOR + "%at",
                         "refs/stash",
                         "--"),
                 CliStash::parse);
@@ -54,11 +61,40 @@ final class CliStash {
     }
 
     private static Either<UnexpectedOutput, Stash> stash(String line) {
-        return GitOutput.fields(line, 3)
-                .map(fields -> new Stash(
-                        fields.get(0),
-                        new Sha(fields.get(1)),
-                        BRANCH_PREFIX.matcher(fields.get(2)).replaceFirst("")));
+        return GitOutput.fields(line, 4)
+                .flatMap(fields -> GitOutput.epochSeconds(fields.get(3))
+                        .map(time -> new Stash(
+                                fields.get(0),
+                                new Sha(fields.get(1)),
+                                BRANCH_PREFIX.matcher(fields.get(2)).replaceFirst(""),
+                                branch(fields.get(2)),
+                                time)));
+    }
+
+    private static Option<String> branch(String message) {
+        Matcher matcher = STASHED_ON.matcher(message);
+        return matcher.find() ? Option.of(matcher.group(1)).filter(branch -> !branch.equals(NO_BRANCH)) : Option.none();
+    }
+
+    /**
+     * What {@code stash} stashed, as {@code git stash show} shows it: the changed files with their change counts, a
+     * summary line, a blank line and the diff, read with {@code options}. Its untracked files are in it, whatever
+     * the user's {@code stash.show*} settings say. Long output is cut off.
+     */
+    static Either<ProcessError, DiffText> changes(Path workTree, Sha stash, DiffOptions options) {
+        return GitProcess.read(
+                workTree,
+                GitCommand.reading(List.of(
+                                "stash",
+                                "show",
+                                "--include-untracked",
+                                "--stat=1000",
+                                "--patch",
+                                "--no-color",
+                                "--no-ext-diff")
+                        .appendAll(CliDiff.flags(options))
+                        .append(stash.value())),
+                output -> Either.right(CliDiff.truncated(output)));
     }
 
     /**

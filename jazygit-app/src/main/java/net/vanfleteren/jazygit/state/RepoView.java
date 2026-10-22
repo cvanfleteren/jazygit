@@ -18,6 +18,8 @@ import net.vanfleteren.jazygit.git.model.*;
  *                     diff), once one is highlighted
  * @param fileDiff     the diff of the node highlighted in the files pane, keyed by the changed files under
  *                     it, once one is highlighted
+ * @param stashDetail  what the stash highlighted in the stash pane stashed (its files, a summary and its diff),
+ *                     keyed by its sha, which stays as stashes are added and dropped, once one is highlighted
  * @param focusedPane  the id of the element of the screen, outside the popups, that had the focus last, which a
  *                     closing popup gives it back to; none before the view reported one
  * @param cherryPick   the commit copied to be cherry-picked onto the branch checked out later, if one is
@@ -32,6 +34,7 @@ public record RepoView(
         Option<Preview<BranchRef, List<Commit>>> branchLog,
         Option<Preview<Sha, DiffText>> commitDetail,
         Option<Preview<List<FileEntry>, Diffs>> fileDiff,
+        Option<Preview<Sha, DiffText>> stashDetail,
         Option<String> focusedPane,
         Option<Commit> cherryPick,
         Option<String> searchLine,
@@ -39,6 +42,7 @@ public record RepoView(
 
     public static final RepoView INITIAL = new RepoView(
             BranchesTab.LOCAL,
+            Option.none(),
             Option.none(),
             Option.none(),
             Option.none(),

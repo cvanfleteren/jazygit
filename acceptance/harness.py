@@ -63,7 +63,10 @@ class Git:
 
     def __init__(self, path: Path, env: dict):
         self.path = path
-        self.env = env
+        # The tests read the repository while the app changes it. A plain git status takes the index lock to write
+        # back what it refreshed, and a commit of the app that starts meanwhile fails on it: like the app's reads,
+        # these take no lock they can do without.
+        self.env = {**env, "GIT_OPTIONAL_LOCKS": "0"}
 
     def __call__(self, *args) -> str:
         return self.raw(*args).strip()

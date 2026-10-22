@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.elements.Panel;
+import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
@@ -10,9 +11,11 @@ import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.SelectionMsg;
 
 /**
- * Bottom-left panel listing the stashes, newest first. The highlighted stash is unstashed with {@code g} and deleted with {@code d}.
+ * Bottom-left panel listing the stashes, newest first. The highlighted stash is unstashed with {@code g} and deleted with {@code d};
+ * Enter moves the focus to its changes.
  */
 public final class StashPanel {
 
@@ -25,16 +28,19 @@ public final class StashPanel {
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public StashPanel(Consumer<Msg> dispatch) {
-        this(dispatch, Theme.Highlights.DEFAULT);
+        this(dispatch, () -> {}, Theme.Highlights.DEFAULT);
     }
 
     /**
+     * @param openStash  called when Enter is pressed on a stash, to move focus to its changes
      * @param highlights how the highlighted stash is shown, also when the pane is not in use
      */
-    public StashPanel(Consumer<Msg> dispatch, Theme.Highlights highlights) {
+    public StashPanel(Consumer<Msg> dispatch, Runnable openStash, Theme.Highlights highlights) {
         list = new LoadableList<>(
                 Messages.get("panel.stash.title"), ID, LoadableList.Reselect.following(Stash::sha), highlights);
-        list.onKey(event -> PaneKeys.sending(keymap.handle(Scopes.STASH, event, selectedStash()), dispatch));
+        list.onKey(event -> event.code() == KeyCode.ENTER && selectedStash().isDefined()
+                ? Option.of(openStash)
+                : PaneKeys.sending(keymap.handle(Scopes.STASH, event, selectedStash()), dispatch));
     }
 
     /**
@@ -68,5 +74,13 @@ public final class StashPanel {
      */
     public Option<Stash> selectedStash() {
         return list.selected(stashes -> stashes);
+    }
+
+    /**
+     * The message to send when the highlighted stash is not the one whose changes {@code model} holds.
+     */
+    public Option<Msg> selectionChange(Model model) {
+        return PaneKeys.selectionChange(
+                selectedStash().map(Stash::sha), model.repoView().stashDetail(), SelectionMsg.StashSelected::new);
     }
 }

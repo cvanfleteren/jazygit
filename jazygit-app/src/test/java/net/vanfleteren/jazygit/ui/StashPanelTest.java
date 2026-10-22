@@ -6,6 +6,7 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.Instant;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.feature.stash.StashMsg;
@@ -26,8 +27,8 @@ class StashPanelTest {
     @Test
     void listsTheStashes() throws Exception {
         Model model = withStashes(List.of(
-                new Stash("stash@{0}", new Sha("s0"), "WIP on main abc1234 Add widget"),
-                new Stash("stash@{1}", new Sha("s1"), "older")));
+                new Stash("stash@{0}", new Sha("s0"), "WIP on main abc1234 Add widget", Option.none(), Instant.EPOCH),
+                new Stash("stash@{1}", new Sha("s1"), "older", Option.none(), Instant.EPOCH)));
         StashPanel panel = new StashPanel(msg -> {});
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, null))) {
@@ -42,8 +43,9 @@ class StashPanelTest {
 
     @Test
     void gUnstashesAndDDeletesTheHighlightedStashAndQuestionMarkShowsHelp() throws Exception {
-        Stash older = new Stash("stash@{1}", new Sha("s1"), "older");
-        Model model = withStashes(List.of(new Stash("stash@{0}", new Sha("s0"), "newest"), older));
+        Stash older = new Stash("stash@{1}", new Sha("s1"), "older", Option.none(), Instant.EPOCH);
+        Model model = withStashes(
+                List.of(new Stash("stash@{0}", new Sha("s0"), "newest", Option.none(), Instant.EPOCH), older));
         java.util.List<Msg> dispatched = new ArrayList<>();
         StashPanel panel = new StashPanel(dispatched::add);
 
@@ -69,6 +71,33 @@ class StashPanelTest {
     }
 
     @Test
+    void theHighlightedStashIsReportedUntilItsChangesAreShownAndEnterOpensThem() throws Exception {
+        Stash older = new Stash("stash@{1}", new Sha("s1"), "older", Option.none(), Instant.EPOCH);
+        Model model = withStashes(
+                List.of(new Stash("stash@{0}", new Sha("s0"), "newest", Option.none(), Instant.EPOCH), older));
+        int[] opened = {0};
+        StashPanel panel = new StashPanel(msg -> {}, () -> opened[0]++, Theme.Highlights.DEFAULT);
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, StashPanel.ID))) {
+            SettledPilot.focus(testRunner, StashPanel.ID);
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner).pause();
+
+            Msg selected = panel.selectionChange(model).get();
+            assertEquals(new SelectionMsg.StashSelected(older.sha()), selected);
+            assertEquals(
+                    Option.none(),
+                    panel.selectionChange(Update.update(model, selected).model()));
+
+            SettledPilot.of(testRunner).press(KeyCode.ENTER);
+            SettledPilot.of(testRunner).pause();
+            assertEquals(1, opened[0]);
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
     void gAndDDoNothingWithoutStashes() throws Exception {
         Model model = withStashes(List.of());
         java.util.List<Msg> dispatched = new ArrayList<>();
@@ -88,8 +117,8 @@ class StashPanelTest {
 
     @Test
     void theListScrollsAlongWithTheSelection() throws Exception {
-        Model model =
-                withStashes(List.range(0, 80).map(i -> new Stash("stash@{" + i + "}", new Sha("s" + i), "work " + i)));
+        Model model = withStashes(List.range(0, 80)
+                .map(i -> new Stash("stash@{" + i + "}", new Sha("s" + i), "work " + i, Option.none(), Instant.EPOCH)));
         StashPanel panel = new StashPanel(msg -> {});
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, StashPanel.ID))) {
@@ -111,7 +140,8 @@ class StashPanelTest {
     @Test
     void theHighlightOnlyShowsWhileThePaneIsInUseAndComesBackWhereItWas() throws Exception {
         Model model = withStashes(List.of(
-                new Stash("stash@{0}", new Sha("s0"), "newest"), new Stash("stash@{1}", new Sha("s1"), "older")));
+                new Stash("stash@{0}", new Sha("s0"), "newest", Option.none(), Instant.EPOCH),
+                new Stash("stash@{1}", new Sha("s1"), "older", Option.none(), Instant.EPOCH)));
         StashPanel panel = new StashPanel(msg -> {});
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, StashPanel.ID))) {

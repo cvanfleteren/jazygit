@@ -6,10 +6,12 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
 import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
+import net.vanfleteren.jazygit.state.Cmd.LoadStashDetail;
 import net.vanfleteren.jazygit.state.SelectionMsg.BranchSelected;
 import net.vanfleteren.jazygit.state.SelectionMsg.CommitSelected;
 import net.vanfleteren.jazygit.state.SelectionMsg.DivergenceCommitSelected;
 import net.vanfleteren.jazygit.state.SelectionMsg.FilesSelected;
+import net.vanfleteren.jazygit.state.SelectionMsg.StashSelected;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -53,6 +55,13 @@ public final class SelectionUpdate {
                         model.repoView().fileDiff(),
                         diff -> model.mapRepoView(repoView -> repoView.withFileDiff(diff)),
                         entries -> new LoadFileDiff(entries, model.preferences().diffOptions()));
+            case StashSelected(var sha) ->
+                selected(
+                        model,
+                        sha,
+                        model.repoView().stashDetail(),
+                        detail -> model.mapRepoView(repoView -> repoView.withStashDetail(detail)),
+                        stash -> new LoadStashDetail(stash, model.preferences().diffOptions()));
         };
     }
 

@@ -41,11 +41,13 @@ public final class DiffOptionsUpdate {
                         .toList()
                         .appendAll(model.repoView().divergence().flatMap(DivergenceView::detail))
                         .map(detail -> new Cmd.LoadCommitDetail(detail.key(), options)))
+                .appendAll(model.repoView().stashDetail().map(detail -> new Cmd.LoadStashDetail(detail.key(), options)))
                 .distinct();
         return new Next(
                 model.mapPreferences(preferences -> preferences.withDiffOptions(options))
                         .mapRepoView(repoView -> repoView.withFileDiff(reloading(repoView.fileDiff()))
                                 .withCommitDetail(reloading(repoView.commitDetail()))
+                                .withStashDetail(reloading(repoView.stashDetail()))
                                 .withDivergence(divergence)),
                 loads);
     }

@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
+import net.vanfleteren.jazygit.state.Cmd.LoadStashDetail;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
@@ -111,6 +112,73 @@ class SelectionUpdateTest {
         assertTrue(Update.update(model, new Tick(Instant.EPOCH))
                 .cmds()
                 .contains(new LoadCommitDetail(new Sha("aaaa"), DiffOptions.DEFAULT)));
+    }
+
+    @Test
+    void selectingAStashLoadsItsChangesOnce() {
+        Next next = Update.update(loaded(), new SelectionMsg.StashSelected(new Sha("5555")));
+
+        assertEquals(
+                Option.of(new Preview<>(new Sha("5555"), new Loading<>())),
+                next.model().repoView().stashDetail());
+        assertEquals(List.of(new LoadStashDetail(new Sha("5555"), DiffOptions.DEFAULT)), next.cmds());
+
+        Next again = Update.update(next.model(), new SelectionMsg.StashSelected(new Sha("5555")));
+        assertSame(next.model(), again.model());
+        assertEquals(List.of(), again.cmds());
+    }
+
+    @Test
+    void changesOfAStashThatIsNoLongerSelectedAreDropped() {
+        Model model = Update.update(loaded(), new SelectionMsg.StashSelected(new Sha("5555")))
+                .model();
+        model = Update.update(model, new SelectionMsg.StashSelected(new Sha("6666")))
+                .model();
+
+        assertEquals(
+                model.repoView().stashDetail(),
+                Update.update(
+                                model,
+                                new LoadMsg.StashDetailLoaded(
+                                        new Sha("5555"), DiffOptions.DEFAULT, DiffText.of("changes")))
+                        .model()
+                        .repoView()
+                        .stashDetail());
+        assertEquals(
+                model.repoView().stashDetail(),
+                Update.update(
+                                model,
+                                new LoadMsg.Failed(
+                                        new LoadStashDetail(new Sha("5555"), DiffOptions.DEFAULT), refused("boom")))
+                        .model()
+                        .repoView()
+                        .stashDetail());
+    }
+
+    @Test
+    void loadedStashChangesAreShownAndFailedOnesRetriedOnTheNextTick() {
+        Model selected = Update.update(loaded(), new SelectionMsg.StashSelected(new Sha("5555")))
+                .model();
+        assertEquals(
+                Option.of(new Preview<>(new Sha("5555"), new Loaded<>(DiffText.of("changes")))),
+                Update.update(
+                                selected,
+                                new LoadMsg.StashDetailLoaded(
+                                        new Sha("5555"), DiffOptions.DEFAULT, DiffText.of("changes")))
+                        .model()
+                        .repoView()
+                        .stashDetail());
+
+        Model failed = Update.update(
+                        selected,
+                        new LoadMsg.Failed(new LoadStashDetail(new Sha("5555"), DiffOptions.DEFAULT), refused("boom")))
+                .model();
+        assertEquals(
+                Option.of(new Preview<>(new Sha("5555"), new Failed<>(refused("boom")))),
+                failed.repoView().stashDetail());
+        assertTrue(Update.update(failed, new Tick(Instant.EPOCH))
+                .cmds()
+                .contains(new LoadStashDetail(new Sha("5555"), DiffOptions.DEFAULT)));
     }
 
     @Test
