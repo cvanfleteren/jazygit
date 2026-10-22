@@ -86,7 +86,8 @@ public class JazygitApp extends ToolkitApp {
     private static final int MIN_STASH_HEIGHT = 3;
     // Where the commands that threw are written down.
     private static final Path BUG_LOG = Path.of(System.getProperty("java.io.tmpdir"), "jazygit-bugs.log");
-    private static final Duration REFRESH_INTERVAL = Duration.ofMillis(750);
+    // In milliseconds; the acceptance tests tick faster, as each of their steps waits for the app to see a change.
+    private static final Duration REFRESH_INTERVAL = Duration.ofMillis(Long.getLong("jazygit.refreshInterval", 750));
     private static final Duration FETCH_INTERVAL = Duration.ofMinutes(1);
     // How many background commands run at once: a fetch, the pull requests and a preview, but not so many git or
     // gh processes that a burst of them slows the machine down or eats into GitHub's rate limit.

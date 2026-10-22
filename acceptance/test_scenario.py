@@ -1,7 +1,13 @@
 """
-A day's work in one session, from an empty repository: each step starts from where the one before left the
-repository and the app, the way it goes when a person uses it.
+A day's work, a stretch of it per test, in one session: each step starts from where the one before left the
+repository and the app, the way it goes when a person uses it. A stretch that comes later in the day starts from
+the repository as git sets it up, the way the stretch before would have left it.
 """
+
+import pytest
+
+# By far the longest tests: they go first, so they are not what the run waits on at the end.
+pytestmark = pytest.mark.slow
 
 
 def test_a_feature_from_first_commit_to_tidy_history(repo, jazygit):
@@ -56,6 +62,22 @@ def test_a_feature_from_first_commit_to_tidy_history(repo, jazygit):
     ui.branches.rename("feature", "parser")
     assert repo.branches() == ["main", "parser"]
     assert repo.current_branch() == "parser"
+
+
+def tidy_feature(repo):
+    """Where the tidy history leaves the repository: main with only the initial commit, and the feature on parser,
+    checked out."""
+    repo.commit("Initial commit", **{"README.md": "# Parser\n"})
+    repo("switch", "--create", "parser")
+    repo.commit("Add parser", **{"parser.py": "def parse(text):\n    return text\n"})
+    repo.commit("Test the parser", **{"test_parser.py": "assert parse('a') == 'a'\n",
+                                      "conftest.py": "from parser import parse\n"})
+    repo.commit("Add printer", **{"printer.py": "def show(tree):\n    print(tree)\n"})
+
+
+def test_commits_moved_to_the_branches_they_belong_on(repo, jazygit):
+    tidy_feature(repo)
+    ui = jazygit()
 
     # Back on main, a fix is committed there by mistake, and moved to a branch of its own.
     ui.branches.checkout("main")
@@ -120,8 +142,24 @@ def test_a_feature_worked_on_with_a_teammate_through_origin(repo, origin, clone,
     assert origin.subjects("feature") == ["Add tests", "Add the parser", "Initial commit"]
     assert origin("show", "feature:parser.py") == "def parse(text):\n    return text"
 
+
+def published_feature(repo):
+    """Where working on the feature with the teammate leaves the repository: main and the feature pushed to origin,
+    which they track, and the feature checked out."""
+    repo.commit("Initial commit", **{"README.md": "# Parser\n"})
+    repo("push", "--set-upstream", "origin", "main")
+    repo("switch", "--create", "feature")
+    repo.commit("Add the parser", **{"parser.py": "def parse(text):\n    return text\n"})
+    repo.commit("Add tests", **{"test_parser.py": "assert parse('a') == 'a'\n"})
+    repo("push", "--set-upstream", "origin", "feature")
+
+
+def test_a_hand_with_a_teammates_docs_while_main_moves_on(repo, origin, clone, jazygit):
+    published_feature(repo)
+    teammate = clone()
+    ui = jazygit()
+
     # The teammate starts on the docs, and asks for a hand with them.
-    teammate("switch", "main")
     teammate("switch", "--create", "docs")
     teammate.commit("Document the parser", **{"README.md": "# Parser\n\nParses text.\n"})
     teammate("push", "--set-upstream", "origin", "docs")
