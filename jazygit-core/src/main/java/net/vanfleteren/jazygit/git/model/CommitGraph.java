@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.git.model;
 
 import io.vavr.collection.*;
+import io.vavr.control.Option;
 
 /**
  * Lays out a commit log with its merges: the commits a merge brought in follow it, so they can be shown
@@ -82,7 +83,46 @@ public final class CommitGraph {
      * @param depth        in how many merged branches the commit is
      * @param closesBranch whether it is the last commit of the (innermost) branch it is in
      */
-    public record Node(Commit commit, int depth, boolean closesBranch) {}
+    public record Node(Commit commit, int depth, boolean closesBranch) {
+
+        /**
+         * The rails before the lines of the commit, like {@code git log --graph} draws them: a merge opens a
+         * rail with a {@code "\"} line, the last commit of a merged branch closes it with a {@code "/"} in
+         * place of its second line.
+         */
+        public Gutter gutter() {
+            String rails = "| ".repeat(depth);
+            String closing = "| ".repeat(Math.max(0, depth - 1));
+            if (commit.isMerge()) {
+                return new Gutter(rails + "*   ", Option.of(rails + "|\\  "), rails + "| | ", rails + "| | ");
+            }
+            if (closesBranch) {
+                return new Gutter(rails + "* ", Option.none(), closing + "|/  ", closing + "|   ");
+            }
+            return new Gutter(rails + "* ", Option.none(), rails + "| ", rails + "| ");
+        }
+    }
+
+    /**
+     * What goes before each line of a commit in a graph.
+     *
+     * @param first   before its first line
+     * @param opening before the line a merge adds after its first line to open the rail of its branch
+     * @param second  before its second line
+     * @param rest    before each line after that
+     */
+    public record Gutter(String first, Option<String> opening, String second, String rest) {
+
+        /**
+         * The {@code lines} with the rails before them, and for a merge the line {@code openingText} after the
+         * first one.
+         */
+        public List<String> draw(List<String> lines, String openingText) {
+            List<String> drawn = lines.zipWith(
+                    Stream.of(first, second).appendAll(Stream.continually(rest)), (line, rail) -> rail + line);
+            return opening.fold(() -> drawn, rail -> drawn.insert(1, rail + openingText));
+        }
+    }
 
     /**
      * The shas placed so far, and the commits in the order they were placed, last placed first.

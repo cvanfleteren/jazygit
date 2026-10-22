@@ -204,7 +204,6 @@ public final class ContentPanel {
      */
     private static List<String> logLines(CommitGraph.Node node, DateTimeFormatter dateTime, Option<String> mark) {
         Commit c = node.commit();
-        String rails = "| ".repeat(node.depth());
         List<String> lines = List.of(
                         Messages.get("content.commitSha", c.shortSha())
                                 + mark.map(text -> "  " + text).getOrElse(""),
@@ -213,20 +212,11 @@ public final class ContentPanel {
                         "")
                 .appendAll(messageLines(c))
                 .append("");
-        // Like git's graph: a merge opens a rail with a "\\" line, the last commit of a merged
-        // branch closes it with a "/" in place of its second line.
-        String closing = "| ".repeat(Math.max(0, node.depth() - 1));
-        return c.isMerge()
-                ? List.of(
-                                rails + "*   " + lines.head(),
-                                rails + "|\\  "
-                                        + Messages.get(
-                                                "content.merge",
-                                                c.parents().map(Sha::shortSha).mkString(" ")))
-                        .appendAll(lines.tail().map(line -> rails + "| | " + line))
-                : lines.zipWithIndex((line, i) -> i == 0
-                        ? rails + "* " + line
-                        : node.closesBranch() ? closing + (i == 1 ? "|/  " : "|   ") + line : rails + "| " + line);
+        return node.gutter()
+                .draw(
+                        lines,
+                        Messages.get(
+                                "content.merge", c.parents().map(Sha::shortSha).mkString(" ")));
     }
 
     /**
