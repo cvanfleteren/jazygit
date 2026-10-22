@@ -142,7 +142,7 @@ public class BranchesPanel {
     private Panel tabPanel(Model model, boolean focused, boolean active) {
         BranchesTab tab = model.repoView().branchesTab();
         Panel panel = list(tab).render(model, focused, active, title(tab));
-        return panel.onMouseEvent(event -> titleClick(panel.renderedArea(), event));
+        return panel.onMouseEvent(event -> titleClick(panel.renderedArea(), event, tabClicked));
     }
 
     /**
@@ -160,15 +160,14 @@ public class BranchesPanel {
      * Shows the list whose name in the title of the pane, drawn in {@code area}, is clicked. The title starts
      * after the corner of the border.
      */
-    private EventResult titleClick(Rect area, MouseEvent event) {
+    private static EventResult titleClick(Rect area, MouseEvent event, Consumer<BranchesTab> tabClicked) {
         return Option.when(
                         event.kind() == MouseEventKind.PRESS
                                 && event.isLeftButton()
-                                && area != null
                                 && event.y() == area.top(),
                         event.x() - area.left() - 1)
                 .flatMap(BranchesPanel::tabAt)
-                .map(clicked -> {
+                .map(clicked -> {   
                     tabClicked.accept(clicked);
                     return EventResult.HANDLED;
                 })

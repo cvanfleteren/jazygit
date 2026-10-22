@@ -88,7 +88,6 @@ public final class StatusPanel {
         return Option.when(
                         event.kind() == MouseEventKind.PRESS
                                 && event.isLeftButton()
-                                && area != null
                                 && event.y() == area.top(),
                         event.x() - area.left() - 1)
                 .flatMap(StatusPanel::screenAt)
