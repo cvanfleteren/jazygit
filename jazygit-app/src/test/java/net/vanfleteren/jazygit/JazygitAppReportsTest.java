@@ -170,7 +170,7 @@ class JazygitAppReportsTest {
             Instant from = Instant.now();
             Thread.sleep(SPINNING.toMillis());
 
-            // The model's own tick draws one frame every 750 ms; the spinner asks for one every 120 ms.
+            // The model's own clock draws one frame every 500 ms; the spinner asks for one every 120 ms.
             long turns = app.drawnAt.stream()
                     .filter(at -> at.isAfter(from))
                     .map(TimeText::spinnerFrame)
