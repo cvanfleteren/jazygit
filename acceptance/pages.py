@@ -46,16 +46,18 @@ class Jazygit:
     def _shows_repo(self) -> bool:
         return self.commits.shows_history() and self.branches.shows_branches() and self.files.shows_changes()
 
-    def changing_repo(self, description: str, keys):
+    def changing_repo(self, description: str, keys, done=None):
         """Runs keys, a function that presses them, and waits until they changed the repository, and the app
-        shows how."""
+        shows how. An operation that runs several git commands changes it after each: done, a function that tells
+        whether the repository is as the last of them leaves it, keeps the wait going until then."""
         self.caught_up()
         before = self._state()
         keys()
         failures = []
         try:
             # The app's own wait: when it dies handling the keys, this fails at once, with what it last wrote.
-            self.app.eventually(lambda: not self._busy() and self._changed_from(before, failures), description)
+            self.app.eventually(lambda: not self._busy() and self._changed_from(before, failures)
+                                and (done is None or done()), description)
         except AppExited:
             raise
         except AssertionError as e:
@@ -331,6 +333,7 @@ class BranchesPane:
         self.select(branch)
         locked = where == "worktree" and any(
             self.repo.worktrees()[path] == branch for path in self.repo.locked_worktrees())
+        upstream = self.repo.upstream(branch)
 
         def keys():
             self.app.press("d")
@@ -338,7 +341,13 @@ class BranchesPane:
             if locked:
                 self.ui.confirm("Unlock worktree")
 
-        self.ui.changing_repo(f"{branch} to be deleted", keys)
+        # Deleting both, or with the worktree, takes a git command for each.
+        def done():
+            return ((where == "remote" or branch not in self.repo.branches())
+                    and (where not in ("remote", "both") or upstream not in self.repo.remote_branches())
+                    and (where != "worktree" or branch not in self.repo.worktrees().values()))
+
+        self.ui.changing_repo(f"{branch} to be deleted", keys, done)
 
     def push(self, branch: str, upstream: str = None):
         """Pushes the branch. One without an upstream is pushed to upstream, "<remote> <branch>", which it then
@@ -654,6 +663,8 @@ class WorktreesPane:
         with changes, which git refuses to remove, is removed anyway, as the app offers to, when anyway."""
         key = {"keep": "r", "delete": "b"}[branch]
         self.select(name)
+        path = self.path(name)
+        checked_out = self.repo.worktrees()[path]
 
         def keys():
             self.app.press("d")
@@ -662,7 +673,12 @@ class WorktreesPane:
                 # Titled as the question before, with a message that wraps where the path makes it: by its keys.
                 self.ui.confirm("(enter) confirm")
 
-        self.ui.changing_repo(f"the worktree {name} removed", keys)
+        # Deleting its branch too is a git command of its own, after the removal.
+        def done():
+            return (path not in self.repo.worktrees()
+                    and (branch == "keep" or checked_out not in self.repo.branches()))
+
+        self.ui.changing_repo(f"the worktree {name} removed", keys, done)
 
     def try_to_remove(self, name: str):
         """Asks to remove the worktree, for when the app is to refuse it: it does not wait for the repository to
