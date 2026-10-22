@@ -182,20 +182,41 @@ class FilesPanelTest {
         assertEquals("d.txt", selectedAfter("c.txt", names, List.of("b.txt", "d.txt", "e.txt")));
     }
 
+    @Test
+    void whenTheSelectedFileAndTheOneBelowAreGoneTheOneAboveIsSelected() throws Exception {
+        List<String> names = List.of("a.txt", "b.txt", "c.txt", "d.txt", "e.txt");
+        assertEquals("b.txt", selectedAfter("c.txt", names, List.of("a.txt", "b.txt", "e.txt")));
+    }
+
+    @Test
+    void whenTheSelectedDirectoryIsGoneItsNeighbourIsSelected() throws Exception {
+        List<String> names = List.of("a.txt", "dir1/x.txt", "dir2/w.txt", "dir3/v.txt");
+        // The root, a.txt, dir1, x.txt, then dir2.
+        assertEquals("x.txt", selectedAfter(4, names, List.of("a.txt", "dir1/x.txt", "dir3/v.txt")));
+    }
+
     /**
      * The name of the file selected once only the {@code remaining} files are changed, when {@code selected}
-     * was, among the changed {@code names}.
+     * was, among the changed {@code names}, which are all in the root.
      */
     private String selectedAfter(String selected, List<String> names, List<String> remaining) throws Exception {
+        // Below the root.
+        return selectedAfter(names.indexOf(selected) + 1, names, remaining);
+    }
+
+    /**
+     * The name of the node selected once only the {@code remaining} files are changed, when the node in
+     * {@code row} was, among the changed {@code names}.
+     */
+    private String selectedAfter(int row, List<String> names, List<String> remaining) throws Exception {
         Model before = TestModels.loaded(new FixedProvider(names.map(n -> new FileEntry(n, ChangeType.MODIFIED))));
         Model after = TestModels.loaded(new FixedProvider(remaining.map(n -> new FileEntry(n, ChangeType.MODIFIED))));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, FilesPanel.ID))) {
             RenderedText.of(testRunner, () -> panel.render(before, FilesPanel.ID));
-            // Below the root.
-            RenderedText.of(testRunner, () -> panel.tree().selected(names.indexOf(selected) + 1));
+            RenderedText.of(testRunner, () -> panel.tree().selected(row));
             RenderedText.of(testRunner, () -> panel.render(after, FilesPanel.ID));
-            String name = ((FileTree.File) panel.tree().selectedNode().data()).name();
+            String name = panel.tree().selectedNode().data().name();
 
             SettledPilot.of(testRunner).quit();
             return name;

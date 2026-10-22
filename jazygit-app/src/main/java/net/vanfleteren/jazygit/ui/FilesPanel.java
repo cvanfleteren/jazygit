@@ -11,8 +11,12 @@ import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
 import dev.tamboui.widgets.common.ScrollBarPolicy;
 import dev.tamboui.widgets.tree.TreeNode;
+import io.vavr.Tuple;
+import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.collection.Set;
+import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.git.model.*;
@@ -296,13 +300,25 @@ public class FilesPanel {
      * else the nearest one still there, below before above, or else the same row, kept inside the tree.
      */
     private static int restored(List<Option<String>> before, int previous, List<Option<String>> after) {
-        return List.range(0, before.size())
-                .sortBy(i -> 2 * Math.abs(i - previous) + (i < previous ? 1 : 0))
-                .iterator()
-                .flatMap(before::get)
-                .map(path -> after.indexOf(Option.of(path)))
-                .find(i -> i >= 0)
+        Vector<Option<String>> rows = before.toVector();
+        Map<String, Integer> rowOf = after.zipWithIndex()
+                .flatMap(row -> row._1.map(path -> Tuple.of(path, row._2)))
+                .toMap(row -> row);
+        return around(previous, rows.size())
+                .flatMap(rows::get)
+                .flatMap(rowOf::get)
+                .headOption()
                 .getOrElse(() -> clamp(previous, after.size()));
+    }
+
+    /**
+     * Row {@code previous}, then the other of {@code size} rows, nearest first, the one below before the one
+     * above.
+     */
+    private static Iterator<Integer> around(int previous, int size) {
+        return Iterator.rangeClosed(0, 2 * (size + Math.abs(previous)))
+                .map(k -> k % 2 == 1 ? previous + (k + 1) / 2 : previous - k / 2)
+                .filter(i -> i >= 0 && i < size);
     }
 
     /**
