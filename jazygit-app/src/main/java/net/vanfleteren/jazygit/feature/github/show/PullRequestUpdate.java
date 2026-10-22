@@ -34,8 +34,9 @@ public final class PullRequestUpdate {
                 show(model, new Branch.Name(pullRequest.headBranch()), pullRequest.pullRequest());
             case PullRequestMsg.SummaryRequested(var pullRequest) ->
                 Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
+            // The branches pane shows the pull request as it was just read too, also when the dialog is closed.
             case PullRequestMsg.DetailsLoaded(int number, var details) ->
-                Next.of(shown(model, number, Either.right(details)));
+                Next.of(shown(model.mapGitHub(gitHub -> gitHub.withRead(details)), number, Either.right(details)));
             case PullRequestMsg.DetailsFailed(int number, var failure) ->
                 Next.of(shown(model, number, Either.left(failure)));
             // The dialog stays open, so the pull request can still be merged or closed from it.

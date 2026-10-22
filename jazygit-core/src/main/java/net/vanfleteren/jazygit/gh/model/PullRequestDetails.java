@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.gh.model;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -70,6 +71,15 @@ public record PullRequestDetails(
                 labels,
                 reviewers,
                 checks);
+    }
+
+    /**
+     * This pull request as a list of the open ones holds it; none when it is no longer open.
+     */
+    public Option<PullRequest> listed() {
+        return Option.when(
+                state == State.OPEN,
+                () -> new PullRequest(number, headBranch, draft, Checks.combined(checks.map(Check::state)), review));
     }
 
     public enum State {

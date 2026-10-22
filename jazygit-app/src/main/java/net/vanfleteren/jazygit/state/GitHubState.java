@@ -7,6 +7,7 @@ import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Upstream;
@@ -34,6 +35,16 @@ public record GitHubState(
 
     public static final GitHubState NOT_READ =
             new GitHubState(Option.none(), Option.none(), Option.none(), HashSet.empty(), HashSet.empty());
+
+    /**
+     * This state with the pull request {@code details} are about as they were just read: as it now is, or no
+     * longer listed once it is merged or closed. Unchanged when it is not listed.
+     */
+    public GitHubState withRead(PullRequestDetails details) {
+        return withPullRequests(pullRequests.map(open -> open.find(listed -> listed._2.number() == details.number())
+                .map(listed -> details.listed().fold(() -> open.remove(listed._1), now -> open.put(listed._1, now)))
+                .getOrElse(open)));
+    }
 
     /**
      * The open pull request from {@code branch}: the one from the branch it follows on the remote, else from
