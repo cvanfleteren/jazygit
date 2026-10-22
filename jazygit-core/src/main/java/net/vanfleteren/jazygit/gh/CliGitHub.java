@@ -97,6 +97,7 @@ public final class CliGitHub implements GitHub {
     private static final String MY_PRS_JQ = SUMMARY_FIELDS_JQ + """
             .data | to_entries[] | .key as $list | (["list", $list, "", (.value.issueCount | tostring)] | @tsv), \
             (.value.nodes[] | select(.number != null) | (["pr", $list] + summary) | @tsv)""";
+    private static final int LIST_LINE_FIELDS = 4;
     private static final int SUMMARY_LINE_FIELDS = 13;
     // The base branch of a pull request on the first line, its body after it.
     private static final String PREVIEW_JQ = ".baseRefName + \"\\n\" + .body";
@@ -304,12 +305,7 @@ public final class CliGitHub implements GitHub {
         List<List<String>> lines = List.of(raw.split("\\R"))
                 .filter(line -> !line.isBlank())
                 .map(line -> List.of(line.split("\t", -1)).map(CliGitHub::unescape));
-        Option<List<String>> unknown = lines.find(fields -> !(fields.size() == 4
-                        && fields.head().equals("list")
-                        && Try.of(() -> Integer.parseInt(fields.get(3))).isSuccess()
-                || fields.size() == SUMMARY_LINE_FIELDS
-                        && fields.head().equals("pr")
-                        && summary(fields.drop(2)).isDefined()));
+        Option<List<String>> unknown = lines.find(fields -> !knownListsLine(fields));
         if (unknown.isDefined()) {
             return Either.left(new UnexpectedOutput(unknown.get().mkString("\t")));
         }
@@ -325,6 +321,19 @@ public final class CliGitHub implements GitHub {
                                 new PullRequestList(
                                         byList.get(fields.get(1)).getOrElse(List.empty()),
                                         Integer.parseInt(fields.get(3)))))));
+    }
+
+    private static boolean knownListsLine(List<String> fields) {
+        return switch (fields.head()) {
+            case "list" -> fields.size() == LIST_LINE_FIELDS && isNumber(fields.get(3));
+            case "pr" ->
+                fields.size() == SUMMARY_LINE_FIELDS && summary(fields.drop(2)).isDefined();
+            default -> false;
+        };
+    }
+
+    private static boolean isNumber(String field) {
+        return Try.of(() -> Integer.parseInt(field)).isSuccess();
     }
 
     private static Option<PullRequestSummary> summary(List<String> f) {
