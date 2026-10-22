@@ -133,11 +133,13 @@ class App:
 
     def press(self, *names):
         for name in names:
+            self.check_running()
             self.process.send(key(name))
             # Give each key its own read, the way a person's keystrokes arrive.
             time.sleep(0.05)
 
     def type(self, text: str):
+        self.check_running()
         self.process.send(text)
 
     def wait_for(self, text: str, timeout=TIMEOUT):
