@@ -8,15 +8,17 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
 import dev.tamboui.tui.event.MouseButton;
-import dev.tamboui.tui.event.TickEvent;
+import dev.tamboui.tui.event.ResizeEvent;
 import dev.tamboui.tui.pilot.ElementNotFoundException;
 import dev.tamboui.tui.pilot.Pilot;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 /**
@@ -30,18 +32,31 @@ import java.util.function.Supplier;
 public final class SettledPilot implements Pilot {
 
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
+    // The frame, JazygitApp#redrawIfFocusMoves's check behind it, and the Redraw that check queues. A longer chain
+    // of runLater hops, like JazygitApp#report's, needs a frame count to settle on.
     private static final int SETTLE_ROUNDS = 3;
+    // A count of frames that never changes: one pass of rounds settles.
+    private static final IntSupplier UNCOUNTED = () -> 0;
 
     private final ToolkitTestRunner testRunner;
     private final Pilot pilot;
+    private final IntSupplier framesDrawn;
 
-    private SettledPilot(ToolkitTestRunner testRunner) {
+    private SettledPilot(ToolkitTestRunner testRunner, IntSupplier framesDrawn) {
         this.testRunner = testRunner;
         this.pilot = testRunner.pilot();
+        this.framesDrawn = framesDrawn;
     }
 
     public static Pilot of(ToolkitTestRunner testRunner) {
-        return new SettledPilot(testRunner);
+        return of(testRunner, UNCOUNTED);
+    }
+
+    /**
+     * A pilot that settles as {@link #settle(ToolkitTestRunner, IntSupplier)} does, on {@code framesDrawn}.
+     */
+    public static Pilot of(ToolkitTestRunner testRunner, IntSupplier framesDrawn) {
+        return new SettledPilot(testRunner, framesDrawn);
     }
 
     /**
@@ -49,12 +64,29 @@ public final class SettledPilot implements Pilot {
      * frame with it, which moving the focus does not by itself.
      */
     public static void focus(ToolkitTestRunner testRunner, String id) {
+        focus(testRunner, id, UNCOUNTED);
+    }
+
+    /**
+     * As {@link #focus(ToolkitTestRunner, String)}, settling on {@code framesDrawn}.
+     */
+    public static void focus(ToolkitTestRunner testRunner, String id, IntSupplier framesDrawn) {
         testRunner
                 .runner()
                 .runOnRenderThread(() -> testRunner.runner().focusManager().setFocus(id));
-        // TamboUI draws a frame on a tick.
-        testRunner.runner().tuiRunner().dispatch(TickEvent.of(0));
-        settle(testRunner);
+        // TamboUI draws a frame on a resize, in its turn; a tick waits behind every other event, the next key too,
+        // which the panes would then handle as drawn without the focus.
+        Size size = terminalSize(testRunner);
+        testRunner.runner().tuiRunner().dispatch(ResizeEvent.of(size.width(), size.height()));
+        settle(testRunner, framesDrawn);
+    }
+
+    private static Size terminalSize(ToolkitTestRunner testRunner) {
+        try {
+            return testRunner.backend().size();
+        } catch (IOException failed) {
+            throw new AssertionError("the test backend has no size", failed);
+        }
     }
 
     /**
@@ -65,6 +97,27 @@ public final class SettledPilot implements Pilot {
      * the redraw take three.
      */
     public static void settle(ToolkitTestRunner testRunner) {
+        settle(testRunner, UNCOUNTED);
+    }
+
+    /**
+     * Waits as {@link #settle(ToolkitTestRunner)} does, again and again until a pass draws no frame, as
+     * {@code framesDrawn} counts them: what a frame reports reaches the model a round later, and the frame the model
+     * then asks for comes after more rounds than one pass takes.
+     */
+    public static void settle(ToolkitTestRunner testRunner, IntSupplier framesDrawn) {
+        long deadline = System.nanoTime() + TIMEOUT.toNanos();
+        int before;
+        do {
+            if (System.nanoTime() > deadline) {
+                throw new AssertionError("the render thread kept drawing frames for " + TIMEOUT);
+            }
+            before = framesDrawn.getAsInt();
+            settleOnce(testRunner);
+        } while (framesDrawn.getAsInt() != before);
+    }
+
+    private static void settleOnce(ToolkitTestRunner testRunner) {
         CountDownLatch handled = new CountDownLatch(1);
         queueRounds(testRunner, SETTLE_ROUNDS, handled::countDown);
         try {
@@ -113,37 +166,37 @@ public final class SettledPilot implements Pilot {
     @Override
     public void press(String... keys) {
         pilot.press(keys);
-        settle(testRunner);
+        settle(testRunner, framesDrawn);
     }
 
     @Override
     public void mousePress(MouseButton button, int x, int y) {
         pilot.mousePress(button, x, y);
-        settle(testRunner);
+        settle(testRunner, framesDrawn);
     }
 
     @Override
     public void mouseRelease(MouseButton button, int x, int y) {
         pilot.mouseRelease(button, x, y);
-        settle(testRunner);
+        settle(testRunner, framesDrawn);
     }
 
     @Override
     public void click(int x, int y) {
         pilot.click(x, y);
-        settle(testRunner);
+        settle(testRunner, framesDrawn);
     }
 
     @Override
     public void click(String elementId) throws ElementNotFoundException {
         pilot.click(elementId);
-        settle(testRunner);
+        settle(testRunner, framesDrawn);
     }
 
     @Override
     public void click(String elementId, int x, int y) throws ElementNotFoundException {
         pilot.click(elementId, x, y);
-        settle(testRunner);
+        settle(testRunner, framesDrawn);
     }
 
     /**
@@ -154,7 +207,7 @@ public final class SettledPilot implements Pilot {
      */
     @Override
     public Rect findElement(String elementId) throws ElementNotFoundException {
-        settle(testRunner);
+        settle(testRunner, framesDrawn);
         Rect area = onRenderThread(() -> testRunner.runner().elementRegistry().getArea(elementId));
         if (area == null) {
             throw new ElementNotFoundException("Element not found: " + elementId);
@@ -164,37 +217,37 @@ public final class SettledPilot implements Pilot {
 
     @Override
     public boolean hasElement(String elementId) {
-        settle(testRunner);
+        settle(testRunner, framesDrawn);
         return onRenderThread(() -> testRunner.runner().elementRegistry().getArea(elementId) != null);
     }
 
     @Override
     public void mouseMove(int x, int y) {
         pilot.mouseMove(x, y);
-        settle(testRunner);
+        settle(testRunner, framesDrawn);
     }
 
     @Override
     public void resize(int width, int height) {
         pilot.resize(width, height);
-        settle(testRunner);
+        settle(testRunner, framesDrawn);
     }
 
     @Override
     public void resize(Size size) {
         pilot.resize(size);
-        settle(testRunner);
+        settle(testRunner, framesDrawn);
     }
 
     @Override
     public void pause() {
-        settle(testRunner);
+        settle(testRunner, framesDrawn);
     }
 
     @Override
     public void pause(Duration delay) {
         pilot.pause(delay);
-        settle(testRunner);
+        settle(testRunner, framesDrawn);
     }
 
     @Override
@@ -217,6 +270,6 @@ public final class SettledPilot implements Pilot {
 
     private void dispatch(Event event) {
         testRunner.runner().tuiRunner().dispatch(event);
-        settle(testRunner);
+        settle(testRunner, framesDrawn);
     }
 }
