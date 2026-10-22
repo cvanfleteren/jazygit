@@ -20,16 +20,26 @@ public final class TimeText {
     private TimeText() {}
 
     /**
-     * The time {@code since} as a number and one unit: s, m, h or d.
+     * The time {@code since} as a number and one unit: m, h or d; or "now" under a minute, so that what shows it changes
+     * once a minute at most.
      */
     public static String age(Duration since) {
         long seconds = Math.max(0, since.toSeconds());
         return switch (Long.valueOf(seconds)) {
-            case Long s when s < 60 -> Messages.get("branches.age.seconds", String.valueOf(s));
+            case Long s when s < 60 -> Messages.get("branches.age.now");
             case Long s when s < 3600 -> Messages.get("branches.age.minutes", String.valueOf(s / 60));
             case Long s when s < 86400 -> Messages.get("branches.age.hours", String.valueOf(s / 3600));
             case Long s -> Messages.get("branches.age.days", String.valueOf(s / 86400));
         };
+    }
+
+    /**
+     * How long ago something happened {@code since}, to show in a sentence: "2m ago", or "just now" under a minute.
+     */
+    public static String ago(Duration since) {
+        return since.toSeconds() < 60
+                ? Messages.get("branches.age.justNow")
+                : Messages.get("branches.age.ago", age(since));
     }
 
     /**

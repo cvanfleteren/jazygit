@@ -345,7 +345,7 @@ public final class PullRequestDialog implements PopupView {
         return Messages.get(
                 "dialog.pullRequest.created.value",
                 LocalDate.ofInstant(pr.createdAt(), clock.getZone()).toString(),
-                TimeText.age(Duration.between(pr.createdAt(), now)));
+                TimeText.ago(Duration.between(pr.createdAt(), now)));
     }
 
     /**

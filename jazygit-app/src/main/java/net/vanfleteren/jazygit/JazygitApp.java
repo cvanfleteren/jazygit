@@ -87,10 +87,8 @@ public class JazygitApp extends ToolkitApp {
     private static final Path BUG_LOG = Path.of(System.getProperty("java.io.tmpdir"), "jazygit-bugs.log");
     // In milliseconds; the acceptance tests tick faster, as each of their steps waits for the app to see a change.
     private static final Duration REFRESH_INTERVAL = Duration.ofMillis(Long.getLong("jazygit.refreshInterval", 750));
-    // Divides a second, so each age in whole seconds shows for as long; with a refresh of 750ms, one in four showed
-    // twice
-    // as long as the others.
-    private static final Duration CLOCK_INTERVAL = Duration.ofMillis(500);
+    // The ages shown change once a minute at most, so a new minute shows at most this late.
+    private static final Duration CLOCK_INTERVAL = Duration.ofSeconds(5);
     private static final Duration FETCH_INTERVAL = Duration.ofMinutes(1);
     // How many background commands run at once: a fetch, the pull requests and a preview, but not so many git or
     // gh processes that a burst of them slows the machine down or eats into GitHub's rate limit.

@@ -37,7 +37,7 @@ public interface Msg {
     }
 
     /**
-     * The time it is, told often enough that the ages shown, in whole seconds, each show for as long.
+     * The time it is, told apart from the refresh: often enough that an age shown in minutes turns soon after it should.
      *
      * @param now the time it is
      */
