@@ -55,6 +55,11 @@ public final class ContentPanel {
     private static final List<String> LEFT_PANES =
             List.of(FilesPanel.ID, BranchesPanel.ID, CommitsPanel.ID, StashPanel.ID);
     private static final String MESSAGE_INDENT = "    ";
+    /**
+     * How the header lines of a diff start, before its first hunk.
+     */
+    private static final List<String> DIFF_HEADER_PREFIXES = List.of("+++", "---", "diff ", "index ");
+
     private final Theme.SpanStyles styles;
     // The scrollable areas for the diffs, the branch log and the commit. Where they are scrolled to lives in the
     // model; the elements are kept between renders as they also lay out the text for the scrollbar. Only used from
@@ -180,8 +185,7 @@ public final class ContentPanel {
 
     private static Option<String> diffClass(String line) {
         return switch (line) {
-            case String l
-            when List.of("+++", "---", "diff ", "index ").exists(l::startsWith) -> Option.of(Theme.Classes.DIFF_HEADER);
+            case String l when DIFF_HEADER_PREFIXES.exists(l::startsWith) -> Option.of(Theme.Classes.DIFF_HEADER);
             case String l when l.startsWith("+") -> Option.of(Theme.Classes.DIFF_ADDED);
             case String l when l.startsWith("-") -> Option.of(Theme.Classes.DIFF_REMOVED);
             case String l when l.startsWith("@@") -> Option.of(Theme.Classes.DIFF_HUNK);
