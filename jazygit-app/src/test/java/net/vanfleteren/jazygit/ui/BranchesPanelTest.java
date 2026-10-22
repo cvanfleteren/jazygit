@@ -115,7 +115,7 @@ class BranchesPanelTest {
                 List.of(
                         LoadableList.Seg.styled(" #38", Theme.Classes.PULL_REQUEST),
                         LoadableList.Seg.styled(" ●", Theme.Classes.CHECKS_RUNNING),
-                        LoadableList.Seg.styled(" ✎", Theme.Classes.REVIEW_CHANGES)),
+                        LoadableList.Seg.styled(" 👎", Theme.Classes.REVIEW_CHANGES)),
                 BranchesPanel.pullRequest(
                         Option.of(new PullRequest(38, "b", false, Checks.PENDING, Review.CHANGES_REQUESTED))));
         // A draft without checks or reviews shows only its number, dimmed.

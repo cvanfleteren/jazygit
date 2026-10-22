@@ -61,7 +61,7 @@ public final class HelpDialog implements PopupView {
                     Tuple.of(Messages.get("branches.worktree"), "help.branches.legend.worktree"),
                     Tuple.of("#42", "help.branches.legend.pullRequest"),
                     Tuple.of("✓ ✗ ●", "help.branches.legend.checks"),
-                    Tuple.of("👍 ✎ ?", "help.branches.legend.review")));
+                    Tuple.of("👍 👎 ?", "help.branches.legend.review")));
 
     private final Consumer<Msg> dispatch;
     private final Keymap keymap;

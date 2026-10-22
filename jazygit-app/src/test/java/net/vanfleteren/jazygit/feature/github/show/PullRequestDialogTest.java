@@ -151,8 +151,8 @@ class PullRequestDialogTest {
         assertTrue(screen.contains("  Created  2026-10-10 (3d ago)"), screen);
         assertTrue(screen.contains("  Changes  +120 −34 in 7 files"), screen);
         assertTrue(screen.contains("Mergeable  yes"), screen);
-        assertTrue(screen.contains("   Review  ✎ changes requested"), screen);
-        assertTrue(screen.contains("Reviewers  @alice 👍  @bob ✎"), screen);
+        assertTrue(screen.contains("   Review  👎 changes requested"), screen);
+        assertTrue(screen.contains("Reviewers  @alice 👍  @bob 👎"), screen);
         assertTrue(screen.contains(" Comments  5"), screen);
         assertTrue(screen.contains("  Threads  5 with 12 comments, 2 unresolved"), screen);
         assertTrue(screen.contains("   Labels  enhancement, ui"), screen);
