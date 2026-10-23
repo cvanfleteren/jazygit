@@ -1,4 +1,4 @@
-# 25. How many commits a pull request has
+# 26. How many commits a pull request has
 
 Date: 2026-10-23
 
@@ -11,7 +11,7 @@ put together, and whether a merge that keeps them will bring many. The line also
 ## Decision
 
 - The line reads `+328 −28 in 12 files, 2 commits`, one message with a choice for each count, so `in 1 file,
-  1 commit` for one, and a translation can put them in another order.
+  1 commit` for one and `in 0 files, 0 commits` for none, and a translation can put them in another order.
 - The count is GitHub's `commits { totalCount }` of the pull request, as its "Commits" tab shows it: read in the
   query of the details the dialog reads already, on the connection of its latest commit, so it takes no more
   requests. Not counted with git, which would need its branches fetched, and could count otherwise than GitHub.

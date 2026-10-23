@@ -293,6 +293,37 @@ class PullRequestDialogTest {
         assertTrue(screen.contains("  Changes  +1 −1 in 1 file, 1 commit"), screen);
     }
 
+    // As a change and its revert leave, or only empty commits.
+    @Test
+    void countsNoFilesAndNoCommitsInThePlural() throws Exception {
+        PullRequestDetails empty = new PullRequestDetails(
+                READY.number(),
+                READY.title(),
+                READY.author(),
+                READY.state(),
+                READY.draft(),
+                READY.headBranch(),
+                READY.baseBranch(),
+                READY.createdAt(),
+                READY.pushedAt(),
+                0,
+                0,
+                0,
+                0,
+                READY.mergeable(),
+                READY.review(),
+                READY.comments(),
+                READY.reviewThreads(),
+                READY.labels(),
+                READY.reviewers(),
+                READY.checks());
+
+        String screen = screen(
+                PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(empty)));
+
+        assertTrue(screen.contains("  Changes  +0 −0 in 0 files, 0 commits"), screen);
+    }
+
     @Test
     void countsNoReviewThreads() throws Exception {
         String screen = screen(
