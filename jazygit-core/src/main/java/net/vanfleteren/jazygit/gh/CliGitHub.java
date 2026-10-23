@@ -161,6 +161,16 @@ public final class CliGitHub implements GitHub {
             ((if .__typename == "CheckRun" then .name else .context end) // ""), \
             %s] | @tsv))""".formatted(CHECK_STATE);
     private static final int DETAIL_FIELD_COUNT = 17;
+    /*
+     * How many commits base branch $base has that commit $head does not: GitHub's mergeable only says whether a pull
+     * request merges without conflicts, not that its base moved on. gh fills in the repository of the working tree
+     * for {owner} and {repo}.
+     */
+    private static final String BEHIND_QUERY = """
+            query($owner: String!, $name: String!, $base: String!, $head: String!) { \
+            repository(owner: $owner, name: $name) { ref(qualifiedName: $base) { compare(headRef: $head) { behindBy } } } }""";
+    // The count of BEHIND_QUERY, empty when the base branch is gone.
+    private static final String BEHIND_JQ = ".data.repository.ref.compare.behindBy // \"\" | tostring";
 
     // How a merge is doing, in jq: its status, its id while it is pending, and why when it failed.
     private static final String MERGE_JQ = "[.status, (.details.uuid // \"\"), (.details.message // \"\")] | @tsv";
@@ -507,9 +517,20 @@ public final class CliGitHub implements GitHub {
                                 reviewers,
                                 checks,
                                 f.get(16),
-                                pullRequestStack))
+                                pullRequestStack,
+                                Option.none()))
                         .toOption()))
                 .toEither(() -> new UnexpectedOutput(raw));
+    }
+
+    /**
+     * Parses what {@link #BEHIND_JQ} prints: none when the base branch is gone.
+     */
+    static Either<UnexpectedOutput, Option<Integer>> parseBehind(String raw) {
+        String count = raw.strip();
+        return count.isEmpty()
+                ? Either.right(Option.none())
+                : Try.of(() -> Option.of(Integer.parseInt(count))).toEither(() -> new UnexpectedOutput(raw));
     }
 
     private static boolean known(List<String> fields) {
@@ -732,20 +753,52 @@ public final class CliGitHub implements GitHub {
     @Override
     public Either<GhError, PullRequestDetails> pullRequestDetails(int number) {
         return process.read(
-                gh(
-                        "api",
-                        "graphql",
-                        "-F",
-                        "owner={owner}",
-                        "-F",
-                        "name={repo}",
-                        "-F",
-                        "number=" + number,
-                        "-f",
-                        "query=" + DETAILS_QUERY,
-                        "--jq",
-                        DETAILS_JQ),
-                CliGitHub::parseDetails);
+                        gh(
+                                "api",
+                                "graphql",
+                                "-F",
+                                "owner={owner}",
+                                "-F",
+                                "name={repo}",
+                                "-F",
+                                "number=" + number,
+                                "-f",
+                                "query=" + DETAILS_QUERY,
+                                "--jq",
+                                DETAILS_JQ),
+                        CliGitHub::parseDetails)
+                .map(details -> details.state() == PullRequestDetails.State.OPEN
+                                && !details.head().isEmpty()
+                        ? behindBase(details.baseBranch(), details.head())
+                                .map(details::withBehindBase)
+                                .getOrElse(details)
+                        : details);
+    }
+
+    /**
+     * How many commits base branch {@code base} has that commit {@code head} does not; none when that cannot be read,
+     * which the details are shown without.
+     */
+    private Option<Integer> behindBase(String base, String head) {
+        return process.read(
+                        gh(
+                                "api",
+                                "graphql",
+                                "-F",
+                                "owner={owner}",
+                                "-F",
+                                "name={repo}",
+                                "-f",
+                                "base=refs/heads/" + base,
+                                "-f",
+                                "head=" + head,
+                                "-f",
+                                "query=" + BEHIND_QUERY,
+                                "--jq",
+                                BEHIND_JQ),
+                        CliGitHub::parseBehind)
+                .toOption()
+                .flatMap(behind -> behind);
     }
 
     @Override

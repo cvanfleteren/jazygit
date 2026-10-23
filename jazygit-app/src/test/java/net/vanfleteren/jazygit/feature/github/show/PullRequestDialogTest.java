@@ -170,7 +170,8 @@ class PullRequestDialogTest {
                 READY.reviewers(),
                 READY.checks(),
                 "abc123",
-                Option.of(new PullRequestStack(96, 3, 3)));
+                Option.of(new PullRequestStack(96, 3, 3)),
+                Option.none());
 
         String screen = screen(
                 PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(stacked)));
@@ -223,6 +224,18 @@ class PullRequestDialogTest {
         assertTrue(screen.indexOf("❌ build") < screen.indexOf("⏳ integration"), screen);
         assertFalse(screen.contains("✅ lint"), screen);
         assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
+    }
+
+    @Test
+    void saysHowFarTheBaseMovedOnWhileStillMergeable() throws Exception {
+        String behind = screen(PullRequestPopup.loading(new Branch.Name("support_rename"), PR)
+                .with(Either.right(DETAILS.withBehindBase(3))));
+        String upToDate = screen(PullRequestPopup.loading(new Branch.Name("support_rename"), PR)
+                .with(Either.right(DETAILS.withBehindBase(0))));
+
+        assertTrue(behind.contains("   Branch  support_rename → main · 3 behind"), behind);
+        assertTrue(behind.contains("Mergeable  yes"), behind);
+        assertFalse(upToDate.contains("behind"), upToDate);
     }
 
     @Test

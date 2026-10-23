@@ -98,6 +98,20 @@ class CliGitHubTest {
     }
 
     @Test
+    void parsesHowFarBehindItsBaseAPullRequestIs() {
+        assertEquals(Either.right(Option.of(3)), CliGitHub.parseBehind("3\n"));
+        assertEquals(Either.right(Option.none()), CliGitHub.parseBehind("\n"));
+        assertTrue(CliGitHub.parseBehind("many\n").isLeft());
+        assertEquals(
+                Option.none(),
+                CliGitHub.parseDetails(
+                                "pr\t95\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1"
+                                        + "\tMERGEABLE\t\t0\tabc123\nthreads\t0\t0\t0\t0\n")
+                        .get()
+                        .behindBase());
+    }
+
+    @Test
     void aMergeIsAskedOfTheRestApiWithItsMethodAndOnlyAtTheHeadThatWasRead() {
         assertEquals(
                 List.of(
