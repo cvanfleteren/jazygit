@@ -52,18 +52,17 @@ class DivergenceList {
      * local branch, each under a header for their branch, with a line when there are none or more than are listed.
      */
     static List<Entry> entries(Divergence divergence) {
-        return side(false, divergence.behind(), divergence.behindCount())
-                .appendAll(side(true, divergence.ahead(), divergence.aheadCount()));
+        return side(false, divergence.behind()).appendAll(side(true, divergence.ahead()));
     }
 
-    private static List<Entry> side(boolean ahead, List<Commit> commits, int count) {
-        List<CommitGraph.Node> nodes = CommitGraph.layout(commits);
+    private static List<Entry> side(boolean ahead, Divergence.Side side) {
+        List<CommitGraph.Node> nodes = CommitGraph.layout(side.commits());
         return List.<Entry>of(new Entry.Header(ahead))
                 .appendAll(nodes.zipWith(
                         nodes.map(CommitGraph.Node::closesBranch).prepend(false),
                         (node, joins) -> new Entry.Shown(node, joins, ahead)))
-                .appendAll(Option.<Entry>when(commits.isEmpty(), Entry.None::new))
-                .appendAll(Option.<Entry>when(count > commits.size(), () -> new Entry.More(count - commits.size())));
+                .appendAll(Option.<Entry>when(side.commits().isEmpty(), Entry.None::new))
+                .appendAll(Option.<Entry>when(side.hidden() > 0, () -> new Entry.More(side.hidden())));
     }
 
     /**

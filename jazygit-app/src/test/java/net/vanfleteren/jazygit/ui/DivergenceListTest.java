@@ -15,7 +15,8 @@ class DivergenceListTest {
                 new Branch.Name("feature"), new BranchRef.Local(new Branch.Name("main")), DivergenceView.Against.BASE);
         Commit ours = new Commit(new Sha("a1"), "Ada", "a@x", java.time.Instant.EPOCH, "Ours", "");
 
-        List<String> rows = DivergenceList.entries(new Divergence(List.of(ours), 400, List.of(), 0))
+        List<String> rows = DivergenceList.entries(
+                        new Divergence(new Divergence.Side(List.of(ours), 400), new Divergence.Side(List.of(), 0)))
                 .map(entry -> DivergenceList.row(view, entry))
                 .map(LoadableList.Row::text);
 

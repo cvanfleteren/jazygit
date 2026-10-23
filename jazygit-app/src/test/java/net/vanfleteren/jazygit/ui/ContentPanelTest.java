@@ -244,7 +244,8 @@ class ContentPanelTest {
                         new Branch.Name("main"),
                         new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main"))),
                         DivergenceView.Against.UPSTREAM,
-                        new Loadable.Loaded<>(new Divergence(List.of(ours), 1, List.of(), 0)),
+                        new Loadable.Loaded<>(new Divergence(
+                                new Divergence.Side(List.of(ours), 1), new Divergence.Side(List.of(), 0))),
                         Option.none()))));
         Model selected = Update.update(
                         Update.update(diverged, new SelectionMsg.DivergenceCommitSelected(new Sha("cccc")))
@@ -303,7 +304,8 @@ class ContentPanelTest {
                         new Branch.Name("main"),
                         new BranchRef.Local(new Branch.Name("feature")),
                         DivergenceView.Against.BASE,
-                        new Loadable.Loaded<>(new Divergence(List.of(), 0, List.of(), 0)),
+                        new Loadable.Loaded<>(
+                                new Divergence(new Divergence.Side(List.of(), 0), new Divergence.Side(List.of(), 0))),
                         Option.none()))));
 
         try (ToolkitTestRunner testRunner =
@@ -558,7 +560,8 @@ class ContentPanelTest {
                         new Branch.Name("main"),
                         new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main"))),
                         DivergenceView.Against.UPSTREAM,
-                        new Loadable.Loaded<>(new Divergence(List.of(plain("cccc")), 1, List.of(), 0)),
+                        new Loadable.Loaded<>(new Divergence(
+                                new Divergence.Side(List.of(plain("cccc")), 1), new Divergence.Side(List.of(), 0))),
                         Option.none()))));
         Model loading = Update.update(diverged, new SelectionMsg.DivergenceCommitSelected(new Sha("cccc")))
                 .model();

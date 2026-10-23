@@ -493,7 +493,8 @@ class BranchesPanelTest {
                 new Branch.Name("feature"),
                 new BranchRef.Remote(upstream),
                 DivergenceView.Against.UPSTREAM,
-                new Loadable.Loaded<>(new Divergence(List.of(newer, older), 2, List.of(behind), 1)),
+                new Loadable.Loaded<>(new Divergence(
+                        new Divergence.Side(List.of(newer, older), 2), new Divergence.Side(List.of(behind), 1))),
                 Option.none()))));
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         java.util.List<String> opened = new java.util.ArrayList<>();
