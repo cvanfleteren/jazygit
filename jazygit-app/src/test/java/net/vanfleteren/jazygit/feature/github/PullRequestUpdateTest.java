@@ -699,6 +699,88 @@ class PullRequestUpdateTest {
         assertTrue(failed.model().popup(NewPullRequestPopup.class).isEmpty());
     }
 
+    /**
+     * {@link #AHEAD}, but {@code ahead} and {@code behind} its upstream.
+     */
+    private static Branch ahead(int ahead, int behind) {
+        return new Branch(
+                AHEAD.name(),
+                false,
+                new Sha("5"),
+                Instant.EPOCH,
+                true,
+                false,
+                Option.of(new Upstream(new RemoteBranch("origin", AHEAD.name()), ahead, behind)));
+    }
+
+    @Test
+    void confirmingOnceItWasPushedMeanwhileAsksForItsPullRequest() {
+        Model asking = Update.update(model(), new PullRequestMsg.Requested(AHEAD.name()))
+                .model();
+        Model pushedElsewhere = localBranchesRead(asking, List.of(RELEASE, PUSHED, UNPUSHED, ahead(0, 0), MAIN))
+                .model();
+
+        Next confirmed = Update.update(pushedElsewhere, new CreatePullRequestMsg.PushFirstConfirmed());
+
+        assertTrue(confirmed.model().popup(PushFirstPopup.class).isEmpty());
+        assertFalse(
+                confirmed.cmds().exists(PushFirst.class::isInstance),
+                confirmed.cmds().toString());
+        assertTrue(
+                confirmed.cmds().exists(ReadParent.class::isInstance),
+                confirmed.cmds().toString());
+    }
+
+    @Test
+    void confirmingOnceItDivergedMeanwhileSaysSo() {
+        Model asking = Update.update(model(), new PullRequestMsg.Requested(AHEAD.name()))
+                .model();
+        Model diverged = localBranchesRead(asking, List.of(RELEASE, PUSHED, UNPUSHED, ahead(2, 1), MAIN))
+                .model();
+
+        Next confirmed = Update.update(diverged, new CreatePullRequestMsg.PushFirstConfirmed());
+
+        assertTrue(confirmed.model().popup(PushFirstPopup.class).isEmpty());
+        assertEquals(
+                Option.of(new AppError.Diverged(AHEAD.name(), new RemoteBranch("origin", AHEAD.name()))),
+                confirmed.model().outcome().error());
+        assertEquals(List.empty(), confirmed.cmds());
+    }
+
+    @Test
+    void aPushedBranchThatIsGoneMeanwhileAsksForNoPullRequest() {
+        PushFirst push =
+                new PushFirst(new PushSettingUpstream(UNPUSHED.name(), new RemoteBranch("origin", UNPUSHED.name())));
+        Model pushing = Update.start(model(), push).model();
+        Model gone = localBranchesRead(pushing, List.of(RELEASE, PUSHED, AHEAD, MAIN))
+                .model();
+        List<ExecutedCommand> commands = StubGitProvider.executed("git push -u origin local");
+
+        Next pushed = Update.update(gone, push.succeeded(commands));
+
+        assertEquals(OperationUpdate.succeeded(gone, push, commands).cmds(), pushed.cmds());
+        assertTrue(pushed.model().popup(NewPullRequestPopup.class).isEmpty());
+    }
+
+    @Test
+    void aPushThatEndsWhileAnotherPopupIsOpenLeavesThatOpen() {
+        PushFirst push =
+                new PushFirst(new PushSettingUpstream(UNPUSHED.name(), new RemoteBranch("origin", UNPUSHED.name())));
+        Model other = Update.start(model(), push).model().openPopup(new SwitchWorktreePopup(MAIN.name(), "/work/main"));
+        Model pushed = Update.update(other, push.succeeded(StubGitProvider.executed("git push -u origin local")))
+                .model();
+
+        Model parentRead = Update.update(pushed, new CreatePullRequestMsg.ParentRead(UNPUSHED.name(), Option.none()))
+                .model();
+        Model titleRead = Update.update(
+                        parentRead,
+                        new CreatePullRequestMsg.TitleRead(
+                                UNPUSHED.name(), UNPUSHED.name(), List.of(MAIN.name()), Option.of("Add it")))
+                .model();
+
+        assertEquals(other.popup(), titleRead.popup());
+    }
+
     @Test
     void aBranchWithAPullRequestShowsItWhileItsDetailsAreRead() {
         Next shown = Update.update(withPr(), new PullRequestMsg.Requested(new Branch.Name("feature")));

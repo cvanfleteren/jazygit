@@ -27,7 +27,7 @@ public final class CreatePullRequestDialogs {
                             commits,
                             popup.target().shortName()))
                     .getOrElse(() -> Messages.get(
-                            "dialog.pushFirst.notOnRemote",
+                            "dialog.pushFirst.untracked",
                             popup.branch().value(),
                             popup.target().shortName())),
             CreatePullRequestMsg.PushFirstConfirmed::new,

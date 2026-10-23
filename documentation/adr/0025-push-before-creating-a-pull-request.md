@@ -14,10 +14,14 @@ again.
 Jazygit asks to push the branch first, and goes on to create its pull request once the push succeeded.
 
 - A branch without an upstream on a remote, or with commits its upstream does not have, gets a confirm dialog
-  instead of the error. It says where the branch goes: "stack-1 is not on the remote yet. Push it to origin/stack-1,
-  then create its pull request?", or "stack-1 has 3 commits not on origin/stack-1. Push them, then create its pull
-  request?".
+  instead of the error. It says where the branch goes: "stack-1 does not track a remote branch. Push it to
+  origin/stack-1 and track it, then create its pull request?", or "stack-1 has 3 commits not on origin/stack-1. Push
+  them, then create its pull request?". The first also covers a branch whose remote branch exists but is not tracked,
+  and one that tracks a local branch, as stacked branches often do, which then tracks the remote branch instead.
 - Cancelling does nothing.
+- The branches may be read again while the dialog is open. When there is nothing to push by the time the user
+  confirms, as it was pushed from elsewhere or has diverged since, the dialog closes and the branch is asked about
+  again as it is then: its pull request is asked for, or the error of a diverged branch shows.
 - Confirming pushes the branch as a push from the branches pane does, but without asking more: one without an
   upstream is pushed to `Branch.pushTarget()` (its gone upstream, or `origin/<name>`), which it then tracks, rather
   than asking where in the dialog of the upstream; one that is ahead is pushed to its upstream, fast-forward.
