@@ -2,8 +2,6 @@
 app leaves them stopped; the conflicts are resolved with git, and the operation continued, skipped or aborted from
 the app (M)."""
 
-import pytest
-
 
 def diverged(repo):
     """Main and a branch feature that each change one.txt since they parted, feature checked out."""
@@ -332,8 +330,6 @@ def test_abort_a_drop_that_stops_on_conflicts_keeps_the_commit(repo, jazygit):
     assert repo.status() == {}
 
 
-@pytest.mark.xfail(strict=True, reason="the amend commits the staged changes as a fixup! commit before it rebases, "
-                                       "and aborting the rebase leaves that commit on the branch")
 def test_abort_an_amend_that_stops_on_conflicts_keeps_the_changes_staged(repo, jazygit):
     changed_twice(repo)
     before = repo("rev-parse", "main")

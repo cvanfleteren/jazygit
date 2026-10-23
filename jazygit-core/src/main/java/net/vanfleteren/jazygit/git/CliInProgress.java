@@ -28,6 +28,8 @@ final class CliInProgress {
     private static final List<String> MARKERS =
             List.of("MERGE_HEAD", "rebase-merge", "rebase-apply", "CHERRY_PICK_HEAD", "REVERT_HEAD");
     private static final String BRANCH_REF = "refs/heads/";
+    // Left by jazygit next to git's own files of a rebase that amends an older commit; git deletes it with them.
+    private static final String AMENDING = "jazygit-amending";
 
     private CliInProgress() {}
 
@@ -68,9 +70,40 @@ final class CliInProgress {
             Path worktree, InProgress inProgress, InProgressAction action) {
         GitCommand command = git(subcommand(inProgress), option(action));
         return action == InProgressAction.ABORT
-                ? GitFailure.widen(GitProcess.log(worktree, command))
+                ? GitFailure.widen(abort(worktree, command))
                 : GitProcess.log(worktree, command.withEnvironment(HashMap.of("GIT_EDITOR", "true")))
                         .mapLeft(failure -> Unfinished.stoppedAgain(worktree, inProgress, failure));
+    }
+
+    /**
+     * Marks the rebase that stopped in {@code worktree} as one that amends an older commit: it started from a
+     * commit of the staged changes, which it folds into that one, see {@link CliCommit#amend(Path, Sha)}. Aborting
+     * it then takes that commit away again, so the changes are staged as they were. When the mark cannot be left,
+     * aborting leaves that commit on the branch, as aborting it outside jazygit does.
+     */
+    static void markAmending(Path worktree) {
+        markers(worktree)
+                .forEach(markers ->
+                        Try.run(() -> Files.createFile(rebaseDir(markers).resolve(AMENDING))));
+    }
+
+    /**
+     * Runs {@code abort}: {@code git <operation> --abort}, which puts the branch back where the operation started.
+     * For a rebase that amends an older commit, that is the commit of the staged changes, which
+     * {@code git reset --soft HEAD^} takes away again, keeping them staged.
+     */
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> abort(Path worktree, GitCommand abort) {
+        boolean amending = markers(worktree)
+                .exists(markers -> Files.exists(rebaseDir(markers).resolve(AMENDING)));
+        return GitFailure.sequence(
+                () -> GitProcess.log(worktree, abort),
+                () -> amending
+                        ? GitProcess.log(worktree, git("reset", "--quiet", "--soft", "HEAD^"))
+                        : GitFailure.nothing());
+    }
+
+    private static Path rebaseDir(Markers markers) {
+        return markers.paths().get(1);
     }
 
     private static String subcommand(InProgress inProgress) {

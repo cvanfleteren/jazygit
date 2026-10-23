@@ -155,6 +155,27 @@ class InProgressTest {
     }
 
     @Test
+    void abortingAnAmendThatStoppedOnConflictsKeepsTheChangesStaged() throws Exception {
+        String before = git("rev-parse", "HEAD");
+        write("a.txt", "amended\n");
+        git("add", "a.txt");
+        // The staged change is to what the last commit made of a.txt, which the first one does not have.
+        GitFailure<GitError> stop = git.amendCommit(sha("main~1")).getLeft();
+        assertInstanceOf(GitError.StoppedOnConflicts.class, stop.error());
+
+        assertEquals(
+                List.of("git rebase --abort", "git reset --quiet --soft HEAD^"),
+                git.continueOrAbort(git.status().get().inProgress().get(), InProgressAction.ABORT)
+                        .get()
+                        .map(ExecutedCommand::line));
+
+        assertEquals(Option.none(), git.status().get().inProgress());
+        assertEquals(before, git("rev-parse", "HEAD"));
+        assertEquals("M  a.txt\n", git("status", "--porcelain"));
+        assertEquals("amended\n", Files.readString(repo.resolve("a.txt")));
+    }
+
+    @Test
     void skippingACherryPickLeavesOutItsCommit() throws Exception {
         String before = git("rev-parse", "HEAD");
         gitAnyExit("cherry-pick", "conflicting");

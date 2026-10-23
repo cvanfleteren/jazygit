@@ -37,7 +37,8 @@ final class CliCommit {
     /**
      * Amends the commit {@code sha} with the index, keeping its message: by amending when it is HEAD, else by
      * committing the index as a fixup of it, which {@link CliRebase#fixupInto} folds into it. When that fails other
-     * than on conflicts, the fixup commit is undone again, so its changes are staged as before.
+     * than on conflicts, the fixup commit is undone again, so its changes are staged as before. When it stops on
+     * conflicts, the rebase is marked so that aborting it undoes the fixup commit too.
      *
      * @return the command lines that were run
      */
@@ -50,9 +51,18 @@ final class CliCommit {
                                         run(worktree, List.of("commit", "--quiet", "--fixup=" + sha.value()))),
                                 () -> CliRebase.fixupInto(worktree, sha)
                                         .mapLeft(failure -> failure.error() instanceof GitError.StoppedOnConflicts
-                                                ? failure
+                                                ? markedAmending(worktree, failure)
                                                 : failure.followedBy(run(
                                                         worktree, List.of("reset", "--quiet", "--soft", "HEAD^"))))));
+    }
+
+    /**
+     * {@code stop}, once the rebase it stopped is marked as one that amends, see
+     * {@link CliInProgress#markAmending}.
+     */
+    private static GitFailure<GitError> markedAmending(Path worktree, GitFailure<GitError> stop) {
+        CliInProgress.markAmending(worktree);
+        return stop;
     }
 
     /**
