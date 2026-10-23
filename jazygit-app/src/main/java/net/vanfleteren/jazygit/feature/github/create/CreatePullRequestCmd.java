@@ -5,19 +5,24 @@ import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.branch.BranchCmd;
+import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.git.GitError;
+import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Operation;
 
 /**
- * Creating the pull request of a branch: reading the branch it came from, reading the title it starts out with for
- * a base, and creating it.
+ * Creating the pull request of a branch: pushing it first when it is not on its remote, reading the branch it came
+ * from, reading the title it starts out with for a base, and creating it.
  */
 public sealed interface CreatePullRequestCmd extends Cmd {
 
@@ -122,6 +127,37 @@ public sealed interface CreatePullRequestCmd extends Cmd {
 
         private Msg read(Option<String> subject) {
             return new CreatePullRequestMsg.BaseTitleRead(branch, base, subject);
+        }
+    }
+
+    /**
+     * Pushes a branch as {@code push} does, before its pull request is created, which its success leads to.
+     */
+    record PushFirst(PushCmd push) implements CreatePullRequestCmd, BranchCmd.KeepsBranchBusy {
+
+        @Override
+        public Branch.Name branch() {
+            return push.branch();
+        }
+
+        @Override
+        public Operation operation() {
+            return push.operation();
+        }
+
+        @Override
+        public boolean changesGitHub() {
+            return push.changesGitHub();
+        }
+
+        @Override
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+            return push.perform(git);
+        }
+
+        @Override
+        public Msg succeeded(List<ExecutedCommand> commands) {
+            return new CreatePullRequestMsg.Pushed(this, commands);
         }
     }
 

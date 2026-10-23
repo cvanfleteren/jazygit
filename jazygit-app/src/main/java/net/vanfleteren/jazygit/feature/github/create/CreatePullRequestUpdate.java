@@ -2,9 +2,13 @@ package net.vanfleteren.jazygit.feature.github.create;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
+import net.vanfleteren.jazygit.feature.branch.push.PushCmd.Push;
+import net.vanfleteren.jazygit.feature.branch.push.PushCmd.PushSettingUpstream;
 import net.vanfleteren.jazygit.feature.fetch.FetchUpdate;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.Base;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.CreatePullRequest;
+import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.PushFirst;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.ReadParent;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.ReadTitle;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.RereadTitle;
@@ -12,11 +16,13 @@ import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestMsg.*;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
- * Creating the pull request of a branch: reading the branch it came from and the title it starts out with, then
+ * Creating the pull request of a branch: pushing it first when it is not on its remote, reading the branch it came
+ * from and the title it starts out with, then
  * asking what it merges into and what it says, in one popup, where the title follows the base until the user types
  * one.
  */
@@ -67,6 +73,23 @@ public final class CreatePullRequestUpdate {
                                 .map(known -> new CreatePullRequest(
                                         popup.branch(), popup.head(), popup.base(), stripped(popup.pullRequest()))));
             case Cancelled() -> Next.of(model.withoutPopup(NewPullRequestPopup.class));
+            case PushFirstConfirmed() ->
+                Update.confirm(
+                        model,
+                        PushFirstPopup.class,
+                        popup -> model.idleBranch(popup.branch()).flatMap(CreatePullRequestUpdate::pushFirst));
+            case PushFirstCancelled() -> Next.of(model.withoutPopup(PushFirstPopup.class));
+            // Done like any push. Asking needs the other branches and the name the branch has on its remote, which is
+            // where it was just pushed to, so it does not wait for the branches to be read again.
+            case Pushed(PushFirst cmd, var commands) -> {
+                Next done = OperationUpdate.succeeded(model, cmd, commands);
+                yield done.model()
+                        .repo()
+                        .branch(cmd.branch())
+                        .map(known -> ask(done.model(), known))
+                        .map(asked -> new Next(asked.model(), done.cmds().appendAll(asked.cmds())))
+                        .getOrElse(done);
+            }
             case Created(CreatePullRequest cmd, var pullRequest, var commands) -> {
                 // Done like any operation. The new pull request shows at once, as GitHub may not list it yet;
                 // reading the pull requests then gives its checks and review.
@@ -112,6 +135,39 @@ public final class CreatePullRequestUpdate {
                             : Next.of(picking);
                 })
                 .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * Asks what the pull request of {@code branch}, which has none yet, merges into and what it says, as
+     * {@link #ask} does, once it is on its remote with all its commits. Before that, the user is asked to push it
+     * there, except when it has diverged from it: only a force push would, which is not done in passing.
+     */
+    public static Next askPushed(Model model, Branch branch) {
+        return branch.remoteUpstream()
+                .map(upstream -> branch.ahead() == 0
+                        ? ask(model, branch)
+                        : branch.behind() > 0
+                                ? Next.of(model.fail(new AppError.Diverged(branch.name(), upstream.branch())))
+                                : Update.ask(
+                                        model,
+                                        new PushFirstPopup(
+                                                branch.name(), upstream.branch(), Option.of(branch.ahead()))))
+                .getOrElse(
+                        () -> Update.ask(model, new PushFirstPopup(branch.name(), branch.pushTarget(), Option.none())));
+    }
+
+    /**
+     * The push of {@code branch} before its pull request is created: to the push target, which it then tracks, when
+     * it has no upstream on a remote; fast-forward to its upstream when it is ahead of it. None when it has diverged
+     * from it, or has nothing to push.
+     */
+    static Option<PushFirst> pushFirst(Branch branch) {
+        return branch.remoteUpstream()
+                .map(upstream -> branch.ahead() > 0 && branch.behind() == 0
+                        ? Option.<PushCmd>of(new Push(branch.name(), upstream.branch(), PushMode.FAST_FORWARD))
+                        : Option.<PushCmd>none())
+                .getOrElse(() -> Option.of(new PushSettingUpstream(branch.name(), branch.pushTarget())))
+                .map(PushFirst::new);
     }
 
     /**

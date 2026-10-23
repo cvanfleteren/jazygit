@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.settings.SettingsProblem;
@@ -64,7 +65,8 @@ public final class ErrorText {
             case AppError.WorktreeMissing(String worktree) -> Messages.get("error.switchWorktree.missing", worktree);
             case AppError.NothingToPrune() -> Messages.get("error.pruneWorktrees.nothing");
             case AppError.MainWorktreeNotLockable() -> Messages.get("error.lockWorktree.main");
-            case AppError.NotPushed(Branch.Name branch) -> Messages.get("error.pullRequest.notPushed", branch.value());
+            case AppError.Diverged(Branch.Name branch, RemoteBranch upstream) ->
+                Messages.get("error.pullRequest.diverged", branch.value(), upstream.shortName());
             case AppError.NoBase(Branch.Name branch) -> Messages.get("error.pullRequest.noBase", branch.value());
             case AppError.OtherRepository(String pullRequest) ->
                 Messages.get("error.checkoutPr.otherRepository", pullRequest);

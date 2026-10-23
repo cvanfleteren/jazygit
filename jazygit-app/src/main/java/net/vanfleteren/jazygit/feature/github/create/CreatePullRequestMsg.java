@@ -63,6 +63,18 @@ public sealed interface CreatePullRequestMsg extends Msg {
     record Cancelled() implements CreatePullRequestMsg {}
 
     /**
+     * The user confirmed pushing the branch before creating its pull request.
+     */
+    record PushFirstConfirmed() implements CreatePullRequestMsg {}
+
+    record PushFirstCancelled() implements CreatePullRequestMsg {}
+
+    /**
+     * The branch was pushed by running {@code commands}, so its pull request can be created now.
+     */
+    record Pushed(CreatePullRequestCmd.PushFirst cmd, List<ExecutedCommand> commands) implements CreatePullRequestMsg {}
+
+    /**
      * The pull request was created by running {@code commands}.
      *
      * @param pullRequest the new pull request, as far as it is known before it is read from GitHub
