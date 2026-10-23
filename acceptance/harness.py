@@ -179,6 +179,40 @@ class Git:
         return {Path(worktree["worktree"]): worktree["locked"]
                 for worktree in self.worktree_list() if "locked" in worktree}
 
+    def in_progress(self):
+        """The operation the repository is in the middle of, stopped or still running: "rebase", "merge",
+        "cherry-pick" or "revert"; None when there is none. A rebase comes first, as the app has it: one that
+        recreates a merge is merging too, and one that stops on a conflicting commit is a rebase all the same."""
+        if any((self.git_dir / name).is_dir() for name in ("rebase-merge", "rebase-apply")):
+            return "rebase"
+        heads = {"MERGE_HEAD": "merge", "CHERRY_PICK_HEAD": "cherry-pick", "REVERT_HEAD": "revert"}
+        return next((kind for name, kind in heads.items() if (self.git_dir / name).exists()), None)
+
+    def stopped_at(self) -> str:
+        """The commit the rebase, merge, cherry-pick or revert in progress stopped at, as git names it in REBASE_HEAD,
+        MERGE_HEAD, CHERRY_PICK_HEAD or REVERT_HEAD; empty when none did."""
+        def read(name):
+            # Git can take it away while it goes on.
+            try:
+                return (self.git_dir / name).read_text().strip()
+            except FileNotFoundError:
+                return ""
+
+        return " ".join(read(name) for name in ("REBASE_HEAD", "MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD"))
+
+    def conflicts(self) -> list:
+        """The paths that still have conflicts, until they are staged."""
+        return sorted(self("diff", "--name-only", "--diff-filter=U").splitlines())
+
+    def resolve(self, name: str, content: str):
+        """Resolves the conflicts in the file name, by writing what it should hold and staging it."""
+        self.write(name, content)
+        self("add", "--", name)
+
+    def parents(self, rev="HEAD") -> int:
+        """How many parents the commit rev has: two for a merge commit."""
+        return len(self("rev-list", "--parents", "-n", "1", rev).split()) - 1
+
     def short(self, rev: str) -> str:
         """The abbreviated hash the app shows for rev."""
         return self("rev-parse", "--short=7", rev)
