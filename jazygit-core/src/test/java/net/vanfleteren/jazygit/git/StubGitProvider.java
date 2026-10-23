@@ -218,7 +218,7 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<GitError, Divergence> divergence(BranchRef branch, BranchRef other) {
-        return Either.right(new Divergence(List.empty(), 0, List.empty(), 0));
+        return Either.right(new Divergence(new Divergence.Side(List.empty(), 0), new Divergence.Side(List.empty(), 0)));
     }
 
     @Override

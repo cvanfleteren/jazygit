@@ -105,8 +105,9 @@ final class CliLog {
                                                         worktree,
                                                         List.of(theirs.value(), "^" + ours.value()),
                                                         MAX_COMMITS)
-                                                .map(behind ->
-                                                        new Divergence(ahead, counts._1, behind, counts._2)))))));
+                                                .map(behind -> new Divergence(
+                                                        new Divergence.Side(ahead, counts._1),
+                                                        new Divergence.Side(behind, counts._2))))))));
     }
 
     /**
