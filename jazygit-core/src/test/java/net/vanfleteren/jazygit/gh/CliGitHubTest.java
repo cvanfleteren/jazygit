@@ -32,6 +32,13 @@ import org.junit.jupiter.api.io.TempDir;
 
 class CliGitHubTest {
 
+    // Pull request 95 on top of 94, which is merged already.
+    private static final PullRequestStack STACK = new PullRequestStack(
+            96,
+            2,
+            2,
+            List.of(new PullRequestStack.Entry(1, 94, State.MERGED), new PullRequestStack.Entry(2, 95, State.OPEN)));
+
     /*
      * The details of a pull request in state, at commit head, into main, as read through a gh that runs compare when
      * asked how far behind its base it is, writing what it was asked with to the file "compared" in dir.
@@ -54,9 +61,9 @@ class CliGitHubTest {
 
     @Test
     void parsesOneTabSeparatedLinePerPullRequest() {
-        String raw = "9\tfeature/login\tfalse\tAPPROVED\tSUCCESS,SKIPPED\t\t\t\n"
-                + "7\twip\ttrue\t\t\t\t\t\n"
-                + "5\tfix/npe\tfalse\tCHANGES_REQUESTED\tSUCCESS,PENDING\t\t\t\n";
+        String raw = "9\tfeature/login\tfalse\tAPPROVED\tSUCCESS,SKIPPED\t\t\t\t\n"
+                + "7\twip\ttrue\t\t\t\t\t\t\n"
+                + "5\tfix/npe\tfalse\tCHANGES_REQUESTED\tSUCCESS,PENDING\t\t\t\t\n";
 
         assertEquals(
                 Either.right(List.of(
@@ -69,26 +76,23 @@ class CliGitHubTest {
     @Test
     void aStackedPullRequestSaysWhereItSitsInItsStack() {
         assertEquals(
-                Either.right(List.of(new PullRequest(
-                        95,
-                        "fix-abort-amend",
-                        false,
-                        Checks.NONE,
-                        Review.NONE,
-                        Option.of(new PullRequestStack(96, 2, 2))))),
-                CliGitHub.parse("95\tfix-abort-amend\tfalse\t\t\t96\t2\t2\n"));
-        assertTrue(
-                CliGitHub.parse("95\tfix-abort-amend\tfalse\t\t\t96\ttwo\t2\n").isLeft());
+                Either.right(List.of(
+                        new PullRequest(95, "fix-abort-amend", false, Checks.NONE, Review.NONE, Option.of(STACK)))),
+                CliGitHub.parse("95\tfix-abort-amend\tfalse\t\t\t96\t2\t2\t1:94:MERGED,2:95:OPEN\n"));
+        assertTrue(CliGitHub.parse("95\tfix-abort-amend\tfalse\t\t\t96\ttwo\t2\t\n")
+                .isLeft());
+        assertTrue(CliGitHub.parse("95\tfix-abort-amend\tfalse\t\t\t96\t2\t2\t1:94:GONE\n")
+                .isLeft());
     }
 
     @Test
     void aStackedPullRequestInAListSaysWhereItSitsInItsStack() {
         String raw = "list\trepository\towner/repo\t1\n"
                 + "pr\trepository\towner/repo\t95\tFix\talice\tfix\tfalse\tfalse\t\t\t2026-10-15T08:00:00Z"
-                + "\thttps://github.com/owner/repo/pull/95\t96\t2\t2\n";
+                + "\thttps://github.com/owner/repo/pull/95\t96\t2\t2\t1:94:MERGED,2:95:OPEN\n";
 
         assertEquals(
-                Option.of(new PullRequestStack(96, 2, 2)),
+                Option.of(STACK),
                 CliGitHub.parseLists(raw)
                         .get()
                         .get("repository")
@@ -105,16 +109,15 @@ class CliGitHubTest {
                 "pr\t95\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0"
                         + "\tabc123\t1\n"
                         + "threads\t0\t0\t0\t0\n"
-                        + "stack\t96\t2\t2\n";
+                        + "stack\t96\t2\t2\t1:94:MERGED,2:95:OPEN\n";
 
         PullRequestDetails details = CliGitHub.parseDetails(raw).get();
 
         assertEquals("abc123", details.head());
-        assertEquals(Option.of(new PullRequestStack(96, 2, 2)), details.stack());
-        assertEquals(
-                Option.of(new PullRequestStack(96, 2, 2)),
-                details.listed().get().stack());
-        assertTrue(CliGitHub.parseDetails(raw + "stack\t96\t2\n").isLeft());
+        assertEquals(Option.of(STACK), details.stack());
+        assertEquals(Option.of(STACK), details.listed().get().stack());
+        assertTrue(CliGitHub.parseDetails(raw + "stack\t96\t2\t2\n").isLeft());
+        assertEquals(0, details.stack().get().below());
     }
 
     @Test
@@ -174,11 +177,11 @@ class CliGitHubTest {
     void parsesTheListsOfPullRequestsWithTheirRepositoryAndHowManyMatch() {
         String raw = "list\treviewRequested\t\t52\n"
                 + "pr\treviewRequested\tother/repo\t9\tFix the\\tlogin\talice\tfeature/login\tfalse\tfalse"
-                + "\tAPPROVED\tSUCCESS\t2026-10-16T21:39:59Z\thttps://github.com/other/repo/pull/9\t\t\t\n"
+                + "\tAPPROVED\tSUCCESS\t2026-10-16T21:39:59Z\thttps://github.com/other/repo/pull/9\t\t\t\t\n"
                 + "list\tauthored\t\t0\n"
                 + "list\trepository\towner/repo\t1\n"
                 + "pr\trepository\towner/repo\t7\tWIP\t\tpatch-1\ttrue\ttrue\t\t\t2026-10-15T08:00:00Z"
-                + "\thttps://github.com/owner/repo/pull/7\t\t\t\n";
+                + "\thttps://github.com/owner/repo/pull/7\t\t\t\t\n";
 
         var lists = CliGitHub.parseLists(raw).get();
 

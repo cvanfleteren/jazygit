@@ -179,7 +179,64 @@ class PullRequestDialogTest {
 
     @Test
     void aStackedPullRequestSaysWhatMergingItMergesToo() throws Exception {
-        PullRequestDetails stacked = new PullRequestDetails(
+        PullRequestDetails stacked = stacked(new PullRequestStack(
+                96,
+                3,
+                3,
+                List.of(
+                        new PullRequestStack.Entry(1, 40, State.OPEN),
+                        new PullRequestStack.Entry(2, 41, State.OPEN),
+                        new PullRequestStack.Entry(3, 42, State.OPEN))));
+
+        String screen = screen(
+                PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(stacked)));
+
+        assertTrue(screen.contains("    Stack  #96 · 3 of 3 · merging also merges the 2 below"), screen);
+        assertTrue(screen.contains("(m) Merge 3 PRs"), screen);
+        assertTrue(screen.contains("(s) Squash and merge 3 PRs"), screen);
+        assertTrue(screen.contains("(r) Rebase and merge 3 PRs"), screen);
+    }
+
+    @Test
+    void theOnesBelowInAStackThatAreMergedAlreadyAreNotMergedAgain() throws Exception {
+        PullRequestDetails stacked = stacked(new PullRequestStack(
+                96,
+                3,
+                3,
+                List.of(
+                        new PullRequestStack.Entry(1, 40, State.MERGED),
+                        new PullRequestStack.Entry(2, 41, State.OPEN),
+                        new PullRequestStack.Entry(3, 42, State.OPEN))));
+
+        String screen = screen(
+                PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(stacked)));
+
+        assertTrue(screen.contains("    Stack  #96 · 3 of 3 · merging also merges the 1 below"), screen);
+        assertTrue(screen.contains("(s) Squash and merge 2 PRs"), screen);
+    }
+
+    @Test
+    void aStackWhoseOnesBelowAreAllMergedMergesOnlyItself() throws Exception {
+        PullRequestDetails stacked = stacked(new PullRequestStack(
+                9,
+                2,
+                2,
+                List.of(new PullRequestStack.Entry(1, 7, State.MERGED), new PullRequestStack.Entry(2, 8, State.OPEN))));
+
+        String screen = screen(
+                PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(stacked)));
+
+        assertTrue(screen.contains("    Stack  #9 · 2 of 2"), screen);
+        assertFalse(screen.contains("merging also merges"), screen);
+        assertTrue(screen.contains("(s) Squash and merge "), screen);
+        assertFalse(screen.contains("PRs"), screen);
+    }
+
+    /**
+     * The ready pull request, read as sitting in {@code stack}.
+     */
+    private static PullRequestDetails stacked(PullRequestStack stack) {
+        return new PullRequestDetails(
                 READY.number(),
                 READY.title(),
                 READY.author(),
@@ -201,16 +258,8 @@ class PullRequestDialogTest {
                 READY.reviewers(),
                 READY.checks(),
                 "abc123",
-                Option.of(new PullRequestStack(96, 3, 3)),
+                Option.of(stack),
                 Option.none());
-
-        String screen = screen(
-                PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(stacked)));
-
-        assertTrue(screen.contains("    Stack  #96 · 3 of 3 · merging also merges the 2 below"), screen);
-        assertTrue(screen.contains("(m) Merge 3 PRs"), screen);
-        assertTrue(screen.contains("(s) Squash and merge 3 PRs"), screen);
-        assertTrue(screen.contains("(r) Rebase and merge 3 PRs"), screen);
     }
 
     @Test
@@ -221,7 +270,7 @@ class PullRequestDialogTest {
                 false,
                 Checks.PASSING,
                 Review.APPROVED,
-                Option.of(new PullRequestStack(96, 1, 2)));
+                Option.of(new PullRequestStack(96, 1, 2, List.empty())));
 
         String screen = screen(PullRequestPopup.loading(new Branch.Name("support_rename"), bottom)
                 .with(Either.right(READY)));

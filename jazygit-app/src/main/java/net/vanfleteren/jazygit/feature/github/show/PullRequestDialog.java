@@ -128,7 +128,7 @@ public final class PullRequestDialog implements PopupView {
                 key,
                 popup -> popup.stack()
                         .filter(stack -> stack.below() > 0)
-                        .map(stack -> Messages.get(labelKey + ".stack", String.valueOf(stack.position())))
+                        .map(stack -> Messages.get(labelKey + ".stack", String.valueOf(stack.below() + 1)))
                         .getOrElse(() -> Messages.get(labelKey)),
                 () -> new PullRequestMsg.MergeChosen(method),
                 PullRequestUpdate::mergeable);
