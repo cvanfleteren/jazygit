@@ -28,6 +28,8 @@ final class CliInProgress {
     private static final List<String> MARKERS =
             List.of("MERGE_HEAD", "rebase-merge", "rebase-apply", "CHERRY_PICK_HEAD", "REVERT_HEAD");
     private static final String BRANCH_REF = "refs/heads/";
+    // Left by jazygit next to git's own files of a rebase that amends an older commit; git deletes it with them.
+    private static final String AMENDING = "jazygit-amending";
 
     private CliInProgress() {}
 
@@ -42,7 +44,7 @@ final class CliInProgress {
      * What the repository whose files are at {@code markers} is in the middle of, if anything.
      */
     static Option<InProgress> read(Markers markers) {
-        return inProgress(markers.paths());
+        return inProgress(markers);
     }
 
     /**
@@ -68,9 +70,38 @@ final class CliInProgress {
             Path worktree, InProgress inProgress, InProgressAction action) {
         GitCommand command = git(subcommand(inProgress), option(action));
         return action == InProgressAction.ABORT
-                ? GitFailure.widen(GitProcess.log(worktree, command))
+                ? GitFailure.widen(abort(worktree, inProgress, command))
                 : GitProcess.log(worktree, command.withEnvironment(HashMap.of("GIT_EDITOR", "true")))
                         .mapLeft(failure -> Unfinished.stoppedAgain(worktree, inProgress, failure));
+    }
+
+    /**
+     * Marks the rebase that stopped in {@code worktree} as one that amends an older commit: it started from a
+     * commit of the staged changes, which it folds into that one, see {@link CliCommit#amend(Path, Sha)}. Aborting
+     * it then takes that commit away again, so the changes are staged as they were. When the mark cannot be left,
+     * aborting leaves that commit on the branch, as aborting it outside jazygit does.
+     */
+    static void markAmending(Path worktree) {
+        markers(worktree)
+                .forEach(markers ->
+                        Try.run(() -> Files.createFile(markers.rebaseMerge().resolve(AMENDING))));
+    }
+
+    /**
+     * Runs {@code abort}: {@code git <operation> --abort}, which puts the branch back where the operation started.
+     * For a rebase that amends an older commit, that is the commit of the staged changes, which
+     * {@code git reset --soft HEAD^} takes away again, keeping them staged. Only a rebase can be marked so.
+     */
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> abort(
+            Path worktree, InProgress inProgress, GitCommand abort) {
+        boolean amending = inProgress instanceof InProgress.Rebasing
+                && markers(worktree)
+                        .exists(markers -> Files.exists(markers.rebaseMerge().resolve(AMENDING)));
+        return GitFailure.sequence(
+                () -> GitProcess.log(worktree, abort),
+                () -> amending
+                        ? GitProcess.log(worktree, git("reset", "--quiet", "--soft", "HEAD^"))
+                        : GitFailure.nothing());
     }
 
     private static String subcommand(InProgress inProgress) {
@@ -99,12 +130,12 @@ final class CliInProgress {
     /**
      * A rebase comes first: one that recreates a merge is merging too.
      */
-    private static Option<InProgress> inProgress(List<Path> markers) {
-        return rebasing(markers.get(1), "msgnum", "end")
-                .orElse(() -> rebasing(markers.get(2), "next", "last"))
-                .orElse(() -> sha(markers.get(0)).map(InProgress.Merging::new))
-                .orElse(() -> sha(markers.get(3)).map(InProgress.CherryPicking::new))
-                .orElse(() -> sha(markers.get(4)).map(InProgress.Reverting::new));
+    private static Option<InProgress> inProgress(Markers markers) {
+        return rebasing(markers.rebaseMerge(), "msgnum", "end")
+                .orElse(() -> rebasing(markers.rebaseApply(), "next", "last"))
+                .orElse(() -> sha(markers.mergeHead()).map(InProgress.Merging::new))
+                .orElse(() -> sha(markers.cherryPickHead()).map(InProgress.CherryPicking::new))
+                .orElse(() -> sha(markers.revertHead()).map(InProgress.Reverting::new));
     }
 
     /**
@@ -151,5 +182,26 @@ final class CliInProgress {
     /**
      * Where git keeps the files that tell what a repository is in the middle of, in the order of {@code MARKERS}.
      */
-    record Markers(List<Path> paths) {}
+    record Markers(List<Path> paths) {
+
+        Path mergeHead() {
+            return paths.get(0);
+        }
+
+        Path rebaseMerge() {
+            return paths.get(1);
+        }
+
+        Path rebaseApply() {
+            return paths.get(2);
+        }
+
+        Path cherryPickHead() {
+            return paths.get(3);
+        }
+
+        Path revertHead() {
+            return paths.get(4);
+        }
+    }
 }

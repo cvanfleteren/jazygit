@@ -54,3 +54,7 @@ Refactorings that were left out of the functional/immutable cleanup, and why.
   nothing; `git reset --merge`, which keeps unrelated uncommitted changes, is run outside the app. Discarding all
   changes in the app would throw those away too. M could offer "abort" (`reset --merge`) when files have conflicts
   but nothing is in progress.
+- [ ] **Skipping an amend that stopped on conflicts loses the staged changes.** Amending an older commit commits them
+  as a `fixup!` commit and rebases to fold it in. When that stops on the `fixup!` commit, skipping it (M) leaves the
+  changes out: once the rebase is done, only the reflog still has them. The rebase is marked as an amend (see
+  `CliInProgress.markAmending`), so M could warn before skipping it, or offer to abort instead.
