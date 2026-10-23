@@ -200,6 +200,7 @@ public class JazygitApp extends ToolkitApp {
      * command that runs is not interrupted, which would kill it half-way, say in the middle of a rebase.
      */
     private static void stop(Runtime running) {
+        running.program().stop();
         running.io().getQueue().clear();
         running.io().shutdown();
         running.background().shutdownNow();

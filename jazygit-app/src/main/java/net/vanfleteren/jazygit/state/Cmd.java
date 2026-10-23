@@ -85,6 +85,14 @@ public interface Cmd {
     }
 
     /**
+     * What this command must not share with another command at the same time, if anything: while a command that
+     * holds it runs, one that needs it waits on its own thread.
+     */
+    default Option<Guard> guard() {
+        return Option.none();
+    }
+
+    /**
      * What a command can be the latest of.
      */
     enum Slot {
@@ -92,6 +100,18 @@ public interface Cmd {
          * The preview of the highlighted pull request.
          */
         PULL_REQUEST_PREVIEW
+    }
+
+    /**
+     * What a command can keep others from while it runs.
+     */
+    enum Guard {
+        /**
+         * The remote-tracking refs and {@code FETCH_HEAD}, which every fetch writes: by fetching, pulling, pushing,
+         * deleting a branch on its remote, or checking out a pull request through gh. Two at once can leave
+         * {@code FETCH_HEAD} with the lines of both, or fail on the lock of a ref.
+         */
+        REMOTE_REFS
     }
 
     /**

@@ -20,9 +20,10 @@ final class CliFetch {
     private CliFetch() {}
 
     /**
-     * Runs {@code git fetch --prune <remote>}. It always prunes, whatever {@code fetch.prune} says: the
-     * remote-tracking branches of branches deleted on the remote go, so git marks the local branches that
-     * followed them as gone. Git's own prompts are already off; ssh would still ask for a
+     * Runs {@code git fetch --prune --no-write-fetch-head <remote>}. It always prunes, whatever {@code fetch.prune}
+     * says: the remote-tracking branches of branches deleted on the remote go, so git marks the local branches that
+     * followed them as gone. It leaves {@code FETCH_HEAD} alone, which nothing reads after it, but a pull does
+     * after its own fetch. Git's own prompts are already off; ssh would still ask for a
      * passphrase or about an unknown host on the terminal, so it runs in batch mode.
      *
      * @param environment the value of the environment variable {@code GIT_SSH_COMMAND}, if it is set
@@ -30,7 +31,11 @@ final class CliFetch {
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(
             Path worktree, String remote, Option<String> environment, Map<String, String> credentials) {
-        return CliRemote.toRemote(worktree, git("fetch", "--quiet", "--prune", remote), environment, credentials)
+        return CliRemote.toRemote(
+                        worktree,
+                        git("fetch", "--quiet", "--prune", "--no-write-fetch-head", remote),
+                        environment,
+                        credentials)
                 .flatMap(fetch -> GitProcess.log(worktree, fetch));
     }
 

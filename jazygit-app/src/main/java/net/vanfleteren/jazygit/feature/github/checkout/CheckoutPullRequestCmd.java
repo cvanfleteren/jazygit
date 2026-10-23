@@ -26,6 +26,11 @@ public record CheckoutPullRequestCmd(PullRequestSummary pullRequest) implements 
     }
 
     @Override
+    public Option<Guard> guard() {
+        return Option.of(Guard.REMOTE_REFS);
+    }
+
+    @Override
     public Msg run(Env env) {
         return env.gitHub().checkoutPullRequest(pullRequest.number()).fold(this::failedWith, this::succeeded);
     }

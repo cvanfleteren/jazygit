@@ -44,6 +44,12 @@ public record AddWorktreeCmd(WorktreeSource source, String location) implements 
         return source.busyBranch();
     }
 
+    // gh fetches the pull request, into the remote-tracking refs the worktrees share.
+    @Override
+    public Option<Guard> guard() {
+        return Option.when(source instanceof PullRequest, Guard.REMOTE_REFS);
+    }
+
     @Override
     public Msg run(Env env) {
         GitInfoProvider git = env.git();

@@ -151,6 +151,11 @@ public sealed interface CreatePullRequestCmd extends Cmd {
         }
 
         @Override
+        public Option<Guard> guard() {
+            return push.guard();
+        }
+
+        @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return push.perform(git);
         }
