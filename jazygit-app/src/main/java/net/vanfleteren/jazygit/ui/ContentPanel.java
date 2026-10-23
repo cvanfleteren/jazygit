@@ -30,6 +30,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.AheadUpdate;
+import net.vanfleteren.jazygit.state.BranchCommitsView;
 import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.DivergenceView;
 import net.vanfleteren.jazygit.state.Failure;
@@ -51,6 +52,7 @@ public final class ContentPanel {
     private static final String COMMIT_AREA_ID = "commit-changes";
     private static final String STASH_AREA_ID = "stash-changes";
     private static final String DIVERGENCE_AREA_ID = "divergence-commit";
+    private static final String BRANCH_COMMIT_AREA_ID = "branch-commit";
     private static final String PULL_REQUEST_AREA_ID = "pull-request-preview";
     private static final String MESSAGE_INDENT = "    ";
     /**
@@ -68,6 +70,8 @@ public final class ContentPanel {
     private final ScrollArea stashArea;
     // The commit highlighted in the divergence the branches pane lists.
     private final ScrollArea divergenceArea;
+    // The commit highlighted in the commits of a branch the branches pane lists.
+    private final ScrollArea branchCommitArea;
     // Not focusable: clicking the log must not take the focus from the branches pane it mirrors.
     private final ScrollArea logArea;
     private final ScrollArea pullRequestArea;
@@ -101,9 +105,11 @@ public final class ContentPanel {
         commitArea = area.apply(COMMIT_AREA_ID);
         stashArea = area.apply(STASH_AREA_ID);
         divergenceArea = area.apply(DIVERGENCE_AREA_ID);
+        branchCommitArea = area.apply(BRANCH_COMMIT_AREA_ID);
         logArea = area.apply("branch-log");
         pullRequestArea = area.apply(PULL_REQUEST_AREA_ID);
-        focusableAreas = List.of(stagedArea, unstagedArea, commitArea, stashArea, divergenceArea, pullRequestArea);
+        focusableAreas = List.of(
+                stagedArea, unstagedArea, commitArea, stashArea, divergenceArea, branchCommitArea, pullRequestArea);
     }
 
     /**
@@ -116,6 +122,7 @@ public final class ContentPanel {
                         COMMIT_AREA_ID,
                         STASH_AREA_ID,
                         DIVERGENCE_AREA_ID,
+                        BRANCH_COMMIT_AREA_ID,
                         PULL_REQUEST_AREA_ID)
                 .contains(id);
     }
@@ -331,7 +338,7 @@ public final class ContentPanel {
             case "diff-staged", "diff-unstaged" -> Option.of(FilesPanel.ID);
             case COMMIT_AREA_ID -> Option.of(CommitsPanel.ID);
             case STASH_AREA_ID -> Option.of(StashPanel.ID);
-            case DIVERGENCE_AREA_ID -> Option.of(BranchesPanel.ID);
+            case DIVERGENCE_AREA_ID, BRANCH_COMMIT_AREA_ID -> Option.of(BranchesPanel.ID);
             // It shows the pull request highlighted in whichever list of the pull requests screen is in use.
             case PULL_REQUEST_AREA_ID ->
                 Option.of(model.prOverview().listPane().getOrElse(PullRequestsPanel.REVIEW_REQUESTED_ID));
@@ -379,6 +386,14 @@ public final class ContentPanel {
                                 .map(Preview::shown)
                                 .filter(detail -> detail.value().toOption().isDefined())
                                 .flatMap(detail -> view.commit(detail.key())))
+                        .isDefined();
+            case BRANCH_COMMIT_AREA_ID ->
+                model.repoView()
+                        .branchCommits()
+                        .flatMap(view -> view.detail()
+                                .map(Preview::shown)
+                                .filter(detail -> detail.value().toOption().isDefined())
+                                .flatMap(detail -> view.commit(model, detail.key())))
                         .isDefined();
             case PULL_REQUEST_AREA_ID ->
                 model.prOverview()
@@ -436,13 +451,15 @@ public final class ContentPanel {
     }
 
     /**
-     * The commit highlighted in the divergence the local branches pane lists, or else the log of the branch.
+     * The commit highlighted in the divergence the local branches pane lists, or in the commits of a branch the pane
+     * lists, or else the log of the branch.
      */
     private StyledElement<?> branchesView(Model model, String focusedId) {
         return model.repoView()
                 .divergence()
                 .filter(view -> model.repoView().branchesTab() == BranchesTab.LOCAL)
                 .<StyledElement<?>>map(view -> divergenceCommitView(model, focusedId, view))
+                .orElse(() -> model.repoView().branchCommits().map(view -> branchCommitView(model, focusedId, view)))
                 .getOrElse(() -> branchLogView(model, focusedId));
     }
 
@@ -590,6 +607,30 @@ public final class ContentPanel {
                                 .exists(divergence -> divergence.ahead().isEmpty()
                                         && divergence.behind().isEmpty())
                         ? dimPanel(title, Messages.get("content.noDivergence"))
+                        : loadingPanel(title));
+    }
+
+    /**
+     * The commit highlighted in the commits of a branch {@code view}, as the commits pane shows its commits.
+     */
+    private StyledElement<?> branchCommitView(Model model, String focusedId, BranchCommitsView view) {
+        DiffOptions options = model.preferences().diffOptions();
+        String title = Messages.get("panel.commit.title");
+        return view.detail()
+                .map(Preview::shown)
+                .<StyledElement<?>>map(detail -> whenLoaded(
+                        title,
+                        detail.value(),
+                        changes -> view.commit(model, detail.key())
+                                .<StyledElement<?>>map(commit -> branchCommitArea.show(
+                                        model,
+                                        focusedId,
+                                        titled(Messages.get("panel.commit.titleFor", commit.shortSha()), options),
+                                        new ScrolledContent.CommitChanges(commit, changes),
+                                        commitText(commit, shownChanges(changes, options), styles)))
+                                .getOrElse(() -> loadingPanel(title))))
+                .getOrElse(() -> view.commits(model).toOption().exists(List::isEmpty)
+                        ? panel(title, text(Messages.get("content.noCommits")))
                         : loadingPanel(title));
     }
 

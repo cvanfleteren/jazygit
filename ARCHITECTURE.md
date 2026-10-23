@@ -210,6 +210,19 @@ tabs, closes it.
 It is read again when either branch moves, as the periodic loads of the branches tell. When the branch is gone, it
 closes; when the upstream is gone, or the base branch, it closes with the error that says so.
 
+## The commits of a branch
+
+Enter on a branch, local or remote, lists its commits in place of the branches (`feature.branch.commits`,
+`ui.BranchCommitsList`), drawn by the same `CommitsPanel.rows` and `marked` as the commits pane: the commits on the
+base dimmed, and with `b` only the others and the fork point. Enter on a commit moves the focus to its diff; Escape,
+or switching tabs, goes back to the branches.
+
+`RepoView.branchCommits` (`state.BranchCommitsView`) holds only the branch and the preview of the highlighted commit.
+The commits are not held twice: while the list is open, the branch stays the one highlighted in the branches pane,
+so its log is `RepoView.branchLog` and what is ahead `RepoView.branchAhead`, read and read again as for the
+highlighted branch. A log read for another branch shows as loading. When the branch is gone, the list closes. The
+content panel shows the highlighted commit as the commits pane does, in a scroll area of its own. See ADR 23.
+
 ## Searching the commits
 
 `/` in the commits pane opens a line above the list to type a query in (`RepoView.searchLine`); Enter runs it through
@@ -279,8 +292,8 @@ follow it there.
   they send back. They are the `Cmd.DiffLoad`s: what one of them read with other options than the model's, or
   failed to, arrives too late and is dropped by `LoadUpdate.update` in one place, as what was read for another
   highlighted item is.
-- Toggling reads the diffs shown again (the files, the commit and the commit of a divergence), which keep showing
-  as they were until they are read.
+- Toggling reads the diffs shown again (the files, the commit, the commit of a divergence and the commit of a
+  branch's commits), which keep showing as they were until they are read.
 - The titles of the diffs say when whitespace is ignored, and a diff that comes back blank says that only
   whitespace changed.
 - The diff of a pull request is read with `gh pr diff`, which has no such option, so it shows all changes.

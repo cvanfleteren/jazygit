@@ -12,6 +12,8 @@ import net.vanfleteren.jazygit.git.model.*;
  * @param branchesTab  which branches the branches pane lists; it stays when the focus leaves the pane
  * @param divergence   the commits a local branch and its upstream or base branch do not share, which the
  *                     branches pane lists in place of the local branches while it is open
+ * @param branchCommits the commits of a branch, local or remote, which the branches pane lists in place of the
+ *                      branches while it is open
  * @param branchLog    the log of the branch, local or remote, highlighted in the branches pane, once one is
  *                     highlighted
  * @param branchAhead  the commits of the branch whose log is shown that are not on its base, keyed by the branch;
@@ -34,6 +36,7 @@ import net.vanfleteren.jazygit.git.model.*;
 public record RepoView(
         BranchesTab branchesTab,
         Option<DivergenceView> divergence,
+        Option<BranchCommitsView> branchCommits,
         Option<Preview<BranchRef, List<Commit>>> branchLog,
         Option<Preview<BranchRef, Option<Ahead>>> branchAhead,
         Option<Preview<Sha, DiffText>> commitDetail,
@@ -47,6 +50,7 @@ public record RepoView(
 
     public static final RepoView INITIAL = new RepoView(
             BranchesTab.LOCAL,
+            Option.none(),
             Option.none(),
             Option.none(),
             Option.none(),

@@ -67,3 +67,5 @@ commits to act on, by what was read for another HEAD.
   ahead, the count, the merge-base and the commit at it.
 - Dimming is by sha, so it is right with merges in both directions, where a separator could not be.
 - The marking shows after the log, as it is read once the log is.
+
+The title no longer says `only` while `b` is on: see ADR 0023.

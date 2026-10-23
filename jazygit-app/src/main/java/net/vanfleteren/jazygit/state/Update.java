@@ -174,6 +174,12 @@ public final class Update {
                         .map(detail -> new LoadCommitDetail(
                                 detail.key(), model.preferences().diffOptions())))
                 .appendAll(model.repoView()
+                        .branchCommits()
+                        .flatMap(BranchCommitsView::detail)
+                        .filter(detail -> detail.value() instanceof Failed)
+                        .map(detail -> new LoadCommitDetail(
+                                detail.key(), model.preferences().diffOptions())))
+                .appendAll(model.repoView()
                         .stashDetail()
                         .filter(detail -> detail.value() instanceof Failed)
                         .map(detail -> new Cmd.LoadStashDetail(

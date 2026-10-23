@@ -41,7 +41,7 @@ class AheadViewTest {
     @Test
     void theTitleCountsTheCommitsNotOnTheBase() {
         assertEquals("Commits · 2 ahead of origin/main", new AheadView(Option.of(AHEAD), false).title("Commits"));
-        assertEquals("Commits · only 2 ahead of origin/main", new AheadView(Option.of(AHEAD), true).title("Commits"));
+        assertEquals("Commits · 2 ahead of origin/main", new AheadView(Option.of(AHEAD), true).title("Commits"));
         assertEquals("Commits · 300+ ahead of origin/main", new AheadView(Option.of(MORE), false).title("Commits"));
         assertEquals("Commits", new AheadView(Option.none(), true).title("Commits"));
     }
@@ -99,7 +99,7 @@ class AheadViewTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.ID))) {
             String shown = RenderedText.of(testRunner, () -> panel.render(model, CommitsPanel.ID));
 
-            assertTrue(shown.contains("Commits · only 2 ahead of origin/main"), shown);
+            assertTrue(shown.contains("Commits · 2 ahead of origin/main"), shown);
             assertTrue(shown.contains("⑂ origin/main msg a"), shown);
             assertFalse(shown.contains("msg 0"), shown);
             SettledPilot.of(testRunner).quit();

@@ -31,6 +31,10 @@ public final class Scopes {
      */
     public static final Scope<Commit> DIVERGENCE = new Scope<>("divergence", "panel.divergence.title");
     /**
+     * The selected commit of the branch the branches pane lists the commits of in place of the branches.
+     */
+    public static final Scope<Commit> BRANCH_COMMITS = new Scope<>("branchCommits", "panel.branchCommits.title");
+    /**
      * The selected commit.
      */
     public static final Scope<Commit> COMMITS = new Scope<>("commits", "panel.commits.title");

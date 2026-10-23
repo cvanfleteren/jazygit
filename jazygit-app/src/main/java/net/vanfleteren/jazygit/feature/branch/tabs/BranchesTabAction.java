@@ -11,7 +11,7 @@ import net.vanfleteren.jazygit.keys.Scopes;
 public final class BranchesTabAction {
 
     public static final FeatureAction ACTION = FeatureAction.ofKeys(keys -> List.of(
-                    Scopes.BRANCHES, Scopes.REMOTE_BRANCHES, Scopes.DIVERGENCE, Scopes.WORKTREES)
+                    Scopes.BRANCHES, Scopes.REMOTE_BRANCHES, Scopes.DIVERGENCE, Scopes.BRANCH_COMMITS, Scopes.WORKTREES)
             .foldLeft(
                     keys,
                     (added, scope) -> added.add(

@@ -18,11 +18,12 @@ import net.vanfleteren.jazygit.i18n.Messages;
 record AheadView(Option<Ahead> ahead, boolean only) {
 
     /**
-     * {@code title}, followed by how many commits are not on the base, and which branch that is.
+     * {@code title}, followed by how many commits are not on the base, and which branch that is; the same whether
+     * only those are listed or not.
      */
     String title(String title) {
         return ahead.map(read -> Messages.get(
-                        only ? "panel.ahead.only" : "panel.ahead",
+                        "panel.ahead",
                         title,
                         read.more()
                                 ? Messages.get("panel.ahead.more", GitInfoProvider.MAX_COMMITS)
