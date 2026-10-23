@@ -418,8 +418,15 @@ class ContentPanelTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(model.get(), area))) {
             SettledPilot.focus(testRunner, area);
             RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
-            List.of(KeyCode.END, KeyCode.UP, KeyCode.PAGE_UP, KeyCode.HOME, KeyCode.PAGE_DOWN, KeyCode.RIGHT)
-                    .appendAll(List.of(KeyCode.RIGHT, KeyCode.LEFT))
+            List.of(
+                            KeyCode.END,
+                            KeyCode.UP,
+                            KeyCode.PAGE_UP,
+                            KeyCode.HOME,
+                            KeyCode.PAGE_DOWN,
+                            KeyCode.RIGHT,
+                            KeyCode.RIGHT,
+                            KeyCode.LEFT)
                     .forEach(key -> SettledPilot.of(testRunner).press(key));
             SettledPilot.of(testRunner).pause();
         }
