@@ -6,7 +6,7 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
+import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Msg;

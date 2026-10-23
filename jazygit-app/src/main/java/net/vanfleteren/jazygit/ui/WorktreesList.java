@@ -62,17 +62,16 @@ class WorktreesList implements BranchesTabList {
 
     /**
      * What the worktree has checked out, with a leading space: its branch, else the commit of its detached HEAD,
-     * dimmed.
+     * dimmed, or that git cannot tell.
      */
     private static LoadableList.Seg checkedOut(Worktree worktree) {
-        return worktree.branch()
-                .fold(
-                        () -> note(
-                                Messages.get(
-                                        "worktrees.detached",
-                                        worktree.head().map(Sha::shortSha).getOrElse("")),
-                                Theme.Classes.DIM),
-                        name -> LoadableList.Seg.of(" " + name.value()));
+        return worktree.head()
+                .map(head -> switch (head) {
+                    case Head.OnBranch(Branch.Name name, Option<Sha> tip) -> LoadableList.Seg.of(" " + name.value());
+                    case Head.Detached(Sha at) ->
+                        note(Messages.get("worktrees.detached", at.shortSha()), Theme.Classes.DIM);
+                })
+                .getOrElse(() -> note(Messages.get("worktrees.unknownHead"), Theme.Classes.DIM));
     }
 
     /**
