@@ -8,6 +8,7 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.zeroturnaround.exec.ProcessExecutor;
 
 /**
  * Talking to the remotes.
@@ -42,8 +43,48 @@ class CliRemoteTest {
     }
 
     @Test
+    void theSshCommandOfTheConfigIsKeptWhenTheEnvironmentSetsNone(@TempDir Path repo) throws Exception {
+        configureSsh(repo, "ssh -i ~/.ssh/work");
+
+        assertEquals(Option.of("ssh -i ~/.ssh/work -o BatchMode=yes"), sshCommand(repo, Option.none()));
+        assertEquals(Option.of("ssh -i ~/.ssh/work -o BatchMode=yes"), sshCommand(repo, Option.of("  ")));
+    }
+
+    @Test
+    void theSshCommandOfTheEnvironmentGoesBeforeTheConfig(@TempDir Path repo) throws Exception {
+        configureSsh(repo, "ssh -i ~/.ssh/work");
+
+        assertEquals(Option.of("ssh -i ~/.ssh/own -o BatchMode=yes"), sshCommand(repo, Option.of("ssh -i ~/.ssh/own")));
+    }
+
+    @Test
+    void anEmptySshCommandInTheConfigRunsPlainSsh(@TempDir Path repo) throws Exception {
+        configureSsh(repo, "");
+
+        assertEquals(Option.of("ssh -o BatchMode=yes"), sshCommand(repo, Option.none()));
+    }
+
+    @Test
     void sshRunsInBatchModeKeepingTheConfiguredCommand() {
         assertEquals("ssh -o BatchMode=yes", CliRemote.batchMode(Option.none()));
         assertEquals("ssh -i ~/.ssh/work -o BatchMode=yes", CliRemote.batchMode(Option.of("ssh -i ~/.ssh/work")));
+    }
+
+    private static Option<String> sshCommand(Path repo, Option<String> environment) {
+        return CliRemote.toRemote(repo, GitCommand.git("fetch", "origin"), environment, HashMap.empty())
+                .get()
+                .environment()
+                .get("GIT_SSH_COMMAND");
+    }
+
+    private static void configureSsh(Path repo, String command) throws Exception {
+        new ProcessExecutor()
+                .command("git", "init", "-q", repo.toString())
+                .exitValueNormal()
+                .execute();
+        new ProcessExecutor()
+                .command("git", "-C", repo.toString(), "config", "core.sshCommand", command)
+                .exitValueNormal()
+                .execute();
     }
 }
