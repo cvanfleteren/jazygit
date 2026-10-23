@@ -55,6 +55,14 @@ class PullRequestDetailsTest {
     }
 
     @Test
+    void howFarBehindItsBaseLeavesItsOwnCommitsAsTheyAre() {
+        PullRequestDetails behind = details(State.OPEN, List.empty()).withBehindBase(5);
+
+        assertEquals(1, behind.commits());
+        assertEquals(Option.of(5), behind.behindBase());
+    }
+
+    @Test
     void itsChecksAreListedCombined() {
         assertEquals(Option.of(Checks.NONE), listedChecks());
         assertEquals(Option.of(Checks.PASSING), listedChecks(new Check("build", Checks.PASSING)));

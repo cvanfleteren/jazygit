@@ -142,9 +142,9 @@ public record PullRequestDetails(
     }
 
     /**
-     * This pull request, its base branch having {@code commits} its branch does not.
+     * This pull request, its base branch having {@code behind} commits its branch does not.
      */
-    public PullRequestDetails withBehindBase(int commits) {
+    public PullRequestDetails withBehindBase(int behind) {
         return new PullRequestDetails(
                 number,
                 title,
@@ -168,7 +168,7 @@ public record PullRequestDetails(
                 checks,
                 head,
                 stack,
-                Option.of(commits));
+                Option.of(behind));
     }
 
     /**
