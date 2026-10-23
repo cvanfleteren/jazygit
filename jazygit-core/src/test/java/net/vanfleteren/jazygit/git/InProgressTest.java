@@ -133,8 +133,22 @@ class InProgressTest {
         GitFailure<GitError> failure =
                 git.continueOrAbort(merging, InProgressAction.CONTINUE).getLeft();
 
+        assertInstanceOf(GitError.CommandFailed.class, failure.error());
         assertEquals(List.of("git merge --continue"), failure.commands().map(ExecutedCommand::line));
         assertEquals(Option.of(merging), git.status().get().inProgress());
+    }
+
+    @Test
+    void continuingARebaseWhileConflictsRemainFailsWhereItStopped() throws Exception {
+        git("checkout", "-q", "conflicting");
+        gitAnyExit("rebase", "main");
+        InProgress rebasing = git.status().get().inProgress().get();
+
+        GitFailure<GitError> failure =
+                git.continueOrAbort(rebasing, InProgressAction.CONTINUE).getLeft();
+
+        assertInstanceOf(GitError.CommandFailed.class, failure.error());
+        assertEquals(Option.of(rebasing), git.status().get().inProgress());
     }
 
     @Test

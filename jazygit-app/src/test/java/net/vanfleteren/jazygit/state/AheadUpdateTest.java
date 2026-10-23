@@ -31,6 +31,16 @@ class AheadUpdateTest {
         return new Ahead(tip, base, FEATURE_COMMITS, false, Option.none());
     }
 
+    /**
+     * The sample model with the feature branch highlighted and its log read.
+     */
+    private static Model featureLogRead() {
+        Model selected = Update.update(loaded(), new SelectionMsg.BranchSelected(FEATURE_LOG))
+                .model();
+        return Update.update(selected, new LoadMsg.BranchLogLoaded(FEATURE_LOG, FEATURE_COMMITS))
+                .model();
+    }
+
     @Test
     void theBaseIsTheParentElseTheMainBranchTheRemoteOneFirst() {
         Cmd.LoadAhead load = new Cmd.LoadAhead(Option.of(FEATURE_LOG), Option.of(FEATURE), Option.of(MAIN));
@@ -110,6 +120,73 @@ class AheadUpdateTest {
                         logRead.model(), new LoadMsg.AheadLoaded(load, Option.of(ahead(FEATURE_TIP, origin("main")))))
                 .model();
         assertEquals(Option.of(ahead(FEATURE_TIP, origin("main"))), AheadUpdate.branch(read, FEATURE_LOG));
+    }
+
+    @Test
+    void aBranchIsNamedWithoutItsRemote() {
+        assertEquals(Option.of(FEATURE), AheadUpdate.of(loaded(), FEATURE_LOG).named());
+        assertEquals(
+                Option.of(FEATURE), AheadUpdate.of(loaded(), origin("feature")).named());
+    }
+
+    @Test
+    void theLogOfABranchNoLongerHighlightedIsDropped() {
+        Model selected = Update.update(loaded(), new SelectionMsg.BranchSelected(FEATURE_LOG))
+                .model();
+        Model other = Update.update(selected, new SelectionMsg.BranchSelected(new BranchRef.Local(MAIN)))
+                .model();
+
+        Update.Next late = Update.update(other, new LoadMsg.BranchLogLoaded(FEATURE_LOG, FEATURE_COMMITS));
+
+        assertEquals(List.empty(), late.cmds());
+        assertEquals(other.repoView(), late.model().repoView());
+    }
+
+    @Test
+    void whatWasReadForAnotherTipOfTheHighlightedBranchIsNotUsed() {
+        Model logRead = featureLogRead();
+
+        Model stale = Update.update(
+                        logRead,
+                        new LoadMsg.AheadLoaded(
+                                AheadUpdate.of(logRead, FEATURE_LOG), Option.of(ahead(HEAD, origin("main")))))
+                .model();
+
+        assertEquals(Option.none(), AheadUpdate.branch(stale, FEATURE_LOG));
+    }
+
+    @Test
+    void theCommitsOfTheHighlightedBranchAreReadAgainWhenItsBaseMovedButNotWhenItMovedToo() {
+        Model logRead = featureLogRead();
+        Cmd.LoadAhead load = AheadUpdate.of(logRead, FEATURE_LOG);
+        Model read = Update.update(
+                        logRead,
+                        new LoadMsg.AheadLoaded(load, Option.of(ahead(FEATURE_TIP, new BranchRef.Local(MAIN)))))
+                .model();
+
+        Update.Next baseMoved = localBranchesRead(
+                read, List.of(new Branch(MAIN, true, new Sha("cccc")), new Branch(FEATURE, false, FEATURE_TIP)));
+        Update.Next bothMoved = localBranchesRead(
+                read, List.of(new Branch(MAIN, true, new Sha("cccc")), new Branch(FEATURE, false, new Sha("eeee"))));
+
+        assertTrue(baseMoved.cmds().contains(load), baseMoved.cmds().toString());
+        // Its log is read again, and what is not on its base after it.
+        assertTrue(
+                bothMoved.cmds().contains(new Cmd.LoadBranchLog(FEATURE_LOG)),
+                bothMoved.cmds().toString());
+        assertFalse(bothMoved.cmds().contains(load), bothMoved.cmds().toString());
+    }
+
+    @Test
+    void aFailedReadForTheHighlightedBranchIsTriedAgainOnTheNextRefresh() {
+        Model logRead = featureLogRead();
+        Cmd.LoadAhead load = AheadUpdate.of(logRead, FEATURE_LOG);
+
+        Model failed = Update.update(logRead, load.failed(refused("no"))).model();
+
+        assertEquals(Option.none(), AheadUpdate.branch(failed, FEATURE_LOG));
+        assertTrue(Update.refresh(failed).cmds().contains(load));
+        assertFalse(Update.refresh(logRead).cmds().contains(load));
     }
 
     @Test

@@ -594,6 +594,42 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void aRebaseThatStopsHalfWayOtherThanOnConflictsIsAborted() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("x.txt"), "x\n");
+        git("add", "x.txt");
+        git("commit", "-q", "-m", "Add x");
+        git("rm", "-q", "x.txt");
+        git("commit", "-q", "-m", "Remove x");
+        git("checkout", "-q", "main");
+        Files.writeString(repo.resolve("m.txt"), "m\n");
+        git("add", "m.txt");
+        git("commit", "-q", "-m", "Main work");
+        git("checkout", "-q", "feature");
+        // Picking "Add x" would overwrite it, so the rebase stops there, without conflicts.
+        Files.writeString(repo.resolve("x.txt"), "untracked\n");
+
+        GitFailure<GitError> failure = provider.rebase(new Branch.Name("main")).getLeft();
+
+        assertInstanceOf(GitError.CommandFailed.class, failure.error());
+        assertEquals(List.of("git rebase --abort"), failure.commands().tail().map(ExecutedCommand::line));
+        assertEquals(Option.none(), failure.cleanupFailed());
+        assertTrue(Files.notExists(repo.resolve(".git/rebase-merge")));
+        assertEquals(
+                List.of("Remove x", "Add x", "Initial commit"),
+                provider.commits().get().map(Commit::message).toList());
+    }
+
+    @Test
+    void aRebaseThatDoesNotStartIsNotAborted() {
+        GitFailure<GitError> failure = provider.rebase(new Branch.Name("nope")).getLeft();
+
+        assertInstanceOf(GitError.CommandFailed.class, failure.error());
+        assertEquals(1, failure.commands().size(), failure.commands().toString());
+        assertEquals(Option.none(), failure.cleanupFailed());
+    }
+
+    @Test
     void cherryPickCopiesACommitOntoTheCheckedOutBranch() throws Exception {
         git("checkout", "-q", "-b", "feature");
         Files.writeString(repo.resolve("f.txt"), "f\n");
@@ -650,6 +686,25 @@ class CliGitInfoProviderTest {
                 List.of("Same work", "Initial commit"),
                 provider.commits().get().map(Commit::message).toList());
         assertTrue(!gitSucceedsIn(repo, "rev-parse", "--verify", "--quiet", "CHERRY_PICK_HEAD"));
+    }
+
+    @Test
+    void aCherryPickThatDoesNotStartIsNotAborted() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Feature work");
+        Sha picked = provider.commits().get().head().sha();
+        git("checkout", "-q", "main");
+        // Picking it would overwrite it, so git refuses before it starts.
+        Files.writeString(repo.resolve("f.txt"), "untracked\n");
+
+        GitFailure<GitError> failure = provider.cherryPick(picked).getLeft();
+
+        assertInstanceOf(GitError.CommandFailed.class, failure.error());
+        assertEquals(
+                List.of("git cherry-pick " + picked.value()), failure.commands().map(ExecutedCommand::line));
+        assertEquals(Option.none(), failure.cleanupFailed());
     }
 
     @Test
