@@ -140,11 +140,15 @@ class GhTokenTest {
                 """);
         GhToken token = new GhToken(dir, gh, () -> Option.of(ALICE));
 
-        new GhProcess(dir, gh, token).log(GhCommand.gh("pr", "merge", "1"));
+        GhFailure failure = new GhProcess(dir, gh, token)
+                .log(GhCommand.gh("pr", "merge", "1"))
+                .getLeft();
 
         assertEquals(
                 List.of("auth token --user alice-work --hostname github.com token=", "pr merge 1 token=secret"),
                 called());
+        assertEquals(
+                new GhError.CommandFailed(Option.of("GraphQL: Pull request is not mergeable"), 1), failure.error());
     }
 
     @Test

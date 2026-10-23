@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit;
 
-import static net.vanfleteren.jazygit.TestApp.TIMEOUT;
+import static net.vanfleteren.jazygit.TestApp.await;
 import static net.vanfleteren.jazygit.TestApp.awaitModel;
 import static net.vanfleteren.jazygit.TestApp.focusedId;
 import static net.vanfleteren.jazygit.TestApp.onRenderThread;
@@ -60,7 +60,7 @@ class JazygitAppWiringTest {
         assertEquals(
                 List.of(
                         Tuple.of(TimeText.CLOCK_INTERVAL, Msg.Clock.class),
-                        Tuple.of(Duration.ofMillis(750), Msg.Tick.class),
+                        Tuple.of(JazygitApp.REFRESH_INTERVAL, Msg.Tick.class),
                         Tuple.of(Duration.ofMinutes(1), FetchMsg.Tick.class),
                         Tuple.of(Duration.ofMinutes(1), PrOverviewMsg.Tick.class),
                         Tuple.of(Duration.ofMinutes(1), PullRequestMsg.Tick.class)),
@@ -76,13 +76,7 @@ class JazygitAppWiringTest {
             app.start(testRunner);
             int started = reads.get();
 
-            long deadline = System.nanoTime() + TIMEOUT.toNanos();
-            while (reads.get() < started + 2) {
-                if (System.nanoTime() > deadline) {
-                    throw new AssertionError("the status was not read again within " + TIMEOUT);
-                }
-                Thread.sleep(20);
-            }
+            await(() -> reads.get() >= started + 2, "the status was read again");
         } finally {
             app.onStop();
         }

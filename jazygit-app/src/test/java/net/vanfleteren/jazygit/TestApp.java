@@ -104,10 +104,19 @@ final class TestApp extends JazygitApp {
      */
     static void awaitModel(ToolkitTestRunner testRunner, TestApp app, Function<Model, Boolean> expected)
             throws Exception {
+        await(() -> onRenderThread(testRunner, () -> expected.apply(app.model())), "the model got there");
+    }
+
+    /**
+     * Waits until {@code condition} holds, failing when it does not within {@link #TIMEOUT}.
+     *
+     * @param what what holds then, for the failure
+     */
+    static void await(Condition condition, String what) throws Exception {
         long deadline = System.nanoTime() + TIMEOUT.toNanos();
-        while (!onRenderThread(testRunner, () -> expected.apply(app.model()))) {
+        while (!condition.holds()) {
             if (System.nanoTime() > deadline) {
-                throw new AssertionError("the model did not get there within " + TIMEOUT);
+                throw new AssertionError("not within " + TIMEOUT + ": " + what);
             }
             Thread.sleep(20);
         }
@@ -117,5 +126,14 @@ final class TestApp extends JazygitApp {
         CompletableFuture<T> value = new CompletableFuture<>();
         testRunner.runner().runOnRenderThread(() -> value.complete(read.get()));
         return value.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * What {@link #await} waits for; checking it may throw, as reading on the render thread does.
+     */
+    @FunctionalInterface
+    interface Condition {
+
+        boolean holds() throws Exception;
     }
 }

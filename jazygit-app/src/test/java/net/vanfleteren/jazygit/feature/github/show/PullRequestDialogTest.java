@@ -383,12 +383,12 @@ class PullRequestDialogTest {
     }
 
     @Test
-    void aMergedOrClosedPullRequestIsNeitherMergedNorClosed() throws Exception {
+    void aMergedOrClosedPullRequestIsNeitherChangedMergedNorClosed() throws Exception {
         for (State state : List.of(State.MERGED, State.CLOSED)) {
             PullRequestPopup popup = PullRequestPopup.loading(new Branch.Name("support_rename"), PR)
                     .with(Either.right(readyIn(state)));
             try (ToolkitTestRunner runner = start(TestModels.loaded().openPopup(popup))) {
-                for (char key : new char[] {'m', 's', 'r', 'x'}) {
+                for (char key : new char[] {'d', 'm', 's', 'r', 'x'}) {
                     SettledPilot.of(runner).press(key);
                     SettledPilot.of(runner).pause();
                 }
