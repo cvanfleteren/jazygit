@@ -130,6 +130,28 @@ class GhTokenTest {
     }
 
     @Test
+    void aCommandThatFailsOtherwiseIsNotRunAgain() throws IOException {
+        // Running it again would merge, create or comment twice when it did so before failing.
+        String gh = gh("""
+                case "$1" in
+                  auth) echo secret ;;
+                  pr) echo 'GraphQL: Pull request is not mergeable' >&2; exit 1 ;;
+                esac
+                """);
+        GhToken token = new GhToken(dir, gh, () -> Option.of(ALICE));
+
+        GhFailure failure = new GhProcess(dir, gh, token)
+                .log(GhCommand.gh("pr", "merge", "1"))
+                .getLeft();
+
+        assertEquals(
+                List.of("auth token --user alice-work --hostname github.com token=", "pr merge 1 token=secret"),
+                called());
+        assertEquals(
+                new GhError.CommandFailed(Option.of("GraphQL: Pull request is not mergeable"), 1), failure.error());
+    }
+
+    @Test
     void withoutAnAccountARejectedCommandIsNotRunAgain() throws IOException {
         String gh = gh("echo 'HTTP 401: Bad credentials' >&2; exit 1");
 

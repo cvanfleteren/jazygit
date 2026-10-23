@@ -383,6 +383,45 @@ class PullRequestDialogTest {
     }
 
     @Test
+    void aMergedOrClosedPullRequestIsNeitherChangedMergedNorClosed() throws Exception {
+        for (State state : List.of(State.MERGED, State.CLOSED)) {
+            PullRequestPopup popup = PullRequestPopup.loading(new Branch.Name("support_rename"), PR)
+                    .with(Either.right(readyIn(state)));
+            try (ToolkitTestRunner runner = start(TestModels.loaded().openPopup(popup))) {
+                for (char key : new char[] {'d', 'm', 's', 'r', 'x'}) {
+                    SettledPilot.of(runner).press(key);
+                    SettledPilot.of(runner).pause();
+                }
+            }
+        }
+
+        assertEquals(java.util.List.of(), dispatched);
+    }
+
+    private static PullRequestDetails readyIn(State state) {
+        return new PullRequestDetails(
+                READY.number(),
+                READY.title(),
+                READY.author(),
+                state,
+                READY.draft(),
+                READY.headBranch(),
+                READY.baseBranch(),
+                READY.createdAt(),
+                READY.createdAt(),
+                READY.additions(),
+                READY.deletions(),
+                READY.changedFiles(),
+                READY.mergeable(),
+                READY.review(),
+                READY.comments(),
+                READY.reviewThreads(),
+                READY.labels(),
+                READY.reviewers(),
+                READY.checks());
+    }
+
+    @Test
     void aDraftOffersToMarkItReadyForReview() throws Exception {
         String screen = screen(
                 PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(DETAILS)));

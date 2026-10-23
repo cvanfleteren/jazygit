@@ -76,6 +76,17 @@ import org.slf4j.LoggerFactory;
  */
 public class JazygitApp extends ToolkitApp {
 
+    // In milliseconds; the acceptance tests tick faster, as each of their steps waits for the app to see a change.
+    static final Duration REFRESH_INTERVAL = Duration.ofMillis(Long.getLong("jazygit.refreshInterval", 750));
+    static final Duration FETCH_INTERVAL = Duration.ofMinutes(1);
+    // What is dispatched every so often: the time, the repository read again, and what the remotes and GitHub have.
+    static final List<Timer> TIMERS = List.of(
+            new Timer(TimeText.CLOCK_INTERVAL, () -> new Msg.Clock(Instant.now())),
+            new Timer(REFRESH_INTERVAL, Msg.Tick::new),
+            new Timer(FETCH_INTERVAL, FetchMsg.Tick::new),
+            new Timer(FETCH_INTERVAL, PrOverviewMsg.Tick::new),
+            new Timer(FETCH_INTERVAL, PullRequestMsg.Tick::new));
+
     // Rows of the command log panel, borders included.
     private static final int COMMAND_LOG_HEIGHT = CommandLogPanel.VISIBLE_LINES + 2;
     private static final int FILES_PERCENT = 25;
@@ -85,9 +96,6 @@ public class JazygitApp extends ToolkitApp {
     private static final int MIN_STASH_HEIGHT = 3;
     // Where the commands that threw are written down.
     private static final Path BUG_LOG = Path.of(System.getProperty("java.io.tmpdir"), "jazygit-bugs.log");
-    // In milliseconds; the acceptance tests tick faster, as each of their steps waits for the app to see a change.
-    private static final Duration REFRESH_INTERVAL = Duration.ofMillis(Long.getLong("jazygit.refreshInterval", 750));
-    private static final Duration FETCH_INTERVAL = Duration.ofMinutes(1);
     // How many background commands run at once: a fetch, the pull requests and a preview, but not so many git or
     // gh processes that a burst of them slows the machine down or eats into GitHub's rate limit.
     private static final int BACKGROUND_THREADS = 4;
@@ -352,11 +360,8 @@ public class JazygitApp extends ToolkitApp {
         runner.eventRouter().addGlobalHandler(this::handleGlobalKey);
         runner.eventRouter().addGlobalHandler(this::handleMouse);
         startRuntime(env, settings, themeOverride, Landing.START);
-        every(TimeText.CLOCK_INTERVAL, () -> dispatch.accept(new Msg.Clock(Instant.now())));
-        every(REFRESH_INTERVAL, () -> dispatch.accept(new Msg.Tick()));
-        every(FETCH_INTERVAL, () -> dispatch.accept(new FetchMsg.Tick()));
-        every(FETCH_INTERVAL, () -> dispatch.accept(new PrOverviewMsg.Tick()));
-        every(FETCH_INTERVAL, () -> dispatch.accept(new PullRequestMsg.Tick()));
+        TIMERS.forEach(timer ->
+                every(timer.interval(), () -> dispatch.accept(timer.msg().get())));
         every(TimeText.SPINNER_FRAME, this::turnSpinners);
     }
 
@@ -706,4 +711,9 @@ public class JazygitApp extends ToolkitApp {
      * Asks for a frame, as {@link #requestRedraw()} does.
      */
     private record Redraw() implements Event {}
+
+    /**
+     * Dispatches what {@code msg} makes every {@code interval}.
+     */
+    record Timer(Duration interval, Supplier<Msg> msg) {}
 }
