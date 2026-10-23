@@ -46,7 +46,7 @@ class CliGitHubTest {
                         + " ;;\n"
                         + "  *) printf 'pr\\t95\\tFix\\t\\t" + state
                         + "\\tfalse\\tfix\\tmain\\t2026-01-01T00:00:00Z\\t2026-01-01T00:00:00Z\\t1\\t0\\t1\\tMERGEABLE"
-                        + "\\t\\t0\\t" + head + "\\nthreads\\t0\\t0\\t0\\t0\\n' ;;\n"
+                        + "\\t\\t0\\t" + head + "\\t1\\nthreads\\t0\\t0\\t0\\t0\\n' ;;\n"
                         + "esac\n");
         gh.toFile().setExecutable(true);
         return new CliGitHub(dir, gh.toString(), GhToken.NONE).pullRequestDetails(95);
@@ -103,7 +103,7 @@ class CliGitHubTest {
     void theDetailsOfAStackedPullRequestSayWhereItSitsAndWhatItsHeadIs() {
         String raw =
                 "pr\t95\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0"
-                        + "\tabc123\n"
+                        + "\tabc123\t1\n"
                         + "threads\t0\t0\t0\t0\n"
                         + "stack\t96\t2\t2\n";
 
@@ -126,7 +126,7 @@ class CliGitHubTest {
                 Option.none(),
                 CliGitHub.parseDetails(
                                 "pr\t95\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1"
-                                        + "\tMERGEABLE\t\t0\tabc123\nthreads\t0\t0\t0\t0\n")
+                                        + "\tMERGEABLE\t\t0\tabc123\t1\nthreads\t0\t0\t0\t0\n")
                         .get()
                         .behindBase());
     }
@@ -420,7 +420,7 @@ class CliGitHubTest {
     void parsesTheDetailsOfAPullRequest() {
         String raw =
                 "pr\t42\tAdd\\trename\tcvf\tOPEN\ttrue\tsupport_rename\tmain\t2026-10-10T08:00:00Z\t2026-10-12T09:00:00Z\t120\t34\t7"
-                        + "\tMERGEABLE\tCHANGES_REQUESTED\t2\t\n"
+                        + "\tMERGEABLE\tCHANGES_REQUESTED\t2\t\t3\n"
                         + "threads\t130\t100\t2\t12\n"
                         + "label\tui\n"
                         + "review\tbob\tCHANGES_REQUESTED\n"
@@ -445,6 +445,7 @@ class CliGitHubTest {
                         120,
                         34,
                         7,
+                        3,
                         Mergeable.MERGEABLE,
                         Review.CHANGES_REQUESTED,
                         2,
@@ -461,7 +462,7 @@ class CliGitHubTest {
     @Test
     void aMergedPullRequestWithoutChecksLabelsOrReviewers() {
         String raw =
-                "pr\t5\tFix\t\tMERGED\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\t\n"
+                "pr\t5\tFix\t\tMERGED\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\t\t1\n"
                         + "threads\t0\t0\t0\t0\n";
 
         assertEquals(
@@ -477,6 +478,7 @@ class CliGitHubTest {
                         Instant.parse("2026-01-01T00:00:00Z"),
                         1,
                         0,
+                        1,
                         1,
                         Mergeable.UNKNOWN,
                         Review.NONE,
@@ -496,10 +498,10 @@ class CliGitHubTest {
         assertTrue(CliGitHub.parseDetails("something\telse\n").isLeft());
         // Without its review threads.
         assertTrue(CliGitHub.parseDetails(
-                        "pr\t5\tFix\t\tMERGED\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\t\n")
+                        "pr\t5\tFix\t\tMERGED\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\t\t1\n")
                 .isLeft());
         assertTrue(CliGitHub.parseDetails(
-                        "pr\t5\tFix\t\tMERGED\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\t\n"
+                        "pr\t5\tFix\t\tMERGED\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\t\t1\n"
                                 + "threads\tx\t0\t0\t0\n")
                 .isLeft());
     }
@@ -507,7 +509,7 @@ class CliGitHubTest {
     @Test
     void aCheckWithoutAStateYetIsNeitherPassingNorFailing() {
         String raw =
-                "pr\t5\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\t\n"
+                "pr\t5\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\t\t1\n"
                         + "threads\t0\t0\t0\t0\n"
                         + "check\tci/status\t\n";
 
@@ -519,7 +521,7 @@ class CliGitHubTest {
     @Test
     void detailLinesWithTooFewFieldsAreUnexpectedOutput() {
         String pr =
-                "pr\t5\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\t\n"
+                "pr\t5\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\t\t1\n"
                         + "threads\t0\t0\t0\t0\n";
 
         assertTrue(CliGitHub.parseDetails(pr + "check\tbuild\n").isLeft());

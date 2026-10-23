@@ -131,7 +131,7 @@ public final class CliGitHub implements GitHub {
             ... on Mannequin { login } ... on Team { name } } } } \
             timelineItems(last: 1, itemTypes: [HEAD_REF_FORCE_PUSHED_EVENT]) { nodes { \
             ... on HeadRefForcePushedEvent { createdAt } } } \
-            commits(last: 1) { nodes { commit { committedDate statusCheckRollup { contexts(first: 100) { nodes { __typename \
+            commits(last: 1) { totalCount nodes { commit { committedDate statusCheckRollup { contexts(first: 100) { nodes { __typename \
             ... on CheckRun { name status conclusion } ... on StatusContext { context state } } } } } } } \
             reviewThreads(last: 100) { totalCount nodes { isResolved comments { totalCount } } } } } }""".formatted(STACK_FIELDS);
     /*
@@ -148,7 +148,7 @@ public final class CliGitHub implements GitHub {
             ([.createdAt, .commits.nodes[0].commit.committedDate, .timelineItems.nodes[0].createdAt] \
             | map(select(. != null)) | max), (.additions | tostring), \
             (.deletions | tostring), (.changedFiles | tostring), (.mergeable // ""), (.reviewDecision // ""), \
-            (.comments.totalCount | tostring), (.headRefOid // "")] | @tsv), \
+            (.comments.totalCount | tostring), (.headRefOid // ""), (.commits.totalCount | tostring)] | @tsv), \
             (select(.stack != null) | ["stack"] + stack | @tsv), \
             (.reviewThreads | ["threads", (.totalCount | tostring), (.nodes | length | tostring), \
             ([.nodes[] | select(.isResolved | not)] | length | tostring), \
@@ -160,7 +160,7 @@ public final class CliGitHub implements GitHub {
             (.commits.nodes[0].commit.statusCheckRollup.contexts.nodes[]? | ["check", \
             ((if .__typename == "CheckRun" then .name else .context end) // ""), \
             %s] | @tsv))""".formatted(CHECK_STATE);
-    private static final int DETAIL_FIELD_COUNT = 17;
+    private static final int DETAIL_FIELD_COUNT = 18;
     /*
      * How many commits base branch $base has that commit $head does not: GitHub's mergeable only says whether a pull
      * request merges without conflicts, not that its base moved on. gh fills in the repository of the working tree
@@ -509,6 +509,7 @@ public final class CliGitHub implements GitHub {
                                 Integer.parseInt(f.get(10)),
                                 Integer.parseInt(f.get(11)),
                                 Integer.parseInt(f.get(12)),
+                                Integer.parseInt(f.get(17)),
                                 mergeable(f.get(13)),
                                 review(f.get(14)),
                                 Integer.parseInt(f.get(15)),

@@ -95,6 +95,7 @@ public interface StubGitHub extends GitHub {
                 0,
                 0,
                 0,
+                1,
                 PullRequestDetails.Mergeable.UNKNOWN,
                 PullRequest.Review.NONE,
                 0,

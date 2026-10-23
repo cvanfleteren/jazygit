@@ -27,6 +27,7 @@ class PullRequestDetailsTest {
                 0,
                 0,
                 0,
+                1,
                 PullRequestDetails.Mergeable.UNKNOWN,
                 Review.REQUIRED,
                 0,
@@ -51,6 +52,14 @@ class PullRequestDetailsTest {
     void aMergedOrClosedPullRequestIsNotListed() {
         assertEquals(Option.none(), details(State.MERGED, List.empty()).listed());
         assertEquals(Option.none(), details(State.CLOSED, List.empty()).listed());
+    }
+
+    @Test
+    void howFarBehindItsBaseLeavesItsOwnCommitsAsTheyAre() {
+        PullRequestDetails behind = details(State.OPEN, List.empty()).withBehindBase(5);
+
+        assertEquals(1, behind.commits());
+        assertEquals(Option.of(5), behind.behindBase());
     }
 
     @Test

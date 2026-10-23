@@ -98,6 +98,7 @@ class CommentUpdateTest {
                         DETAILS.additions(),
                         DETAILS.deletions(),
                         DETAILS.changedFiles(),
+                        1,
                         DETAILS.mergeable(),
                         DETAILS.review(),
                         DETAILS.comments(),

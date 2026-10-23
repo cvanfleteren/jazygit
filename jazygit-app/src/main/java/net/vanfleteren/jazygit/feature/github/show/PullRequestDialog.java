@@ -344,8 +344,7 @@ public final class PullRequestDialog implements PopupView {
                                 text(" −" + pr.deletions()).addClass(Theme.Classes.DIFF_REMOVED),
                                 text(" "
                                         + Messages.get(
-                                                "dialog.pullRequest.changes.files",
-                                                String.valueOf(pr.changedFiles())))),
+                                                "dialog.pullRequest.changes.files", pr.changedFiles(), pr.commits()))),
                         Line.labelled("dialog.pullRequest.mergeable", mergeable(pr.mergeable())),
                         Line.blank(),
                         Line.pieces(List.<StyledElement<?>>of(label("dialog.pullRequest.review"))
