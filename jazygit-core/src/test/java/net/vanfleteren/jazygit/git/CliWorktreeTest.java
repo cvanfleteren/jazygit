@@ -93,28 +93,28 @@ class CliWorktreeTest {
                 List.of(
                         new Worktree(
                                 Path.of("/repos/app feature"),
-                                new Head.OnBranch(new BranchName("feature/x"), Option.of(new Sha(A))),
+                                Option.of(new Head.OnBranch(new BranchName("feature/x"), Option.of(new Sha(A)))),
                                 false,
                                 true,
                                 Option.of("on usb"),
                                 false),
                         new Worktree(
                                 Path.of("/repos/app"),
-                                new Head.OnBranch(new BranchName("main"), Option.of(new Sha(A))),
+                                Option.of(new Head.OnBranch(new BranchName("main"), Option.of(new Sha(A)))),
                                 true,
                                 false,
                                 Option.none(),
                                 false),
                         new Worktree(
                                 Path.of("/repos/detached"),
-                                new Head.Detached(new Sha(A)),
+                                Option.of(new Head.Detached(new Sha(A))),
                                 false,
                                 false,
                                 Option.of(""),
                                 false),
                         new Worktree(
                                 Path.of("/repos/gone"),
-                                new Head.OnBranch(new BranchName("gone"), Option.of(new Sha(A))),
+                                Option.of(new Head.OnBranch(new BranchName("gone"), Option.of(new Sha(A)))),
                                 false,
                                 false,
                                 Option.none(),
@@ -130,7 +130,7 @@ class CliWorktreeTest {
         assertEquals(
                 List.of(new Worktree(
                         Path.of("/repos/linked"),
-                        new Head.OnBranch(new BranchName("main"), Option.of(new Sha(A))),
+                        Option.of(new Head.OnBranch(new BranchName("main"), Option.of(new Sha(A)))),
                         false,
                         true,
                         Option.none(),
@@ -141,7 +141,7 @@ class CliWorktreeTest {
     @Test
     void aRepositoryWithoutCommitsHasABranchWithoutATipAndMalformedOutputIsAnError() {
         assertEquals(
-                List.of(new Head.OnBranch(new BranchName("main"), Option.none())),
+                List.of(Option.of(new Head.OnBranch(new BranchName("main"), Option.none()))),
                 CliWorktree.parse(
                                 worktree("worktree /repos/new", "HEAD " + ZEROES, "branch refs/heads/main"),
                                 Path.of("/repos/new"))
@@ -151,20 +151,34 @@ class CliWorktreeTest {
                 new GitError.UnexpectedOutput("/repos/app"),
                 CliWorktree.parse(worktree("/repos/app"), Path.of("/repos/app")).getLeft());
         assertEquals(
-                new GitError.UnexpectedOutput("worktree /repos/app"),
-                CliWorktree.parse(worktree("worktree /repos/app"), Path.of("/repos/app"))
-                        .getLeft());
-        assertEquals(
                 new GitError.UnexpectedOutput("not a sha"),
                 CliWorktree.parse(worktree("worktree /repos/app", "HEAD not a sha"), Path.of("/repos/app"))
                         .getLeft());
     }
 
     @Test
+    void aWorktreeWhoseHeadGitCannotResolveIsListedWithoutOne() {
+        // While git worktree add sets it up, its HEAD is a placeholder of zeroes, detached; with a broken HEAD
+        // file, git says neither branch nor detached.
+        String raw = worktree("worktree /repos/app", "HEAD " + A, "branch refs/heads/main")
+                + worktree("worktree /repos/adding", "HEAD " + ZEROES, "detached")
+                + worktree("worktree /repos/broken", "HEAD " + ZEROES)
+                + worktree("worktree /repos/headless");
+
+        assertEquals(
+                List.of(
+                        Option.of(new Head.OnBranch(new BranchName("main"), Option.of(new Sha(A)))),
+                        Option.<Head>none(),
+                        Option.<Head>none(),
+                        Option.<Head>none()),
+                CliWorktree.parse(raw, Path.of("/repos/app")).get().map(Worktree::head));
+    }
+
+    @Test
     void aNewWorktreeGoesNextToThisOneNamedAfterItAndTheBranch() {
         Worktree app = new Worktree(
                 Path.of("/repos/app"),
-                new Head.OnBranch(new BranchName("main"), Option.none()),
+                Option.of(new Head.OnBranch(new BranchName("main"), Option.none())),
                 true,
                 true,
                 Option.none(),
@@ -320,6 +334,6 @@ class CliWorktreeTest {
         Worktree detached = provider.worktrees().get().last();
         assertEquals(main.resolveSibling("detached"), detached.path());
         assertEquals(Option.none(), detached.branch());
-        assertInstanceOf(Head.Detached.class, detached.head());
+        assertInstanceOf(Head.Detached.class, detached.head().get());
     }
 }

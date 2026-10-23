@@ -42,14 +42,14 @@ class BranchesPanelTest {
                 .mapRepo(repo -> repo.withWorktrees(new Loadable.Loaded<>(List.of(
                         new Worktree(
                                 java.nio.file.Path.of("/repos/app"),
-                                new Head.OnBranch(new BranchName("main"), Option.of(new Sha("1"))),
+                                Option.of(new Head.OnBranch(new BranchName("main"), Option.of(new Sha("1")))),
                                 true,
                                 true,
                                 Option.none(),
                                 false),
                         new Worktree(
                                 java.nio.file.Path.of("/repos/app-feature"),
-                                new Head.OnBranch(new BranchName("feature"), Option.of(new Sha("2"))),
+                                Option.of(new Head.OnBranch(new BranchName("feature"), Option.of(new Sha("2")))),
                                 false,
                                 false,
                                 Option.none(),
@@ -312,7 +312,7 @@ class BranchesPanelTest {
         Model two = withWorktrees(before);
         Worktree added = new Worktree(
                 java.nio.file.Path.of("/repos/app-other"),
-                new Head.OnBranch(new BranchName("other"), Option.of(new Sha("3"))),
+                Option.of(new Head.OnBranch(new BranchName("other"), Option.of(new Sha("3")))),
                 false,
                 false,
                 Option.none(),

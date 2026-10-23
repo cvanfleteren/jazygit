@@ -14,7 +14,7 @@ class WorktreesListTest {
     void aWorktreeSaysWhatItHasCheckedOutAndWhatKeepsItFromBeingRemoved() {
         Worktree detached = new Worktree(
                 java.nio.file.Path.of("/repos/x"),
-                new Head.Detached(new Sha("1234567890")),
+                Option.of(new Head.Detached(new Sha("1234567890"))),
                 false,
                 false,
                 Option.of(""),
@@ -33,11 +33,19 @@ class WorktreesListTest {
     }
 
     @Test
+    void aWorktreeWhoseHeadGitCannotResolveSaysSo() {
+        Worktree broken =
+                new Worktree(java.nio.file.Path.of("/repos/x"), Option.none(), false, false, Option.none(), false);
+
+        assertEquals("x (HEAD unknown)", WorktreesList.row(Repo.LOADING, broken).text());
+    }
+
+    @Test
     void aWorktreeWithChangesIsMarkedAndItsBranchSaysHowFarItIsFromItsUpstream() {
         java.nio.file.Path path = java.nio.file.Path.of("/repos/x");
         Worktree worktree = new Worktree(
                 path,
-                new Head.OnBranch(new BranchName("feature"), Option.of(new Sha("1234567890"))),
+                Option.of(new Head.OnBranch(new BranchName("feature"), Option.of(new Sha("1234567890")))),
                 false,
                 false,
                 Option.none(),
@@ -77,7 +85,7 @@ class WorktreesListTest {
     void theWorktreeThatIsShownStandsOutByTheStyleOfItsNameAlone() {
         Worktree shown = new Worktree(
                 java.nio.file.Path.of("/repos/x"),
-                new Head.OnBranch(new BranchName("feature"), Option.of(new Sha("1234567890"))),
+                Option.of(new Head.OnBranch(new BranchName("feature"), Option.of(new Sha("1234567890")))),
                 false,
                 true,
                 Option.none(),
@@ -93,7 +101,7 @@ class WorktreesListTest {
     void aWorktreeLockedForAReasonSaysWhy() {
         Worktree locked = new Worktree(
                 java.nio.file.Path.of("/repos/x"),
-                new Head.OnBranch(new BranchName("feature"), Option.of(new Sha("1234567890"))),
+                Option.of(new Head.OnBranch(new BranchName("feature"), Option.of(new Sha("1234567890")))),
                 false,
                 false,
                 Option.of("on usb"),

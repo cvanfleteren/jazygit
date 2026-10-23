@@ -64,14 +64,14 @@ class WorktreeUpdateTest {
     private static final BranchName TAKEN = new BranchName("taken");
     private static final Worktree MAIN = new Worktree(
             Path.of("/repos/app"),
-            new Head.OnBranch(new BranchName("main"), Option.of(new Sha("aaaa"))),
+            Option.of(new Head.OnBranch(new BranchName("main"), Option.of(new Sha("aaaa")))),
             true,
             true,
             Option.none(),
             false);
     private static final Worktree LINKED = new Worktree(
             Path.of("/repos/app-taken"),
-            new Head.OnBranch(TAKEN, Option.of(new Sha("1111"))),
+            Option.of(new Head.OnBranch(TAKEN, Option.of(new Sha("1111")))),
             false,
             false,
             Option.none(),
@@ -548,8 +548,8 @@ class WorktreeUpdateTest {
 
     @Test
     void withoutABranchOrWhileItIsBusyOnlyTheWorktreeIsRemoved() {
-        Worktree detached =
-                new Worktree(LINKED.path(), new Head.Detached(new Sha("1111")), false, false, Option.none(), false);
+        Worktree detached = new Worktree(
+                LINKED.path(), Option.of(new Head.Detached(new Sha("1111"))), false, false, Option.none(), false);
         Model asked = Update.update(worktrees(MAIN, detached), new RemoveWorktreeMsg.Requested("/repos/app-taken"))
                 .model();
         assertEquals(Option.of(new RemoveWorktreePopup("/repos/app-taken", "app-taken", Option.none())), asked.popup());
@@ -854,7 +854,12 @@ class WorktreeUpdateTest {
 
         Worktree mainNotShown = new Worktree(MAIN.path(), MAIN.head(), true, false, Option.none(), false);
         Worktree shownLinked = new Worktree(
-                Path.of("/repos/app-shown"), new Head.Detached(new Sha("2222")), false, true, Option.none(), false);
+                Path.of("/repos/app-shown"),
+                Option.of(new Head.Detached(new Sha("2222"))),
+                false,
+                true,
+                Option.none(),
+                false);
         Next shown = Update.update(
                 worktrees(mainNotShown, shownLinked), new RemoveWorktreeMsg.Requested("/repos/app-shown"));
         assertEquals(Option.none(), shown.model().popup(RemoveWorktreePopup.class));
@@ -883,7 +888,7 @@ class WorktreeUpdateTest {
         // Worktrees next to a bare repository: none is the main one.
         Worktree shown = new Worktree(
                 Path.of("/repos/proj/main"),
-                new Head.OnBranch(new BranchName("main"), Option.of(new Sha("aaaa"))),
+                Option.of(new Head.OnBranch(new BranchName("main"), Option.of(new Sha("aaaa")))),
                 false,
                 true,
                 Option.none(),
@@ -895,7 +900,12 @@ class WorktreeUpdateTest {
                         .popup());
 
         Worktree taken = new Worktree(
-                Path.of("/repos/app-feature"), new Head.Detached(new Sha("3333")), false, false, Option.none(), false);
+                Path.of("/repos/app-feature"),
+                Option.of(new Head.Detached(new Sha("3333"))),
+                false,
+                false,
+                Option.none(),
+                false);
         assertEquals(
                 Option.of(new NewWorktreePopup(new WorktreeSource.Existing(FEATURE), "/repos/app-feature-2")),
                 Update.update(worktrees(MAIN, LINKED, taken), new AddWorktreeMsg.Requested(FEATURE))
