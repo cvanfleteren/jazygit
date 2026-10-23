@@ -42,7 +42,10 @@ public final class RecentReposDialog {
         return List.of(PopupSlot.returningToFocus(new PickDialog<>(SPEC, dispatch)));
     }
 
-    static PickDialog.Row<String> row(RecentRepo repo) {
+    /**
+     * The row of {@code repo}: its name, its checked out branch and the directory it is in.
+     */
+    public static PickDialog.Row<String> row(RecentRepo repo) {
         Path directory = Path.of(repo.directory());
         return new PickDialog.Row<>(
                 repo.directory(),
@@ -70,7 +73,7 @@ public final class RecentReposDialog {
     /**
      * How {@code directory} is shown: from {@code ~} when it is in the home directory.
      */
-    static String shown(String directory) {
+    public static String shown(String directory) {
         return directory.equals(HOME) || directory.startsWith(HOME + File.separator)
                 ? "~" + directory.substring(HOME.length())
                 : directory;

@@ -104,6 +104,25 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void initMakesARepositoryWithoutCommitsAndOpensIt(@TempDir Path elsewhere) throws Exception {
+        Path plain = Files.createDirectories(elsewhere.resolve("plain"));
+        assumeTrue(!gitSucceedsIn(plain, "rev-parse"), "the temporary directory is inside a repository");
+
+        CliGitInfoProvider initialised = CliGitInfoProvider.init(plain).get();
+
+        assertEquals(plain.toRealPath(), initialised.worktree().toRealPath());
+        assertEquals(Option.none(), initialised.status().get().headCommit());
+        assertTrue(gitSucceedsIn(plain, "rev-parse", "--git-dir"));
+    }
+
+    @Test
+    void initFailsWhereGitCannotMakeARepository(@TempDir Path elsewhere) {
+        Path missing = elsewhere.resolve("missing");
+
+        assertTrue(CliGitInfoProvider.init(missing).isLeft());
+    }
+
+    @Test
     void statusFollowsTheWorkingTree() throws Exception {
         assertEquals(List.of(), provider.status().get().files());
 

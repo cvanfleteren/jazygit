@@ -23,9 +23,12 @@ empty on an unborn HEAD, and the acceptance tests start it on a plain `git init`
 
 ### A startup program before the app
 
-- A small TamboUI program of its own, Elm-like as the app is (its own model and update), runs before `JazygitApp`
-  is built. It ends with the directory of a repository, which goes to `start` as the start directory did, or with
-  quitting.
+- A small TamboUI program of its own, `StartApp`, runs before `JazygitApp` is built. It ends with the working tree
+  of a repository, which `start` opens as it opened the start directory, or with quitting.
+- It is Elm-like as the app is, with its own messages, update and commands (`feature.start`). Its model is the
+  app's `Model`, with no repository: only its popup and preferences are used, so the dialogs are the app's own
+  (`ChoiceDialog`, `TextInputDialog`, `PickDialog`), and look and work as they do. Its commands need no `Env`, as
+  there is no repository yet; `StartApp` runs them on a thread of their own.
 - Not: an app without a repository (`Option<Repo>` in the model, every pane knowing about it), showing the dialog
   as a `Popup`. That touches nearly everything, for a dialog shown before anything else.
 - The theme and the settings are loaded before it, so it looks like the app, `--theme` included.
@@ -34,15 +37,16 @@ empty on an unborn HEAD, and the acceptance tests start it on a plain `git init`
 
 - Centred, as the app's dialogs: `<absolute path> is not inside a git repository`, or `<absolute path> does not
   exist`.
-- The options are a list: ↑/↓ and j/k move, Enter chooses, and each has a key of its own:
+- The options are a list, as in the app's other dialogs: ↑/↓ move, Enter chooses, `/` filters, and each has a key
+  of its own:
   - **i: init here.** A plain `git init` in the start directory, as the user's git config has it (the initial
-    branch, templates); no initial commit. Then the repository opens. When it fails, git's error shows in the
-    dialog, which stays. Not offered when the path does not exist: no creating the folder, as a typo would create
+    branch, templates); no initial commit. Then the repository opens. When it fails, git's error shows in a box
+    under the dialog, which stays. Not offered when the path does not exist: no creating the folder, as a typo would create
     one.
-  - **o: open another folder…** A path is typed: relative to the start directory, `~` for the home directory, no
-    tab completion. A folder inside a repository opens it, searching upwards as git does. A folder outside one
+  - **o: open another folder…** A path is typed: relative to the folder the dialog is about, the start directory
+    at first, `~` for the home directory, no tab completion. A folder inside a repository opens it, searching upwards as git does. A folder outside one
     shows the dialog again, for that folder, so it can be initialised there. A path that does not exist shows an
-    error under the input, which keeps what was typed. Esc goes back to the options.
+    error in a box under the input, which keeps what was typed. Esc goes back to the options.
   - **r: recent repositories.** The list of the recent repositories, with the rows the app shows (`RecentRepo`).
     Choosing one opens it, Esc goes back to the options. Not offered when there are none.
   - **q: quit.** Esc, q and Ctrl-C quit too. The exit code is 0, with nothing on stderr: the user chose to.
