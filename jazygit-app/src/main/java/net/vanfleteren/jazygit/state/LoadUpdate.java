@@ -140,11 +140,14 @@ public final class LoadUpdate {
 
     /**
      * Reads what shows a branch again when the branch moved: the log of the highlighted one, and the divergence
-     * that is open, once however many of its branches moved.
+     * that is open, once however many of its branches moved. The commits of a branch that is gone are closed.
      */
     private static Next branchesLoaded(Model before, Model next) {
         Next reloaded = reloadDivergence(
-                before, reloadMovedLog(next, branch -> !tipOf(before, branch).equals(tipOf(next, branch))));
+                before,
+                reloadMovedLog(
+                        closeGoneBranchCommits(next),
+                        branch -> !tipOf(before, branch).equals(tipOf(next, branch))));
         return new Next(reloaded.model(), reloaded.cmds().appendAll(AheadUpdate.branchesLoaded(before, next)));
     }
 
@@ -167,6 +170,17 @@ public final class LoadUpdate {
                                         ? new Next(model, next.cmds().append(view.load()))
                                         : next))
                 .getOrElse(next);
+    }
+
+    /**
+     * {@code model} with the commits of the branch that are open closed, quietly, if the branch is gone.
+     */
+    private static Model closeGoneBranchCommits(Model model) {
+        return model.repoView()
+                .branchCommits()
+                .filter(view -> tipOf(model, view.branch()).contains(Option.none()))
+                .map(gone -> model.mapRepoView(repoView -> repoView.withBranchCommits(Option.none())))
+                .getOrElse(model);
     }
 
     /**
@@ -211,11 +225,14 @@ public final class LoadUpdate {
     }
 
     /**
-     * Applies {@code f} to the detail of the divergence that is open, if it is the one of {@code sha}.
+     * Applies {@code f} to the detail of the divergence that is open, and to that of the commits of a branch that are,
+     * if it is the one of {@code sha}.
      */
     private static Model withDetail(Model model, Sha sha, UnaryOperator<Preview<Sha, DiffText>> f) {
         return model.mapRepoView(repoView -> repoView.withDivergence(
-                repoView.divergence().map(view -> view.withDetail(Preview.updated(view.detail(), sha, f)))));
+                        repoView.divergence().map(view -> view.withDetail(Preview.updated(view.detail(), sha, f))))
+                .withBranchCommits(
+                        repoView.branchCommits().map(view -> view.withDetail(Preview.updated(view.detail(), sha, f)))));
     }
 
     /**

@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.diff;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
+import net.vanfleteren.jazygit.state.BranchCommitsView;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.DivergenceView;
 import net.vanfleteren.jazygit.state.Model;
@@ -34,12 +35,15 @@ public final class DiffOptionsUpdate {
     private static Next changed(Model model, DiffOptions options) {
         Option<DivergenceView> divergence =
                 model.repoView().divergence().map(view -> view.withDetail(reloading(view.detail())));
+        Option<BranchCommitsView> branchCommits =
+                model.repoView().branchCommits().map(view -> view.withDetail(reloading(view.detail())));
         List<Cmd> loads = List.<Cmd>empty()
                 .appendAll(model.repoView().fileDiff().map(diff -> new Cmd.LoadFileDiff(diff.key(), options)))
                 .appendAll(model.repoView()
                         .commitDetail()
                         .toList()
                         .appendAll(model.repoView().divergence().flatMap(DivergenceView::detail))
+                        .appendAll(model.repoView().branchCommits().flatMap(BranchCommitsView::detail))
                         .map(detail -> new Cmd.LoadCommitDetail(detail.key(), options)))
                 .appendAll(model.repoView().stashDetail().map(detail -> new Cmd.LoadStashDetail(detail.key(), options)))
                 .distinct();
@@ -48,7 +52,8 @@ public final class DiffOptionsUpdate {
                         .mapRepoView(repoView -> repoView.withFileDiff(reloading(repoView.fileDiff()))
                                 .withCommitDetail(reloading(repoView.commitDetail()))
                                 .withStashDetail(reloading(repoView.stashDetail()))
-                                .withDivergence(divergence)),
+                                .withDivergence(divergence)
+                                .withBranchCommits(branchCommits)),
                 loads);
     }
 

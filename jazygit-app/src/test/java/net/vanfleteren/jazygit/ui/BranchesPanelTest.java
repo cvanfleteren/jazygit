@@ -8,6 +8,7 @@ import dev.tamboui.tui.event.MouseButton;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
+import net.vanfleteren.jazygit.feature.branch.commits.BranchCommitsMsg;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchCmd;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.pull.PullCmd;
@@ -538,6 +539,77 @@ class BranchesPanelTest {
                 highlighted);
         assertEquals(java.util.List.of("commit"), opened);
         assertEquals(java.util.List.of(new UpstreamMsg.DivergenceClosed(), new BranchesTabMsg.Switched(1)), dispatched);
+    }
+
+    @Test
+    void enterOnABranchOpensItsCommitsOnTheLocalAndTheRemoteTab() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        BranchesPanel sending = new BranchesPanel(dispatched::add, tab -> {});
+        Model remotes = withRemotes(before);
+        for (Model shown : List.of(before, remotes)) {
+            try (ToolkitTestRunner testRunner =
+                    ToolkitTestRunner.runTest(() -> sending.render(shown, BranchesPanel.ID))) {
+                SettledPilot.focus(testRunner, BranchesPanel.ID);
+                RenderedText.of(testRunner, () -> sending.render(shown, BranchesPanel.ID));
+                SettledPilot.of(testRunner).press(KeyCode.ENTER);
+                SettledPilot.of(testRunner).pause();
+                SettledPilot.of(testRunner).quit();
+            }
+        }
+
+        assertEquals(
+                java.util.List.of(
+                        new BranchCommitsMsg.Opened(new BranchRef.Local(new Branch.Name("main"))),
+                        new BranchCommitsMsg.Opened(
+                                new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("feature"))))),
+                dispatched);
+    }
+
+    @Test
+    void theCommitsOfABranchAreListedInPlaceOfTheBranchesUnderItsNameAndHowManyAreAhead() throws Exception {
+        Commit newer = new Commit(new Sha("a2"), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, "Ours", "");
+        Commit older = new Commit(new Sha("a1"), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, "Shared", "");
+        BranchRef feature = new BranchRef.Local(new Branch.Name("feature"));
+        BranchRef base = new BranchRef.Local(new Branch.Name("main"));
+        Model open = before.mapRepoView(repoView -> repoView.withBranchCommits(Option.of(BranchCommitsView.of(feature)))
+                .withBranchLog(Option.of(new Preview<>(feature, new Loadable.Loaded<>(List.of(newer, older)))))
+                .withBranchAhead(Option.of(new Preview<>(
+                        feature,
+                        new Loadable.Loaded<>(
+                                Option.of(new Ahead(new Sha("a2"), base, List.of(newer), false, Option.of(older))))))));
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        BranchesPanel sending = new BranchesPanel(dispatched::add, tab -> {});
+        java.util.List<Option<Msg>> highlighted = new java.util.ArrayList<>();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> sending.render(open, BranchesPanel.ID))) {
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
+            String screen = RenderedText.ofLarge(testRunner, () -> sending.render(open, BranchesPanel.ID));
+            highlighted.add(sending.selectionChange(open));
+            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner).pause();
+            highlighted.add(sending.selectionChange(open));
+            SettledPilot.of(testRunner).press(KeyCode.ENTER);
+            SettledPilot.of(testRunner).press('b');
+            SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
+            SettledPilot.of(testRunner).press(']');
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).quit();
+
+            assertTrue(screen.contains("feature · 1 ahead of main"), screen);
+            assertTrue(screen.contains("a2 AL ○ Ours"), screen);
+            assertTrue(screen.contains("a1 AL ○ Shared"), screen);
+            assertFalse(screen.contains("Remote"), screen);
+        }
+        assertEquals(
+                java.util.List.of(
+                        Option.of(new SelectionMsg.BranchCommitSelected(new Sha("a2"))),
+                        Option.of(new SelectionMsg.BranchCommitSelected(new Sha("a1")))),
+                highlighted);
+        // Enter does nothing on a commit.
+        assertEquals(
+                java.util.List.of(
+                        new AheadMsg.Toggled(), new BranchCommitsMsg.Closed(), new BranchesTabMsg.Switched(1)),
+                dispatched);
+        assertFalse(BranchesPanel.showsSpinner(open.withBusyBranch(feature, PushCmd.PUSH)));
     }
 
     /**

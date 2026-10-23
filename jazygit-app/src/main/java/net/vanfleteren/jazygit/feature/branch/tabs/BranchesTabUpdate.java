@@ -10,7 +10,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
  * Switching the branches pane between the local branches, the remote ones and the worktrees. Switching closes the
- * divergence listed in place of the local branches.
+ * divergence listed in place of the local branches, and the commits of a branch listed in place of the branches.
  */
 public final class BranchesTabUpdate {
 
@@ -28,7 +28,7 @@ public final class BranchesTabUpdate {
      * Shows {@code tab}; for the worktrees, reads which have changes right away rather than at the next tick.
      */
     private static Next switched(Model model, BranchesTab tab) {
-        return Update.readWorktreeChanges(
-                model.mapRepoView(repoView -> repoView.withBranchesTab(tab).withDivergence(Option.none())));
+        return Update.readWorktreeChanges(model.mapRepoView(repoView ->
+                repoView.withBranchesTab(tab).withDivergence(Option.none()).withBranchCommits(Option.none())));
     }
 }

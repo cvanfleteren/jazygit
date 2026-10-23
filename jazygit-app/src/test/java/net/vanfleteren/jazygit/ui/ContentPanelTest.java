@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.stream.Collectors;
+import net.vanfleteren.jazygit.feature.branch.commits.BranchCommitsMsg;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
@@ -259,6 +260,37 @@ class ContentPanelTest {
             assertFalse(screen.contains("Log:"), screen);
         }
 
+        String area = content.areaOfPane(selected, BranchesPanel.ID).get();
+        assertEquals(Option.of(BranchesPanel.ID), content.paneOfArea(selected, area));
+    }
+
+    @Test
+    void withTheCommitsOfABranchOpenTheBranchesShowTheHighlightedOneWhichCanBeFocused() throws Exception {
+        BranchRef feature = new BranchRef.Local(new Branch.Name("feature"));
+        Model logRead = Update.update(
+                        Update.update(TestModels.loaded(), new SelectionMsg.BranchSelected(feature))
+                                .model(),
+                        new LoadMsg.BranchLogLoaded(feature, TestModels.FEATURE_COMMITS))
+                .model();
+        Model open =
+                Update.update(logRead, new BranchCommitsMsg.Opened(feature)).model();
+        Model loading = Update.update(open, new SelectionMsg.BranchCommitSelected(new Sha("ffff")))
+                .model();
+        Model selected = Update.update(
+                        loading,
+                        new LoadMsg.CommitDetailLoaded(
+                                new Sha("ffff"), DiffOptions.DEFAULT, DiffText.of("+added line")))
+                .model();
+
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> content.render(selected, BranchesPanel.ID))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> content.render(selected, BranchesPanel.ID));
+            assertTrue(screen.contains("Commit: ffff"), screen);
+            assertTrue(screen.contains("+added line"), screen);
+            assertFalse(screen.contains("Log:"), screen);
+        }
+
+        assertEquals(Option.none(), content.areaOfPane(loading, BranchesPanel.ID));
         String area = content.areaOfPane(selected, BranchesPanel.ID).get();
         assertEquals(Option.of(BranchesPanel.ID), content.paneOfArea(selected, area));
     }

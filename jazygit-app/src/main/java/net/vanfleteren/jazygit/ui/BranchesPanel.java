@@ -23,7 +23,8 @@ import net.vanfleteren.jazygit.state.*;
  * shows that list.
  * <p>
  * While a divergence is open, it is listed in place of the local branches, by a {@link DivergenceList}; Escape goes
- * back to the branches.
+ * back to the branches. So it does from the commits of a branch, which Enter on a branch lists in place of the
+ * branches, by a {@link BranchCommitsList}.
  */
 public class BranchesPanel {
 
@@ -35,6 +36,7 @@ public class BranchesPanel {
     private final RemoteBranchesList remoteList;
     private final WorktreesList worktreeList;
     private final DivergenceList divergenceList;
+    private final BranchCommitsList branchCommitsList;
     private final Consumer<BranchesTab> tabClicked;
 
     /**
@@ -71,12 +73,13 @@ public class BranchesPanel {
             Clock clock,
             Theme.Highlights highlights) {
         this.tabClicked = tabClicked;
-        // Only the list shown is rendered, that of the tab or the divergence in place of the local branches, so
-        // only it gets keys: TamboUI routes them to the elements of the last frame.
+        // Only the list shown is rendered, that of the tab, or the divergence or the commits of a branch in its place,
+        // so only it gets keys: TamboUI routes them to the elements of the last frame.
         localList = new LocalBranchesList(ID, dispatch, clock, highlights);
         remoteList = new RemoteBranchesList(ID, dispatch, clock, highlights);
         worktreeList = new WorktreesList(ID, dispatch, highlights);
         divergenceList = new DivergenceList(ID, dispatch, openCommit, highlights);
+        branchCommitsList = new BranchCommitsList(ID, dispatch, highlights);
     }
 
     /**
@@ -134,9 +137,10 @@ public class BranchesPanel {
     public Panel render(Model model, String focusedId, String activeId) {
         boolean focused = ID.equals(focusedId);
         boolean active = ID.equals(activeId);
-        return divergenceList
-                .render(divergence(model), focused, active)
-                .getOrElse(() -> tabPanel(model, focused, active));
+        // Both are rendered also when they are not shown, to know when they are opened again.
+        Option<Panel> divergence = divergenceList.render(divergence(model), focused, active);
+        Option<Panel> branchCommits = branchCommitsList.render(model, focused, active);
+        return divergence.orElse(branchCommits).getOrElse(() -> tabPanel(model, focused, active));
     }
 
     private Panel tabPanel(Model model, boolean focused, boolean active) {
@@ -174,12 +178,13 @@ public class BranchesPanel {
 
     /**
      * Whether the pane shows a spinner in {@code model}: on a busy branch in the list it shows, which a divergence
-     * shown in its place hides.
+     * or the commits of a branch shown in its place hide.
      */
     public static boolean showsSpinner(Model model) {
         BranchesTab tab = model.repoView().branchesTab();
         return model.screen() == Screen.REPOSITORY
                 && divergence(model).isEmpty()
+                && model.repoView().branchCommits().isEmpty()
                 && model.jobs()
                         .busy()
                         .keySet()
@@ -201,7 +206,10 @@ public class BranchesPanel {
      * holds.
      */
     public Option<Msg> selectionChange(Model model) {
-        return divergence(model).map(divergenceList::selectionChange).getOrElse(() -> tabSelectionChange(model));
+        return divergence(model)
+                .map(divergenceList::selectionChange)
+                .orElse(() -> model.repoView().branchCommits().map(branchCommitsList::selectionChange))
+                .getOrElse(() -> tabSelectionChange(model));
     }
 
     private Option<Msg> tabSelectionChange(Model model) {

@@ -24,8 +24,8 @@ of the branches, but only those that differ from its upstream, and only for a lo
 
 - The whole log of the branch, `git log <branch>`, as `GitInfoProvider.log(BranchRef)` reads it: at most 300
   commits, as the commits pane, and no paging.
-- The rows look as those of the commits pane, rails of the graph included. The rendering of a row and of the graph
-  is taken out of `CommitsPanel` into a widget both use, so that they do not drift apart.
+- The rows look as those of the commits pane, rails of the graph included: they are drawn by the same functions,
+  `CommitsPanel.rows` and `CommitsPanel.marked`, so that they do not drift apart.
 - The commits are compared with the base of the branch as ADR 0020 sets out, as the commits pane and the log of a
   highlighted branch are: those on the base are dimmed, and the title counts the others, e.g.
   `feature/x · 4 ahead of origin/main`. More than 300 ahead shows `300+ ahead` and dims nothing. A branch without a
@@ -47,21 +47,25 @@ pane (reword, fixup, cherry-pick, …), nor of the branches pane (`u`, checkout,
 
 As the divergence view is, and next to it, not through it nor a stack of views:
 
-- `RepoView.branchCommits: Option<BranchCommitsView>`, holding the `BranchRef`, the commits as a
-  `Loadable<List<Commit>>`, what of them is ahead of the base as an `Ahead` of its own, and a `Preview` of the
-  highlighted commit of its own.
-- The `Ahead` is read by `Cmd.LoadAhead` once the log is read, and again when the tip of the base moved, as for the
-  other logs. Until it arrives, or when reading it failed, the list is shown unmarked.
-- A scope of its own, `Scopes.BRANCH_COMMITS`, with Esc and the moves; a `SelectionMsg.BranchCommitSelected`; and a
-  content area of its own, mapped to the branches pane, as `DIVERGENCE_AREA_ID` is.
-- When the branches are read anew (`BranchesLoaded`) and the tip of the branch moved, e.g. after a fetch, its log is
-  read again and the same sha stays highlighted while it is still listed. When the branch is gone, the list closes.
-  What arrives for another branch, or for a list since closed, is dropped. This is as `reloadDivergence` does.
+- `RepoView.branchCommits: Option<BranchCommitsView>`, holding the `BranchRef` and a `Preview` of the highlighted
+  commit of its own.
+- The commits are not held twice. While the list is open, the branch is the one highlighted in the branches pane:
+  Enter was pressed on it, and the branches, which are not drawn, cannot highlight another. So its commits are the
+  log of the highlighted branch, `RepoView.branchLog`, and what of them is ahead of the base is
+  `RepoView.branchAhead`. Both are already read for it, and read again as they are for it: the log when the tip of
+  the branch moved, e.g. after a fetch, and what is ahead when the tip of its base moved. A log read for another
+  branch is not shown as its: the list says it is loading. Until what is ahead arrives, or when reading it failed,
+  the list is shown unmarked.
+- A scope of its own, `Scopes.BRANCH_COMMITS`, with Esc, `[`, `]`, `b` and the moves; a
+  `SelectionMsg.BranchCommitSelected`; and a content area of its own, mapped to the branches pane, as
+  `DIVERGENCE_AREA_ID` is. Enter is named in the keymap, as `Keymap.ENTER`, for the binding on a branch.
+- When the branches are read anew, the same sha stays highlighted while it is still listed. When the branch is gone,
+  the list closes, quietly.
 
 ## Consequences
 
-- Opening a branch takes a git process for its log, the few of ADR 0020 to compare it with its base, and each commit
-  highlighted one more, as in the commits pane.
+- Opening a branch takes no git process of its own: its log and what is ahead were read when it was highlighted.
+  Each commit highlighted takes one, as in the commits pane.
 - The commits of another branch can be looked at, but not acted on: cherry-picking from it, or searching
   are left for later.
 - The divergence view and this list are two drill-downs of the branches pane held side by side. A third would be the
