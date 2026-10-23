@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.git.model.Divergence;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.GitMetadata;
+import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.InProgressAction;
 import net.vanfleteren.jazygit.git.model.MergeMode;
@@ -32,7 +33,6 @@ import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
-import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.git.model.ResetMode;
 import net.vanfleteren.jazygit.git.model.ResetTarget;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -113,8 +113,7 @@ public interface StubGitProvider extends GitInfoProvider {
     default Either<ProcessError, List<Worktree>> worktrees() {
         return Either.right(List.of(new Worktree(
                 worktree(),
-                Option.of(new Sha("aaaa")),
-                Option.of(new Branch.Name("main")),
+                new Head.OnBranch(new Branch.Name("main"), Option.of(new Sha("aaaa"))),
                 true,
                 true,
                 Option.none(),

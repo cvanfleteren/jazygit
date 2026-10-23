@@ -6,7 +6,7 @@ import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.model.Branch;
-import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
+import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

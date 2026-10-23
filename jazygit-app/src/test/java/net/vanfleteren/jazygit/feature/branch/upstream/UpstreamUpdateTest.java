@@ -12,7 +12,7 @@ import net.vanfleteren.jazygit.feature.commit.reset.ResetCmd;
 import net.vanfleteren.jazygit.feature.commit.reset.ResetMsg;
 import net.vanfleteren.jazygit.feature.commit.reset.ResetPopup;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
+import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.DivergenceView;
