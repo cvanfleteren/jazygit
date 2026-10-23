@@ -13,7 +13,13 @@ import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Queue;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BooleanSupplier;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg;
@@ -675,6 +681,75 @@ class ProgramTest {
 
         assertEquals(java.util.List.of("third", "fourth"), ran);
         assertEquals(java.util.List.of("third", "fourth"), heard);
+    }
+
+    /**
+     * Notes in {@code ran} that it ran, then waits for {@code release}; it runs where {@code background} says, and
+     * holds {@code guard}, if any.
+     */
+    private record Guarded(
+            String name,
+            boolean background,
+            Option<Cmd.Guard> guard,
+            CountDownLatch release,
+            java.util.List<String> ran)
+            implements Cmd {
+
+        @Override
+        public Msg run(Env env) {
+            ran.add(name);
+            try {
+                release.await();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            return new Heard(name, new ArrayList<>());
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return new Heard(name, new ArrayList<>());
+        }
+    }
+
+    @Test
+    void aCommandWaitsForTheOneThatHoldsItsGuardAndOthersDoNot() throws InterruptedException {
+        ExecutorService io = Executors.newSingleThreadExecutor();
+        ExecutorService background = Executors.newFixedThreadPool(2);
+        try {
+            // The messages the commands answer with are not handled: only which commands ran counts.
+            Program guarding = Program.start(new Env(provider, StubGitHub.empty()), io, background, task -> {});
+            java.util.List<String> ran = new CopyOnWriteArrayList<>();
+            CountDownLatch fetched = new CountDownLatch(1);
+            CountDownLatch done = new CountDownLatch(0);
+            Option<Cmd.Guard> remoteRefs = Option.of(Cmd.Guard.REMOTE_REFS);
+
+            guarding.dispatch(new Asked(List.of(new Guarded("fetch", true, remoteRefs, fetched, ran))));
+            await(() -> ran.contains("fetch"));
+            guarding.dispatch(new Asked(List.of(
+                    new Guarded("pull", false, remoteRefs, done, ran),
+                    new Guarded("preview", true, Option.none(), done, ran))));
+            await(() -> ran.contains("preview"));
+            Thread.sleep(50);
+            assertEquals(java.util.List.of("fetch", "preview"), ran);
+
+            fetched.countDown();
+            await(() -> ran.contains("pull"));
+            assertEquals(java.util.List.of("fetch", "preview", "pull"), ran);
+        } finally {
+            io.shutdownNow();
+            background.shutdownNow();
+        }
+    }
+
+    private static void await(BooleanSupplier condition) throws InterruptedException {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (!condition.getAsBoolean()) {
+            if (System.nanoTime() > deadline) {
+                throw new AssertionError("timed out");
+            }
+            Thread.sleep(5);
+        }
     }
 
     @Test

@@ -29,6 +29,11 @@ public sealed interface DeleteBranchCmd extends BranchCmd {
             implements DeleteBranchCmd, BranchCmd.KeepsBranchBusy {
 
         @Override
+        public Option<Guard> guard() {
+            return Option.when(scope.remote(), Guard.REMOTE_REFS);
+        }
+
+        @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return git.deleteBranch(branch, remote, scope);
         }
@@ -52,6 +57,11 @@ public sealed interface DeleteBranchCmd extends BranchCmd {
         @Override
         public Option<BranchRef> busyBranch() {
             return Option.of(new BranchRef.Remote(remote));
+        }
+
+        @Override
+        public Option<Guard> guard() {
+            return Option.of(Guard.REMOTE_REFS);
         }
 
         @Override

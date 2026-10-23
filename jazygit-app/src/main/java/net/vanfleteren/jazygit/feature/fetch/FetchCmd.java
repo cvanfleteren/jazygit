@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.fetch;
 
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
@@ -35,6 +36,11 @@ public sealed interface FetchCmd extends Cmd {
      * Fetches from {@code remote}.
      */
     record Fetch(String remote) implements FetchCmd {
+
+        @Override
+        public Option<Guard> guard() {
+            return Option.of(Guard.REMOTE_REFS);
+        }
 
         @Override
         public Msg run(Env env) {

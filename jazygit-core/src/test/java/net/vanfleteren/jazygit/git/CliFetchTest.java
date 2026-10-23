@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
@@ -54,12 +55,12 @@ class CliFetchTest {
         List<String> remotes = CliRemote.remotes(repo).get();
         assertEquals(List.of("origin", "other"), remotes);
         assertEquals(
-                List.of("git fetch --quiet --prune origin"),
+                List.of("git fetch --quiet --prune --no-write-fetch-head origin"),
                 CliFetch.fetch(repo, "origin", Option.none(), HashMap.empty())
                         .get()
                         .map(ExecutedCommand::line));
         assertEquals(
-                List.of("git fetch --quiet --prune other"),
+                List.of("git fetch --quiet --prune --no-write-fetch-head other"),
                 CliFetch.fetch(repo, "other", Option.none(), HashMap.empty())
                         .get()
                         .map(ExecutedCommand::line));
@@ -84,5 +85,27 @@ class CliFetchTest {
 
         assertFalse(git(repo, "branch", "-r").contains("origin/feature"));
         assertTrue(git(repo, "branch", "-vv").contains("[origin/feature: gone]"));
+    }
+
+    @Test
+    void theFetchLeavesFetchHeadAsThePullsOwnFetchWroteIt() throws Exception {
+        Path origin = dir.resolve("origin.git");
+        Path repo = dir.resolve("repo");
+        Path clone = dir.resolve("clone");
+        git(dir, "init", "-q", "--bare", "-b", "main", origin.toString());
+        git(dir, "clone", "-q", origin.toString(), repo.toString());
+        git(repo, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "first");
+        git(repo, "push", "-q", "-u", "origin", "main");
+        git(repo, "fetch", "-q", "origin");
+        Path fetchHead = repo.resolve(".git/FETCH_HEAD");
+        String pulled = Files.readString(fetchHead);
+        git(dir, "clone", "-q", origin.toString(), clone.toString());
+        git(clone, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "theirs");
+        git(clone, "push", "-q", "origin", "main");
+
+        CliFetch.fetch(repo, "origin", Option.none(), HashMap.empty()).get();
+
+        assertEquals(pulled, Files.readString(fetchHead));
+        assertEquals(git(clone, "rev-parse", "main"), git(repo, "rev-parse", "origin/main"));
     }
 }

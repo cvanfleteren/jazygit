@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.branch.pull;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
@@ -20,6 +21,11 @@ public sealed interface PullCmd extends BranchCmd.KeepsBranchBusy {
 
     Operation FAST_FORWARD =
             Operation.of("log.title.fastForward", "error.fastForward.failed").labelledWhenBusy("branches.busy.pull");
+
+    @Override
+    default Option<Guard> guard() {
+        return Option.of(Guard.REMOTE_REFS);
+    }
 
     /**
      * Pulls {@code branch}, the checked out branch, from its upstream.

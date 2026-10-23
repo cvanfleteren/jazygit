@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.branch.push;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
@@ -19,6 +20,11 @@ public sealed interface PushCmd extends BranchCmd.KeepsBranchBusy {
     @Override
     default Operation operation() {
         return PUSH;
+    }
+
+    @Override
+    default Option<Guard> guard() {
+        return Option.of(Guard.REMOTE_REFS);
     }
 
     @Override

@@ -7,7 +7,10 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -21,7 +24,8 @@ import org.slf4j.LoggerFactory;
  *
  * <p>The model, and the command started last per {@link Cmd.Slot slot}, are only read and replaced on the
  * {@code ui} executor's thread, so they need no synchronisation. {@link #dispatch(Msg)} and {@link #model()} must
- * be called on that thread.
+ * be called on that thread. The lock of each {@link Cmd.Guard guard} is taken on the thread that performs the
+ * command.
  */
 public final class Program {
 
@@ -36,6 +40,8 @@ public final class Program {
     private final Runnable modelChanged;
     // The command started last for each slot, to cancel when a newer one comes.
     private final Map<Cmd.Slot, Future<Void>> latest = new EnumMap<>(Cmd.Slot.class);
+    // What a command that names a guard holds while it runs, so another one that names it waits.
+    private final Map<Cmd.Guard, Lock> guards = new EnumMap<>(Cmd.Guard.class);
     private Model model;
 
     private Program(
@@ -46,6 +52,9 @@ public final class Program {
         this.ui = ui;
         this.bugs = bugs;
         this.modelChanged = modelChanged;
+        for (Cmd.Guard guard : Cmd.Guard.values()) {
+            guards.put(guard, new ReentrantLock());
+        }
     }
 
     /**
@@ -135,18 +144,28 @@ public final class Program {
     }
 
     /**
-     * Performs {@code cmd} on its executor. One that takes a slot cancels the one that took it before, if that
-     * one has not started yet: it is skipped, and reports nothing.
+     * Performs {@code cmd} on its executor, once it holds its guard, if it names one. One that takes a slot cancels
+     * the one that took it before, if that one has not started yet: it is skipped, and reports nothing.
      */
     private void launch(Cmd cmd) {
+        Option<Lock> guard = cmd.guard().map(guards::get);
         FutureTask<Void> task = new FutureTask<>(
                 () -> {
-                    Msg result = perform(env, cmd, bugs);
+                    Msg result = guarded(guard, () -> perform(env, cmd, bugs));
                     Try.run(() -> ui.execute(() -> dispatch(result)));
                 },
                 null);
         cmd.slot().forEach(slot -> Option.of(latest.put(slot, task)).forEach(older -> older.cancel(false)));
         // Once the app stops, the executors take nothing anymore, and what is left is dropped.
         Try.run(() -> (cmd.background() ? background : io).execute(task));
+    }
+
+    private static Msg guarded(Option<Lock> guard, Supplier<Msg> perform) {
+        guard.forEach(Lock::lock);
+        try {
+            return perform.get();
+        } finally {
+            guard.forEach(Lock::unlock);
+        }
     }
 }

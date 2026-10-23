@@ -345,8 +345,11 @@ the terminal, which would take the first key typed in the editor.
   (`Cmd.background()`), so they don't hold up the others: the fetch, and reading the pull requests.
   - A fetch can run next to a command on `git-io`. git locks what it writes, so the two never corrupt the
     repository.
-  - A command that needs a ref the fetch is updating at that moment can fail on the lock, though. That
-    failure is reported like any other.
+  - But `FETCH_HEAD` has no lock, and a ref that is locked makes the other command fail rather than wait. So a
+    command that writes the remote-tracking refs or `FETCH_HEAD` (fetching, pulling, pushing, deleting a branch
+    on its remote, checking out a pull request through gh) names a guard, `Cmd.guard()`. `Program` holds a lock
+    per guard and takes it on the command's own thread around performing it, so such commands run one after the
+    other, wherever they run. The background fetch also writes no `FETCH_HEAD`. See ADR 27.
 
 Every command answers with a `Msg`, also one that throws. `Program.perform` turns whatever it throws into a
 `Failure.Bug`, and writes the stack trace to `jazygit-bugs.log` in the temporary directory, as the terminal
