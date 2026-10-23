@@ -13,7 +13,6 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.git.model.Upstream;
 
 /**
  * What GitHub reports about the branches of the repository, which the branches pane shows.
@@ -107,7 +106,7 @@ public record GitHubState(
      * the branch of the same name; none when it follows a branch on a remote other than GitHub.
      */
     public Option<PullRequest> pullRequest(Branch branch) {
-        Option<RemoteBranch> upstream = branch.remoteUpstream().map(Upstream::branch);
+        Option<RemoteBranch> upstream = branch.remoteUpstream();
         return upstream.exists(followed -> !mayBeOnGitHub(followed))
                 ? Option.none()
                 : pullRequests.flatMap(open ->
@@ -125,7 +124,7 @@ public record GitHubState(
      * How the CI checks are doing on the branch {@code branch} follows on GitHub, if it follows one.
      */
     public Option<Checks> checks(Branch branch) {
-        return branch.remoteUpstream().flatMap(upstream -> checks(upstream.branch()));
+        return branch.remoteUpstream().flatMap(this::checks);
     }
 
     /**

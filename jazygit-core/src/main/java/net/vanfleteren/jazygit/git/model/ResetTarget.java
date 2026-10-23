@@ -35,7 +35,7 @@ public sealed interface ResetTarget {
      * The commit a branch the checked out one follows points to, as this repository knows it: nothing is
      * fetched first.
      */
-    record ToUpstream(RemoteBranch branch) implements ResetTarget {
+    record ToUpstream(BranchRef branch) implements ResetTarget {
 
         @Override
         public String revision() {
@@ -44,7 +44,7 @@ public sealed interface ResetTarget {
 
         @Override
         public String label() {
-            return branch.shortName();
+            return branch.name();
         }
     }
 }

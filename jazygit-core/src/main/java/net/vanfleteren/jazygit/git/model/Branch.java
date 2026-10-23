@@ -77,25 +77,24 @@ public record Branch(
     }
 
     /**
-     * The remote-tracking branch it follows, if that exists; none when its upstream is gone.
+     * The branch it follows, if that exists; none when its upstream is gone.
      */
     public Option<Upstream> upstream() {
         return tracking instanceof Tracking.Tracks(Upstream upstream) ? Option.of(upstream) : Option.none();
     }
 
     /**
-     * Its upstream, if that is a branch on a remote, which it can be pushed to; none when it follows a local
-     * branch.
+     * The branch on a remote it follows, which it can be pushed to; none when it follows a local branch.
      */
-    public Option<Upstream> remoteUpstream() {
-        return upstream().filter(upstream -> !upstream.branch().local());
+    public Option<RemoteBranch> remoteUpstream() {
+        return upstream().map(Upstream::branch).flatMap(Branch::onRemote);
     }
 
     /**
-     * The remote branch its upstream was, when that was deleted on the remote.
+     * The branch its upstream was, when that was deleted.
      */
-    public Option<RemoteBranch> goneUpstream() {
-        return tracking instanceof Tracking.Gone(RemoteBranch upstream) ? Option.of(upstream) : Option.none();
+    public Option<BranchRef> goneUpstream() {
+        return tracking instanceof Tracking.Gone(BranchRef upstream) ? Option.of(upstream) : Option.none();
     }
 
     /**
@@ -106,7 +105,7 @@ public record Branch(
         return upstream()
                 .map(Upstream::branch)
                 .orElse(this::goneUpstream)
-                .filter(upstream -> !upstream.local())
+                .flatMap(Branch::onRemote)
                 .getOrElse(() -> new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, name));
     }
 
@@ -144,6 +143,10 @@ public record Branch(
      */
     public boolean remoteDeletable() {
         return hasRemote && !isDefault;
+    }
+
+    private static Option<RemoteBranch> onRemote(BranchRef branch) {
+        return branch instanceof BranchRef.Remote(RemoteBranch remote) ? Option.of(remote) : Option.none();
     }
 
     /**

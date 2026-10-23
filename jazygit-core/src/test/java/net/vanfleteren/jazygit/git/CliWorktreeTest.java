@@ -284,7 +284,7 @@ class CliWorktreeTest {
                         .get()
                         .find(branch -> branch.name().value().equals("shared"))
                         .flatMap(branch -> branch.upstream())
-                        .map(upstream -> upstream.branch().shortName()));
+                        .map(upstream -> upstream.branch().name()));
     }
 
     @Test

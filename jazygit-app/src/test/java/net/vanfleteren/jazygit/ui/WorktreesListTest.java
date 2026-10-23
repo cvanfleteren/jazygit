@@ -52,7 +52,8 @@ class WorktreesListTest {
                         java.time.Instant.EPOCH,
                         true,
                         false,
-                        Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("feature")), 2, 1))))))
+                        Option.of(new Upstream(
+                                new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("feature"))), 2, 1))))))
                 .withWorktreeChanges(io.vavr.collection.HashMap.of(path.toString(), true));
 
         LoadableList.Row row = WorktreesList.row(repo, worktree);

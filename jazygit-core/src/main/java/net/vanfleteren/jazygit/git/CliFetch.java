@@ -9,6 +9,7 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
@@ -41,13 +42,21 @@ final class CliFetch {
 
     /**
      * Runs {@code git fetch <remote> refs/heads/<upstream>:refs/heads/<name>}: fast-forwards {@code name}, which
-     * is not checked out, to {@code upstream}, the branch it tracks. Git refuses when that is not a fast-forward.
+     * is not checked out, to {@code upstream}, the branch it tracks; the remote is {@code .} for a local one. Git
+     * refuses when that is not a fast-forward.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(
-            Path worktree, Branch.Name name, RemoteBranch upstream, Map<String, String> credentials) {
-        return CliRemote.run(
-                worktree,
-                git("fetch", upstream.remote(), Refs.head(upstream.branch()) + ":" + Refs.head(name)),
-                credentials);
+            Path worktree, Branch.Name name, BranchRef upstream, Map<String, String> credentials) {
+        return switch (upstream) {
+            case BranchRef.Local(Branch.Name branch) ->
+                fastForward(worktree, name, Refs.THIS_REPOSITORY, branch, credentials);
+            case BranchRef.Remote(RemoteBranch remote) ->
+                fastForward(worktree, name, remote.remote(), remote.branch(), credentials);
+        };
+    }
+
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(
+            Path worktree, Branch.Name name, String remote, Branch.Name branch, Map<String, String> credentials) {
+        return CliRemote.run(worktree, git("fetch", remote, Refs.head(branch) + ":" + Refs.head(name)), credentials);
     }
 }

@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -34,7 +35,7 @@ class RemoteRefsGuardTest {
     void fetchingPullingAndPushingTakeIt() {
         assertEquals(GUARDED, new FetchCmd.Fetch("origin").guard());
         assertEquals(GUARDED, new PullCmd.Pull(FEATURE).guard());
-        assertEquals(GUARDED, new PullCmd.FastForward(FEATURE, UPSTREAM).guard());
+        assertEquals(GUARDED, new PullCmd.FastForward(FEATURE, new BranchRef.Remote(UPSTREAM)).guard());
         assertEquals(GUARDED, new PushCmd.Push(FEATURE, UPSTREAM, PushMode.FAST_FORWARD).guard());
         assertEquals(GUARDED, new PushCmd.PushSettingUpstream(FEATURE, UPSTREAM).guard());
         assertEquals(GUARDED, new PushFirst(new PushCmd.PushSettingUpstream(FEATURE, UPSTREAM)).guard());

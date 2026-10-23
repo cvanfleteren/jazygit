@@ -13,11 +13,6 @@ public record RemoteBranch(String remote, Branch.Name branch) {
     public static final String DEFAULT_REMOTE = "origin";
 
     /**
-     * The remote git names for this repository itself.
-     */
-    private static final String LOCAL_REMOTE = ".";
-
-    /**
      * The remote branch written as {@code <remote> <branch>}; none unless that is exactly two words.
      * Neither a remote nor a branch name can contain whitespace.
      */
@@ -34,14 +29,6 @@ public record RemoteBranch(String remote, Branch.Name branch) {
     }
 
     /**
-     * Whether it is a branch of this repository rather than of a remote, as for a branch created with
-     * {@code --track} from a local one: its remote is {@code .}.
-     */
-    public boolean local() {
-        return remote.equals(LOCAL_REMOTE);
-    }
-
-    /**
      * Its remote-tracking ref, e.g. {@code refs/remotes/origin/main}.
      */
     public String trackingRef() {
@@ -49,17 +36,9 @@ public record RemoteBranch(String remote, Branch.Name branch) {
     }
 
     /**
-     * The ref it is read from: its remote-tracking ref, or the branch itself for one of this repository.
-     */
-    public String ref() {
-        return local() ? "refs/heads/" + branch.value() : trackingRef();
-    }
-
-    /**
-     * The name git shows for it, e.g. {@code origin/main}; just the branch for one of this repository, whose
-     * remote is {@code .}.
+     * The name git shows for it, e.g. {@code origin/main}.
      */
     public String shortName() {
-        return local() ? branch.value() : remote + "/" + branch.value();
+        return remote + "/" + branch.value();
     }
 }

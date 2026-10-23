@@ -72,8 +72,7 @@ public record Repo(
      */
     public Option<Branch> trackingBranch(RemoteBranch upstream) {
         return branches.toOption()
-                .flatMap(loaded -> loaded.find(branch ->
-                        branch.upstream().exists(followed -> followed.branch().equals(upstream))));
+                .flatMap(loaded -> loaded.find(branch -> branch.remoteUpstream().contains(upstream)));
     }
 
     /**

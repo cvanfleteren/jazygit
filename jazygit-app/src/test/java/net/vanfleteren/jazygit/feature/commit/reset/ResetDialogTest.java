@@ -13,6 +13,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.ResetMode;
@@ -79,11 +80,11 @@ class ResetDialogTest {
     void aResetOntoTheUpstreamSaysHowManyLocalCommitsItDrops() throws Exception {
         RemoteBranch upstream = new RemoteBranch("origin", new Branch.Name("main"));
 
-        String one = choice(new ResetPopup(new ResetTarget.ToUpstream(upstream), 1));
+        String one = choice(new ResetPopup(new ResetTarget.ToUpstream(new BranchRef.Remote(upstream)), 1));
         assertTrue(one.contains("Reset to origin/main (drops 1 local commit)"), one);
-        assertTrue(choice(new ResetPopup(new ResetTarget.ToUpstream(upstream), 3))
+        assertTrue(choice(new ResetPopup(new ResetTarget.ToUpstream(new BranchRef.Remote(upstream)), 3))
                 .contains("Reset to origin/main (drops 3 local commits)"));
-        String none = choice(new ResetPopup(new ResetTarget.ToUpstream(upstream), 0));
+        String none = choice(new ResetPopup(new ResetTarget.ToUpstream(new BranchRef.Remote(upstream)), 0));
         assertTrue(none.contains("Reset to origin/main"), none);
         assertFalse(none.contains("drops"), none);
     }

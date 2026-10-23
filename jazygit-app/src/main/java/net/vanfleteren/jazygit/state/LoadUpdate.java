@@ -207,8 +207,7 @@ public final class LoadUpdate {
         Option<Branch> known = branch.flatMap(b -> b);
         return switch (view.against()) {
             case UPSTREAM ->
-                known.filter(b ->
-                                !b.upstream().map(u -> BranchRef.of(u.branch())).contains(view.other()))
+                known.filter(b -> !b.upstream().map(Upstream::branch).contains(view.other()))
                         .map(b -> b.upstream().isDefined() ? Option.none() : Option.of(AppError.noUpstream(b)));
             case BASE ->
                 tipOf(model, view.other())

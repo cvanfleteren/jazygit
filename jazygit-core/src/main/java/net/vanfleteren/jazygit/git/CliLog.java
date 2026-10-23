@@ -59,7 +59,7 @@ final class CliLog {
                         () -> Either.right(List.empty()),
                         tip -> read(
                                 worktree,
-                                filters(query).append(tip.value()).appendAll(notOn.map(base -> "^" + Refs.of(base))),
+                                filters(query).append(tip.value()).appendAll(notOn.map(base -> "^" + base.ref())),
                                 query.paths(),
                                 MAX_COMMITS)));
     }
@@ -136,7 +136,7 @@ final class CliLog {
         return bases.isEmpty()
                 ? Either.right(Option.none())
                 : Either.<GitError, Option<Sha>>narrow(
-                                resolve(worktree, Refs.of(bases.head())).mapLeft(GitFailure::error))
+                                resolve(worktree, bases.head().ref()).mapLeft(GitFailure::error))
                         .flatMap(tip -> tip.fold(
                                 () -> firstExisting(worktree, bases.tail()),
                                 found -> Either.right(Option.of(Tuple.of(bases.head(), found)))));
@@ -216,7 +216,7 @@ final class CliLog {
      * How many commits are on {@code branch} and not on {@code base}, counting no further than {@code max}.
      */
     static Either<ProcessError, Integer> countNotOn(Path worktree, BranchRef branch, BranchRef base, int max) {
-        return count(worktree, List.of("--max-count=" + max, Refs.of(branch), "^" + Refs.of(base)));
+        return count(worktree, List.of("--max-count=" + max, branch.ref(), "^" + base.ref()));
     }
 
     /**
@@ -232,7 +232,7 @@ final class CliLog {
 
     private static Either<GitError, Sha> tip(Path worktree, BranchRef branch) {
         return Either.<GitError, Option<Sha>>narrow(
-                        resolve(worktree, Refs.of(branch)).mapLeft(GitFailure::error))
+                        resolve(worktree, branch.ref()).mapLeft(GitFailure::error))
                 .flatMap(tip -> tip.toEither(() -> new UnknownBranch(branch)));
     }
 

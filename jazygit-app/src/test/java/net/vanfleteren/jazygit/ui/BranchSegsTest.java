@@ -117,7 +117,7 @@ class BranchSegsTest {
                         java.time.Instant.EPOCH,
                         false,
                         false,
-                        new Tracking.Gone(new RemoteBranch("origin", new Branch.Name("b"))))));
+                        new Tracking.Gone(new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("b")))))));
         // A branch that was never pushed shows nothing.
         assertEquals(List.of(), BranchSegs.sync(new Branch(new Branch.Name("b"), false, new Sha("1"))));
     }
@@ -150,7 +150,8 @@ class BranchSegsTest {
                         t,
                         true,
                         false,
-                        Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("b")), 0, 0)))));
+                        Option.of(new Upstream(
+                                new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("b"))), 0, 0)))));
         assertEquals(
                 List.of(LoadableList.Seg.styled(" ↑2", Theme.Classes.AHEAD)),
                 BranchSegs.sync(new Branch(
@@ -160,7 +161,8 @@ class BranchSegsTest {
                         t,
                         true,
                         false,
-                        Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("b")), 2, 0)))));
+                        Option.of(new Upstream(
+                                new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("b"))), 2, 0)))));
         assertEquals(
                 List.of(LoadableList.Seg.styled(" ↓1", Theme.Classes.BEHIND)),
                 BranchSegs.sync(new Branch(
@@ -170,7 +172,8 @@ class BranchSegsTest {
                         t,
                         true,
                         false,
-                        Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("b")), 0, 1)))));
+                        Option.of(new Upstream(
+                                new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("b"))), 0, 1)))));
         assertEquals(
                 List.of(
                         LoadableList.Seg.styled(" ↑2", Theme.Classes.AHEAD),
@@ -182,7 +185,8 @@ class BranchSegsTest {
                         t,
                         true,
                         false,
-                        Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("b")), 2, 1)))));
+                        Option.of(new Upstream(
+                                new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("b"))), 2, 1)))));
     }
 
     @Test

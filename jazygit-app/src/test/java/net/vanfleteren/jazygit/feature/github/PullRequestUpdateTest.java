@@ -63,7 +63,7 @@ class PullRequestUpdateTest {
             Instant.EPOCH,
             true,
             true,
-            Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("main")), 0, 0)));
+            Option.of(new Upstream(new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main"))), 0, 0)));
     private static final Branch RELEASE = new Branch(
             new Branch.Name("release"),
             false,
@@ -71,7 +71,8 @@ class PullRequestUpdateTest {
             Instant.EPOCH,
             true,
             false,
-            Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("release")), 0, 0)));
+            Option.of(
+                    new Upstream(new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("release"))), 0, 0)));
     private static final Branch PUSHED = new Branch(
             new Branch.Name("feature"),
             false,
@@ -79,7 +80,8 @@ class PullRequestUpdateTest {
             Instant.EPOCH,
             true,
             false,
-            Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("feature")), 0, 0)));
+            Option.of(
+                    new Upstream(new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("feature"))), 0, 0)));
     private static final Branch UNPUSHED = new Branch(new Branch.Name("local"), false, new Sha("4"));
     private static final Branch AHEAD = new Branch(
             new Branch.Name("ahead"),
@@ -88,7 +90,7 @@ class PullRequestUpdateTest {
             Instant.EPOCH,
             true,
             false,
-            Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("ahead")), 2, 0)));
+            Option.of(new Upstream(new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("ahead"))), 2, 0)));
     private static final Branch.Name FEATURE = PUSHED.name();
     private static final PullRequest FEATURE_PR =
             new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED);
@@ -603,7 +605,7 @@ class PullRequestUpdateTest {
                 Instant.EPOCH,
                 true,
                 false,
-                Option.of(new Upstream(upstream, 2, 1)));
+                Option.of(new Upstream(new BranchRef.Remote(upstream), 2, 1)));
         Model branches = localBranchesRead(loaded(), List.of(diverged, MAIN)).model();
         Model starting = Update.update(branches, new PullRequestsMsg.Loaded(List.empty()))
                 .model();
@@ -710,7 +712,7 @@ class PullRequestUpdateTest {
                 Instant.EPOCH,
                 true,
                 false,
-                Option.of(new Upstream(new RemoteBranch("origin", AHEAD.name()), ahead, behind)));
+                Option.of(new Upstream(new BranchRef.Remote(new RemoteBranch("origin", AHEAD.name())), ahead, behind)));
     }
 
     @Test
@@ -1513,7 +1515,8 @@ class PullRequestUpdateTest {
                 Instant.EPOCH,
                 true,
                 false,
-                Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("feature")), 0, 0)));
+                Option.of(new Upstream(
+                        new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("feature"))), 0, 0)));
         Model withPr = Update.update(model(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
                 .model();
 
@@ -1530,7 +1533,8 @@ class PullRequestUpdateTest {
                 Instant.EPOCH,
                 true,
                 false,
-                Option.of(new Upstream(new RemoteBranch("my/fork", new Branch.Name("feature")), 0, 0)));
+                Option.of(new Upstream(
+                        new BranchRef.Remote(new RemoteBranch("my/fork", new Branch.Name("feature"))), 0, 0)));
         Model withPr = Update.update(model(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
                 .model();
 

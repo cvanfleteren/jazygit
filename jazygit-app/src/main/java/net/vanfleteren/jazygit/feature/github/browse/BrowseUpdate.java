@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.feature.github.browse;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
@@ -38,7 +37,6 @@ public final class BrowseUpdate {
      */
     static Option<RemoteBranch> onRemote(Branch branch) {
         return branch.remoteUpstream()
-                .map(Upstream::branch)
                 .orElse(() -> Option.when(
                         branch.hasRemote() && branch.goneUpstream().isEmpty(),
                         () -> new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, branch.name())));

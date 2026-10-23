@@ -71,7 +71,7 @@ public final class UpstreamUpdate {
     private static Next upstreamDivergence(Model model, UpstreamPopup popup) {
         return popup.branch()
                 .map(branch -> branch.upstream()
-                        .map(upstream -> open(model, branch, BranchRef.of(upstream.branch()), Against.UPSTREAM))
+                        .map(upstream -> open(model, branch, upstream.branch(), Against.UPSTREAM))
                         .getOrElse(() -> Next.of(model.fail(AppError.noUpstream(branch)))))
                 .getOrElse(() -> Next.of(model));
     }

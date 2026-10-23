@@ -275,8 +275,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(
-            Branch.Name branch, RemoteBranch upstream) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(Branch.Name branch, BranchRef upstream) {
         return CliFetch.fastForward(worktree, branch, upstream, credentials.get());
     }
 

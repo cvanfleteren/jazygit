@@ -37,9 +37,21 @@ class UpstreamUpdateTest {
     private static final RemoteBranch ORIGIN_MAIN = new RemoteBranch("origin", MAIN);
     private static final RemoteBranch ORIGIN_FEATURE = new RemoteBranch("origin", FEATURE);
     private static final Branch TRACKING = new Branch(
-            MAIN, true, new Sha("aaaa"), Instant.EPOCH, true, true, Option.of(new Upstream(ORIGIN_MAIN, 2, 1)));
+            MAIN,
+            true,
+            new Sha("aaaa"),
+            Instant.EPOCH,
+            true,
+            true,
+            Option.of(new Upstream(new BranchRef.Remote(ORIGIN_MAIN), 2, 1)));
     private static final Branch FEATURE_BRANCH = new Branch(
-            FEATURE, false, new Sha("ffff"), Instant.EPOCH, true, false, Option.of(new Upstream(ORIGIN_FEATURE, 1, 0)));
+            FEATURE,
+            false,
+            new Sha("ffff"),
+            Instant.EPOCH,
+            true,
+            false,
+            Option.of(new Upstream(new BranchRef.Remote(ORIGIN_FEATURE), 1, 0)));
     private static final List<RemoteRef> REMOTES = List.of(
             new RemoteRef(ORIGIN_MAIN, new Sha("a0a0"), Instant.EPOCH),
             new RemoteRef(ORIGIN_FEATURE, new Sha("f0f0"), Instant.EPOCH));
@@ -206,7 +218,7 @@ class UpstreamUpdateTest {
                 Instant.EPOCH,
                 true,
                 false,
-                Option.of(new Upstream(ORIGIN_FEATURE, 2, 0)));
+                Option.of(new Upstream(new BranchRef.Remote(ORIGIN_FEATURE), 2, 0)));
         List<RemoteRef> fetched = REMOTES.update(1, new RemoteRef(ORIGIN_FEATURE, new Sha("f1f1"), Instant.EPOCH));
 
         Next next = Update.update(
@@ -227,7 +239,13 @@ class UpstreamUpdateTest {
     @Test
     void itClosesWhenTheUpstreamIsGone() {
         Branch gone = new Branch(
-                FEATURE, false, new Sha("ffff"), Instant.EPOCH, false, false, new Tracking.Gone(ORIGIN_FEATURE));
+                FEATURE,
+                false,
+                new Sha("ffff"),
+                Instant.EPOCH,
+                false,
+                false,
+                new Tracking.Gone(new BranchRef.Remote(ORIGIN_FEATURE)));
 
         Next next = TestModels.localBranchesRead(viewing(), List.of(TRACKING, gone));
 
@@ -251,7 +269,7 @@ class UpstreamUpdateTest {
 
         assertEquals(Option.none(), next.model().popup(UpstreamPopup.class));
         assertEquals(
-                Option.of(new ResetPopup(new ResetTarget.ToUpstream(ORIGIN_MAIN), 2)),
+                Option.of(new ResetPopup(new ResetTarget.ToUpstream(new BranchRef.Remote(ORIGIN_MAIN)), 2)),
                 next.model().popup(ResetPopup.class));
         assertEquals(List.of(), next.cmds());
     }
@@ -261,7 +279,7 @@ class UpstreamUpdateTest {
         Next next = Update.update(opened(with(TRACKING, FEATURE_BRANCH), FEATURE), new UpstreamMsg.ResetChosen());
 
         assertEquals(
-                Option.of(new ResetPopup(new ResetTarget.ToUpstream(ORIGIN_MAIN), 2)),
+                Option.of(new ResetPopup(new ResetTarget.ToUpstream(new BranchRef.Remote(ORIGIN_MAIN)), 2)),
                 next.model().popup(ResetPopup.class));
     }
 
@@ -272,7 +290,9 @@ class UpstreamUpdateTest {
 
         Next next = Update.update(asking, new ResetMsg.Chosen(ResetMode.SOFT));
 
-        assertEquals(List.of(new ResetCmd(new ResetTarget.ToUpstream(ORIGIN_MAIN), ResetMode.SOFT)), next.cmds());
+        assertEquals(
+                List.of(new ResetCmd(new ResetTarget.ToUpstream(new BranchRef.Remote(ORIGIN_MAIN)), ResetMode.SOFT)),
+                next.cmds());
         assertEquals(Option.none(), next.model().popup());
     }
 
@@ -286,8 +306,14 @@ class UpstreamUpdateTest {
 
     @Test
     void aBranchWhoseUpstreamIsGoneCannotBeResetOntoIt() {
-        Branch gone =
-                new Branch(MAIN, true, new Sha("aaaa"), Instant.EPOCH, false, false, new Tracking.Gone(ORIGIN_MAIN));
+        Branch gone = new Branch(
+                MAIN,
+                true,
+                new Sha("aaaa"),
+                Instant.EPOCH,
+                false,
+                false,
+                new Tracking.Gone(new BranchRef.Remote(ORIGIN_MAIN)));
 
         Next next = Update.update(opened(with(gone)), new UpstreamMsg.ResetChosen());
 

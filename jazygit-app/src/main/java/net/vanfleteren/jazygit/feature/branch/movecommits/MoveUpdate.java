@@ -74,9 +74,7 @@ public final class MoveUpdate {
                         .flatMap(idle -> model.commit(sha))
                         .filter(commit -> !commit.parents().isEmpty())
                         .map(commit -> Next.of(
-                                model.clearError(),
-                                new MoveCmd.ReadRange(
-                                        from.name(), sha, from.remoteUpstream().map(Upstream::branch))))
+                                model.clearError(), new MoveCmd.ReadRange(from.name(), sha, from.remoteUpstream())))
                         .getOrElse(() -> Next.of(model)))
                 .getOrElse(() -> Next.of(model.fail(new AppError.NoBranchCheckedOut())));
     }
@@ -94,7 +92,7 @@ public final class MoveUpdate {
                         .map(commit -> new MoveRequest(
                                 from,
                                 current.isDefault(),
-                                current.remoteUpstream().map(Upstream::branch),
+                                current.remoteUpstream(),
                                 commit,
                                 range,
                                 bases(model, current, range))))
@@ -143,7 +141,7 @@ public final class MoveUpdate {
                 ? List.empty()
                 : UpstreamUpdate.base(model)
                         .toList()
-                        .appendAll(from.upstream().map(upstream -> BranchRef.of(upstream.branch())))
+                        .appendAll(from.upstream().map(Upstream::branch))
                         .filter(ref -> !ref.equals(new BranchRef.Local(from.name())))
                         .distinct();
         return others.<MoveBase>map(MoveBase.Onto::new).prepend(new MoveBase.Parent());

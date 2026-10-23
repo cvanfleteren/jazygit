@@ -40,7 +40,7 @@ final class CliMoveCommits {
                 () -> GitFailure.widen(CliCheckout.checkoutNewBranch(
                         worktree,
                         to,
-                        onto.map(Refs::of).getOrElse(from.value()),
+                        onto.map(BranchRef::ref).getOrElse(from.value()),
                         Option.of(onto.map(CliMoveCommits::name).getOrElse(from)))),
                 () -> onto.isDefined()
                         ? copy(worktree, from, oldest)

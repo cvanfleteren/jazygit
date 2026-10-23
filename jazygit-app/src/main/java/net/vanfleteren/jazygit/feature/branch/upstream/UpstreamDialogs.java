@@ -53,7 +53,7 @@ public final class UpstreamDialogs {
 
     private static String upstreamName(Option<Branch> branch) {
         return branch.flatMap(Branch::upstream)
-                .map(upstream -> upstream.branch().shortName())
+                .map(upstream -> upstream.branch().name())
                 .getOrElse(() -> Messages.get("dialog.upstream.unknown"));
     }
 }

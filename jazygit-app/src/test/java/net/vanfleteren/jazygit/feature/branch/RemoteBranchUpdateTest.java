@@ -115,7 +115,7 @@ class RemoteBranchUpdateTest {
                                         Instant.EPOCH,
                                         true,
                                         false,
-                                        Option.of(new Upstream(ORIGIN_NEW, 0, 0))),
+                                        Option.of(new Upstream(new BranchRef.Remote(ORIGIN_NEW), 0, 0))),
                                 new Branch(
                                         new Branch.Name("mine"),
                                         false,
@@ -123,7 +123,7 @@ class RemoteBranchUpdateTest {
                                         Instant.EPOCH,
                                         true,
                                         false,
-                                        Option.of(new Upstream(ORIGIN_FEATURE, 0, 0)))))
+                                        Option.of(new Upstream(new BranchRef.Remote(ORIGIN_FEATURE), 0, 0)))))
                 .model();
 
         assertEquals(

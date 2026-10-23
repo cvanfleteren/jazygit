@@ -27,6 +27,7 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 final class CliBranch {
 
     private static final String ORIGIN = Refs.REMOTES + RemoteBranch.DEFAULT_REMOTE + "/";
+
     private static final List<String> FIELDS = List.of(
             "%(refname)",
             "%(objectname)",
@@ -223,12 +224,16 @@ final class CliBranch {
         }
 
         /**
-         * The branch it follows on its remote, as git's configuration says, whether or not that still exists.
+         * The branch it follows, as git's configuration says, whether or not that still exists: one on a remote, or
+         * one of this repository.
          */
-        Option<RemoteBranch> upstream() {
+        Option<BranchRef> upstream() {
             return remote.flatMap(r -> remoteRef
                     .flatMap(ref -> GitOutput.after(ref, HEADS))
-                    .map(branch -> new RemoteBranch(r, new Branch.Name(branch))));
+                    .map(Branch.Name::new)
+                    .map(branch -> r.equals(Refs.THIS_REPOSITORY)
+                            ? new BranchRef.Local(branch)
+                            : new BranchRef.Remote(new RemoteBranch(r, branch))));
         }
 
         /**

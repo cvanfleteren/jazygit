@@ -29,7 +29,7 @@ class BrowseUpdateTest {
             Instant.EPOCH,
             true,
             false,
-            Option.of(new Upstream(ORIGIN_FEATURE, 0, 0)));
+            Option.of(new Upstream(new BranchRef.Remote(ORIGIN_FEATURE), 0, 0)));
     private static final Branch WITHOUT_UPSTREAM =
             new Branch(new Branch.Name("plain"), false, new Sha("2"), Instant.EPOCH, true, false);
     private static final Branch LOCAL = new Branch(new Branch.Name("local"), false, new Sha("3"));
@@ -40,7 +40,7 @@ class BrowseUpdateTest {
             Instant.EPOCH,
             false,
             false,
-            new Tracking.Gone(new RemoteBranch("origin", new Branch.Name("gone"))));
+            new Tracking.Gone(new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("gone")))));
 
     private static Model model() {
         return TestModels.localBranchesRead(loaded(), List.of(RENAMED, WITHOUT_UPSTREAM, LOCAL, GONE))

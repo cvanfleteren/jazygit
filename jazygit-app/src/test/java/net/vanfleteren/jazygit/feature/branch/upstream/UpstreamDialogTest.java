@@ -37,7 +37,8 @@ class UpstreamDialogTest {
             Instant.EPOCH,
             true,
             false,
-            Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("feature")), 0, 0)));
+            Option.of(
+                    new Upstream(new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("feature"))), 0, 0)));
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final ChoiceDialog<UpstreamPopup> dialog = new ChoiceDialog<>(UpstreamDialogs.UPSTREAM, dispatched::add);
