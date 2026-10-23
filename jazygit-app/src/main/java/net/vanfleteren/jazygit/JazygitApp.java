@@ -445,6 +445,7 @@ public class JazygitApp extends ToolkitApp {
                 JazygitApp::logBug,
                 this::requestRedraw);
         runtime = Option.of(new Runtime(io, background, program));
+        runner.setWindowTitle(Messages.get("window.title", env.git().repositoryName()));
         runner.focusManager().setFocus(PopupSlot.focusedPane(program.model()));
         // The first tick of the clock is a while off, and the ages the model shows are told from the start.
         dispatch.accept(new Msg.Clock(Instant.now()));
