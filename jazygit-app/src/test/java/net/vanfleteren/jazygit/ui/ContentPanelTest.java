@@ -35,7 +35,7 @@ class ContentPanelTest {
     private final Model model = TestModels.loaded(new SampleData(), "feature/initial-layout");
 
     private static Commit plain(String sha, String... parents) {
-        return new Commit(
+        return Fixtures.commit(
                 new Sha(sha),
                 "Ada",
                 "a@e.com",
@@ -241,8 +241,8 @@ class ContentPanelTest {
         Commit ours = plain("cccc");
         Model diverged = TestModels.loaded()
                 .mapRepoView(repoView -> repoView.withDivergence(Option.of(new DivergenceView(
-                        new Branch.Name("main"),
-                        new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main"))),
+                        new BranchName("main"),
+                        new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))),
                         DivergenceView.Against.UPSTREAM,
                         new Loadable.Loaded<>(new Divergence(
                                 new Divergence.Side(List.of(ours), 1), new Divergence.Side(List.of(), 0))),
@@ -268,7 +268,7 @@ class ContentPanelTest {
 
     @Test
     void withTheCommitsOfABranchOpenTheBranchesShowTheHighlightedOneWhichCanBeFocused() throws Exception {
-        BranchRef feature = new BranchRef.Local(new Branch.Name("feature"));
+        BranchRef feature = new BranchRef.Local(new BranchName("feature"));
         Model logRead = Update.update(
                         Update.update(TestModels.loaded(), new SelectionMsg.BranchSelected(feature))
                                 .model(),
@@ -301,8 +301,8 @@ class ContentPanelTest {
     void aDivergenceWithoutCommitsSaysTheBranchesHaveNotDiverged() throws Exception {
         Model diverged = TestModels.loaded()
                 .mapRepoView(repoView -> repoView.withDivergence(Option.of(new DivergenceView(
-                        new Branch.Name("main"),
-                        new BranchRef.Local(new Branch.Name("feature")),
+                        new BranchName("main"),
+                        new BranchRef.Local(new BranchName("feature")),
                         DivergenceView.Against.BASE,
                         new Loadable.Loaded<>(
                                 new Divergence(new Divergence.Side(List.of(), 0), new Divergence.Side(List.of(), 0))),
@@ -557,8 +557,8 @@ class ContentPanelTest {
     void theDivergenceAreaCanOnlyBeFocusedOnTheLocalTabOnceItsCommitIsLoaded() {
         Model diverged = TestModels.loaded()
                 .mapRepoView(repoView -> repoView.withDivergence(Option.of(new DivergenceView(
-                        new Branch.Name("main"),
-                        new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main"))),
+                        new BranchName("main"),
+                        new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))),
                         DivergenceView.Against.UPSTREAM,
                         new Loadable.Loaded<>(new Divergence(
                                 new Divergence.Side(List.of(plain("cccc")), 1), new Divergence.Side(List.of(), 0))),
@@ -586,7 +586,7 @@ class ContentPanelTest {
 
     @Test
     void commitTextShowsTheHeaderTheMessageADividerAndTheChanges() {
-        Commit commit = new Commit(
+        Commit commit = Fixtures.commit(
                 new Sha("a1b2c3d4e5f6"),
                 "Ada Lovelace",
                 "ada@example.com",
@@ -653,7 +653,8 @@ class ContentPanelTest {
 
     @Test
     void commitTextHasNoBlankLineWithoutAnExtendedMessage() {
-        Commit commit = new Commit(new Sha("a1b2c3d4e5f6"), "Ada", "ada@example.com", Instant.EPOCH, "Subject", "");
+        Commit commit =
+                Fixtures.commit(new Sha("a1b2c3d4e5f6"), "Ada", "ada@example.com", Instant.EPOCH, "Subject", "");
 
         List<String> lines = ContentPanel.commitText(commit, "x", Theme.SpanStyles.NONE).lines().stream()
                 .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
@@ -676,7 +677,7 @@ class ContentPanelTest {
 
     @Test
     void logLinesShowTheExtendedMessageFollowedByABlankLine() {
-        Commit commit = new Commit(
+        Commit commit = Fixtures.commit(
                 new Sha("a1b2c3d"),
                 "Ada Lovelace",
                 "ada@example.com",
@@ -714,14 +715,14 @@ class ContentPanelTest {
     @Test
     void logLinesWithoutExtendedMessageEndAfterTheSubject() {
         List<Commit> commits = List.of(
-                new Commit(
+                Fixtures.commit(
                         new Sha("a1b2c3d"),
                         "Ada",
                         "ada@example.com",
                         Instant.parse("2026-10-09T12:30:00Z"),
                         "Second",
                         ""),
-                new Commit(
+                Fixtures.commit(
                         new Sha("b2c3d4e"),
                         "Ada",
                         "ada@example.com",

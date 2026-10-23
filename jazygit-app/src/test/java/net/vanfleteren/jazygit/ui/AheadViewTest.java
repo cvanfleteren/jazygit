@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 class AheadViewTest {
 
     private static final BranchRef MAIN =
-            new BranchRef.Remote(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, new Branch.Name("main")));
+            new BranchRef.Remote(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, new BranchName("main")));
     private static final Commit TIP = commit("c");
     private static final Commit MIDDLE = commit("b");
     private static final Commit FORK = commit("a");
@@ -35,7 +35,7 @@ class AheadViewTest {
     private static final Ahead MORE = new Ahead(TIP.sha(), MAIN, List.of(TIP, MIDDLE), true, Option.of(FORK));
 
     private static Commit commit(String sha) {
-        return new Commit(new Sha(sha.repeat(7)), "Ada", "ada@example.com", Instant.EPOCH, "msg " + sha, "");
+        return Fixtures.commit(new Sha(sha.repeat(7)), "Ada", "ada@example.com", Instant.EPOCH, "msg " + sha, "");
     }
 
     @Test

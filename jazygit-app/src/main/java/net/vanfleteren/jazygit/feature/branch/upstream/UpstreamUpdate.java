@@ -4,6 +4,7 @@ import io.vavr.control.Option;
 import java.util.function.BiFunction;
 import net.vanfleteren.jazygit.feature.commit.reset.ResetPopup;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -26,7 +27,7 @@ public final class UpstreamUpdate {
 
     public static Next update(Model model, UpstreamMsg msg) {
         return switch (msg) {
-            case UpstreamMsg.Requested(Option<Branch.Name> branch) -> {
+            case UpstreamMsg.Requested(Option<BranchName> branch) -> {
                 Option<Branch> highlighted = branch.flatMap(model.repo()::branch);
                 yield Update.ask(
                         model,

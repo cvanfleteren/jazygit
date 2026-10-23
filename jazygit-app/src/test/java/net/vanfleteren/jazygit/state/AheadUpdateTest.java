@@ -15,12 +15,12 @@ import org.junit.jupiter.api.Test;
  */
 class AheadUpdateTest {
 
-    private static final Branch.Name MAIN = new Branch.Name("main");
-    private static final Branch.Name FEATURE = new Branch.Name("feature");
+    private static final BranchName MAIN = new BranchName("main");
+    private static final BranchName FEATURE = new BranchName("feature");
     private static final BranchRef FEATURE_LOG = new BranchRef.Local(FEATURE);
 
     private static BranchRef origin(String name) {
-        return new BranchRef.Remote(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, new Branch.Name(name)));
+        return new BranchRef.Remote(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, new BranchName(name)));
     }
 
     private static final Sha HEAD = new Sha("aaaa");
@@ -50,10 +50,10 @@ class AheadUpdateTest {
         assertEquals(
                 List.of(
                         origin("parent"),
-                        new BranchRef.Local(new Branch.Name("parent")),
+                        new BranchRef.Local(new BranchName("parent")),
                         origin("main"),
                         new BranchRef.Local(MAIN)),
-                load.bases(Option.of(new Branch.Name("parent"))));
+                load.bases(Option.of(new BranchName("parent"))));
         assertEquals(List.of(origin("main"), new BranchRef.Local(MAIN)), load.bases(Option.none()));
     }
 
@@ -123,8 +123,8 @@ class AheadUpdateTest {
         Model mainKnown = localBranchesRead(
                         selected.model(),
                         List.of(
-                                new Branch(MAIN, true, HEAD, Instant.EPOCH, false, true),
-                                new Branch(FEATURE, false, FEATURE_TIP)))
+                                Fixtures.branch(MAIN, true, HEAD, Instant.EPOCH, false, true),
+                                Fixtures.branch(FEATURE, false, FEATURE_TIP)))
                 .model();
 
         Update.Next logRead = Update.update(
@@ -226,9 +226,13 @@ class AheadUpdateTest {
                 .model();
 
         Update.Next baseMoved = localBranchesRead(
-                read, List.of(new Branch(MAIN, true, new Sha("cccc")), new Branch(FEATURE, false, FEATURE_TIP)));
+                read,
+                List.of(Fixtures.branch(MAIN, true, new Sha("cccc")), Fixtures.branch(FEATURE, false, FEATURE_TIP)));
         Update.Next bothMoved = localBranchesRead(
-                read, List.of(new Branch(MAIN, true, new Sha("cccc")), new Branch(FEATURE, false, new Sha("eeee"))));
+                read,
+                List.of(
+                        Fixtures.branch(MAIN, true, new Sha("cccc")),
+                        Fixtures.branch(FEATURE, false, new Sha("eeee"))));
 
         assertTrue(baseMoved.cmds().contains(load), baseMoved.cmds().toString());
         // Its log is read again, and what is not on its base after it.
@@ -259,7 +263,10 @@ class AheadUpdateTest {
                 .model();
 
         Update.Next moved = localBranchesRead(
-                read, List.of(new Branch(MAIN, true, new Sha("aaaa")), new Branch(FEATURE, false, new Sha("eeee"))));
+                read,
+                List.of(
+                        Fixtures.branch(MAIN, true, new Sha("aaaa")),
+                        Fixtures.branch(FEATURE, false, new Sha("eeee"))));
         Update.Next still = localBranchesRead(read, BRANCHES);
 
         assertTrue(moved.cmds().contains(load));
@@ -284,7 +291,10 @@ class AheadUpdateTest {
         // HEAD moved to another branch: its log is read again, and what is not on its base after it.
         Model moved = Update.update(loaded(), new LoadMsg.StatusLoaded(MOVED)).model();
         Update.Next checkedOut = localBranchesRead(
-                moved, List.of(new Branch(MAIN, false, new Sha("aaaa")), new Branch(FEATURE, true, new Sha("bbbb"))));
+                moved,
+                List.of(
+                        Fixtures.branch(MAIN, false, new Sha("aaaa")),
+                        Fixtures.branch(FEATURE, true, new Sha("bbbb"))));
         assertFalse(
                 checkedOut.cmds().exists(Cmd.LoadAhead.class::isInstance),
                 checkedOut.cmds().toString());
@@ -295,7 +305,7 @@ class AheadUpdateTest {
         Model logRead = Update.update(selected, TestModels.branchLogLoaded(FEATURE_LOG, FEATURE_COMMITS))
                 .model();
         Update.Next branchMoved = localBranchesRead(
-                logRead, List.of(new Branch(MAIN, true, HEAD), new Branch(FEATURE, false, new Sha("eeee"))));
+                logRead, List.of(Fixtures.branch(MAIN, true, HEAD), Fixtures.branch(FEATURE, false, new Sha("eeee"))));
         assertEquals(List.of(TestModels.loadBranchLog(FEATURE_LOG)), branchMoved.cmds());
     }
 
@@ -303,8 +313,8 @@ class AheadUpdateTest {
     void checkingOutABranchWhereHeadIsReadsWhatIsNotOnItsBase() {
         Model model = loaded();
 
-        Update.Next checkedOut =
-                localBranchesRead(model, List.of(new Branch(MAIN, false, HEAD), new Branch(FEATURE, true, HEAD)));
+        Update.Next checkedOut = localBranchesRead(
+                model, List.of(Fixtures.branch(MAIN, false, HEAD), Fixtures.branch(FEATURE, true, HEAD)));
 
         assertTrue(checkedOut.cmds().contains(AheadUpdate.ofHead(checkedOut.model())));
     }

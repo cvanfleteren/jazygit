@@ -23,21 +23,6 @@ public record Commit(
         List<Sha> parents,
         List<Tag> tags) {
 
-    public Commit(
-            Sha sha,
-            String authorName,
-            String authorEmail,
-            Instant authorTime,
-            String message,
-            String body,
-            List<Sha> parents) {
-        this(sha, authorName, authorEmail, authorTime, message, body, parents, List.of());
-    }
-
-    public Commit(Sha sha, String authorName, String authorEmail, Instant authorTime, String message, String body) {
-        this(sha, authorName, authorEmail, authorTime, message, body, List.of());
-    }
-
     public String shortSha() {
         return sha.shortSha();
     }

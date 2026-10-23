@@ -25,7 +25,7 @@ public sealed interface InProgress {
      *
      * @param branch the branch being rebased; none for a detached HEAD
      */
-    record Rebasing(Option<Branch.Name> branch, Sha onto, int step, int total) implements InProgress {}
+    record Rebasing(Option<BranchName> branch, Sha onto, int step, int total) implements InProgress {}
 
     /**
      * A cherry-pick of {@code commit}.

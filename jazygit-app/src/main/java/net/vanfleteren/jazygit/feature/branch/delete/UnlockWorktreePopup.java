@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch.delete;
 
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.Popup;
 
 /**
@@ -10,4 +10,4 @@ import net.vanfleteren.jazygit.state.Popup;
  * @param name   the name of its directory
  * @param reason why it was locked; empty when no reason was given
  */
-public record UnlockWorktreePopup(Branch.Name branch, String location, String name, String reason) implements Popup {}
+public record UnlockWorktreePopup(BranchName branch, String location, String name, String reason) implements Popup {}

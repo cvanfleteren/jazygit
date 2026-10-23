@@ -7,7 +7,7 @@ import io.vavr.control.Option;
  */
 public sealed interface Head {
 
-    static Head onBranch(Branch.Name branch, Sha tip) {
+    static Head onBranch(BranchName branch, Sha tip) {
         return new OnBranch(branch, Option.of(tip));
     }
 
@@ -16,7 +16,7 @@ public sealed interface Head {
      */
     default Option<Sha> commit() {
         return switch (this) {
-            case OnBranch(Branch.Name branch, Option<Sha> tip) -> tip;
+            case OnBranch(BranchName branch, Option<Sha> tip) -> tip;
             case Detached(Sha at) -> Option.of(at);
         };
     }
@@ -24,8 +24,8 @@ public sealed interface Head {
     /**
      * The checked out branch; none for a detached HEAD.
      */
-    default Option<Branch.Name> branchName() {
-        return this instanceof OnBranch(Branch.Name branch, Option<Sha> tip) ? Option.of(branch) : Option.none();
+    default Option<BranchName> branchName() {
+        return this instanceof OnBranch(BranchName branch, Option<Sha> tip) ? Option.of(branch) : Option.none();
     }
 
     /**
@@ -33,7 +33,7 @@ public sealed interface Head {
      *
      * @param tip the commit it points to; none in a repository without commits
      */
-    record OnBranch(Branch.Name branch, Option<Sha> tip) implements Head {}
+    record OnBranch(BranchName branch, Option<Sha> tip) implements Head {}
 
     /**
      * A commit checked out without a branch.

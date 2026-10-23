@@ -6,13 +6,14 @@ import io.vavr.collection.List;
 import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Sha;
 import org.junit.jupiter.api.Test;
 
 class LogGraphTest {
 
     private static Commit commit(String sha, String... parents) {
-        return new Commit(
+        return Fixtures.commit(
                 new Sha(sha),
                 "Ada",
                 "ada@example.com",

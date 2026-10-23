@@ -26,7 +26,9 @@ import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Upstream;
@@ -52,7 +54,7 @@ class JazygitAppReportsTest {
 
     private static final Duration SPINNING = Duration.ofSeconds(1);
 
-    private static final Branch.Name MAIN = new Branch.Name("main");
+    private static final BranchName MAIN = new BranchName("main");
 
     private final List<Sha> commits = new SampleData().commits().get().map(commit -> commit.sha());
 
@@ -177,7 +179,7 @@ class JazygitAppReportsTest {
 
         @Override
         public Either<ProcessError, List<Branch>> branches() {
-            return Either.right(List.of(new Branch(
+            return Either.right(List.of(Fixtures.branch(
                     MAIN,
                     true,
                     new Sha("aaaa"),

@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.feature.github.create;
 import io.vavr.collection.List;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.Popup;
 
 /**
@@ -18,10 +18,10 @@ import net.vanfleteren.jazygit.state.Popup;
  */
 @With
 public record NewPullRequestPopup(
-        Branch.Name branch,
-        Branch.Name head,
-        List<Branch.Name> bases,
-        Branch.Name base,
+        BranchName branch,
+        BranchName head,
+        List<BranchName> bases,
+        BranchName base,
         String titleRead,
         NewPullRequest pullRequest)
         implements Popup {

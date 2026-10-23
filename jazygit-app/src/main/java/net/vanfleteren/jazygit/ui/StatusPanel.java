@@ -17,6 +17,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
@@ -151,7 +152,7 @@ public final class StatusPanel {
     private static String operationLabel(InProgress inProgress, List<Branch> branches) {
         return switch (inProgress) {
             case InProgress.Merging(Sha theirs) -> Messages.get("status.merging", name(theirs, branches));
-            case InProgress.Rebasing(Option<Branch.Name> branch, Sha onto, int step, int total) ->
+            case InProgress.Rebasing(Option<BranchName> branch, Sha onto, int step, int total) ->
                 branch.map(name -> Messages.get("status.rebasing", name.value(), step, total, name(onto, branches)))
                         .getOrElse(() -> Messages.get("status.rebasingDetached", step, total, name(onto, branches)));
             case InProgress.CherryPicking(Sha commit) -> Messages.get("status.cherryPicking", name(commit, branches));
@@ -173,7 +174,7 @@ public final class StatusPanel {
      */
     static String branchLabel(Head head) {
         return switch (head) {
-            case Head.OnBranch(Branch.Name branch, Option<Sha> tip) -> branch.value();
+            case Head.OnBranch(BranchName branch, Option<Sha> tip) -> branch.value();
             case Head.Detached(Sha at) -> Messages.get("status.headDetached", at.shortSha());
         };
     }

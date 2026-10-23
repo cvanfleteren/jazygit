@@ -18,7 +18,7 @@ import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.StubGitProvider;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.MergeMode;
@@ -34,16 +34,16 @@ import org.junit.jupiter.api.Test;
 
 class OperationUpdateTest {
 
-    private static final MergeCmd MERGE = new MergeCmd(new Branch.Name("feature"), MergeMode.MERGE_COMMIT);
+    private static final MergeCmd MERGE = new MergeCmd(new BranchName("feature"), MergeMode.MERGE_COMMIT);
     private static final InProgress MERGING =
             new InProgress.Merging(new Sha("0123456789012345678901234567890123456789"));
     private static final PushCmd.Push PUSH = new PushCmd.Push(
-            new Branch.Name("feature"), new RemoteBranch("origin", new Branch.Name("feature")), PushMode.FAST_FORWARD);
+            new BranchName("feature"), new RemoteBranch("origin", new BranchName("feature")), PushMode.FAST_FORWARD);
 
     @Test
     void aSuccessLogsItsCommandsReleasesItsBranchClearsTheErrorAndReadsTheRepositoryAgain() {
         Model pushing = TestModels.withCheckoutError(loaded(), "foo", "boom")
-                .withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), PushCmd.PUSH);
+                .withBusyBranch(new BranchRef.Local(new BranchName("feature")), PushCmd.PUSH);
 
         Next next = Update.update(pushing, succeeded(PUSH, "git push origin feature"));
 
@@ -64,7 +64,7 @@ class OperationUpdateTest {
 
     @Test
     void onlyAnOperationThatChangesGitHubReadsItAgain() {
-        PullCmd.Pull pull = new PullCmd.Pull(new Branch.Name("feature"));
+        PullCmd.Pull pull = new PullCmd.Pull(new BranchName("feature"));
 
         Next next = Update.update(loaded(), succeeded(pull, "git pull"));
 
@@ -77,7 +77,7 @@ class OperationUpdateTest {
                 new GitError.CommandFailed("rejected", 1), executed("git push origin feature"), Option.none());
 
         Next next = Update.update(
-                loaded().withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), PushCmd.PUSH),
+                loaded().withBusyBranch(new BranchRef.Local(new BranchName("feature")), PushCmd.PUSH),
                 new OperationMsg.Failed(PUSH, failure));
 
         assertEquals(
@@ -97,7 +97,7 @@ class OperationUpdateTest {
                 List.of(),
                 Option.of(new GitError.CommandFailed("fatal: no rebase in progress", 128)));
 
-        Next next = Update.update(loaded(), new OperationMsg.Failed(new RebaseCmd(new Branch.Name("main")), failure));
+        Next next = Update.update(loaded(), new OperationMsg.Failed(new RebaseCmd(new BranchName("main")), failure));
 
         assertEquals(
                 Option.of("Rebasing onto main failed: CONFLICT; cleaning up afterwards failed too: "
@@ -110,7 +110,7 @@ class OperationUpdateTest {
         GitInfoProvider throwing = new StubGitProvider() {
             @Override
             public Either<GitFailure<GitError.ProcessError>, List<ExecutedCommand>> push(
-                    Branch.Name branch, RemoteBranch upstream, PushMode mode) {
+                    BranchName branch, RemoteBranch upstream, PushMode mode) {
                 throw new IllegalStateException("unexpected");
             }
         };
@@ -129,7 +129,7 @@ class OperationUpdateTest {
         GitInfoProvider throwing = new StubGitProvider() {
             @Override
             public Either<GitFailure<GitError.ProcessError>, List<ExecutedCommand>> push(
-                    Branch.Name branch, RemoteBranch upstream, PushMode mode) {
+                    BranchName branch, RemoteBranch upstream, PushMode mode) {
                 throw new StackOverflowError();
             }
         };
@@ -154,7 +154,7 @@ class OperationUpdateTest {
     void anOperationThatStopsOnConflictsIsReportedAsStoppedNotAsFailed() {
         GitInfoProvider stopping = new StubGitProvider() {
             @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> merge(Branch.Name branch, MergeMode mode) {
+            public Either<GitFailure<GitError>, List<ExecutedCommand>> merge(BranchName branch, MergeMode mode) {
                 return Either.left(new GitFailure<>(
                         new GitError.StoppedOnConflicts(Option.of(MERGING), 2), executed("git merge feature")));
             }

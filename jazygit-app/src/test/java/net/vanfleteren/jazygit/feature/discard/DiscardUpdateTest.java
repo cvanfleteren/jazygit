@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Scope;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -18,12 +19,12 @@ import org.junit.jupiter.api.Test;
 
 class DiscardUpdateTest {
 
-    private static final FileEntry UNSTAGED_MOD = new FileEntry("unstaged.txt", ChangeType.MODIFIED);
+    private static final FileEntry UNSTAGED_MOD = Fixtures.fileEntry("unstaged.txt", ChangeType.MODIFIED);
     private static final FileEntry STAGED_MOD = new FileEntry("staged.txt", ChangeType.MODIFIED, true, false);
     private static final FileEntry BOTH_MOD = new FileEntry("both.txt", ChangeType.MODIFIED, true, true);
-    private static final FileEntry NEW = new FileEntry("new.txt", ChangeType.ADDED);
+    private static final FileEntry NEW = Fixtures.fileEntry("new.txt", ChangeType.ADDED);
     private static final FileEntry NEW_EDITED = new FileEntry("edited-new.txt", ChangeType.ADDED, true, true);
-    private static final FileEntry UNTRACKED = new FileEntry("dir/untracked.txt", ChangeType.UNTRACKED);
+    private static final FileEntry UNTRACKED = Fixtures.fileEntry("dir/untracked.txt", ChangeType.UNTRACKED);
     private static final List<FileEntry> ALL = List.of(UNSTAGED_MOD, STAGED_MOD, BOTH_MOD, NEW, NEW_EDITED, UNTRACKED);
 
     @Test

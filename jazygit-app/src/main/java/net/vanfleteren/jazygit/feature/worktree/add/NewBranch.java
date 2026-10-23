@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.worktree.add;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 
 /**
  * A branch to create along with the worktree that checks it out.
@@ -10,4 +10,4 @@ import net.vanfleteren.jazygit.git.model.Branch;
  * @param parent the local branch it is made from, recorded as such; none for one made from a remote branch
  * @param track  whether it follows {@code start}, a remote branch, as checking that out does
  */
-public record NewBranch(String start, Option<Branch.Name> parent, boolean track) {}
+public record NewBranch(String start, Option<BranchName> parent, boolean track) {}

@@ -54,9 +54,9 @@ class BranchUpdateTest {
         return localBranchesRead(
                         loaded(),
                         List.of(
-                                new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
-                                new Branch(
-                                        new Branch.Name("feature"),
+                                Fixtures.branch(new BranchName("main"), true, new Sha("aaaa")),
+                                Fixtures.branch(
+                                        new BranchName("feature"),
                                         false,
                                         new Sha("ffff"),
                                         Instant.EPOCH,
@@ -64,7 +64,7 @@ class BranchUpdateTest {
                                         false,
                                         Option.of(new Upstream(
                                                 new BranchRef.Remote(
-                                                        new RemoteBranch("origin", new Branch.Name("feature"))),
+                                                        new RemoteBranch("origin", new BranchName("feature"))),
                                                 0,
                                                 0)))))
                 .model();
@@ -77,8 +77,8 @@ class BranchUpdateTest {
         return localBranchesRead(
                         loaded(),
                         List.of(
-                                new Branch(
-                                        new Branch.Name("main"),
+                                Fixtures.branch(
+                                        new BranchName("main"),
                                         true,
                                         new Sha("aaaa"),
                                         Instant.EPOCH,
@@ -86,11 +86,11 @@ class BranchUpdateTest {
                                         true,
                                         Option.of(new Upstream(
                                                 new BranchRef.Remote(
-                                                        new RemoteBranch("origin", new Branch.Name("main"))),
+                                                        new RemoteBranch("origin", new BranchName("main"))),
                                                 mainAhead,
                                                 1))),
-                                new Branch(
-                                        new Branch.Name("feature"),
+                                Fixtures.branch(
+                                        new BranchName("feature"),
                                         false,
                                         new Sha("ffff"),
                                         Instant.EPOCH,
@@ -98,7 +98,7 @@ class BranchUpdateTest {
                                         false,
                                         Option.of(new Upstream(
                                                 new BranchRef.Remote(
-                                                        new RemoteBranch("origin", new Branch.Name("feature"))),
+                                                        new RemoteBranch("origin", new BranchName("feature"))),
                                                 featureAhead,
                                                 1)))))
                 .model();
@@ -107,12 +107,12 @@ class BranchUpdateTest {
     @Test
     void checkoutRequestOfAnotherBranchChecksItOut() {
         Model failedBefore = Update.update(
-                        loaded(), failed(new CheckoutCmd.Checkout(new Branch.Name("feature")), "boom"))
+                        loaded(), failed(new CheckoutCmd.Checkout(new BranchName("feature")), "boom"))
                 .model();
 
-        Next next = Update.update(failedBefore, new CheckoutMsg.Requested(new Branch.Name("feature")));
+        Next next = Update.update(failedBefore, new CheckoutMsg.Requested(new BranchName("feature")));
 
-        assertEquals(List.of(new Checkout(new Branch.Name("feature"))), next.cmds());
+        assertEquals(List.of(new Checkout(new BranchName("feature"))), next.cmds());
         assertEquals(Option.none(), next.model().outcome().error());
     }
 
@@ -121,11 +121,11 @@ class BranchUpdateTest {
         Next next = Update.update(
                 loaded(),
                 new CheckoutMsg.NeedsStash(
-                        new CheckoutCmd.Checkout(new Branch.Name("feature")),
+                        new CheckoutCmd.Checkout(new BranchName("feature")),
                         net.vanfleteren.jazygit.git.StubGitProvider.executed("git checkout --quiet feature --")));
 
         assertEquals(
-                Option.of(new StashCheckoutPopup(new Branch.Name("feature"))),
+                Option.of(new StashCheckoutPopup(new BranchName("feature"))),
                 next.model().popup(StashCheckoutPopup.class));
         // The checkout that ran is logged like any other.
         assertEquals(
@@ -139,12 +139,12 @@ class BranchUpdateTest {
 
     @Test
     void theOfferToStashDoesNotTakeAwayADialogTheUserIsTypingIn() {
-        Model typing = Update.update(tracking(), new NewBranchMsg.Requested(new Branch.Name("main")))
+        Model typing = Update.update(tracking(), new NewBranchMsg.Requested(new BranchName("main")))
                 .model();
 
         Model next = Update.update(
                         typing,
-                        new CheckoutMsg.NeedsStash(new CheckoutCmd.Checkout(new Branch.Name("feature")), List.empty()))
+                        new CheckoutMsg.NeedsStash(new CheckoutCmd.Checkout(new BranchName("feature")), List.empty()))
                 .model();
 
         assertEquals(typing.popup(), next.popup());
@@ -152,25 +152,25 @@ class BranchUpdateTest {
 
     @Test
     void aBusyBranchIsNotCheckedOutMergedRebasedOrBranchedFrom() {
-        Model pushing = tracking().withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), PushCmd.PUSH);
+        Model pushing = tracking().withBusyBranch(new BranchRef.Local(new BranchName("feature")), PushCmd.PUSH);
 
         assertEquals(
                 List.of(),
-                Update.update(pushing, new CheckoutMsg.Requested(new Branch.Name("feature")))
+                Update.update(pushing, new CheckoutMsg.Requested(new BranchName("feature")))
                         .cmds());
         assertEquals(
                 Option.none(),
-                Update.update(pushing, new MergeMsg.Requested(new Branch.Name("feature")))
+                Update.update(pushing, new MergeMsg.Requested(new BranchName("feature")))
                         .model()
                         .popup());
         assertEquals(
                 Option.none(),
-                Update.update(pushing, new RebaseMsg.Requested(new Branch.Name("feature")))
+                Update.update(pushing, new RebaseMsg.Requested(new BranchName("feature")))
                         .model()
                         .popup());
         assertEquals(
                 Option.none(),
-                Update.update(pushing, new NewBranchMsg.Requested(new Branch.Name("feature")))
+                Update.update(pushing, new NewBranchMsg.Requested(new BranchName("feature")))
                         .model()
                         .popup());
     }
@@ -180,13 +180,13 @@ class BranchUpdateTest {
         Model dirty = Update.update(
                         loaded(),
                         new LoadMsg.StatusLoaded(new RepoStatus(
-                                Head.onBranch(new Branch.Name("main"), new Sha("aaaa")),
-                                List.of(new FileEntry("a.txt", ChangeType.MODIFIED)))))
+                                Head.onBranch(new BranchName("main"), new Sha("aaaa")),
+                                List.of(Fixtures.fileEntry("a.txt", ChangeType.MODIFIED)))))
                 .model();
 
         assertEquals(
-                List.of(new Checkout(new Branch.Name("feature"))),
-                Update.update(dirty, new CheckoutMsg.Requested(new Branch.Name("feature")))
+                List.of(new Checkout(new BranchName("feature"))),
+                Update.update(dirty, new CheckoutMsg.Requested(new BranchName("feature")))
                         .cmds());
     }
 
@@ -194,12 +194,12 @@ class BranchUpdateTest {
     void confirmingTheStashChecksOutThroughAStashAndClosesThePopup() {
         Model asked = Update.update(
                         loaded(),
-                        new CheckoutMsg.NeedsStash(new CheckoutCmd.Checkout(new Branch.Name("feature")), List.empty()))
+                        new CheckoutMsg.NeedsStash(new CheckoutCmd.Checkout(new BranchName("feature")), List.empty()))
                 .model();
 
         Next next = Update.update(asked, new CheckoutMsg.StashConfirmed());
 
-        assertEquals(List.of(new CheckoutWithStash(new Branch.Name("feature"))), next.cmds());
+        assertEquals(List.of(new CheckoutWithStash(new BranchName("feature"))), next.cmds());
         assertEquals(Option.none(), next.model().popup());
     }
 
@@ -207,7 +207,7 @@ class BranchUpdateTest {
     void cancellingTheStashClosesThePopupWithoutCheckingOut() {
         Model asked = Update.update(
                         loaded(),
-                        new CheckoutMsg.NeedsStash(new CheckoutCmd.Checkout(new Branch.Name("feature")), List.empty()))
+                        new CheckoutMsg.NeedsStash(new CheckoutCmd.Checkout(new BranchName("feature")), List.empty()))
                 .model();
 
         Next next = Update.update(asked, new CheckoutMsg.StashCancelled());
@@ -229,26 +229,26 @@ class BranchUpdateTest {
 
         assertEquals(
                 List.of(),
-                Update.update(model, new CheckoutMsg.Requested(new Branch.Name("main")))
+                Update.update(model, new CheckoutMsg.Requested(new BranchName("main")))
                         .cmds());
         assertEquals(
                 List.of(),
-                Update.update(model, new CheckoutMsg.Requested(new Branch.Name("gone")))
+                Update.update(model, new CheckoutMsg.Requested(new BranchName("gone")))
                         .cmds());
         assertEquals(
                 List.of(),
-                Update.update(Update.init("repo").model(), new CheckoutMsg.Requested(new Branch.Name("feature")))
+                Update.update(Update.init("repo").model(), new CheckoutMsg.Requested(new BranchName("feature")))
                         .cmds());
     }
 
     @Test
     void pushRequestOfABranchWithoutUpstreamAsksWhereToPushIt() {
         Next asked = Update.update(
-                withCheckoutError(loaded(), "foo", "boom"), new PushMsg.Requested(new Branch.Name("feature")));
+                withCheckoutError(loaded(), "foo", "boom"), new PushMsg.Requested(new BranchName("feature")));
 
         assertEquals(List.of(), asked.cmds());
         assertEquals(
-                Option.of(new SetUpstreamPopup(new Branch.Name("feature"))),
+                Option.of(new SetUpstreamPopup(new BranchName("feature"))),
                 asked.model().popup());
         assertEquals(Option.none(), asked.model().outcome().error());
         assertEquals(
@@ -258,11 +258,11 @@ class BranchUpdateTest {
                 Update.update(typed(asked.model(), "  upstream   shared/feature "), new PushMsg.UpstreamConfirmed());
         assertEquals(
                 List.of(new PushCmd.PushSettingUpstream(
-                        new Branch.Name("feature"), new RemoteBranch("upstream", new Branch.Name("shared/feature")))),
+                        new BranchName("feature"), new RemoteBranch("upstream", new BranchName("shared/feature")))),
                 confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());
         assertEquals(
-                io.vavr.collection.HashSet.of(new BranchRef.Local(new Branch.Name("feature"))),
+                io.vavr.collection.HashSet.of(new BranchRef.Local(new BranchName("feature"))),
                 confirmed.model().jobs().busy().keySet());
 
         Next cancelled = Update.update(asked.model(), new PushMsg.UpstreamCancelled());
@@ -275,38 +275,38 @@ class BranchUpdateTest {
         Model model = localBranchesRead(
                         loaded(),
                         List.of(
-                                new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
-                                new Branch(
-                                        new Branch.Name("feature"),
+                                Fixtures.branch(new BranchName("main"), true, new Sha("aaaa")),
+                                Fixtures.branch(
+                                        new BranchName("feature"),
                                         false,
                                         new Sha("ffff"),
                                         Instant.EPOCH,
                                         true,
                                         false,
-                                        Option.of(new Upstream(new BranchRef.Local(new Branch.Name("main")), 1, 0)))))
+                                        Option.of(new Upstream(new BranchRef.Local(new BranchName("main")), 1, 0)))))
                 .model();
 
-        Next asked = Update.update(model, new PushMsg.Requested(new Branch.Name("feature")));
+        Next asked = Update.update(model, new PushMsg.Requested(new BranchName("feature")));
 
         assertEquals(List.of(), asked.cmds());
         assertEquals(
-                Option.of(new SetUpstreamPopup(new Branch.Name("feature"))),
+                Option.of(new SetUpstreamPopup(new BranchName("feature"))),
                 asked.model().popup());
         assertEquals(
-                new RemoteBranch("origin", new Branch.Name("feature")),
-                model.repo().branch(new Branch.Name("feature")).get().pushTarget());
+                new RemoteBranch("origin", new BranchName("feature")),
+                model.repo().branch(new BranchName("feature")).get().pushTarget());
     }
 
     @Test
     void anUpstreamThatIsNotARemoteAndABranchKeepsTheDialogOpen() {
-        Model asked = Update.update(loaded(), new PushMsg.Requested(new Branch.Name("feature")))
+        Model asked = Update.update(loaded(), new PushMsg.Requested(new BranchName("feature")))
                 .model();
 
         for (String text : List.of("", "origin", "origin feature extra")) {
             Next next = Update.update(typed(asked, text), new PushMsg.UpstreamConfirmed());
             assertEquals(List.of(), next.cmds());
             assertEquals(
-                    Option.of(new SetUpstreamPopup(new Branch.Name("feature"), text)),
+                    Option.of(new SetUpstreamPopup(new BranchName("feature"), text)),
                     next.model().popup());
             assertTrue(next.model().outcome().error().isDefined());
         }
@@ -326,32 +326,32 @@ class BranchUpdateTest {
                         tracking(),
                         failed(
                                 new PushCmd.Push(
-                                        new Branch.Name("feature"),
-                                        new RemoteBranch("origin", new Branch.Name("feature")),
+                                        new BranchName("feature"),
+                                        new RemoteBranch("origin", new BranchName("feature")),
                                         PushMode.FAST_FORWARD),
                                 "boom"))
                 .model();
 
-        Next next = Update.update(failedBefore, new PushMsg.Requested(new Branch.Name("feature")));
+        Next next = Update.update(failedBefore, new PushMsg.Requested(new BranchName("feature")));
 
         assertEquals(
                 List.of(new PushCmd.Push(
-                        new Branch.Name("feature"),
-                        new RemoteBranch("origin", new Branch.Name("feature")),
+                        new BranchName("feature"),
+                        new RemoteBranch("origin", new BranchName("feature")),
                         PushMode.FAST_FORWARD)),
                 next.cmds());
         assertEquals(Option.none(), next.model().outcome().error());
         assertEquals(
-                io.vavr.collection.HashSet.of(new BranchRef.Local(new Branch.Name("feature"))),
+                io.vavr.collection.HashSet.of(new BranchRef.Local(new BranchName("feature"))),
                 next.model().jobs().busy().keySet());
         // Not pushed again while it is being pushed.
         assertEquals(
                 List.of(),
-                Update.update(next.model(), new PushMsg.Requested(new Branch.Name("feature")))
+                Update.update(next.model(), new PushMsg.Requested(new BranchName("feature")))
                         .cmds());
         assertEquals(
                 List.of(),
-                Update.update(loaded(), new PushMsg.Requested(new Branch.Name("gone")))
+                Update.update(loaded(), new PushMsg.Requested(new BranchName("gone")))
                         .cmds());
     }
 
@@ -360,9 +360,9 @@ class BranchUpdateTest {
         Model diverged = localBranchesRead(
                         loaded(),
                         List.of(
-                                new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
-                                new Branch(
-                                        new Branch.Name("feature"),
+                                Fixtures.branch(new BranchName("main"), true, new Sha("aaaa")),
+                                Fixtures.branch(
+                                        new BranchName("feature"),
                                         false,
                                         new Sha("ffff"),
                                         Instant.EPOCH,
@@ -370,16 +370,16 @@ class BranchUpdateTest {
                                         false,
                                         Option.of(new Upstream(
                                                 new BranchRef.Remote(
-                                                        new RemoteBranch("origin", new Branch.Name("feature"))),
+                                                        new RemoteBranch("origin", new BranchName("feature"))),
                                                 1,
                                                 2)))))
                 .model();
 
-        Next asked = Update.update(diverged, new PushMsg.Requested(new Branch.Name("feature")));
+        Next asked = Update.update(diverged, new PushMsg.Requested(new BranchName("feature")));
 
         assertEquals(List.of(), asked.cmds());
         assertEquals(
-                Option.of(new ForcePushPopup(new Branch.Name("feature"))),
+                Option.of(new ForcePushPopup(new BranchName("feature"))),
                 asked.model().popup());
         assertEquals(
                 io.vavr.collection.HashSet.empty(), asked.model().jobs().busy().keySet());
@@ -387,13 +387,13 @@ class BranchUpdateTest {
         Next confirmed = Update.update(asked.model(), new PushMsg.ForceConfirmed());
         assertEquals(
                 List.of(new PushCmd.Push(
-                        new Branch.Name("feature"),
-                        new RemoteBranch("origin", new Branch.Name("feature")),
+                        new BranchName("feature"),
+                        new RemoteBranch("origin", new BranchName("feature")),
                         PushMode.FORCE_WITH_LEASE)),
                 confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());
         assertEquals(
-                io.vavr.collection.HashSet.of(new BranchRef.Local(new Branch.Name("feature"))),
+                io.vavr.collection.HashSet.of(new BranchRef.Local(new BranchName("feature"))),
                 confirmed.model().jobs().busy().keySet());
 
         Next cancelled = Update.update(asked.model(), new PushMsg.ForceCancelled());
@@ -413,14 +413,14 @@ class BranchUpdateTest {
                         loaded(),
                         failed(
                                 new PushCmd.Push(
-                                        new Branch.Name("feature"),
-                                        new RemoteBranch("origin", new Branch.Name("feature")),
+                                        new BranchName("feature"),
+                                        new RemoteBranch("origin", new BranchName("feature")),
                                         PushMode.FAST_FORWARD),
                                 "boom"))
                 .model();
         assertEquals(Option.of("Pushing branch feature failed: boom"), errorText(failed));
 
-        Model pushing = Update.update(loaded(), new PushMsg.Requested(new Branch.Name("feature")))
+        Model pushing = Update.update(loaded(), new PushMsg.Requested(new BranchName("feature")))
                 .model();
         assertEquals(
                 io.vavr.collection.HashSet.empty(),
@@ -428,8 +428,8 @@ class BranchUpdateTest {
                                 pushing,
                                 failed(
                                         new PushCmd.Push(
-                                                new Branch.Name("feature"),
-                                                new RemoteBranch("origin", new Branch.Name("feature")),
+                                                new BranchName("feature"),
+                                                new RemoteBranch("origin", new BranchName("feature")),
                                                 PushMode.FAST_FORWARD),
                                         "boom"))
                         .model()
@@ -441,8 +441,8 @@ class BranchUpdateTest {
                 Update.update(
                                 pushing,
                                 succeeded(new PushCmd.Push(
-                                        new Branch.Name("feature"),
-                                        new RemoteBranch("origin", new Branch.Name("feature")),
+                                        new BranchName("feature"),
+                                        new RemoteBranch("origin", new BranchName("feature")),
                                         PushMode.FAST_FORWARD)))
                         .model()
                         .jobs()
@@ -452,8 +452,8 @@ class BranchUpdateTest {
         Next done = Update.update(
                 withCheckoutError(loaded(), "foo", "boom"),
                 succeeded(new PushCmd.Push(
-                        new Branch.Name("feature"),
-                        new RemoteBranch("origin", new Branch.Name("feature")),
+                        new BranchName("feature"),
+                        new RemoteBranch("origin", new BranchName("feature")),
                         PushMode.FAST_FORWARD)));
         assertEquals(Option.none(), done.model().outcome().error());
         assertTrue(done.cmds().contains(new LoadBranches()));
@@ -461,40 +461,40 @@ class BranchUpdateTest {
 
     @Test
     void pullRequestOfTheCheckedOutBranchPullsItEvenWhenItHasDiverged() {
-        Model failedBefore = Update.update(pullable(2, 0), failed(new PullCmd.Pull(new Branch.Name("main")), "boom"))
+        Model failedBefore = Update.update(pullable(2, 0), failed(new PullCmd.Pull(new BranchName("main")), "boom"))
                 .model();
 
-        Next next = Update.update(failedBefore, new PullMsg.Requested(new Branch.Name("main")));
+        Next next = Update.update(failedBefore, new PullMsg.Requested(new BranchName("main")));
 
-        assertEquals(List.of(new PullCmd.Pull(new Branch.Name("main"))), next.cmds());
+        assertEquals(List.of(new PullCmd.Pull(new BranchName("main"))), next.cmds());
         assertEquals(Option.none(), next.model().outcome().error());
         assertEquals(
-                io.vavr.collection.HashMap.of(new BranchRef.Local(new Branch.Name("main")), PullCmd.PULL),
+                io.vavr.collection.HashMap.of(new BranchRef.Local(new BranchName("main")), PullCmd.PULL),
                 next.model().jobs().busy());
         // Not pulled again while it is being pulled.
         assertEquals(
                 List.of(),
-                Update.update(next.model(), new PullMsg.Requested(new Branch.Name("main")))
+                Update.update(next.model(), new PullMsg.Requested(new BranchName("main")))
                         .cmds());
     }
 
     @Test
     void pullRequestOfAnotherBranchFastForwardsIt() {
-        Next next = Update.update(pullable(0, 0), new PullMsg.Requested(new Branch.Name("feature")));
+        Next next = Update.update(pullable(0, 0), new PullMsg.Requested(new BranchName("feature")));
 
         assertEquals(
                 List.of(new PullCmd.FastForward(
-                        new Branch.Name("feature"),
-                        new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("feature"))))),
+                        new BranchName("feature"),
+                        new BranchRef.Remote(new RemoteBranch("origin", new BranchName("feature"))))),
                 next.cmds());
         assertEquals(
-                io.vavr.collection.HashSet.of(new BranchRef.Local(new Branch.Name("feature"))),
+                io.vavr.collection.HashSet.of(new BranchRef.Local(new BranchName("feature"))),
                 next.model().jobs().busy().keySet());
     }
 
     @Test
     void anotherBranchWithCommitsToPushIsNotFastForwarded() {
-        Next next = Update.update(pullable(0, 1), new PullMsg.Requested(new Branch.Name("feature")));
+        Next next = Update.update(pullable(0, 1), new PullMsg.Requested(new BranchName("feature")));
 
         assertEquals(List.of(), next.cmds());
         assertEquals(
@@ -504,33 +504,33 @@ class BranchUpdateTest {
 
     @Test
     void aBranchWithoutUpstreamIsNotPulled() {
-        Next current = Update.update(loaded(), new PullMsg.Requested(new Branch.Name("main")));
+        Next current = Update.update(loaded(), new PullMsg.Requested(new BranchName("main")));
         assertEquals(List.of(), current.cmds());
         assertEquals(Option.of("Branch main has no upstream"), errorText(current.model()));
 
         assertEquals(
                 List.of(),
-                Update.update(loaded(), new PullMsg.Requested(new Branch.Name("feature")))
+                Update.update(loaded(), new PullMsg.Requested(new BranchName("feature")))
                         .cmds());
         assertEquals(
                 List.of(),
-                Update.update(loaded(), new PullMsg.Requested(new Branch.Name("gone")))
+                Update.update(loaded(), new PullMsg.Requested(new BranchName("gone")))
                         .cmds());
     }
 
     @Test
     void aBranchWhoseUpstreamIsGoneIsNotPulledAndTheErrorSaysWhy() {
-        Branch gone = new Branch(
-                new Branch.Name("old"),
+        Branch gone = Fixtures.branch(
+                new BranchName("old"),
                 false,
                 new Sha("9"),
                 Instant.EPOCH,
                 false,
                 false,
-                new Tracking.Gone(new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("old")))));
+                new Tracking.Gone(new BranchRef.Remote(new RemoteBranch("origin", new BranchName("old")))));
         Model model = localBranchesRead(loaded(), List.of(gone)).model();
 
-        Next pulled = Update.update(model, new PullMsg.Requested(new Branch.Name("old")));
+        Next pulled = Update.update(model, new PullMsg.Requested(new BranchName("old")));
 
         assertEquals(List.of(), pulled.cmds());
         assertEquals(
@@ -538,8 +538,8 @@ class BranchUpdateTest {
                 errorText(pulled.model()));
         // Like a branch without an upstream, it asks where to push.
         assertEquals(
-                Option.of(new SetUpstreamPopup(new Branch.Name("old"))),
-                Update.update(model, new PushMsg.Requested(new Branch.Name("old")))
+                Option.of(new SetUpstreamPopup(new BranchName("old"))),
+                Update.update(model, new PushMsg.Requested(new BranchName("old")))
                         .model()
                         .popup());
     }
@@ -548,7 +548,7 @@ class BranchUpdateTest {
     void failedPullIsStored() {
         assertEquals(
                 Option.of("Pulling branch main failed: boom"),
-                errorText(Update.update(loaded(), failed(new PullCmd.Pull(new Branch.Name("main")), "boom"))
+                errorText(Update.update(loaded(), failed(new PullCmd.Pull(new BranchName("main")), "boom"))
                         .model()));
         assertEquals(
                 Option.of("Fast-forwarding branch feature failed: boom"),
@@ -556,18 +556,18 @@ class BranchUpdateTest {
                                 loaded(),
                                 failed(
                                         new PullCmd.FastForward(
-                                                new Branch.Name("feature"),
+                                                new BranchName("feature"),
                                                 new BranchRef.Remote(
-                                                        new RemoteBranch("origin", new Branch.Name("feature")))),
+                                                        new RemoteBranch("origin", new BranchName("feature")))),
                                         "boom"))
                         .model()));
     }
 
     @Test
     void newBranchRequestOpensTheDialogAndCancelClosesIt() {
-        Model open = Update.update(loaded(), new NewBranchMsg.Requested(new Branch.Name("feature")))
+        Model open = Update.update(loaded(), new NewBranchMsg.Requested(new BranchName("feature")))
                 .model();
-        assertEquals(Option.of(new NewBranchPopup(new Branch.Name("feature"))), open.popup());
+        assertEquals(Option.of(new NewBranchPopup(new BranchName("feature"))), open.popup());
 
         Next cancelled = Update.update(open, new NewBranchMsg.Cancelled());
         assertEquals(Option.none(), cancelled.model().popup());
@@ -576,7 +576,7 @@ class BranchUpdateTest {
 
     @Test
     void newBranchRequestedAtACommitOpensTheDialogWithItsSha() {
-        net.vanfleteren.jazygit.git.model.Commit commit = new net.vanfleteren.jazygit.git.model.Commit(
+        net.vanfleteren.jazygit.git.model.Commit commit = net.vanfleteren.jazygit.git.model.Fixtures.commit(
                 new Sha("abc1234567"), "Ada", "a@e.com", java.time.Instant.EPOCH, "msg", "");
         Model model = Update.update(loaded(), TestModels.commitsLoaded(List.of(commit)))
                 .model();
@@ -595,34 +595,34 @@ class BranchUpdateTest {
 
     @Test
     void confirmedNewBranchIsCreatedAtTheBase() {
-        Model open = Update.update(loaded(), new NewBranchMsg.Requested(new Branch.Name("feature")))
+        Model open = Update.update(loaded(), new NewBranchMsg.Requested(new BranchName("feature")))
                 .model();
 
         Next next = Update.update(typed(open, " topic "), new NewBranchMsg.Confirmed());
 
         assertEquals(
-                List.of(new NewBranchCmd(new Branch.Name("topic"), "feature", Option.of(new Branch.Name("feature")))),
+                List.of(new NewBranchCmd(new BranchName("topic"), "feature", Option.of(new BranchName("feature")))),
                 next.cmds());
         assertEquals(Option.none(), next.model().popup());
     }
 
     @Test
     void blankNewBranchNameKeepsTheDialogOpen() {
-        Model open = Update.update(loaded(), new NewBranchMsg.Requested(new Branch.Name("feature")))
+        Model open = Update.update(loaded(), new NewBranchMsg.Requested(new BranchName("feature")))
                 .model();
 
         Next next = Update.update(typed(open, "  "), new NewBranchMsg.Confirmed());
 
         assertEquals(List.of(), next.cmds());
         assertEquals(
-                Option.of(new NewBranchPopup(new Branch.Name("feature")).withText("  ")),
+                Option.of(new NewBranchPopup(new BranchName("feature")).withText("  ")),
                 next.model().popup());
     }
 
     @Test
     void failedBranchCreationIsStored() {
         Model model = Update.update(
-                        loaded(), failed(new NewBranchCmd(new Branch.Name("topic"), "main", Option.none()), "boom"))
+                        loaded(), failed(new NewBranchCmd(new BranchName("topic"), "main", Option.none()), "boom"))
                 .model();
 
         assertEquals(Option.of("Creating branch topic failed: boom"), errorText(model));
@@ -630,9 +630,9 @@ class BranchUpdateTest {
 
     @Test
     void renameRequestOpensTheDialogAndCancelClosesIt() {
-        Model open = Update.update(loaded(), new RenameBranchMsg.Requested(new Branch.Name("feature")))
+        Model open = Update.update(loaded(), new RenameBranchMsg.Requested(new BranchName("feature")))
                 .model();
-        assertEquals(Option.of(new RenameBranchPopup(new Branch.Name("feature"))), open.popup());
+        assertEquals(Option.of(new RenameBranchPopup(new BranchName("feature"))), open.popup());
 
         Next cancelled = Update.update(open, new RenameBranchMsg.Cancelled());
         assertEquals(Option.none(), cancelled.model().popup());
@@ -641,45 +641,45 @@ class BranchUpdateTest {
 
     @Test
     void theCheckedOutBranchCanBeRenamedButNotABusyOrUnknownOne() {
-        Model pushing = loaded().withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), PushCmd.PUSH);
+        Model pushing = loaded().withBusyBranch(new BranchRef.Local(new BranchName("feature")), PushCmd.PUSH);
 
         assertEquals(
-                Option.of(new RenameBranchPopup(new Branch.Name("main"))),
-                Update.update(pushing, new RenameBranchMsg.Requested(new Branch.Name("main")))
+                Option.of(new RenameBranchPopup(new BranchName("main"))),
+                Update.update(pushing, new RenameBranchMsg.Requested(new BranchName("main")))
                         .model()
                         .popup());
         assertEquals(
                 Option.none(),
-                Update.update(pushing, new RenameBranchMsg.Requested(new Branch.Name("feature")))
+                Update.update(pushing, new RenameBranchMsg.Requested(new BranchName("feature")))
                         .model()
                         .popup());
         assertEquals(
                 Option.none(),
-                Update.update(pushing, new RenameBranchMsg.Requested(new Branch.Name("nope")))
+                Update.update(pushing, new RenameBranchMsg.Requested(new BranchName("nope")))
                         .model()
                         .popup());
     }
 
     @Test
     void confirmedRenameRenamesTheBranch() {
-        Model open = Update.update(loaded(), new RenameBranchMsg.Requested(new Branch.Name("feature")))
+        Model open = Update.update(loaded(), new RenameBranchMsg.Requested(new BranchName("feature")))
                 .model();
 
         Next next = Update.update(typed(open, " topic "), new RenameBranchMsg.Confirmed());
 
-        assertEquals(List.of(new RenameBranchCmd(new Branch.Name("feature"), new Branch.Name("topic"))), next.cmds());
+        assertEquals(List.of(new RenameBranchCmd(new BranchName("feature"), new BranchName("topic"))), next.cmds());
         assertEquals(Option.none(), next.model().popup());
     }
 
     @Test
     void blankRenameKeepsTheDialogOpenAndTheSameNameClosesIt() {
-        Model open = Update.update(loaded(), new RenameBranchMsg.Requested(new Branch.Name("feature")))
+        Model open = Update.update(loaded(), new RenameBranchMsg.Requested(new BranchName("feature")))
                 .model();
 
         Next blank = Update.update(typed(open, "  "), new RenameBranchMsg.Confirmed());
         assertEquals(List.of(), blank.cmds());
         assertEquals(
-                Option.of(new RenameBranchPopup(new Branch.Name("feature"), "  ")),
+                Option.of(new RenameBranchPopup(new BranchName("feature"), "  ")),
                 blank.model().popup());
 
         Next same = Update.update(typed(open, "feature "), new RenameBranchMsg.Confirmed());
@@ -691,7 +691,7 @@ class BranchUpdateTest {
     void failedRenameIsStored() {
         Model model = Update.update(
                         loaded(),
-                        failed(new RenameBranchCmd(new Branch.Name("feature"), new Branch.Name("main")), "boom"))
+                        failed(new RenameBranchCmd(new BranchName("feature"), new BranchName("main")), "boom"))
                 .model();
 
         assertEquals(Option.of("Renaming branch feature failed: boom"), errorText(model));
@@ -702,38 +702,38 @@ class BranchUpdateTest {
         Model model = loaded();
 
         assertEquals(
-                Option.of(new DeleteBranchPopup(new Branch.Name("feature"))),
-                Update.update(model, new DeleteBranchMsg.Requested(new Branch.Name("feature")))
+                Option.of(new DeleteBranchPopup(new BranchName("feature"))),
+                Update.update(model, new DeleteBranchMsg.Requested(new BranchName("feature")))
                         .model()
                         .popup());
         assertEquals(
                 Option.none(),
-                Update.update(model, new DeleteBranchMsg.Requested(new Branch.Name("main")))
+                Update.update(model, new DeleteBranchMsg.Requested(new BranchName("main")))
                         .model()
                         .popup());
         assertEquals(
                 Option.none(),
-                Update.update(model, new DeleteBranchMsg.Requested(new Branch.Name("gone")))
+                Update.update(model, new DeleteBranchMsg.Requested(new BranchName("gone")))
                         .model()
                         .popup());
     }
 
     @Test
     void remoteScopesAreRefusedForALocalOnlyBranch() {
-        Model open = Update.update(loaded(), new DeleteBranchMsg.Requested(new Branch.Name("feature")))
+        Model open = Update.update(loaded(), new DeleteBranchMsg.Requested(new BranchName("feature")))
                 .model();
 
         for (DeleteScope scope : List.of(DeleteScope.REMOTE, DeleteScope.BOTH)) {
             Next next = Update.update(open, new DeleteBranchMsg.Chosen(scope));
             assertEquals(List.of(), next.cmds());
             assertEquals(
-                    Option.of(new DeleteBranchPopup(new Branch.Name("feature"))),
+                    Option.of(new DeleteBranchPopup(new BranchName("feature"))),
                     next.model().popup());
         }
         assertEquals(
                 List.of(new DeleteBranchCmd.DeleteBranch(
-                        new Branch.Name("feature"),
-                        new RemoteBranch("origin", new Branch.Name("feature")),
+                        new BranchName("feature"),
+                        new RemoteBranch("origin", new BranchName("feature")),
                         DeleteScope.LOCAL)),
                 Update.update(open, new DeleteBranchMsg.Chosen(DeleteScope.LOCAL))
                         .cmds());
@@ -744,16 +744,16 @@ class BranchUpdateTest {
         Model model = localBranchesRead(
                         loaded(),
                         List.of(
-                                new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
-                                new Branch(
-                                        new Branch.Name("trunk"),
+                                Fixtures.branch(new BranchName("main"), true, new Sha("aaaa")),
+                                Fixtures.branch(
+                                        new BranchName("trunk"),
                                         false,
                                         new Sha("tttt"),
                                         java.time.Instant.EPOCH,
                                         true,
                                         true)))
                 .model();
-        Model open = Update.update(model, new DeleteBranchMsg.Requested(new Branch.Name("trunk")))
+        Model open = Update.update(model, new DeleteBranchMsg.Requested(new BranchName("trunk")))
                 .model();
 
         assertEquals(
@@ -766,8 +766,8 @@ class BranchUpdateTest {
                         .cmds());
         assertEquals(
                 List.of(new DeleteBranchCmd.DeleteBranch(
-                        new Branch.Name("trunk"),
-                        new RemoteBranch("origin", new Branch.Name("trunk")),
+                        new BranchName("trunk"),
+                        new RemoteBranch("origin", new BranchName("trunk")),
                         DeleteScope.LOCAL)),
                 Update.update(open, new DeleteBranchMsg.Chosen(DeleteScope.LOCAL))
                         .cmds());
@@ -778,35 +778,35 @@ class BranchUpdateTest {
         Model withRemote = localBranchesRead(
                         loaded(),
                         List.of(
-                                new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
-                                new Branch(
-                                        new Branch.Name("feature"),
+                                Fixtures.branch(new BranchName("main"), true, new Sha("aaaa")),
+                                Fixtures.branch(
+                                        new BranchName("feature"),
                                         false,
                                         new Sha("ffff"),
                                         java.time.Instant.EPOCH,
                                         true)))
                 .model();
-        Model open = Update.update(withRemote, new DeleteBranchMsg.Requested(new Branch.Name("feature")))
+        Model open = Update.update(withRemote, new DeleteBranchMsg.Requested(new BranchName("feature")))
                 .model();
 
         Next next = Update.update(open, new DeleteBranchMsg.Chosen(DeleteScope.REMOTE));
 
         assertEquals(
                 List.of(new DeleteBranchCmd.DeleteBranch(
-                        new Branch.Name("feature"),
-                        new RemoteBranch("origin", new Branch.Name("feature")),
+                        new BranchName("feature"),
+                        new RemoteBranch("origin", new BranchName("feature")),
                         DeleteScope.REMOTE)),
                 next.cmds());
         assertEquals(Option.none(), next.model().popup());
         assertEquals(
-                io.vavr.collection.HashSet.of(new BranchRef.Local(new Branch.Name("feature"))),
+                io.vavr.collection.HashSet.of(new BranchRef.Local(new BranchName("feature"))),
                 next.model().jobs().busy().keySet());
     }
 
     @Test
     void aBranchBeingDeletedIsBusyUntilTheDeleteIsDone() {
         Model deleting = Update.update(
-                        Update.update(tracking(), new DeleteBranchMsg.Requested(new Branch.Name("feature")))
+                        Update.update(tracking(), new DeleteBranchMsg.Requested(new BranchName("feature")))
                                 .model(),
                         new DeleteBranchMsg.Chosen(DeleteScope.BOTH))
                 .model();
@@ -814,11 +814,11 @@ class BranchUpdateTest {
         // Neither pushed nor deleted again meanwhile.
         assertEquals(
                 List.of(),
-                Update.update(deleting, new PushMsg.Requested(new Branch.Name("feature")))
+                Update.update(deleting, new PushMsg.Requested(new BranchName("feature")))
                         .cmds());
         assertEquals(
                 Option.none(),
-                Update.update(deleting, new DeleteBranchMsg.Requested(new Branch.Name("feature")))
+                Update.update(deleting, new DeleteBranchMsg.Requested(new BranchName("feature")))
                         .model()
                         .popup());
 
@@ -827,8 +827,8 @@ class BranchUpdateTest {
                 Update.update(
                                 deleting,
                                 succeeded(new DeleteBranchCmd.DeleteBranch(
-                                        new Branch.Name("feature"),
-                                        new RemoteBranch("origin", new Branch.Name("feature")),
+                                        new BranchName("feature"),
+                                        new RemoteBranch("origin", new BranchName("feature")),
                                         DeleteScope.LOCAL)))
                         .model()
                         .jobs()
@@ -840,8 +840,8 @@ class BranchUpdateTest {
                                 deleting,
                                 failed(
                                         new DeleteBranchCmd.DeleteBranch(
-                                                new Branch.Name("feature"),
-                                                new RemoteBranch("origin", new Branch.Name("feature")),
+                                                new BranchName("feature"),
+                                                new RemoteBranch("origin", new BranchName("feature")),
                                                 DeleteScope.LOCAL),
                                         "boom"))
                         .model()
@@ -852,7 +852,7 @@ class BranchUpdateTest {
 
     @Test
     void cancellingClosesThePopupWithoutDeleting() {
-        Model open = Update.update(loaded(), new DeleteBranchMsg.Requested(new Branch.Name("feature")))
+        Model open = Update.update(loaded(), new DeleteBranchMsg.Requested(new BranchName("feature")))
                 .model();
 
         Next next = Update.update(open, new DeleteBranchMsg.Cancelled());
@@ -867,8 +867,8 @@ class BranchUpdateTest {
                         loaded(),
                         failed(
                                 new DeleteBranchCmd.DeleteBranch(
-                                        new Branch.Name("feature"),
-                                        new RemoteBranch("origin", new Branch.Name("feature")),
+                                        new BranchName("feature"),
+                                        new RemoteBranch("origin", new BranchName("feature")),
                                         DeleteScope.LOCAL),
                                 "boom"))
                 .model();
@@ -879,7 +879,7 @@ class BranchUpdateTest {
     @Test
     void checkedOutReloadsStatusAndBranches() {
         Next next = Update.update(
-                loaded(), succeeded(new CheckoutCmd.Checkout(new Branch.Name("feature")), "git checkout feature"));
+                loaded(), succeeded(new CheckoutCmd.Checkout(new BranchName("feature")), "git checkout feature"));
 
         assertEquals(
                 List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadStashes()),
@@ -891,7 +891,7 @@ class BranchUpdateTest {
     void failedCheckoutIsStoredAndTheRepositoryReadAgain() {
         Next next = Update.update(
                 loaded(),
-                failed(new CheckoutCmd.Checkout(new Branch.Name("feature")), "local changes would be overwritten"));
+                failed(new CheckoutCmd.Checkout(new BranchName("feature")), "local changes would be overwritten"));
 
         assertEquals(
                 Option.of("Checkout of feature failed: local changes would be overwritten"), errorText(next.model()));
@@ -903,14 +903,14 @@ class BranchUpdateTest {
         Model model = localBranchesRead(
                         loaded(),
                         List.of(
-                                new Branch(new Branch.Name("main"), true, new Sha("1")),
-                                new Branch(new Branch.Name("feature"), false, new Sha("2"))))
+                                Fixtures.branch(new BranchName("main"), true, new Sha("1")),
+                                Fixtures.branch(new BranchName("feature"), false, new Sha("2"))))
                 .model();
 
-        Next next = Update.update(model, new RebaseMsg.Requested(new Branch.Name("feature")));
+        Next next = Update.update(model, new RebaseMsg.Requested(new BranchName("feature")));
 
         assertEquals(
-                Option.of(new RebasePopup(new Branch.Name("main"), new Branch.Name("feature"))),
+                Option.of(new RebasePopup(new BranchName("main"), new BranchName("feature"))),
                 next.model().popup(RebasePopup.class));
         assertEquals(List.of(), next.cmds());
     }
@@ -920,18 +920,18 @@ class BranchUpdateTest {
         Model model = localBranchesRead(
                         loaded(),
                         List.of(
-                                new Branch(new Branch.Name("main"), true, new Sha("1")),
-                                new Branch(new Branch.Name("feature"), false, new Sha("2"))))
+                                Fixtures.branch(new BranchName("main"), true, new Sha("1")),
+                                Fixtures.branch(new BranchName("feature"), false, new Sha("2"))))
                 .model();
 
         assertEquals(
                 Option.none(),
-                Update.update(model, new RebaseMsg.Requested(new Branch.Name("main")))
+                Update.update(model, new RebaseMsg.Requested(new BranchName("main")))
                         .model()
                         .popup(RebasePopup.class));
         assertEquals(
                 Option.none(),
-                Update.update(model, new RebaseMsg.Requested(new Branch.Name("nope")))
+                Update.update(model, new RebaseMsg.Requested(new BranchName("nope")))
                         .model()
                         .popup(RebasePopup.class));
     }
@@ -941,21 +941,21 @@ class BranchUpdateTest {
         Model open = localBranchesRead(
                         loaded(),
                         List.of(
-                                new Branch(new Branch.Name("main"), true, new Sha("1")),
-                                new Branch(new Branch.Name("feature"), false, new Sha("2"))))
+                                Fixtures.branch(new BranchName("main"), true, new Sha("1")),
+                                Fixtures.branch(new BranchName("feature"), false, new Sha("2"))))
                 .model();
-        open = Update.update(open, new RebaseMsg.Requested(new Branch.Name("feature")))
+        open = Update.update(open, new RebaseMsg.Requested(new BranchName("feature")))
                 .model();
 
         Next next = Update.update(open, new RebaseMsg.Chosen());
 
-        assertEquals(List.of(new RebaseCmd(new Branch.Name("feature"))), next.cmds());
+        assertEquals(List.of(new RebaseCmd(new BranchName("feature"))), next.cmds());
         assertEquals(Option.none(), next.model().popup(RebasePopup.class));
     }
 
     @Test
     void aFailedRebaseShowsTheError() {
-        Next next = Update.update(loaded(), failed(new RebaseCmd(new Branch.Name("feature")), "conflict"));
+        Next next = Update.update(loaded(), failed(new RebaseCmd(new BranchName("feature")), "conflict"));
 
         assertEquals(Option.of("Rebasing onto feature failed: conflict"), errorText(next.model()));
     }

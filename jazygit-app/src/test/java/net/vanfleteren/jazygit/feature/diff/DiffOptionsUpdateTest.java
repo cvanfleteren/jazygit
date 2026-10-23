@@ -9,7 +9,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendPopup;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendTarget;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
@@ -91,8 +91,8 @@ class DiffOptionsUpdateTest {
     @Test
     void whatWasReadForTheCommitOfADivergenceBeforeTheToggleIsDropped() {
         Model model = loaded().mapRepoView(repoView -> repoView.withDivergence(Option.of(DivergenceView.loading(
-                new Branch.Name("main"),
-                new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main"))),
+                new BranchName("main"),
+                new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))),
                 DivergenceView.Against.UPSTREAM))));
         model = Update.update(model, new SelectionMsg.DivergenceCommitSelected(SHA))
                 .model();

@@ -7,6 +7,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Sha;
 import org.junit.jupiter.api.Test;
 
@@ -16,12 +17,12 @@ import org.junit.jupiter.api.Test;
 class SummaryHistoryTest {
 
     private static Commit commit(String summary) {
-        return new Commit(
+        return Fixtures.commit(
                 new Sha("aaaa"), "Ada", "ada@example.com", Instant.EPOCH, summary, "", List.of(new Sha("bbbb")));
     }
 
     private static Commit merge(String summary) {
-        return new Commit(
+        return Fixtures.commit(
                 new Sha("cccc"),
                 "Ada",
                 "ada@example.com",

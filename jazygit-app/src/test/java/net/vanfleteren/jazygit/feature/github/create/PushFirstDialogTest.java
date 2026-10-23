@@ -10,7 +10,7 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.control.Option;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
  */
 class PushFirstDialogTest {
 
-    private static final Branch.Name BRANCH = new Branch.Name("stack-1");
+    private static final BranchName BRANCH = new BranchName("stack-1");
     private static final RemoteBranch TARGET = new RemoteBranch("origin", BRANCH);
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();

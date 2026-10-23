@@ -8,7 +8,7 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.CommandFailed;
 import net.vanfleteren.jazygit.git.GitError.LocalChanges;
 import net.vanfleteren.jazygit.git.GitError.StashNotRestored;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,14 +41,14 @@ class CliCheckoutTest {
 
         assertInstanceOf(
                 LocalChanges.class,
-                CliCheckout.checkout(repo, new Branch.Name("feature")).getLeft().error());
+                CliCheckout.checkout(repo, new BranchName("feature")).getLeft().error());
     }
 
     @Test
     void checkoutCarriesNonConflictingChangesAcrossWithoutAStash() throws Exception {
         Files.writeString(repo.resolve("a.txt"), "changed\n");
 
-        assertTrue(CliCheckout.checkout(repo, new Branch.Name("feature")).isRight());
+        assertTrue(CliCheckout.checkout(repo, new BranchName("feature")).isRight());
 
         assertEquals("changed\n", Files.readString(repo.resolve("a.txt")));
     }
@@ -57,7 +57,7 @@ class CliCheckoutTest {
     void otherCheckoutFailuresAreNotLocalChanges() {
         assertInstanceOf(
                 CommandFailed.class,
-                CliCheckout.checkout(repo, new Branch.Name("no-such-branch"))
+                CliCheckout.checkout(repo, new BranchName("no-such-branch"))
                         .getLeft()
                         .error());
     }
@@ -68,7 +68,7 @@ class CliCheckoutTest {
 
         assertEquals(
                 List.of("git stash push --quiet", "git checkout --quiet feature --", "git stash pop --index --quiet"),
-                CliCheckout.checkoutWithStash(repo, new Branch.Name("feature"))
+                CliCheckout.checkoutWithStash(repo, new BranchName("feature"))
                         .get()
                         .map(ExecutedCommand::line));
 
@@ -83,7 +83,7 @@ class CliCheckoutTest {
         git("add", "a.txt");
 
         assertTrue(
-                CliCheckout.checkoutWithStash(repo, new Branch.Name("feature")).isRight());
+                CliCheckout.checkoutWithStash(repo, new BranchName("feature")).isRight());
 
         assertEquals("M  a.txt\n", git("status", "--porcelain"));
     }
@@ -94,7 +94,7 @@ class CliCheckoutTest {
         git("stash", "push", "-q");
 
         assertTrue(
-                CliCheckout.checkoutWithStash(repo, new Branch.Name("feature")).isRight());
+                CliCheckout.checkoutWithStash(repo, new BranchName("feature")).isRight());
 
         assertEquals("feature", git("branch", "--show-current").strip());
         assertEquals("one\n", Files.readString(repo.resolve("a.txt")));
@@ -105,7 +105,7 @@ class CliCheckoutTest {
     void failedCheckoutPutsTheChangesBack() throws Exception {
         Files.writeString(repo.resolve("a.txt"), "changed\n");
 
-        GitFailure<GitError> failure = CliCheckout.checkoutWithStash(repo, new Branch.Name("no-such-branch"))
+        GitFailure<GitError> failure = CliCheckout.checkoutWithStash(repo, new BranchName("no-such-branch"))
                 .getLeft();
 
         assertInstanceOf(CommandFailed.class, failure.error());
@@ -130,7 +130,7 @@ class CliCheckoutTest {
         Files.writeString(repo.resolve("a.txt"), "main change\n");
 
         GitFailure<GitError> failure =
-                CliCheckout.checkoutWithStash(repo, new Branch.Name("feature")).getLeft();
+                CliCheckout.checkoutWithStash(repo, new BranchName("feature")).getLeft();
 
         assertInstanceOf(StashNotRestored.class, failure.error());
         assertEquals("feature", git("branch", "--show-current").strip());

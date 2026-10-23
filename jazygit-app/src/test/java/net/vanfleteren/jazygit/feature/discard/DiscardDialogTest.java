@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Scope;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.state.CursorFeedback;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -27,8 +28,8 @@ import org.junit.jupiter.api.Test;
  */
 class DiscardDialogTest {
 
-    private static final FileEntry MODIFIED = new FileEntry("a.txt", ChangeType.MODIFIED);
-    private static final FileEntry STAGED = new FileEntry("b.txt", ChangeType.ADDED);
+    private static final FileEntry MODIFIED = Fixtures.fileEntry("a.txt", ChangeType.MODIFIED);
+    private static final FileEntry STAGED = Fixtures.fileEntry("b.txt", ChangeType.ADDED);
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final CursorFeedback cursor = new CursorFeedback(dispatched::add);

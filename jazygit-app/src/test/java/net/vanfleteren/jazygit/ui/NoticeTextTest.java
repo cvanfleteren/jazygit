@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.ui;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Notice;
@@ -28,7 +28,7 @@ class NoticeTextTest {
         assertEquals(
                 "The rebase stopped at commit 2 of 5 on 3 conflicts. Resolve them, then continue, skip or abort it (M).",
                 NoticeText.of(new Notice.StoppedOnConflicts(
-                        Option.of(new InProgress.Rebasing(Option.of(new Branch.Name("feature")), SHA, 2, 5)), 3)));
+                        Option.of(new InProgress.Rebasing(Option.of(new BranchName("feature")), SHA, 2, 5)), 3)));
     }
 
     @Test

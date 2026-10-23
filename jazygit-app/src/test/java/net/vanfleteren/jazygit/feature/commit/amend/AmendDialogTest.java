@@ -41,8 +41,8 @@ class AmendDialogTest {
         return Update.update(
                         loaded,
                         new LoadMsg.StatusLoaded(new RepoStatus(
-                                Head.onBranch(new Branch.Name("main"), head.sha()),
-                                List.of(new FileEntry("a.txt", ChangeType.MODIFIED)))))
+                                Head.onBranch(new BranchName("main"), head.sha()),
+                                List.of(Fixtures.fileEntry("a.txt", ChangeType.MODIFIED)))))
                 .model();
     }
 

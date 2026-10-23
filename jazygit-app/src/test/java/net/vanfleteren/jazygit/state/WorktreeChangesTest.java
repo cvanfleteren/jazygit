@@ -13,7 +13,7 @@ import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.StubGitProvider;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Worktree;
@@ -34,7 +34,7 @@ class WorktreeChangesTest {
     private static Worktree worktree(Path path, boolean current, boolean prunable) {
         return new Worktree(
                 path,
-                new Head.OnBranch(new Branch.Name(path.getFileName().toString()), Option.of(new Sha("aaaa"))),
+                new Head.OnBranch(new BranchName(path.getFileName().toString()), Option.of(new Sha("aaaa"))),
                 current,
                 current,
                 Option.none(),

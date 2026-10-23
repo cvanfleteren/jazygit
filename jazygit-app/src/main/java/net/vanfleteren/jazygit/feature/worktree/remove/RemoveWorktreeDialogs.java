@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.feature.worktree.remove;
 
 import io.vavr.collection.List;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.BranchesPanel;
@@ -31,7 +31,7 @@ public final class RemoveWorktreeDialogs {
                                     popup -> Messages.get(
                                             "dialog.removeWorktree.deleteBranch",
                                             popup.branch()
-                                                    .map(Branch.Name::value)
+                                                    .map(BranchName::value)
                                                     .getOrElse("")),
                                     () -> new RemoveWorktreeMsg.Chosen(true),
                                     (model, popup) -> RemoveWorktreeUpdate.branchDeletable(model, popup))

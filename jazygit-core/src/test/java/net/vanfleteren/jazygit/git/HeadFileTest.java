@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
 import org.junit.jupiter.api.Test;
@@ -17,7 +17,7 @@ class HeadFileTest {
     Path dir;
 
     private static Option<Head> onBranch(String name) {
-        return Option.of(new Head.OnBranch(new Branch.Name(name), Option.none()));
+        return Option.of(new Head.OnBranch(new BranchName(name), Option.none()));
     }
 
     private Path repo(String head) throws Exception {

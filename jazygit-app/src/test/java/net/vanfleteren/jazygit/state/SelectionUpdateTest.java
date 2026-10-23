@@ -24,15 +24,15 @@ class SelectionUpdateTest {
     @Test
     void selectingABranchLoadsItsLogOnce() {
         Next next = Update.update(
-                loaded(), new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("feature"))));
+                loaded(), new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName("feature"))));
 
         assertEquals(
-                Option.of(new Preview<>(new BranchRef.Local(new Branch.Name("feature")), new Loading<>())),
+                Option.of(new Preview<>(new BranchRef.Local(new BranchName("feature")), new Loading<>())),
                 next.model().repoView().branchLog());
-        assertEquals(List.of(TestModels.loadBranchLog(new BranchRef.Local(new Branch.Name("feature")))), next.cmds());
+        assertEquals(List.of(TestModels.loadBranchLog(new BranchRef.Local(new BranchName("feature")))), next.cmds());
 
         Next again = Update.update(
-                next.model(), new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("feature"))));
+                next.model(), new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName("feature"))));
         assertSame(next.model(), again.model());
         assertEquals(List.of(), again.cmds());
     }
@@ -183,30 +183,28 @@ class SelectionUpdateTest {
         Model feature = Update.update(
                         Update.update(
                                         loaded(),
-                                        new SelectionMsg.BranchSelected(
-                                                new BranchRef.Local(new Branch.Name("feature"))))
+                                        new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName("feature"))))
                                 .model(),
-                        TestModels.branchLogLoaded(new BranchRef.Local(new Branch.Name("feature")), FEATURE_COMMITS))
+                        TestModels.branchLogLoaded(new BranchRef.Local(new BranchName("feature")), FEATURE_COMMITS))
                 .model();
         Preview<BranchRef, List<Commit>> featureLog =
                 feature.repoView().branchLog().get();
 
         Model main = Update.update(
-                        feature, new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("main"))))
+                        feature, new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName("main"))))
                 .model();
         assertEquals(
                 Option.of(new Preview<BranchRef, List<Commit>>(
-                        new BranchRef.Local(new Branch.Name("main")), new Loading<>(), Option.of(featureLog))),
+                        new BranchRef.Local(new BranchName("main")), new Loading<>(), Option.of(featureLog))),
                 main.repoView().branchLog());
 
-        Model other = Update.update(
-                        main, new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("other"))))
+        Model other = Update.update(main, new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName("other"))))
                 .model();
         assertEquals(Option.of(featureLog), other.repoView().branchLog().get().previous());
 
         Model done = Update.update(
                         other,
-                        TestModels.branchLogLoaded(new BranchRef.Local(new Branch.Name("other")), FEATURE_COMMITS))
+                        TestModels.branchLogLoaded(new BranchRef.Local(new BranchName("other")), FEATURE_COMMITS))
                 .model();
         assertEquals(Option.none(), done.repoView().branchLog().get().previous());
     }
@@ -214,26 +212,25 @@ class SelectionUpdateTest {
     @Test
     void loadedLogIsShownForTheSelectedBranch() {
         Model model = Update.update(
-                        loaded(), new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("feature"))))
+                        loaded(), new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName("feature"))))
                 .model();
 
         Model next = Update.update(
                         model,
-                        TestModels.branchLogLoaded(new BranchRef.Local(new Branch.Name("feature")), FEATURE_COMMITS))
+                        TestModels.branchLogLoaded(new BranchRef.Local(new BranchName("feature")), FEATURE_COMMITS))
                 .model();
 
         assertEquals(
-                Option.of(
-                        new Preview<>(new BranchRef.Local(new Branch.Name("feature")), new Loaded<>(FEATURE_COMMITS))),
+                Option.of(new Preview<>(new BranchRef.Local(new BranchName("feature")), new Loaded<>(FEATURE_COMMITS))),
                 next.repoView().branchLog());
     }
 
     @Test
     void resultsForABranchThatIsNoLongerSelectedAreDropped() {
         Model model = Update.update(
-                        loaded(), new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("feature"))))
+                        loaded(), new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName("feature"))))
                 .model();
-        model = Update.update(model, new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("main"))))
+        model = Update.update(model, new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName("main"))))
                 .model();
 
         assertEquals(
@@ -241,7 +238,7 @@ class SelectionUpdateTest {
                 Update.update(
                                 model,
                                 TestModels.branchLogLoaded(
-                                        new BranchRef.Local(new Branch.Name("feature")), FEATURE_COMMITS))
+                                        new BranchRef.Local(new BranchName("feature")), FEATURE_COMMITS))
                         .model()
                         .repoView()
                         .branchLog());
@@ -250,7 +247,7 @@ class SelectionUpdateTest {
                 Update.update(
                                 model,
                                 new LoadMsg.Failed(
-                                        TestModels.loadBranchLog(new BranchRef.Local(new Branch.Name("feature"))),
+                                        TestModels.loadBranchLog(new BranchRef.Local(new BranchName("feature"))),
                                         refused("boom")))
                         .model()
                         .repoView()
@@ -260,30 +257,29 @@ class SelectionUpdateTest {
     @Test
     void failedLogIsRetriedOnTheNextTick() {
         Model model = Update.update(
-                        loaded(), new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("feature"))))
+                        loaded(), new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName("feature"))))
                 .model();
         model = Update.update(
                         model,
                         new LoadMsg.Failed(
-                                TestModels.loadBranchLog(new BranchRef.Local(new Branch.Name("feature"))),
+                                TestModels.loadBranchLog(new BranchRef.Local(new BranchName("feature"))),
                                 refused("boom")))
                 .model();
 
         assertEquals(
-                Option.of(
-                        new Preview<>(new BranchRef.Local(new Branch.Name("feature")), new Failed<>(refused("boom")))),
+                Option.of(new Preview<>(new BranchRef.Local(new BranchName("feature")), new Failed<>(refused("boom")))),
                 model.repoView().branchLog());
         assertEquals(
                 List.of(
                         new LoadStatus(),
                         new Cmd.CheckMetadata(),
-                        TestModels.loadBranchLog(new BranchRef.Local(new Branch.Name("feature")))),
+                        TestModels.loadBranchLog(new BranchRef.Local(new BranchName("feature")))),
                 Update.update(model, new Tick()).cmds());
     }
 
     @Test
     void aRetriedLogThatCameBackIsNoLongerRunning() {
-        BranchRef feature = new BranchRef.Local(new Branch.Name("feature"));
+        BranchRef feature = new BranchRef.Local(new BranchName("feature"));
         Model selected = Update.update(loaded(), new SelectionMsg.BranchSelected(feature))
                 .model();
         Model failed = Update.update(selected, new LoadMsg.Failed(TestModels.loadBranchLog(feature), refused("boom")))
@@ -299,11 +295,11 @@ class SelectionUpdateTest {
     @Test
     void movedTipOfTheSelectedBranchReloadsItsLog() {
         Model model = Update.update(
-                        loaded(), new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("feature"))))
+                        loaded(), new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName("feature"))))
                 .model();
         model = Update.update(
                         model,
-                        TestModels.branchLogLoaded(new BranchRef.Local(new Branch.Name("feature")), FEATURE_COMMITS))
+                        TestModels.branchLogLoaded(new BranchRef.Local(new BranchName("feature")), FEATURE_COMMITS))
                 .model();
 
         assertEquals(List.of(), localBranchesRead(model, BRANCHES).cmds());
@@ -312,16 +308,16 @@ class SelectionUpdateTest {
                 localBranchesRead(
                                 model,
                                 List.of(
-                                        new Branch(new Branch.Name("main"), true, new Sha("moved")),
-                                        new Branch(new Branch.Name("feature"), false, new Sha("ffff"))))
+                                        Fixtures.branch(new BranchName("main"), true, new Sha("moved")),
+                                        Fixtures.branch(new BranchName("feature"), false, new Sha("ffff"))))
                         .cmds());
         assertEquals(
-                List.of(TestModels.loadBranchLog(new BranchRef.Local(new Branch.Name("feature")))),
+                List.of(TestModels.loadBranchLog(new BranchRef.Local(new BranchName("feature")))),
                 localBranchesRead(
                                 model,
                                 List.of(
-                                        new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
-                                        new Branch(new Branch.Name("feature"), false, new Sha("moved"))))
+                                        Fixtures.branch(new BranchName("main"), true, new Sha("aaaa")),
+                                        Fixtures.branch(new BranchName("feature"), false, new Sha("moved"))))
                         .cmds());
     }
 
@@ -346,7 +342,7 @@ class SelectionUpdateTest {
     void aDiffOfOtherFilesThanTheHighlightedOnesIsDropped() {
         Model model = Update.update(loaded(), new SelectionMsg.FilesSelected(DIRTY.files()))
                 .model();
-        List<FileEntry> other = List.of(new FileEntry("b.txt", ChangeType.UNTRACKED));
+        List<FileEntry> other = List.of(Fixtures.fileEntry("b.txt", ChangeType.UNTRACKED));
 
         assertEquals(
                 model.repoView().fileDiff(),
@@ -377,7 +373,7 @@ class SelectionUpdateTest {
         Next statusLoaded = Update.update(refreshed, new LoadMsg.StatusLoaded(DIRTY));
         assertTrue(statusLoaded.cmds().contains(new Cmd.LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT)));
 
-        List<FileEntry> next = List.of(new FileEntry("b.txt", ChangeType.UNTRACKED));
+        List<FileEntry> next = List.of(Fixtures.fileEntry("b.txt", ChangeType.UNTRACKED));
         Preview<List<FileEntry>, Diffs> loading = Update.update(model, new SelectionMsg.FilesSelected(next))
                 .model()
                 .repoView()
@@ -399,7 +395,7 @@ class SelectionUpdateTest {
         Next statusLoaded = Update.update(
                 model,
                 new LoadMsg.StatusLoaded(
-                        new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), restaged)));
+                        new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("aaaa")), restaged)));
 
         assertFalse(statusLoaded.cmds().contains(new Cmd.LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT)));
     }

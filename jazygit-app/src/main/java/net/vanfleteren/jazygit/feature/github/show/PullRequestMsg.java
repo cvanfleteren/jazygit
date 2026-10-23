@@ -5,7 +5,7 @@ import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
@@ -26,7 +26,7 @@ public sealed interface PullRequestMsg extends Msg {
     /**
      * The user asked for the pull request of a branch: to show it, or to create it when there is none.
      */
-    record Requested(Branch.Name branch) implements PullRequestMsg {}
+    record Requested(BranchName branch) implements PullRequestMsg {}
 
     /**
      * The user asked for a pull request listed on the pull requests screen: to show it when it is of the

@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.pull.PullCmd;
 import net.vanfleteren.jazygit.feature.branch.push.SetUpstreamPopup;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.ErrorPopup;
 import net.vanfleteren.jazygit.state.Model;
@@ -21,7 +21,7 @@ class ErrorUpdateTest {
 
     @Test
     void aFailedOperationOpensTheErrorPopup() {
-        Model failed = Update.update(loaded(), failed(new PullCmd.Pull(new Branch.Name("main")), "boom"))
+        Model failed = Update.update(loaded(), failed(new PullCmd.Pull(new BranchName("main")), "boom"))
                 .model();
 
         assertEquals(failed.outcome().error().map(ErrorPopup::new), failed.popup());
@@ -36,10 +36,10 @@ class ErrorUpdateTest {
 
     @Test
     void anOpenPopupIsNotReplacedByTheErrorPopup() {
-        Model failed = loaded().openPopup(new SetUpstreamPopup(new Branch.Name("feature")))
+        Model failed = loaded().openPopup(new SetUpstreamPopup(new BranchName("feature")))
                 .fail(new AppError.InvalidUpstream("x"));
 
-        assertEquals(Option.of(new SetUpstreamPopup(new Branch.Name("feature"))), failed.popup());
+        assertEquals(Option.of(new SetUpstreamPopup(new BranchName("feature"))), failed.popup());
         assertEquals(
                 Option.of(new AppError.InvalidUpstream("x")), failed.outcome().error());
     }

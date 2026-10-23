@@ -12,8 +12,9 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Upstream;
@@ -36,19 +37,19 @@ class ForcePushDialogTest {
     private static Model openModel() {
         Model diverged = TestModels.localBranchesRead(
                         TestModels.loaded(),
-                        List.of(new Branch(
-                                new Branch.Name("main"),
+                        List.of(Fixtures.branch(
+                                new BranchName("main"),
                                 true,
                                 new Sha("aaaa"),
                                 Instant.EPOCH,
                                 true,
                                 false,
                                 Option.of(new Upstream(
-                                        new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main"))),
+                                        new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))),
                                         1,
                                         2)))))
                 .model();
-        return Update.update(diverged, new PushMsg.Requested(new Branch.Name("main")))
+        return Update.update(diverged, new PushMsg.Requested(new BranchName("main")))
                 .model();
     }
 

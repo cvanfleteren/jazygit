@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch.push;
 
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.TextPopup;
 
@@ -10,9 +10,9 @@ import net.vanfleteren.jazygit.state.TextPopup;
  * @param upstream the upstream as far as it was typed; it starts out as the branch of the same name on the default
  *                 remote
  */
-public record SetUpstreamPopup(Branch.Name branch, String upstream) implements TextPopup {
+public record SetUpstreamPopup(BranchName branch, String upstream) implements TextPopup {
 
-    public SetUpstreamPopup(Branch.Name branch) {
+    public SetUpstreamPopup(BranchName branch) {
         this(branch, new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, branch).text());
     }
 

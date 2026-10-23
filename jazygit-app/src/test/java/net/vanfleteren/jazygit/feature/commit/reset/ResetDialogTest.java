@@ -12,9 +12,10 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.ResetMode;
 import net.vanfleteren.jazygit.git.model.ResetTarget;
@@ -33,7 +34,7 @@ import org.junit.jupiter.api.Test;
 class ResetDialogTest {
 
     private static final Commit TARGET =
-            new Commit(new Sha("1111111111"), "Ada", "ada@example.com", Instant.EPOCH, "Target", "");
+            Fixtures.commit(new Sha("1111111111"), "Ada", "ada@example.com", Instant.EPOCH, "Target", "");
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final ChoiceDialog<ResetPopup> dialog = new ChoiceDialog<>(ResetDialogs.RESET, dispatched::add);
@@ -78,7 +79,7 @@ class ResetDialogTest {
 
     @Test
     void aResetOntoTheUpstreamSaysHowManyLocalCommitsItDrops() throws Exception {
-        RemoteBranch upstream = new RemoteBranch("origin", new Branch.Name("main"));
+        RemoteBranch upstream = new RemoteBranch("origin", new BranchName("main"));
 
         String one = choice(new ResetPopup(new ResetTarget.ToUpstream(new BranchRef.Remote(upstream)), 1));
         assertTrue(one.contains("Reset to origin/main (drops 1 local commit)"), one);

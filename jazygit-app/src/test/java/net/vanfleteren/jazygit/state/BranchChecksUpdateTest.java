@@ -20,7 +20,9 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Upstream;
@@ -34,17 +36,17 @@ class BranchChecksUpdateTest {
 
     private static final GitHubChecks ON_ORIGIN = new GitHubChecks(
             HashSet.of("origin"),
-            HashMap.of(new Branch.Name("feature"), Checks.FAILING, new Branch.Name("main"), Checks.PASSING));
+            HashMap.of(new BranchName("feature"), Checks.FAILING, new BranchName("main"), Checks.PASSING));
     private static final PullRequest FEATURE_PR =
             new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED);
 
     private static RemoteBranch remote(String remote, String branch) {
-        return new RemoteBranch(remote, new Branch.Name(branch));
+        return new RemoteBranch(remote, new BranchName(branch));
     }
 
     private static Branch following(String name, RemoteBranch upstream) {
-        return new Branch(
-                new Branch.Name(name),
+        return Fixtures.branch(
+                new BranchName(name),
                 false,
                 new Sha("abc"),
                 Instant.EPOCH,
@@ -82,7 +84,7 @@ class BranchChecksUpdateTest {
 
         assertEquals(
                 new BranchChecksMsg.Loaded(new GitHubChecks(
-                        HashSet.of("upstream", "mirror"), HashMap.of(new Branch.Name("main"), Checks.PASSING))),
+                        HashSet.of("upstream", "mirror"), HashMap.of(new BranchName("main"), Checks.PASSING))),
                 msg);
     }
 

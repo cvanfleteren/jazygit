@@ -12,6 +12,7 @@ import io.vavr.collection.List;
 import java.time.Instant;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.state.*;
@@ -31,8 +32,8 @@ class FixupDialogTest {
     private final Model open = openModel();
 
     private static Model openModel() {
-        Commit below = new Commit(new Sha("1111111111"), "Ada", "ada@example.com", Instant.EPOCH, "Below", "");
-        Commit selected = new Commit(
+        Commit below = Fixtures.commit(new Sha("1111111111"), "Ada", "ada@example.com", Instant.EPOCH, "Below", "");
+        Commit selected = Fixtures.commit(
                 new Sha("2222222222"), "Ada", "ada@example.com", Instant.EPOCH, "Selected", "", List.of(below.sha()));
         Model model = Update.update(TestModels.loaded(), TestModels.commitsLoaded(List.of(selected, below)))
                 .model();

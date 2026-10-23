@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.feature.worktree.add;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 
 /**
@@ -18,7 +18,7 @@ public sealed interface WorktreeSource {
     /**
      * What the directory of the new worktree is named after, next to the main worktree.
      */
-    Branch.Name directory();
+    BranchName directory();
 
     /**
      * The branch that is busy while the worktree is added, if any.
@@ -30,7 +30,7 @@ public sealed interface WorktreeSource {
     /**
      * {@code branch}, which exists and is checked out nowhere.
      */
-    record Existing(Branch.Name branch) implements WorktreeSource {
+    record Existing(BranchName branch) implements WorktreeSource {
 
         @Override
         public String label() {
@@ -38,7 +38,7 @@ public sealed interface WorktreeSource {
         }
 
         @Override
-        public Branch.Name directory() {
+        public BranchName directory() {
             return branch;
         }
 
@@ -51,7 +51,7 @@ public sealed interface WorktreeSource {
     /**
      * The new branch {@code name}, created as {@code from} says.
      */
-    record Created(Branch.Name name, NewBranch from) implements WorktreeSource {
+    record Created(BranchName name, NewBranch from) implements WorktreeSource {
 
         @Override
         public String label() {
@@ -59,7 +59,7 @@ public sealed interface WorktreeSource {
         }
 
         @Override
-        public Branch.Name directory() {
+        public BranchName directory() {
             return name;
         }
 
@@ -80,8 +80,8 @@ public sealed interface WorktreeSource {
         }
 
         @Override
-        public Branch.Name directory() {
-            return new Branch.Name(start);
+        public BranchName directory() {
+            return new BranchName(start);
         }
     }
 
@@ -99,8 +99,8 @@ public sealed interface WorktreeSource {
          * Its branch; for one from a fork, whose branch gh may name otherwise, its number.
          */
         @Override
-        public Branch.Name directory() {
-            return new Branch.Name(pullRequest.fromFork() ? "pr-" + pullRequest.number() : pullRequest.headBranch());
+        public BranchName directory() {
+            return new BranchName(pullRequest.fromFork() ? "pr-" + pullRequest.number() : pullRequest.headBranch());
         }
 
         /**
@@ -109,7 +109,7 @@ public sealed interface WorktreeSource {
         @Override
         public Option<BranchRef> busyBranch() {
             return Option.when(
-                    !pullRequest.fromFork(), () -> new BranchRef.Local(new Branch.Name(pullRequest.headBranch())));
+                    !pullRequest.fromFork(), () -> new BranchRef.Local(new BranchName(pullRequest.headBranch())));
         }
     }
 }

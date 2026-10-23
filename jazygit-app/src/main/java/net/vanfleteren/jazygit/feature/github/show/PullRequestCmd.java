@@ -4,7 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.github.browse.BrowsePullRequestCmd;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
@@ -33,7 +33,7 @@ public sealed interface PullRequestCmd extends Cmd {
      */
     sealed interface ChangingCmd extends OperationCmd {
 
-        Branch.Name branch();
+        BranchName branch();
 
         int number();
 
@@ -56,7 +56,7 @@ public sealed interface PullRequestCmd extends Cmd {
     /**
      * Opens pull request {@code number}, from {@code branch}, in the browser.
      */
-    record OpenPullRequest(Branch.Name branch, int number) implements PullRequestCmd, OperationCmd {
+    record OpenPullRequest(BranchName branch, int number) implements PullRequestCmd, OperationCmd {
 
         @Override
         public Operation operation() {
@@ -78,7 +78,7 @@ public sealed interface PullRequestCmd extends Cmd {
      * Asks GitHub to merge pull request {@code number}, from {@code branch}, as {@code method} says, while its branch
      * is at {@code head}: GitHub merges it in the background (ADR 24).
      */
-    record MergePullRequest(Branch.Name branch, int number, String head, MergeMethod method)
+    record MergePullRequest(BranchName branch, int number, String head, MergeMethod method)
             implements PullRequestCmd, ChangingCmd {
 
         @Override
@@ -122,7 +122,7 @@ public sealed interface PullRequestCmd extends Cmd {
     /**
      * Closes pull request {@code number}, from {@code branch}, without merging it.
      */
-    record ClosePullRequest(Branch.Name branch, int number) implements PullRequestCmd, ChangingCmd {
+    record ClosePullRequest(BranchName branch, int number) implements PullRequestCmd, ChangingCmd {
 
         @Override
         public Operation operation() {
@@ -139,7 +139,7 @@ public sealed interface PullRequestCmd extends Cmd {
      * Turns pull request {@code number}, from {@code branch}, into a draft when {@code draft}, else marks it
      * ready for review.
      */
-    record SetDraft(Branch.Name branch, int number, boolean draft) implements PullRequestCmd, OperationCmd {
+    record SetDraft(BranchName branch, int number, boolean draft) implements PullRequestCmd, OperationCmd {
 
         @Override
         public Operation operation() {

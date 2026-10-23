@@ -11,7 +11,7 @@ import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.model.Ahead;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.CommitQuery;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
@@ -266,7 +266,7 @@ public interface Cmd {
      * @param named the name of the branch, local or remote; none for a detached HEAD
      * @param main  the main branch, once the branches are read and one is
      */
-    record LoadAhead(Option<BranchRef> branch, Option<Branch.Name> named, Option<Branch.Name> main) implements Load {
+    record LoadAhead(Option<BranchRef> branch, Option<BranchName> named, Option<BranchName> main) implements Load {
 
         @Override
         public Msg run(Env env) {
@@ -278,7 +278,7 @@ public interface Cmd {
          */
         Either<Failure, Option<Ahead>> read(Env env) {
             return named.fold(
-                            () -> Either.<ProcessError, Option<Branch.Name>>right(Option.none()),
+                            () -> Either.<ProcessError, Option<BranchName>>right(Option.none()),
                             env.git()::parentBranch)
                     .<GitError>mapLeft(error -> error)
                     .flatMap(parent -> env.git().ahead(branch, bases(parent)))
@@ -288,7 +288,7 @@ public interface Cmd {
         /**
          * The branches to compare with, the first that exists counting.
          */
-        List<BranchRef> bases(Option<Branch.Name> parent) {
+        List<BranchRef> bases(Option<BranchName> parent) {
             return parent.toList()
                     .appendAll(main)
                     .filter(base -> !named.contains(base))
@@ -318,7 +318,7 @@ public interface Cmd {
     /**
      * Reads the commits only on {@code branch} and the ones only on {@code other}.
      */
-    record LoadDivergence(Branch.Name branch, BranchRef other) implements Load {
+    record LoadDivergence(BranchName branch, BranchRef other) implements Load {
 
         @Override
         public Msg run(Env env) {

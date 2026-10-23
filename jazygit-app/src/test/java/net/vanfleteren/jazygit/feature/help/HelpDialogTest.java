@@ -16,7 +16,7 @@ import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.push.PushMsg;
 import net.vanfleteren.jazygit.feature.repos.RecentReposMsg;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelMsg;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.CursorFeedback;
@@ -34,7 +34,7 @@ import org.junit.jupiter.api.Test;
  */
 class HelpDialogTest {
 
-    private static final Branch.Name FEATURE = new Branch.Name("feature");
+    private static final BranchName FEATURE = new BranchName("feature");
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final CursorFeedback cursor = new CursorFeedback(dispatched::add);
     private final HelpDialog dialog = new HelpDialog(cursor);

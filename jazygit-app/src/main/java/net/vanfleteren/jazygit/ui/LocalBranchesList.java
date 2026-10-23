@@ -61,8 +61,8 @@ class LocalBranchesList implements BranchesTabList {
      * one branch came in its place. After a checkout it goes to the new current branch, which is listed first.
      */
     private static int reselect(List<Branch> previous, List<Branch> next, int selected) {
-        Option<Branch.Name> before = current(previous);
-        Option<Branch.Name> target = before.equals(current(next))
+        Option<BranchName> before = current(previous);
+        Option<BranchName> target = before.equals(current(next))
                 ? Option.of(selected)
                         .filter(i -> i < previous.size())
                         .map(i -> previous.get(i).name())
@@ -76,14 +76,14 @@ class LocalBranchesList implements BranchesTabList {
     /**
      * The name {@code name} has in {@code next}: its own while it is there, else the only one that is new there.
      */
-    private static Branch.Name renamed(List<Branch> previous, List<Branch> next, Branch.Name name) {
-        List<Branch.Name> before = previous.map(Branch::name);
-        List<Branch.Name> after = next.map(Branch::name);
-        List<Branch.Name> added = after.removeAll(before);
+    private static BranchName renamed(List<Branch> previous, List<Branch> next, BranchName name) {
+        List<BranchName> before = previous.map(Branch::name);
+        List<BranchName> after = next.map(Branch::name);
+        List<BranchName> added = after.removeAll(before);
         return after.contains(name) || added.size() != 1 ? name : added.head();
     }
 
-    private static Option<Branch.Name> current(List<Branch> branches) {
+    private static Option<BranchName> current(List<Branch> branches) {
         return branches.find(Branch::current).map(Branch::name);
     }
 
@@ -113,7 +113,7 @@ class LocalBranchesList implements BranchesTabList {
     /**
      * The name of the highlighted branch, once the branches are shown.
      */
-    Option<Branch.Name> selectedBranch() {
+    Option<BranchName> selectedBranch() {
         return list.selected(branches -> branches).map(Branch::name);
     }
 }

@@ -18,9 +18,8 @@ Refactorings that were left out of the functional/immutable cleanup, and why.
 
 ## Smaller items
 
-- [ ] **Telescoping constructors** on `Branch`, `Commit` and `FileEntry` (cleanup only).
 - [ ] **Stronger types** for stash refs and remotes, which are now plain `String`s, like branch names are now
-  `Branch.Name`. Also for the stage target, where `""` stands for the repository root; a sealed `Target` would
+  `BranchName`. Also for the stage target, where `""` stands for the repository root; a sealed `Target` would
   be clearer. The `gh` layer keeps branch names as `String`s, as it knows nothing of git.
 - [ ] **Typed reasons for ignored requests.** Some requests do nothing and don't say why, for example
   squashing a root or merge commit, or deleting the current or a busy branch. They could report an

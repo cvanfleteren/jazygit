@@ -15,7 +15,7 @@ import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.PushMode;
@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test;
 class RemoteRefsGuardTest {
 
     private static final Option<Cmd.Guard> GUARDED = Option.of(Cmd.Guard.REMOTE_REFS);
-    private static final Branch.Name FEATURE = new Branch.Name("feature");
+    private static final BranchName FEATURE = new BranchName("feature");
     private static final RemoteBranch UPSTREAM = new RemoteBranch("origin", FEATURE);
 
     @Test

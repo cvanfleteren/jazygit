@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.git.model.CommitQuery;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Tag;
 import net.vanfleteren.jazygit.model.SampleData;
@@ -29,7 +30,7 @@ import org.junit.jupiter.api.Test;
 class CommitsPanelTest {
 
     private static Commit commit(String sha, String... parents) {
-        return new Commit(
+        return Fixtures.commit(
                 new Sha(sha + "0000"),
                 "Ada",
                 "ada@example.com",

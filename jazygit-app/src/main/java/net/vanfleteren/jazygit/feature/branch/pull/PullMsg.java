@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch.pull;
 
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -15,5 +15,5 @@ public sealed interface PullMsg extends Msg {
     /**
      * The user asked to pull a branch.
      */
-    record Requested(Branch.Name branch) implements PullMsg {}
+    record Requested(BranchName branch) implements PullMsg {}
 }

@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.model.AllBranches;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Worktree;
@@ -93,14 +93,14 @@ class CliWorktreeTest {
                 List.of(
                         new Worktree(
                                 Path.of("/repos/app feature"),
-                                new Head.OnBranch(new Branch.Name("feature/x"), Option.of(new Sha(A))),
+                                new Head.OnBranch(new BranchName("feature/x"), Option.of(new Sha(A))),
                                 false,
                                 true,
                                 Option.of("on usb"),
                                 false),
                         new Worktree(
                                 Path.of("/repos/app"),
-                                new Head.OnBranch(new Branch.Name("main"), Option.of(new Sha(A))),
+                                new Head.OnBranch(new BranchName("main"), Option.of(new Sha(A))),
                                 true,
                                 false,
                                 Option.none(),
@@ -114,7 +114,7 @@ class CliWorktreeTest {
                                 false),
                         new Worktree(
                                 Path.of("/repos/gone"),
-                                new Head.OnBranch(new Branch.Name("gone"), Option.of(new Sha(A))),
+                                new Head.OnBranch(new BranchName("gone"), Option.of(new Sha(A))),
                                 false,
                                 false,
                                 Option.none(),
@@ -130,7 +130,7 @@ class CliWorktreeTest {
         assertEquals(
                 List.of(new Worktree(
                         Path.of("/repos/linked"),
-                        new Head.OnBranch(new Branch.Name("main"), Option.of(new Sha(A))),
+                        new Head.OnBranch(new BranchName("main"), Option.of(new Sha(A))),
                         false,
                         true,
                         Option.none(),
@@ -141,7 +141,7 @@ class CliWorktreeTest {
     @Test
     void aRepositoryWithoutCommitsHasABranchWithoutATipAndMalformedOutputIsAnError() {
         assertEquals(
-                List.of(new Head.OnBranch(new Branch.Name("main"), Option.none())),
+                List.of(new Head.OnBranch(new BranchName("main"), Option.none())),
                 CliWorktree.parse(
                                 worktree("worktree /repos/new", "HEAD " + ZEROES, "branch refs/heads/main"),
                                 Path.of("/repos/new"))
@@ -164,16 +164,16 @@ class CliWorktreeTest {
     void aNewWorktreeGoesNextToThisOneNamedAfterItAndTheBranch() {
         Worktree app = new Worktree(
                 Path.of("/repos/app"),
-                new Head.OnBranch(new Branch.Name("main"), Option.none()),
+                new Head.OnBranch(new BranchName("main"), Option.none()),
                 true,
                 true,
                 Option.none(),
                 false);
 
-        assertEquals("/repos/app-feature-login", app.siblingFor(new Branch.Name("feature/login")));
+        assertEquals("/repos/app-feature-login", app.siblingFor(new BranchName("feature/login")));
         assertEquals("app", app.name());
         // Next to a bare repository, worktrees are named after their branch only.
-        assertEquals("/repos/feature-login", app.nextTo(new Branch.Name("feature/login")));
+        assertEquals("/repos/feature-login", app.nextTo(new BranchName("feature/login")));
     }
 
     @Test
@@ -185,7 +185,7 @@ class CliWorktreeTest {
         CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
         Path linked = main.resolveSibling("linked");
 
-        List<String> added = provider.addWorktree(Path.of("../linked"), new Branch.Name("feature"))
+        List<String> added = provider.addWorktree(Path.of("../linked"), new BranchName("feature"))
                 .get()
                 .map(ExecutedCommand::line);
 
@@ -195,7 +195,7 @@ class CliWorktreeTest {
         assertEquals(List.of(true, false), worktrees.map(Worktree::current));
         assertEquals(List.of(true, false), worktrees.map(Worktree::main));
         assertEquals(
-                List.of(Option.of(new Branch.Name("main")), Option.of(new Branch.Name("feature"))),
+                List.of(Option.of(new BranchName("main")), Option.of(new BranchName("feature"))),
                 worktrees.map(Worktree::branch));
         assertEquals(
                 List.of(linked, main),
@@ -220,7 +220,7 @@ class CliWorktreeTest {
         git(main, "branch", "feature");
         CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
         Path linked = main.resolveSibling("linked");
-        provider.addWorktree(linked, new Branch.Name("feature")).get();
+        provider.addWorktree(linked, new BranchName("feature")).get();
 
         assertEquals(
                 List.of("git worktree lock " + linked),
@@ -265,23 +265,23 @@ class CliWorktreeTest {
         Path fromRemote = main.resolveSibling("from-remote");
 
         List<String> added = provider.addWorktreeWithNewBranch(
-                        fromLocal, new Branch.Name("topic"), "main", Option.of(new Branch.Name("main")), false)
+                        fromLocal, new BranchName("topic"), "main", Option.of(new BranchName("main")), false)
                 .get()
                 .map(ExecutedCommand::line);
         provider.addWorktreeWithNewBranch(
-                        fromRemote, new Branch.Name("shared"), "refs/remotes/origin/shared", Option.none(), true)
+                        fromRemote, new BranchName("shared"), "refs/remotes/origin/shared", Option.none(), true)
                 .get();
 
         assertEquals("git worktree add --quiet -b topic " + fromLocal + " main", added.head());
         assertEquals(
                 List.of(
-                        Option.of(new Branch.Name("main")),
-                        Option.of(new Branch.Name("topic")),
-                        Option.of(new Branch.Name("shared"))),
+                        Option.of(new BranchName("main")),
+                        Option.of(new BranchName("topic")),
+                        Option.of(new BranchName("shared"))),
                 provider.worktrees().get().map(Worktree::branch));
         assertEquals(
-                Option.of(new Branch.Name("main")),
-                CliConfig.parent(main, new Branch.Name("topic")).get());
+                Option.of(new BranchName("main")),
+                CliConfig.parent(main, new BranchName("topic")).get());
         assertEquals(
                 Option.of("origin/shared"),
                 provider.allBranches()
@@ -300,7 +300,7 @@ class CliWorktreeTest {
         CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
 
         GitFailure<GitError.ProcessError> failure = provider.addWorktree(
-                        main.resolveSibling("other"), new Branch.Name("main"))
+                        main.resolveSibling("other"), new BranchName("main"))
                 .getLeft();
 
         assertInstanceOf(GitError.CommandFailed.class, failure.error());

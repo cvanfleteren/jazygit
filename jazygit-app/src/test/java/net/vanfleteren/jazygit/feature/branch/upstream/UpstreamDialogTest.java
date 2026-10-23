@@ -12,7 +12,9 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Upstream;
@@ -30,15 +32,14 @@ import org.junit.jupiter.api.Test;
  */
 class UpstreamDialogTest {
 
-    private static final Branch TRACKING = new Branch(
-            new Branch.Name("feature"),
+    private static final Branch TRACKING = Fixtures.branch(
+            new BranchName("feature"),
             true,
             new Sha("ffff"),
             Instant.EPOCH,
             true,
             false,
-            Option.of(
-                    new Upstream(new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("feature"))), 0, 0)));
+            Option.of(new Upstream(new BranchRef.Remote(new RemoteBranch("origin", new BranchName("feature"))), 0, 0)));
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final ChoiceDialog<UpstreamPopup> dialog = new ChoiceDialog<>(UpstreamDialogs.UPSTREAM, dispatched::add);
@@ -47,7 +48,7 @@ class UpstreamDialogTest {
     void namesTheBranchItsUpstreamAndTheBase() throws Exception {
         String screen = render(new UpstreamPopup(
                 Option.of(TRACKING),
-                Option.of(new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main")))),
+                Option.of(new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main")))),
                 Option.of(TRACKING)));
 
         assertTrue(screen.contains("Upstream options for feature"), screen);
@@ -58,7 +59,7 @@ class UpstreamDialogTest {
 
     @Test
     void withoutAnUpstreamOrBaseTheOptionsAreStillOffered() throws Exception {
-        Branch main = new Branch(new Branch.Name("main"), true, new Sha("a"));
+        Branch main = Fixtures.branch(new BranchName("main"), true, new Sha("a"));
         String screen = render(new UpstreamPopup(Option.of(main), Option.none(), Option.of(main)));
 
         assertTrue(screen.contains("Upstream options for main"), screen);

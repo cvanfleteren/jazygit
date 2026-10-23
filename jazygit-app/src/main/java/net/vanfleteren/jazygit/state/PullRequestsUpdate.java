@@ -4,7 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -60,9 +60,9 @@ public final class PullRequestsUpdate {
      * bases: the newest, the one with the highest number, is kept, so the choice does not depend on the order
      * gh lists them in.
      */
-    static Map<Branch.Name, PullRequest> byHeadBranch(List<PullRequest> pullRequests) {
+    static Map<BranchName, PullRequest> byHeadBranch(List<PullRequest> pullRequests) {
         // Vavr's toMap has no merge function; a later entry replaces an earlier one, so ascending numbers keep the
         // newest.
-        return pullRequests.sortBy(PullRequest::number).toMap(pr -> new Branch.Name(pr.headBranch()), pr -> pr);
+        return pullRequests.sortBy(PullRequest::number).toMap(pr -> new BranchName(pr.headBranch()), pr -> pr);
     }
 }

@@ -10,7 +10,7 @@ import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.*;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Worktree;
@@ -78,9 +78,9 @@ final class CliWorktree {
         Either<UnexpectedOutput, Option<Sha>> sha = value(lines, "HEAD")
                 .map(text -> GitOutput.sha(text).map(Option::of))
                 .getOrElse(() -> Either.right(Option.none()));
-        Option<Branch.Name> branch = value(lines, "branch")
+        Option<BranchName> branch = value(lines, "branch")
                 .flatMap(ref -> GitOutput.after(ref, HEADS))
-                .map(Branch.Name::new);
+                .map(BranchName::new);
         return lines.contains("bare")
                 ? Either.right(Option.none())
                 : path.flatMap(root -> sha.flatMap(at -> head(at, branch)
@@ -98,7 +98,7 @@ final class CliWorktree {
      * What the HEAD of a worktree points to: {@code branch}, or else the commit {@code sha}; none when it has
      * neither.
      */
-    private static Option<Head> head(Option<Sha> sha, Option<Branch.Name> branch) {
+    private static Option<Head> head(Option<Sha> sha, Option<BranchName> branch) {
         // A repository without commits has a HEAD of zeroes.
         Option<Sha> commit = sha.filter(at -> !at.value().matches("0+"));
         return branch.<Head>map(name -> new Head.OnBranch(name, commit)).orElse(() -> commit.map(Head.Detached::new));
@@ -126,7 +126,7 @@ final class CliWorktree {
      * Runs {@code git worktree add --quiet <location> <branch>} in {@code worktree}.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> add(
-            Path worktree, Path location, Branch.Name branch) {
+            Path worktree, Path location, BranchName branch) {
         return GitProcess.log(
                 worktree,
                 git(
@@ -162,9 +162,9 @@ final class CliWorktree {
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> addNewBranch(
             Path worktree,
             Path location,
-            Branch.Name name,
+            BranchName name,
             String startPoint,
-            Option<Branch.Name> parent,
+            Option<BranchName> parent,
             boolean track) {
         return GitFailure.sequence(
                 () -> GitProcess.log(

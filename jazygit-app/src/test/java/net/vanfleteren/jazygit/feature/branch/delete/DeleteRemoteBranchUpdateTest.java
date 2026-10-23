@@ -18,9 +18,9 @@ import org.junit.jupiter.api.Test;
  */
 class DeleteRemoteBranchUpdateTest {
 
-    private static final RemoteBranch ORIGIN_MAIN = new RemoteBranch("origin", new Branch.Name("main"));
-    private static final RemoteBranch ORIGIN_FEATURE = new RemoteBranch("origin", new Branch.Name("feature"));
-    private static final RemoteBranch UPSTREAM_MAIN = new RemoteBranch("upstream", new Branch.Name("main"));
+    private static final RemoteBranch ORIGIN_MAIN = new RemoteBranch("origin", new BranchName("main"));
+    private static final RemoteBranch ORIGIN_FEATURE = new RemoteBranch("origin", new BranchName("feature"));
+    private static final RemoteBranch UPSTREAM_MAIN = new RemoteBranch("upstream", new BranchName("main"));
 
     /**
      * main locally, the default branch; origin/main, origin/feature and upstream/main on the remotes.
@@ -28,7 +28,8 @@ class DeleteRemoteBranchUpdateTest {
     private static Model model() {
         Model branches = TestModels.localBranchesRead(
                         loaded(),
-                        List.of(new Branch(new Branch.Name("main"), true, new Sha("aaaa"), Instant.EPOCH, true, true)))
+                        List.of(Fixtures.branch(
+                                new BranchName("main"), true, new Sha("aaaa"), Instant.EPOCH, true, true)))
                 .model();
         return TestModels.remoteBranchesRead(
                         branches,

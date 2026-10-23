@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.feature.branch.movecommits.MoveMsg.*;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.feature.branch.upstream.UpstreamUpdate;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.CommitRange;
@@ -84,7 +85,7 @@ public final class MoveUpdate {
      * can only move to a new branch where they are, as they do not cherry-pick well, so then its name is asked
      * straight away.
      */
-    private static Next rangeRead(Model model, Branch.Name from, Sha oldest, CommitRange range) {
+    private static Next rangeRead(Model model, BranchName from, Sha oldest, CommitRange range) {
         return model.repo()
                 .currentBranch()
                 .filter(current -> current.name().equals(from) && range.commits() > 0)
@@ -106,7 +107,7 @@ public final class MoveUpdate {
     /**
      * The local branches the commits can move to: the ones other than {@code from}.
      */
-    private static List<Branch> others(Model model, Branch.Name from) {
+    private static List<Branch> others(Model model, BranchName from) {
         return model.repo()
                 .branches()
                 .toOption()
@@ -118,7 +119,7 @@ public final class MoveUpdate {
      * Asks for the name of a new branch, or moves the commits onto the existing {@code branch}. One that is checked
      * out in another worktree cannot be checked out here, and one that an operation runs on takes no other.
      */
-    private static Next targetChosen(Model model, MoveRequest request, Option<Branch.Name> branch) {
+    private static Next targetChosen(Model model, MoveRequest request, Option<BranchName> branch) {
         return branch.fold(
                 () -> Update.ask(model, new MoveNamePopup(request)),
                 name -> model.repo()
@@ -153,7 +154,7 @@ public final class MoveUpdate {
      */
     private static Next named(Model model) {
         return model.popup(MoveNamePopup.class)
-                .flatMap(popup -> Branch.Name.parse(popup.name())
+                .flatMap(popup -> BranchName.parse(popup.name())
                         .filter(name -> model.repo().branch(name).isEmpty())
                         .map(name -> {
                             Model closed = model.withoutPopup(MoveNamePopup.class);
@@ -167,7 +168,7 @@ public final class MoveUpdate {
     /**
      * Moves the commits to the new branch {@code name}, which starts at {@code base}.
      */
-    private static Next based(Model model, MoveRequest request, Branch.Name name, MoveBase base) {
+    private static Next based(Model model, MoveRequest request, BranchName name, MoveBase base) {
         Option<BranchRef> onto = switch (base) {
             case MoveBase.Parent() -> Option.none();
             case MoveBase.Onto(BranchRef branch) -> Option.of(branch);

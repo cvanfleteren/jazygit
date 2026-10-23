@@ -12,7 +12,7 @@ import net.vanfleteren.jazygit.state.Operation;
 /**
  * Renames {@code branch} to {@code newName}.
  */
-public record RenameBranchCmd(Branch.Name branch, Branch.Name newName) implements BranchCmd {
+public record RenameBranchCmd(BranchName branch, BranchName newName) implements BranchCmd {
 
     public static final Operation RENAME_BRANCH = Operation.of("log.title.renameBranch", "error.renameBranch.failed");
 

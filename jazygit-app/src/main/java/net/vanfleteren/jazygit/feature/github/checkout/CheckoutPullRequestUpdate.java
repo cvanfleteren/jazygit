@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeUpdate;
 import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
@@ -59,7 +60,7 @@ public final class CheckoutPullRequestUpdate {
     private static Next proceed(Model model, Readiness readiness, Supplier<Next> ready) {
         return switch (readiness) {
             case Readiness.Blocked(AppError error) -> Next.of(model.fail(error));
-            case Readiness.Elsewhere(Branch.Name branch, String worktree) ->
+            case Readiness.Elsewhere(BranchName branch, String worktree) ->
                 Update.ask(model, new SwitchWorktreePopup(branch, worktree));
             case Readiness.Busy() -> Next.of(model);
             case Readiness.Ready() -> ready.get();
@@ -114,7 +115,7 @@ public final class CheckoutPullRequestUpdate {
      * from a fork gh names after its owner, so it is not looked for.
      */
     private static Option<Readiness> checkedOutElsewhere(Model model, PullRequestSummary pullRequest) {
-        Branch.Name branch = new Branch.Name(pullRequest.headBranch());
+        BranchName branch = new BranchName(pullRequest.headBranch());
         return Option.when(!pullRequest.fromFork(), branch)
                 .flatMap(model.repo()::branch)
                 .flatMap(Branch::worktreeLocation)
@@ -156,7 +157,7 @@ public final class CheckoutPullRequestUpdate {
         /**
          * Another worktree has its branch checked out, at {@code worktree}.
          */
-        record Elsewhere(Branch.Name branch, String worktree) implements Readiness {}
+        record Elsewhere(BranchName branch, String worktree) implements Readiness {}
 
         /**
          * Its worktree is being added already.

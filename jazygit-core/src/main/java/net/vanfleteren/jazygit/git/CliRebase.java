@@ -10,7 +10,7 @@ import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
@@ -66,7 +66,7 @@ final class CliRebase {
      *
      * @return the command lines that were run
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> onto(Path worktree, Branch.Name onto) {
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> onto(Path worktree, BranchName onto) {
         return rebase(worktree, git(REBASE.append("--no-autosquash").append(onto.value())));
     }
 

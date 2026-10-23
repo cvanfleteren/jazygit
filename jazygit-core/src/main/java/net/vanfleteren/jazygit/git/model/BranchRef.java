@@ -18,7 +18,7 @@ public sealed interface BranchRef {
     /**
      * The local branch {@code branch}.
      */
-    record Local(Branch.Name branch) implements BranchRef {
+    record Local(BranchName branch) implements BranchRef {
 
         @Override
         public String name() {

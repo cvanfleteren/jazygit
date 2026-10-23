@@ -134,7 +134,7 @@ class JazygitAppPilotTest {
     void theRemoteBranchesAreOneStopOfTheTabCycleAndTheirKeysWorkThere() throws Exception {
         SampleData data = new SampleData();
         java.util.List<Msg> dispatched = new ArrayList<>();
-        RemoteBranch feature = new RemoteBranch("origin", new Branch.Name("feature"));
+        RemoteBranch feature = new RemoteBranch("origin", new BranchName("feature"));
         Model remote = TestModels.loaded(data)
                 .mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.REMOTE))
                 .mapRepo(repo -> repo.withRemoteBranches(new Loadable.Loaded<>(List.of(
@@ -225,13 +225,13 @@ class JazygitAppPilotTest {
             Pilot pilot = SettledPilot.of(testRunner);
             pilot.pause();
             assertEquals(
-                    new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("main"))),
+                    new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName("main"))),
                     fixture.selections().getLast());
 
             pilot.press(KeyCode.DOWN);
             pilot.pause();
             assertEquals(
-                    new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("feature/initial-layout"))),
+                    new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName("feature/initial-layout"))),
                     fixture.selections().getLast());
 
             pilot.quit();
@@ -253,7 +253,7 @@ class JazygitAppPilotTest {
             pilot.press(' ');
             pilot.pause();
             assertEquals(
-                    java.util.List.of(new CheckoutMsg.Requested(new Branch.Name("feature/initial-layout"))),
+                    java.util.List.of(new CheckoutMsg.Requested(new BranchName("feature/initial-layout"))),
                     fixture.dispatched());
 
             SettledPilot.focus(testRunner, CommitsPanel.ID);

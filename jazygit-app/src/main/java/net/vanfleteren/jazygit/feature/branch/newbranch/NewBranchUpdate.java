@@ -6,7 +6,7 @@ import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.CheckoutRemot
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg.Requested;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
@@ -21,7 +21,7 @@ public final class NewBranchUpdate {
 
     public static Next update(Model model, NewBranchMsg msg) {
         return switch (msg) {
-            case Requested(Branch.Name base) ->
+            case Requested(BranchName base) ->
                 Update.ask(model, model.idleBranch(base).map(known -> new NewBranchPopup(base)));
             case NewBranchMsg.RequestedAtCommit(var sha) -> atCommit(model, sha);
             case NewBranchMsg.RequestedAtRemote(var remote) ->
@@ -48,7 +48,7 @@ public final class NewBranchUpdate {
         return Update.confirm(
                 model,
                 NewBranchPopup.class,
-                popup -> Branch.Name.parse(popup.name())
+                popup -> BranchName.parse(popup.name())
                         .map(branch -> popup.following()
                                 .<BranchCmd>map(remote -> new CheckoutRemote(branch, remote))
                                 .getOrElse(() -> new NewBranchCmd(branch, popup.base(), popup.parent()))));

@@ -4,7 +4,7 @@ import io.vavr.collection.List;
 import java.time.Duration;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 
 /**
  * A merge of a pull request that GitHub was asked for, which it does in the background (ADR 24).
@@ -17,7 +17,7 @@ import net.vanfleteren.jazygit.git.model.Branch;
  * @param checking whether GitHub is being asked how it is doing
  */
 public record PullRequestMerge(
-        int number, Branch.Name branch, List<Integer> below, MergeStatus status, Instant asked, boolean checking) {
+        int number, BranchName branch, List<Integer> below, MergeStatus status, Instant asked, boolean checking) {
 
     /**
      * How long a pending merge is asked about before it is left to GitHub.
@@ -28,7 +28,7 @@ public record PullRequestMerge(
      * A merge GitHub was just asked for, which said {@code status}.
      */
     public static PullRequestMerge asked(
-            int number, Branch.Name branch, List<Integer> below, MergeStatus status, Instant asked) {
+            int number, BranchName branch, List<Integer> below, MergeStatus status, Instant asked) {
         return new PullRequestMerge(number, branch, below, status, asked, false);
     }
 

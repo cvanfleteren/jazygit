@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 class CommitGraphTest {
 
     private static Commit commit(String sha, String... parents) {
-        return new Commit(
+        return Fixtures.commit(
                 new Sha(sha),
                 "Ada",
                 "ada@example.com",

@@ -11,10 +11,11 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendTarget.LastCommit;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendTarget.Older;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -38,10 +39,10 @@ class AmendUpdateTest {
 
     private static final FileEntry STAGED = new FileEntry("a.txt", ChangeType.MODIFIED, true, false);
     private static final FileEntry UNSTAGED = new FileEntry("b.txt", ChangeType.MODIFIED, false, true);
-    private static final FileEntry UNTRACKED = new FileEntry("c.txt", ChangeType.UNTRACKED);
+    private static final FileEntry UNTRACKED = Fixtures.fileEntry("c.txt", ChangeType.UNTRACKED);
 
     private static Commit commit(String sha, List<String> parents) {
-        return new Commit(
+        return Fixtures.commit(
                 new Sha(sha),
                 "Ada",
                 "ada@example.com",
@@ -60,7 +61,7 @@ class AmendUpdateTest {
         return Update.update(
                         loaded,
                         new LoadMsg.StatusLoaded(
-                                new RepoStatus(Head.onBranch(new Branch.Name("main"), commits[0].sha()), files)))
+                                new RepoStatus(Head.onBranch(new BranchName("main"), commits[0].sha()), files)))
                 .model();
     }
 

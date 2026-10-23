@@ -59,7 +59,7 @@ final class CliStatus {
         Option<Sha> commit = oid.filter(o -> !o.equals("(initial)")).flatMap(Sha::parse);
         return commit.filter(c -> branch.equals("(detached)"))
                 .<Head>map(Head.Detached::new)
-                .getOrElse(() -> new Head.OnBranch(new Branch.Name(branch), commit));
+                .getOrElse(() -> new Head.OnBranch(new BranchName(branch), commit));
     }
 
     private static Either<UnexpectedOutput, Parsed> next(Parsed parsed, String field) {

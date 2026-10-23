@@ -54,18 +54,18 @@ public interface GitInfoProvider {
      * remote one goes first, so a failure leaves the local branch in place.
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(
-            Branch.Name name, RemoteBranch remote, DeleteScope scope);
+            BranchName name, RemoteBranch remote, DeleteScope scope);
 
     /**
      * Deletes the local branch {@code name}, merged or not.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(Branch.Name name);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name);
 
     /**
      * Renames the local branch {@code name} to {@code newName}; it keeps following the same upstream. Fails when a
      * branch is called {@code newName} already.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> renameBranch(Branch.Name name, Branch.Name newName);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> renameBranch(BranchName name, BranchName newName);
 
     /**
      * Deletes {@code remote} on its remote.
@@ -78,7 +78,7 @@ public interface GitInfoProvider {
      * Checks out the local branch {@code branch}. Fails with {@link GitError.LocalChanges} when
      * uncommitted changes would be overwritten.
      */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> checkout(Branch.Name branch);
+    Either<GitFailure<GitError>, List<ExecutedCommand>> checkout(BranchName branch);
 
     /**
      * Checks out the local branch {@code branch}, taking the uncommitted changes along: they are stashed
@@ -86,21 +86,21 @@ public interface GitInfoProvider {
      * where they were; when popping them on {@code branch} fails, they stay in the stash, which is a
      * {@link GitError.StashNotRestored}.
      */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> checkoutWithStash(Branch.Name branch);
+    Either<GitFailure<GitError>, List<ExecutedCommand>> checkoutWithStash(BranchName branch);
 
     /**
      * Creates the local branch {@code name} at {@code startPoint} and checks it out; records {@code parent} as the
      * branch it came from, if given, as {@link #parentBranch} reads it.
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(
-            Branch.Name name, String startPoint, Option<Branch.Name> parent);
+            BranchName name, String startPoint, Option<BranchName> parent);
 
     /**
      * Creates the local branch {@code name} at the remote-tracking branch of {@code upstream}, following it, and
      * checks it out.
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewTrackingBranch(
-            Branch.Name name, RemoteBranch upstream);
+            BranchName name, RemoteBranch upstream);
 
     // Merging branches, as git merge does.
 
@@ -109,7 +109,7 @@ public interface GitInfoProvider {
      * left so, for the user to resolve them, and fails with {@link GitError.StoppedOnConflicts}; a squash merge is
      * then not committed.
      */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> merge(Branch.Name branch, MergeMode mode);
+    Either<GitFailure<GitError>, List<ExecutedCommand>> merge(BranchName branch, MergeMode mode);
 
     // Copying commits onto the checked out branch, as git cherry-pick does.
 
@@ -148,7 +148,7 @@ public interface GitInfoProvider {
      * conflicts is left so, and fails with {@link GitError.StoppedOnConflicts}; when it fails otherwise, it is
      * aborted again, so the repository is left as it was.
      */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(Branch.Name onto);
+    Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(BranchName onto);
 
     // Pushing branches, as git push does.
 
@@ -156,14 +156,14 @@ public interface GitInfoProvider {
      * Pushes the local branch {@code branch} to {@code upstream}, the branch it tracks.
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(
-            Branch.Name branch, RemoteBranch upstream, PushMode mode);
+            BranchName branch, RemoteBranch upstream, PushMode mode);
 
     /**
      * Pushes the local branch {@code branch} to {@code upstream}, which becomes its upstream once the push
      * succeeded.
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(
-            Branch.Name branch, RemoteBranch upstream);
+            BranchName branch, RemoteBranch upstream);
 
     // Pulling the checked out branch, as git pull does.
 
@@ -185,7 +185,7 @@ public interface GitInfoProvider {
      * Fast-forwards the local branch {@code branch}, which is not checked out, to {@code upstream}, the branch it
      * tracks. Fails when that is not a fast-forward.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(Branch.Name branch, BranchRef upstream);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(BranchName branch, BranchRef upstream);
 
     // The remotes, as git remote lists them.
 
@@ -215,7 +215,7 @@ public interface GitInfoProvider {
      * The branch {@code branch} was made from, if that was recorded: as {@code gh} does, in
      * {@code branch.<name>.gh-merge-base}.
      */
-    Either<ProcessError, Option<Branch.Name>> parentBranch(Branch.Name branch);
+    Either<ProcessError, Option<BranchName>> parentBranch(BranchName branch);
 
     // The history, as git log shows it.
 
@@ -266,7 +266,7 @@ public interface GitInfoProvider {
      *
      * @param oldest the full object id of a commit of {@code branch} that has a parent
      */
-    Either<GitError, CommitRange> commitRange(Branch.Name branch, Sha oldest, Option<RemoteBranch> upstream);
+    Either<GitError, CommitRange> commitRange(BranchName branch, Sha oldest, Option<RemoteBranch> upstream);
 
     // A single commit, as git show shows it.
 
@@ -374,7 +374,7 @@ public interface GitInfoProvider {
      * @param onto   the branch the new branch starts at, if not at {@code from}
      */
     Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommits(
-            Branch.Name from, Sha oldest, Branch.Name to, Option<BranchRef> onto);
+            BranchName from, Sha oldest, BranchName to, Option<BranchRef> onto);
 
     /**
      * Moves the commits of the checked out branch {@code from}, from {@code oldest} up to its tip, onto the existing
@@ -385,7 +385,7 @@ public interface GitInfoProvider {
      *
      * @param oldest the full object id of a commit of {@code from} that has a parent
      */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommitsTo(Branch.Name from, Sha oldest, Branch.Name to);
+    Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommitsTo(BranchName from, Sha oldest, BranchName to);
 
     // Moving the checked out branch, as git reset does.
 
@@ -434,7 +434,7 @@ public interface GitInfoProvider {
      * Checks {@code branch} out in a new worktree at {@code location}, which is taken relative to the working
      * tree of this one. Git refuses a branch that is checked out already, and a location that is not empty.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktree(Path location, Branch.Name branch);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktree(Path location, BranchName branch);
 
     /**
      * Checks {@code startPoint}, a branch, a commit or any other revision, out in a new worktree at
@@ -449,7 +449,7 @@ public interface GitInfoProvider {
      * is a branch already.
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktreeWithNewBranch(
-            Path location, Branch.Name name, String startPoint, Option<Branch.Name> parent, boolean track);
+            Path location, BranchName name, String startPoint, Option<BranchName> parent, boolean track);
 
     /**
      * Removes the linked worktree at {@code location}, its directory included; its branch stays. Without

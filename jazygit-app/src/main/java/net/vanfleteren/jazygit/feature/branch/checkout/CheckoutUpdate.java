@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg.*;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchPopup;
 import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.BranchesTab;
@@ -27,7 +28,7 @@ public final class CheckoutUpdate {
 
     public static Next update(Model model, CheckoutMsg msg) {
         return switch (msg) {
-            case Requested(Branch.Name branch) -> requested(model, branch);
+            case Requested(BranchName branch) -> requested(model, branch);
             case RemoteRequested(RemoteBranch branch) -> remoteRequested(model, branch);
             // The checkout ran, and failed; the stash it needs is offered instead of the failure.
             case NeedsStash(var cmd, var commands) ->
@@ -76,7 +77,7 @@ public final class CheckoutUpdate {
      * Checks out {@code branch}. One that another worktree has checked out git would refuse, so switching to that
      * worktree is offered instead.
      */
-    private static Next requested(Model model, Branch.Name branch) {
+    private static Next requested(Model model, BranchName branch) {
         return model.idleBranch(branch)
                 .flatMap(Branch::worktreeLocation)
                 .map(worktree -> Update.ask(model, new SwitchWorktreePopup(branch, worktree)))

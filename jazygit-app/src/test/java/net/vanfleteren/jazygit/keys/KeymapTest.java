@@ -14,7 +14,7 @@ import net.vanfleteren.jazygit.feature.inprogress.InProgressMsg;
 import net.vanfleteren.jazygit.feature.layout.LayoutMsg;
 import net.vanfleteren.jazygit.feature.repos.RecentReposMsg;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelMsg;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
@@ -95,16 +95,16 @@ class KeymapTest {
     @Test
     void aKeyActsOnTheSelection() {
         assertEquals(
-                Option.of(new CheckoutMsg.Requested(new Branch.Name("x"))),
-                keymap.handle(Scopes.BRANCHES, KeyEvent.ofChar(' '), Option.of(new Branch.Name("x"))));
+                Option.of(new CheckoutMsg.Requested(new BranchName("x"))),
+                keymap.handle(Scopes.BRANCHES, KeyEvent.ofChar(' '), Option.of(new BranchName("x"))));
     }
 
     @Test
     void shiftOOpensTheBranchOnGitHub() {
         assertEquals(
-                Option.of(new BrowseMsg.Requested(new Branch.Name("x"))),
-                keymap.handle(Scopes.BRANCHES, KeyEvent.ofChar('O'), Option.of(new Branch.Name("x"))));
-        RemoteBranch remote = new RemoteBranch("origin", new Branch.Name("x"));
+                Option.of(new BrowseMsg.Requested(new BranchName("x"))),
+                keymap.handle(Scopes.BRANCHES, KeyEvent.ofChar('O'), Option.of(new BranchName("x"))));
+        RemoteBranch remote = new RemoteBranch("origin", new BranchName("x"));
         assertEquals(
                 Option.of(new BrowseMsg.RemoteRequested(remote)),
                 keymap.handle(Scopes.REMOTE_BRANCHES, KeyEvent.ofChar('O'), Option.of(remote)));
@@ -112,7 +112,7 @@ class KeymapTest {
 
     @Test
     void dDeletesARemoteBranch() {
-        RemoteBranch remote = new RemoteBranch("origin", new Branch.Name("x"));
+        RemoteBranch remote = new RemoteBranch("origin", new BranchName("x"));
         assertEquals(
                 Option.of(new DeleteBranchMsg.RemoteRequested(remote)),
                 keymap.handle(Scopes.REMOTE_BRANCHES, KeyEvent.ofChar('d'), Option.of(remote)));
@@ -125,7 +125,7 @@ class KeymapTest {
 
     @Test
     void aKeyWithCtrlOrAltIsNotTheKeyWithout() {
-        Option<Branch.Name> selection = Option.of(new Branch.Name("x"));
+        Option<BranchName> selection = Option.of(new BranchName("x"));
 
         assertTrue(
                 keymap.handle(Scopes.BRANCHES, KeyEvent.ofChar('r'), selection).isDefined());
@@ -145,10 +145,10 @@ class KeymapTest {
                 .add(
                         Scopes.BRANCHES,
                         Keymap.Binding.onSelected("ctrl+x", "help.global.quit", CheckoutMsg.Requested::new));
-        Option<Branch.Name> selection = Option.of(new Branch.Name("x"));
+        Option<BranchName> selection = Option.of(new BranchName("x"));
 
         assertEquals(
-                Option.of(new CheckoutMsg.Requested(new Branch.Name("x"))),
+                Option.of(new CheckoutMsg.Requested(new BranchName("x"))),
                 ctrlX.handle(
                         Scopes.BRANCHES, KeyEvent.ofChar('x', dev.tamboui.tui.event.KeyModifiers.CTRL), selection));
         assertEquals(Option.none(), ctrlX.handle(Scopes.BRANCHES, KeyEvent.ofChar('x'), selection));
@@ -157,7 +157,7 @@ class KeymapTest {
     @Test
     void unknownKeysDoNothing() {
         assertEquals(
-                Option.none(), keymap.handle(Scopes.BRANCHES, KeyEvent.ofChar('Z'), Option.of(new Branch.Name("x"))));
+                Option.none(), keymap.handle(Scopes.BRANCHES, KeyEvent.ofChar('Z'), Option.of(new BranchName("x"))));
     }
 
     @Test

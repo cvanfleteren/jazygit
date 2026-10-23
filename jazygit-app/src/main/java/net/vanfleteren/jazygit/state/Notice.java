@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.Sha;
 
@@ -24,16 +24,16 @@ public sealed interface Notice {
      * Moving the commits of {@code branch} since {@code oldest} to {@code target}, a new or an existing branch,
      * stopped on conflicts while copying them onto it: {@code branch} still has them, until the user moves it back.
      */
-    record MoveStopped(StoppedOnConflicts stopped, Branch.Name branch, Sha oldest, Branch.Name target)
+    record MoveStopped(StoppedOnConflicts stopped, BranchName branch, Sha oldest, BranchName target)
             implements Notice {}
 
     /**
      * GitHub added the pull request of {@code branch} to the merge queue of its base branch, which merges it later.
      */
-    record MergeEnqueued(Branch.Name branch) implements Notice {}
+    record MergeEnqueued(BranchName branch) implements Notice {}
 
     /**
      * GitHub was still merging the pull request of {@code branch} after so long that it is no longer asked about.
      */
-    record MergeStillPending(Branch.Name branch) implements Notice {}
+    record MergeStillPending(BranchName branch) implements Notice {}
 }

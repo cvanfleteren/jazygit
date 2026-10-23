@@ -6,7 +6,7 @@ import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.StoppedOnConflicts;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.CommitRange;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -21,9 +21,9 @@ import org.zeroturnaround.exec.ProcessExecutor;
  */
 class CliMoveCommitsTest {
 
-    private static final Branch.Name FEATURE = new Branch.Name("feature");
-    private static final Branch.Name MOVED = new Branch.Name("moved");
-    private static final BranchRef MAIN = new BranchRef.Local(new Branch.Name("main"));
+    private static final BranchName FEATURE = new BranchName("feature");
+    private static final BranchName MOVED = new BranchName("moved");
+    private static final BranchRef MAIN = new BranchRef.Local(new BranchName("main"));
 
     @TempDir
     Path repo;
@@ -94,7 +94,7 @@ class CliMoveCommitsTest {
     void aFailedCheckoutLeavesEverythingAlone() throws Exception {
         String tip = head();
 
-        assertTrue(CliMoveCommits.move(repo, FEATURE, sha("HEAD~1"), new Branch.Name("main"), Option.none())
+        assertTrue(CliMoveCommits.move(repo, FEATURE, sha("HEAD~1"), new BranchName("main"), Option.none())
                 .isLeft());
 
         assertEquals("feature", git("branch", "--show-current").strip());
@@ -109,7 +109,7 @@ class CliMoveCommitsTest {
         Sha oldest = sha("HEAD~1");
         String parent = sha("HEAD~2").value();
 
-        assertTrue(CliMoveCommits.moveTo(repo, FEATURE, oldest, new Branch.Name("main"))
+        assertTrue(CliMoveCommits.moveTo(repo, FEATURE, oldest, new BranchName("main"))
                 .isRight());
 
         assertEquals("main", git("branch", "--show-current").strip());
@@ -125,7 +125,7 @@ class CliMoveCommitsTest {
         Files.writeString(repo.resolve("b.txt"), "uncommitted\n");
         String tip = head();
 
-        var failure = CliMoveCommits.moveTo(repo, FEATURE, sha("HEAD~1"), new Branch.Name("main"))
+        var failure = CliMoveCommits.moveTo(repo, FEATURE, sha("HEAD~1"), new BranchName("main"))
                 .getLeft();
 
         assertInstanceOf(GitError.LocalChanges.class, failure.error());
@@ -141,7 +141,7 @@ class CliMoveCommitsTest {
         git("commit", "-q", "--allow-empty", "-m", "empty on purpose");
         String parent = sha("HEAD~3").value();
 
-        assertTrue(CliMoveCommits.moveTo(repo, FEATURE, sha("HEAD~2"), new Branch.Name("main"))
+        assertTrue(CliMoveCommits.moveTo(repo, FEATURE, sha("HEAD~2"), new BranchName("main"))
                 .isRight());
 
         assertEquals("main", git("branch", "--show-current").strip());
@@ -155,7 +155,7 @@ class CliMoveCommitsTest {
         String tip = head();
         failToSign();
 
-        var failure = CliMoveCommits.moveTo(repo, FEATURE, sha("HEAD~1"), new Branch.Name("main"))
+        var failure = CliMoveCommits.moveTo(repo, FEATURE, sha("HEAD~1"), new BranchName("main"))
                 .getLeft();
 
         assertFalse(failure.error() instanceof StoppedOnConflicts);

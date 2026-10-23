@@ -4,6 +4,7 @@ import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Operation;
@@ -19,7 +20,7 @@ public final class Branches {
      * The checked out branch and {@code other}, if {@code other} is a known branch other than the checked out
      * one: what merging and rebasing work with.
      */
-    public static Option<Tuple2<Branch.Name, Branch.Name>> checkedOutAnd(Model model, Branch.Name other) {
+    public static Option<Tuple2<BranchName, BranchName>> checkedOutAnd(Model model, BranchName other) {
         return model.repo()
                 .currentBranch()
                 .filter(current -> !current.name().equals(other))
@@ -31,7 +32,7 @@ public final class Branches {
      * Why {@code operation} cannot be done to {@code name} here, when it is a branch checked out in another
      * worktree.
      */
-    public static Option<AppError> checkedOutElsewhere(Model model, Operation operation, Branch.Name name) {
+    public static Option<AppError> checkedOutElsewhere(Model model, Operation operation, BranchName name) {
         return model.repo()
                 .branch(name)
                 .flatMap(Branch::worktreeLocation)
@@ -41,7 +42,7 @@ public final class Branches {
     /**
      * Whether {@code name} is a known branch that is not checked out, and that no operation runs on.
      */
-    public static boolean isOtherIdleBranch(Model model, Branch.Name name) {
+    public static boolean isOtherIdleBranch(Model model, BranchName name) {
         return model.idleBranch(name).exists(branch -> !branch.current());
     }
 }

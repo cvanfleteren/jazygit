@@ -53,7 +53,7 @@ public record Repo(
     /**
      * The local branch {@code name}, if the branches are loaded and it is one of them.
      */
-    public Option<Branch> branch(Branch.Name name) {
+    public Option<Branch> branch(BranchName name) {
         return branches.toOption()
                 .flatMap(loaded -> loaded.find(branch -> branch.name().equals(name)));
     }

@@ -16,7 +16,7 @@ public final class Scopes {
     /**
      * The name of the selected branch.
      */
-    public static final Scope<Branch.Name> BRANCHES = new Scope<>("branches", "panel.branches.title");
+    public static final Scope<BranchName> BRANCHES = new Scope<>("branches", "panel.branches.title");
     /**
      * The selected remote-tracking branch.
      */

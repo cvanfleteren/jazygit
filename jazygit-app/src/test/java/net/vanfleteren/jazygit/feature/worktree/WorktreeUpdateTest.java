@@ -60,11 +60,11 @@ import org.junit.jupiter.api.Test;
  */
 class WorktreeUpdateTest {
 
-    private static final Branch.Name FEATURE = new Branch.Name("feature");
-    private static final Branch.Name TAKEN = new Branch.Name("taken");
+    private static final BranchName FEATURE = new BranchName("feature");
+    private static final BranchName TAKEN = new BranchName("taken");
     private static final Worktree MAIN = new Worktree(
             Path.of("/repos/app"),
-            new Head.OnBranch(new Branch.Name("main"), Option.of(new Sha("aaaa"))),
+            new Head.OnBranch(new BranchName("main"), Option.of(new Sha("aaaa"))),
             true,
             true,
             Option.none(),
@@ -92,8 +92,8 @@ class WorktreeUpdateTest {
         Model branches = TestModels.localBranchesRead(
                         loaded(),
                         List.of(
-                                new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
-                                new Branch(FEATURE, false, new Sha("ffff")),
+                                Fixtures.branch(new BranchName("main"), true, new Sha("aaaa")),
+                                Fixtures.branch(FEATURE, false, new Sha("ffff")),
                                 new Branch(
                                         TAKEN,
                                         false,
@@ -124,7 +124,7 @@ class WorktreeUpdateTest {
 
     @Test
     void forTheCheckedOutBranchANewBranchMadeFromItIsAskedFor() {
-        Branch.Name main = new Branch.Name("main");
+        BranchName main = new BranchName("main");
 
         Next next = Update.update(model(), new AddWorktreeMsg.Requested(main));
 
@@ -147,7 +147,7 @@ class WorktreeUpdateTest {
                 blank.popup(),
                 Update.update(blank, new AddWorktreeMsg.NameConfirmed()).model().popup());
         Next located = Update.update(typed(named.model(), "topic"), new AddWorktreeMsg.NameConfirmed());
-        Branch.Name topic = new Branch.Name("topic");
+        BranchName topic = new BranchName("topic");
         assertEquals(
                 Option.of(new NewWorktreePopup(new WorktreeSource.Created(topic, fromFeature), "/repos/app-topic")),
                 located.model().popup());
@@ -159,7 +159,7 @@ class WorktreeUpdateTest {
 
     @Test
     void aNewBranchFromARemoteOneFollowsItAndStartsOutNamedAsIt() {
-        RemoteBranch remote = new RemoteBranch("origin", new Branch.Name("shared"));
+        RemoteBranch remote = new RemoteBranch("origin", new BranchName("shared"));
         Model known = TestModels.remoteBranchesRead(
                         model(), List.of(new RemoteRef(remote, new Sha("5555"), Instant.EPOCH)))
                 .model();
@@ -178,19 +178,20 @@ class WorktreeUpdateTest {
         GitInfoProvider git = new StubGitProvider() {
             @Override
             public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktreeWithNewBranch(
-                    Path location, Branch.Name name, String startPoint, Option<Branch.Name> parent, boolean track) {
-                ran.add(location + " " + name.value() + " " + startPoint + " " + parent + " " + track);
+                    Path location, BranchName name, String startPoint, Option<BranchName> parent, boolean track) {
+                ran.add(location + " " + name.value() + " " + startPoint + " " + parent.map(BranchName::value) + " "
+                        + track);
                 return Either.right(List.empty());
             }
         };
 
         new AddWorktreeCmd(
                         new WorktreeSource.Created(
-                                new Branch.Name("topic"), new NewBranch("feature", Option.of(FEATURE), false)),
+                                new BranchName("topic"), new NewBranch("feature", Option.of(FEATURE), false)),
                         "/repos/app-topic")
                 .run(new Env(git, net.vanfleteren.jazygit.gh.StubGitHub.empty()));
 
-        assertEquals(java.util.List.of("/repos/app-topic topic feature Some(Name[value=feature]) false"), ran);
+        assertEquals(java.util.List.of("/repos/app-topic topic feature Some(feature) false"), ran);
     }
 
     /**
@@ -234,7 +235,7 @@ class WorktreeUpdateTest {
                 Update.update(started, new AddWorktreeMsg.NameConfirmed())
                         .model()
                         .popup());
-        Branch.Name topic = new Branch.Name("topic");
+        BranchName topic = new BranchName("topic");
         assertEquals(
                 Option.of(new NewWorktreePopup(new WorktreeSource.Created(topic, fromFeature), "/repos/app-topic")),
                 Update.update(typed(started, "topic"), new AddWorktreeMsg.NameConfirmed())
@@ -264,8 +265,8 @@ class WorktreeUpdateTest {
 
     @Test
     void fromARemoteBranchTheNewBranchFollowsItAndStartsOutNamedAsItButFromACommitItFollowsNone() {
-        RemoteBranch other = new RemoteBranch("origin", new Branch.Name("other"));
-        RemoteBranch remote = new RemoteBranch("origin", new Branch.Name("shared"));
+        RemoteBranch other = new RemoteBranch("origin", new BranchName("other"));
+        RemoteBranch remote = new RemoteBranch("origin", new BranchName("shared"));
         Model known = TestModels.remoteBranchesRead(
                         model(),
                         List.of(
@@ -418,7 +419,7 @@ class WorktreeUpdateTest {
 
         assertEquals(
                 Option.none(),
-                Update.update(model(), new AddWorktreeMsg.Requested(new Branch.Name("nope")))
+                Update.update(model(), new AddWorktreeMsg.Requested(new BranchName("nope")))
                         .model()
                         .popup());
         assertEquals(
@@ -766,7 +767,7 @@ class WorktreeUpdateTest {
             }
 
             @Override
-            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(Branch.Name name) {
+            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name) {
                 ran.add("delete " + name.value());
                 return Either.right(List.empty());
             }
@@ -786,7 +787,7 @@ class WorktreeUpdateTest {
             }
 
             @Override
-            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(Branch.Name name) {
+            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name) {
                 ran.add("delete " + name.value());
                 return Either.right(List.empty());
             }
@@ -812,7 +813,7 @@ class WorktreeUpdateTest {
             }
 
             @Override
-            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(Branch.Name name) {
+            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name) {
                 return StubGitProvider.refused("git branch --delete --force " + name.value(), "ref is locked");
             }
         };
@@ -882,7 +883,7 @@ class WorktreeUpdateTest {
         // Worktrees next to a bare repository: none is the main one.
         Worktree shown = new Worktree(
                 Path.of("/repos/proj/main"),
-                new Head.OnBranch(new Branch.Name("main"), Option.of(new Sha("aaaa"))),
+                new Head.OnBranch(new BranchName("main"), Option.of(new Sha("aaaa"))),
                 false,
                 true,
                 Option.none(),

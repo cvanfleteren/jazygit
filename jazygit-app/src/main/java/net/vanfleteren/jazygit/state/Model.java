@@ -157,7 +157,7 @@ public record Model(
      * The local branch {@code name}, if it is one and no operation runs on it: a branch that is being pushed,
      * pulled or deleted takes no other operation meanwhile.
      */
-    public Option<Branch> idleBranch(Branch.Name name) {
+    public Option<Branch> idleBranch(BranchName name) {
         return repo.branch(name).filter(known -> !jobs.busy().containsKey(new BranchRef.Local(name)));
     }
 

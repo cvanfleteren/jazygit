@@ -15,10 +15,12 @@ import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -36,7 +38,7 @@ class PanePositionTest {
 
         @Override
         public Either<ProcessError, RepoStatus> status() {
-            return Either.right(new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), files));
+            return Either.right(new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("aaaa")), files));
         }
 
         @Override
@@ -57,15 +59,15 @@ class PanePositionTest {
 
     private static final Model MODEL = TestModels.loaded(new FixedProvider(
             List.of(
-                    new FileEntry("net/vanfleteren/A.java", ChangeType.MODIFIED),
-                    new FileEntry("net/vanfleteren/B.java", ChangeType.UNTRACKED)),
+                    Fixtures.fileEntry("net/vanfleteren/A.java", ChangeType.MODIFIED),
+                    Fixtures.fileEntry("net/vanfleteren/B.java", ChangeType.UNTRACKED)),
             List.of(
-                    new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
-                    new Branch(new Branch.Name("feature"), false, new Sha("bbbb"))),
+                    Fixtures.branch(new BranchName("main"), true, new Sha("aaaa")),
+                    Fixtures.branch(new BranchName("feature"), false, new Sha("bbbb"))),
             List.of(
-                    new Commit(new Sha("aaaa"), "me", "me@example.com", Instant.EPOCH, "first", ""),
-                    new Commit(new Sha("bbbb"), "me", "me@example.com", Instant.EPOCH, "second", ""),
-                    new Commit(new Sha("cccc"), "me", "me@example.com", Instant.EPOCH, "third", ""))));
+                    Fixtures.commit(new Sha("aaaa"), "me", "me@example.com", Instant.EPOCH, "first", ""),
+                    Fixtures.commit(new Sha("bbbb"), "me", "me@example.com", Instant.EPOCH, "second", ""),
+                    Fixtures.commit(new Sha("cccc"), "me", "me@example.com", Instant.EPOCH, "third", ""))));
 
     @Test
     void branchesShowSelectedPositionAndFollowSelection() throws Exception {

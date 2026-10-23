@@ -70,7 +70,7 @@ final class CliBranch {
      * pushed to. With both, the remote one goes first, so a failure leaves the local branch in place.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> delete(
-            Path worktree, Branch.Name name, RemoteBranch remote, DeleteScope scope, Map<String, String> credentials) {
+            Path worktree, BranchName name, RemoteBranch remote, DeleteScope scope, Map<String, String> credentials) {
         return GitFailure.sequence(
                 () -> scope.remote() ? deleteRemote(worktree, remote, credentials) : GitFailure.nothing(),
                 () -> scope.local() ? deleteLocal(worktree, name) : GitFailure.nothing());
@@ -80,14 +80,14 @@ final class CliBranch {
      * Runs {@code git branch -m <name> <newName>} in {@code worktree}, which refuses to overwrite a branch.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> rename(
-            Path worktree, Branch.Name name, Branch.Name newName) {
+            Path worktree, BranchName name, BranchName newName) {
         return GitProcess.log(worktree, git("branch", "--move", name.value(), newName.value()));
     }
 
     /**
      * Runs {@code git branch -D <name>} in {@code worktree}.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocal(Path worktree, Branch.Name name) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocal(Path worktree, BranchName name) {
         return GitProcess.log(worktree, git("branch", "--delete", "--force", name.value()));
     }
 
@@ -119,7 +119,7 @@ final class CliBranch {
                         .map(name -> new RemoteRef(
                                 new RemoteBranch(
                                         name.substring(0, name.indexOf('/')),
-                                        new Branch.Name(name.substring(name.indexOf('/') + 1))),
+                                        new BranchName(name.substring(name.indexOf('/') + 1))),
                                 ref.tip(),
                                 ref.time())))
                 .sorted(REMOTE_ORDER);
@@ -128,8 +128,8 @@ final class CliBranch {
     private static List<Branch> branches(List<Ref> refs) {
         Set<String> remote =
                 refs.map(Ref::name).filter(name -> name.startsWith(REMOTES)).toSet();
-        List<Branch.Name> local = refs.flatMap(Ref::localName);
-        Option<Branch.Name> defaultBranch = defaultBranch(refs, local);
+        List<BranchName> local = refs.flatMap(Ref::localName);
+        Option<BranchName> defaultBranch = defaultBranch(refs, local);
         return refs.flatMap(ref -> ref.localName()
                         .map(name -> new Branch(
                                 name,
@@ -147,12 +147,12 @@ final class CliBranch {
      * The main branch: the one {@code origin/HEAD} points to, as set by a clone. Without it, the
      * first of {@code main} and {@code master} that is among {@code branches}.
      */
-    private static Option<Branch.Name> defaultBranch(List<Ref> refs, List<Branch.Name> branches) {
+    private static Option<BranchName> defaultBranch(List<Ref> refs, List<BranchName> branches) {
         return refs.find(ref -> ref.name().equals(ORIGIN + "HEAD"))
                 .flatMap(Ref::symref)
                 .flatMap(target -> GitOutput.after(target, ORIGIN))
-                .map(Branch.Name::new)
-                .orElse(() -> List.of("main", "master").map(Branch.Name::new).find(branches::contains));
+                .map(BranchName::new)
+                .orElse(() -> List.of("main", "master").map(BranchName::new).find(branches::contains));
     }
 
     private static Tracking tracking(Ref ref) {
@@ -219,8 +219,8 @@ final class CliBranch {
         /**
          * The name of the local branch, if this is one.
          */
-        Option<Branch.Name> localName() {
-            return GitOutput.after(name, HEADS).map(Branch.Name::new);
+        Option<BranchName> localName() {
+            return GitOutput.after(name, HEADS).map(BranchName::new);
         }
 
         /**
@@ -230,7 +230,7 @@ final class CliBranch {
         Option<BranchRef> upstream() {
             return remote.flatMap(r -> remoteRef
                     .flatMap(ref -> GitOutput.after(ref, HEADS))
-                    .map(Branch.Name::new)
+                    .map(BranchName::new)
                     .map(branch -> r.equals(Refs.THIS_REPOSITORY)
                             ? new BranchRef.Local(branch)
                             : new BranchRef.Remote(new RemoteBranch(r, branch))));
@@ -240,7 +240,7 @@ final class CliBranch {
          * The remote-tracking ref of the branch it is pushed to: its upstream, or the one of the same name
          * on {@code origin}.
          */
-        String pushedTo(Branch.Name branch) {
+        String pushedTo(BranchName branch) {
             return upstreamRef.getOrElse(() -> ORIGIN + branch.value());
         }
 

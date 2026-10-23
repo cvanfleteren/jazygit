@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch.newbranch;
 
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
@@ -17,7 +17,7 @@ public sealed interface NewBranchMsg extends Msg {
     /**
      * The user asked for a new branch starting at {@code base}; the name is still to be entered.
      */
-    record Requested(Branch.Name base) implements NewBranchMsg {}
+    record Requested(BranchName base) implements NewBranchMsg {}
 
     /**
      * The user asked for a new branch starting at the commit {@code sha}.

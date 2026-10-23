@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch.newbranch;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.TextPopup;
 
@@ -13,17 +13,17 @@ import net.vanfleteren.jazygit.state.TextPopup;
  * @param parent    the branch the new branch is made from, if it is made from one
  */
 public record NewBranchPopup(
-        String base, String label, String name, Option<RemoteBranch> following, Option<Branch.Name> parent)
+        String base, String label, String name, Option<RemoteBranch> following, Option<BranchName> parent)
         implements TextPopup {
 
-    public NewBranchPopup(String base, String label, Option<Branch.Name> parent) {
+    public NewBranchPopup(String base, String label, Option<BranchName> parent) {
         this(base, label, "", Option.none(), parent);
     }
 
     /**
      * Asking for the name of a new branch made from the local branch {@code base}.
      */
-    public NewBranchPopup(Branch.Name base) {
+    public NewBranchPopup(BranchName base) {
         this(base.value(), base.value(), Option.of(base));
     }
 

@@ -39,20 +39,20 @@ class CliParseTest {
         assertEquals(
                 List.of(
                         new RemoteRef(
-                                new RemoteBranch("upstream", new Branch.Name("feature/nested")),
+                                new RemoteBranch("upstream", new BranchName("feature/nested")),
                                 new Sha(B),
                                 Instant.ofEpochSecond(400)),
                         new RemoteRef(
-                                new RemoteBranch("origin", new Branch.Name("trunk")),
+                                new RemoteBranch("origin", new BranchName("trunk")),
                                 new Sha(A),
                                 Instant.ofEpochSecond(300)),
                         new RemoteRef(
-                                new RemoteBranch("origin", new Branch.Name("old")),
+                                new RemoteBranch("origin", new BranchName("old")),
                                 new Sha(B),
                                 Instant.ofEpochSecond(100))),
                 CliBranch.parseAll(raw).get().remote());
         assertEquals(
-                List.of(new Branch.Name("main")),
+                List.of(new BranchName("main")),
                 CliBranch.parseAll(raw).get().local().map(Branch::name));
     }
 
@@ -97,37 +97,37 @@ class CliParseTest {
 
         assertEquals(
                 List.of(
-                        new Branch(
-                                new Branch.Name("trunk"),
+                        Fixtures.branch(
+                                new BranchName("trunk"),
                                 true,
                                 new Sha(A),
                                 Instant.ofEpochSecond(300),
                                 true,
                                 true,
                                 Option.of(new Upstream(
-                                        new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("trunk"))),
+                                        new BranchRef.Remote(new RemoteBranch("origin", new BranchName("trunk"))),
                                         0,
                                         0))),
-                        new Branch(
-                                new Branch.Name("feature"),
+                        Fixtures.branch(
+                                new BranchName("feature"),
                                 false,
                                 new Sha(B),
                                 Instant.ofEpochSecond(200),
                                 true,
                                 false,
                                 Option.of(new Upstream(
-                                        new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("feature"))),
+                                        new BranchRef.Remote(new RemoteBranch("origin", new BranchName("feature"))),
                                         1,
                                         2))),
-                        new Branch(
-                                new Branch.Name("gone"),
+                        Fixtures.branch(
+                                new BranchName("gone"),
                                 false,
                                 new Sha(B),
                                 Instant.ofEpochSecond(100),
                                 false,
                                 false,
                                 new Tracking.Gone(
-                                        new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("gone")))))),
+                                        new BranchRef.Remote(new RemoteBranch("origin", new BranchName("gone")))))),
                 CliBranch.parseAll(raw).get().local());
     }
 
@@ -165,9 +165,9 @@ class CliParseTest {
 
         Branch local = CliBranch.parseAll(raw).get().local().head();
         assertEquals(
-                Option.of(new BranchRef.Remote(new RemoteBranch("my/fork", new Branch.Name("feature/x")))),
+                Option.of(new BranchRef.Remote(new RemoteBranch("my/fork", new BranchName("feature/x")))),
                 local.upstream().map(Upstream::branch));
-        assertEquals(new RemoteBranch("my/fork", new Branch.Name("feature/x")), local.pushTarget());
+        assertEquals(new RemoteBranch("my/fork", new BranchName("feature/x")), local.pushTarget());
     }
 
     @Test
@@ -213,7 +213,7 @@ class CliParseTest {
                                 "Body\nmore",
                                 List.of(new Sha(B)),
                                 List.of(new Tag("v1"), new Tag("v1.1"))),
-                        new Commit(new Sha(B), "Bob", "bob@example.com", Instant.EPOCH, "Root", "", List.empty())),
+                        Fixtures.commit(new Sha(B), "Bob", "bob@example.com", Instant.EPOCH, "Root", "", List.empty())),
                 CliLog.parse(raw).get());
     }
 

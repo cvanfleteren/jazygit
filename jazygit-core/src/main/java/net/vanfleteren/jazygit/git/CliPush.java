@@ -7,7 +7,7 @@ import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -24,7 +24,7 @@ final class CliPush {
      * Pushes {@code name} to {@code upstream}, the branch it tracks.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(
-            Path worktree, Branch.Name name, RemoteBranch upstream, PushMode mode, Map<String, String> credentials) {
+            Path worktree, BranchName name, RemoteBranch upstream, PushMode mode, Map<String, String> credentials) {
         return CliRemote.run(
                 worktree,
                 git(List.of("push")
@@ -39,7 +39,7 @@ final class CliPush {
      * which it then tracks. Git only sets the upstream when the push succeeds.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(
-            Path worktree, Branch.Name name, RemoteBranch upstream, Map<String, String> credentials) {
+            Path worktree, BranchName name, RemoteBranch upstream, Map<String, String> credentials) {
         return CliRemote.run(
                 worktree, git("push", "--set-upstream", upstream.remote(), refspec(name, upstream)), credentials);
     }
@@ -48,7 +48,7 @@ final class CliPush {
      * What to push {@code name} as: just the name when the remote branch has it too, so the command reads as
      * one would type it.
      */
-    private static String refspec(Branch.Name name, RemoteBranch target) {
+    private static String refspec(BranchName name, RemoteBranch target) {
         return target.branch().equals(name) ? name.value() : name.value() + ":" + Refs.head(target.branch());
     }
 }

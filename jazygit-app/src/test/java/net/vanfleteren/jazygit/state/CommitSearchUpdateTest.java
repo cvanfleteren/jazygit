@@ -7,10 +7,11 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.Ahead;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitQuery;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
@@ -24,8 +25,8 @@ import org.junit.jupiter.api.Test;
 class CommitSearchUpdateTest {
 
     private static final List<Commit> FOUND = List.of(
-            new Commit(new Sha("0123"), "Bob", "bob@example.com", Instant.EPOCH, "Fix it", ""),
-            new Commit(new Sha("4567"), "Bob", "bob@example.com", Instant.EPOCH, "Fix it again", ""));
+            Fixtures.commit(new Sha("0123"), "Bob", "bob@example.com", Instant.EPOCH, "Fix it", ""),
+            Fixtures.commit(new Sha("4567"), "Bob", "bob@example.com", Instant.EPOCH, "Fix it again", ""));
 
     private static Model typed(Model model, String text) {
         return Update.update(
@@ -158,7 +159,7 @@ class CommitSearchUpdateTest {
 
     @Test
     void whileOnlyTheCommitsNotOnTheBaseAreListedTheSearchLeavesOutTheBase() {
-        BranchRef base = new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main")));
+        BranchRef base = new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main")));
         Ahead ahead = new Ahead(COMMITS.head().sha(), base, FOUND, false, Option.none());
         Model model = Update.update(loaded(), new LoadMsg.AheadLoaded(AheadUpdate.ofHead(loaded()), Option.of(ahead)))
                 .model();
@@ -175,8 +176,8 @@ class CommitSearchUpdateTest {
 
     @Test
     void theSearchFollowsTheBaseOfHeadOnceItIsReadOrAnotherOne() {
-        BranchRef main = new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main")));
-        BranchRef parent = new BranchRef.Local(new Branch.Name("parent"));
+        BranchRef main = new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main")));
+        BranchRef parent = new BranchRef.Local(new BranchName("parent"));
         Model only = Update.update(loaded(), new AheadMsg.Toggled()).model();
         Model searched = Update.update(typed(only, "fix"), new CommitSearchMsg.Submitted())
                 .model();

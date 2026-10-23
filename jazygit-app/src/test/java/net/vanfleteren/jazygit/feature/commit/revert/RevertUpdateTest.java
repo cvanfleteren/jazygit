@@ -8,6 +8,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -21,7 +22,7 @@ import org.junit.jupiter.api.Test;
 class RevertUpdateTest {
 
     private static final Commit FIRST = TestModels.COMMITS.head();
-    private static final Commit MERGE = new Commit(
+    private static final Commit MERGE = Fixtures.commit(
             new Sha("mmmm"),
             "Ada",
             "ada@example.com",

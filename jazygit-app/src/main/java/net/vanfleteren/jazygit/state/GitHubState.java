@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 
 /**
@@ -31,7 +32,7 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
  */
 @With
 public record GitHubState(
-        Option<Map<Branch.Name, PullRequest>> pullRequests,
+        Option<Map<BranchName, PullRequest>> pullRequests,
         Option<Failure> pullRequestsFailure,
         Option<GitHubChecks> branchChecks,
         Set<Cmd> reading,

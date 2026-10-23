@@ -1,9 +1,9 @@
 package net.vanfleteren.jazygit.feature.branch.checkout;
 
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.Popup;
 
 /**
  * Asking whether to stash the uncommitted changes, check out {@code branch} and pop the stash again.
  */
-public record StashCheckoutPopup(Branch.Name branch) implements Popup {}
+public record StashCheckoutPopup(BranchName branch) implements Popup {}

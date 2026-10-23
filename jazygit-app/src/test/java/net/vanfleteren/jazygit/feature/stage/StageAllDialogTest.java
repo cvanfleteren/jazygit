@@ -35,8 +35,8 @@ class StageAllDialogTest {
         Model unstaged = Update.update(
                         TestModels.loaded(new SampleData()),
                         new LoadMsg.StatusLoaded(new RepoStatus(
-                                Head.onBranch(new Branch.Name("main"), new Sha("aaaa")),
-                                List.of(new FileEntry("a.txt", ChangeType.MODIFIED)))))
+                                Head.onBranch(new BranchName("main"), new Sha("aaaa")),
+                                List.of(Fixtures.fileEntry("a.txt", ChangeType.MODIFIED)))))
                 .model();
         return Update.update(unstaged, new CommitMsg.Requested()).model();
     }

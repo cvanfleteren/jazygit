@@ -5,7 +5,7 @@ import io.vavr.control.Option;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -61,7 +61,7 @@ public final class RecentReposDialog {
 
     private static Cell head(Head head) {
         return switch (head) {
-            case Head.OnBranch(Branch.Name branch, Option<Sha> tip) ->
+            case Head.OnBranch(BranchName branch, Option<Sha> tip) ->
                 Cell.styled(branch.value(), Theme.Classes.REPO_BRANCH);
             case Head.Detached(Sha at) -> Cell.styled(at.shortSha(), Theme.Classes.DIM);
         };

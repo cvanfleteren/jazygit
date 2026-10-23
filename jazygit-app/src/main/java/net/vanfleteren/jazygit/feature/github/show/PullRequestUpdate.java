@@ -10,7 +10,7 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -26,12 +26,12 @@ public final class PullRequestUpdate {
 
     public static Next update(Model model, PullRequestMsg msg) {
         return switch (msg) {
-            case PullRequestMsg.Requested(Branch.Name branch) -> requested(model, branch);
+            case PullRequestMsg.Requested(BranchName branch) -> requested(model, branch);
             // A pull request of another repository is opened in the browser, as gh acts on this one; so is one
             // while it is not known yet which repository this is, which does no harm.
             case PullRequestMsg.SummaryRequested(var pullRequest)
             when model.prOverview().ofThisRepository(pullRequest).getOrElse(false) ->
-                show(model, new Branch.Name(pullRequest.headBranch()), pullRequest.pullRequest());
+                show(model, new BranchName(pullRequest.headBranch()), pullRequest.pullRequest());
             case PullRequestMsg.SummaryRequested(var pullRequest) ->
                 Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
             // The branches pane shows the pull request as it was just read too, also when the dialog is closed.
@@ -166,7 +166,7 @@ public final class PullRequestUpdate {
      * the user is asked to push it first when it is not on its remote, or not with all its commits, and then which
      * branch it merges into.
      */
-    private static Next requested(Model model, Branch.Name branch) {
+    private static Next requested(Model model, BranchName branch) {
         return model.idleBranch(branch)
                 .map(known -> model.gitHub()
                         .pullRequest(known)
@@ -185,7 +185,7 @@ public final class PullRequestUpdate {
     /**
      * Shows {@code pullRequest}, from {@code branch}, reading what there is to know about it.
      */
-    private static Next show(Model model, Branch.Name branch, PullRequest pullRequest) {
+    private static Next show(Model model, BranchName branch, PullRequest pullRequest) {
         return Next.of(
                 Update.ask(model, PullRequestPopup.loading(branch, pullRequest)).model(),
                 new LoadPullRequestDetails(pullRequest.number()));

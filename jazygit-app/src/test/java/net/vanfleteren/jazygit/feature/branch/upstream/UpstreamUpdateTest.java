@@ -31,11 +31,11 @@ import org.junit.jupiter.api.Test;
  */
 class UpstreamUpdateTest {
 
-    private static final Branch.Name MAIN = new Branch.Name("main");
-    private static final Branch.Name FEATURE = new Branch.Name("feature");
+    private static final BranchName MAIN = new BranchName("main");
+    private static final BranchName FEATURE = new BranchName("feature");
     private static final RemoteBranch ORIGIN_MAIN = new RemoteBranch("origin", MAIN);
     private static final RemoteBranch ORIGIN_FEATURE = new RemoteBranch("origin", FEATURE);
-    private static final Branch TRACKING = new Branch(
+    private static final Branch TRACKING = Fixtures.branch(
             MAIN,
             true,
             new Sha("aaaa"),
@@ -43,7 +43,7 @@ class UpstreamUpdateTest {
             true,
             true,
             Option.of(new Upstream(new BranchRef.Remote(ORIGIN_MAIN), 2, 1)));
-    private static final Branch FEATURE_BRANCH = new Branch(
+    private static final Branch FEATURE_BRANCH = Fixtures.branch(
             FEATURE,
             false,
             new Sha("ffff"),
@@ -55,7 +55,7 @@ class UpstreamUpdateTest {
             new RemoteRef(ORIGIN_MAIN, new Sha("a0a0"), Instant.EPOCH),
             new RemoteRef(ORIGIN_FEATURE, new Sha("f0f0"), Instant.EPOCH));
     private static final Commit AHEAD =
-            new Commit(new Sha("ffff"), "Ada", "ada@example.com", Instant.EPOCH, "Local work", "");
+            Fixtures.commit(new Sha("ffff"), "Ada", "ada@example.com", Instant.EPOCH, "Local work", "");
     private static final Divergence DIVERGENCE =
             new Divergence(new Divergence.Side(List.of(AHEAD), 1), new Divergence.Side(List.of(), 0));
 
@@ -67,7 +67,7 @@ class UpstreamUpdateTest {
         return TestModels.remoteBranchesRead(model, remotes).model();
     }
 
-    private static Model opened(Model model, Branch.Name highlighted) {
+    private static Model opened(Model model, BranchName highlighted) {
         return Update.update(model, new UpstreamMsg.Requested(Option.of(highlighted)))
                 .model();
     }
@@ -211,7 +211,7 @@ class UpstreamUpdateTest {
 
     @Test
     void itIsReadAgainOnceWhenTheBranchAndItsUpstreamBothMove() {
-        Branch committed = new Branch(
+        Branch committed = Fixtures.branch(
                 FEATURE,
                 false,
                 new Sha("f2f2"),
@@ -238,7 +238,7 @@ class UpstreamUpdateTest {
 
     @Test
     void itClosesWhenTheUpstreamIsGone() {
-        Branch gone = new Branch(
+        Branch gone = Fixtures.branch(
                 FEATURE,
                 false,
                 new Sha("ffff"),
@@ -306,7 +306,7 @@ class UpstreamUpdateTest {
 
     @Test
     void aBranchWhoseUpstreamIsGoneCannotBeResetOntoIt() {
-        Branch gone = new Branch(
+        Branch gone = Fixtures.branch(
                 MAIN,
                 true,
                 new Sha("aaaa"),
@@ -326,7 +326,7 @@ class UpstreamUpdateTest {
     @Test
     void aDetachedHeadHasNoBranchToReset() {
         Model detached = Update.update(
-                        with(new Branch(MAIN, false, new Sha("aaaa"))),
+                        with(Fixtures.branch(MAIN, false, new Sha("aaaa"))),
                         new LoadMsg.StatusLoaded(new RepoStatus(new Head.Detached(new Sha("aaaa")), List.of())))
                 .model();
         Model asking = opened(detached);

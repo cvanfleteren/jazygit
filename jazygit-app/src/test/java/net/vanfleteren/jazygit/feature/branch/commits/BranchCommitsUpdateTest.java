@@ -19,8 +19,8 @@ import org.junit.jupiter.api.Test;
  */
 class BranchCommitsUpdateTest {
 
-    private static final Branch.Name MAIN = new Branch.Name("main");
-    private static final BranchRef FEATURE = new BranchRef.Local(new Branch.Name("feature"));
+    private static final BranchName MAIN = new BranchName("main");
+    private static final BranchRef FEATURE = new BranchRef.Local(new BranchName("feature"));
     private static final Sha FEATURE_TIP = new Sha("ffff");
     private static final DiffText CHANGES = DiffText.of("+added line");
 
@@ -69,7 +69,7 @@ class BranchCommitsUpdateTest {
     void openingClosesTheDivergence() {
         Model diverged = featureLogRead()
                 .mapRepoView(repoView -> repoView.withDivergence(Option.of(DivergenceView.loading(
-                        MAIN, new BranchRef.Local(new Branch.Name("feature")), DivergenceView.Against.BASE))));
+                        MAIN, new BranchRef.Local(new BranchName("feature")), DivergenceView.Against.BASE))));
 
         assertEquals(Option.none(), opened(diverged).repoView().divergence());
     }
@@ -135,9 +135,9 @@ class BranchCommitsUpdateTest {
         Update.Next moved = localBranchesRead(
                 open,
                 List.of(
-                        new Branch(MAIN, true, new Sha("aaaa")),
-                        new Branch(new Branch.Name("feature"), false, new Sha("eeee"))));
-        Update.Next gone = localBranchesRead(open, List.of(new Branch(MAIN, true, new Sha("aaaa"))));
+                        Fixtures.branch(MAIN, true, new Sha("aaaa")),
+                        Fixtures.branch(new BranchName("feature"), false, new Sha("eeee"))));
+        Update.Next gone = localBranchesRead(open, List.of(Fixtures.branch(MAIN, true, new Sha("aaaa"))));
 
         assertTrue(
                 moved.cmds().contains(TestModels.loadBranchLog(FEATURE)),
@@ -148,11 +148,11 @@ class BranchCommitsUpdateTest {
 
     @Test
     void aRemoteBranchThatIsGoneIsClosedToo() {
-        BranchRef remote = new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("feature")));
+        BranchRef remote = new BranchRef.Remote(new RemoteBranch("origin", new BranchName("feature")));
         Model withRemote = remoteBranchesRead(
                         loaded(),
                         List.of(new RemoteRef(
-                                new RemoteBranch("origin", new Branch.Name("feature")), FEATURE_TIP, Instant.EPOCH)))
+                                new RemoteBranch("origin", new BranchName("feature")), FEATURE_TIP, Instant.EPOCH)))
                 .model();
         Model open =
                 Update.update(withRemote, new BranchCommitsMsg.Opened(remote)).model();
@@ -183,7 +183,7 @@ class BranchCommitsUpdateTest {
 
     @Test
     void theForkPointListedWithOnlyTheCommitsAheadIsFoundAlsoWhenTheLogStopsBeforeIt() {
-        Commit fork = new Commit(new Sha("eeee"), "Ada", "ada@example.com", Instant.EPOCH, "Fork", "");
+        Commit fork = Fixtures.commit(new Sha("eeee"), "Ada", "ada@example.com", Instant.EPOCH, "Fork", "");
         BranchRef base = new BranchRef.Local(MAIN);
         Model open = opened(featureLogRead())
                 .mapRepoView(repoView -> repoView.withOnlyAhead(true)
