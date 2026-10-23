@@ -37,6 +37,7 @@ class GitHubStateTest {
                 0,
                 0,
                 0,
+                1,
                 PullRequestDetails.Mergeable.UNKNOWN,
                 Review.CHANGES_REQUESTED,
                 0,

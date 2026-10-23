@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
  * @param additions    the lines it adds
  * @param deletions    the lines it removes
  * @param changedFiles the files it changes
+ * @param commits      the commits it has, as its "Commits" tab on GitHub counts them
  * @param mergeable    whether it merges without conflicts
  * @param review       where its review stands
  * @param comments     how many comments it has
@@ -48,6 +49,7 @@ public record PullRequestDetails(
         int additions,
         int deletions,
         int changedFiles,
+        int commits,
         Mergeable mergeable,
         Review review,
         int comments,
@@ -75,6 +77,7 @@ public record PullRequestDetails(
             int additions,
             int deletions,
             int changedFiles,
+            int commits,
             Mergeable mergeable,
             Review review,
             int comments,
@@ -95,6 +98,7 @@ public record PullRequestDetails(
                 additions,
                 deletions,
                 changedFiles,
+                commits,
                 mergeable,
                 review,
                 comments,
@@ -124,6 +128,7 @@ public record PullRequestDetails(
                 additions,
                 deletions,
                 changedFiles,
+                commits,
                 mergeable,
                 review,
                 comments,
@@ -153,6 +158,7 @@ public record PullRequestDetails(
                 additions,
                 deletions,
                 changedFiles,
+                commits,
                 mergeable,
                 review,
                 comments,

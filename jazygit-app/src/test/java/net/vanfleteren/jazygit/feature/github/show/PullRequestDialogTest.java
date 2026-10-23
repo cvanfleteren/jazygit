@@ -50,6 +50,7 @@ class PullRequestDialogTest {
             120,
             34,
             7,
+            3,
             Mergeable.MERGEABLE,
             Review.CHANGES_REQUESTED,
             5,
@@ -75,6 +76,7 @@ class PullRequestDialogTest {
             "main",
             NOW,
             NOW,
+            1,
             1,
             1,
             1,
@@ -104,6 +106,7 @@ class PullRequestDialogTest {
                 DETAILS.additions(),
                 DETAILS.deletions(),
                 DETAILS.changedFiles(),
+                DETAILS.commits(),
                 DETAILS.mergeable(),
                 DETAILS.review(),
                 DETAILS.comments(),
@@ -189,6 +192,7 @@ class PullRequestDialogTest {
                 READY.additions(),
                 READY.deletions(),
                 READY.changedFiles(),
+                READY.commits(),
                 READY.mergeable(),
                 READY.review(),
                 READY.comments(),
@@ -239,7 +243,7 @@ class PullRequestDialogTest {
         assertTrue(screen.contains("   Branch  support_rename → main"), screen);
         assertTrue(screen.contains("  Created  2026-10-10 (3d ago)"), screen);
         assertTrue(screen.contains("   Pushed  2026-10-12 (1d ago)"), screen);
-        assertTrue(screen.contains("  Changes  +120 −34 in 7 files"), screen);
+        assertTrue(screen.contains("  Changes  +120 −34 in 7 files, 3 commits"), screen);
         assertTrue(screen.contains("Mergeable  yes"), screen);
         assertTrue(screen.contains("   Review  👎 changes requested"), screen);
         assertTrue(screen.contains("Reviewers  👍 @alice  👎 @bob  ? @dave  💬 @carol"), screen);
@@ -282,6 +286,14 @@ class PullRequestDialogTest {
     }
 
     @Test
+    void countsOneFileAndOneCommitInTheSingular() throws Exception {
+        String screen = screen(
+                PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(READY)));
+
+        assertTrue(screen.contains("  Changes  +1 −1 in 1 file, 1 commit"), screen);
+    }
+
+    @Test
     void countsNoReviewThreads() throws Exception {
         String screen = screen(
                 PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(READY)));
@@ -320,6 +332,7 @@ class PullRequestDialogTest {
                 READY.additions(),
                 READY.deletions(),
                 READY.changedFiles(),
+                READY.commits(),
                 READY.mergeable(),
                 READY.review(),
                 READY.comments(),
@@ -346,6 +359,7 @@ class PullRequestDialogTest {
                 DETAILS.additions(),
                 DETAILS.deletions(),
                 DETAILS.changedFiles(),
+                DETAILS.commits(),
                 DETAILS.mergeable(),
                 DETAILS.review(),
                 DETAILS.comments(),
@@ -377,6 +391,7 @@ class PullRequestDialogTest {
                 0,
                 0,
                 0,
+                1,
                 Mergeable.UNKNOWN,
                 Review.NONE,
                 0,
@@ -424,6 +439,7 @@ class PullRequestDialogTest {
                 0,
                 0,
                 0,
+                1,
                 Mergeable.UNKNOWN,
                 Review.APPROVED,
                 0,
@@ -540,6 +556,7 @@ class PullRequestDialogTest {
                 READY.additions(),
                 READY.deletions(),
                 READY.changedFiles(),
+                READY.commits(),
                 READY.mergeable(),
                 READY.review(),
                 READY.comments(),
