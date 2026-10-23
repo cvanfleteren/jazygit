@@ -95,7 +95,7 @@ class MoveUpdateTest {
                                 new RemoteRef(ORIGIN_MAIN, ROOT.sha(), Instant.EPOCH),
                                 new RemoteRef(ORIGIN_FEATURE, MIDDLE.sha(), Instant.EPOCH)))
                 .model();
-        return Update.update(model, new LoadMsg.CommitsLoaded(List.of(TIP, MIDDLE, ROOT)))
+        return Update.update(model, TestModels.commitsLoaded(List.of(TIP, MIDDLE, ROOT)))
                 .model();
     }
 

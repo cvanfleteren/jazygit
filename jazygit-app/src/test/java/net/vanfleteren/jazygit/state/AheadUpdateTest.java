@@ -4,6 +4,7 @@ import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.*;
 import org.junit.jupiter.api.Test;
@@ -37,7 +38,7 @@ class AheadUpdateTest {
     private static Model featureLogRead() {
         Model selected = Update.update(loaded(), new SelectionMsg.BranchSelected(FEATURE_LOG))
                 .model();
-        return Update.update(selected, new LoadMsg.BranchLogLoaded(FEATURE_LOG, FEATURE_COMMITS))
+        return Update.update(selected, TestModels.branchLogLoaded(FEATURE_LOG, FEATURE_COMMITS))
                 .model();
     }
 
@@ -70,17 +71,27 @@ class AheadUpdateTest {
     }
 
     @Test
-    void theCommitsOfHeadNotOnItsBaseAreReadOnceItsLogIs() {
-        Update.Next next = Update.update(loaded(), new LoadMsg.CommitsLoaded(COMMITS));
+    void theLogOfHeadIsShownWithItsCommitsNotOnItsBase() {
+        Cmd.LoadAhead load = loadCommits().ahead();
+        Update.Next next = Update.update(
+                loaded(),
+                new LoadMsg.CommitsLoaded(COMMITS, load, Either.right(Option.of(ahead(HEAD, origin("main"))))));
 
-        assertTrue(next.cmds().contains(AheadUpdate.ofHead(next.model())));
-        Model read = Update.update(
-                        next.model(),
-                        new LoadMsg.AheadLoaded(
-                                AheadUpdate.ofHead(next.model()), Option.of(ahead(HEAD, origin("main")))))
+        // They were read with the log, so it is never shown without them.
+        assertEquals(Option.of(ahead(HEAD, origin("main"))), AheadUpdate.head(next.model()));
+        assertFalse(next.cmds().contains(load));
+        assertEquals(FEATURE_COMMITS.headOption(), next.model().commit(new Sha("ffff")));
+    }
+
+    @Test
+    void theLogOfHeadIsShownWhenItsCommitsNotOnItsBaseCannotBeRead() {
+        Cmd.LoadAhead load = loadCommits().ahead();
+        Model model = Update.update(loaded(), new LoadMsg.CommitsLoaded(COMMITS, load, Either.left(refused("boom"))))
                 .model();
-        assertEquals(Option.of(ahead(HEAD, origin("main"))), AheadUpdate.head(read));
-        assertEquals(FEATURE_COMMITS.headOption(), read.commit(new Sha("ffff")));
+
+        assertEquals(Option.of(COMMITS), model.repo().commits().toOption());
+        assertInstanceOf(Loadable.Failed.class, model.repo().ahead());
+        assertTrue(Update.update(model, new Msg.Tick()).cmds().contains(load));
     }
 
     @Test
@@ -100,26 +111,29 @@ class AheadUpdateTest {
     void whatIsReadForABranchNoLongerHighlightedIsDropped() {
         Model selected = Update.update(loaded(), new SelectionMsg.BranchSelected(FEATURE_LOG))
                 .model();
-        Update.Next logRead = Update.update(selected, new LoadMsg.BranchLogLoaded(FEATURE_LOG, FEATURE_COMMITS));
-        Cmd.LoadAhead load = AheadUpdate.of(logRead.model(), FEATURE_LOG);
-        assertEquals(List.of(load), logRead.cmds());
+        Cmd.LoadAhead load = loadBranchLog(FEATURE_LOG).ahead();
+        Update.Next logRead = Update.update(
+                selected,
+                new LoadMsg.BranchLogLoaded(
+                        FEATURE_LOG,
+                        FEATURE_COMMITS,
+                        load,
+                        Either.right(Option.of(ahead(FEATURE_TIP, origin("main"))))));
+        // They were read with the log, so it is never shown without them.
+        assertEquals(List.empty(), logRead.cmds());
+        assertEquals(Option.of(ahead(FEATURE_TIP, origin("main"))), AheadUpdate.branch(logRead.model(), FEATURE_LOG));
 
-        // The log of the other branch is read before what is not on its base, which drops the one of before.
+        // Read again as the base moved, they arrive after another branch is highlighted, and are dropped.
         BranchRef main = new BranchRef.Local(MAIN);
         Model other = Update.update(logRead.model(), new SelectionMsg.BranchSelected(main))
                 .model();
         Model otherRead =
-                Update.update(other, new LoadMsg.BranchLogLoaded(main, COMMITS)).model();
+                Update.update(other, TestModels.branchLogLoaded(main, COMMITS)).model();
         Model late = Update.update(
                         otherRead, new LoadMsg.AheadLoaded(load, Option.of(ahead(FEATURE_TIP, origin("main")))))
                 .model();
         assertEquals(Option.none(), AheadUpdate.branch(late, FEATURE_LOG));
         assertEquals(otherRead.repoView(), late.repoView());
-
-        Model read = Update.update(
-                        logRead.model(), new LoadMsg.AheadLoaded(load, Option.of(ahead(FEATURE_TIP, origin("main")))))
-                .model();
-        assertEquals(Option.of(ahead(FEATURE_TIP, origin("main"))), AheadUpdate.branch(read, FEATURE_LOG));
     }
 
     @Test
@@ -136,7 +150,7 @@ class AheadUpdateTest {
         Model other = Update.update(selected, new SelectionMsg.BranchSelected(new BranchRef.Local(MAIN)))
                 .model();
 
-        Update.Next late = Update.update(other, new LoadMsg.BranchLogLoaded(FEATURE_LOG, FEATURE_COMMITS));
+        Update.Next late = Update.update(other, TestModels.branchLogLoaded(FEATURE_LOG, FEATURE_COMMITS));
 
         assertEquals(List.empty(), late.cmds());
         assertEquals(other.repoView(), late.model().repoView());
@@ -172,7 +186,7 @@ class AheadUpdateTest {
         assertTrue(baseMoved.cmds().contains(load), baseMoved.cmds().toString());
         // Its log is read again, and what is not on its base after it.
         assertTrue(
-                bothMoved.cmds().contains(new Cmd.LoadBranchLog(FEATURE_LOG)),
+                bothMoved.cmds().contains(TestModels.loadBranchLog(FEATURE_LOG)),
                 bothMoved.cmds().toString());
         assertFalse(bothMoved.cmds().contains(load), bothMoved.cmds().toString());
     }
@@ -231,11 +245,11 @@ class AheadUpdateTest {
         // The highlighted branch moved: its log is read again, and what is not on its base after it.
         Model selected = Update.update(loaded(), new SelectionMsg.BranchSelected(FEATURE_LOG))
                 .model();
-        Model logRead = Update.update(selected, new LoadMsg.BranchLogLoaded(FEATURE_LOG, FEATURE_COMMITS))
+        Model logRead = Update.update(selected, TestModels.branchLogLoaded(FEATURE_LOG, FEATURE_COMMITS))
                 .model();
         Update.Next branchMoved = localBranchesRead(
                 logRead, List.of(new Branch(MAIN, true, HEAD), new Branch(FEATURE, false, new Sha("eeee"))));
-        assertEquals(List.of(new Cmd.LoadBranchLog(FEATURE_LOG)), branchMoved.cmds());
+        assertEquals(List.of(TestModels.loadBranchLog(FEATURE_LOG)), branchMoved.cmds());
     }
 
     @Test

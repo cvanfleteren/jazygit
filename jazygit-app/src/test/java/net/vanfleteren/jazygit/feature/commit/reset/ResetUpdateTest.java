@@ -10,6 +10,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
@@ -36,7 +37,7 @@ class ResetUpdateTest {
     }
 
     private static Model withFiles(FileEntry... files) {
-        Model model = Update.update(TestModels.loaded(), new LoadMsg.CommitsLoaded(List.of(TIP, ROOT)))
+        Model model = Update.update(TestModels.loaded(), TestModels.commitsLoaded(List.of(TIP, ROOT)))
                 .model();
         RepoStatus status = new RepoStatus(Head.onBranch(new Branch.Name("main"), TIP.sha()), List.of(files));
         return Update.update(model, new LoadMsg.StatusLoaded(status)).model();
@@ -110,7 +111,7 @@ class ResetUpdateTest {
 
     @Test
     void aHardResetAsksWhenTheStatusIsNotKnown() {
-        Model model = Update.update(Update.init("repo").model(), new LoadMsg.CommitsLoaded(List.of(TIP, ROOT)))
+        Model model = Update.update(Update.init("repo").model(), TestModels.commitsLoaded(List.of(TIP, ROOT)))
                 .model();
 
         Next next = Update.update(opened(model), new ResetMsg.Chosen(ResetMode.HARD));

@@ -55,7 +55,7 @@ class AmendUpdateTest {
      * The commits loaded, with HEAD at the first one.
      */
     private static Model with(List<FileEntry> files, Commit... commits) {
-        Model loaded = Update.update(TestModels.loaded(), new LoadMsg.CommitsLoaded(List.of(commits)))
+        Model loaded = Update.update(TestModels.loaded(), TestModels.commitsLoaded(List.of(commits)))
                 .model();
         return Update.update(
                         loaded,

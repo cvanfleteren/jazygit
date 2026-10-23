@@ -12,7 +12,6 @@ import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
-import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
@@ -71,7 +70,7 @@ class UpdateTest {
         Next next = Update.update(Update.init("repo").model(), new LoadMsg.StatusLoaded(CLEAN));
 
         assertEquals(new Loaded<>(CLEAN), next.model().repo().status());
-        assertEquals(List.of(new LoadCommits()), next.cmds());
+        assertEquals(List.of(new Cmd.LoadCommits(AheadUpdate.ofHead(next.model()))), next.cmds());
     }
 
     @Test
@@ -130,7 +129,7 @@ class UpdateTest {
     void movedHeadReloadsCommits() {
         Next next = Update.update(loaded(), new LoadMsg.StatusLoaded(MOVED));
 
-        assertEquals(List.of(new LoadCommits()), next.cmds());
+        assertEquals(List.of(TestModels.loadCommits()), next.cmds());
     }
 
     @Test
@@ -142,7 +141,7 @@ class UpdateTest {
                 localBranchesRead(model, BRANCHES).model().repo().branches());
         assertSame(
                 model.repo().commits(),
-                Update.update(model, new LoadMsg.CommitsLoaded(COMMITS))
+                Update.update(model, TestModels.commitsLoaded(COMMITS))
                         .model()
                         .repo()
                         .commits());
@@ -150,11 +149,11 @@ class UpdateTest {
 
     @Test
     void failuresAreStoredAndRetriedOnTheNextTick() {
-        Model model = Update.update(loaded(), new LoadMsg.Failed(new LoadCommits(), refused("boom")))
+        Model model = Update.update(loaded(), new LoadMsg.Failed(TestModels.loadCommits(), refused("boom")))
                 .model();
         assertEquals(new Failed<>(refused("boom")), model.repo().commits());
         assertEquals(
-                List.of(new LoadStatus(), new Cmd.CheckMetadata(), new LoadCommits()),
+                List.of(new LoadStatus(), new Cmd.CheckMetadata(), TestModels.loadCommits()),
                 Update.update(model, new Tick()).cmds());
 
         Model statusFailed = Update.update(
@@ -168,13 +167,13 @@ class UpdateTest {
 
     @Test
     void aRetryThatIsStillRunningIsNotStartedAgain() {
-        Model failed = Update.update(loaded(), new LoadMsg.Failed(new LoadCommits(), refused("boom")))
+        Model failed = Update.update(loaded(), new LoadMsg.Failed(TestModels.loadCommits(), refused("boom")))
                 .model();
         Model retrying = Update.update(failed, new Tick()).model();
 
-        assertFalse(Update.update(retrying, new Tick()).cmds().contains(new LoadCommits()));
+        assertFalse(Update.update(retrying, new Tick()).cmds().contains(TestModels.loadCommits()));
         Model retried =
-                Update.update(retrying, new LoadMsg.CommitsLoaded(COMMITS)).model();
-        assertFalse(retried.jobs().refreshing().contains(new LoadCommits()));
+                Update.update(retrying, TestModels.commitsLoaded(COMMITS)).model();
+        assertFalse(retried.jobs().refreshing().contains(TestModels.loadCommits()));
     }
 }

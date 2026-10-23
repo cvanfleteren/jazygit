@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.TestModels;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -270,7 +271,7 @@ class ContentPanelTest {
         Model logRead = Update.update(
                         Update.update(TestModels.loaded(), new SelectionMsg.BranchSelected(feature))
                                 .model(),
-                        new LoadMsg.BranchLogLoaded(feature, TestModels.FEATURE_COMMITS))
+                        TestModels.branchLogLoaded(feature, TestModels.FEATURE_COMMITS))
                 .model();
         Model open =
                 Update.update(logRead, new BranchCommitsMsg.Opened(feature)).model();

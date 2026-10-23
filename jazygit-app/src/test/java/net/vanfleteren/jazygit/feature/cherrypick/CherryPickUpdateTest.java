@@ -11,7 +11,6 @@ import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
@@ -48,7 +47,7 @@ class CherryPickUpdateTest {
                                 new Branch(new Branch.Name("main"), false, new Sha("aaaa")),
                                 new Branch(new Branch.Name("feature"), true, new Sha("ffff"))))
                 .model();
-        return Update.update(branches, new LoadMsg.CommitsLoaded(TestModels.FEATURE_COMMITS))
+        return Update.update(branches, TestModels.commitsLoaded(TestModels.FEATURE_COMMITS))
                 .model();
     }
 
@@ -65,7 +64,7 @@ class CherryPickUpdateTest {
     void copyingAnotherCommitReplacesTheCopy() {
         Model model = Update.update(
                         TestModels.loaded(),
-                        new LoadMsg.CommitsLoaded(TestModels.FEATURE_COMMITS.appendAll(TestModels.COMMITS)))
+                        TestModels.commitsLoaded(TestModels.FEATURE_COMMITS.appendAll(TestModels.COMMITS)))
                 .model();
         model = Update.update(model, new CherryPickMsg.Copied(FIRST.sha())).model();
 
@@ -78,7 +77,7 @@ class CherryPickUpdateTest {
 
     @Test
     void aMergeCannotBeCopied() {
-        Model model = Update.update(TestModels.loaded(), new LoadMsg.CommitsLoaded(List.of(MERGE)))
+        Model model = Update.update(TestModels.loaded(), TestModels.commitsLoaded(List.of(MERGE)))
                 .model();
 
         assertEquals(

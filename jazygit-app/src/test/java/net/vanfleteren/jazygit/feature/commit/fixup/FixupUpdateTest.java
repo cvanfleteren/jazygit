@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
@@ -37,7 +38,7 @@ class FixupUpdateTest {
     }
 
     private static Model withCommits(Commit... commits) {
-        return Update.update(TestModels.loaded(), new LoadMsg.CommitsLoaded(List.of(commits)))
+        return Update.update(TestModels.loaded(), TestModels.commitsLoaded(List.of(commits)))
                 .model();
     }
 

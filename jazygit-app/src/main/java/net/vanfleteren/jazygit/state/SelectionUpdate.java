@@ -30,7 +30,7 @@ public final class SelectionUpdate {
                         branch,
                         model.repoView().branchLog(),
                         log -> model.mapRepoView(repoView -> repoView.withBranchLog(log)),
-                        LoadBranchLog::new);
+                        log -> new LoadBranchLog(log, AheadUpdate.of(model, log)));
             case CommitSelected(var sha) ->
                 selected(
                         model,

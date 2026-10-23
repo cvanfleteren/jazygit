@@ -148,7 +148,8 @@ public final class Update {
 
     private static Next reload(Model model, List<Cmd.Load> periodic) {
         List<Cmd.Load> retries = List.<Cmd.Load>empty()
-                .appendAll(Option.when(model.repo().commits() instanceof Failed, LoadCommits::new))
+                .appendAll(Option.when(
+                        model.repo().commits() instanceof Failed, () -> new LoadCommits(AheadUpdate.ofHead(model))))
                 .appendAll(AheadUpdate.retries(model))
                 .appendAll(model.repoView()
                         .commitSearch()
@@ -157,7 +158,7 @@ public final class Update {
                 .appendAll(model.repoView()
                         .branchLog()
                         .filter(log -> log.value() instanceof Failed)
-                        .map(log -> new LoadBranchLog(log.key())))
+                        .map(log -> new LoadBranchLog(log.key(), AheadUpdate.of(model, log.key()))))
                 .appendAll(model.repoView()
                         .commitDetail()
                         .filter(detail -> detail.value() instanceof Failed)
