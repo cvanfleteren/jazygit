@@ -34,12 +34,28 @@ public record PullRequestPopup(
 
     /**
      * The popup showing {@code read}: the details, or why reading them failed. Details that were read already
-     * stay shown when reading them again fails, marked stale.
+     * stay shown when reading them again fails, marked stale. How far the base moved on is read apart from the rest
+     * and can fail alone: the count shown stays when the pull request is still open at the same commit on the same
+     * base, where the base can only have moved on further.
      */
     public PullRequestPopup with(Either<Failure, PullRequestDetails> read) {
         return read.isLeft() && detailsRead()
                 ? new PullRequestPopup(branch, pullRequest, details, false, Option.of(read.getLeft()))
-                : new PullRequestPopup(branch, pullRequest, Option.of(read), false, Option.none());
+                : new PullRequestPopup(
+                        branch, pullRequest, Option.of(read.map(this::keepingBehindBase)), false, Option.none());
+    }
+
+    private PullRequestDetails keepingBehindBase(PullRequestDetails read) {
+        return read.behindBase().isDefined()
+                        || read.state() != PullRequestDetails.State.OPEN
+                        || read.head().isEmpty()
+                ? read
+                : readDetails()
+                        .filter(shown -> shown.head().equals(read.head())
+                                && shown.baseBranch().equals(read.baseBranch()))
+                        .flatMap(PullRequestDetails::behindBase)
+                        .map(read::withBehindBase)
+                        .getOrElse(read);
     }
 
     /**

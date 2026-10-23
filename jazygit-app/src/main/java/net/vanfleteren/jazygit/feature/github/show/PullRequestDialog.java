@@ -172,6 +172,14 @@ public final class PullRequestDialog implements PopupView {
         return pr.draft() ? state + " · " + Messages.get("dialog.pullRequest.draft") : state;
     }
 
+    // Mergeable only says it merges without conflicts; GitHub warns about a base that moved on apart from that.
+    private static Option<StyledElement<?>> behindBase(PullRequestDetails pr) {
+        return pr.behindBase()
+                .filter(commits -> commits > 0)
+                .map(commits -> text(" · " + Messages.get("dialog.pullRequest.branch.behind", String.valueOf(commits)))
+                        .addClass(Theme.Classes.BEHIND));
+    }
+
     private static StyledElement<?> mergeable(PullRequestDetails.Mergeable mergeable) {
         return switch (mergeable) {
             case MERGEABLE -> text(Messages.get("dialog.pullRequest.mergeable.yes"));
@@ -323,7 +331,9 @@ public final class PullRequestDialog implements PopupView {
                 .appendAll(Option.when(
                         !pr.author().isEmpty(),
                         () -> Line.labelled("dialog.pullRequest.author", text("@" + pr.author()))))
-                .append(Line.labelled("dialog.pullRequest.branch", text(pr.headBranch() + " → " + pr.baseBranch())))
+                .append(Line.pieces(List.<StyledElement<?>>of(
+                                label("dialog.pullRequest.branch"), text(pr.headBranch() + " → " + pr.baseBranch()))
+                        .appendAll(behindBase(pr))))
                 .appendAll(pr.stack().map(PullRequestDialog::stack))
                 .appendAll(List.of(
                         Line.labelled("dialog.pullRequest.created", text(when(pr.createdAt(), now))),

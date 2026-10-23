@@ -32,6 +32,8 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
  * @param checks       its CI checks, one by one
  * @param head         the commit its branch is at, empty when not known
  * @param stack        where it sits in its stack, if it is stacked
+ * @param behindBase   how many commits its base branch has that its branch does not, as the base moved on since its
+ *                     branch was made; empty when not known
  */
 public record PullRequestDetails(
         int number,
@@ -54,10 +56,11 @@ public record PullRequestDetails(
         List<Reviewer> reviewers,
         List<Check> checks,
         String head,
-        Option<PullRequestStack> stack) {
+        Option<PullRequestStack> stack,
+        Option<Integer> behindBase) {
 
     /**
-     * One that is not stacked, at a commit that is not known.
+     * One that is not stacked, at a commit that is not known, not known to be behind its base.
      */
     public PullRequestDetails(
             int number,
@@ -100,6 +103,7 @@ public record PullRequestDetails(
                 reviewers,
                 checks,
                 "",
+                Option.none(),
                 Option.none());
     }
 
@@ -128,7 +132,37 @@ public record PullRequestDetails(
                 reviewers,
                 checks,
                 head,
-                stack);
+                stack,
+                behindBase);
+    }
+
+    /**
+     * This pull request, its base branch having {@code commits} its branch does not.
+     */
+    public PullRequestDetails withBehindBase(int commits) {
+        return new PullRequestDetails(
+                number,
+                title,
+                author,
+                state,
+                draft,
+                headBranch,
+                baseBranch,
+                createdAt,
+                pushedAt,
+                additions,
+                deletions,
+                changedFiles,
+                mergeable,
+                review,
+                comments,
+                reviewThreads,
+                labels,
+                reviewers,
+                checks,
+                head,
+                stack,
+                Option.of(commits));
     }
 
     /**

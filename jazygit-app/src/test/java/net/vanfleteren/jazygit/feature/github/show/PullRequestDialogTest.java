@@ -89,6 +89,33 @@ class PullRequestDialogTest {
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final PullRequestDialog dialog = new PullRequestDialog(dispatched::add, Clock.fixed(NOW, ZoneOffset.UTC));
 
+    // DETAILS at commit head, into base, not known to be behind it.
+    private static PullRequestDetails at(String head, String base) {
+        return new PullRequestDetails(
+                DETAILS.number(),
+                DETAILS.title(),
+                DETAILS.author(),
+                DETAILS.state(),
+                DETAILS.draft(),
+                DETAILS.headBranch(),
+                base,
+                DETAILS.createdAt(),
+                DETAILS.pushedAt(),
+                DETAILS.additions(),
+                DETAILS.deletions(),
+                DETAILS.changedFiles(),
+                DETAILS.mergeable(),
+                DETAILS.review(),
+                DETAILS.comments(),
+                DETAILS.reviewThreads(),
+                DETAILS.labels(),
+                DETAILS.reviewers(),
+                DETAILS.checks(),
+                head,
+                Option.none(),
+                Option.none());
+    }
+
     private static int hintLine(String screen) {
         return List.of(screen.split("\n")).indexWhere(line -> line.contains("(enter) select"));
     }
@@ -170,7 +197,8 @@ class PullRequestDialogTest {
                 READY.reviewers(),
                 READY.checks(),
                 "abc123",
-                Option.of(new PullRequestStack(96, 3, 3)));
+                Option.of(new PullRequestStack(96, 3, 3)),
+                Option.none());
 
         String screen = screen(
                 PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(stacked)));
@@ -223,6 +251,34 @@ class PullRequestDialogTest {
         assertTrue(screen.indexOf("❌ build") < screen.indexOf("⏳ integration"), screen);
         assertFalse(screen.contains("✅ lint"), screen);
         assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
+    }
+
+    @Test
+    void saysHowFarTheBaseMovedOnWhileStillMergeable() throws Exception {
+        String behind = screen(PullRequestPopup.loading(new Branch.Name("support_rename"), PR)
+                .with(Either.right(DETAILS.withBehindBase(3))));
+        String upToDate = screen(PullRequestPopup.loading(new Branch.Name("support_rename"), PR)
+                .with(Either.right(DETAILS.withBehindBase(0))));
+
+        assertTrue(behind.contains("   Branch  support_rename → main · 3 behind"), behind);
+        assertTrue(behind.contains("Mergeable  yes"), behind);
+        assertFalse(upToDate.contains("behind"), upToDate);
+    }
+
+    @Test
+    void aRefreshThatCouldNotTellHowFarBehindKeepsTheCountForTheSameCommitOnTheSameBase() throws Exception {
+        PullRequestPopup shown = PullRequestPopup.loading(new Branch.Name("support_rename"), PR)
+                .with(Either.right(at("abc123", "main").withBehindBase(3)));
+
+        String same = screen(shown.with(Either.right(at("abc123", "main"))));
+        String pushed = screen(shown.with(Either.right(at("def456", "main"))));
+        String retargeted = screen(shown.with(Either.right(at("abc123", "develop"))));
+        String upToDate = screen(shown.with(Either.right(at("abc123", "main").withBehindBase(0))));
+
+        assertTrue(same.contains("support_rename → main · 3 behind"), same);
+        assertFalse(pushed.contains("behind"), pushed);
+        assertFalse(retargeted.contains("behind"), retargeted);
+        assertFalse(upToDate.contains("behind"), upToDate);
     }
 
     @Test
