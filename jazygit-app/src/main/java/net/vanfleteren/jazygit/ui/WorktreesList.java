@@ -70,7 +70,10 @@ class WorktreesList implements BranchesTabList {
                         () -> note(
                                 Messages.get(
                                         "worktrees.detached",
-                                        worktree.head().map(Sha::shortSha).getOrElse("")),
+                                        worktree.head()
+                                                .commit()
+                                                .map(Sha::shortSha)
+                                                .getOrElse("")),
                                 Theme.Classes.DIM),
                         name -> LoadableList.Seg.of(" " + name.value()));
     }

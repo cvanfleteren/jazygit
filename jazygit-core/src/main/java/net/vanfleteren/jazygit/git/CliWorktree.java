@@ -11,6 +11,7 @@ import io.vavr.control.Try;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.*;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -74,22 +75,33 @@ final class CliWorktree {
         Either<UnexpectedOutput, Path> path = GitOutput.after(lines.head(), "worktree ")
                 .flatMap(text -> Try.of(() -> Path.of(text)).toOption())
                 .toEither(() -> new UnexpectedOutput(lines.head()));
-        Either<UnexpectedOutput, Option<Sha>> head = value(lines, "HEAD")
+        Either<UnexpectedOutput, Option<Sha>> sha = value(lines, "HEAD")
                 .map(text -> GitOutput.sha(text).map(Option::of))
                 .getOrElse(() -> Either.right(Option.none()));
-        return path.flatMap(root -> head.map(sha -> Option.when(
-                !lines.contains("bare"),
-                () -> new Worktree(
-                        root,
-                        // A repository without commits has a HEAD of zeroes.
-                        sha.filter(commit -> !commit.value().matches("0+")),
-                        value(lines, "branch")
-                                .flatMap(ref -> GitOutput.after(ref, HEADS))
-                                .map(Branch.Name::new),
-                        first,
-                        root.equals(current),
-                        reason(lines, "locked"),
-                        reason(lines, "prunable").isDefined()))));
+        Option<Branch.Name> branch = value(lines, "branch")
+                .flatMap(ref -> GitOutput.after(ref, HEADS))
+                .map(Branch.Name::new);
+        return lines.contains("bare")
+                ? Either.right(Option.none())
+                : path.flatMap(root -> sha.flatMap(at -> head(at, branch)
+                        .toEither(() -> new UnexpectedOutput(lines.mkString("\n")))
+                        .map(head -> Option.of(new Worktree(
+                                root,
+                                head,
+                                first,
+                                root.equals(current),
+                                reason(lines, "locked"),
+                                reason(lines, "prunable").isDefined())))));
+    }
+
+    /**
+     * What the HEAD of a worktree points to: {@code branch}, or else the commit {@code sha}; none when it has
+     * neither.
+     */
+    private static Option<Head> head(Option<Sha> sha, Option<Branch.Name> branch) {
+        // A repository without commits has a HEAD of zeroes.
+        Option<Sha> commit = sha.filter(at -> !at.value().matches("0+"));
+        return branch.<Head>map(name -> new Head.OnBranch(name, commit)).orElse(() -> commit.map(Head.Detached::new));
     }
 
     /**

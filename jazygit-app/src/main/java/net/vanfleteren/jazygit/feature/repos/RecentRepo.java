@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.repos;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
+import net.vanfleteren.jazygit.git.model.Head;
 
 /**
  * A recent repository that can be switched to.

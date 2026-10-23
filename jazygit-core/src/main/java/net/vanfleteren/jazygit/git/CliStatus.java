@@ -11,7 +11,7 @@ import java.util.function.Function;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.git.model.RepoStatus.Head;
+import net.vanfleteren.jazygit.git.model.Head;
 
 /**
  * Reads the working tree status through the {@code git status} command line tool.

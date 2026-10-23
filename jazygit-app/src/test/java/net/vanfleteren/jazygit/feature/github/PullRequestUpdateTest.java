@@ -1716,7 +1716,7 @@ class PullRequestUpdateTest {
     @Test
     void aPullRequestIsNotCheckedOutOverChanges() {
         RepoStatus changed = new RepoStatus(
-                RepoStatus.Head.onBranch(new Branch.Name("main"), new Sha("aaaa")),
+                Head.onBranch(new Branch.Name("main"), new Sha("aaaa")),
                 List.of(new FileEntry("a.txt", ChangeType.MODIFIED)));
 
         Next refused = Update.update(ofOwnerRepo(changed), new CheckoutPullRequestMsg.Requested(summary("owner/repo")));
@@ -1773,8 +1773,7 @@ class PullRequestUpdateTest {
                         ofOwnerRepo(status),
                         new LoadMsg.WorktreesLoaded(List.of(new Worktree(
                                 java.nio.file.Path.of("/repos/app"),
-                                Option.of(new Sha("aaaa")),
-                                Option.of(new Branch.Name("main")),
+                                new Head.OnBranch(new Branch.Name("main"), Option.of(new Sha("aaaa"))),
                                 true,
                                 true,
                                 Option.none(),
@@ -1797,7 +1796,7 @@ class PullRequestUpdateTest {
                 Update.update(asked.model(), new AddWorktreeMsg.Confirmed()).cmds());
 
         RepoStatus changed = new RepoStatus(
-                RepoStatus.Head.onBranch(new Branch.Name("main"), new Sha("aaaa")),
+                Head.onBranch(new Branch.Name("main"), new Sha("aaaa")),
                 List.of(new FileEntry("a.txt", ChangeType.MODIFIED)));
         PullRequestSummary own = own("feature/login");
         assertEquals(
