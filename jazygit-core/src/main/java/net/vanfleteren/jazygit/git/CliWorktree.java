@@ -83,23 +83,22 @@ final class CliWorktree {
                 .map(Branch.Name::new);
         return lines.contains("bare")
                 ? Either.right(Option.none())
-                : path.flatMap(root -> sha.flatMap(at -> head(at, branch)
-                        .toEither(() -> new UnexpectedOutput(lines.mkString("\n")))
-                        .map(head -> Option.of(new Worktree(
-                                root,
-                                head,
-                                first,
-                                root.equals(current),
-                                reason(lines, "locked"),
-                                reason(lines, "prunable").isDefined())))));
+                : path.flatMap(root -> sha.map(at -> Option.of(new Worktree(
+                        root,
+                        head(at, branch),
+                        first,
+                        root.equals(current),
+                        reason(lines, "locked"),
+                        reason(lines, "prunable").isDefined()))));
     }
 
     /**
      * What the HEAD of a worktree points to: {@code branch}, or else the commit {@code sha}; none when it has
-     * neither.
+     * neither, as when git cannot resolve it: while {@code git worktree add} sets it up, or when its HEAD file is
+     * broken.
      */
     private static Option<Head> head(Option<Sha> sha, Option<Branch.Name> branch) {
-        // A repository without commits has a HEAD of zeroes.
+        // A repository without commits, and a HEAD git cannot resolve, have a HEAD of zeroes.
         Option<Sha> commit = sha.filter(at -> !at.value().matches("0+"));
         return branch.<Head>map(name -> new Head.OnBranch(name, commit)).orElse(() -> commit.map(Head.Detached::new));
     }

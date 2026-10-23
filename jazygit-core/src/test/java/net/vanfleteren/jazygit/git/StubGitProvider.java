@@ -113,7 +113,7 @@ public interface StubGitProvider extends GitInfoProvider {
     default Either<ProcessError, List<Worktree>> worktrees() {
         return Either.right(List.of(new Worktree(
                 worktree(),
-                new Head.OnBranch(new Branch.Name("main"), Option.of(new Sha("aaaa"))),
+                Option.of(new Head.OnBranch(new Branch.Name("main"), Option.of(new Sha("aaaa")))),
                 true,
                 true,
                 Option.none(),

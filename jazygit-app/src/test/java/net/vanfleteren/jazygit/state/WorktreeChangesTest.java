@@ -34,7 +34,8 @@ class WorktreeChangesTest {
     private static Worktree worktree(Path path, boolean current, boolean prunable) {
         return new Worktree(
                 path,
-                new Head.OnBranch(new Branch.Name(path.getFileName().toString()), Option.of(new Sha("aaaa"))),
+                Option.of(
+                        new Head.OnBranch(new Branch.Name(path.getFileName().toString()), Option.of(new Sha("aaaa")))),
                 current,
                 current,
                 Option.none(),

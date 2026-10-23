@@ -1773,7 +1773,7 @@ class PullRequestUpdateTest {
                         ofOwnerRepo(status),
                         new LoadMsg.WorktreesLoaded(List.of(new Worktree(
                                 java.nio.file.Path.of("/repos/app"),
-                                new Head.OnBranch(new Branch.Name("main"), Option.of(new Sha("aaaa"))),
+                                Option.of(new Head.OnBranch(new Branch.Name("main"), Option.of(new Sha("aaaa")))),
                                 true,
                                 true,
                                 Option.none(),
