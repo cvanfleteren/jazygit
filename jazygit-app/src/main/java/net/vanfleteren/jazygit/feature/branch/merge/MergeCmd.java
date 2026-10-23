@@ -12,7 +12,7 @@ import net.vanfleteren.jazygit.state.Operation;
 /**
  * Merges {@code branch} into the checked out branch.
  */
-public record MergeCmd(Branch.Name branch, MergeMode mode) implements BranchCmd {
+public record MergeCmd(BranchName branch, MergeMode mode) implements BranchCmd {
 
     public static final Operation MERGE =
             Operation.of("log.title.merge", "error.merge.failed").waitingForUnfinished();

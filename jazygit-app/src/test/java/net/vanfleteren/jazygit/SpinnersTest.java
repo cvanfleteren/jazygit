@@ -12,7 +12,7 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.BranchesTab;
@@ -27,9 +27,9 @@ import org.junit.jupiter.api.Test;
 class SpinnersTest {
 
     private static final Model LOADED = TestModels.loaded(new SampleData());
-    private static final BranchRef.Local FEATURE = new BranchRef.Local(new Branch.Name("feature"));
+    private static final BranchRef.Local FEATURE = new BranchRef.Local(new BranchName("feature"));
     private static final PullRequestPopup PULL_REQUEST = PullRequestPopup.loading(
-            new Branch.Name("feature"), new PullRequest(42, "feature", true, Checks.PASSING, Review.APPROVED));
+            new BranchName("feature"), new PullRequest(42, "feature", true, Checks.PASSING, Review.APPROVED));
 
     @Test
     void noneShowsWhenNothingRuns() {

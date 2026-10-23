@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Conflict;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Head;
@@ -58,7 +58,7 @@ class StatusPanelTest {
 
     @Test
     void aDetachedHeadIsDescribedByItsCommit() {
-        assertEquals("main", StatusPanel.branchLabel(Head.onBranch(new Branch.Name("main"), new Sha("0123456789"))));
+        assertEquals("main", StatusPanel.branchLabel(Head.onBranch(new BranchName("main"), new Sha("0123456789"))));
         assertEquals("HEAD detached at 0123456", StatusPanel.branchLabel(new Head.Detached(new Sha("0123456789"))));
     }
 
@@ -81,7 +81,7 @@ class StatusPanelTest {
                 FileEntry.conflicted("a.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
         FileEntry alsoConflicted =
                 FileEntry.conflicted("b.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.DELETED));
-        Head main = Head.onBranch(new Branch.Name("main"), new Sha("aaaa"));
+        Head main = Head.onBranch(new BranchName("main"), new Sha("aaaa"));
 
         assertEquals(
                 "repo → REBASING feature 1/2 onto main · 2 conflicts",
@@ -89,7 +89,7 @@ class StatusPanelTest {
                         new Head.Detached(new Sha("bbbb")),
                         List.of(conflicted, alsoConflicted),
                         Option.of(new InProgress.Rebasing(
-                                Option.of(new Branch.Name("feature")), new Sha("aaaa"), 1, 2)))));
+                                Option.of(new BranchName("feature")), new Sha("aaaa"), 1, 2)))));
         assertEquals(
                 "repo → REBASING 1/2 onto 0123456",
                 statusLine(new RepoStatus(

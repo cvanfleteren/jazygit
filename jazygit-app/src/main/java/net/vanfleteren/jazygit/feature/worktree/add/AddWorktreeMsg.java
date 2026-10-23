@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.worktree.add;
 
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Model;
@@ -21,13 +21,13 @@ public sealed interface AddWorktreeMsg extends Msg {
     /**
      * The user asked to check {@code branch} out in a new worktree; where is still to be entered.
      */
-    record Requested(Branch.Name branch) implements AddWorktreeMsg {}
+    record Requested(BranchName branch) implements AddWorktreeMsg {}
 
     /**
      * The user asked for a new branch made from {@code base}, checked out in a new worktree; its name and where
      * are still to be entered.
      */
-    record NewBranchRequested(Branch.Name base) implements AddWorktreeMsg {}
+    record NewBranchRequested(BranchName base) implements AddWorktreeMsg {}
 
     /**
      * The user asked for a new branch that follows {@code remote}, checked out in a new worktree.

@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.feature.stage.StageCmd.Stage;
 import net.vanfleteren.jazygit.feature.stage.StageCmd.Unstage;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.LogEntry;
@@ -24,8 +25,8 @@ class StageUpdateTest {
 
     @Test
     void toggleStagesTheFilesWithUnstagedChanges() {
-        FileEntry unstaged = new FileEntry("a.txt", ChangeType.MODIFIED);
-        FileEntry untracked = new FileEntry("b.txt", ChangeType.UNTRACKED);
+        FileEntry unstaged = Fixtures.fileEntry("a.txt", ChangeType.MODIFIED);
+        FileEntry untracked = Fixtures.fileEntry("b.txt", ChangeType.UNTRACKED);
         FileEntry staged = new FileEntry("c.txt", ChangeType.MODIFIED, true, false);
 
         Next next = Update.update(loaded(), new StageMsg.Requested(List.of(unstaged, untracked, staged)));
@@ -44,7 +45,7 @@ class StageUpdateTest {
 
     @Test
     void toggleUnstagesAddedFilesAndResetsTheOthers() {
-        FileEntry added = new FileEntry("a.txt", ChangeType.ADDED);
+        FileEntry added = Fixtures.fileEntry("a.txt", ChangeType.ADDED);
         FileEntry modified = new FileEntry("b.txt", ChangeType.MODIFIED, true, false);
         FileEntry deleted = new FileEntry("c.txt", ChangeType.DELETED, true, false);
 
@@ -80,7 +81,7 @@ class StageUpdateTest {
 
     @Test
     void toggleOfADirectoryStagesTheDirectory() {
-        FileEntry unstaged = new FileEntry("src/a.txt", ChangeType.MODIFIED);
+        FileEntry unstaged = Fixtures.fileEntry("src/a.txt", ChangeType.MODIFIED);
         FileEntry staged = new FileEntry("src/c.txt", ChangeType.MODIFIED, true, false);
 
         assertEquals(
@@ -97,7 +98,7 @@ class StageUpdateTest {
     void toggleOfAStagedDirectoryResetsItUnlessItHasNewlyAddedFiles() {
         FileEntry modified = new FileEntry("src/b.txt", ChangeType.MODIFIED, true, false);
         FileEntry deleted = new FileEntry("src/c.txt", ChangeType.DELETED, true, false);
-        FileEntry added = new FileEntry("src/a.txt", ChangeType.ADDED);
+        FileEntry added = Fixtures.fileEntry("src/a.txt", ChangeType.ADDED);
 
         assertEquals(
                 List.of(new Unstage(List.of(), List.of("."))),

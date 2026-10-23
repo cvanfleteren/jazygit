@@ -6,7 +6,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.InProgressAction;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -66,7 +66,7 @@ class InProgressTest {
         gitAnyExit("rebase", "main");
 
         assertEquals(
-                Option.of(new InProgress.Rebasing(Option.of(new Branch.Name("conflicting")), sha("main"), 1, 2)),
+                Option.of(new InProgress.Rebasing(Option.of(new BranchName("conflicting")), sha("main"), 1, 2)),
                 git.status().get().inProgress());
     }
 
@@ -119,7 +119,7 @@ class InProgressTest {
         GitFailure<GitError> failure =
                 git.continueOrAbort(rebasing, InProgressAction.CONTINUE).getLeft();
 
-        InProgress next = new InProgress.Rebasing(Option.of(new Branch.Name("conflicting")), sha("main"), 2, 2);
+        InProgress next = new InProgress.Rebasing(Option.of(new BranchName("conflicting")), sha("main"), 2, 2);
         assertEquals(new GitError.StoppedOnConflicts(Option.of(next), 1), failure.error());
         assertEquals(List.of("git rebase --continue"), failure.commands().map(ExecutedCommand::line));
         assertEquals(Option.of(next), git.status().get().inProgress());

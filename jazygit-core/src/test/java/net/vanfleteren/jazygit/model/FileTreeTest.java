@@ -8,12 +8,13 @@ import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.FileTree;
 import net.vanfleteren.jazygit.git.model.FileTree.Dir;
 import net.vanfleteren.jazygit.git.model.FileTree.File;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import org.junit.jupiter.api.Test;
 
 class FileTreeTest {
 
     private static FileEntry modified(String path) {
-        return new FileEntry(path, ChangeType.MODIFIED);
+        return Fixtures.fileEntry(path, ChangeType.MODIFIED);
     }
 
     @Test

@@ -5,7 +5,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.Failure;
 
 /**
@@ -18,7 +18,7 @@ import net.vanfleteren.jazygit.state.Failure;
  *                      read succeeds
  */
 public record PullRequestPopup(
-        Branch.Name branch,
+        BranchName branch,
         PullRequest pullRequest,
         Option<Either<Failure, PullRequestDetails>> details,
         boolean refreshing,
@@ -28,7 +28,7 @@ public record PullRequestPopup(
     /**
      * The popup while its details are being read.
      */
-    public static PullRequestPopup loading(Branch.Name branch, PullRequest pullRequest) {
+    public static PullRequestPopup loading(BranchName branch, PullRequest pullRequest) {
         return new PullRequestPopup(branch, pullRequest, Option.none(), false, Option.none());
     }
 

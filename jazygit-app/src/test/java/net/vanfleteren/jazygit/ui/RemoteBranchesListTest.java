@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 class RemoteBranchesListTest {
 
     private static final RemoteRef FEATURE =
-            new RemoteRef(new RemoteBranch("origin", new Branch.Name("feature")), new Sha("2"), Instant.EPOCH);
+            new RemoteRef(new RemoteBranch("origin", new BranchName("feature")), new Sha("2"), Instant.EPOCH);
 
     @Test
     void aRemoteBranchThatALocalBranchFollowsIsDimmed() {

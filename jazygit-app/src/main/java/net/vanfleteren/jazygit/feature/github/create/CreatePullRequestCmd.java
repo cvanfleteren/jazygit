@@ -14,7 +14,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
@@ -32,21 +32,21 @@ public sealed interface CreatePullRequestCmd extends Cmd {
     /**
      * The subject of the oldest commit of {@code branch} that is not on {@code baseRef}, if it could be read.
      */
-    private static Option<String> firstSubject(Env env, Branch.Name branch, BranchRef baseRef) {
+    private static Option<String> firstSubject(Env env, BranchName branch, BranchRef baseRef) {
         return env.git().firstSubject(new BranchRef.Local(branch), baseRef).getOrElse(Option.none());
     }
 
     /**
      * A branch a pull request can merge into, as {@code name}, and {@code ref}, the branch it is on its remote.
      */
-    record Base(Branch.Name name, BranchRef ref) {}
+    record Base(BranchName name, BranchRef ref) {}
 
     /**
      * Reads which of {@code bases} the branch {@code branch} was made from: the one recorded as such, or else the
      * one the fewest of its commits are not on. On a tie, the earliest of {@code bases} wins. Without it, the user
      * still gets to choose.
      */
-    record ReadParent(Branch.Name branch, List<Base> bases) implements CreatePullRequestCmd {
+    record ReadParent(BranchName branch, List<Base> bases) implements CreatePullRequestCmd {
 
         // Further away than this, a base is too far to tell apart from the others; it also bounds the walk.
         public static final int MAX_DISTANCE = 1000;
@@ -66,7 +66,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
             return read(Option.none());
         }
 
-        private Either<GitError.ProcessError, Option<Branch.Name>> closest(Env env) {
+        private Either<GitError.ProcessError, Option<BranchName>> closest(Env env) {
             BranchRef local = new BranchRef.Local(branch);
             return Either.sequenceRight(bases.map(base -> env.git()
                             .countNotOn(local, base.ref(), MAX_DISTANCE)
@@ -78,7 +78,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
                             .map(Tuple2::_1));
         }
 
-        private Msg read(Option<Branch.Name> parent) {
+        private Msg read(Option<BranchName> parent) {
             return new CreatePullRequestMsg.ParentRead(branch, parent);
         }
     }
@@ -91,7 +91,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
      * @param head  the name the branch has on its remote
      * @param bases the branches it can merge into, the one it is read for first
      */
-    record ReadTitle(Branch.Name branch, Branch.Name head, List<Branch.Name> bases, BranchRef baseRef)
+    record ReadTitle(BranchName branch, BranchName head, List<BranchName> bases, BranchRef baseRef)
             implements CreatePullRequestCmd {
 
         @Override
@@ -113,7 +113,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
      * Reads the title a new pull request of {@code branch} starts out with again, for {@code base}, which the user
      * picked instead, as {@link ReadTitle} does.
      */
-    record RereadTitle(Branch.Name branch, Branch.Name base, BranchRef baseRef) implements CreatePullRequestCmd {
+    record RereadTitle(BranchName branch, BranchName base, BranchRef baseRef) implements CreatePullRequestCmd {
 
         @Override
         public Msg run(Env env) {
@@ -136,7 +136,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
     record PushFirst(PushCmd push) implements CreatePullRequestCmd, BranchCmd.KeepsBranchBusy {
 
         @Override
-        public Branch.Name branch() {
+        public BranchName branch() {
             return push.branch();
         }
 
@@ -170,7 +170,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
      * Creates a pull request from {@code branch}, as it is on its remote under the name {@code head}, into
      * {@code base}, as {@code pullRequest} says.
      */
-    record CreatePullRequest(Branch.Name branch, Branch.Name head, Branch.Name base, NewPullRequest pullRequest)
+    record CreatePullRequest(BranchName branch, BranchName head, BranchName base, NewPullRequest pullRequest)
             implements CreatePullRequestCmd, OperationCmd {
 
         @Override

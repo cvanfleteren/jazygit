@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.github.browse;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
@@ -17,7 +18,7 @@ public final class BrowseUpdate {
 
     public static Next update(Model model, BrowseMsg msg) {
         return switch (msg) {
-            case BrowseMsg.Requested(Branch.Name name) ->
+            case BrowseMsg.Requested(BranchName name) ->
                 model.repo()
                         .branch(name)
                         .map(branch -> onRemote(branch)

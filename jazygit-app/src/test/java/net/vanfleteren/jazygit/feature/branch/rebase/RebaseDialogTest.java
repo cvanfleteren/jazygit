@@ -10,7 +10,7 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -31,7 +31,7 @@ class RebaseDialogTest {
             new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(RebaseDialogs.REBASE, dispatched::add);
     private final Model open = Update.update(
                     TestModels.loaded(new SampleData()),
-                    new RebaseMsg.Requested(new Branch.Name("feature/initial-layout")))
+                    new RebaseMsg.Requested(new BranchName("feature/initial-layout")))
             .model();
 
     @Test

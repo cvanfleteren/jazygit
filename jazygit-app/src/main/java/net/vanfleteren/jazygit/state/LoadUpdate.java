@@ -221,7 +221,7 @@ public final class LoadUpdate {
      */
     static Option<Option<Sha>> tipOf(Model model, BranchRef branch) {
         return switch (branch) {
-            case BranchRef.Local(Branch.Name name) ->
+            case BranchRef.Local(BranchName name) ->
                 model.repo()
                         .branches()
                         .toOption()

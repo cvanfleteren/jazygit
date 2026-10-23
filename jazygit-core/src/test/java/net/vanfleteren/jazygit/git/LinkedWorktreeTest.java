@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -111,11 +112,11 @@ class LinkedWorktreeTest {
         List<FileEntry> files = provider.status().get().files();
         Diffs diffs = provider.diff(files, DiffOptions.DEFAULT).get();
 
-        assertEquals(List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)), files);
+        assertEquals(List.of(Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED)), files);
         assertTrue(diffs.unstaged().text().contains("+brand new"), diffs.toString());
         // The untracked file was diffed in a copy of the index; the real one still does not have it.
         assertEquals(
-                List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)),
+                List.of(Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED)),
                 provider.status().get().files());
         assertEquals(
                 List.of(), CliGitInfoProvider.open(main).get().status().get().files());

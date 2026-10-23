@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.Ahead;
 import net.vanfleteren.jazygit.git.model.AllBranches;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
@@ -80,7 +81,7 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<ProcessError, RepoStatus> status() {
-        return Either.right(new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), List.empty()));
+        return Either.right(new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("aaaa")), List.empty()));
     }
 
     // No files to look at, so what the stub says is read every time.
@@ -113,7 +114,7 @@ public interface StubGitProvider extends GitInfoProvider {
     default Either<ProcessError, List<Worktree>> worktrees() {
         return Either.right(List.of(new Worktree(
                 worktree(),
-                Option.of(new Head.OnBranch(new Branch.Name("main"), Option.of(new Sha("aaaa")))),
+                Option.of(new Head.OnBranch(new BranchName("main"), Option.of(new Sha("aaaa")))),
                 true,
                 true,
                 Option.none(),
@@ -126,7 +127,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktree(Path location, Branch.Name branch) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktree(Path location, BranchName branch) {
         return ran();
     }
 
@@ -143,7 +144,7 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktreeWithNewBranch(
-            Path location, Branch.Name name, String startPoint, Option<Branch.Name> parent, boolean track) {
+            Path location, BranchName name, String startPoint, Option<BranchName> parent, boolean track) {
         return ran();
     }
 
@@ -232,7 +233,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitError, CommitRange> commitRange(Branch.Name branch, Sha oldest, Option<RemoteBranch> upstream) {
+    default Either<GitError, CommitRange> commitRange(BranchName branch, Sha oldest, Option<RemoteBranch> upstream) {
         return Either.right(new CommitRange(1, 0, 0));
     }
 
@@ -247,41 +248,40 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> checkout(Branch.Name branch) {
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> checkout(BranchName branch) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> checkoutWithStash(Branch.Name branch) {
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> checkoutWithStash(BranchName branch) {
         return ran();
     }
 
     @Override
     default Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(
-            Branch.Name name, String startPoint, Option<Branch.Name> parent) {
+            BranchName name, String startPoint, Option<BranchName> parent) {
         return ran();
     }
 
     @Override
     default Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewTrackingBranch(
-            Branch.Name name, RemoteBranch upstream) {
+            BranchName name, RemoteBranch upstream) {
         return ran();
     }
 
     @Override
     default Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(
-            Branch.Name name, RemoteBranch remote, DeleteScope scope) {
+            BranchName name, RemoteBranch remote, DeleteScope scope) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(Branch.Name name) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> renameBranch(
-            Branch.Name name, Branch.Name newName) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> renameBranch(BranchName name, BranchName newName) {
         return ran();
     }
 
@@ -291,7 +291,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> merge(Branch.Name branch, MergeMode mode) {
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> merge(BranchName branch, MergeMode mode) {
         return ran();
     }
 
@@ -311,7 +311,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<ProcessError, Option<Branch.Name>> parentBranch(Branch.Name branch) {
+    default Either<ProcessError, Option<BranchName>> parentBranch(BranchName branch) {
         return Either.right(Option.none());
     }
 
@@ -326,19 +326,19 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(Branch.Name onto) {
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(BranchName onto) {
         return ran();
     }
 
     @Override
     default Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(
-            Branch.Name branch, RemoteBranch upstream, PushMode mode) {
+            BranchName branch, RemoteBranch upstream, PushMode mode) {
         return ran();
     }
 
     @Override
     default Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(
-            Branch.Name branch, RemoteBranch upstream) {
+            BranchName branch, RemoteBranch upstream) {
         return ran();
     }
 
@@ -348,8 +348,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(
-            Branch.Name branch, BranchRef upstream) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(BranchName branch, BranchRef upstream) {
         return ran();
     }
 
@@ -405,13 +404,13 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommits(
-            Branch.Name from, Sha oldest, Branch.Name to, Option<BranchRef> onto) {
+            BranchName from, Sha oldest, BranchName to, Option<BranchRef> onto) {
         return ran();
     }
 
     @Override
     default Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommitsTo(
-            Branch.Name from, Sha oldest, Branch.Name to) {
+            BranchName from, Sha oldest, BranchName to) {
         return ran();
     }
 

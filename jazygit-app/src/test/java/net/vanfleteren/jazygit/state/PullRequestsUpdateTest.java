@@ -15,7 +15,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.git.StubGitProvider;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
@@ -37,14 +37,14 @@ class PullRequestsUpdateTest {
                         .model()
                         .gitHub()
                         .pullRequests()
-                        .flatMap(open -> open.get(new Branch.Name("feature"))));
+                        .flatMap(open -> open.get(new BranchName("feature"))));
         assertEquals(
                 Option.of(FEATURE_PR),
                 Update.update(loaded(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR, older)))
                         .model()
                         .gitHub()
                         .pullRequests()
-                        .flatMap(open -> open.get(new Branch.Name("feature"))));
+                        .flatMap(open -> open.get(new BranchName("feature"))));
     }
 
     @Test
@@ -151,7 +151,7 @@ class PullRequestsUpdateTest {
         // What the first read read shows until the one started after the change is done.
         assertEquals(
                 Option.of(FEATURE_PR),
-                done.model().gitHub().pullRequests().flatMap(open -> open.get(new Branch.Name("feature"))));
+                done.model().gitHub().pullRequests().flatMap(open -> open.get(new BranchName("feature"))));
 
         Next readAgain = Update.update(done.model(), new PullRequestsMsg.Loaded(List.empty()));
 

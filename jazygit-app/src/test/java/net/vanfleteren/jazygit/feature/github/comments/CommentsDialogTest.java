@@ -25,7 +25,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.gh.model.PullRequestComment.Kind;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -41,7 +41,7 @@ import org.junit.jupiter.api.Test;
 class CommentsDialogTest {
 
     private static final PullRequestPopup SHOWN = PullRequestPopup.loading(
-                    new Branch.Name("feature"), new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED))
+                    new BranchName("feature"), new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED))
             .with(Either.right(StubGitHub.empty().pullRequestDetails(42).get()));
     private static final Size WIDE = new Size(140, 30);
     // Under 100 columns, the list is above the comment, a third of the popup high.

@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.Reread
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestMsg.*;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.state.*;
@@ -103,7 +104,7 @@ public final class CreatePullRequestUpdate {
                 Model shown = pullRequest
                         .map(pr -> done.model()
                                 .mapGitHub(gitHub -> gitHub.withPullRequests(gitHub.pullRequests()
-                                        .map(open -> open.put(new Branch.Name(pr.headBranch()), pr)))))
+                                        .map(open -> open.put(new BranchName(pr.headBranch()), pr)))))
                         .getOrElse(done.model());
                 // A read that is still running may have missed it, so this one is started anyway. GitHub may have
                 // changed the remote too, which a fetch brings in.
@@ -132,7 +133,7 @@ public final class CreatePullRequestUpdate {
      * {@code model}, where the user moved in the list of bases of {@code popup} to {@code base}, if the filter shows
      * any: that is the base then, and the title is read for it while it is the one read before.
      */
-    private static Next moved(Model model, NewPullRequestPopup popup, Option<Branch.Name> base) {
+    private static Next moved(Model model, NewPullRequestPopup popup, Option<BranchName> base) {
         return base.filter(picked -> !picked.equals(popup.base()))
                 .map(picked -> {
                     Model picking = model.openPopup(popup.withBase(picked));
@@ -180,7 +181,7 @@ public final class CreatePullRequestUpdate {
      * offered first. With none to merge into, there is nothing to ask.
      */
     public static Next ask(Model model, Branch branch) {
-        List<Branch.Name> bases = bases(model, branch.name());
+        List<BranchName> bases = bases(model, branch.name());
         return bases.size() < 2
                 ? readTitle(model, branch, bases)
                 : Next.of(
@@ -192,7 +193,7 @@ public final class CreatePullRequestUpdate {
      * can have another name on its remote; gh needs that one. Without bases, which the branches read while the
      * parent was can also leave, there is nothing to ask.
      */
-    private static Next readTitle(Model model, Branch branch, List<Branch.Name> bases) {
+    private static Next readTitle(Model model, Branch branch, List<BranchName> bases) {
         return bases.headOption()
                 .map(first -> Next.of(
                         model,
@@ -203,7 +204,7 @@ public final class CreatePullRequestUpdate {
     /**
      * {@code bases} with {@code parent} first, if it is one of them.
      */
-    static List<Branch.Name> parentFirst(List<Branch.Name> bases, Option<Branch.Name> parent) {
+    static List<BranchName> parentFirst(List<BranchName> bases, Option<BranchName> parent) {
         return parent.filter(bases::contains)
                 .map(first -> bases.remove(first).prepend(first))
                 .getOrElse(bases);
@@ -213,7 +214,7 @@ public final class CreatePullRequestUpdate {
      * The branch {@code base} is on its remote, which a pull request merges into; the local one when it has no
      * upstream there.
      */
-    private static BranchRef baseRef(Model model, Branch.Name base) {
+    private static BranchRef baseRef(Model model, BranchName base) {
         return model.repo()
                 .branch(base)
                 .flatMap(Branch::remoteUpstream)
@@ -225,7 +226,7 @@ public final class CreatePullRequestUpdate {
      * The branches a pull request from {@code branch} can merge into: the others that are on their remote, the
      * default branch first.
      */
-    static List<Branch.Name> bases(Model model, Branch.Name branch) {
+    static List<BranchName> bases(Model model, BranchName branch) {
         return model.repo()
                 .branches()
                 .toOption()

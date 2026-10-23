@@ -8,7 +8,7 @@ import net.vanfleteren.jazygit.feature.worktree.WorktreeCmd;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Env;
@@ -23,7 +23,7 @@ import net.vanfleteren.jazygit.state.Operation;
  *
  * @param unlocking why it was locked, when it is; empty when no reason was given
  */
-public record RemoveWorktreeCmd(String location, boolean force, Option<Branch.Name> deleting, Option<String> unlocking)
+public record RemoveWorktreeCmd(String location, boolean force, Option<BranchName> deleting, Option<String> unlocking)
         implements WorktreeCmd {
 
     public static final Operation REMOVE_WORKTREE =
@@ -41,7 +41,7 @@ public record RemoveWorktreeCmd(String location, boolean force, Option<Branch.Na
     /**
      * Removes the worktree at {@code location}, which is not locked, deleting {@code deleting} with it if given.
      */
-    public RemoveWorktreeCmd(String location, boolean force, Option<Branch.Name> deleting) {
+    public RemoveWorktreeCmd(String location, boolean force, Option<BranchName> deleting) {
         this(location, force, deleting, Option.none());
     }
 

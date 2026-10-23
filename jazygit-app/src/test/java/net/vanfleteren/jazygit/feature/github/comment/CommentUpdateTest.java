@@ -34,7 +34,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.StubGitProvider;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.RecentRepositories;
@@ -53,7 +53,7 @@ import org.junit.jupiter.api.Test;
  */
 class CommentUpdateTest {
 
-    private static final Branch.Name FEATURE = new Branch.Name("feature");
+    private static final BranchName FEATURE = new BranchName("feature");
     private static final PullRequest FEATURE_PR =
             new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED);
     private static final PullRequestDetails DETAILS =

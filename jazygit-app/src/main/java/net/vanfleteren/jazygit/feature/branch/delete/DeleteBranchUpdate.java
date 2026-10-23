@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchMsg.Requested;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeUpdate;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -28,7 +29,7 @@ public final class DeleteBranchUpdate {
 
     public static Next update(Model model, DeleteBranchMsg msg) {
         return switch (msg) {
-            case Requested(Branch.Name branch) -> requested(model, branch);
+            case Requested(BranchName branch) -> requested(model, branch);
             case Cancelled() -> Next.of(model.withoutPopup(DeleteBranchPopup.class));
             case Chosen(DeleteScope scope) -> chosen(model, scope);
             case DeleteBranchMsg.WithWorktreeChosen() -> withWorktreeChosen(model);
@@ -57,7 +58,7 @@ public final class DeleteBranchUpdate {
      * that is checked out in another worktree can be deleted on its remote, or locally once that worktree is
      * removed, when it can be; when neither is possible, that is said.
      */
-    private static Next requested(Model model, Branch.Name branch) {
+    private static Next requested(Model model, BranchName branch) {
         Option<Worktree> worktree = removableWorktree(model, branch);
         return model.repo()
                 .branch(branch)
@@ -75,7 +76,7 @@ public final class DeleteBranchUpdate {
      * The other worktree that has {@code branch} checked out, if one does and it can be removed, once unlocked when
      * it is locked, so that the branch can be deleted once it is gone.
      */
-    public static Option<Worktree> removableWorktree(Model model, Branch.Name branch) {
+    public static Option<Worktree> removableWorktree(Model model, BranchName branch) {
         return otherWorktree(model, branch)
                 .filter(worktree ->
                         RemoveWorktreeUpdate.notRemovable(worktree).forAll(AppError.WorktreeLocked.class::isInstance));
@@ -84,7 +85,7 @@ public final class DeleteBranchUpdate {
     /**
      * The other worktree that has {@code branch} checked out, if one does.
      */
-    private static Option<Worktree> otherWorktree(Model model, Branch.Name branch) {
+    private static Option<Worktree> otherWorktree(Model model, BranchName branch) {
         return model.repo()
                 .branch(branch)
                 .flatMap(Branch::worktreeLocation)
@@ -141,14 +142,14 @@ public final class DeleteBranchUpdate {
                 && !isDefault(model, branch);
     }
 
-    public static boolean remoteDeletable(Model model, Branch.Name branch) {
+    public static boolean remoteDeletable(Model model, BranchName branch) {
         return model.repo().branch(branch).exists(Branch::remoteDeletable);
     }
 
     /**
      * Whether {@code branch} can be deleted here: not while another worktree has it checked out.
      */
-    public static boolean localDeletable(Model model, Branch.Name branch) {
+    public static boolean localDeletable(Model model, BranchName branch) {
         return model.repo().branch(branch).exists(known -> !known.checkedOutElsewhere());
     }
 

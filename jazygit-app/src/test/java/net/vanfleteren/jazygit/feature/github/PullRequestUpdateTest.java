@@ -56,42 +56,40 @@ import org.junit.jupiter.api.Test;
 
 class PullRequestUpdateTest {
 
-    private static final Branch MAIN = new Branch(
-            new Branch.Name("main"),
+    private static final Branch MAIN = Fixtures.branch(
+            new BranchName("main"),
             true,
             new Sha("1"),
             Instant.EPOCH,
             true,
             true,
-            Option.of(new Upstream(new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main"))), 0, 0)));
-    private static final Branch RELEASE = new Branch(
-            new Branch.Name("release"),
+            Option.of(new Upstream(new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))), 0, 0)));
+    private static final Branch RELEASE = Fixtures.branch(
+            new BranchName("release"),
             false,
             new Sha("2"),
             Instant.EPOCH,
             true,
             false,
-            Option.of(
-                    new Upstream(new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("release"))), 0, 0)));
-    private static final Branch PUSHED = new Branch(
-            new Branch.Name("feature"),
+            Option.of(new Upstream(new BranchRef.Remote(new RemoteBranch("origin", new BranchName("release"))), 0, 0)));
+    private static final Branch PUSHED = Fixtures.branch(
+            new BranchName("feature"),
             false,
             new Sha("3"),
             Instant.EPOCH,
             true,
             false,
-            Option.of(
-                    new Upstream(new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("feature"))), 0, 0)));
-    private static final Branch UNPUSHED = new Branch(new Branch.Name("local"), false, new Sha("4"));
-    private static final Branch AHEAD = new Branch(
-            new Branch.Name("ahead"),
+            Option.of(new Upstream(new BranchRef.Remote(new RemoteBranch("origin", new BranchName("feature"))), 0, 0)));
+    private static final Branch UNPUSHED = Fixtures.branch(new BranchName("local"), false, new Sha("4"));
+    private static final Branch AHEAD = Fixtures.branch(
+            new BranchName("ahead"),
             false,
             new Sha("5"),
             Instant.EPOCH,
             true,
             false,
-            Option.of(new Upstream(new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("ahead"))), 2, 0)));
-    private static final Branch.Name FEATURE = PUSHED.name();
+            Option.of(new Upstream(new BranchRef.Remote(new RemoteBranch("origin", new BranchName("ahead"))), 2, 0)));
+    private static final BranchName FEATURE = PUSHED.name();
     private static final PullRequest FEATURE_PR =
             new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED);
 
@@ -118,7 +116,7 @@ class PullRequestUpdateTest {
     void beforeThePullRequestsAreReadNoneIsCreated() {
         Model starting = localBranchesRead(loaded(), List.of(PUSHED, MAIN)).model();
 
-        Next asked = Update.update(starting, new PullRequestMsg.Requested(new Branch.Name("feature")));
+        Next asked = Update.update(starting, new PullRequestMsg.Requested(new BranchName("feature")));
 
         assertEquals(
                 Option.of(new AppError.PullRequestsNotRead()),
@@ -228,7 +226,7 @@ class PullRequestUpdateTest {
     void theRecordedParentIsReadWithoutCountingCommits() {
         StubGitProvider git = new StubGitProvider() {
             @Override
-            public Either<GitError.ProcessError, Option<Branch.Name>> parentBranch(Branch.Name branch) {
+            public Either<GitError.ProcessError, Option<BranchName>> parentBranch(BranchName branch) {
                 return Either.right(Option.of(RELEASE.name()));
             }
 
@@ -269,7 +267,7 @@ class PullRequestUpdateTest {
     void aRecordedParentThatIsNoBaseIsIgnored() {
         StubGitProvider git = new StubGitProvider() {
             @Override
-            public Either<GitError.ProcessError, Option<Branch.Name>> parentBranch(Branch.Name branch) {
+            public Either<GitError.ProcessError, Option<BranchName>> parentBranch(BranchName branch) {
                 return Either.right(Option.of(UNPUSHED.name()));
             }
 
@@ -299,7 +297,7 @@ class PullRequestUpdateTest {
     }
 
     private static BranchRef remote(String branch) {
-        return new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name(branch)));
+        return new BranchRef.Remote(new RemoteBranch("origin", new BranchName(branch)));
     }
 
     /**
@@ -597,8 +595,8 @@ class PullRequestUpdateTest {
 
     @Test
     void aDivergedBranchIsNotForcePushedForItsPullRequest() {
-        RemoteBranch upstream = new RemoteBranch("origin", new Branch.Name("diverged"));
-        Branch diverged = new Branch(
+        RemoteBranch upstream = new RemoteBranch("origin", new BranchName("diverged"));
+        Branch diverged = Fixtures.branch(
                 upstream.branch(),
                 false,
                 new Sha("6"),
@@ -705,7 +703,7 @@ class PullRequestUpdateTest {
      * {@link #AHEAD}, but {@code ahead} and {@code behind} its upstream.
      */
     private static Branch ahead(int ahead, int behind) {
-        return new Branch(
+        return Fixtures.branch(
                 AHEAD.name(),
                 false,
                 new Sha("5"),
@@ -785,17 +783,17 @@ class PullRequestUpdateTest {
 
     @Test
     void aBranchWithAPullRequestShowsItWhileItsDetailsAreRead() {
-        Next shown = Update.update(withPr(), new PullRequestMsg.Requested(new Branch.Name("feature")));
+        Next shown = Update.update(withPr(), new PullRequestMsg.Requested(new BranchName("feature")));
 
         assertEquals(
-                Option.of(PullRequestPopup.loading(new Branch.Name("feature"), FEATURE_PR)),
+                Option.of(PullRequestPopup.loading(new BranchName("feature"), FEATURE_PR)),
                 shown.model().popup());
         assertEquals(List.of(new LoadPullRequestDetails(42)), shown.cmds());
     }
 
     @Test
     void theDetailsReadShowInThePopup() {
-        Model shown = Update.update(withPr(), new PullRequestMsg.Requested(new Branch.Name("feature")))
+        Model shown = Update.update(withPr(), new PullRequestMsg.Requested(new BranchName("feature")))
                 .model();
         PullRequestDetails details = StubGitHub.empty().pullRequestDetails(42).get();
 
@@ -803,7 +801,7 @@ class PullRequestUpdateTest {
                 Update.update(shown, new LoadPullRequestDetails(42).run(env())).model();
 
         assertEquals(
-                Option.of(PullRequestPopup.loading(new Branch.Name("feature"), FEATURE_PR)
+                Option.of(PullRequestPopup.loading(new BranchName("feature"), FEATURE_PR)
                         .with(Either.right(details))),
                 loaded.popup());
     }
@@ -885,7 +883,7 @@ class PullRequestUpdateTest {
 
     @Test
     void failingToReadTheDetailsShowsWhyInThePopup() {
-        Model shown = Update.update(withPr(), new PullRequestMsg.Requested(new Branch.Name("feature")))
+        Model shown = Update.update(withPr(), new PullRequestMsg.Requested(new BranchName("feature")))
                 .model();
         var failure = refused("gh: not logged in");
 
@@ -893,7 +891,7 @@ class PullRequestUpdateTest {
                 .model();
 
         assertEquals(
-                Option.of(PullRequestPopup.loading(new Branch.Name("feature"), FEATURE_PR)
+                Option.of(PullRequestPopup.loading(new BranchName("feature"), FEATURE_PR)
                         .with(Either.left(failure))),
                 failed.popup());
         assertEquals(Option.none(), failed.outcome().error());
@@ -901,7 +899,7 @@ class PullRequestUpdateTest {
 
     @Test
     void detailsReadAfterThePopupClosedOrForAnotherPullRequestAreDropped() {
-        Model shown = Update.update(withPr(), new PullRequestMsg.Requested(new Branch.Name("feature")))
+        Model shown = Update.update(withPr(), new PullRequestMsg.Requested(new BranchName("feature")))
                 .model();
         PullRequestDetails details = StubGitHub.empty().pullRequestDetails(7).get();
 
@@ -1076,7 +1074,7 @@ class PullRequestUpdateTest {
 
     @Test
     void choosingToMergeOrCloseStartsItOnceTheDetailsShowItCan() {
-        Model shown = Update.update(withPr(), new PullRequestMsg.Requested(new Branch.Name("feature")))
+        Model shown = Update.update(withPr(), new PullRequestMsg.Requested(new BranchName("feature")))
                 .model();
         // Nothing is known about the pull request yet.
         assertEquals(
@@ -1096,15 +1094,15 @@ class PullRequestUpdateTest {
         Next closing = Update.update(read, new PullRequestMsg.CloseChosen());
 
         assertEquals(
-                List.of(new MergePullRequest(new Branch.Name("feature"), 42, "", MergeMethod.SQUASH)), merging.cmds());
+                List.of(new MergePullRequest(new BranchName("feature"), 42, "", MergeMethod.SQUASH)), merging.cmds());
         assertEquals(Option.none(), merging.model().popup());
         assertEquals(
                 Option.of(PullRequestCmd.MERGE_PR),
-                merging.model().jobs().busy().get(new BranchRef.Local(new Branch.Name("feature"))));
-        assertEquals(List.of(new ClosePullRequest(new Branch.Name("feature"), 42)), closing.cmds());
+                merging.model().jobs().busy().get(new BranchRef.Local(new BranchName("feature"))));
+        assertEquals(List.of(new ClosePullRequest(new BranchName("feature"), 42)), closing.cmds());
         assertEquals(
                 Option.of(PullRequestCmd.CLOSE_PR),
-                closing.model().jobs().busy().get(new BranchRef.Local(new Branch.Name("feature"))));
+                closing.model().jobs().busy().get(new BranchRef.Local(new BranchName("feature"))));
     }
 
     @Test
@@ -1379,7 +1377,7 @@ class PullRequestUpdateTest {
      * {@code status}.
      */
     private static Model askedFor(Model model, String branch, int number, MergeStatus status) {
-        MergePullRequest cmd = new MergePullRequest(new Branch.Name(branch), number, "", MergeMethod.MERGE);
+        MergePullRequest cmd = new MergePullRequest(new BranchName(branch), number, "", MergeMethod.MERGE);
         return Update.update(model, new PullRequestMsg.MergeAsked(cmd, status, List.empty()))
                 .model();
     }
@@ -1452,7 +1450,7 @@ class PullRequestUpdateTest {
 
     @Test
     void aMergeThatGitHubRefusesIsShownAsAnErrorAndKeepsThePullRequest() {
-        Model shown = Update.update(withPr(), new PullRequestMsg.Requested(new Branch.Name("feature")))
+        Model shown = Update.update(withPr(), new PullRequestMsg.Requested(new BranchName("feature")))
                 .model();
         Model read = Update.update(
                         shown,
@@ -1485,38 +1483,38 @@ class PullRequestUpdateTest {
                 Option.of("Merging the pull request of feature failed: Pull request #42 is not mergeable: "
                         + "the base branch policy prohibits the merge."),
                 errorText(failed.model()));
-        assertEquals(Option.none(), failed.model().jobs().busy().get(new BranchRef.Local(new Branch.Name("feature"))));
+        assertEquals(Option.none(), failed.model().jobs().busy().get(new BranchRef.Local(new BranchName("feature"))));
         assertEquals(
                 StubGitHub.empty().pullRequestDetails(42).get().listed(),
-                failed.model().gitHub().pullRequests().flatMap(open -> open.get(new Branch.Name("feature"))));
+                failed.model().gitHub().pullRequests().flatMap(open -> open.get(new BranchName("feature"))));
     }
 
     @Test
     void openingThePullRequestInTheBrowserKeepsTheDialogOpen() {
-        Model shown = Update.update(withPr(), new PullRequestMsg.Requested(new Branch.Name("feature")))
+        Model shown = Update.update(withPr(), new PullRequestMsg.Requested(new BranchName("feature")))
                 .model();
 
         Next opened = Update.update(shown, new PullRequestMsg.OpenConfirmed());
 
-        assertEquals(List.of(new OpenPullRequest(new Branch.Name("feature"), 42)), opened.cmds());
+        assertEquals(List.of(new OpenPullRequest(new BranchName("feature"), 42)), opened.cmds());
         assertEquals(shown.popup(), opened.model().popup());
 
         Next done = Update.update(
-                opened.model(), new OpenPullRequest(new Branch.Name("feature"), 42).succeeded(List.empty()));
+                opened.model(), new OpenPullRequest(new BranchName("feature"), 42).succeeded(List.empty()));
         assertEquals(shown.popup(), done.model().popup());
     }
 
     @Test
     void thePullRequestOfABranchIsFoundByItsNameOnTheRemote() {
-        Branch renamed = new Branch(
-                new Branch.Name("mine"),
+        Branch renamed = Fixtures.branch(
+                new BranchName("mine"),
                 false,
                 new Sha("6"),
                 Instant.EPOCH,
                 true,
                 false,
                 Option.of(new Upstream(
-                        new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("feature"))), 0, 0)));
+                        new BranchRef.Remote(new RemoteBranch("origin", new BranchName("feature"))), 0, 0)));
         Model withPr = Update.update(model(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
                 .model();
 
@@ -1526,15 +1524,15 @@ class PullRequestUpdateTest {
 
     @Test
     void thePullRequestOfABranchIsFoundEvenWhenItsRemoteNameHasASlash() {
-        Branch onFork = new Branch(
-                new Branch.Name("mine"),
+        Branch onFork = Fixtures.branch(
+                new BranchName("mine"),
                 false,
                 new Sha("6"),
                 Instant.EPOCH,
                 true,
                 false,
                 Option.of(new Upstream(
-                        new BranchRef.Remote(new RemoteBranch("my/fork", new Branch.Name("feature"))), 0, 0)));
+                        new BranchRef.Remote(new RemoteBranch("my/fork", new BranchName("feature"))), 0, 0)));
         Model withPr = Update.update(model(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
                 .model();
 
@@ -1547,7 +1545,7 @@ class PullRequestUpdateTest {
         Model failed =
                 Update.update(model(), new PullRequestsMsg.LoadFailed(failure)).model();
 
-        Next asked = Update.update(failed, new PullRequestMsg.Requested(new Branch.Name("feature")));
+        Next asked = Update.update(failed, new PullRequestMsg.Requested(new BranchName("feature")));
 
         assertEquals(
                 Option.of(new AppError.PullRequestsUnavailable(failure)),
@@ -1564,7 +1562,7 @@ class PullRequestUpdateTest {
         Next done = Update.update(creating, cmd.run(new Env(new StubGitProvider() {}, StubGitHub.empty())));
 
         assertTrue(done.cmds().contains(new LoadPullRequests()), done.cmds().toString());
-        assertEquals(Option.none(), done.model().jobs().busy().get(new BranchRef.Local(new Branch.Name("feature"))));
+        assertEquals(Option.none(), done.model().jobs().busy().get(new BranchRef.Local(new BranchName("feature"))));
         assertTrue(done.cmds().contains(new FetchCmd.ListRemotes()), done.cmds().toString());
         assertEquals(
                 "gh pr create --head feature --base main --title Login --body '' --draft",
@@ -1582,7 +1580,7 @@ class PullRequestUpdateTest {
 
         assertEquals(
                 Option.of(created),
-                done.model().gitHub().pullRequests().flatMap(open -> open.get(new Branch.Name("feature"))));
+                done.model().gitHub().pullRequests().flatMap(open -> open.get(new BranchName("feature"))));
         assertTrue(done.cmds().contains(new LoadPullRequests()));
     }
 
@@ -1609,7 +1607,7 @@ class PullRequestUpdateTest {
 
         assertEquals(
                 Option.of(PullRequestPopup.loading(
-                        new Branch.Name("patch-1"),
+                        new BranchName("patch-1"),
                         new PullRequest(9, "patch-1", true, Checks.FAILING, Review.REQUIRED))),
                 shown.model().popup(PullRequestPopup.class));
         assertEquals(List.of(new LoadPullRequestDetails(9)), shown.cmds());
@@ -1673,7 +1671,7 @@ class PullRequestUpdateTest {
 
     @Test
     void forAPullRequestWhoseBranchAnotherWorktreeHasSwitchingToThatWorktreeIsOffered() {
-        Branch.Name patch = new Branch.Name("patch-1");
+        BranchName patch = new BranchName("patch-1");
         Model elsewhere = localBranchesRead(
                         ofOwnerRepo(CLEAN),
                         List.of(new Branch(
@@ -1716,8 +1714,8 @@ class PullRequestUpdateTest {
     @Test
     void aPullRequestIsNotCheckedOutOverChanges() {
         RepoStatus changed = new RepoStatus(
-                Head.onBranch(new Branch.Name("main"), new Sha("aaaa")),
-                List.of(new FileEntry("a.txt", ChangeType.MODIFIED)));
+                Head.onBranch(new BranchName("main"), new Sha("aaaa")),
+                List.of(Fixtures.fileEntry("a.txt", ChangeType.MODIFIED)));
 
         Next refused = Update.update(ofOwnerRepo(changed), new CheckoutPullRequestMsg.Requested(summary("owner/repo")));
 
@@ -1773,7 +1771,7 @@ class PullRequestUpdateTest {
                         ofOwnerRepo(status),
                         new LoadMsg.WorktreesLoaded(List.of(new Worktree(
                                 java.nio.file.Path.of("/repos/app"),
-                                Option.of(new Head.OnBranch(new Branch.Name("main"), Option.of(new Sha("aaaa")))),
+                                Option.of(new Head.OnBranch(new BranchName("main"), Option.of(new Sha("aaaa")))),
                                 true,
                                 true,
                                 Option.none(),
@@ -1796,8 +1794,8 @@ class PullRequestUpdateTest {
                 Update.update(asked.model(), new AddWorktreeMsg.Confirmed()).cmds());
 
         RepoStatus changed = new RepoStatus(
-                Head.onBranch(new Branch.Name("main"), new Sha("aaaa")),
-                List.of(new FileEntry("a.txt", ChangeType.MODIFIED)));
+                Head.onBranch(new BranchName("main"), new Sha("aaaa")),
+                List.of(Fixtures.fileEntry("a.txt", ChangeType.MODIFIED)));
         PullRequestSummary own = own("feature/login");
         assertEquals(
                 Option.of(new NewWorktreePopup(new WorktreeSource.PullRequest(own), "/repos/app-feature-login")),
@@ -1809,7 +1807,8 @@ class PullRequestUpdateTest {
     @Test
     void aPullRequestWhoseBranchIsCheckedOutHereGetsNoWorktreeAndOneOfAnotherRepositoryNeither() {
         Model onPatch = localBranchesRead(
-                        withMainWorktree(CLEAN), List.of(new Branch(new Branch.Name("patch-1"), true, new Sha("bbbb"))))
+                        withMainWorktree(CLEAN),
+                        List.of(Fixtures.branch(new BranchName("patch-1"), true, new Sha("bbbb"))))
                 .model();
 
         Next here = Update.update(onPatch, new CheckoutPullRequestMsg.WorktreeRequested(own("patch-1")));
@@ -1828,7 +1827,7 @@ class PullRequestUpdateTest {
 
     @Test
     void forAPullRequestWhoseBranchAnotherWorktreeHasSwitchingToItIsOfferedInsteadOfANewOne() {
-        Branch.Name patch = new Branch.Name("patch-1");
+        BranchName patch = new BranchName("patch-1");
         Model elsewhere = localBranchesRead(
                         withMainWorktree(CLEAN),
                         List.of(new Branch(
@@ -1856,7 +1855,7 @@ class PullRequestUpdateTest {
                 .model();
 
         Next adding = Update.update(asked, new AddWorktreeMsg.Confirmed());
-        BranchRef login = new BranchRef.Local(new Branch.Name("feature/login"));
+        BranchRef login = new BranchRef.Local(new BranchName("feature/login"));
         assertEquals(
                 Option.of(AddWorktreeCmd.ADD_WORKTREE),
                 adding.model().jobs().busy().get(login));

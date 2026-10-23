@@ -8,7 +8,7 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -35,7 +35,7 @@ final class CliMoveCommits {
      * @return the command lines that were run
      */
     static Either<GitFailure<GitError>, List<ExecutedCommand>> move(
-            Path worktree, Branch.Name from, Sha oldest, Branch.Name to, Option<BranchRef> onto) {
+            Path worktree, BranchName from, Sha oldest, BranchName to, Option<BranchRef> onto) {
         return GitFailure.sequence(
                 () -> GitFailure.widen(CliCheckout.checkoutNewBranch(
                         worktree,
@@ -62,7 +62,7 @@ final class CliMoveCommits {
      * @return the command lines that were run
      */
     static Either<GitFailure<GitError>, List<ExecutedCommand>> moveTo(
-            Path worktree, Branch.Name from, Sha oldest, Branch.Name to) {
+            Path worktree, BranchName from, Sha oldest, BranchName to) {
         return GitFailure.sequence(
                 () -> CliCheckout.checkout(worktree, to),
                 () -> copy(worktree, from, oldest).mapLeft(failure -> undone(failure, () -> checkout(worktree, from))),
@@ -75,7 +75,7 @@ final class CliMoveCommits {
      * nothing to copy; one that was empty to begin with is copied as it is.
      */
     private static Either<GitFailure<GitError>, List<ExecutedCommand>> copy(
-            Path worktree, Branch.Name from, Sha oldest) {
+            Path worktree, BranchName from, Sha oldest) {
         return Unfinished.runOrUndo(
                 worktree,
                 git("cherry-pick", "--empty=drop", "--allow-empty", parent(oldest) + ".." + Refs.head(from)),
@@ -94,14 +94,14 @@ final class CliMoveCommits {
     /**
      * {@code git checkout <branch>}: checks out {@code branch} again, which the working tree came from.
      */
-    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkout(Path worktree, Branch.Name branch) {
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkout(Path worktree, BranchName branch) {
         return GitProcess.log(worktree, git("checkout", "--quiet", branch.value(), "--"));
     }
 
     /**
      * {@code git branch -D <branch>}: deletes the new {@code branch}, which got none of the commits.
      */
-    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> delete(Path worktree, Branch.Name branch) {
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> delete(Path worktree, BranchName branch) {
         return GitProcess.log(worktree, git("branch", "-D", branch.value()));
     }
 
@@ -110,16 +110,16 @@ final class CliMoveCommits {
      * parent of {@code oldest}.
      */
     private static Either<GitFailure<GitError>, List<ExecutedCommand>> moveBack(
-            Path worktree, Branch.Name branch, Sha oldest) {
+            Path worktree, BranchName branch, Sha oldest) {
         return GitFailure.widen(GitProcess.log(worktree, git("branch", "--force", branch.value(), parent(oldest))));
     }
 
     /**
      * The name of {@code branch}; on its remote, the name it has there.
      */
-    private static Branch.Name name(BranchRef branch) {
+    private static BranchName name(BranchRef branch) {
         return switch (branch) {
-            case BranchRef.Local(Branch.Name name) -> name;
+            case BranchRef.Local(BranchName name) -> name;
             case BranchRef.Remote(RemoteBranch remote) -> remote.branch();
         };
     }

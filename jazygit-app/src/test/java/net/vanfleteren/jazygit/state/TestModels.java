@@ -12,7 +12,6 @@ import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.ui.ErrorText;
 
 /**
@@ -22,19 +21,19 @@ import net.vanfleteren.jazygit.ui.ErrorText;
 public final class TestModels {
 
     public static final RepoStatus CLEAN =
-            new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), List.of());
+            new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("aaaa")), List.of());
     public static final RepoStatus DIRTY = new RepoStatus(
-            Head.onBranch(new Branch.Name("main"), new Sha("aaaa")),
-            List.of(new FileEntry("a.txt", ChangeType.UNTRACKED)));
+            Head.onBranch(new BranchName("main"), new Sha("aaaa")),
+            List.of(Fixtures.fileEntry("a.txt", ChangeType.UNTRACKED)));
     public static final RepoStatus MOVED =
-            new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("bbbb")), List.of());
+            new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("bbbb")), List.of());
     public static final List<Branch> BRANCHES = List.of(
-            new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
-            new Branch(new Branch.Name("feature"), false, new Sha("ffff")));
+            Fixtures.branch(new BranchName("main"), true, new Sha("aaaa")),
+            Fixtures.branch(new BranchName("feature"), false, new Sha("ffff")));
     public static final List<Commit> COMMITS =
-            List.of(new Commit(new Sha("aaaa"), "Ada", "ada@example.com", Instant.EPOCH, "First", ""));
+            List.of(Fixtures.commit(new Sha("aaaa"), "Ada", "ada@example.com", Instant.EPOCH, "First", ""));
     public static final List<Commit> FEATURE_COMMITS =
-            List.of(new Commit(new Sha("ffff"), "Ada", "ada@example.com", Instant.EPOCH, "Feature", ""));
+            List.of(Fixtures.commit(new Sha("ffff"), "Ada", "ada@example.com", Instant.EPOCH, "Feature", ""));
 
     private TestModels() {}
 
@@ -59,7 +58,7 @@ public final class TestModels {
     public static Model loaded(GitInfoProvider provider, String branch) {
         Program program =
                 Program.start(new Env(provider, StubGitHub.empty()), Runnable::run, Runnable::run, Runnable::run);
-        program.dispatch(new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name(branch))));
+        program.dispatch(new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName(branch))));
         return program.model();
     }
 
@@ -201,7 +200,7 @@ public final class TestModels {
      */
     public static Model switchingBranch(Model model, String branch) {
         return model.mapRepoView(repoView -> repoView.withBranchLog(Option.of(Preview.loading(
-                new BranchRef.Local(new Branch.Name(branch)), model.repoView().branchLog()))));
+                new BranchRef.Local(new BranchName(branch)), model.repoView().branchLog()))));
     }
 
     /**

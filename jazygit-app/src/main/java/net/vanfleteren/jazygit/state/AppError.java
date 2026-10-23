@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -32,7 +33,7 @@ public sealed interface AppError {
      *
      * @param message why, as GitHub says it
      */
-    record MergeFailed(Branch.Name branch, String message) implements AppError {}
+    record MergeFailed(BranchName branch, String message) implements AppError {}
 
     /**
      * A commit was asked for, but nothing has changed.
@@ -83,7 +84,7 @@ public sealed interface AppError {
     /**
      * A pull, or a reset onto the upstream, was asked for, but the branch has no upstream.
      */
-    record NoUpstream(Branch.Name branch) implements AppError {}
+    record NoUpstream(BranchName branch) implements AppError {}
 
     /**
      * A pull, or a reset onto the upstream, was asked for, but the upstream of the branch was deleted on the
@@ -91,18 +92,18 @@ public sealed interface AppError {
      *
      * @param upstream the short name the upstream had, e.g. {@code origin/feature}
      */
-    record UpstreamGone(Branch.Name branch, String upstream) implements AppError {}
+    record UpstreamGone(BranchName branch, String upstream) implements AppError {}
 
     /**
      * Comparing a branch with the main branch was asked for, but there is no main branch to compare it with:
      * none is known, or it is gone.
      */
-    record NoBaseBranch(Branch.Name branch) implements AppError {}
+    record NoBaseBranch(BranchName branch) implements AppError {}
 
     /**
      * Comparing a branch with the main branch was asked for, but it is the main branch.
      */
-    record IsBaseBranch(Branch.Name branch) implements AppError {}
+    record IsBaseBranch(BranchName branch) implements AppError {}
 
     /**
      * An operation on the checked out branch was asked for, but HEAD is detached.
@@ -113,7 +114,7 @@ public sealed interface AppError {
      * A pull of a branch that is not checked out was asked for, but its commits not yet pushed keep it from
      * being fast-forwarded.
      */
-    record UnpushedCommits(Branch.Name branch) implements AppError {}
+    record UnpushedCommits(BranchName branch) implements AppError {}
 
     /**
      * An operation was asked for on a branch that is checked out in another worktree, which keeps git from
@@ -121,7 +122,7 @@ public sealed interface AppError {
      *
      * @param worktree the root of the worktree the branch is checked out in
      */
-    record CheckedOutElsewhere(Operation operation, Branch.Name branch, String worktree) implements AppError {}
+    record CheckedOutElsewhere(Operation operation, BranchName branch, String worktree) implements AppError {}
 
     /**
      * The main worktree was asked to be removed, which holds the repository.
@@ -173,12 +174,12 @@ public sealed interface AppError {
      * A pull request was asked for, but the branch has diverged from {@code upstream}, which only a force push
      * gets its commits onto.
      */
-    record Diverged(Branch.Name branch, RemoteBranch upstream) implements AppError {}
+    record Diverged(BranchName branch, RemoteBranch upstream) implements AppError {}
 
     /**
      * A pull request was asked for, but no other branch is on the remote for it to merge into.
      */
-    record NoBase(Branch.Name branch) implements AppError {}
+    record NoBase(BranchName branch) implements AppError {}
 
     /**
      * The pull request {@code pullRequest}, as {@code owner/name#number}, cannot be checked out, as it is of
@@ -214,7 +215,7 @@ public sealed interface AppError {
     /**
      * Opening a branch on GitHub was asked for, but the branch is on no remote, or its upstream is gone.
      */
-    record NotOnRemote(Branch.Name branch) implements AppError {}
+    record NotOnRemote(BranchName branch) implements AppError {}
 
     /**
      * A pull request was asked for before the pull requests were read, so it is unknown whether the branch has

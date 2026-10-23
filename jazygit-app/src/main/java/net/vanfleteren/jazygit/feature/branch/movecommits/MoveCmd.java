@@ -6,7 +6,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -35,7 +35,7 @@ public sealed interface MoveCmd extends Cmd {
      * Reads the commits of {@code from} from {@code oldest} up to its tip, and how many of them are on
      * {@code upstream} already.
      */
-    record ReadRange(Branch.Name from, Sha oldest, Option<RemoteBranch> upstream) implements MoveCmd {
+    record ReadRange(BranchName from, Sha oldest, Option<RemoteBranch> upstream) implements MoveCmd {
 
         @Override
         public Msg run(Env env) {
@@ -54,7 +54,7 @@ public sealed interface MoveCmd extends Cmd {
      * Moves the commits of {@code from} from {@code oldest} up to its tip to {@code target}; then force-pushes
      * {@code from} to {@code forcePush}, if given.
      */
-    record Move(Branch.Name from, Sha oldest, MoveTarget target, Option<RemoteBranch> forcePush)
+    record Move(BranchName from, Sha oldest, MoveTarget target, Option<RemoteBranch> forcePush)
             implements MoveCmd, BranchCmd.ChecksOutBranch {
 
         @Override
@@ -63,7 +63,7 @@ public sealed interface MoveCmd extends Cmd {
         }
 
         @Override
-        public Branch.Name branch() {
+        public BranchName branch() {
             return target.branch();
         }
 

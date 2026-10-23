@@ -10,11 +10,12 @@ import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitRange;
-import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.PushMode;
@@ -38,10 +39,10 @@ import org.junit.jupiter.api.Test;
  */
 class MoveUpdateTest {
 
-    private static final Branch.Name FEATURE = new Branch.Name("feature");
-    private static final Branch.Name MAIN = new Branch.Name("main");
-    private static final Branch.Name TOPIC = new Branch.Name("topic");
-    private static final Branch.Name ELSEWHERE = new Branch.Name("elsewhere");
+    private static final BranchName FEATURE = new BranchName("feature");
+    private static final BranchName MAIN = new BranchName("main");
+    private static final BranchName TOPIC = new BranchName("topic");
+    private static final BranchName ELSEWHERE = new BranchName("elsewhere");
     private static final RemoteBranch ORIGIN_FEATURE = new RemoteBranch("origin", FEATURE);
     private static final RemoteBranch ORIGIN_MAIN = new RemoteBranch("origin", MAIN);
 
@@ -57,7 +58,7 @@ class MoveUpdateTest {
     private static final CommitRange PUSHED = new CommitRange(2, 0, 1);
 
     private static Commit commit(String sha, List<String> parents) {
-        return new Commit(
+        return Fixtures.commit(
                 new Sha(sha),
                 "Ada",
                 "ada@example.com",
@@ -69,7 +70,7 @@ class MoveUpdateTest {
 
     private static Model model(boolean onFeature) {
         List<Branch> branches = List.of(
-                new Branch(
+                Fixtures.branch(
                         FEATURE,
                         onFeature,
                         TIP.sha(),
@@ -77,7 +78,7 @@ class MoveUpdateTest {
                         true,
                         false,
                         Option.of(new Upstream(new BranchRef.Remote(ORIGIN_FEATURE), 1, 0))),
-                new Branch(MAIN, false, ROOT.sha(), Instant.EPOCH, true, true),
+                Fixtures.branch(MAIN, false, ROOT.sha(), Instant.EPOCH, true, true),
                 new Branch(
                         ELSEWHERE,
                         false,
@@ -130,7 +131,7 @@ class MoveUpdateTest {
                         model,
                         new LoadMsg.StatusLoaded(new RepoStatus(
                                 Head.onBranch(FEATURE, TIP.sha()),
-                                List.of(new FileEntry("a.txt", ChangeType.MODIFIED)))))
+                                List.of(Fixtures.fileEntry("a.txt", ChangeType.MODIFIED)))))
                 .model();
     }
 
@@ -268,7 +269,7 @@ class MoveUpdateTest {
                         read(UNPUSHED),
                         new LoadMsg.StatusLoaded(new RepoStatus(
                                 Head.onBranch(FEATURE, TIP.sha()),
-                                List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)))))
+                                List.of(Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED)))))
                 .model();
 
         Next next = Update.update(untracked, new MoveMsg.TargetChosen(Option.of(MAIN)));

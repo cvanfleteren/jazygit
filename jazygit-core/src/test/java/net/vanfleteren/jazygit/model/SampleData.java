@@ -7,7 +7,6 @@ import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.git.model.Head;
 
 /**
  * Fixed sample data used by tests, so they don't depend on the state of a real repository.
@@ -45,7 +44,7 @@ public final class SampleData implements StubGitProvider {
      */
     private static Commit commit(String sha, String author, String time, String message, String body) {
         int lt = author.indexOf(" <");
-        return new Commit(
+        return Fixtures.commit(
                 new Sha(sha),
                 author.substring(0, lt),
                 author.substring(lt + 2, author.length() - 1),
@@ -68,38 +67,41 @@ public final class SampleData implements StubGitProvider {
     @Override
     public Either<ProcessError, RepoStatus> status() {
         return Either.right(new RepoStatus(
-                Head.onBranch(new Branch.Name("main"), new Sha("a1b2c3d4e5f60718293a4b5c6d7e8f9012345678")),
+                Head.onBranch(new BranchName("main"), new Sha("a1b2c3d4e5f60718293a4b5c6d7e8f9012345678")),
                 List.of(
-                        new FileEntry("src/main/java/net/vanfleteren/jazygit/JazygitApp.java", ChangeType.MODIFIED),
-                        new FileEntry("src/main/java/net/vanfleteren/jazygit/ui/ContentPanel.java", ChangeType.ADDED),
-                        new FileEntry("src/main/java/net/vanfleteren/jazygit/model/SampleData.java", ChangeType.ADDED),
-                        new FileEntry("pom.xml", ChangeType.MODIFIED),
-                        new FileEntry("README.md", ChangeType.DELETED),
-                        new FileEntry("notes.txt", ChangeType.UNTRACKED))));
+                        Fixtures.fileEntry(
+                                "src/main/java/net/vanfleteren/jazygit/JazygitApp.java", ChangeType.MODIFIED),
+                        Fixtures.fileEntry(
+                                "src/main/java/net/vanfleteren/jazygit/ui/ContentPanel.java", ChangeType.ADDED),
+                        Fixtures.fileEntry(
+                                "src/main/java/net/vanfleteren/jazygit/model/SampleData.java", ChangeType.ADDED),
+                        Fixtures.fileEntry("pom.xml", ChangeType.MODIFIED),
+                        Fixtures.fileEntry("README.md", ChangeType.DELETED),
+                        Fixtures.fileEntry("notes.txt", ChangeType.UNTRACKED))));
     }
 
     @Override
     public Either<ProcessError, List<Branch>> branches() {
         return Either.right(List.of(
-                new Branch(
-                        new Branch.Name("main"),
+                Fixtures.branch(
+                        new BranchName("main"),
                         true,
                         new Sha("a1b2c3d4e5f60718293a4b5c6d7e8f9012345678"),
                         Instant.EPOCH,
                         true,
                         true),
-                new Branch(
-                        new Branch.Name("feature/initial-layout"),
+                Fixtures.branch(
+                        new BranchName("feature/initial-layout"),
                         false,
                         new Sha("0a1b2c3d4e5f60718293a4b5c6d7e8f901234567"),
                         Instant.EPOCH,
                         true),
-                new Branch(
-                        new Branch.Name("feature/jgit-backend"),
+                Fixtures.branch(
+                        new BranchName("feature/jgit-backend"),
                         false,
                         new Sha("1a2b3c4d5e6f708192a3b4c5d6e7f80912345678")),
-                new Branch(
-                        new Branch.Name("bugfix/focus-cycling"),
+                Fixtures.branch(
+                        new BranchName("bugfix/focus-cycling"),
                         false,
                         new Sha("c3d4e5f60718293a4b5c6d7e8f9012345678a1b2"))));
     }

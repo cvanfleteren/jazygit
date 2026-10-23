@@ -11,7 +11,6 @@ import java.util.function.Function;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.git.model.Head;
 
 /**
  * Reads the working tree status through the {@code git status} command line tool.
@@ -60,7 +59,7 @@ final class CliStatus {
         Option<Sha> commit = oid.filter(o -> !o.equals("(initial)")).flatMap(Sha::parse);
         return commit.filter(c -> branch.equals("(detached)"))
                 .<Head>map(Head.Detached::new)
-                .getOrElse(() -> new Head.OnBranch(new Branch.Name(branch), commit));
+                .getOrElse(() -> new Head.OnBranch(new BranchName(branch), commit));
     }
 
     private static Either<UnexpectedOutput, Parsed> next(Parsed parsed, String field) {

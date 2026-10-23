@@ -12,7 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.InProgressAction;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -155,10 +155,10 @@ final class CliInProgress {
     /**
      * The branch named in {@code file} as {@code refs/heads/<branch>}; none when it says {@code detached HEAD}.
      */
-    private static Option<Branch.Name> branch(Path file) {
+    private static Option<BranchName> branch(Path file) {
         return firstLine(file)
                 .filter(ref -> ref.startsWith(BRANCH_REF))
-                .map(ref -> new Branch.Name(ref.substring(BRANCH_REF.length())));
+                .map(ref -> new BranchName(ref.substring(BRANCH_REF.length())));
     }
 
     private static Option<Integer> number(Path file) {

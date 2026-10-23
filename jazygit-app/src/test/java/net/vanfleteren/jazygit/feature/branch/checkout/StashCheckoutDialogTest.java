@@ -10,7 +10,7 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -32,7 +32,7 @@ class StashCheckoutDialogTest {
     private static Model openModel() {
         return Update.update(
                         TestModels.loaded(),
-                        new CheckoutMsg.NeedsStash(new CheckoutCmd.Checkout(new Branch.Name("feature")), List.empty()))
+                        new CheckoutMsg.NeedsStash(new CheckoutCmd.Checkout(new BranchName("feature")), List.empty()))
                 .model();
     }
 

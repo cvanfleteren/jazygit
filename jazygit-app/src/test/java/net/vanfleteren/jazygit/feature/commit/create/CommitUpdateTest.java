@@ -13,7 +13,6 @@ import net.vanfleteren.jazygit.feature.commit.reword.RewordCmd;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordMsg;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordPopup;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
@@ -30,7 +29,7 @@ class CommitUpdateTest {
     }
 
     private static Commit commit(String sha, String message, String body) {
-        return new Commit(new Sha(sha), "me", "me@example.com", Instant.EPOCH, message, body);
+        return Fixtures.commit(new Sha(sha), "me", "me@example.com", Instant.EPOCH, message, body);
     }
 
     @Test
@@ -49,7 +48,7 @@ class CommitUpdateTest {
 
     private Model withFiles(FileEntry... files) {
         return loaded().mapRepo(repo -> repo.withStatus(
-                new Loaded<>(new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), List.of(files)))));
+                new Loaded<>(new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("aaaa")), List.of(files)))));
     }
 
     private Model withCommits(Commit... commits) {
@@ -118,7 +117,7 @@ class CommitUpdateTest {
 
     @Test
     void commitOpensTheDialogWhenSomethingIsStaged() {
-        Model model = Update.update(withFiles(new FileEntry("a.txt", ChangeType.ADDED)), new CommitMsg.Requested())
+        Model model = Update.update(withFiles(Fixtures.fileEntry("a.txt", ChangeType.ADDED)), new CommitMsg.Requested())
                 .model();
 
         assertTrue(model.popup(CommitPopup.class).isDefined());
@@ -127,7 +126,8 @@ class CommitUpdateTest {
 
     @Test
     void commitAsksToStageAllWhenNothingIsStaged() {
-        Model model = Update.update(withFiles(new FileEntry("a.txt", ChangeType.MODIFIED)), new CommitMsg.Requested())
+        Model model = Update.update(
+                        withFiles(Fixtures.fileEntry("a.txt", ChangeType.MODIFIED)), new CommitMsg.Requested())
                 .model();
 
         assertTrue(model.popup(StageAllPopup.class).isDefined());
@@ -146,8 +146,8 @@ class CommitUpdateTest {
     void confirmingStageAllStagesEverythingUnstaged() {
         Model asking = Update.update(
                         withFiles(
-                                new FileEntry("a.txt", ChangeType.MODIFIED),
-                                new FileEntry("b.txt", ChangeType.UNTRACKED)),
+                                Fixtures.fileEntry("a.txt", ChangeType.MODIFIED),
+                                Fixtures.fileEntry("b.txt", ChangeType.UNTRACKED)),
                         new CommitMsg.Requested())
                 .model();
 
@@ -165,7 +165,8 @@ class CommitUpdateTest {
 
     @Test
     void cancellingStageAllClosesThePrompt() {
-        Model asking = Update.update(withFiles(new FileEntry("a.txt", ChangeType.MODIFIED)), new CommitMsg.Requested())
+        Model asking = Update.update(
+                        withFiles(Fixtures.fileEntry("a.txt", ChangeType.MODIFIED)), new CommitMsg.Requested())
                 .model();
 
         assertFalse(Update.update(asking, new CommitMsg.StageAllCancelled())
@@ -176,7 +177,7 @@ class CommitUpdateTest {
 
     @Test
     void confirmingTheCommitCommitsAndClosesTheDialog() {
-        Model open = Update.update(withFiles(new FileEntry("a.txt", ChangeType.ADDED)), new CommitMsg.Requested())
+        Model open = Update.update(withFiles(Fixtures.fileEntry("a.txt", ChangeType.ADDED)), new CommitMsg.Requested())
                 .model();
 
         Next next =
@@ -188,7 +189,7 @@ class CommitUpdateTest {
 
     @Test
     void blankSummaryKeepsTheCommitDialogOpen() {
-        Model open = Update.update(withFiles(new FileEntry("a.txt", ChangeType.ADDED)), new CommitMsg.Requested())
+        Model open = Update.update(withFiles(Fixtures.fileEntry("a.txt", ChangeType.ADDED)), new CommitMsg.Requested())
                 .model();
 
         Next next = Update.update(typed(open, new CommitMessage("  ", "details")), new CommitMsg.Confirmed());
@@ -199,7 +200,7 @@ class CommitUpdateTest {
 
     @Test
     void cancellingTheCommitClosesTheDialog() {
-        Model open = Update.update(withFiles(new FileEntry("a.txt", ChangeType.ADDED)), new CommitMsg.Requested())
+        Model open = Update.update(withFiles(Fixtures.fileEntry("a.txt", ChangeType.ADDED)), new CommitMsg.Requested())
                 .model();
 
         assertFalse(Update.update(open, new CommitMsg.Cancelled())

@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.ui;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -25,7 +25,7 @@ public final class ErrorText {
                 Messages.get(
                         operation.errorKey(),
                         subject.toList().<Object>map(s -> s).append(of(failure)).toJavaArray());
-            case AppError.MergeFailed(Branch.Name branch, String message) ->
+            case AppError.MergeFailed(BranchName branch, String message) ->
                 Messages.get("error.mergePr.failed", branch.value(), message);
             case AppError.NothingToCommit() -> Messages.get("error.commit.nothing");
             case AppError.NothingToAmend() -> Messages.get("error.amend.nothing");
@@ -43,15 +43,15 @@ public final class ErrorText {
                                         .getOrElse(() -> Messages.get("error.conflictsRemain", conflicts)))
                                 .toJavaArray());
             case AppError.InvalidUpstream(String text) -> Messages.get("error.upstream.invalid", text.strip());
-            case AppError.NoUpstream(Branch.Name branch) -> Messages.get("error.upstream.none", branch.value());
-            case AppError.UpstreamGone(Branch.Name branch, String upstream) ->
+            case AppError.NoUpstream(BranchName branch) -> Messages.get("error.upstream.none", branch.value());
+            case AppError.UpstreamGone(BranchName branch, String upstream) ->
                 Messages.get("error.upstream.gone", branch.value(), upstream);
-            case AppError.NoBaseBranch(Branch.Name branch) -> Messages.get("error.divergence.noBase", branch.value());
-            case AppError.IsBaseBranch(Branch.Name branch) -> Messages.get("error.divergence.isBase", branch.value());
+            case AppError.NoBaseBranch(BranchName branch) -> Messages.get("error.divergence.noBase", branch.value());
+            case AppError.IsBaseBranch(BranchName branch) -> Messages.get("error.divergence.isBase", branch.value());
             case AppError.NoBranchCheckedOut() -> Messages.get("error.detached");
-            case AppError.UnpushedCommits(Branch.Name branch) ->
+            case AppError.UnpushedCommits(BranchName branch) ->
                 Messages.get("error.fastForward.unpushed", branch.value());
-            case AppError.CheckedOutElsewhere(var operation, Branch.Name branch, var worktree) ->
+            case AppError.CheckedOutElsewhere(var operation, BranchName branch, var worktree) ->
                 Messages.get(operation.errorKey(), branch.value(), Messages.get("error.checkedOutElsewhere", worktree));
             case AppError.MainWorktreeNotRemovable(String worktree) ->
                 Messages.get("error.removeWorktree.main", worktree);
@@ -65,9 +65,9 @@ public final class ErrorText {
             case AppError.WorktreeMissing(String worktree) -> Messages.get("error.switchWorktree.missing", worktree);
             case AppError.NothingToPrune() -> Messages.get("error.pruneWorktrees.nothing");
             case AppError.MainWorktreeNotLockable() -> Messages.get("error.lockWorktree.main");
-            case AppError.Diverged(Branch.Name branch, RemoteBranch upstream) ->
+            case AppError.Diverged(BranchName branch, RemoteBranch upstream) ->
                 Messages.get("error.pullRequest.diverged", branch.value(), upstream.shortName());
-            case AppError.NoBase(Branch.Name branch) -> Messages.get("error.pullRequest.noBase", branch.value());
+            case AppError.NoBase(BranchName branch) -> Messages.get("error.pullRequest.noBase", branch.value());
             case AppError.OtherRepository(String pullRequest) ->
                 Messages.get("error.checkoutPr.otherRepository", pullRequest);
             case AppError.ChangesBeforeCheckout(String pullRequest) ->
@@ -76,7 +76,7 @@ public final class ErrorText {
                 Messages.get("error.checkoutPr.here", pullRequest);
             case AppError.ChangesBeforeMove(String target) -> Messages.get("error.moveCommits.changes", target);
             case AppError.DefaultBranch(String branch) -> Messages.get("error.deleteBranch.default", branch);
-            case AppError.NotOnRemote(Branch.Name branch) -> Messages.get("error.browse.notOnRemote", branch.value());
+            case AppError.NotOnRemote(BranchName branch) -> Messages.get("error.browse.notOnRemote", branch.value());
             case AppError.PullRequestsNotRead() -> Messages.get("error.pullRequest.notRead");
             case AppError.PullRequestsUnavailable(Failure failure) ->
                 Messages.get("error.pullRequest.unavailable", of(failure));

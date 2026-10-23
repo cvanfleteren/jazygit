@@ -5,7 +5,7 @@ import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
 
@@ -58,7 +58,7 @@ public final class HeadFile {
             String ref = line.substring(REF.length()).strip();
             return Option.when(
                     ref.startsWith(Refs.HEADS),
-                    () -> new Head.OnBranch(new Branch.Name(ref.substring(Refs.HEADS.length())), Option.none()));
+                    () -> new Head.OnBranch(new BranchName(ref.substring(Refs.HEADS.length())), Option.none()));
         }
         return Sha.parse(line).map(Head.Detached::new);
     }

@@ -25,13 +25,6 @@ public record FileEntry(
     }
 
     /**
-     * An entry that is wholly staged when it is {@link ChangeType#ADDED}, and wholly unstaged otherwise.
-     */
-    public FileEntry(String path, ChangeType type) {
-        this(path, type, type == ChangeType.ADDED, type != ChangeType.ADDED);
-    }
-
-    /**
      * A file that is in conflict; it is not staged until the conflict is resolved.
      */
     public static FileEntry conflicted(String path, Conflict conflict) {

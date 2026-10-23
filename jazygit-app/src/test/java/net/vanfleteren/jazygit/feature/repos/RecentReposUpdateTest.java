@@ -16,7 +16,7 @@ import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.StubGitProvider;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.settings.RecentRepositories;
 import net.vanfleteren.jazygit.settings.SettingsStore;
@@ -136,7 +136,7 @@ class RecentReposUpdateTest {
                 new RecentReposMsg.Listed(List.of(new RecentRepo(
                         other.toString(),
                         "other",
-                        Option.of(new Head.OnBranch(new Branch.Name("develop"), Option.none()))))),
+                        Option.of(new Head.OnBranch(new BranchName("develop"), Option.none()))))),
                 listed);
     }
 

@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.feature.branch.movecommits;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.CommitsPanel;
@@ -24,7 +24,7 @@ public final class MoveDialogs {
      * Asks where the commits move to: a new branch, the first option, or one of the other local branches. One that
      * is checked out in another worktree is marked as such, as it cannot be checked out here.
      */
-    public static final PickDialog.Spec<MoveTargetPopup, Option<Branch.Name>> TARGET = new PickDialog.Spec<>(
+    public static final PickDialog.Spec<MoveTargetPopup, Option<BranchName>> TARGET = new PickDialog.Spec<>(
             "move-commits-target",
             MoveTargetPopup.class,
             popup -> Messages.get(

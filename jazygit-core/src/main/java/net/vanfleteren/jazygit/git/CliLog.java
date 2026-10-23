@@ -196,7 +196,7 @@ final class CliLog {
      * which lists each with its parents; and how many of them are on {@code upstream}, from how many are not.
      */
     static Either<GitError, CommitRange> range(
-            Path worktree, Branch.Name branch, Sha oldest, Option<RemoteBranch> upstream) {
+            Path worktree, BranchName branch, Sha oldest, Option<RemoteBranch> upstream) {
         List<String> revisions = List.of(Refs.head(branch), "^" + oldest.value() + "^");
         return Either.narrow(GitProcess.read(
                         worktree,

@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -108,7 +108,7 @@ class UpdateTest {
         Next next = Update.update(
                 model,
                 new LoadMsg.StatusLoaded(
-                        new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), List.of())));
+                        new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("aaaa")), List.of())));
 
         assertSame(model.repo().status(), next.model().repo().status());
         assertEquals(List.of(), next.cmds());

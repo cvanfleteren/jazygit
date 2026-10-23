@@ -4,7 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
@@ -25,13 +25,13 @@ public sealed interface CreatePullRequestMsg extends Msg {
     /**
      * The branch {@code branch} was made from was read, if it could be told: the base that is offered first.
      */
-    record ParentRead(Branch.Name branch, Option<Branch.Name> parent) implements CreatePullRequestMsg {}
+    record ParentRead(BranchName branch, Option<BranchName> parent) implements CreatePullRequestMsg {}
 
     /**
      * The user moved in the list of bases, to {@code cursor}: the highlighted base, if the filter shows any, is the
      * one the pull request merges into.
      */
-    record BaseMoved(ListCursor cursor, Option<Branch.Name> base) implements CreatePullRequestMsg {}
+    record BaseMoved(ListCursor cursor, Option<BranchName> base) implements CreatePullRequestMsg {}
 
     /**
      * The title a new pull request of {@code branch} starts out with was read, for the first of {@code bases}: the
@@ -40,15 +40,14 @@ public sealed interface CreatePullRequestMsg extends Msg {
      * @param head  the name the branch has on its remote
      * @param bases the branches it can merge into, the one it was read for first
      */
-    record TitleRead(Branch.Name branch, Branch.Name head, List<Branch.Name> bases, Option<String> subject)
+    record TitleRead(BranchName branch, BranchName head, List<BranchName> bases, Option<String> subject)
             implements CreatePullRequestMsg {}
 
     /**
      * The title of the new pull request of {@code branch} was read again, for {@code base}, which the user picked
      * instead.
      */
-    record BaseTitleRead(Branch.Name branch, Branch.Name base, Option<String> subject)
-            implements CreatePullRequestMsg {}
+    record BaseTitleRead(BranchName branch, BranchName base, Option<String> subject) implements CreatePullRequestMsg {}
 
     /**
      * The user changed what the new pull request says.

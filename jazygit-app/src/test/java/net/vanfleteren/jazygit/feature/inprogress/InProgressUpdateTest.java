@@ -5,10 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Conflict;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.InProgressAction;
@@ -27,7 +28,7 @@ import org.junit.jupiter.api.Test;
 class InProgressUpdateTest {
 
     private static final InProgress REBASING =
-            new InProgress.Rebasing(Option.of(new Branch.Name("feature")), new Sha("aaaa"), 1, 2);
+            new InProgress.Rebasing(Option.of(new BranchName("feature")), new Sha("aaaa"), 1, 2);
     private static final FileEntry CONFLICTED =
             FileEntry.conflicted("a.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
 
@@ -51,7 +52,7 @@ class InProgressUpdateTest {
 
     @Test
     void requestingWithNothingInProgressDoesNothing() {
-        Model model = inMiddleOf(Option.none(), List.of(new FileEntry("a.txt", ChangeType.MODIFIED)));
+        Model model = inMiddleOf(Option.none(), List.of(Fixtures.fileEntry("a.txt", ChangeType.MODIFIED)));
 
         assertEquals(model, Update.update(model, new InProgressMsg.Requested()).model());
     }
@@ -141,7 +142,7 @@ class InProgressUpdateTest {
     void operationsThatChangeTheHistoryWaitUntilItIsDone() {
         Model model = inMiddleOf(Option.of(REBASING), List.of());
 
-        Next next = Update.update(model, new CheckoutMsg.Requested(new Branch.Name("feature")));
+        Next next = Update.update(model, new CheckoutMsg.Requested(new BranchName("feature")));
 
         assertEquals(List.of(), next.cmds());
         assertEquals(
@@ -153,7 +154,7 @@ class InProgressUpdateTest {
     void operationsThatChangeTheHistoryWaitUntilNoConflictsRemain() {
         Model model = inMiddleOf(Option.none(), List.of(CONFLICTED));
 
-        Next next = Update.update(model, new CheckoutMsg.Requested(new Branch.Name("feature")));
+        Next next = Update.update(model, new CheckoutMsg.Requested(new BranchName("feature")));
 
         assertEquals(List.of(), next.cmds());
         assertEquals(

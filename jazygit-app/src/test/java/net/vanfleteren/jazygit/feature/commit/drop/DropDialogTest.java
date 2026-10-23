@@ -12,6 +12,7 @@ import io.vavr.collection.List;
 import java.time.Instant;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -30,8 +31,8 @@ class DropDialogTest {
     private final Model open = openModel();
 
     private static Model openModel() {
-        Commit below = new Commit(new Sha("c1"), "Ada", "ada@example.com", Instant.EPOCH, "Below", "");
-        Commit selected = new Commit(
+        Commit below = Fixtures.commit(new Sha("c1"), "Ada", "ada@example.com", Instant.EPOCH, "Below", "");
+        Commit selected = Fixtures.commit(
                 new Sha("c2"), "Ada", "ada@example.com", Instant.EPOCH, "Selected", "", List.of(new Sha("c1")));
         Model model = Update.update(TestModels.loaded(), TestModels.commitsLoaded(List.of(selected, below)))
                 .model();

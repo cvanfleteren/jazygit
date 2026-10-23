@@ -9,6 +9,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.commit.squash.SquashCmd;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.state.*;
@@ -27,7 +28,7 @@ class FixupUpdateTest {
     private static final Commit MERGE = commit("c4", List.of("c3", "x"));
 
     private static Commit commit(String sha, List<String> parents) {
-        return new Commit(
+        return Fixtures.commit(
                 new Sha(sha),
                 "Ada",
                 "ada@example.com",

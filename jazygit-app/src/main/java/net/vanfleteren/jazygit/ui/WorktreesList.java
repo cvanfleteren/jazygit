@@ -67,7 +67,7 @@ class WorktreesList implements BranchesTabList {
     private static LoadableList.Seg checkedOut(Worktree worktree) {
         return worktree.head()
                 .map(head -> switch (head) {
-                    case Head.OnBranch(Branch.Name name, Option<Sha> tip) -> LoadableList.Seg.of(" " + name.value());
+                    case Head.OnBranch(BranchName name, Option<Sha> tip) -> LoadableList.Seg.of(" " + name.value());
                     case Head.Detached(Sha at) ->
                         note(Messages.get("worktrees.detached", at.shortSha()), Theme.Classes.DIM);
                 })

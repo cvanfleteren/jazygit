@@ -22,7 +22,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.gh.model.PullRequestComment.Kind;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -33,7 +33,7 @@ import org.junit.jupiter.api.Test;
  */
 class CommentsUpdateTest {
 
-    private static final Branch.Name FEATURE = new Branch.Name("feature");
+    private static final BranchName FEATURE = new BranchName("feature");
     private static final PullRequest FEATURE_PR =
             new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED);
     private static final PullRequestDetails DETAILS =

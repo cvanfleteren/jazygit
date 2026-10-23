@@ -7,7 +7,7 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import org.junit.jupiter.api.Test;
 
@@ -22,7 +22,7 @@ class ModelDrawnTest {
     @Test
     void aBusyBranchIsDrawn() {
         Model busy = model.withBusyBranch(
-                new BranchRef.Local(new Branch.Name("main")), Operation.of("log.push", "error.push"));
+                new BranchRef.Local(new BranchName("main")), Operation.of("log.push", "error.push"));
 
         assertNotEquals(model.drawn(), busy.drawn());
     }

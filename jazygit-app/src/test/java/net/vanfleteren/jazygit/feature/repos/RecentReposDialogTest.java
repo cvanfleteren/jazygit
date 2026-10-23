@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.ui.Theme;
@@ -21,7 +21,7 @@ class RecentReposDialogTest {
         String directory = HOME + "/repos/jazygit";
 
         PickDialog.Row<String> row = RecentReposDialog.row(new RecentRepo(
-                directory, "jazygit", Option.of(new Head.OnBranch(new Branch.Name("main"), Option.none()))));
+                directory, "jazygit", Option.of(new Head.OnBranch(new BranchName("main"), Option.none()))));
 
         assertEquals(directory, row.value());
         assertEquals(

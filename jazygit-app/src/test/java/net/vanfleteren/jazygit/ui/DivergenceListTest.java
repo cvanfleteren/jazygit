@@ -12,8 +12,8 @@ class DivergenceListTest {
     @Test
     void aDivergenceSaysWhenABranchHasNoCommitsOfItsOwnOrMoreThanAreListed() {
         DivergenceView view = DivergenceView.loading(
-                new Branch.Name("feature"), new BranchRef.Local(new Branch.Name("main")), DivergenceView.Against.BASE);
-        Commit ours = new Commit(new Sha("a1"), "Ada", "a@x", java.time.Instant.EPOCH, "Ours", "");
+                new BranchName("feature"), new BranchRef.Local(new BranchName("main")), DivergenceView.Against.BASE);
+        Commit ours = Fixtures.commit(new Sha("a1"), "Ada", "a@x", java.time.Instant.EPOCH, "Ours", "");
 
         List<String> rows = DivergenceList.entries(
                         new Divergence(new Divergence.Side(List.of(ours), 400), new Divergence.Side(List.of(), 0)))

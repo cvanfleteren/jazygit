@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.feature.branch.pull;
 import net.vanfleteren.jazygit.feature.branch.Branches;
 import net.vanfleteren.jazygit.feature.branch.pull.PullCmd.FastForward;
 import net.vanfleteren.jazygit.feature.branch.pull.PullCmd.Pull;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
@@ -19,11 +19,11 @@ public final class PullUpdate {
 
     public static Next update(Model model, PullMsg msg) {
         return switch (msg) {
-            case PullMsg.Requested(Branch.Name branch) -> requested(model, branch);
+            case PullMsg.Requested(BranchName branch) -> requested(model, branch);
         };
     }
 
-    private static Next requested(Model model, Branch.Name branch) {
+    private static Next requested(Model model, BranchName branch) {
         // A branch that is busy is not pulled meanwhile. A branch without an upstream, or whose upstream was
         // deleted, has nothing to pull from.
         // A branch that is not checked out can only be fast-forwarded, which its own commits would prevent, as

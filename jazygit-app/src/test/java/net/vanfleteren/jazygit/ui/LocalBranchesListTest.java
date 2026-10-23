@@ -13,12 +13,12 @@ class LocalBranchesListTest {
     @Test
     void theCurrentBranchStandsOutByTheStyleOfItsNameAlone() {
         LoadableList.Row current = LocalBranchesList.row(
-                new Branch(new Branch.Name("main"), true, new Sha("1")),
+                Fixtures.branch(new BranchName("main"), true, new Sha("1")),
                 Duration.ofMinutes(5),
                 List.empty(),
                 Option.none());
         LoadableList.Row other = LocalBranchesList.row(
-                new Branch(new Branch.Name("feature"), false, new Sha("2")),
+                Fixtures.branch(new BranchName("feature"), false, new Sha("2")),
                 Duration.ofMinutes(5),
                 List.empty(),
                 Option.none());

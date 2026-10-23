@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.github.browse;
 
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -17,7 +17,7 @@ public sealed interface BrowseMsg extends Msg {
     /**
      * The user asked to open a local branch on GitHub, in the browser.
      */
-    record Requested(Branch.Name branch) implements BrowseMsg {}
+    record Requested(BranchName branch) implements BrowseMsg {}
 
     /**
      * The user asked to open a remote branch on GitHub, in the browser.

@@ -30,7 +30,7 @@ public sealed interface CheckoutCmd extends BranchCmd.ChecksOutBranch {
      * Checks out {@code branch}. When uncommitted changes are in the way, the user is offered to take them
      * along instead of being told it failed.
      */
-    record Checkout(Branch.Name branch) implements CheckoutCmd {
+    record Checkout(BranchName branch) implements CheckoutCmd {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
@@ -53,7 +53,7 @@ public sealed interface CheckoutCmd extends BranchCmd.ChecksOutBranch {
      * Creates the local branch {@code branch} at the remote branch {@code upstream}, following it, and checks it
      * out. The remote branch shows as busy meanwhile, as the local one does not exist yet.
      */
-    record CheckoutRemote(Branch.Name branch, RemoteBranch upstream) implements CheckoutCmd {
+    record CheckoutRemote(BranchName branch, RemoteBranch upstream) implements CheckoutCmd {
 
         @Override
         public Option<BranchRef> busyBranch() {
@@ -69,7 +69,7 @@ public sealed interface CheckoutCmd extends BranchCmd.ChecksOutBranch {
     /**
      * Checks out {@code branch}, taking the uncommitted changes along through a stash.
      */
-    record CheckoutWithStash(Branch.Name branch) implements CheckoutCmd {
+    record CheckoutWithStash(BranchName branch) implements CheckoutCmd {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {

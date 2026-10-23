@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import lombok.With;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.DiffText;
@@ -21,7 +21,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
  */
 @With
 public record DivergenceView(
-        Branch.Name branch,
+        BranchName branch,
         BranchRef other,
         Against against,
         Loadable<Divergence> commits,
@@ -30,7 +30,7 @@ public record DivergenceView(
     /**
      * The view of {@code branch} against {@code other}, its commits still to be read.
      */
-    public static DivergenceView loading(Branch.Name branch, BranchRef other, Against against) {
+    public static DivergenceView loading(BranchName branch, BranchRef other, Against against) {
         return new DivergenceView(branch, other, against, Loadable.loading(), Option.none());
     }
 

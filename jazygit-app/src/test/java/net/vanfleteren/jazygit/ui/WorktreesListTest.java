@@ -45,21 +45,21 @@ class WorktreesListTest {
         java.nio.file.Path path = java.nio.file.Path.of("/repos/x");
         Worktree worktree = new Worktree(
                 path,
-                Option.of(new Head.OnBranch(new Branch.Name("feature"), Option.of(new Sha("1234567890")))),
+                Option.of(new Head.OnBranch(new BranchName("feature"), Option.of(new Sha("1234567890")))),
                 false,
                 false,
                 Option.none(),
                 false);
         Repo repo = Repo.LOADING
-                .withBranches(new Loadable.Loaded<>(List.of(new Branch(
-                        new Branch.Name("feature"),
+                .withBranches(new Loadable.Loaded<>(List.of(Fixtures.branch(
+                        new BranchName("feature"),
                         false,
                         new Sha("1234567890"),
                         java.time.Instant.EPOCH,
                         true,
                         false,
                         Option.of(new Upstream(
-                                new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("feature"))), 2, 1))))))
+                                new BranchRef.Remote(new RemoteBranch("origin", new BranchName("feature"))), 2, 1))))))
                 .withWorktreeChanges(io.vavr.collection.HashMap.of(path.toString(), true));
 
         LoadableList.Row row = WorktreesList.row(repo, worktree);
@@ -85,7 +85,7 @@ class WorktreesListTest {
     void theWorktreeThatIsShownStandsOutByTheStyleOfItsNameAlone() {
         Worktree shown = new Worktree(
                 java.nio.file.Path.of("/repos/x"),
-                Option.of(new Head.OnBranch(new Branch.Name("feature"), Option.of(new Sha("1234567890")))),
+                Option.of(new Head.OnBranch(new BranchName("feature"), Option.of(new Sha("1234567890")))),
                 false,
                 true,
                 Option.none(),
@@ -101,7 +101,7 @@ class WorktreesListTest {
     void aWorktreeLockedForAReasonSaysWhy() {
         Worktree locked = new Worktree(
                 java.nio.file.Path.of("/repos/x"),
-                Option.of(new Head.OnBranch(new Branch.Name("feature"), Option.of(new Sha("1234567890")))),
+                Option.of(new Head.OnBranch(new BranchName("feature"), Option.of(new Sha("1234567890")))),
                 false,
                 false,
                 Option.of("on usb"),

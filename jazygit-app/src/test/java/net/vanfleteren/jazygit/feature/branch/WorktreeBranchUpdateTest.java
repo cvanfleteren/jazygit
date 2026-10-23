@@ -36,8 +36,8 @@ import org.junit.jupiter.api.Test;
 class WorktreeBranchUpdateTest {
 
     private static final Path LINKED = Path.of("/repos/linked");
-    private static final Branch.Name FEATURE = new Branch.Name("feature");
-    private static final Branch.Name LOCAL = new Branch.Name("local");
+    private static final BranchName FEATURE = new BranchName("feature");
+    private static final BranchName LOCAL = new BranchName("local");
 
     /**
      * {@code feature}, which is on its remote, and {@code local}, which is not, are both checked out in another
@@ -48,7 +48,7 @@ class WorktreeBranchUpdateTest {
         return TestModels.localBranchesRead(
                         loaded(),
                         List.of(
-                                new Branch(new Branch.Name("main"), true, new Sha("aaaa")),
+                                Fixtures.branch(new BranchName("main"), true, new Sha("aaaa")),
                                 new Branch(
                                         FEATURE,
                                         false,
@@ -142,7 +142,7 @@ class WorktreeBranchUpdateTest {
         Model model = elsewhere();
 
         assertEquals(
-                Option.of(new MergePopup(new Branch.Name("main"), FEATURE)),
+                Option.of(new MergePopup(new BranchName("main"), FEATURE)),
                 Update.update(model, new MergeMsg.Requested(FEATURE)).model().popup());
         assertEquals(
                 Option.of(new RenameBranchPopup(FEATURE)),

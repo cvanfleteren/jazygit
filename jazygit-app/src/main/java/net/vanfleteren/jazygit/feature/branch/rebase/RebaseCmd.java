@@ -12,7 +12,7 @@ import net.vanfleteren.jazygit.state.Operation;
 /**
  * Rebases the checked out branch onto {@code branch}.
  */
-public record RebaseCmd(Branch.Name branch) implements BranchCmd {
+public record RebaseCmd(BranchName branch) implements BranchCmd {
 
     public static final Operation REBASE =
             Operation.of("log.title.rebase", "error.rebase.failed").waitingForUnfinished();

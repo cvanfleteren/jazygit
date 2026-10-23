@@ -21,9 +21,9 @@ import org.junit.jupiter.api.Test;
  */
 class BrowseUpdateTest {
 
-    private static final RemoteBranch ORIGIN_FEATURE = new RemoteBranch("origin", new Branch.Name("feature"));
-    private static final Branch RENAMED = new Branch(
-            new Branch.Name("mine"),
+    private static final RemoteBranch ORIGIN_FEATURE = new RemoteBranch("origin", new BranchName("feature"));
+    private static final Branch RENAMED = Fixtures.branch(
+            new BranchName("mine"),
             false,
             new Sha("1"),
             Instant.EPOCH,
@@ -31,16 +31,16 @@ class BrowseUpdateTest {
             false,
             Option.of(new Upstream(new BranchRef.Remote(ORIGIN_FEATURE), 0, 0)));
     private static final Branch WITHOUT_UPSTREAM =
-            new Branch(new Branch.Name("plain"), false, new Sha("2"), Instant.EPOCH, true, false);
-    private static final Branch LOCAL = new Branch(new Branch.Name("local"), false, new Sha("3"));
-    private static final Branch GONE = new Branch(
-            new Branch.Name("gone"),
+            Fixtures.branch(new BranchName("plain"), false, new Sha("2"), Instant.EPOCH, true, false);
+    private static final Branch LOCAL = Fixtures.branch(new BranchName("local"), false, new Sha("3"));
+    private static final Branch GONE = Fixtures.branch(
+            new BranchName("gone"),
             false,
             new Sha("4"),
             Instant.EPOCH,
             false,
             false,
-            new Tracking.Gone(new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("gone")))));
+            new Tracking.Gone(new BranchRef.Remote(new RemoteBranch("origin", new BranchName("gone")))));
 
     private static Model model() {
         return TestModels.localBranchesRead(loaded(), List.of(RENAMED, WITHOUT_UPSTREAM, LOCAL, GONE))
@@ -49,7 +49,7 @@ class BrowseUpdateTest {
 
     @Test
     void aBranchIsOpenedByItsNameOnTheRemote() {
-        Next next = Update.update(model(), new BrowseMsg.Requested(new Branch.Name("mine")));
+        Next next = Update.update(model(), new BrowseMsg.Requested(new BranchName("mine")));
 
         assertEquals(List.of(new BrowseCmd(ORIGIN_FEATURE)), next.cmds());
         assertEquals(Option.none(), next.model().outcome().error());
@@ -58,23 +58,23 @@ class BrowseUpdateTest {
     @Test
     void aBranchWithoutUpstreamThatIsOnOriginIsOpenedThere() {
         assertEquals(
-                List.of(new BrowseCmd(new RemoteBranch("origin", new Branch.Name("plain")))),
-                Update.update(model(), new BrowseMsg.Requested(new Branch.Name("plain")))
+                List.of(new BrowseCmd(new RemoteBranch("origin", new BranchName("plain")))),
+                Update.update(model(), new BrowseMsg.Requested(new BranchName("plain")))
                         .cmds());
     }
 
     @Test
     void aBranchOnNoRemoteIsNotOpened() {
-        Next local = Update.update(model(), new BrowseMsg.Requested(new Branch.Name("local")));
+        Next local = Update.update(model(), new BrowseMsg.Requested(new BranchName("local")));
         assertEquals(List.empty(), local.cmds());
         assertEquals(
-                Option.of(new AppError.NotOnRemote(new Branch.Name("local"))),
+                Option.of(new AppError.NotOnRemote(new BranchName("local"))),
                 local.model().outcome().error());
 
-        Next gone = Update.update(model(), new BrowseMsg.Requested(new Branch.Name("gone")));
+        Next gone = Update.update(model(), new BrowseMsg.Requested(new BranchName("gone")));
         assertEquals(List.empty(), gone.cmds());
         assertEquals(
-                Option.of(new AppError.NotOnRemote(new Branch.Name("gone"))),
+                Option.of(new AppError.NotOnRemote(new BranchName("gone"))),
                 gone.model().outcome().error());
     }
 

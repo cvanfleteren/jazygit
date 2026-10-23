@@ -30,9 +30,9 @@ import org.junit.jupiter.api.Test;
  */
 class BranchesPanelTest {
 
-    private static final Branch MAIN = new Branch(new Branch.Name("main"), true, new Sha("1"));
-    private static final Branch FEATURE = new Branch(new Branch.Name("feature"), false, new Sha("2"));
-    private static final Branch OLD = new Branch(new Branch.Name("old"), false, new Sha("3"));
+    private static final Branch MAIN = Fixtures.branch(new BranchName("main"), true, new Sha("1"));
+    private static final Branch FEATURE = Fixtures.branch(new BranchName("feature"), false, new Sha("2"));
+    private static final Branch OLD = Fixtures.branch(new BranchName("old"), false, new Sha("3"));
 
     private final BranchesPanel panel = new BranchesPanel(msg -> {}, tab -> {});
     private final Model before = with(TestModels.loaded(new SampleData()), List.of(MAIN, FEATURE, OLD));
@@ -42,14 +42,14 @@ class BranchesPanelTest {
                 .mapRepo(repo -> repo.withWorktrees(new Loadable.Loaded<>(List.of(
                         new Worktree(
                                 java.nio.file.Path.of("/repos/app"),
-                                Option.of(new Head.OnBranch(new Branch.Name("main"), Option.of(new Sha("1")))),
+                                Option.of(new Head.OnBranch(new BranchName("main"), Option.of(new Sha("1")))),
                                 true,
                                 true,
                                 Option.none(),
                                 false),
                         new Worktree(
                                 java.nio.file.Path.of("/repos/app-feature"),
-                                Option.of(new Head.OnBranch(new Branch.Name("feature"), Option.of(new Sha("2")))),
+                                Option.of(new Head.OnBranch(new BranchName("feature"), Option.of(new Sha("2")))),
                                 false,
                                 false,
                                 Option.none(),
@@ -60,11 +60,11 @@ class BranchesPanelTest {
         return model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.REMOTE))
                 .mapRepo(repo -> repo.withRemoteBranches(new Loadable.Loaded<>(List.of(
                         new RemoteRef(
-                                new RemoteBranch("origin", new Branch.Name("feature")),
+                                new RemoteBranch("origin", new BranchName("feature")),
                                 new Sha("2"),
                                 java.time.Instant.EPOCH),
                         new RemoteRef(
-                                new RemoteBranch("upstream", new Branch.Name("main")),
+                                new RemoteBranch("upstream", new BranchName("main")),
                                 new Sha("1"),
                                 java.time.Instant.EPOCH)))));
     }
@@ -78,8 +78,8 @@ class BranchesPanelTest {
         Model after = with(
                 before,
                 List.of(
-                        new Branch(new Branch.Name("old"), true, new Sha("3")),
-                        new Branch(new Branch.Name("main"), false, new Sha("1")),
+                        Fixtures.branch(new BranchName("old"), true, new Sha("3")),
+                        Fixtures.branch(new BranchName("main"), false, new Sha("1")),
                         FEATURE));
 
         assertEquals(selecting("old"), highlightedAfterMovingTo(2, after));
@@ -106,8 +106,8 @@ class BranchesPanelTest {
 
     @Test
     void aBranchBeingPushedOrPulledShowsWhatIsDoneLeftOfTheSpinner() throws Exception {
-        Model busy = before.withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), PushCmd.PUSH)
-                .withBusyBranch(new BranchRef.Local(new Branch.Name("main")), PullCmd.PULL);
+        Model busy = before.withBusyBranch(new BranchRef.Local(new BranchName("feature")), PushCmd.PUSH)
+                .withBusyBranch(new BranchRef.Local(new BranchName("main")), PullCmd.PULL);
         String frame = net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(java.time.Instant.EPOCH);
         BranchesPanel panel = new BranchesPanel(
                 msg -> {}, tab -> {}, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
@@ -121,7 +121,7 @@ class BranchesPanelTest {
     @Test
     void aBranchBeingDeletedShowsOnlyTheSpinner() throws Exception {
         Model deleting =
-                before.withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), DeleteBranchCmd.DELETE_BRANCH);
+                before.withBusyBranch(new BranchRef.Local(new BranchName("feature")), DeleteBranchCmd.DELETE_BRANCH);
         String frame = net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(java.time.Instant.EPOCH);
         BranchesPanel panel = new BranchesPanel(
                 msg -> {}, tab -> {}, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
@@ -148,7 +148,7 @@ class BranchesPanelTest {
 
     @Test
     void aRenamedBranchStaysHighlightedUnderItsNewName() throws Exception {
-        Model after = with(before, List.of(MAIN, OLD, new Branch(new Branch.Name("topic"), false, new Sha("2"))));
+        Model after = with(before, List.of(MAIN, OLD, Fixtures.branch(new BranchName("topic"), false, new Sha("2"))));
 
         assertEquals(selecting("topic"), highlightedAfterMovingTo(1, after));
     }
@@ -189,7 +189,7 @@ class BranchesPanelTest {
 
         assertEquals(
                 java.util.List.of(new net.vanfleteren.jazygit.feature.branch.rename.RenameBranchMsg.Requested(
-                        new Branch.Name("feature"))),
+                        new BranchName("feature"))),
                 dispatched);
     }
 
@@ -206,7 +206,7 @@ class BranchesPanelTest {
             SettledPilot.of(testRunner).quit();
         }
 
-        assertEquals(java.util.List.of(new NewBranchMsg.Requested(new Branch.Name("feature"))), dispatched);
+        assertEquals(java.util.List.of(new NewBranchMsg.Requested(new BranchName("feature"))), dispatched);
     }
 
     @Test
@@ -224,7 +224,7 @@ class BranchesPanelTest {
 
         assertEquals(
                 java.util.List.of(
-                        new net.vanfleteren.jazygit.feature.branch.push.PushMsg.Requested(new Branch.Name("feature"))),
+                        new net.vanfleteren.jazygit.feature.branch.push.PushMsg.Requested(new BranchName("feature"))),
                 dispatched);
     }
 
@@ -243,7 +243,7 @@ class BranchesPanelTest {
 
         assertEquals(
                 java.util.List.of(
-                        new net.vanfleteren.jazygit.feature.branch.pull.PullMsg.Requested(new Branch.Name("feature"))),
+                        new net.vanfleteren.jazygit.feature.branch.pull.PullMsg.Requested(new BranchName("feature"))),
                 dispatched);
     }
 
@@ -283,7 +283,7 @@ class BranchesPanelTest {
         }
         assertEquals(
                 Option.of(new SelectionMsg.BranchSelected(
-                        new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("feature"))))),
+                        new BranchRef.Remote(new RemoteBranch("origin", new BranchName("feature"))))),
                 panel.selectionChange(remote));
     }
 
@@ -297,7 +297,7 @@ class BranchesPanelTest {
         }
         assertEquals(
                 Option.of(new SelectionMsg.BranchSelected(
-                        new BranchRef.Remote(new RemoteBranch("upstream", new Branch.Name("main"))))),
+                        new BranchRef.Remote(new RemoteBranch("upstream", new BranchName("main"))))),
                 panel.selectionChange(remote));
     }
 
@@ -312,7 +312,7 @@ class BranchesPanelTest {
         Model two = withWorktrees(before);
         Worktree added = new Worktree(
                 java.nio.file.Path.of("/repos/app-other"),
-                Option.of(new Head.OnBranch(new Branch.Name("other"), Option.of(new Sha("3")))),
+                Option.of(new Head.OnBranch(new BranchName("other"), Option.of(new Sha("3")))),
                 false,
                 false,
                 Option.none(),
@@ -357,7 +357,7 @@ class BranchesPanelTest {
                         new BranchesTabMsg.Switched(1)),
                 dispatched);
         assertEquals(
-                Option.of(new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name("feature")))),
+                Option.of(new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName("feature")))),
                 panel.selectionChange(worktrees));
     }
 
@@ -374,7 +374,7 @@ class BranchesPanelTest {
             SettledPilot.of(testRunner).quit();
         }
 
-        assertEquals(java.util.List.of(new AddWorktreeMsg.Requested(new Branch.Name("feature"))), dispatched);
+        assertEquals(java.util.List.of(new AddWorktreeMsg.Requested(new BranchName("feature"))), dispatched);
     }
 
     @Test
@@ -407,7 +407,7 @@ class BranchesPanelTest {
             SettledPilot.of(testRunner).quit();
         }
 
-        RemoteBranch upstreamMain = new RemoteBranch("upstream", new Branch.Name("main"));
+        RemoteBranch upstreamMain = new RemoteBranch("upstream", new BranchName("main"));
         // P pushes a local branch; it does nothing here.
         assertEquals(
                 java.util.List.of(
@@ -485,12 +485,12 @@ class BranchesPanelTest {
 
     @Test
     void aDivergenceListsTheCommitsOfEitherBranchUnderItsNameAndTheHighlightSkipsTheNames() throws Exception {
-        Commit behind = new Commit(new Sha("b1"), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, "Theirs", "");
-        Commit newer = new Commit(new Sha("a2"), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, "Ours two", "");
-        Commit older = new Commit(new Sha("a1"), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, "Ours one", "");
-        RemoteBranch upstream = new RemoteBranch("origin", new Branch.Name("feature"));
+        Commit behind = Fixtures.commit(new Sha("b1"), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, "Theirs", "");
+        Commit newer = Fixtures.commit(new Sha("a2"), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, "Ours two", "");
+        Commit older = Fixtures.commit(new Sha("a1"), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, "Ours one", "");
+        RemoteBranch upstream = new RemoteBranch("origin", new BranchName("feature"));
         Model diverged = before.mapRepoView(repoView -> repoView.withDivergence(Option.of(new DivergenceView(
-                new Branch.Name("feature"),
+                new BranchName("feature"),
                 new BranchRef.Remote(upstream),
                 DivergenceView.Against.UPSTREAM,
                 new Loadable.Loaded<>(new Divergence(
@@ -557,18 +557,18 @@ class BranchesPanelTest {
 
         assertEquals(
                 java.util.List.of(
-                        new BranchCommitsMsg.Opened(new BranchRef.Local(new Branch.Name("main"))),
+                        new BranchCommitsMsg.Opened(new BranchRef.Local(new BranchName("main"))),
                         new BranchCommitsMsg.Opened(
-                                new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("feature"))))),
+                                new BranchRef.Remote(new RemoteBranch("origin", new BranchName("feature"))))),
                 dispatched);
     }
 
     @Test
     void theCommitsOfABranchAreListedInPlaceOfTheBranchesUnderItsNameAndHowManyAreAhead() throws Exception {
-        Commit newer = new Commit(new Sha("a2"), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, "Ours", "");
-        Commit older = new Commit(new Sha("a1"), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, "Shared", "");
-        BranchRef feature = new BranchRef.Local(new Branch.Name("feature"));
-        BranchRef base = new BranchRef.Local(new Branch.Name("main"));
+        Commit newer = Fixtures.commit(new Sha("a2"), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, "Ours", "");
+        Commit older = Fixtures.commit(new Sha("a1"), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, "Shared", "");
+        BranchRef feature = new BranchRef.Local(new BranchName("feature"));
+        BranchRef base = new BranchRef.Local(new BranchName("main"));
         Model open = before.mapRepoView(repoView -> repoView.withBranchCommits(Option.of(BranchCommitsView.of(feature)))
                 .withBranchLog(Option.of(new Preview<>(feature, new Loadable.Loaded<>(List.of(newer, older)))))
                 .withBranchAhead(Option.of(new Preview<>(
@@ -627,15 +627,15 @@ class BranchesPanelTest {
     }
 
     private static Commit commit(String sha, String message) {
-        return new Commit(new Sha(sha), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, message, "");
+        return Fixtures.commit(new Sha(sha), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, message, "");
     }
 
     @Test
     void theCommitsOfABranchOpenedAgainStartAtItsNewestEvenWhenTheOneBeforeHadTheHighlightedCommitToo()
             throws Exception {
         Commit shared = commit("a1", "Shared");
-        BranchRef feature = new BranchRef.Local(new Branch.Name("feature"));
-        BranchRef old = new BranchRef.Local(new Branch.Name("old"));
+        BranchRef feature = new BranchRef.Local(new BranchName("feature"));
+        BranchRef old = new BranchRef.Local(new BranchName("old"));
         java.util.concurrent.atomic.AtomicReference<Model> shown = new java.util.concurrent.atomic.AtomicReference<>(
                 listing(feature, feature, List.of(commit("a2", "Ours"), shared)));
         Option<Msg> highlighted;
@@ -660,8 +660,8 @@ class BranchesPanelTest {
 
     @Test
     void theCommitsOfABranchWhoseLogIsStillReadShowThatAndThenStartAtItsNewest() throws Exception {
-        BranchRef feature = new BranchRef.Local(new Branch.Name("feature"));
-        BranchRef main = new BranchRef.Local(new Branch.Name("main"));
+        BranchRef feature = new BranchRef.Local(new BranchName("feature"));
+        BranchRef main = new BranchRef.Local(new BranchName("main"));
         java.util.concurrent.atomic.AtomicReference<Model> shown = new java.util.concurrent.atomic.AtomicReference<>(
                 listing(feature, main, List.of(commit("c1", "On main"))));
         String loading;
@@ -688,8 +688,8 @@ class BranchesPanelTest {
     void withOnlyTheCommitsAheadTheCommitsOfABranchEndAtTheForkPointWhichCanBeHighlighted() throws Exception {
         Commit ours = commit("a3", "Ours");
         Commit fork = commit("a2", "Fork");
-        BranchRef feature = new BranchRef.Local(new Branch.Name("feature"));
-        BranchRef base = new BranchRef.Local(new Branch.Name("main"));
+        BranchRef feature = new BranchRef.Local(new BranchName("feature"));
+        BranchRef base = new BranchRef.Local(new BranchName("main"));
         Model open = listing(feature, feature, List.of(ours, fork, commit("a1", "Older")))
                 .mapRepoView(repoView -> repoView.withOnlyAhead(true)
                         .withBranchAhead(Option.of(new Preview<>(
@@ -717,7 +717,7 @@ class BranchesPanelTest {
      * What the panel sends when the local branch {@code name} gets highlighted.
      */
     private static Option<Msg> selecting(String name) {
-        return Option.of(new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name(name))));
+        return Option.of(new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName(name))));
     }
 
     private Option<Msg> highlightedAfterMovingTo(int index, Model after) throws Exception {

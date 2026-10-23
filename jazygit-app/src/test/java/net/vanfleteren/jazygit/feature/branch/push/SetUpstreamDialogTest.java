@@ -10,7 +10,7 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.control.Option;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -27,7 +27,7 @@ class SetUpstreamDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     // In the test models, feature has no upstream.
-    private Model open = Update.update(TestModels.loaded(), new PushMsg.Requested(new Branch.Name("feature")))
+    private Model open = Update.update(TestModels.loaded(), new PushMsg.Requested(new BranchName("feature")))
             .model();
     // As in the app, an edit changes the model the popup shows; the other messages are only kept.
     private final net.vanfleteren.jazygit.ui.widgets.TextInputDialog<SetUpstreamPopup> dialog =

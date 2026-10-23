@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.worktree.remove;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.Popup;
 
 /**
@@ -10,4 +10,4 @@ import net.vanfleteren.jazygit.state.Popup;
  * @param name   the name of its directory
  * @param branch the branch it has checked out, if any
  */
-public record RemoveWorktreePopup(String location, String name, Option<Branch.Name> branch) implements Popup {}
+public record RemoveWorktreePopup(String location, String name, Option<BranchName> branch) implements Popup {}

@@ -8,7 +8,7 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.CommandFailed;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -24,19 +24,19 @@ final class CliConfig {
     /**
      * The branch {@code branch} was made from, as {@code gh} records it to take as the base of its pull request.
      */
-    static Either<ProcessError, Option<Branch.Name>> parent(Path worktree, Branch.Name branch) {
-        return get(worktree, parentKey(branch)).map(value -> value.flatMap(Branch.Name::parse));
+    static Either<ProcessError, Option<BranchName>> parent(Path worktree, BranchName branch) {
+        return get(worktree, parentKey(branch)).map(value -> value.flatMap(BranchName::parse));
     }
 
     /**
      * Records {@code parent} as the branch {@code branch} was made from, where {@code gh} looks for it.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> setParent(
-            Path worktree, Branch.Name branch, Branch.Name parent) {
+            Path worktree, BranchName branch, BranchName parent) {
         return set(worktree, parentKey(branch), Option.of(parent.value()));
     }
 
-    private static String parentKey(Branch.Name branch) {
+    private static String parentKey(BranchName branch) {
         return "branch." + branch.value() + ".gh-merge-base";
     }
 

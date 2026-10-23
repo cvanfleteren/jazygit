@@ -20,7 +20,7 @@ public record Worktree(
     /**
      * The branch it has checked out; none when its HEAD is detached or cannot be resolved.
      */
-    public Option<Branch.Name> branch() {
+    public Option<BranchName> branch() {
         return head.flatMap(Head::branchName);
     }
 
@@ -50,7 +50,7 @@ public record Worktree(
      * Where a new worktree for {@code branch} goes by default: next to this one, named after it and the branch,
      * e.g. {@code /repos/app-feature-login} for {@code feature/login} next to {@code /repos/app}.
      */
-    public String siblingFor(Branch.Name branch) {
+    public String siblingFor(BranchName branch) {
         return path.resolveSibling(name() + "-" + directoryFor(branch)).toString();
     }
 
@@ -59,11 +59,11 @@ public record Worktree(
      * next to a bare repository: named after the branch, e.g. {@code /repos/proj/feature-login} for
      * {@code feature/login} next to {@code /repos/proj/main}.
      */
-    public String nextTo(Branch.Name branch) {
+    public String nextTo(BranchName branch) {
         return path.resolveSibling(directoryFor(branch)).toString();
     }
 
-    private static String directoryFor(Branch.Name branch) {
+    private static String directoryFor(BranchName branch) {
         return branch.value().replace('/', '-');
     }
 }

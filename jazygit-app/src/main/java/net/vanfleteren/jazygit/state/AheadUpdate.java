@@ -5,6 +5,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Ahead;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -195,7 +196,7 @@ public final class AheadUpdate {
         return ahead.exists(read -> !LoadUpdate.tipOf(before, read.base()).equals(LoadUpdate.tipOf(next, read.base())));
     }
 
-    private static Option<Branch.Name> main(Model model) {
+    private static Option<BranchName> main(Model model) {
         return model.repo()
                 .branches()
                 .toOption()
@@ -203,9 +204,9 @@ public final class AheadUpdate {
                 .map(Branch::name);
     }
 
-    private static Branch.Name name(BranchRef branch) {
+    private static BranchName name(BranchRef branch) {
         return switch (branch) {
-            case BranchRef.Local(Branch.Name name) -> name;
+            case BranchRef.Local(BranchName name) -> name;
             case BranchRef.Remote(var remote) -> remote.branch();
         };
     }

@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.worktree.add;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.TextPopup;
 
@@ -25,7 +25,7 @@ public record NewWorktreeBranchPopup(String label, String name, NewBranch from, 
     /**
      * Asking for the name of a new branch made from the local branch {@code base}, recorded as its parent.
      */
-    static NewWorktreeBranchPopup fromLocal(Branch.Name base, Option<WorktreeSource> ifBlank) {
+    static NewWorktreeBranchPopup fromLocal(BranchName base, Option<WorktreeSource> ifBlank) {
         return new NewWorktreeBranchPopup(
                 base.value(), "", new NewBranch(base.value(), Option.of(base), false), ifBlank);
     }

@@ -110,16 +110,16 @@ class BranchSegsTest {
     void aBranchWhoseUpstreamIsGoneSaysSo() {
         assertEquals(
                 List.of(LoadableList.Seg.styled(" gone", Theme.Classes.GONE)),
-                BranchSegs.sync(new Branch(
-                        new Branch.Name("b"),
+                BranchSegs.sync(Fixtures.branch(
+                        new BranchName("b"),
                         false,
                         new Sha("1"),
                         java.time.Instant.EPOCH,
                         false,
                         false,
-                        new Tracking.Gone(new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("b")))))));
+                        new Tracking.Gone(new BranchRef.Remote(new RemoteBranch("origin", new BranchName("b")))))));
         // A branch that was never pushed shows nothing.
-        assertEquals(List.of(), BranchSegs.sync(new Branch(new Branch.Name("b"), false, new Sha("1"))));
+        assertEquals(List.of(), BranchSegs.sync(Fixtures.branch(new BranchName("b"), false, new Sha("1"))));
     }
 
     @Test
@@ -127,7 +127,7 @@ class BranchSegsTest {
         assertEquals(
                 List.of(LoadableList.Seg.styled(" (worktree)", Theme.Classes.DIM)),
                 BranchSegs.worktree(new Branch(
-                        new Branch.Name("b"),
+                        new BranchName("b"),
                         false,
                         new Sha("1"),
                         java.time.Instant.EPOCH,
@@ -135,7 +135,7 @@ class BranchSegsTest {
                         false,
                         new Tracking.None(),
                         Option.of(java.nio.file.Path.of("/repos/linked")))));
-        assertEquals(List.of(), BranchSegs.worktree(new Branch(new Branch.Name("b"), false, new Sha("1"))));
+        assertEquals(List.of(), BranchSegs.worktree(Fixtures.branch(new BranchName("b"), false, new Sha("1"))));
     }
 
     @Test
@@ -143,50 +143,50 @@ class BranchSegsTest {
         java.time.Instant t = java.time.Instant.EPOCH;
         assertEquals(
                 List.of(),
-                BranchSegs.sync(new Branch(
-                        new Branch.Name("b"),
+                BranchSegs.sync(Fixtures.branch(
+                        new BranchName("b"),
                         false,
                         new Sha("1"),
                         t,
                         true,
                         false,
                         Option.of(new Upstream(
-                                new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("b"))), 0, 0)))));
+                                new BranchRef.Remote(new RemoteBranch("origin", new BranchName("b"))), 0, 0)))));
         assertEquals(
                 List.of(LoadableList.Seg.styled(" ↑2", Theme.Classes.AHEAD)),
-                BranchSegs.sync(new Branch(
-                        new Branch.Name("b"),
+                BranchSegs.sync(Fixtures.branch(
+                        new BranchName("b"),
                         false,
                         new Sha("1"),
                         t,
                         true,
                         false,
                         Option.of(new Upstream(
-                                new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("b"))), 2, 0)))));
+                                new BranchRef.Remote(new RemoteBranch("origin", new BranchName("b"))), 2, 0)))));
         assertEquals(
                 List.of(LoadableList.Seg.styled(" ↓1", Theme.Classes.BEHIND)),
-                BranchSegs.sync(new Branch(
-                        new Branch.Name("b"),
+                BranchSegs.sync(Fixtures.branch(
+                        new BranchName("b"),
                         false,
                         new Sha("1"),
                         t,
                         true,
                         false,
                         Option.of(new Upstream(
-                                new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("b"))), 0, 1)))));
+                                new BranchRef.Remote(new RemoteBranch("origin", new BranchName("b"))), 0, 1)))));
         assertEquals(
                 List.of(
                         LoadableList.Seg.styled(" ↑2", Theme.Classes.AHEAD),
                         LoadableList.Seg.styled(" ↓1", Theme.Classes.BEHIND)),
-                BranchSegs.sync(new Branch(
-                        new Branch.Name("b"),
+                BranchSegs.sync(Fixtures.branch(
+                        new BranchName("b"),
                         false,
                         new Sha("1"),
                         t,
                         true,
                         false,
                         Option.of(new Upstream(
-                                new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("b"))), 2, 1)))));
+                                new BranchRef.Remote(new RemoteBranch("origin", new BranchName("b"))), 2, 1)))));
     }
 
     @Test

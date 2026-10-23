@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.feature.branch.movecommits;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.CommitRange;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -27,17 +27,17 @@ public sealed interface MoveMsg extends Msg {
     /**
      * The commits of {@code from} from {@code oldest} up to its tip were read.
      */
-    record RangeRead(Branch.Name from, Sha oldest, CommitRange range) implements MoveMsg {}
+    record RangeRead(BranchName from, Sha oldest, CommitRange range) implements MoveMsg {}
 
     /**
      * Reading the commits of {@code from} that would move failed.
      */
-    record RangeFailed(Branch.Name from, Failure failure) implements MoveMsg {}
+    record RangeFailed(BranchName from, Failure failure) implements MoveMsg {}
 
     /**
      * The user chose where the commits move to: the existing {@code branch}, or else a new branch.
      */
-    record TargetChosen(Option<Branch.Name> branch) implements MoveMsg {}
+    record TargetChosen(Option<BranchName> branch) implements MoveMsg {}
 
     record TargetCancelled() implements MoveMsg {}
 

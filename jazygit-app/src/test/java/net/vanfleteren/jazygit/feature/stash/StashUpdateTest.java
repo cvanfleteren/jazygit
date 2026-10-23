@@ -8,7 +8,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.stash.StashCmd.Stash;
 import net.vanfleteren.jazygit.git.model.ChangeType;
-import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -33,7 +33,7 @@ class StashUpdateTest {
         return Update.update(
                         model,
                         new LoadMsg.StatusLoaded(
-                                new RepoStatus(head, List.of(new FileEntry("a.txt", ChangeType.MODIFIED)))))
+                                new RepoStatus(head, List.of(Fixtures.fileEntry("a.txt", ChangeType.MODIFIED)))))
                 .model();
     }
 

@@ -12,7 +12,6 @@ import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import org.junit.jupiter.api.Test;
@@ -87,7 +86,7 @@ class FilesPanelTest {
     void changesOnlyInTheWorkingTreeShowInTheUnstagedColumn() throws Exception {
         // The rename only in the working tree follows intent-to-add of the new path.
         Model model = TestModels.loaded(new FixedProvider(List.of(
-                new FileEntry("gone.txt", ChangeType.DELETED), FileEntry.renamed("b.txt", "a.txt", false, true))));
+                Fixtures.fileEntry("gone.txt", ChangeType.DELETED), FileEntry.renamed("b.txt", "a.txt", false, true))));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.ID))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(model, FilesPanel.ID));
@@ -111,8 +110,9 @@ class FilesPanelTest {
 
     @Test
     void rendersLoadingThenStatusChanges() throws Exception {
-        Model untracked = TestModels.loaded(new FixedProvider(List.of(new FileEntry("a.txt", ChangeType.UNTRACKED))));
-        Model added = TestModels.loaded(new FixedProvider(List.of(new FileEntry("a.txt", ChangeType.ADDED))));
+        Model untracked =
+                TestModels.loaded(new FixedProvider(List.of(Fixtures.fileEntry("a.txt", ChangeType.UNTRACKED))));
+        Model added = TestModels.loaded(new FixedProvider(List.of(Fixtures.fileEntry("a.txt", ChangeType.ADDED))));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(untracked, FilesPanel.ID))) {
             String loading = RenderedText.of(testRunner, () -> panel.render(TestModels.loading("repo"), FilesPanel.ID));
@@ -146,10 +146,11 @@ class FilesPanelTest {
 
     @Test
     void rendersMergedDirectoriesAndKeepsSelectionWhenStatusChanges() throws Exception {
-        FileEntry a = new FileEntry("net/vanfleteren/A.java", ChangeType.MODIFIED);
-        FileEntry b = new FileEntry("net/vanfleteren/B.java", ChangeType.UNTRACKED);
+        FileEntry a = Fixtures.fileEntry("net/vanfleteren/A.java", ChangeType.MODIFIED);
+        FileEntry b = Fixtures.fileEntry("net/vanfleteren/B.java", ChangeType.UNTRACKED);
         Model before = TestModels.loaded(new FixedProvider(List.of(a, b)));
-        Model after = TestModels.loaded(new FixedProvider(List.of(new FileEntry("aaa.txt", ChangeType.ADDED), a, b)));
+        Model after =
+                TestModels.loaded(new FixedProvider(List.of(Fixtures.fileEntry("aaa.txt", ChangeType.ADDED), a, b)));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, FilesPanel.ID))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(before, FilesPanel.ID));
@@ -209,8 +210,9 @@ class FilesPanelTest {
      * {@code row} was, among the changed {@code names}.
      */
     private String selectedAfter(int row, List<String> names, List<String> remaining) throws Exception {
-        Model before = TestModels.loaded(new FixedProvider(names.map(n -> new FileEntry(n, ChangeType.MODIFIED))));
-        Model after = TestModels.loaded(new FixedProvider(remaining.map(n -> new FileEntry(n, ChangeType.MODIFIED))));
+        Model before = TestModels.loaded(new FixedProvider(names.map(n -> Fixtures.fileEntry(n, ChangeType.MODIFIED))));
+        Model after =
+                TestModels.loaded(new FixedProvider(remaining.map(n -> Fixtures.fileEntry(n, ChangeType.MODIFIED))));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, FilesPanel.ID))) {
             RenderedText.of(testRunner, () -> panel.render(before, FilesPanel.ID));
@@ -225,8 +227,8 @@ class FilesPanelTest {
 
     @Test
     void clickingANodeHighlightsIt() throws Exception {
-        Model model = TestModels.loaded(new FixedProvider(
-                List.of(new FileEntry("a.txt", ChangeType.MODIFIED), new FileEntry("b.txt", ChangeType.MODIFIED))));
+        Model model = TestModels.loaded(new FixedProvider(List.of(
+                Fixtures.fileEntry("a.txt", ChangeType.MODIFIED), Fixtures.fileEntry("b.txt", ChangeType.MODIFIED))));
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.ID), new Size(40, 8))) {
@@ -243,7 +245,7 @@ class FilesPanelTest {
     @Test
     void clickingANodeOfAScrolledTreeHighlightsTheNodeShownThere() throws Exception {
         Model model = TestModels.loaded(new FixedProvider(
-                List.range(0, 20).map(i -> new FileEntry("f%02d.txt".formatted(i), ChangeType.MODIFIED))));
+                List.range(0, 20).map(i -> Fixtures.fileEntry("f%02d.txt".formatted(i), ChangeType.MODIFIED))));
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.ID), new Size(40, 8))) {
@@ -263,7 +265,7 @@ class FilesPanelTest {
 
         @Override
         public Either<ProcessError, RepoStatus> status() {
-            return Either.right(new RepoStatus(Head.onBranch(new Branch.Name("main"), new Sha("aaaa")), files));
+            return Either.right(new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("aaaa")), files));
         }
     }
 }

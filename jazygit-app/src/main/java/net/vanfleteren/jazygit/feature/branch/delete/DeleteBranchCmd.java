@@ -25,7 +25,7 @@ public sealed interface DeleteBranchCmd extends BranchCmd {
     /**
      * Deletes {@code branch} where {@code scope} says; on its remote, that is {@code remote}.
      */
-    record DeleteBranch(Branch.Name branch, RemoteBranch remote, DeleteScope scope)
+    record DeleteBranch(BranchName branch, RemoteBranch remote, DeleteScope scope)
             implements DeleteBranchCmd, BranchCmd.KeepsBranchBusy {
 
         @Override
@@ -45,7 +45,7 @@ public sealed interface DeleteBranchCmd extends BranchCmd {
     record DeleteRemoteBranch(RemoteBranch remote) implements DeleteBranchCmd {
 
         @Override
-        public Branch.Name branch() {
+        public BranchName branch() {
             return remote.branch();
         }
 

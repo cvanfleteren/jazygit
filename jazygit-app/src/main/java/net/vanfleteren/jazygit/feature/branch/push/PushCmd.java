@@ -35,7 +35,7 @@ public sealed interface PushCmd extends BranchCmd.KeepsBranchBusy {
     /**
      * Pushes {@code branch} to {@code upstream}, which it then tracks.
      */
-    record PushSettingUpstream(Branch.Name branch, RemoteBranch upstream) implements PushCmd {
+    record PushSettingUpstream(BranchName branch, RemoteBranch upstream) implements PushCmd {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
@@ -46,7 +46,7 @@ public sealed interface PushCmd extends BranchCmd.KeepsBranchBusy {
     /**
      * Pushes {@code branch} to {@code upstream}, the branch it tracks.
      */
-    record Push(Branch.Name branch, RemoteBranch upstream, PushMode mode) implements PushCmd {
+    record Push(BranchName branch, RemoteBranch upstream, PushMode mode) implements PushCmd {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {

@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch.rename;
 
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.TextPopup;
 
 /**
@@ -8,9 +8,9 @@ import net.vanfleteren.jazygit.state.TextPopup;
  *
  * @param name the new name as far as it was typed; it starts out as the name the branch has
  */
-public record RenameBranchPopup(Branch.Name branch, String name) implements TextPopup {
+public record RenameBranchPopup(BranchName branch, String name) implements TextPopup {
 
-    public RenameBranchPopup(Branch.Name branch) {
+    public RenameBranchPopup(BranchName branch) {
         this(branch, branch.value());
     }
 

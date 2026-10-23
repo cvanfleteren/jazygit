@@ -5,7 +5,7 @@ import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg.*;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.git.model.Worktree;
@@ -22,8 +22,8 @@ public final class AddWorktreeUpdate {
 
     public static Next update(Model model, AddWorktreeMsg msg) {
         return switch (msg) {
-            case Requested(Branch.Name branch) -> requested(model, branch);
-            case NewBranchRequested(Branch.Name base) ->
+            case Requested(BranchName branch) -> requested(model, branch);
+            case NewBranchRequested(BranchName base) ->
                 Update.ask(
                         model,
                         model.idleBranch(base).map(known -> NewWorktreeBranchPopup.fromLocal(base, Option.none())));
@@ -88,7 +88,7 @@ public final class AddWorktreeUpdate {
      * {@link #location}. The branch checked out here git keeps from being checked out twice, so a new branch made
      * from it is asked for instead; one that another worktree has checked out git would refuse too, which is said.
      */
-    private static Next requested(Model model, Branch.Name branch) {
+    private static Next requested(Model model, BranchName branch) {
         return model.idleBranch(branch)
                 .map(known -> known.current()
                         ? update(model, new NewBranchRequested(branch))
@@ -112,7 +112,7 @@ public final class AddWorktreeUpdate {
                 .map(start -> Update.ask(
                         model.withoutPopup(NewWorktreeStartPopup.class),
                         switch (resolve(model, start)) {
-                            case Start.Local(Branch.Name branch) ->
+                            case Start.Local(BranchName branch) ->
                                 NewWorktreeBranchPopup.fromLocal(
                                         branch,
                                         Option.of(model.idleBranch(branch)
@@ -132,7 +132,7 @@ public final class AddWorktreeUpdate {
      */
     private static Start resolve(Model model, String start) {
         return model.repo()
-                .branch(new Branch.Name(start))
+                .branch(new BranchName(start))
                 .<Start>map(local -> new Start.Local(local.name()))
                 .orElse(() -> model.repo()
                         .remoteBranches()
@@ -151,7 +151,7 @@ public final class AddWorktreeUpdate {
         return model.popup(NewWorktreeBranchPopup.class)
                 .flatMap(popup -> popup.name().isBlank()
                         ? popup.ifBlank()
-                        : Branch.Name.parse(popup.name().strip())
+                        : BranchName.parse(popup.name().strip())
                                 .map(name -> new WorktreeSource.Created(name, popup.from())))
                 .map(source -> ask(model.withoutPopup(NewWorktreeBranchPopup.class), source))
                 .getOrElse(() -> Next.of(model));
@@ -162,7 +162,7 @@ public final class AddWorktreeUpdate {
      * {@code name}; without one, as next to a bare repository, next to the one shown, named after {@code name}. A
      * location a worktree has already gets a number appended. Empty while the worktrees are not read.
      */
-    static String location(Model model, Branch.Name name) {
+    static String location(Model model, BranchName name) {
         List<String> taken =
                 model.repo().worktrees().toOption().getOrElse(List.empty()).map(Worktree::location);
         return model.repo()
@@ -181,7 +181,7 @@ public final class AddWorktreeUpdate {
      */
     private sealed interface Start {
 
-        record Local(Branch.Name branch) implements Start {}
+        record Local(BranchName branch) implements Start {}
 
         record Remote(RemoteBranch branch) implements Start {}
 

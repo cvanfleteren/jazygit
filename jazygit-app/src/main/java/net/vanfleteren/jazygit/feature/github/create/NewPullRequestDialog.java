@@ -15,7 +15,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
@@ -277,13 +277,13 @@ public final class NewPullRequestDialog implements PopupView {
      *
      * @param shown the bases that contain the filter
      */
-    private record Bases(NewPullRequestPopup popup, ListCursor cursor, List<Branch.Name> shown) {
+    private record Bases(NewPullRequestPopup popup, ListCursor cursor, List<BranchName> shown) {
 
         static Bases of(NewPullRequestPopup popup, ListCursor cursor) {
             return new Bases(popup, cursor, shown(popup, cursor.filter()));
         }
 
-        static List<Branch.Name> shown(NewPullRequestPopup popup, Option<String> filter) {
+        static List<BranchName> shown(NewPullRequestPopup popup, Option<String> filter) {
             return popup.bases().filter(base -> ListFilter.matches(filter, base.value()));
         }
 
@@ -307,7 +307,7 @@ public final class NewPullRequestDialog implements PopupView {
          * none shows, the base stays too.
          */
         CreatePullRequestMsg.BaseMoved filtered(Option<String> filter) {
-            List<Branch.Name> after = shown(popup, filter);
+            List<BranchName> after = shown(popup, filter);
             int line = Math.max(0, after.indexOf(popup.base()));
             return new CreatePullRequestMsg.BaseMoved(
                     new ListCursor(Option.of(line), filter),

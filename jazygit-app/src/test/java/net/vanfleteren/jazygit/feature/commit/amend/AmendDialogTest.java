@@ -13,7 +13,6 @@ import io.vavr.control.Option;
 import java.util.ArrayList;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
@@ -42,8 +41,8 @@ class AmendDialogTest {
         return Update.update(
                         loaded,
                         new LoadMsg.StatusLoaded(new RepoStatus(
-                                Head.onBranch(new Branch.Name("main"), head.sha()),
-                                List.of(new FileEntry("a.txt", ChangeType.MODIFIED)))))
+                                Head.onBranch(new BranchName("main"), head.sha()),
+                                List.of(Fixtures.fileEntry("a.txt", ChangeType.MODIFIED)))))
                 .model();
     }
 

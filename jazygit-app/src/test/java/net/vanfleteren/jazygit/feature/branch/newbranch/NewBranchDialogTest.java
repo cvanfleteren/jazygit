@@ -13,7 +13,7 @@ import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
 import io.vavr.control.Option;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -30,7 +30,7 @@ class NewBranchDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private Model open = Update.update(
-                    TestModels.loaded(new SampleData()), new NewBranchMsg.Requested(new Branch.Name("main")))
+                    TestModels.loaded(new SampleData()), new NewBranchMsg.Requested(new BranchName("main")))
             .model();
     // As in the app, an edit changes the model the popup shows; the other messages are only kept.
     private final net.vanfleteren.jazygit.ui.widgets.TextInputDialog<NewBranchPopup> dialog =

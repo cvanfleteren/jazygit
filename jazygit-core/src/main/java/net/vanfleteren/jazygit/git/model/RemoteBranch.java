@@ -5,7 +5,7 @@ import io.vavr.control.Option;
 /**
  * A branch on a remote, e.g. {@code feature} on {@code origin}.
  */
-public record RemoteBranch(String remote, Branch.Name branch) {
+public record RemoteBranch(String remote, BranchName branch) {
 
     /**
      * The remote a branch without an upstream is pushed to.
@@ -18,7 +18,7 @@ public record RemoteBranch(String remote, Branch.Name branch) {
      */
     public static Option<RemoteBranch> parse(String text) {
         String[] words = text.strip().split("\\s+");
-        return words.length == 2 ? Option.of(new RemoteBranch(words[0], new Branch.Name(words[1]))) : Option.none();
+        return words.length == 2 ? Option.of(new RemoteBranch(words[0], new BranchName(words[1]))) : Option.none();
     }
 
     /**

@@ -113,7 +113,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktree(Path location, Branch.Name branch) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktree(Path location, BranchName branch) {
         return CliWorktree.add(worktree, location, branch);
     }
 
@@ -130,7 +130,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktreeWithNewBranch(
-            Path location, Branch.Name name, String startPoint, Option<Branch.Name> parent, boolean track) {
+            Path location, BranchName name, String startPoint, Option<BranchName> parent, boolean track) {
         return CliWorktree.addNewBranch(worktree, location, name, startPoint, parent, track);
     }
 
@@ -231,41 +231,41 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitError, CommitRange> commitRange(Branch.Name branch, Sha oldest, Option<RemoteBranch> upstream) {
+    public Either<GitError, CommitRange> commitRange(BranchName branch, Sha oldest, Option<RemoteBranch> upstream) {
         return CliLog.range(worktree, branch, oldest, upstream);
     }
 
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> checkout(Branch.Name branch) {
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> checkout(BranchName branch) {
         return CliCheckout.checkout(worktree, branch);
     }
 
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> checkoutWithStash(Branch.Name branch) {
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> checkoutWithStash(BranchName branch) {
         return CliCheckout.checkoutWithStash(worktree, branch);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(
-            Branch.Name name, String startPoint, Option<Branch.Name> parent) {
+            BranchName name, String startPoint, Option<BranchName> parent) {
         return CliCheckout.checkoutNewBranch(worktree, name, startPoint, parent);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewTrackingBranch(
-            Branch.Name name, RemoteBranch upstream) {
+            BranchName name, RemoteBranch upstream) {
         return CliCheckout.checkoutNewTrackingBranch(worktree, name, upstream);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(
-            Branch.Name branch, RemoteBranch upstream, PushMode mode) {
+            BranchName branch, RemoteBranch upstream, PushMode mode) {
         return CliPush.push(worktree, branch, upstream, mode, credentials.get());
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(
-            Branch.Name branch, RemoteBranch upstream) {
+            BranchName branch, RemoteBranch upstream) {
         return CliPush.pushSettingUpstream(worktree, branch, upstream, credentials.get());
     }
 
@@ -275,12 +275,12 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(Branch.Name branch, BranchRef upstream) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(BranchName branch, BranchRef upstream) {
         return CliFetch.fastForward(worktree, branch, upstream, credentials.get());
     }
 
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> merge(Branch.Name branch, MergeMode mode) {
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> merge(BranchName branch, MergeMode mode) {
         return CliMerge.merge(worktree, branch, mode);
     }
 
@@ -321,7 +321,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<ProcessError, Option<Branch.Name>> parentBranch(Branch.Name branch) {
+    public Either<ProcessError, Option<BranchName>> parentBranch(BranchName branch) {
         return CliConfig.parent(worktree, branch);
     }
 
@@ -331,23 +331,23 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(Branch.Name onto) {
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(BranchName onto) {
         return CliRebase.onto(worktree, onto);
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(
-            Branch.Name name, RemoteBranch remote, DeleteScope scope) {
+            BranchName name, RemoteBranch remote, DeleteScope scope) {
         return CliBranch.delete(worktree, name, remote, scope, credentials.get());
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(Branch.Name name) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name) {
         return CliBranch.deleteLocal(worktree, name);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> renameBranch(Branch.Name name, Branch.Name newName) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> renameBranch(BranchName name, BranchName newName) {
         return CliBranch.rename(worktree, name, newName);
     }
 
@@ -403,13 +403,13 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommits(
-            Branch.Name from, Sha oldest, Branch.Name to, Option<BranchRef> onto) {
+            BranchName from, Sha oldest, BranchName to, Option<BranchRef> onto) {
         return CliMoveCommits.move(worktree, from, oldest, to, onto);
     }
 
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommitsTo(
-            Branch.Name from, Sha oldest, Branch.Name to) {
+            BranchName from, Sha oldest, BranchName to) {
         return CliMoveCommits.moveTo(worktree, from, oldest, to);
     }
 

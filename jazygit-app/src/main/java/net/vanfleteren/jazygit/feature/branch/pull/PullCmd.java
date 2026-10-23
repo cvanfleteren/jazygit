@@ -30,7 +30,7 @@ public sealed interface PullCmd extends BranchCmd.KeepsBranchBusy {
     /**
      * Pulls {@code branch}, the checked out branch, from its upstream.
      */
-    record Pull(Branch.Name branch) implements PullCmd {
+    record Pull(BranchName branch) implements PullCmd {
 
         @Override
         public Operation operation() {
@@ -46,7 +46,7 @@ public sealed interface PullCmd extends BranchCmd.KeepsBranchBusy {
     /**
      * Fast-forwards {@code branch}, which is not checked out, to {@code upstream}, the branch it tracks.
      */
-    record FastForward(Branch.Name branch, BranchRef upstream) implements PullCmd {
+    record FastForward(BranchName branch, BranchRef upstream) implements PullCmd {
 
         @Override
         public Operation operation() {

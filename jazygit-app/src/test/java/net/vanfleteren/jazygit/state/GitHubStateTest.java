@@ -12,12 +12,12 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import org.junit.jupiter.api.Test;
 
 class GitHubStateTest {
 
-    private static final Branch.Name FEATURE = new Branch.Name("feature");
+    private static final BranchName FEATURE = new BranchName("feature");
     private static final PullRequest FEATURE_PR =
             new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED);
     private static final GitHubState LISTED =
@@ -57,7 +57,7 @@ class GitHubStateTest {
 
     @Test
     void aListedPullRequestThatWasReadMergedOrClosedIsNoLongerListed() {
-        Option<Map<Branch.Name, PullRequest>> none = Option.of(HashMap.empty());
+        Option<Map<BranchName, PullRequest>> none = Option.of(HashMap.empty());
 
         assertEquals(none, LISTED.withRead(details(42, "feature", State.MERGED)).pullRequests());
         assertEquals(none, LISTED.withRead(details(42, "feature", State.CLOSED)).pullRequests());

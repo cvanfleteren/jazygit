@@ -6,7 +6,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
@@ -25,8 +25,7 @@ final class CliMerge {
      *
      * @return the command lines that were run
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> merge(
-            Path worktree, Branch.Name branch, MergeMode mode) {
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> merge(Path worktree, BranchName branch, MergeMode mode) {
         return switch (mode) {
             case FAST_FORWARD -> Unfinished.runOrStop(worktree, git("merge", "--ff", "--no-edit", branch.value()));
             case MERGE_COMMIT -> Unfinished.runOrStop(worktree, git("merge", "--no-ff", "--no-edit", branch.value()));
@@ -36,7 +35,7 @@ final class CliMerge {
         };
     }
 
-    private static Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Path worktree, Branch.Name branch) {
+    private static Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Path worktree, BranchName branch) {
         return Unfinished.runOrStop(worktree, git("merge", "--squash", branch.value()));
     }
 

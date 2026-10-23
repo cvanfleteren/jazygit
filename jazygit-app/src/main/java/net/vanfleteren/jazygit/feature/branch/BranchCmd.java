@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.feature.branch;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.GitOperationCmd;
@@ -17,7 +17,7 @@ public interface BranchCmd extends GitOperationCmd {
     /**
      * The branch the command acts on.
      */
-    Branch.Name branch();
+    BranchName branch();
 
     @Override
     default Option<String> subject() {

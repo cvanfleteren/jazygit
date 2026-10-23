@@ -23,7 +23,7 @@ import io.vavr.control.Option;
 import java.util.ArrayList;
 import java.util.Optional;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -47,10 +47,10 @@ class NewPullRequestDialogTest {
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private Model model = TestModels.loaded()
             .openPopup(new NewPullRequestPopup(
-                    new Branch.Name("feature"),
-                    new Branch.Name("feature"),
-                    List.of(new Branch.Name("main"), new Branch.Name("release"), new Branch.Name("ahead")),
-                    new Branch.Name("main"),
+                    new BranchName("feature"),
+                    new BranchName("feature"),
+                    List.of(new BranchName("main"), new BranchName("release"), new BranchName("ahead")),
+                    new BranchName("main"),
                     "Add login",
                     new NewPullRequest("Add login", "", false)));
     // As in the app, an edit or a move changes the model the popup shows; the other messages are only kept.
@@ -199,7 +199,7 @@ class NewPullRequestDialogTest {
 
         assertEquals(
                 java.util.List.of(new CreatePullRequestMsg.BaseMoved(
-                        ListCursor.START.at(1), Option.of(new Branch.Name("release")))),
+                        ListCursor.START.at(1), Option.of(new BranchName("release")))),
                 dispatched);
     }
 
@@ -216,7 +216,7 @@ class NewPullRequestDialogTest {
         }
 
         assertEquals(
-                Option.of(new Branch.Name("release")),
+                Option.of(new BranchName("release")),
                 model.popup(NewPullRequestPopup.class).map(NewPullRequestPopup::base));
     }
 
@@ -232,7 +232,7 @@ class NewPullRequestDialogTest {
         }
 
         assertEquals(
-                Option.of(new Branch.Name("main")),
+                Option.of(new BranchName("main")),
                 model.popup(NewPullRequestPopup.class).map(NewPullRequestPopup::base));
     }
 

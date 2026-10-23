@@ -16,7 +16,7 @@ import java.time.Instant;
  *                  one worktree at a time, so it can be neither checked out nor deleted here
  */
 public record Branch(
-        Name name,
+        BranchName name,
         boolean current,
         Sha tipOid,
         Instant tipTime,
@@ -24,57 +24,6 @@ public record Branch(
         boolean isDefault,
         Tracking tracking,
         Option<Path> worktree) {
-
-    /**
-     * A branch that is checked out in no other worktree.
-     */
-    public Branch(
-            Name name,
-            boolean current,
-            Sha tipOid,
-            Instant tipTime,
-            boolean hasRemote,
-            boolean isDefault,
-            Tracking tracking) {
-        this(name, current, tipOid, tipTime, hasRemote, isDefault, tracking, Option.none());
-    }
-
-    /**
-     * A branch following {@code upstream}, or nothing.
-     */
-    public Branch(
-            Name name,
-            boolean current,
-            Sha tipOid,
-            Instant tipTime,
-            boolean hasRemote,
-            boolean isDefault,
-            Option<Upstream> upstream) {
-        this(
-                name,
-                current,
-                tipOid,
-                tipTime,
-                hasRemote,
-                isDefault,
-                upstream.<Tracking>map(Tracking.Tracks::new).getOrElse(new Tracking.None()));
-    }
-
-    public Branch(Name name, boolean current, Sha tipOid, Instant tipTime, boolean hasRemote, boolean isDefault) {
-        this(name, current, tipOid, tipTime, hasRemote, isDefault, new Tracking.None());
-    }
-
-    public Branch(Name name, boolean current, Sha tipOid, Instant tipTime, boolean hasRemote) {
-        this(name, current, tipOid, tipTime, hasRemote, false);
-    }
-
-    public Branch(Name name, boolean current, Sha tipOid, Instant tipTime) {
-        this(name, current, tipOid, tipTime, false, false);
-    }
-
-    public Branch(Name name, boolean current, Sha tipOid) {
-        this(name, current, tipOid, Instant.EPOCH, false, false);
-    }
 
     /**
      * The branch it follows, if that exists; none when its upstream is gone.
@@ -147,22 +96,5 @@ public record Branch(
 
     private static Option<RemoteBranch> onRemote(BranchRef branch) {
         return branch instanceof BranchRef.Remote(RemoteBranch remote) ? Option.of(remote) : Option.none();
-    }
-
-    /**
-     * The name of a local branch, e.g. {@code main} or {@code feature/login}.
-     */
-    public record Name(String value) {
-
-        /**
-         * The name {@code text} spells, ignoring surrounding whitespace; none when it is blank or has whitespace
-         * inside, which no branch name can.
-         */
-        public static Option<Name> parse(String text) {
-            String stripped = text.strip();
-            return stripped.isEmpty() || stripped.chars().anyMatch(Character::isWhitespace)
-                    ? Option.none()
-                    : Option.of(new Name(stripped));
-        }
     }
 }

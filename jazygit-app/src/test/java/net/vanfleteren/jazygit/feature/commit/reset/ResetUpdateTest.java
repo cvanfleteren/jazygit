@@ -8,7 +8,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -26,7 +25,7 @@ class ResetUpdateTest {
     private static final FileEntry UNTRACKED = new FileEntry("c.txt", ChangeType.UNTRACKED, false, true);
 
     private static Commit commit(String sha, List<String> parents) {
-        return new Commit(
+        return Fixtures.commit(
                 new Sha(sha),
                 "Ada",
                 "ada@example.com",
@@ -39,7 +38,7 @@ class ResetUpdateTest {
     private static Model withFiles(FileEntry... files) {
         Model model = Update.update(TestModels.loaded(), TestModels.commitsLoaded(List.of(TIP, ROOT)))
                 .model();
-        RepoStatus status = new RepoStatus(Head.onBranch(new Branch.Name("main"), TIP.sha()), List.of(files));
+        RepoStatus status = new RepoStatus(Head.onBranch(new BranchName("main"), TIP.sha()), List.of(files));
         return Update.update(model, new LoadMsg.StatusLoaded(status)).model();
     }
 

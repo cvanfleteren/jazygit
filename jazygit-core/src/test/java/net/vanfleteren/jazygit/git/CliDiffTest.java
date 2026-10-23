@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.zeroturnaround.exec.ProcessExecutor;
@@ -24,7 +25,8 @@ class CliDiffTest {
         git("init", "-q");
         Files.writeString(repo.resolve("new.txt"), "first\n");
 
-        Diffs diffs = CliDiff.diff(repo, List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)), DiffOptions.DEFAULT)
+        Diffs diffs = CliDiff.diff(
+                        repo, List.of(Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED)), DiffOptions.DEFAULT)
                 .get();
 
         assertTrue(diffs.unstaged().text().contains("+first"), diffs.unstaged().text());
@@ -47,9 +49,9 @@ class CliDiffTest {
         Diffs diffs = CliDiff.diff(
                         repo,
                         List.of(
-                                new FileEntry("a.txt", ChangeType.MODIFIED),
-                                new FileEntry("new1.txt", ChangeType.UNTRACKED),
-                                new FileEntry("new2.txt", ChangeType.UNTRACKED)),
+                                Fixtures.fileEntry("a.txt", ChangeType.MODIFIED),
+                                Fixtures.fileEntry("new1.txt", ChangeType.UNTRACKED),
+                                Fixtures.fileEntry("new2.txt", ChangeType.UNTRACKED)),
                         DiffOptions.DEFAULT)
                 .get();
 
@@ -77,10 +79,10 @@ class CliDiffTest {
         Files.writeString(repo.resolve("changed.txt"), "one \ntwo\n");
         Files.writeString(repo.resolve("new.txt"), "first\n");
         List<FileEntry> files = List.of(
-                new FileEntry("spaced.txt", ChangeType.MODIFIED),
+                Fixtures.fileEntry("spaced.txt", ChangeType.MODIFIED),
                 new FileEntry("staged.txt", ChangeType.MODIFIED, true, false),
-                new FileEntry("changed.txt", ChangeType.MODIFIED),
-                new FileEntry("new.txt", ChangeType.UNTRACKED));
+                Fixtures.fileEntry("changed.txt", ChangeType.MODIFIED),
+                Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED));
 
         Diffs shown = CliDiff.diff(repo, files, DiffOptions.DEFAULT).get();
         Diffs ignoring = CliDiff.diff(repo, files, DiffOptions.DEFAULT.withIgnoreWhitespace(true))

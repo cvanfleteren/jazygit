@@ -6,7 +6,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchPopup;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendPopup;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendTarget;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -19,15 +19,15 @@ class ModelPopupTest {
     @Test
     void openingAPopupReplacesTheOneThatWasOpen() {
         Model model = closed.openPopup(new AmendPopup(new AmendTarget.LastCommit()))
-                .openPopup(new DeleteBranchPopup(new Branch.Name("feature")));
+                .openPopup(new DeleteBranchPopup(new BranchName("feature")));
 
-        assertEquals(Option.of(new DeleteBranchPopup(new Branch.Name("feature"))), model.popup());
+        assertEquals(Option.of(new DeleteBranchPopup(new BranchName("feature"))), model.popup());
         assertEquals(Option.none(), model.popup(AmendPopup.class));
     }
 
     @Test
     void closingOnlyClosesAPopupOfThatKind() {
-        Model model = closed.openPopup(new DeleteBranchPopup(new Branch.Name("feature")));
+        Model model = closed.openPopup(new DeleteBranchPopup(new BranchName("feature")));
 
         assertEquals(model, model.withoutPopup(AmendPopup.class));
         assertEquals(Option.none(), model.withoutPopup(DeleteBranchPopup.class).popup());

@@ -10,7 +10,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeoutException;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,7 +29,8 @@ class CliGitInfoProviderTest {
     private CliGitInfoProvider provider;
 
     private static List<Branch> withoutTimes(List<Branch> branches) {
-        return branches.map(b -> new Branch(b.name(), b.current(), b.tipOid())).toList();
+        return branches.map(b -> Fixtures.branch(b.name(), b.current(), b.tipOid()))
+                .toList();
     }
 
     /**
@@ -109,12 +109,12 @@ class CliGitInfoProviderTest {
 
         Files.writeString(repo.resolve("new.txt"), "new\n");
         assertEquals(
-                List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)),
+                List.of(Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED)),
                 provider.status().get().files());
 
         git("add", "new.txt");
         assertEquals(
-                List.of(new FileEntry("new.txt", ChangeType.ADDED)),
+                List.of(Fixtures.fileEntry("new.txt", ChangeType.ADDED)),
                 provider.status().get().files());
     }
 
@@ -193,29 +193,29 @@ class CliGitInfoProviderTest {
     void branchesFollowExternalChanges() throws Exception {
         Sha head = provider.status().get().headCommit().get();
         assertEquals(
-                List.of(new Branch(new Branch.Name("main"), true, head)),
+                List.of(Fixtures.branch(new BranchName("main"), true, head)),
                 withoutTimes(provider.allBranches().map(AllBranches::local).get()));
 
         git("branch", "foo");
         assertEquals(
                 List.of(
-                        new Branch(new Branch.Name("main"), true, head),
-                        new Branch(new Branch.Name("foo"), false, head)),
+                        Fixtures.branch(new BranchName("main"), true, head),
+                        Fixtures.branch(new BranchName("foo"), false, head)),
                 withoutTimes(provider.allBranches().map(AllBranches::local).get()));
 
         git("checkout", "-q", "foo");
         assertEquals(
                 List.of(
-                        new Branch(new Branch.Name("foo"), true, head),
-                        new Branch(new Branch.Name("main"), false, head)),
+                        Fixtures.branch(new BranchName("foo"), true, head),
+                        Fixtures.branch(new BranchName("main"), false, head)),
                 withoutTimes(provider.allBranches().map(AllBranches::local).get()));
 
         git("commit", "-q", "--allow-empty", "-m", "Move foo");
         Sha moved = provider.status().get().headCommit().get();
         assertEquals(
                 List.of(
-                        new Branch(new Branch.Name("foo"), true, moved),
-                        new Branch(new Branch.Name("main"), false, head)),
+                        Fixtures.branch(new BranchName("foo"), true, moved),
+                        Fixtures.branch(new BranchName("main"), false, head)),
                 withoutTimes(provider.allBranches().map(AllBranches::local).get()));
     }
 
@@ -280,7 +280,7 @@ class CliGitInfoProviderTest {
         git("checkout", "-q", "main");
 
         List<Commit> side =
-                provider.log(new BranchRef.Local(new Branch.Name("side"))).get();
+                provider.log(new BranchRef.Local(new BranchName("side"))).get();
         assertEquals(
                 List.of("Side subject", "Initial commit"),
                 side.map(Commit::message).toList());
@@ -291,13 +291,13 @@ class CliGitInfoProviderTest {
 
         assertEquals(
                 List.of("Initial commit"),
-                provider.log(new BranchRef.Local(new Branch.Name("main")))
+                provider.log(new BranchRef.Local(new BranchName("main")))
                         .get()
                         .map(Commit::message)
                         .toList());
         assertEquals(
-                new GitError.UnknownBranch(new BranchRef.Local(new Branch.Name("gone"))),
-                provider.log(new BranchRef.Local(new Branch.Name("gone"))).getLeft());
+                new GitError.UnknownBranch(new BranchRef.Local(new BranchName("gone"))),
+                provider.log(new BranchRef.Local(new BranchName("gone"))).getLeft());
     }
 
     @Test
@@ -307,8 +307,8 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "--allow-empty", "-m", "Side two");
         git("checkout", "-q", "main");
         git("commit", "-q", "--allow-empty", "-m", "Main one");
-        BranchRef side = new BranchRef.Local(new Branch.Name("side"));
-        BranchRef main = new BranchRef.Local(new Branch.Name("main"));
+        BranchRef side = new BranchRef.Local(new BranchName("side"));
+        BranchRef main = new BranchRef.Local(new BranchName("main"));
 
         Divergence divergence = provider.divergence(side, main).get();
 
@@ -317,7 +317,7 @@ class CliGitInfoProviderTest {
         assertEquals(2, divergence.ahead().count());
         assertEquals(List.of("Main one"), divergence.behind().commits().map(Commit::message));
         assertEquals(1, divergence.behind().count());
-        BranchRef gone = new BranchRef.Local(new Branch.Name("gone"));
+        BranchRef gone = new BranchRef.Local(new BranchName("gone"));
         assertEquals(
                 new GitError.UnknownBranch(gone),
                 provider.divergence(side, gone).getLeft());
@@ -332,8 +332,8 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "--allow-empty", "-m", "Main one");
         git("checkout", "-q", "side");
         git("merge", "-q", "--no-edit", "main");
-        BranchRef main = new BranchRef.Local(new Branch.Name("main"));
-        BranchRef gone = new BranchRef.Local(new Branch.Name("gone"));
+        BranchRef main = new BranchRef.Local(new BranchName("main"));
+        BranchRef gone = new BranchRef.Local(new BranchName("gone"));
 
         Ahead ahead = provider.ahead(Option.none(), List.of(gone, main)).get().get();
 
@@ -355,7 +355,7 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "--allow-empty", "-m", "Side one");
         git("commit", "-q", "--allow-empty", "-m", "Side two");
         git("commit", "-q", "--allow-empty", "-m", "Side three");
-        List<BranchRef> main = List.of(new BranchRef.Local(new Branch.Name("main")));
+        List<BranchRef> main = List.of(new BranchRef.Local(new BranchName("main")));
 
         Ahead three = CliLog.ahead(repo, Option.none(), main, 3).get().get();
         Ahead two = CliLog.ahead(repo, Option.none(), main, 2).get().get();
@@ -370,7 +370,7 @@ class CliGitInfoProviderTest {
     void historiesThatNeverMetHaveNoForkPoint() throws Exception {
         git("checkout", "-q", "--orphan", "other");
         git("commit", "-q", "--allow-empty", "-m", "Other root");
-        BranchRef main = new BranchRef.Local(new Branch.Name("main"));
+        BranchRef main = new BranchRef.Local(new BranchName("main"));
 
         Ahead ahead = provider.ahead(Option.none(), List.of(main)).get().get();
 
@@ -382,7 +382,7 @@ class CliGitInfoProviderTest {
     void aSearchLeavesOutTheCommitsOnTheBase() throws Exception {
         git("checkout", "-q", "-b", "side");
         git("commit", "-q", "--allow-empty", "-m", "Side one");
-        BranchRef main = new BranchRef.Local(new Branch.Name("main"));
+        BranchRef main = new BranchRef.Local(new BranchName("main"));
 
         assertEquals(
                 List.of("Side one"),
@@ -394,8 +394,8 @@ class CliGitInfoProviderTest {
         git("checkout", "-q", "-b", "side");
         git("commit", "-q", "--allow-empty", "-m", "Side one", "-m", "Its body");
         git("commit", "-q", "--allow-empty", "-m", "Side two");
-        BranchRef side = new BranchRef.Local(new Branch.Name("side"));
-        BranchRef main = new BranchRef.Local(new Branch.Name("main"));
+        BranchRef side = new BranchRef.Local(new BranchName("side"));
+        BranchRef main = new BranchRef.Local(new BranchName("main"));
 
         assertEquals(Option.of("Side one"), provider.firstSubject(side, main).get());
         assertEquals(Option.none(), provider.firstSubject(main, side).get());
@@ -407,8 +407,8 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "--allow-empty", "-m", "Side one");
         git("commit", "-q", "--allow-empty", "-m", "Side two");
         git("commit", "-q", "--allow-empty", "-m", "Side three");
-        BranchRef side = new BranchRef.Local(new Branch.Name("side"));
-        BranchRef main = new BranchRef.Local(new Branch.Name("main"));
+        BranchRef side = new BranchRef.Local(new BranchName("side"));
+        BranchRef main = new BranchRef.Local(new BranchName("main"));
 
         assertEquals(3, provider.countNotOn(side, main, 1000).get());
         assertEquals(2, provider.countNotOn(side, main, 2).get());
@@ -419,12 +419,12 @@ class CliGitInfoProviderTest {
     void reportsRepositoryNameAndCurrentBranch() throws Exception {
         assertEquals(repo.getFileName().toString(), provider.repositoryName());
         assertEquals(
-                Option.of(new Branch.Name("main")),
+                Option.of(new BranchName("main")),
                 provider.status().get().head().branchName());
 
         git("checkout", "-q", "-b", "feature");
         assertEquals(
-                Option.of(new Branch.Name("feature")),
+                Option.of(new BranchName("feature")),
                 provider.status().get().head().branchName());
 
         git("checkout", "-q", "--detach");
@@ -438,13 +438,13 @@ class CliGitInfoProviderTest {
         git("branch", "feature");
         Files.writeString(repo.resolve("new.txt"), "new\n");
 
-        provider.checkout(new Branch.Name("feature")).get();
+        provider.checkout(new BranchName("feature")).get();
 
         assertEquals(
-                Option.of(new Branch.Name("feature")),
+                Option.of(new BranchName("feature")),
                 provider.status().get().head().branchName());
         assertEquals(
-                List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)),
+                List.of(Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED)),
                 provider.status().get().files());
     }
 
@@ -468,7 +468,7 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "dirty\n");
         assertEquals(
                 List.of("git stash push --quiet", "git checkout --quiet feature --", "git stash pop --index --quiet"),
-                provider.checkoutWithStash(new Branch.Name("feature")).get().map(ExecutedCommand::line));
+                provider.checkoutWithStash(new BranchName("feature")).get().map(ExecutedCommand::line));
     }
 
     @Test
@@ -533,7 +533,7 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "-m", "Main work");
         git("checkout", "-q", "feature");
 
-        List<String> executed = provider.rebase(new Branch.Name("main")).get().map(ExecutedCommand::line);
+        List<String> executed = provider.rebase(new BranchName("main")).get().map(ExecutedCommand::line);
 
         assertEquals(List.of("git rebase --autostash --keep-empty --rebase-merges --no-autosquash main"), executed);
         assertEquals(
@@ -566,7 +566,7 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "-m", "Main work");
         git("checkout", "-q", "feature");
 
-        provider.rebase(new Branch.Name("main")).get();
+        provider.rebase(new BranchName("main")).get();
 
         List<Commit> after = provider.commits().get();
         assertEquals(List.of("fixup! Feature work", "Merge side"), after.take(2).map(Commit::message));
@@ -584,7 +584,7 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "-am", "Main edit");
         git("checkout", "-q", "feature");
 
-        GitFailure<GitError> failure = provider.rebase(new Branch.Name("main")).getLeft();
+        GitFailure<GitError> failure = provider.rebase(new BranchName("main")).getLeft();
 
         GitError.StoppedOnConflicts stopped = assertInstanceOf(GitError.StoppedOnConflicts.class, failure.error());
         assertInstanceOf(InProgress.Rebasing.class, stopped.inProgress().get());
@@ -610,7 +610,7 @@ class CliGitInfoProviderTest {
         // Picking "Add x" would overwrite it, so the rebase stops there, without conflicts.
         Files.writeString(repo.resolve("x.txt"), "untracked\n");
 
-        GitFailure<GitError> failure = provider.rebase(new Branch.Name("main")).getLeft();
+        GitFailure<GitError> failure = provider.rebase(new BranchName("main")).getLeft();
 
         assertInstanceOf(GitError.CommandFailed.class, failure.error());
         assertEquals(List.of("git rebase --abort"), failure.commands().tail().map(ExecutedCommand::line));
@@ -623,7 +623,7 @@ class CliGitInfoProviderTest {
 
     @Test
     void aRebaseThatDoesNotStartIsNotAborted() {
-        GitFailure<GitError> failure = provider.rebase(new Branch.Name("nope")).getLeft();
+        GitFailure<GitError> failure = provider.rebase(new BranchName("nope")).getLeft();
 
         assertInstanceOf(GitError.CommandFailed.class, failure.error());
         assertEquals(1, failure.commands().size(), failure.commands().toString());
@@ -909,7 +909,7 @@ class CliGitInfoProviderTest {
         git("push", "-q", "-u", "origin", "main");
         Sha pushed = provider.commits().get().head().sha();
         git("commit", "-q", "--allow-empty", "-m", "local");
-        RemoteBranch upstream = new RemoteBranch("origin", new Branch.Name("main"));
+        RemoteBranch upstream = new RemoteBranch("origin", new BranchName("main"));
 
         List<String> executed = provider.reset(
                         new ResetTarget.ToUpstream(new BranchRef.Remote(upstream)), ResetMode.HARD)
@@ -1205,7 +1205,7 @@ class CliGitInfoProviderTest {
         git("branch", "other");
         gitWithEnvironment("GIT_SEQUENCE_EDITOR", "sed -i -e 's/^pick/edit/'", "rebase", "-i", "--root");
 
-        GitFailure<GitError> failure = provider.rebase(new Branch.Name("other")).getLeft();
+        GitFailure<GitError> failure = provider.rebase(new BranchName("other")).getLeft();
 
         assertTrue(
                 failure.commands().forAll(command -> !command.line().contains("--abort")),
@@ -1327,8 +1327,8 @@ class CliGitInfoProviderTest {
         assertEquals(
                 List.of("git branch --delete --force missing"),
                 provider.deleteBranch(
-                                new Branch.Name("missing"),
-                                new RemoteBranch("origin", new Branch.Name("missing")),
+                                new BranchName("missing"),
+                                new RemoteBranch("origin", new BranchName("missing")),
                                 DeleteScope.LOCAL)
                         .getLeft()
                         .commands()
@@ -1346,14 +1346,14 @@ class CliGitInfoProviderTest {
         git("checkout", "-q", "main");
         Files.writeString(repo.resolve("README.md"), "local change\n");
 
-        GitError error = provider.checkout(new Branch.Name("feature")).getLeft().error();
+        GitError error = provider.checkout(new BranchName("feature")).getLeft().error();
 
         assertTrue(
                 error instanceof GitError.LocalChanges(String explanation)
                         && explanation.contains("would be overwritten"),
                 error.toString());
         assertEquals(
-                Option.of(new Branch.Name("main")),
+                Option.of(new BranchName("main")),
                 provider.status().get().head().branchName());
     }
 
@@ -1377,25 +1377,25 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "-m", "On other");
         git("checkout", "-q", "main");
 
-        provider.checkoutNewBranch(new Branch.Name("topic"), "other", Option.of(new Branch.Name("other")))
+        provider.checkoutNewBranch(new BranchName("topic"), "other", Option.of(new BranchName("other")))
                 .get();
 
         assertEquals(
-                Option.of(new Branch.Name("topic")),
+                Option.of(new BranchName("topic")),
                 provider.status().get().head().branchName());
         assertTrue(Files.exists(repo.resolve("other.txt")));
         assertEquals(
-                Option.of(new Branch.Name("other")),
-                provider.parentBranch(new Branch.Name("topic")).get());
+                Option.of(new BranchName("other")),
+                provider.parentBranch(new BranchName("topic")).get());
     }
 
     @Test
     void aBranchMadeWithoutAParentHasNoneRecorded() throws Exception {
-        provider.checkoutNewBranch(new Branch.Name("topic"), "main", Option.none())
+        provider.checkoutNewBranch(new BranchName("topic"), "main", Option.none())
                 .get();
 
         assertEquals(
-                Option.none(), provider.parentBranch(new Branch.Name("topic")).get());
+                Option.none(), provider.parentBranch(new BranchName("topic")).get());
     }
 
     @Test
@@ -1403,37 +1403,37 @@ class CliGitInfoProviderTest {
         // git config cannot write the configuration while another writer holds its lock.
         Files.writeString(repo.resolve(".git/config.lock"), "");
 
-        var made = provider.checkoutNewBranch(new Branch.Name("topic"), "main", Option.of(new Branch.Name("main")));
+        var made = provider.checkoutNewBranch(new BranchName("topic"), "main", Option.of(new BranchName("main")));
 
         assertTrue(made.isRight());
         assertEquals(2, made.get().size());
         assertEquals(
-                Option.of(new Branch.Name("topic")),
+                Option.of(new BranchName("topic")),
                 provider.status().get().head().branchName());
         assertEquals(
-                Option.none(), provider.parentBranch(new Branch.Name("topic")).get());
+                Option.none(), provider.parentBranch(new BranchName("topic")).get());
     }
 
     @Test
     void aBranchThatFollowsALocalOneIsReadSoAndFastForwardedToIt() throws Exception {
         git("branch", "-q", "--track", "topic", "main");
         git("commit", "-q", "--allow-empty", "-m", "Ahead");
-        BranchRef main = new BranchRef.Local(new Branch.Name("main"));
+        BranchRef main = new BranchRef.Local(new BranchName("main"));
 
         Branch topic = provider.allBranches()
                 .map(AllBranches::local)
                 .get()
-                .find(b -> b.name().equals(new Branch.Name("topic")))
+                .find(b -> b.name().equals(new BranchName("topic")))
                 .get();
         assertEquals(Option.of(new Upstream(main, 0, 1)), topic.upstream());
         assertEquals(Option.none(), topic.remoteUpstream());
 
         assertEquals(
                 List.of("git fetch . refs/heads/main:refs/heads/topic"),
-                provider.fastForward(new Branch.Name("topic"), main).get().map(ExecutedCommand::line));
+                provider.fastForward(new BranchName("topic"), main).get().map(ExecutedCommand::line));
         assertEquals(
                 0,
-                provider.countNotOn(main, new BranchRef.Local(new Branch.Name("topic")), 1000)
+                provider.countNotOn(main, new BranchRef.Local(new BranchName("topic")), 1000)
                         .get());
     }
 
@@ -1446,11 +1446,11 @@ class CliGitInfoProviderTest {
         Branch topic = provider.allBranches()
                 .map(AllBranches::local)
                 .get()
-                .find(b -> b.name().equals(new Branch.Name("topic")))
+                .find(b -> b.name().equals(new BranchName("topic")))
                 .get();
-        assertEquals(Option.of(new BranchRef.Local(new Branch.Name("main"))), topic.goneUpstream());
+        assertEquals(Option.of(new BranchRef.Local(new BranchName("main"))), topic.goneUpstream());
         assertEquals(Option.of("main"), topic.goneUpstream().map(BranchRef::name));
-        assertEquals(new RemoteBranch("origin", new Branch.Name("topic")), topic.pushTarget());
+        assertEquals(new RemoteBranch("origin", new BranchName("topic")), topic.pushTarget());
     }
 
     @Test
@@ -1486,7 +1486,7 @@ class CliGitInfoProviderTest {
         git("push", "-q", "origin", "main", "feature");
         git("remote", "set-head", "origin", "main");
         git("branch", "-D", "feature");
-        RemoteBranch feature = new RemoteBranch("origin", new Branch.Name("feature"));
+        RemoteBranch feature = new RemoteBranch("origin", new BranchName("feature"));
 
         assertEquals(
                 List.of("origin/feature", "origin/main"),
@@ -1502,12 +1502,12 @@ class CliGitInfoProviderTest {
                         .map(Commit::message)
                         .toList());
 
-        provider.checkoutNewTrackingBranch(new Branch.Name("feature"), feature).get();
+        provider.checkoutNewTrackingBranch(new BranchName("feature"), feature).get();
 
         Branch local = provider.allBranches()
                 .map(AllBranches::local)
                 .get()
-                .find(b -> b.name().equals(new Branch.Name("feature")))
+                .find(b -> b.name().equals(new BranchName("feature")))
                 .get();
         assertTrue(local.current());
         assertEquals(Option.of(new BranchRef.Remote(feature)), local.upstream().map(upstream -> upstream.branch()));
@@ -1540,21 +1540,18 @@ class CliGitInfoProviderTest {
         git("init", "-q", "--bare", "-b", "main", bare.toString());
         git("remote", "add", "origin", bare.toString());
 
-        provider.pushSettingUpstream(new Branch.Name("main"), new RemoteBranch("origin", new Branch.Name("main")))
+        provider.pushSettingUpstream(new BranchName("main"), new RemoteBranch("origin", new BranchName("main")))
                 .get();
         assertEquals(List.of(0, 0), counts("main"));
         assertTrue(provider.allBranches()
                 .map(AllBranches::local)
                 .get()
-                .filter(b -> b.name().equals(new Branch.Name("main")))
+                .filter(b -> b.name().equals(new BranchName("main")))
                 .forAll(Branch::hasRemote));
 
         git("commit", "-q", "--allow-empty", "-m", "local");
         assertEquals(List.of(1, 0), counts("main"));
-        provider.push(
-                        new Branch.Name("main"),
-                        new RemoteBranch("origin", new Branch.Name("main")),
-                        PushMode.FAST_FORWARD)
+        provider.push(new BranchName("main"), new RemoteBranch("origin", new BranchName("main")), PushMode.FAST_FORWARD)
                 .get();
         assertEquals(List.of(0, 0), counts("main"));
     }
@@ -1568,27 +1565,27 @@ class CliGitInfoProviderTest {
         assertEquals(
                 List.of("git push --set-upstream mirror main:refs/heads/shared"),
                 provider.pushSettingUpstream(
-                                new Branch.Name("main"), new RemoteBranch("mirror", new Branch.Name("shared")))
+                                new BranchName("main"), new RemoteBranch("mirror", new BranchName("shared")))
                         .get()
                         .map(ExecutedCommand::line));
         Branch main = provider.allBranches().map(AllBranches::local).get().head();
         assertEquals(
-                Option.of(new Upstream(
-                        new BranchRef.Remote(new RemoteBranch("mirror", new Branch.Name("shared"))), 0, 0)),
+                Option.of(
+                        new Upstream(new BranchRef.Remote(new RemoteBranch("mirror", new BranchName("shared"))), 0, 0)),
                 main.upstream());
         assertTrue(main.hasRemote());
 
         git("commit", "-q", "--allow-empty", "-m", "local");
         assertEquals(
                 List.of("git push mirror main:refs/heads/shared"),
-                provider.push(new Branch.Name("main"), main.pushTarget(), PushMode.FAST_FORWARD)
+                provider.push(new BranchName("main"), main.pushTarget(), PushMode.FAST_FORWARD)
                         .get()
                         .map(ExecutedCommand::line));
         assertEquals(List.of(0, 0), counts("main"));
 
         assertEquals(
                 List.of("git push mirror --delete shared"),
-                provider.deleteBranch(new Branch.Name("main"), main.pushTarget(), DeleteScope.REMOTE)
+                provider.deleteBranch(new BranchName("main"), main.pushTarget(), DeleteScope.REMOTE)
                         .get()
                         .map(ExecutedCommand::line));
         assertTrue(gitSucceedsIn(repo, "fetch", "-q", "--prune", "mirror"));
@@ -1600,7 +1597,7 @@ class CliGitInfoProviderTest {
     @Test
     void aFailedPushSetsNoUpstream() throws Exception {
         assertTrue(provider.pushSettingUpstream(
-                        new Branch.Name("main"), new RemoteBranch("nowhere", new Branch.Name("main")))
+                        new BranchName("main"), new RemoteBranch("nowhere", new BranchName("main")))
                 .isLeft());
 
         assertEquals(
@@ -1626,14 +1623,14 @@ class CliGitInfoProviderTest {
         assertEquals(List.of(1, 1), counts("main"));
 
         assertTrue(provider.push(
-                        new Branch.Name("main"),
-                        new RemoteBranch("origin", new Branch.Name("main")),
+                        new BranchName("main"),
+                        new RemoteBranch("origin", new BranchName("main")),
                         PushMode.FAST_FORWARD)
                 .isLeft());
 
         provider.push(
-                        new Branch.Name("main"),
-                        new RemoteBranch("origin", new Branch.Name("main")),
+                        new BranchName("main"),
+                        new RemoteBranch("origin", new BranchName("main")),
                         PushMode.FORCE_WITH_LEASE)
                 .get();
         git("fetch", "-q", "origin");
@@ -1711,8 +1708,8 @@ class CliGitInfoProviderTest {
         assertEquals(
                 List.of("git fetch origin refs/heads/main:refs/heads/main"),
                 provider.fastForward(
-                                new Branch.Name("main"),
-                                new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main"))))
+                                new BranchName("main"),
+                                new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))))
                         .get()
                         .map(ExecutedCommand::line));
 
@@ -1726,8 +1723,8 @@ class CliGitInfoProviderTest {
         git("checkout", "-q", "-b", "other");
 
         assertTrue(provider.fastForward(
-                        new Branch.Name("main"),
-                        new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main"))))
+                        new BranchName("main"),
+                        new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))))
                 .isLeft());
         assertEquals(List.of(1, 1), counts("main"));
     }
@@ -1735,8 +1732,8 @@ class CliGitInfoProviderTest {
     @Test
     void pushFailsWithGitsExplanationWithoutARemote() {
         assertTrue(provider.push(
-                        new Branch.Name("main"),
-                        new RemoteBranch("origin", new Branch.Name("main")),
+                        new BranchName("main"),
+                        new RemoteBranch("origin", new BranchName("main")),
                         PushMode.FAST_FORWARD)
                 .isLeft());
     }
@@ -1780,9 +1777,7 @@ class CliGitInfoProviderTest {
         git("branch", "topic");
 
         provider.deleteBranch(
-                        new Branch.Name("topic"),
-                        new RemoteBranch("origin", new Branch.Name("topic")),
-                        DeleteScope.LOCAL)
+                        new BranchName("topic"), new RemoteBranch("origin", new BranchName("topic")), DeleteScope.LOCAL)
                 .get();
 
         assertEquals(
@@ -1804,7 +1799,7 @@ class CliGitInfoProviderTest {
 
         assertEquals(
                 List.of("git branch --delete --force topic"),
-                provider.deleteLocalBranch(new Branch.Name("topic")).get().map(ExecutedCommand::line));
+                provider.deleteLocalBranch(new BranchName("topic")).get().map(ExecutedCommand::line));
         assertEquals(
                 List.of("main"),
                 provider.allBranches()
@@ -1817,7 +1812,7 @@ class CliGitInfoProviderTest {
     @Test
     void deleteBranchFailsForTheCheckedOutBranch() {
         assertTrue(provider.deleteBranch(
-                        new Branch.Name("main"), new RemoteBranch("origin", new Branch.Name("main")), DeleteScope.LOCAL)
+                        new BranchName("main"), new RemoteBranch("origin", new BranchName("main")), DeleteScope.LOCAL)
                 .isLeft());
     }
 
@@ -1831,22 +1826,22 @@ class CliGitInfoProviderTest {
 
         assertEquals(
                 List.of("git branch --move feature topic"),
-                provider.renameBranch(new Branch.Name("feature"), new Branch.Name("topic"))
+                provider.renameBranch(new BranchName("feature"), new BranchName("topic"))
                         .get()
                         .map(command -> command.line()));
 
         Branch topic = provider.allBranches()
                 .map(AllBranches::local)
                 .get()
-                .find(b -> b.name().equals(new Branch.Name("topic")))
+                .find(b -> b.name().equals(new BranchName("topic")))
                 .get();
         assertEquals(
-                Option.of(new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("feature")))),
+                Option.of(new BranchRef.Remote(new RemoteBranch("origin", new BranchName("feature")))),
                 topic.upstream().map(upstream -> upstream.branch()));
         assertTrue(provider.allBranches()
                 .map(AllBranches::local)
                 .get()
-                .find(b -> b.name().equals(new Branch.Name("feature")))
+                .find(b -> b.name().equals(new BranchName("feature")))
                 .isEmpty());
     }
 
@@ -1855,19 +1850,19 @@ class CliGitInfoProviderTest {
         git("branch", "feature");
         git("branch", "topic");
 
-        assertTrue(provider.renameBranch(new Branch.Name("feature"), new Branch.Name("topic"))
+        assertTrue(provider.renameBranch(new BranchName("feature"), new BranchName("topic"))
                 .isLeft());
         assertTrue(provider.allBranches()
                 .map(AllBranches::local)
                 .get()
-                .exists(b -> b.name().equals(new Branch.Name("feature"))));
+                .exists(b -> b.name().equals(new BranchName("feature"))));
     }
 
     @Test
     void checkoutNewBranchFailsWhenTheNameIsTaken() throws Exception {
         git("branch", "topic");
 
-        assertTrue(provider.checkoutNewBranch(new Branch.Name("topic"), "main", Option.none())
+        assertTrue(provider.checkoutNewBranch(new BranchName("topic"), "main", Option.none())
                 .isLeft());
     }
 
@@ -1896,7 +1891,9 @@ class CliGitInfoProviderTest {
     void aStagedRenameIsOneEntryThatUnstagesAndDiscardsAsAWhole() throws Exception {
         Files.move(repo.resolve("README.md"), repo.resolve("READ.md"));
         assertEquals(
-                List.of(new FileEntry("READ.md", ChangeType.UNTRACKED), new FileEntry("README.md", ChangeType.DELETED)),
+                List.of(
+                        Fixtures.fileEntry("READ.md", ChangeType.UNTRACKED),
+                        Fixtures.fileEntry("README.md", ChangeType.DELETED)),
                 provider.status().get().files());
 
         provider.stage(List.of("READ.md", "README.md")).get();
@@ -1909,7 +1906,9 @@ class CliGitInfoProviderTest {
         provider.unstageNew(List.of("READ.md")).get();
         provider.unstage(List.of("README.md")).get();
         assertEquals(
-                List.of(new FileEntry("READ.md", ChangeType.UNTRACKED), new FileEntry("README.md", ChangeType.DELETED)),
+                List.of(
+                        Fixtures.fileEntry("READ.md", ChangeType.UNTRACKED),
+                        Fixtures.fileEntry("README.md", ChangeType.DELETED)),
                 provider.status().get().files());
 
         provider.stage(List.of("READ.md", "README.md")).get();
@@ -1943,7 +1942,7 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "changed\n");
         Files.writeString(repo.resolve("new.txt"), "new\n");
 
-        Diffs diffs = provider.diff(List.of(new FileEntry("new.txt", ChangeType.UNTRACKED)), DiffOptions.DEFAULT)
+        Diffs diffs = provider.diff(List.of(Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED)), DiffOptions.DEFAULT)
                 .get();
 
         assertEquals("", diffs.staged().text());

@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch.upstream;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -16,7 +16,7 @@ public sealed interface UpstreamMsg extends Msg {
     /**
      * The user asked for the options on the upstream, with {@code branch} highlighted, if any.
      */
-    record Requested(Option<Branch.Name> branch) implements UpstreamMsg {}
+    record Requested(Option<BranchName> branch) implements UpstreamMsg {}
 
     record Cancelled() implements UpstreamMsg {}
 

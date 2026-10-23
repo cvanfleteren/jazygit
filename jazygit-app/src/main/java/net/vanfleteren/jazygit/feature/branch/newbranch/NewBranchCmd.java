@@ -14,7 +14,7 @@ import net.vanfleteren.jazygit.state.Operation;
  * Creates the branch {@code branch} at {@code base} and switches to it, recording {@code parent} as the branch it was
  * made from, if it was made from one.
  */
-public record NewBranchCmd(Branch.Name branch, String base, Option<Branch.Name> parent)
+public record NewBranchCmd(BranchName branch, String base, Option<BranchName> parent)
         implements BranchCmd.ChecksOutBranch {
 
     public static final Operation NEW_BRANCH = Operation.of("log.title.newBranch", "error.newBranch.failed");

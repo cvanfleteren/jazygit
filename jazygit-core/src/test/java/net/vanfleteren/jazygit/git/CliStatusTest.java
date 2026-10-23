@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.git.model.Head;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -46,14 +45,14 @@ class CliStatusTest {
         RepoStatus status = CliStatus.parse(
                         "# branch.oid 0123abcd\0# branch.head main\0# branch.upstream origin/main\0")
                 .get();
-        assertEquals(Head.onBranch(new Branch.Name("main"), new Sha("0123abcd")), status.head());
+        assertEquals(Head.onBranch(new BranchName("main"), new Sha("0123abcd")), status.head());
         assertEquals(List.of(), status.files());
     }
 
     @Test
     void parsesInitialAndDetachedHeads() {
         assertEquals(
-                new Head.OnBranch(new Branch.Name("main"), Option.none()),
+                new Head.OnBranch(new BranchName("main"), Option.none()),
                 CliStatus.parse("# branch.oid (initial)\0# branch.head main\0")
                         .get()
                         .head());
@@ -92,12 +91,12 @@ class CliStatusTest {
                                 "conflict.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED)),
                         new FileEntry("copy.txt", ChangeType.ADDED, true, false),
                         new FileEntry("deleted.txt", ChangeType.DELETED, false, true),
-                        new FileEntry("dir/untracked file.txt", ChangeType.UNTRACKED),
+                        Fixtures.fileEntry("dir/untracked file.txt", ChangeType.UNTRACKED),
                         FileEntry.renamed("edited.txt", "before edit.txt", true, true),
                         FileEntry.renamed("new name.txt", "old name.txt", true, false),
                         new FileEntry("removed.txt", ChangeType.DELETED, true, false),
                         new FileEntry("staged.txt", ChangeType.MODIFIED, true, false),
-                        new FileEntry("unstaged.txt", ChangeType.MODIFIED)),
+                        Fixtures.fileEntry("unstaged.txt", ChangeType.MODIFIED)),
                 CliStatus.parse(raw).get().files());
     }
 

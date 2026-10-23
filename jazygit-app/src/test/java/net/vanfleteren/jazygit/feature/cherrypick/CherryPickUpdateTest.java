@@ -8,8 +8,9 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.git.StubGitProvider;
-import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -23,7 +24,7 @@ import org.junit.jupiter.api.Test;
 class CherryPickUpdateTest {
 
     private static final Commit FIRST = TestModels.COMMITS.head();
-    private static final Commit MERGE = new Commit(
+    private static final Commit MERGE = Fixtures.commit(
             new Sha("mmmm"),
             "Ada",
             "ada@example.com",
@@ -44,8 +45,8 @@ class CherryPickUpdateTest {
         Model branches = TestModels.localBranchesRead(
                         model,
                         List.of(
-                                new Branch(new Branch.Name("main"), false, new Sha("aaaa")),
-                                new Branch(new Branch.Name("feature"), true, new Sha("ffff"))))
+                                Fixtures.branch(new BranchName("main"), false, new Sha("aaaa")),
+                                Fixtures.branch(new BranchName("feature"), true, new Sha("ffff"))))
                 .model();
         return Update.update(branches, TestModels.commitsLoaded(TestModels.FEATURE_COMMITS))
                 .model();
@@ -106,7 +107,7 @@ class CherryPickUpdateTest {
     @Test
     void requestingAsksToPickTheCopyOntoTheCheckedOutBranch() {
         assertEquals(
-                Option.of(new CherryPickPopup(FIRST, Option.of(new Branch.Name("feature")))),
+                Option.of(new CherryPickPopup(FIRST, Option.of(new BranchName("feature")))),
                 asked().popup(CherryPickPopup.class));
     }
 
