@@ -107,7 +107,14 @@ final class StartApp extends ToolkitApp {
             default -> {
                 Update.Next next = Update.update(model, msg);
                 model = next.model();
-                next.cmds().map(StartCmd.class::cast).forEach(this::launch);
+                next.cmds().forEach(cmd -> {
+                    if (cmd instanceof StartCmd start) {
+                        launch(start);
+                    } else {
+                        // Only the app has what another command runs against; asking for one here is a bug.
+                        JazygitApp.logBug(new IllegalStateException("Not a command of the start: " + cmd));
+                    }
+                });
             }
         }
     }

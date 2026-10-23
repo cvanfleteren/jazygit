@@ -70,11 +70,18 @@ public final class StartDialogs {
                                 .map(ErrorText::of)),
                 new Detailed(
                         new TextInputDialog<>(OPEN_FOLDER, dispatch),
-                        model -> model.popup(OpenFolderPopup.class)
-                                .flatMap(OpenFolderPopup::notFound)
-                                .map(directory -> Messages.get(
-                                        "dialog.start.openFolder.notFound", RecentReposDialog.shown(directory)))),
+                        model -> model.popup(OpenFolderPopup.class).flatMap(StartDialogs::problem)),
                 new PickDialog<>(OPEN_RECENT, dispatch));
+    }
+
+    /**
+     * What is wrong with the path last confirmed in {@code popup}: it names no folder, or one that git could not
+     * open.
+     */
+    private static Option<String> problem(OpenFolderPopup popup) {
+        return popup.notFound()
+                .map(directory -> Messages.get("dialog.start.openFolder.notFound", RecentReposDialog.shown(directory)))
+                .orElse(() -> popup.problem().map(ErrorText::of));
     }
 
     /**

@@ -85,11 +85,25 @@ class StartUpdateTest {
         Model notFound = after(typed, new StartMsg.NoRepository("/home/me/notes/typo", false));
 
         assertEquals(
-                Option.of(new OpenFolderPopup(OUTSIDE, "typo", Option.of("/home/me/notes/typo"))),
+                Option.of(new OpenFolderPopup(OUTSIDE, "typo", Option.of("/home/me/notes/typo"), Option.none())),
                 notFound.popup(OpenFolderPopup.class));
         assertEquals(
-                Option.of(new OpenFolderPopup(OUTSIDE, "typos", Option.none())),
+                Option.of(new OpenFolderPopup(OUTSIDE, "typos", Option.none(), Option.none())),
                 after(notFound, new Msg.TextEdited("typos")).popup(OpenFolderPopup.class));
+    }
+
+    @Test
+    void aPathGitRefusesIsSaidUnderItAndEditingItClearsThat() {
+        Model typed = after(starting(), new StartMsg.OpenFolderChosen(), new Msg.TextEdited("/srv/bare.git"));
+
+        Model failed = after(typed, new StartMsg.Failed(FAILED));
+
+        assertEquals(
+                Option.of(new OpenFolderPopup(OUTSIDE, "/srv/bare.git", Option.none(), Option.of(FAILED))),
+                failed.popup(OpenFolderPopup.class));
+        assertEquals(
+                Option.of(new OpenFolderPopup(OUTSIDE, "/srv/bare", Option.none(), Option.none())),
+                after(failed, new Msg.TextEdited("/srv/bare")).popup(OpenFolderPopup.class));
     }
 
     @Test

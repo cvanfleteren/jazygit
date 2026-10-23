@@ -80,6 +80,10 @@ public final class StartUpdate {
                 Next.of(outside(model)
                         .map(popup -> model.openPopup(popup.about(directory, exists)))
                         .getOrElse(model));
+            // So is a path git refuses to open, like that of a bare repository.
+            case StartMsg.Failed(var failure)
+            when model.popup(OpenFolderPopup.class).isDefined() ->
+                open(model, OpenFolderPopup.class, popup -> popup.failing(failure));
             case StartMsg.Failed(var failure) ->
                 Next.of(outside(model)
                         .map(popup -> model.openPopup(popup.failing(failure)))

@@ -93,6 +93,20 @@ def test_a_path_to_no_folder_is_said_and_can_be_corrected(tmp_path, env, outside
     app.wait_for("is not inside a git repository")
 
 
+def test_a_path_git_refuses_is_said_and_can_be_corrected(tmp_path, env, outside):
+    Git(tmp_path, env)("init", "--bare", "--initial-branch=main", str(tmp_path / "bare.git"))
+    app = outside(folder(tmp_path))
+    app.wait_for("is not inside a git repository")
+
+    app.press("o")
+    Jazygit(app, None).enter_text("Open the folder", "../bare.git")
+    app.wait_for("has no working tree")
+    assert "../bare.git" in app.text(), "the path stays as it was typed"
+
+    app.press("escape")
+    app.wait_for("is not inside a git repository")
+
+
 def test_another_folder_in_no_repository_is_asked_about(tmp_path, env, outside):
     other = folder(tmp_path, "other")
     app = outside(folder(tmp_path))
