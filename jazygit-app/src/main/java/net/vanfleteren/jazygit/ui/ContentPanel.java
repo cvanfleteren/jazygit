@@ -292,7 +292,7 @@ public final class ContentPanel {
     static Text stashText(Stash stash, String changes, Theme.SpanStyles styles) {
         return styledText(List.of(styled(
                         Messages.get("content.stashHeader", stash.ref(), stash.message()), Theme.Classes.SHA, styles))
-                .appendAll(stash.branch().map(branch -> Span.raw(Messages.get("content.stashBranch", branch))))
+                .appendAll(stash.branch().map(branch -> Span.raw(Messages.get("content.stashBranch", branch.value()))))
                 .append(dateLine(stash.time()))
                 .map(Line::from)
                 .append(Line.from(Span.raw("---")))

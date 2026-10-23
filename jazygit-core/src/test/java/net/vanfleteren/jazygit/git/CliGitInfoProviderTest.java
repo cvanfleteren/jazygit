@@ -29,7 +29,7 @@ class CliGitInfoProviderTest {
     private CliGitInfoProvider provider;
 
     private static List<Branch> withoutTimes(List<Branch> branches) {
-        return branches.map(b -> Fixtures.branch(b.name(), b.current(), b.tipOid()))
+        return branches.map(b -> Fixtures.branch(b.name(), b.current(), b.tip()))
                 .toList();
     }
 

@@ -11,6 +11,7 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.git.GitError.*;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -71,9 +72,13 @@ final class CliStash {
                                 time)));
     }
 
-    private static Option<String> branch(String message) {
+    private static Option<BranchName> branch(String message) {
         Matcher matcher = STASHED_ON.matcher(message);
-        return matcher.find() ? Option.of(matcher.group(1)).filter(branch -> !branch.equals(NO_BRANCH)) : Option.none();
+        return matcher.find()
+                ? Option.of(matcher.group(1))
+                        .filter(branch -> !branch.equals(NO_BRANCH))
+                        .map(BranchName::new)
+                : Option.none();
     }
 
     /**

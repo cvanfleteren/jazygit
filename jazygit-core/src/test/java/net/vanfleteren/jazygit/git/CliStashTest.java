@@ -8,6 +8,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
@@ -30,7 +31,7 @@ class CliStashTest {
         Stash stash = CliStash.list(repo).get().head();
 
         assertEquals("my work", stash.message());
-        assertEquals(Option.of("main"), stash.branch());
+        assertEquals(Option.of(new BranchName("main")), stash.branch());
     }
 
     @Test

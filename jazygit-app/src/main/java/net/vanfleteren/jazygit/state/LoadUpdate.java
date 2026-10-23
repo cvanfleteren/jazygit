@@ -225,12 +225,12 @@ public final class LoadUpdate {
                 model.repo()
                         .branches()
                         .toOption()
-                        .map(loaded -> model.repo().branch(name).map(Branch::tipOid));
+                        .map(loaded -> model.repo().branch(name).map(Branch::tip));
             case BranchRef.Remote(RemoteBranch remote) ->
                 model.repo()
                         .remoteBranches()
                         .toOption()
-                        .map(loaded -> model.repo().remoteBranch(remote).map(RemoteRef::tipOid));
+                        .map(loaded -> model.repo().remoteBranch(remote).map(RemoteRef::tip));
         };
     }
 
