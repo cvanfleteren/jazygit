@@ -57,3 +57,7 @@ Refactorings that were left out of the functional/immutable cleanup, and why.
   as a `fixup!` commit and rebases to fold it in. When that stops on the `fixup!` commit, skipping it (M) leaves the
   changes out: once the rebase is done, only the reflog still has them. The rebase is marked as an amend (see
   `CliInProgress.markAmending`), so M could warn before skipping it, or offer to abort instead.
+- [ ] **Unstage and discard in a repository without commits.** `CliIndex` resets and checks out against `HEAD`
+  (`reset --quiet HEAD`, `checkout --quiet HEAD`), which fails on an unborn HEAD, as after init from the startup
+  dialog (ADR 28). Add an acceptance test that unstages a file in an empty repository, and use `git rm --cached` /
+  the empty tree there.
