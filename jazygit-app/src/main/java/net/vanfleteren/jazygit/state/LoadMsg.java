@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.*;
 
@@ -79,11 +80,15 @@ public sealed interface LoadMsg extends Msg {
         }
     }
 
-    record CommitsLoaded(List<Commit> commits) implements LoadMsg {
+    /**
+     * The log of HEAD, with what {@code load} read of it after.
+     */
+    record CommitsLoaded(List<Commit> commits, Cmd.LoadAhead load, Either<Failure, Option<Ahead>> ahead)
+            implements LoadMsg {
 
         @Override
         public Cmd.Load cmd() {
-            return new Cmd.LoadCommits();
+            return new Cmd.LoadCommits(load);
         }
     }
 
@@ -106,11 +111,16 @@ public sealed interface LoadMsg extends Msg {
         }
     }
 
-    record BranchLogLoaded(BranchRef branch, List<Commit> commits) implements LoadMsg {
+    /**
+     * The log of {@code branch}, with what {@code load} read of it after.
+     */
+    record BranchLogLoaded(
+            BranchRef branch, List<Commit> commits, Cmd.LoadAhead load, Either<Failure, Option<Ahead>> ahead)
+            implements LoadMsg {
 
         @Override
         public Cmd.Load cmd() {
-            return new Cmd.LoadBranchLog(branch);
+            return new Cmd.LoadBranchLog(branch, load);
         }
     }
 

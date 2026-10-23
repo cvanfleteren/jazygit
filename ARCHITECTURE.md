@@ -240,8 +240,9 @@ operations find the commits it found through `Model.commit`, also those older th
 The commits pane and the log of the highlighted branch dim the commits that are on the base of their branch: the
 branch it was made from (`gh-merge-base`), else the main branch, `origin/` first. Their titles count the others.
 `b`, in either pane, lists only those and the fork point (`RepoView.onlyAhead`), and a search then leaves the base
-out. `Cmd.LoadAhead` reads it, once the log it goes with is read and again when the base moves, into `Repo.ahead`
-for HEAD and `RepoView.branchAhead` for the highlighted branch; `state.AheadUpdate` decides what to read, and
+out. `Cmd.LoadAhead` reads it into `Repo.ahead` for HEAD and `RepoView.branchAhead` for the highlighted branch:
+together with the log it goes with (`Cmd.LoadCommits`, `Cmd.LoadBranchLog`), so that a log is never shown undimmed
+first, and on its own again when the base moves; `state.AheadUpdate` decides what to read, and
 `ui.AheadView` how the panes show it. `feature.ahead` only declares the keys. See ADR 20.
 
 ## The pull requests screen

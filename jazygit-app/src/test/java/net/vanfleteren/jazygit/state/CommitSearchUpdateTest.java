@@ -148,10 +148,10 @@ class CommitSearchUpdateTest {
     void theSearchRunsAgainWhenTheLogChanges() {
         Model searched = run("fix").model();
 
-        Next next = Update.update(searched, new LoadMsg.CommitsLoaded(FOUND));
+        Next next = Update.update(searched, TestModels.commitsLoaded(FOUND));
 
         assertTrue(next.cmds().contains(new Cmd.SearchCommits(CommitQuery.parse("fix"), Option.none())));
-        assertFalse(Update.update(loaded(), new LoadMsg.CommitsLoaded(FOUND))
+        assertFalse(Update.update(loaded(), TestModels.commitsLoaded(FOUND))
                 .cmds()
                 .exists(Cmd.SearchCommits.class::isInstance));
     }

@@ -10,7 +10,6 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
-import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
@@ -39,7 +38,7 @@ class SquashUpdateTest {
     }
 
     private static Model withCommits(Commit... commits) {
-        return Update.update(TestModels.loaded(), new LoadMsg.CommitsLoaded(List.of(commits)))
+        return Update.update(TestModels.loaded(), TestModels.commitsLoaded(List.of(commits)))
                 .model();
     }
 

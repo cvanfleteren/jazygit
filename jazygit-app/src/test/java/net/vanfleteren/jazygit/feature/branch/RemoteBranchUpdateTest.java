@@ -17,7 +17,6 @@ import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchPopup;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.*;
-import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -237,7 +236,7 @@ class RemoteBranchUpdateTest {
         Next unmoved = TestModels.remoteBranchesRead(
                 model, List.of(new RemoteRef(ORIGIN_NEW, new Sha("eeee"), Instant.EPOCH)));
 
-        assertEquals(List.of(new LoadBranchLog(remote)), moved.cmds());
+        assertEquals(List.of(TestModels.loadBranchLog(remote)), moved.cmds());
         assertEquals(List.of(), unmoved.cmds());
     }
 }

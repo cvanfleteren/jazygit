@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
@@ -33,7 +34,7 @@ class FixupDialogTest {
         Commit below = new Commit(new Sha("1111111111"), "Ada", "ada@example.com", Instant.EPOCH, "Below", "");
         Commit selected = new Commit(
                 new Sha("2222222222"), "Ada", "ada@example.com", Instant.EPOCH, "Selected", "", List.of(below.sha()));
-        Model model = Update.update(TestModels.loaded(), new LoadMsg.CommitsLoaded(List.of(selected, below)))
+        Model model = Update.update(TestModels.loaded(), TestModels.commitsLoaded(List.of(selected, below)))
                 .model();
         return Update.update(model, new FixupMsg.Requested(selected.sha())).model();
     }

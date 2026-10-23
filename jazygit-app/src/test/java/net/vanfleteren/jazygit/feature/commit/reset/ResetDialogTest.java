@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.git.model.ResetMode;
 import net.vanfleteren.jazygit.git.model.ResetTarget;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
@@ -36,7 +37,7 @@ class ResetDialogTest {
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final ChoiceDialog<ResetPopup> dialog = new ChoiceDialog<>(ResetDialogs.RESET, dispatched::add);
     private final Model open = Update.update(
-                    Update.update(TestModels.loaded(), new LoadMsg.CommitsLoaded(List.of(TARGET)))
+                    Update.update(TestModels.loaded(), TestModels.commitsLoaded(List.of(TARGET)))
                             .model(),
                     new ResetMsg.Requested(TARGET.sha()))
             .model();

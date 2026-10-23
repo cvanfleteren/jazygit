@@ -46,15 +46,10 @@ public final class LoadUpdate {
             case WorktreeChangesLoaded loaded ->
                 Next.of(worktreeChangesRead(done).mapRepo(repo -> repo.withWorktreeChanges(loaded.changes())));
             // The log is only read again when HEAD moved, so the history the search runs on changed too, and what
-            // is not on its base.
-            case CommitsLoaded(var commits) ->
-                new Next(
-                        done.mapRepo(repo -> repo.withCommits(repo.commits().reload(commits))),
-                        List.<Cmd>narrow(done.repoView()
-                                        .commitSearch()
-                                        .map(CommitSearch::load)
-                                        .toList())
-                                .append(AheadUpdate.ofHead(done)));
+            // is not on its base: that was read with it, so that the log is shown with it at once.
+            case CommitsLoaded(var commits, var load, var ahead) ->
+                commitsLoaded(AheadUpdate.read(
+                        done.mapRepo(repo -> repo.withCommits(repo.commits().reload(commits))), load, ahead));
             // What arrives after another search was run, or after the search was cleared, is dropped.
             case CommitSearchLoaded(var query, var notOn, var commits) ->
                 Next.of(done.mapRepoView(repoView -> repoView.withCommitSearch(repoView.commitSearch()
@@ -62,12 +57,14 @@ public final class LoadUpdate {
                                 ? search.withResults(search.results().reload(commits))
                                 : search))));
             // What arrives after another item was highlighted, or after the diff options changed, is dropped.
-            case BranchLogLoaded(var branch, var commits) ->
+            case BranchLogLoaded(var branch, var commits, var load, var ahead) ->
                 done.repoView().branchLog().exists(log -> log.key().equals(branch))
                         ? AheadUpdate.branchLogLoaded(
                                 done.mapRepoView(repoView -> repoView.withBranchLog(
                                         Preview.updated(repoView.branchLog(), branch, log -> log.reload(commits)))),
-                                branch)
+                                branch,
+                                load,
+                                ahead)
                         : Next.of(done);
             case AheadLoaded(var load, var ahead) -> AheadUpdate.loaded(done, load, ahead);
             case DivergenceLoaded(var branch, var other, var divergence) ->
@@ -94,6 +91,20 @@ public final class LoadUpdate {
                 Next.of(failed(
                         done.mapJobs(jobs -> jobs.withReadAt(jobs.readAt().remove(cmd))), cmd, failure));
         };
+    }
+
+    /**
+     * Runs the search again on the log just read, unless keeping what is not on its base already did.
+     */
+    private static Next commitsLoaded(Next read) {
+        return new Next(
+                read.model(),
+                read.cmds()
+                        .appendAll(read.model()
+                                .repoView()
+                                .commitSearch()
+                                .map(CommitSearch::load)
+                                .filter(search -> !read.cmds().contains(search))));
     }
 
     /**
@@ -134,7 +145,7 @@ public final class LoadUpdate {
                         .exists(status -> previous.headCommit().equals(status.headCommit())));
         // Commit loads are not deduplicated: one queued after HEAD moved must still run, even if
         // an earlier one is in progress.
-        List<Cmd> cmds = headMoved ? List.of(new LoadCommits()) : List.empty();
+        List<Cmd> cmds = headMoved ? List.of(new LoadCommits(AheadUpdate.ofHead(next))) : List.empty();
         return Update.reloadDiff(next, cmds);
     }
 
@@ -245,7 +256,7 @@ public final class LoadUpdate {
                 .branchLog()
                 .map(Preview::key)
                 .filter(moved)
-                .map(branch -> Next.of(next, new LoadBranchLog(branch)))
+                .map(branch -> Next.of(next, new LoadBranchLog(branch, AheadUpdate.of(next, branch))))
                 .getOrElse(() -> Next.of(next));
     }
 
@@ -269,7 +280,7 @@ public final class LoadUpdate {
             // Which worktrees have changes is a detail: when the whole read fails, what was read before stays, and
             // a later tick tries again. A single worktree that cannot be read is left out of a read that succeeds.
             case Cmd.LoadWorktreeChanges _ -> worktreeChangesRead(model);
-            case LoadCommits() -> model.mapRepo(repo -> repo.withCommits(new Failed<>(failure)));
+            case LoadCommits _ -> model.mapRepo(repo -> repo.withCommits(new Failed<>(failure)));
             case Cmd.SearchCommits load ->
                 model.mapRepoView(repoView -> repoView.withCommitSearch(repoView.commitSearch()
                         .map(search ->
@@ -290,7 +301,7 @@ public final class LoadUpdate {
             case LoadStashDetail(Sha sha, var options) ->
                 model.mapRepoView(repoView ->
                         repoView.withStashDetail(Preview.updated(repoView.stashDetail(), sha, d -> d.failed(failure))));
-            case LoadBranchLog(var branch) ->
+            case LoadBranchLog(var branch, var _) ->
                 model.mapRepoView(repoView -> repoView.withBranchLog(
                         Preview.updated(repoView.branchLog(), branch, log -> log.failed(failure))));
         };

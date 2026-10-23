@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Ahead;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -101,14 +102,24 @@ public final class AheadUpdate {
     }
 
     /**
-     * {@code model} reading what is not on the base for the branch whose log was just read, keeping what was read
-     * for it before meanwhile.
+     * Keeps what {@code load} read of the log of {@code branch} just read, so that the log is shown with it at once.
      */
-    static Next branchLogLoaded(Model model, BranchRef branch) {
-        Model loading = model.mapRepoView(repoView -> repoView.withBranchAhead(Option.of(repoView.branchAhead()
+    static Next branchLogLoaded(
+            Model model, BranchRef branch, Cmd.LoadAhead load, Either<Failure, Option<Ahead>> ahead) {
+        Model reading = model.mapRepoView(repoView -> repoView.withBranchAhead(Option.of(repoView.branchAhead()
                 .filter(preview -> preview.key().equals(branch))
                 .getOrElse(() -> new Preview<>(branch, Loadable.loading())))));
-        return Next.of(loading, of(loading, branch));
+        return read(reading, load, ahead);
+    }
+
+    /**
+     * Keeps what {@code load} read with a log, or that it failed, as {@link #loaded} and {@link #failed} do. It was
+     * asked for with the log, so the branches read since may tell another base: then it is read again for that one.
+     */
+    static Next read(Model model, Cmd.LoadAhead load, Either<Failure, Option<Ahead>> ahead) {
+        Next kept = ahead.fold(failure -> Next.of(failed(model, load, failure)), read -> loaded(model, load, read));
+        Cmd.LoadAhead current = load.branch().fold(() -> ofHead(kept.model()), branch -> of(kept.model(), branch));
+        return current.equals(load) ? kept : new Next(kept.model(), kept.cmds().append(current));
     }
 
     /**

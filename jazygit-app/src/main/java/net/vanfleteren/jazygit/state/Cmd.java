@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.git.model.Ahead;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.CommitQuery;
@@ -210,11 +211,16 @@ public interface Cmd {
         }
     }
 
-    record LoadCommits() implements Load {
+    /**
+     * Reads the log of HEAD, and then what of it is not on its base, as {@code ahead} does: the log is shown with it.
+     */
+    record LoadCommits(LoadAhead ahead) implements Load {
 
         @Override
         public Msg run(Env env) {
-            return env.git().commits().fold(this::failedWith, LoadMsg.CommitsLoaded::new);
+            return env.git()
+                    .commits()
+                    .fold(this::failedWith, commits -> new LoadMsg.CommitsLoaded(commits, ahead, ahead.read(env)));
         }
     }
 
@@ -244,12 +250,19 @@ public interface Cmd {
 
         @Override
         public Msg run(Env env) {
+            return read(env).fold(this::failed, ahead -> new LoadMsg.AheadLoaded(this, ahead));
+        }
+
+        /**
+         * The commits not on the base, none when there is no base to compare with; or why they could not be read.
+         */
+        Either<Failure, Option<Ahead>> read(Env env) {
             return named.fold(
                             () -> Either.<ProcessError, Option<Branch.Name>>right(Option.none()),
                             env.git()::parentBranch)
                     .<GitError>mapLeft(error -> error)
                     .flatMap(parent -> env.git().ahead(branch, bases(parent)))
-                    .fold(this::failedWith, ahead -> new LoadMsg.AheadLoaded(this, ahead));
+                    .<Failure>mapLeft(Failure.Git::new);
         }
 
         /**
@@ -266,13 +279,19 @@ public interface Cmd {
         }
     }
 
-    record LoadBranchLog(BranchRef branch) implements Load {
+    /**
+     * Reads the log of {@code branch}, and then what of it is not on its base, as {@code ahead} does: the log is shown
+     * with it.
+     */
+    record LoadBranchLog(BranchRef branch, LoadAhead ahead) implements Load {
 
         @Override
         public Msg run(Env env) {
             return env.git()
                     .log(branch)
-                    .fold(this::failedWith, commits -> new LoadMsg.BranchLogLoaded(branch, commits));
+                    .fold(
+                            this::failedWith,
+                            commits -> new LoadMsg.BranchLogLoaded(branch, commits, ahead, ahead.read(env)));
         }
     }
 

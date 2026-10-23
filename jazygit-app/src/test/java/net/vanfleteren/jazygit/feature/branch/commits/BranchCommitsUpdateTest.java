@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.feature.diff.DiffOptionsMsg;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.TestModels;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -29,7 +30,7 @@ class BranchCommitsUpdateTest {
     private static Model featureLogRead() {
         Model selected = Update.update(loaded(), new SelectionMsg.BranchSelected(FEATURE))
                 .model();
-        return Update.update(selected, new LoadMsg.BranchLogLoaded(FEATURE, FEATURE_COMMITS))
+        return Update.update(selected, TestModels.branchLogLoaded(FEATURE, FEATURE_COMMITS))
                 .model();
     }
 
@@ -60,7 +61,7 @@ class BranchCommitsUpdateTest {
 
         Update.Next open = Update.update(logRead, new BranchCommitsMsg.Opened(main));
 
-        assertEquals(List.of(new Cmd.LoadBranchLog(main)), open.cmds());
+        assertEquals(List.of(TestModels.loadBranchLog(main)), open.cmds());
         assertEquals(new Loadable.Loading<>(), view(open.model()).get().commits(open.model()));
     }
 
@@ -139,7 +140,7 @@ class BranchCommitsUpdateTest {
         Update.Next gone = localBranchesRead(open, List.of(new Branch(MAIN, true, new Sha("aaaa"))));
 
         assertTrue(
-                moved.cmds().contains(new Cmd.LoadBranchLog(FEATURE)),
+                moved.cmds().contains(TestModels.loadBranchLog(FEATURE)),
                 moved.cmds().toString());
         assertEquals(Option.of(BranchCommitsView.of(FEATURE)), view(moved.model()));
         assertEquals(Option.none(), view(gone.model()));

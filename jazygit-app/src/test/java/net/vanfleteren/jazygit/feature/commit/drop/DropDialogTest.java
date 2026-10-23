@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
@@ -32,7 +33,7 @@ class DropDialogTest {
         Commit below = new Commit(new Sha("c1"), "Ada", "ada@example.com", Instant.EPOCH, "Below", "");
         Commit selected = new Commit(
                 new Sha("c2"), "Ada", "ada@example.com", Instant.EPOCH, "Selected", "", List.of(new Sha("c1")));
-        Model model = Update.update(TestModels.loaded(), new LoadMsg.CommitsLoaded(List.of(selected, below)))
+        Model model = Update.update(TestModels.loaded(), TestModels.commitsLoaded(List.of(selected, below)))
                 .model();
         return Update.update(model, new DropMsg.Requested(selected.sha())).model();
     }

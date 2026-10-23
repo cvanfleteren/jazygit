@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd;
@@ -41,13 +42,7 @@ public final class TestModels {
      * A model with the sample status, branches and commits loaded and nothing running.
      */
     public static Model loaded() {
-        Model model = Update.init("repo").model();
-        model = Update.update(model, new LoadMsg.StatusLoaded(CLEAN)).model();
-        model = Update.update(model, new LoadMsg.BranchesLoaded(new AllBranches(BRANCHES, List.empty())))
-                .model();
-        model = Update.update(model, new LoadMsg.StashesLoaded(io.vavr.collection.List.of()))
-                .model();
-        return Update.update(model, new LoadMsg.CommitsLoaded(COMMITS)).model();
+        return Update.update(branchesRead(), commitsLoaded(COMMITS)).model();
     }
 
     /**
@@ -66,6 +61,47 @@ public final class TestModels {
                 Program.start(new Env(provider, StubGitHub.empty()), Runnable::run, Runnable::run, Runnable::run);
         program.dispatch(new SelectionMsg.BranchSelected(new BranchRef.Local(new Branch.Name(branch))));
         return program.model();
+    }
+
+    /**
+     * The sample model before its log is read.
+     */
+    private static Model branchesRead() {
+        Model model = Update.init("repo").model();
+        model = Update.update(model, new LoadMsg.StatusLoaded(CLEAN)).model();
+        model = Update.update(model, new LoadMsg.BranchesLoaded(new AllBranches(BRANCHES, List.empty())))
+                .model();
+        return Update.update(model, new LoadMsg.StashesLoaded(io.vavr.collection.List.of()))
+                .model();
+    }
+
+    /**
+     * The load of the log of HEAD of the sample model.
+     */
+    public static Cmd.LoadCommits loadCommits() {
+        return new Cmd.LoadCommits(AheadUpdate.ofHead(branchesRead()));
+    }
+
+    /**
+     * The log of HEAD of the sample model read as {@code commits}, which has no base to compare with.
+     */
+    public static LoadMsg.CommitsLoaded commitsLoaded(List<Commit> commits) {
+        return new LoadMsg.CommitsLoaded(commits, loadCommits().ahead(), Either.right(Option.none()));
+    }
+
+    /**
+     * The load of the log of {@code branch} of the sample model.
+     */
+    public static Cmd.LoadBranchLog loadBranchLog(BranchRef branch) {
+        return new Cmd.LoadBranchLog(branch, AheadUpdate.of(branchesRead(), branch));
+    }
+
+    /**
+     * The log of {@code branch} of the sample model read as {@code commits}, which has no base to compare with.
+     */
+    public static LoadMsg.BranchLogLoaded branchLogLoaded(BranchRef branch, List<Commit> commits) {
+        return new LoadMsg.BranchLogLoaded(
+                branch, commits, loadBranchLog(branch).ahead(), Either.right(Option.none()));
     }
 
     /**
