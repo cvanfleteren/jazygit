@@ -12,10 +12,12 @@ import net.vanfleteren.jazygit.feature.github.browse.BrowseMsg;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.feature.inprogress.InProgressMsg;
 import net.vanfleteren.jazygit.feature.layout.LayoutMsg;
+import net.vanfleteren.jazygit.feature.repos.RecentReposMsg;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelMsg;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
 import org.junit.jupiter.api.Test;
 
 class KeymapTest {
@@ -29,6 +31,24 @@ class KeymapTest {
         assertEquals(
                 Option.of(new SettingsPanelMsg.Requested()),
                 keymap.handleGlobal(KeyEvent.ofChar('s', dev.tamboui.tui.event.KeyModifiers.CTRL)));
+    }
+
+    @Test
+    void ctrlPSwitchesBetweenTheRepositoryAndThePullRequests() {
+        assertEquals(
+                Option.of(new PrOverviewMsg.Toggled()),
+                keymap.handleGlobal(KeyEvent.ofChar('p', dev.tamboui.tui.event.KeyModifiers.CTRL)));
+        // Plain p is left to the panels.
+        assertEquals(Option.none(), keymap.handleGlobal(KeyEvent.ofChar('p')));
+        assertTrue(keymap.globals().exists(global -> global.label().equals("ctrl+p")));
+    }
+
+    @Test
+    void ctrlRAsksWhichRecentRepositoryToSwitchTo() {
+        assertEquals(
+                Option.of(new RecentReposMsg.Requested()),
+                keymap.handleGlobal(KeyEvent.ofChar('r', dev.tamboui.tui.event.KeyModifiers.CTRL)));
+        assertEquals(Option.none(), keymap.handleGlobal(KeyEvent.ofChar('r')));
     }
 
     @Test
