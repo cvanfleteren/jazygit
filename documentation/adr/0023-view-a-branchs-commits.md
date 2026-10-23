@@ -26,7 +26,10 @@ of the branches, but only those that differ from its upstream, and only for a lo
   commits, as the commits pane, and no paging.
 - The rows look as those of the commits pane, rails of the graph included. The rendering of a row and of the graph
   is taken out of `CommitsPanel` into a widget both use, so that they do not drift apart.
-- The commits are not compared with a base: none is dimmed, and `b` does nothing there.
+- The commits are compared with the base of the branch as ADR 0020 sets out, as the commits pane and the log of a
+  highlighted branch are: those on the base are dimmed, and the title counts the others, e.g.
+  `feature/x · 4 ahead of origin/main`. More than 300 ahead shows `300+ ahead` and dims nothing. A branch without a
+  base, such as the main branch, is shown unmarked. `b` does nothing there.
 - The title names the branch in place of the tabs, so clicking the title does nothing while the list is open.
   Clicking a row highlights it.
 - Highlighting a commit shows it in the content panel as a commit highlighted in the commits pane is shown: the same
@@ -42,7 +45,10 @@ pane (reword, fixup, cherry-pick, …), nor of the branches pane (`u`, checkout,
 As the divergence view is, and next to it, not through it nor a stack of views:
 
 - `RepoView.branchCommits: Option<BranchCommitsView>`, holding the `BranchRef`, the commits as a
-  `Loadable<List<Commit>>`, and a `Preview` of the highlighted commit of its own.
+  `Loadable<List<Commit>>`, what of them is ahead of the base as an `Ahead` of its own, and a `Preview` of the
+  highlighted commit of its own.
+- The `Ahead` is read by `Cmd.LoadAhead` once the log is read, and again when the tip of the base moved, as for the
+  other logs. Until it arrives, or when reading it failed, the list is shown unmarked.
 - A scope of its own, `Scopes.BRANCH_COMMITS`, with Esc and the moves; a `SelectionMsg.BranchCommitSelected`; and a
   content area of its own, mapped to the branches pane, as `DIVERGENCE_AREA_ID` is.
 - When the branches are read anew (`BranchesLoaded`) and the tip of the branch moved, e.g. after a fetch, its log is
@@ -51,8 +57,9 @@ As the divergence view is, and next to it, not through it nor a stack of views:
 
 ## Consequences
 
-- Opening a branch takes a git process for its log, and each commit highlighted one more, as in the commits pane.
-- The commits of another branch can be looked at, but not acted on: cherry-picking from it, comparing with a base,
-  or searching are left for later.
+- Opening a branch takes a git process for its log, the few of ADR 0020 to compare it with its base, and each commit
+  highlighted one more, as in the commits pane.
+- The commits of another branch can be looked at, but not acted on: cherry-picking from it, listing only what is
+  ahead (`b`), or searching are left for later.
 - The divergence view and this list are two drill-downs of the branches pane held side by side. A third would be the
   time to bring them under one.
