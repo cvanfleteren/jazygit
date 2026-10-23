@@ -119,6 +119,12 @@ class CliGitHubTest {
     }
 
     @Test
+    void aListWhoseCountIsNoNumberIsUnexpected() {
+        assertTrue(CliGitHub.parseLists("list\tauthored\t\tmany\n").isLeft());
+        assertTrue(CliGitHub.parseLists("list\tauthored\t\n").isLeft());
+    }
+
+    @Test
     void parsesTheRepositoryAndTheChecksOfEachBranchOverAllPages() {
         String raw = "repo\towner/repo\n"
                 + "branch\tfeature/login\tSUCCESS\n"
@@ -369,6 +375,31 @@ class CliGitHubTest {
                         "pr\t5\tFix\t\tMERGED\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\n"
                                 + "threads\tx\t0\t0\t0\n")
                 .isLeft());
+    }
+
+    @Test
+    void aCheckWithoutAStateYetIsNeitherPassingNorFailing() {
+        String raw =
+                "pr\t5\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\n"
+                        + "threads\t0\t0\t0\t0\n"
+                        + "check\tci/status\t\n";
+
+        assertEquals(
+                List.of(new Check("ci/status", Checks.NONE)),
+                CliGitHub.parseDetails(raw).get().checks());
+    }
+
+    @Test
+    void detailLinesWithTooFewFieldsAreUnexpectedOutput() {
+        String pr =
+                "pr\t5\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\n"
+                        + "threads\t0\t0\t0\t0\n";
+
+        assertTrue(CliGitHub.parseDetails(pr + "check\tbuild\n").isLeft());
+        assertTrue(CliGitHub.parseDetails(pr + "review\tbob\n").isLeft());
+        assertTrue(CliGitHub.parseDetails(pr + "label\n").isLeft());
+        assertTrue(CliGitHub.parseDetails(pr + "requested\n").isLeft());
+        assertTrue(CliGitHub.parseDetails(pr + "threads\t0\t0\n").isLeft());
     }
 
     @Test
