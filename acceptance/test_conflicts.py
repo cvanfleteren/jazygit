@@ -155,6 +155,28 @@ def test_skip_the_commit_a_rebase_stopped_at_leaves_it_out(repo, jazygit):
     assert repo.read("one.txt") == "main\n"
 
 
+def test_skip_the_first_of_two_conflicting_commits_stops_again_on_the_second(repo, jazygit):
+    diverged(repo)
+    repo.commit("Change one again on feature", **{"one.txt": "feature again\n"})
+    ui = jazygit()
+    ui.branches.rebase_onto("main")
+    first = repo("rev-parse", "REBASE_HEAD")
+
+    ui.skip_in_progress()
+
+    # Stopped on the same file, from the same HEAD: only the commit it stopped at tells.
+    assert repo.in_progress() == "rebase"
+    assert repo.conflicts() == ["one.txt"]
+    assert repo("rev-parse", "REBASE_HEAD") != first
+
+    repo.resolve("one.txt", "both\n")
+    ui.continue_in_progress()
+
+    assert repo.in_progress() is None
+    assert repo.current_branch() == "feature"
+    assert repo.subjects() == ["Change one again on feature", "Change one on main", "Add one"]
+
+
 def test_abort_a_rebase_brings_the_branch_and_the_uncommitted_changes_back(repo, jazygit):
     diverged(repo)
     before = repo("rev-parse", "feature")
@@ -210,6 +232,22 @@ def test_abort_a_cherry_pick_brings_the_branch_back_as_it_was(repo, jazygit):
     assert repo.status() == {}
 
 
+def test_skip_the_commit_a_cherry_pick_stopped_at_leaves_the_branch_as_it_was(repo, jazygit):
+    diverged(repo)
+    ui = jazygit()
+    ui.commits.copy("Change one on feature")
+    ui.branches.checkout("main")
+    before = repo("rev-parse", "main")
+    ui.commits.cherry_pick()
+
+    ui.skip_in_progress()
+
+    assert repo.in_progress() is None
+    assert repo("rev-parse", "main") == before
+    assert repo.read("one.txt") == "main\n"
+    assert repo.status() == {}
+
+
 def changed_twice(repo):
     """Main, on which one.txt is added, then changed, then changed again."""
     repo.commit("Add one", **{"one.txt": "one\n"})
@@ -241,6 +279,20 @@ def test_abort_a_revert_brings_the_branch_back_as_it_was(repo, jazygit):
     ui.commits.revert("Change one")
 
     ui.abort_in_progress()
+
+    assert repo.in_progress() is None
+    assert repo("rev-parse", "main") == before
+    assert repo.read("one.txt") == "changed again\n"
+    assert repo.status() == {}
+
+
+def test_skip_the_commit_a_revert_stopped_at_leaves_the_branch_as_it_was(repo, jazygit):
+    changed_twice(repo)
+    before = repo("rev-parse", "main")
+    ui = jazygit()
+    ui.commits.revert("Change one")
+
+    ui.skip_in_progress()
 
     assert repo.in_progress() is None
     assert repo("rev-parse", "main") == before

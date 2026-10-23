@@ -136,14 +136,17 @@ class Jazygit:
 
     def _state(self):
         # The remote branches too, which a push moves, and the upstreams, which a push can set; the stashes, which
-        # dropping one changes and nothing else; and the worktrees, which adding, removing, locking or pruning one
-        # changes, the branches staying as they were.
+        # dropping one changes and nothing else; the worktrees, which adding, removing, locking or pruning one
+        # changes, the branches staying as they were; and the operation in progress with the commit it stopped at,
+        # which skipping one that stops again on the same file changes, HEAD and the files staying as they were.
         return (self.repo("for-each-ref", "--format=%(refname) %(objectname) %(upstream)", "refs/heads",
                           "refs/remotes"),
                 self.repo.current_branch(),
                 self.repo.raw("status", "--porcelain", "-z"),
                 self.repo("stash", "list", "--format=%H"),
-                self.repo.worktree_list())
+                self.repo.worktree_list(),
+                self.repo.in_progress(),
+                self.repo.stopped_at())
 
     def switching(self, path: Path, keys) -> "Jazygit":
         """Runs keys, a function that presses them, and waits until the app shows the worktree at path instead of
