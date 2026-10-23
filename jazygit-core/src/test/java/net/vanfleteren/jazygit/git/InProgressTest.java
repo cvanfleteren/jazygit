@@ -176,6 +176,34 @@ class InProgressTest {
     }
 
     @Test
+    void abortingAnAmendThatStoppedAgainAfterContinuingKeepsTheChangesStaged() throws Exception {
+        write("a.txt", "main again\n");
+        git("commit", "-qam", "main changes a again");
+        String before = git("rev-parse", "HEAD");
+        write("a.txt", "amended\n");
+        git("add", "a.txt");
+        git.amendCommit(sha("main~2")).getLeft();
+        write("a.txt", "resolved\n");
+        git("add", "a.txt");
+        // The commit after the amended one changed a.txt too, so it stops again.
+        GitFailure<GitError> again = git.continueOrAbort(
+                        git.status().get().inProgress().get(), InProgressAction.CONTINUE)
+                .getLeft();
+        assertInstanceOf(GitError.StoppedOnConflicts.class, again.error());
+
+        assertEquals(
+                List.of("git rebase --abort", "git reset --quiet --soft HEAD^"),
+                git.continueOrAbort(git.status().get().inProgress().get(), InProgressAction.ABORT)
+                        .get()
+                        .map(ExecutedCommand::line));
+
+        assertEquals(Option.none(), git.status().get().inProgress());
+        assertEquals(before, git("rev-parse", "HEAD"));
+        assertEquals("M  a.txt\n", git("status", "--porcelain"));
+        assertEquals("amended\n", Files.readString(repo.resolve("a.txt")));
+    }
+
+    @Test
     void skippingACherryPickLeavesOutItsCommit() throws Exception {
         String before = git("rev-parse", "HEAD");
         gitAnyExit("cherry-pick", "conflicting");
