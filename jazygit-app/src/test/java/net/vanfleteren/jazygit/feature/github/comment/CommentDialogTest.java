@@ -100,15 +100,15 @@ class CommentDialogTest {
     @Test
     void whileSendingItSaysSoAndAFailureSaysWhy() throws Exception {
         model = model.openPopup(CommentPopup.on(SHOWN).withText("Nice").withSending(true))
-                .fail(new AppError.NotPushed(new Branch.Name("feature")));
+                .fail(new AppError.NoBase(new Branch.Name("feature")));
         try (ToolkitTestRunner runner = start()) {
             String sending = RenderedText.ofLarge(runner, this::view);
             assertTrue(sending.contains("Sending the comment…"), sending);
-            assertFalse(sending.contains("Push branch feature"), sending);
+            assertFalse(sending.contains("There is no branch"), sending);
 
             model = model.openPopup(CommentPopup.on(SHOWN).withText("Nice"));
             String failed = RenderedText.ofLarge(runner, this::view);
-            assertTrue(failed.contains("Push branch feature"), failed);
+            assertTrue(failed.contains("There is no branch"), failed);
         }
     }
 

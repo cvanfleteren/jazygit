@@ -162,8 +162,9 @@ public final class PullRequestUpdate {
     }
 
     /**
-     * Shows the pull request of the branch, reading what there is to know about it. A branch without one gets one, once it is pushed: the user is asked
-     * which branch it merges into.
+     * Shows the pull request of the branch, reading what there is to know about it. A branch without one gets one:
+     * the user is asked to push it first when it is not on its remote, or not with all its commits, and then which
+     * branch it merges into.
      */
     private static Next requested(Model model, Branch.Name branch) {
         return model.idleBranch(branch)
@@ -177,9 +178,7 @@ public final class PullRequestUpdate {
                                         .pullRequestsFailure()
                                         .<AppError>map(AppError.PullRequestsUnavailable::new)
                                         .getOrElse(AppError.PullRequestsNotRead::new)))
-                                : known.remoteUpstream().isEmpty() || known.ahead() > 0
-                                        ? Next.of(model.fail(new AppError.NotPushed(branch)))
-                                        : CreatePullRequestUpdate.ask(model, known)))
+                                : CreatePullRequestUpdate.askPushed(model, known)))
                 .getOrElse(() -> Next.of(model));
     }
 

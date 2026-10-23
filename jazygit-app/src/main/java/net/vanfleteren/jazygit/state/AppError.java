@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.InProgress;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.settings.SettingsProblem;
 
@@ -169,9 +170,10 @@ public sealed interface AppError {
     record MainWorktreeNotLockable() implements AppError {}
 
     /**
-     * A pull request was asked for, but the branch is not on its remote yet, or not with all its commits.
+     * A pull request was asked for, but the branch has diverged from {@code upstream}, which only a force push
+     * gets its commits onto.
      */
-    record NotPushed(Branch.Name branch) implements AppError {}
+    record Diverged(Branch.Name branch, RemoteBranch upstream) implements AppError {}
 
     /**
      * A pull request was asked for, but no other branch is on the remote for it to merge into.

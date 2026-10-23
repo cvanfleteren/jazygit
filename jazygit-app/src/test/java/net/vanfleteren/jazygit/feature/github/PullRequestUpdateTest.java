@@ -12,6 +12,8 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.checkout.SwitchWorktreePopup;
+import net.vanfleteren.jazygit.feature.branch.push.PushCmd.Push;
+import net.vanfleteren.jazygit.feature.branch.push.PushCmd.PushSettingUpstream;
 import net.vanfleteren.jazygit.feature.fetch.FetchCmd;
 import net.vanfleteren.jazygit.feature.github.browse.BrowsePullRequestCmd;
 import net.vanfleteren.jazygit.feature.github.checkout.CheckoutPullRequestCmd;
@@ -21,6 +23,7 @@ import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.*;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestMsg;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestMsg.BaseMoved;
 import net.vanfleteren.jazygit.feature.github.create.NewPullRequestPopup;
+import net.vanfleteren.jazygit.feature.github.create.PushFirstPopup;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
@@ -569,19 +572,213 @@ class PullRequestUpdateTest {
     }
 
     @Test
-    void aBranchThatIsNotPushedOrHasUnpushedCommitsMustBePushedFirst() {
+    void aBranchNotOnItsRemoteIsAskedToBePushedToItsPushTargetFirst() {
+        Next asking = Update.update(model(), new PullRequestMsg.Requested(UNPUSHED.name()));
+
         assertEquals(
-                Option.of(new AppError.NotPushed(new Branch.Name("local"))),
-                Update.update(model(), new PullRequestMsg.Requested(new Branch.Name("local")))
-                        .model()
-                        .outcome()
-                        .error());
+                Option.of(new PushFirstPopup(
+                        UNPUSHED.name(), new RemoteBranch("origin", UNPUSHED.name()), Option.none())),
+                asking.model().popup());
+        assertEquals(List.empty(), asking.cmds());
+        assertEquals(Option.none(), asking.model().outcome().error());
+    }
+
+    @Test
+    void aBranchAheadOfItsRemoteIsAskedToPushItsCommitsFirst() {
+        Next asking = Update.update(model(), new PullRequestMsg.Requested(AHEAD.name()));
+
         assertEquals(
-                Option.of(new AppError.NotPushed(new Branch.Name("ahead"))),
-                Update.update(model(), new PullRequestMsg.Requested(new Branch.Name("ahead")))
-                        .model()
-                        .outcome()
-                        .error());
+                Option.of(new PushFirstPopup(AHEAD.name(), new RemoteBranch("origin", AHEAD.name()), Option.of(2))),
+                asking.model().popup());
+        assertEquals(List.empty(), asking.cmds());
+    }
+
+    @Test
+    void aDivergedBranchIsNotForcePushedForItsPullRequest() {
+        RemoteBranch upstream = new RemoteBranch("origin", new Branch.Name("diverged"));
+        Branch diverged = new Branch(
+                upstream.branch(),
+                false,
+                new Sha("6"),
+                Instant.EPOCH,
+                true,
+                false,
+                Option.of(new Upstream(upstream, 2, 1)));
+        Model branches = localBranchesRead(loaded(), List.of(diverged, MAIN)).model();
+        Model starting = Update.update(branches, new PullRequestsMsg.Loaded(List.empty()))
+                .model();
+
+        Next refused = Update.update(starting, new PullRequestMsg.Requested(diverged.name()));
+
+        assertEquals(
+                Option.of(new AppError.Diverged(diverged.name(), upstream)),
+                refused.model().outcome().error());
+        assertTrue(refused.model().popup(PushFirstPopup.class).isEmpty());
+        assertEquals(List.empty(), refused.cmds());
+    }
+
+    @Test
+    void confirmingPushesABranchNotOnItsRemoteToItsPushTargetWhichItThenTracks() {
+        Model asking = Update.update(model(), new PullRequestMsg.Requested(UNPUSHED.name()))
+                .model();
+
+        Next pushing = Update.update(asking, new CreatePullRequestMsg.PushFirstConfirmed());
+
+        assertEquals(
+                List.of(new PushFirst(
+                        new PushSettingUpstream(UNPUSHED.name(), new RemoteBranch("origin", UNPUSHED.name())))),
+                pushing.cmds());
+        assertEquals(Option.none(), pushing.model().popup());
+        assertTrue(pushing.model().idleBranch(UNPUSHED.name()).isEmpty());
+    }
+
+    @Test
+    void confirmingPushesTheCommitsOfABranchAheadOfItsRemote() {
+        Model asking = Update.update(model(), new PullRequestMsg.Requested(AHEAD.name()))
+                .model();
+
+        Next pushing = Update.update(asking, new CreatePullRequestMsg.PushFirstConfirmed());
+
+        assertEquals(
+                List.of(new PushFirst(
+                        new Push(AHEAD.name(), new RemoteBranch("origin", AHEAD.name()), PushMode.FAST_FORWARD))),
+                pushing.cmds());
+    }
+
+    @Test
+    void cancellingThePushPushesNothing() {
+        Model asking = Update.update(model(), new PullRequestMsg.Requested(UNPUSHED.name()))
+                .model();
+
+        Next cancelled = Update.update(asking, new CreatePullRequestMsg.PushFirstCancelled());
+
+        assertEquals(Option.none(), cancelled.model().popup());
+        assertEquals(List.empty(), cancelled.cmds());
+    }
+
+    @Test
+    void onceItIsPushedItsPullRequestIsAskedForWhileTheRepositoryIsReadAgain() {
+        PushFirst push =
+                new PushFirst(new PushSettingUpstream(UNPUSHED.name(), new RemoteBranch("origin", UNPUSHED.name())));
+        Model pushing = Update.start(model(), push).model();
+
+        List<ExecutedCommand> commands = StubGitProvider.executed("git push -u origin local");
+
+        Next pushed = Update.update(pushing, push.succeeded(commands));
+
+        assertEquals(
+                List.of(new ReadParent(
+                        UNPUSHED.name(),
+                        List.of(
+                                new Base(MAIN.name(), remote("main")),
+                                new Base(RELEASE.name(), remote("release")),
+                                new Base(FEATURE, remote("feature")),
+                                new Base(AHEAD.name(), remote("ahead"))))),
+                pushed.cmds().filter(ReadParent.class::isInstance));
+        // What any push does once it succeeded is done as well.
+        assertTrue(
+                pushed.cmds()
+                        .containsAll(OperationUpdate.succeeded(pushing, push, commands)
+                                .cmds()),
+                pushed.cmds().toString());
+        assertTrue(pushed.model().idleBranch(UNPUSHED.name()).isDefined());
+    }
+
+    @Test
+    void aFailedPushAsksForNoPullRequest() {
+        PushFirst push =
+                new PushFirst(new PushSettingUpstream(UNPUSHED.name(), new RemoteBranch("origin", UNPUSHED.name())));
+        Model pushing = Update.start(model(), push).model();
+
+        Next failed = Update.update(pushing, failed(push, "rejected"));
+
+        assertFalse(
+                failed.cmds().exists(CreatePullRequestCmd.class::isInstance),
+                failed.cmds().toString());
+        assertTrue(failed.model().outcome().error().isDefined());
+        assertTrue(failed.model().popup(NewPullRequestPopup.class).isEmpty());
+    }
+
+    /**
+     * {@link #AHEAD}, but {@code ahead} and {@code behind} its upstream.
+     */
+    private static Branch ahead(int ahead, int behind) {
+        return new Branch(
+                AHEAD.name(),
+                false,
+                new Sha("5"),
+                Instant.EPOCH,
+                true,
+                false,
+                Option.of(new Upstream(new RemoteBranch("origin", AHEAD.name()), ahead, behind)));
+    }
+
+    @Test
+    void confirmingOnceItWasPushedMeanwhileAsksForItsPullRequest() {
+        Model asking = Update.update(model(), new PullRequestMsg.Requested(AHEAD.name()))
+                .model();
+        Model pushedElsewhere = localBranchesRead(asking, List.of(RELEASE, PUSHED, UNPUSHED, ahead(0, 0), MAIN))
+                .model();
+
+        Next confirmed = Update.update(pushedElsewhere, new CreatePullRequestMsg.PushFirstConfirmed());
+
+        assertTrue(confirmed.model().popup(PushFirstPopup.class).isEmpty());
+        assertFalse(
+                confirmed.cmds().exists(PushFirst.class::isInstance),
+                confirmed.cmds().toString());
+        assertTrue(
+                confirmed.cmds().exists(ReadParent.class::isInstance),
+                confirmed.cmds().toString());
+    }
+
+    @Test
+    void confirmingOnceItDivergedMeanwhileSaysSo() {
+        Model asking = Update.update(model(), new PullRequestMsg.Requested(AHEAD.name()))
+                .model();
+        Model diverged = localBranchesRead(asking, List.of(RELEASE, PUSHED, UNPUSHED, ahead(2, 1), MAIN))
+                .model();
+
+        Next confirmed = Update.update(diverged, new CreatePullRequestMsg.PushFirstConfirmed());
+
+        assertTrue(confirmed.model().popup(PushFirstPopup.class).isEmpty());
+        assertEquals(
+                Option.of(new AppError.Diverged(AHEAD.name(), new RemoteBranch("origin", AHEAD.name()))),
+                confirmed.model().outcome().error());
+        assertEquals(List.empty(), confirmed.cmds());
+    }
+
+    @Test
+    void aPushedBranchThatIsGoneMeanwhileAsksForNoPullRequest() {
+        PushFirst push =
+                new PushFirst(new PushSettingUpstream(UNPUSHED.name(), new RemoteBranch("origin", UNPUSHED.name())));
+        Model pushing = Update.start(model(), push).model();
+        Model gone = localBranchesRead(pushing, List.of(RELEASE, PUSHED, AHEAD, MAIN))
+                .model();
+        List<ExecutedCommand> commands = StubGitProvider.executed("git push -u origin local");
+
+        Next pushed = Update.update(gone, push.succeeded(commands));
+
+        assertEquals(OperationUpdate.succeeded(gone, push, commands).cmds(), pushed.cmds());
+        assertTrue(pushed.model().popup(NewPullRequestPopup.class).isEmpty());
+    }
+
+    @Test
+    void aPushThatEndsWhileAnotherPopupIsOpenLeavesThatOpen() {
+        PushFirst push =
+                new PushFirst(new PushSettingUpstream(UNPUSHED.name(), new RemoteBranch("origin", UNPUSHED.name())));
+        Model other = Update.start(model(), push).model().openPopup(new SwitchWorktreePopup(MAIN.name(), "/work/main"));
+        Model pushed = Update.update(other, push.succeeded(StubGitProvider.executed("git push -u origin local")))
+                .model();
+
+        Model parentRead = Update.update(pushed, new CreatePullRequestMsg.ParentRead(UNPUSHED.name(), Option.none()))
+                .model();
+        Model titleRead = Update.update(
+                        parentRead,
+                        new CreatePullRequestMsg.TitleRead(
+                                UNPUSHED.name(), UNPUSHED.name(), List.of(MAIN.name()), Option.of("Add it")))
+                .model();
+
+        assertEquals(other.popup(), titleRead.popup());
     }
 
     @Test
