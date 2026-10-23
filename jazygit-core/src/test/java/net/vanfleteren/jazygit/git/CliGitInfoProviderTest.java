@@ -1454,6 +1454,20 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void aBranchThatFollowsALocalOneIsOnOriginUnderItsOwnName() throws Exception {
+        git("branch", "-q", "--track", "topic", "main");
+        git("update-ref", "refs/remotes/origin/topic", "HEAD");
+
+        Branch topic = provider.allBranches()
+                .map(AllBranches::local)
+                .get()
+                .find(b -> b.name().equals(new BranchName("topic")))
+                .get();
+        assertEquals(new RemoteBranch("origin", new BranchName("topic")), topic.pushTarget());
+        assertTrue(topic.hasRemote());
+    }
+
+    @Test
     void branchesKnowWhetherTheyExistOnTheirRemote() throws Exception {
         git("branch", "pushed");
         git("branch", "local-only");

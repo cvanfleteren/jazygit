@@ -150,6 +150,21 @@ class CliParseTest {
     }
 
     @Test
+    void aBranchThatFollowsALocalOneIsOnItsRemoteWhenOriginHasItsName() {
+        String raw = ref("refs/heads/main", A, "2", " ", "", "", "", "", "", "")
+                + ref("refs/heads/feature", B, "1", "*", ".", "refs/heads/main", "", "", "refs/heads/main", "")
+                + ref("refs/remotes/origin/feature", B, "1", " ", "", "", "", "", "", "");
+
+        Branch feature = CliBranch.parseAll(raw)
+                .get()
+                .local()
+                .find(branch -> branch.name().equals(new BranchName("feature")))
+                .get();
+        assertEquals(new RemoteBranch("origin", new BranchName("feature")), feature.pushTarget());
+        assertEquals(List.of(true, true), List.of(feature.hasRemote(), feature.remoteDeletable()));
+    }
+
+    @Test
     void anUpstreamKeepsItsRemoteApartFromItsBranchEvenWhenTheRemoteNameHasASlash() {
         String raw = ref(
                 "refs/heads/local",
