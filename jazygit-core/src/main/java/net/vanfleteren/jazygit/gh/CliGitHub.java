@@ -40,13 +40,20 @@ public final class CliGitHub implements GitHub {
             (if .__typename == "CheckRun" \
             then (if .status == "COMPLETED" then (.conclusion // "") else "PENDING" end) \
             else (.state // "") end)""";
-    // Where a pull request sits in its stack, in GraphQL: both null when it is not stacked.
-    private static final String STACK_FIELDS = "stackEntry { position } stack { number size }";
-    // STACK_FIELDS as the fields of a line, in jq: the number of the stack, the position and the size, all empty when
-    // it is not stacked.
+    // Where a pull request sits in its stack, and the pull requests of it, in GraphQL: both null when it is not
+    // stacked.
+    private static final String STACK_FIELDS = """
+            stackEntry { position } stack { number size \
+            entries(first: 100) { nodes { position pullRequest { number state } } } }""";
+    // STACK_FIELDS as the fields of a line, in jq: the number of the stack, the position, the size and its pull
+    // requests as position:number:state, separated by commas, all empty when it is not stacked. An entry whose pull
+    // request cannot be read is left out.
     private static final String STACK_JQ = """
             def stack: [(.stack.number // "" | tostring), (.stackEntry.position // "" | tostring), \
-            (.stack.size // "" | tostring)]; """;
+            (.stack.size // "" | tostring), \
+            ([.stack.entries.nodes[]? | select(.pullRequest != null) \
+            | "\\(.position):\\(.pullRequest.number):\\(.pullRequest.state)"] | join(","))]; """;
+    private static final int STACK_FIELD_COUNT = 4;
     /*
      * The open pull requests of the repository, all pages of them, with the states of the checks on their last
      * commit. gh fills in the repository of the working tree for {owner} and {repo}.
@@ -66,7 +73,7 @@ public final class CliGitHub implements GitHub {
             .data.repository.pullRequests.nodes[] | select(.isCrossRepository | not) \
             | [(.number | tostring), .headRefName, (.isDraft | tostring), (.reviewDecision // ""), \
             ([.commits.nodes[0].commit.statusCheckRollup.contexts.nodes[]? | %s] | join(","))] + stack | @tsv""".formatted(CHECK_STATE);
-    private static final int FIELD_COUNT = 8;
+    private static final int FIELD_COUNT = 5 + STACK_FIELD_COUNT;
 
     /*
      * What a list of pull requests shows of each, in GraphQL. The checks are those on its last commit.
@@ -112,7 +119,7 @@ public final class CliGitHub implements GitHub {
             .data | to_entries[] | .key as $list | (["list", $list, "", (.value.issueCount | tostring)] | @tsv), \
             (.value.nodes[] | select(.number != null) | (["pr", $list] + summary) | @tsv)""";
     private static final int LIST_LINE_FIELDS = 4;
-    private static final int SUMMARY_LINE_FIELDS = 16;
+    private static final int SUMMARY_LINE_FIELDS = 13 + STACK_FIELD_COUNT;
     // The base branch of a pull request on the first line, its body after it.
     private static final String PREVIEW_JQ = ".baseRefName + \"\\n\" + .body";
 
@@ -347,7 +354,7 @@ public final class CliGitHub implements GitHub {
 
     /**
      * Where a pull request sits in its stack, from the fields of {@link #STACK_JQ}: none when they are all empty,
-     * as it is not stacked, and a failure when they are not numbers.
+     * as it is not stacked, and a failure when they are not what they should be.
      */
     private static Try<Option<PullRequestStack>> stack(List<String> fields) {
         return fields.forAll(String::isEmpty)
@@ -355,7 +362,22 @@ public final class CliGitHub implements GitHub {
                 : Try.of(() -> Option.of(new PullRequestStack(
                         Integer.parseInt(fields.get(0)),
                         Integer.parseInt(fields.get(1)),
-                        Integer.parseInt(fields.get(2)))));
+                        Integer.parseInt(fields.get(2)),
+                        List.of(fields.get(3).split(","))
+                                .filter(entry -> !entry.isEmpty())
+                                .map(CliGitHub::stackEntry))));
+    }
+
+    /**
+     * A pull request of a stack, from position:number:state; throws when it is not that.
+     */
+    private static PullRequestStack.Entry stackEntry(String entry) {
+        String[] parts = entry.split(":", -1);
+        if (parts.length != 3) {
+            throw new IllegalArgumentException(entry);
+        }
+        return new PullRequestStack.Entry(
+                Integer.parseInt(parts[0]), Integer.parseInt(parts[1]), PullRequestDetails.State.valueOf(parts[2]));
     }
 
     /**
@@ -539,7 +561,7 @@ public final class CliGitHub implements GitHub {
             case "pr" -> fields.size() == DETAIL_FIELD_COUNT;
             case "label", "requested" -> fields.size() == 2;
             case "review", "check" -> fields.size() == 3;
-            case "stack" -> fields.size() == 4;
+            case "stack" -> fields.size() == 1 + STACK_FIELD_COUNT;
             case "threads" -> fields.size() == 5;
             default -> false;
         };

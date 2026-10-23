@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.*;
 import org.junit.jupiter.api.Test;
@@ -51,7 +52,19 @@ class BranchSegsTest {
                         LoadableList.Seg.styled(" 📚2/3", Theme.Classes.DIM),
                         LoadableList.Seg.styled(" ✅", Theme.Classes.CHECKS_PASSED)),
                 BranchSegs.pullRequest(Option.of(new PullRequest(
-                        95, "b", false, Checks.PASSING, Review.NONE, Option.of(new PullRequestStack(96, 2, 3))))));
+                        95,
+                        "b",
+                        false,
+                        Checks.PASSING,
+                        Review.NONE,
+                        Option.of(new PullRequestStack(
+                                96,
+                                2,
+                                3,
+                                List.of(
+                                        new PullRequestStack.Entry(1, 94, State.OPEN),
+                                        new PullRequestStack.Entry(2, 95, State.OPEN),
+                                        new PullRequestStack.Entry(3, 97, State.OPEN))))))));
     }
 
     @Test
