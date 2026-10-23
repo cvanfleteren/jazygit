@@ -46,7 +46,7 @@ public sealed interface PullCmd extends BranchCmd.KeepsBranchBusy {
     /**
      * Fast-forwards {@code branch}, which is not checked out, to {@code upstream}, the branch it tracks.
      */
-    record FastForward(Branch.Name branch, RemoteBranch upstream) implements PullCmd {
+    record FastForward(Branch.Name branch, BranchRef upstream) implements PullCmd {
 
         @Override
         public Operation operation() {

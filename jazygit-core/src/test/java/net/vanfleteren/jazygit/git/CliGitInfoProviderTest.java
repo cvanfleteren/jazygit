@@ -910,7 +910,8 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "--allow-empty", "-m", "local");
         RemoteBranch upstream = new RemoteBranch("origin", new Branch.Name("main"));
 
-        List<String> executed = provider.reset(new ResetTarget.ToUpstream(upstream), ResetMode.HARD)
+        List<String> executed = provider.reset(
+                        new ResetTarget.ToUpstream(new BranchRef.Remote(upstream)), ResetMode.HARD)
                 .get()
                 .map(ExecutedCommand::line);
 
@@ -1413,13 +1414,26 @@ class CliGitInfoProviderTest {
     }
 
     @Test
-    void countsAgainstABranchOfThisRepositoryFollowedAsARemoteOne() throws Exception {
-        git("checkout", "-q", "-b", "side");
-        git("commit", "-q", "--allow-empty", "-m", "Side one");
-        BranchRef side = new BranchRef.Local(new Branch.Name("side"));
-        BranchRef main = new BranchRef.Remote(new RemoteBranch(".", new Branch.Name("main")));
+    void aBranchThatFollowsALocalOneIsReadSoAndFastForwardedToIt() throws Exception {
+        git("branch", "-q", "--track", "topic", "main");
+        git("commit", "-q", "--allow-empty", "-m", "Ahead");
+        BranchRef main = new BranchRef.Local(new Branch.Name("main"));
 
-        assertEquals(1, provider.countNotOn(side, main, 1000).get());
+        Branch topic = provider.allBranches()
+                .map(AllBranches::local)
+                .get()
+                .find(b -> b.name().equals(new Branch.Name("topic")))
+                .get();
+        assertEquals(Option.of(new Upstream(main, 0, 1)), topic.upstream());
+        assertEquals(Option.none(), topic.remoteUpstream());
+
+        assertEquals(
+                List.of("git fetch . refs/heads/main:refs/heads/topic"),
+                provider.fastForward(new Branch.Name("topic"), main).get().map(ExecutedCommand::line));
+        assertEquals(
+                0,
+                provider.countNotOn(main, new BranchRef.Local(new Branch.Name("topic")), 1000)
+                        .get());
     }
 
     @Test
@@ -1479,7 +1493,7 @@ class CliGitInfoProviderTest {
                 .find(b -> b.name().equals(new Branch.Name("feature")))
                 .get();
         assertTrue(local.current());
-        assertEquals(Option.of(feature), local.upstream().map(upstream -> upstream.branch()));
+        assertEquals(Option.of(new BranchRef.Remote(feature)), local.upstream().map(upstream -> upstream.branch()));
     }
 
     @Test
@@ -1542,7 +1556,9 @@ class CliGitInfoProviderTest {
                         .map(ExecutedCommand::line));
         Branch main = provider.allBranches().map(AllBranches::local).get().head();
         assertEquals(
-                Option.of(new Upstream(new RemoteBranch("mirror", new Branch.Name("shared")), 0, 0)), main.upstream());
+                Option.of(new Upstream(
+                        new BranchRef.Remote(new RemoteBranch("mirror", new Branch.Name("shared"))), 0, 0)),
+                main.upstream());
         assertTrue(main.hasRemote());
 
         git("commit", "-q", "--allow-empty", "-m", "local");
@@ -1677,7 +1693,9 @@ class CliGitInfoProviderTest {
 
         assertEquals(
                 List.of("git fetch origin refs/heads/main:refs/heads/main"),
-                provider.fastForward(new Branch.Name("main"), new RemoteBranch("origin", new Branch.Name("main")))
+                provider.fastForward(
+                                new Branch.Name("main"),
+                                new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main"))))
                         .get()
                         .map(ExecutedCommand::line));
 
@@ -1690,7 +1708,9 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "--allow-empty", "-m", "ours");
         git("checkout", "-q", "-b", "other");
 
-        assertTrue(provider.fastForward(new Branch.Name("main"), new RemoteBranch("origin", new Branch.Name("main")))
+        assertTrue(provider.fastForward(
+                        new Branch.Name("main"),
+                        new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main"))))
                 .isLeft());
         assertEquals(List.of(1, 1), counts("main"));
     }
@@ -1804,7 +1824,7 @@ class CliGitInfoProviderTest {
                 .find(b -> b.name().equals(new Branch.Name("topic")))
                 .get();
         assertEquals(
-                Option.of(new RemoteBranch("origin", new Branch.Name("feature"))),
+                Option.of(new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("feature")))),
                 topic.upstream().map(upstream -> upstream.branch()));
         assertTrue(provider.allBranches()
                 .map(AllBranches::local)

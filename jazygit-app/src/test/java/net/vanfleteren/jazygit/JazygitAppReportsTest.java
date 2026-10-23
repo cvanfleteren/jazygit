@@ -184,7 +184,7 @@ class JazygitAppReportsTest {
                     Instant.EPOCH,
                     true,
                     true,
-                    Option.of(new Upstream(new RemoteBranch("origin", MAIN), 0, 1)))));
+                    Option.of(new Upstream(new BranchRef.Remote(new RemoteBranch("origin", MAIN)), 0, 1)))));
         }
 
         @Override

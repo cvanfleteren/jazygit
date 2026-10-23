@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.git.model;
 
 /**
- * What a local branch follows on its remote.
+ * What a local branch follows.
  */
 public sealed interface Tracking {
 
@@ -16,9 +16,9 @@ public sealed interface Tracking {
     record Tracks(Upstream upstream) implements Tracking {}
 
     /**
-     * Its upstream is configured, but the remote branch is deleted, e.g. after its pull request was merged.
+     * Its upstream is configured, but the branch is deleted, e.g. on the remote after its pull request was merged.
      *
-     * @param branch the branch on its remote that it followed, e.g. {@code feature} on {@code origin}
+     * @param branch the branch that it followed, e.g. {@code origin/feature}
      */
-    record Gone(RemoteBranch branch) implements Tracking {}
+    record Gone(BranchRef branch) implements Tracking {}
 }

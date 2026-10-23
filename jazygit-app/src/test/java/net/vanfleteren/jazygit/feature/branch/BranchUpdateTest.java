@@ -64,7 +64,10 @@ class BranchUpdateTest {
                                         true,
                                         false,
                                         Option.of(new Upstream(
-                                                new RemoteBranch("origin", new Branch.Name("feature")), 0, 0)))))
+                                                new BranchRef.Remote(
+                                                        new RemoteBranch("origin", new Branch.Name("feature"))),
+                                                0,
+                                                0)))))
                 .model();
     }
 
@@ -83,7 +86,10 @@ class BranchUpdateTest {
                                         true,
                                         true,
                                         Option.of(new Upstream(
-                                                new RemoteBranch("origin", new Branch.Name("main")), mainAhead, 1))),
+                                                new BranchRef.Remote(
+                                                        new RemoteBranch("origin", new Branch.Name("main"))),
+                                                mainAhead,
+                                                1))),
                                 new Branch(
                                         new Branch.Name("feature"),
                                         false,
@@ -92,7 +98,8 @@ class BranchUpdateTest {
                                         true,
                                         false,
                                         Option.of(new Upstream(
-                                                new RemoteBranch("origin", new Branch.Name("feature")),
+                                                new BranchRef.Remote(
+                                                        new RemoteBranch("origin", new Branch.Name("feature"))),
                                                 featureAhead,
                                                 1)))))
                 .model();
@@ -277,7 +284,7 @@ class BranchUpdateTest {
                                         Instant.EPOCH,
                                         true,
                                         false,
-                                        Option.of(new Upstream(new RemoteBranch(".", new Branch.Name("main")), 1, 0)))))
+                                        Option.of(new Upstream(new BranchRef.Local(new Branch.Name("main")), 1, 0)))))
                 .model();
 
         Next asked = Update.update(model, new PushMsg.Requested(new Branch.Name("feature")));
@@ -363,7 +370,10 @@ class BranchUpdateTest {
                                         true,
                                         false,
                                         Option.of(new Upstream(
-                                                new RemoteBranch("origin", new Branch.Name("feature")), 1, 2)))))
+                                                new BranchRef.Remote(
+                                                        new RemoteBranch("origin", new Branch.Name("feature"))),
+                                                1,
+                                                2)))))
                 .model();
 
         Next asked = Update.update(diverged, new PushMsg.Requested(new Branch.Name("feature")));
@@ -475,7 +485,8 @@ class BranchUpdateTest {
 
         assertEquals(
                 List.of(new PullCmd.FastForward(
-                        new Branch.Name("feature"), new RemoteBranch("origin", new Branch.Name("feature")))),
+                        new Branch.Name("feature"),
+                        new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("feature"))))),
                 next.cmds());
         assertEquals(
                 io.vavr.collection.HashSet.of(new BranchRef.Local(new Branch.Name("feature"))),
@@ -517,7 +528,7 @@ class BranchUpdateTest {
                 Instant.EPOCH,
                 false,
                 false,
-                new Tracking.Gone(new RemoteBranch("origin", new Branch.Name("old"))));
+                new Tracking.Gone(new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("old")))));
         Model model = localBranchesRead(loaded(), List.of(gone)).model();
 
         Next pulled = Update.update(model, new PullMsg.Requested(new Branch.Name("old")));
@@ -547,7 +558,8 @@ class BranchUpdateTest {
                                 failed(
                                         new PullCmd.FastForward(
                                                 new Branch.Name("feature"),
-                                                new RemoteBranch("origin", new Branch.Name("feature"))),
+                                                new BranchRef.Remote(
+                                                        new RemoteBranch("origin", new Branch.Name("feature")))),
                                         "boom"))
                         .model()));
     }

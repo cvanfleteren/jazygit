@@ -194,8 +194,8 @@ one and one whose directory is gone.
 `u` on a local branch offers, besides resetting the checked out branch onto its upstream, to view how the
 highlighted branch diverged (`feature.branch`, `UpstreamUpdate`):
 
-- **From its upstream** (`v`): the remote-tracking branch it follows, or the local one for an upstream in the
-  repository itself (`BranchRef.of`).
+- **From its upstream** (`v`): the branch it follows, `Upstream.branch`: the remote-tracking one, or the local one
+  for an upstream in the repository itself.
 - **From the base branch** (`b`): `origin/<main>`, else the local `<main>`, where `<main>` is the branch `Branch.isDefault`
   marks. The main branch itself has no base.
 

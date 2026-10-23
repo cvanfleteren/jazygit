@@ -185,7 +185,7 @@ public interface GitInfoProvider {
      * Fast-forwards the local branch {@code branch}, which is not checked out, to {@code upstream}, the branch it
      * tracks. Fails when that is not a fast-forward.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(Branch.Name branch, RemoteBranch upstream);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(Branch.Name branch, BranchRef upstream);
 
     // The remotes, as git remote lists them.
 

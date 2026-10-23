@@ -40,7 +40,7 @@ public final class PullUpdate {
                                                         model.clearError(),
                                                         new FastForward(branch, upstream.branch()))))
                         .getOrElse(() -> Next.of(model.fail(known.goneUpstream()
-                                .<AppError>map(upstream -> new AppError.UpstreamGone(branch, upstream.shortName()))
+                                .<AppError>map(upstream -> new AppError.UpstreamGone(branch, upstream.name()))
                                 .getOrElse(() -> new AppError.NoUpstream(branch))))))
                 .getOrElse(() -> Next.of(model));
     }

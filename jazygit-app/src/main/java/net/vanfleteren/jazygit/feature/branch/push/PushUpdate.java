@@ -34,8 +34,7 @@ public final class PushUpdate {
                         popup -> model.repo()
                                 .branch(popup.branch())
                                 .flatMap(Branch::remoteUpstream)
-                                .map(upstream ->
-                                        new Push(popup.branch(), upstream.branch(), PushMode.FORCE_WITH_LEASE)));
+                                .map(upstream -> new Push(popup.branch(), upstream, PushMode.FORCE_WITH_LEASE)));
         };
     }
 
@@ -47,8 +46,7 @@ public final class PushUpdate {
                 .map(known -> known.remoteUpstream()
                         .map(upstream -> known.behind() > 0
                                 ? Update.ask(model, new ForcePushPopup(branch))
-                                : Update.start(
-                                        model.clearError(), new Push(branch, upstream.branch(), PushMode.FAST_FORWARD)))
+                                : Update.start(model.clearError(), new Push(branch, upstream, PushMode.FAST_FORWARD)))
                         .getOrElse(() -> Update.ask(model, new SetUpstreamPopup(branch))))
                 .getOrElse(() -> Next.of(model));
     }

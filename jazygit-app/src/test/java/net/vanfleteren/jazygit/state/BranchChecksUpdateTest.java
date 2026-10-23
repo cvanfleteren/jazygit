@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Upstream;
@@ -49,7 +50,7 @@ class BranchChecksUpdateTest {
                 Instant.EPOCH,
                 true,
                 false,
-                Option.of(new Upstream(upstream, 1, 0)));
+                Option.of(new Upstream(new BranchRef.Remote(upstream), 1, 0)));
     }
 
     private static Model withChecks() {

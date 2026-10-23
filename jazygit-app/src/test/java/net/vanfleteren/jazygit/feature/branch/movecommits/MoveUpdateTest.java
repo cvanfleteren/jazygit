@@ -76,7 +76,7 @@ class MoveUpdateTest {
                         Instant.EPOCH,
                         true,
                         false,
-                        Option.of(new Upstream(ORIGIN_FEATURE, 1, 0))),
+                        Option.of(new Upstream(new BranchRef.Remote(ORIGIN_FEATURE), 1, 0))),
                 new Branch(MAIN, false, ROOT.sha(), Instant.EPOCH, true, true),
                 new Branch(
                         ELSEWHERE,

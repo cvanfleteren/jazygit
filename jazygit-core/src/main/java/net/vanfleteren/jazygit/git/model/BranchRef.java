@@ -11,12 +11,9 @@ public sealed interface BranchRef {
     String name();
 
     /**
-     * The branch {@code upstream} is read from: the remote-tracking one, or the local branch for an upstream in
-     * this repository itself.
+     * Its ref, e.g. {@code refs/heads/main} or {@code refs/remotes/origin/main}.
      */
-    static BranchRef of(RemoteBranch upstream) {
-        return upstream.local() ? new Local(upstream.branch()) : new Remote(upstream);
-    }
+    String ref();
 
     /**
      * The local branch {@code branch}.
@@ -26,6 +23,11 @@ public sealed interface BranchRef {
         @Override
         public String name() {
             return branch.value();
+        }
+
+        @Override
+        public String ref() {
+            return "refs/heads/" + branch.value();
         }
     }
 
@@ -37,6 +39,11 @@ public sealed interface BranchRef {
         @Override
         public String name() {
             return branch.shortName();
+        }
+
+        @Override
+        public String ref() {
+            return branch.trackingRef();
         }
     }
 }

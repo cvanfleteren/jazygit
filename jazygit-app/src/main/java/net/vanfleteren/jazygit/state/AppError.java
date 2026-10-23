@@ -16,7 +16,7 @@ public sealed interface AppError {
      */
     static AppError noUpstream(Branch branch) {
         return branch.goneUpstream()
-                .<AppError>map(upstream -> new UpstreamGone(branch.name(), upstream.shortName()))
+                .<AppError>map(upstream -> new UpstreamGone(branch.name(), upstream.name()))
                 .getOrElse(() -> new NoUpstream(branch.name()));
     }
 

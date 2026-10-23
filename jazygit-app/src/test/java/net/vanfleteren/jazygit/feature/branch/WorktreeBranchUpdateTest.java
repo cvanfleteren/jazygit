@@ -56,7 +56,7 @@ class WorktreeBranchUpdateTest {
                                         Instant.EPOCH,
                                         true,
                                         false,
-                                        new Tracking.Tracks(new Upstream(upstream, 0, 1)),
+                                        new Tracking.Tracks(new Upstream(new BranchRef.Remote(upstream), 0, 1)),
                                         Option.of(LINKED)),
                                 new Branch(
                                         LOCAL,

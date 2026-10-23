@@ -13,6 +13,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Upstream;
@@ -42,7 +43,10 @@ class ForcePushDialogTest {
                                 Instant.EPOCH,
                                 true,
                                 false,
-                                Option.of(new Upstream(new RemoteBranch("origin", new Branch.Name("main")), 1, 2)))))
+                                Option.of(new Upstream(
+                                        new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main"))),
+                                        1,
+                                        2)))))
                 .model();
         return Update.update(diverged, new PushMsg.Requested(new Branch.Name("main")))
                 .model();

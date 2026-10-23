@@ -153,11 +153,9 @@ public final class CreatePullRequestUpdate {
                 .map(upstream -> branch.ahead() == 0
                         ? ask(model, branch)
                         : branch.behind() > 0
-                                ? Next.of(model.fail(new AppError.Diverged(branch.name(), upstream.branch())))
+                                ? Next.of(model.fail(new AppError.Diverged(branch.name(), upstream)))
                                 : Update.ask(
-                                        model,
-                                        new PushFirstPopup(
-                                                branch.name(), upstream.branch(), Option.of(branch.ahead()))))
+                                        model, new PushFirstPopup(branch.name(), upstream, Option.of(branch.ahead()))))
                 .getOrElse(
                         () -> Update.ask(model, new PushFirstPopup(branch.name(), branch.pushTarget(), Option.none())));
     }
@@ -170,7 +168,7 @@ public final class CreatePullRequestUpdate {
     static Option<PushFirst> pushFirst(Branch branch) {
         return branch.remoteUpstream()
                 .map(upstream -> branch.ahead() > 0 && branch.behind() == 0
-                        ? Option.<PushCmd>of(new Push(branch.name(), upstream.branch(), PushMode.FAST_FORWARD))
+                        ? Option.<PushCmd>of(new Push(branch.name(), upstream, PushMode.FAST_FORWARD))
                         : Option.<PushCmd>none())
                 .getOrElse(() -> Option.of(new PushSettingUpstream(branch.name(), branch.pushTarget())))
                 .map(PushFirst::new);
@@ -219,7 +217,7 @@ public final class CreatePullRequestUpdate {
         return model.repo()
                 .branch(base)
                 .flatMap(Branch::remoteUpstream)
-                .map(upstream -> BranchRef.of(upstream.branch()))
+                .<BranchRef>map(BranchRef.Remote::new)
                 .getOrElse(() -> new BranchRef.Local(base));
     }
 

@@ -350,7 +350,7 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(
-            Branch.Name branch, RemoteBranch upstream) {
+            Branch.Name branch, BranchRef upstream) {
         return ran();
     }
 
