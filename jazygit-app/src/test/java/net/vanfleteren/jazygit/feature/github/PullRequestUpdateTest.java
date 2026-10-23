@@ -1383,23 +1383,23 @@ class PullRequestUpdateTest {
     }
 
     /**
+     * Stack {@code number} of the open pull requests {@code numbers}, the bottom one first, as seen from the one at
+     * {@code position}.
+     */
+    private static PullRequestStack stack(int number, int position, Integer... numbers) {
+        List<PullRequestStack.Entry> entries = List.of(numbers)
+                .zipWithIndex((pr, index) -> new PullRequestStack.Entry(index + 1, pr, PullRequestDetails.State.OPEN));
+        return new PullRequestStack(number, position, entries.size(), entries);
+    }
+
+    /**
      * Pull request 41 at the bottom of a stack, and 42 of feature on top of it.
      */
     private static Model stackOfTwo() {
         PullRequest bottom = new PullRequest(
-                41,
-                "base-work",
-                false,
-                Checks.PASSING,
-                Review.APPROVED,
-                Option.of(new PullRequestStack(7, 1, 2, List.empty())));
-        PullRequest top = new PullRequest(
-                42,
-                "feature",
-                false,
-                Checks.PASSING,
-                Review.APPROVED,
-                Option.of(new PullRequestStack(7, 2, 2, List.empty())));
+                41, "base-work", false, Checks.PASSING, Review.APPROVED, Option.of(stack(7, 1, 41, 42)));
+        PullRequest top =
+                new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED, Option.of(stack(7, 2, 41, 42)));
         return Update.update(model(), new PullRequestsMsg.Loaded(List.of(bottom, top)))
                 .model();
     }
@@ -1430,33 +1430,13 @@ class PullRequestUpdateTest {
     @Test
     void mergingAStackedPullRequestMergesTheOnesBelowItToo() {
         PullRequest bottom = new PullRequest(
-                41,
-                "base-work",
-                false,
-                Checks.PASSING,
-                Review.APPROVED,
-                Option.of(new PullRequestStack(7, 1, 3, List.empty())));
+                41, "base-work", false, Checks.PASSING, Review.APPROVED, Option.of(stack(7, 1, 41, 42, 43)));
         PullRequest middle = new PullRequest(
-                42,
-                "feature",
-                false,
-                Checks.PASSING,
-                Review.APPROVED,
-                Option.of(new PullRequestStack(7, 2, 3, List.empty())));
+                42, "feature", false, Checks.PASSING, Review.APPROVED, Option.of(stack(7, 2, 41, 42, 43)));
         PullRequest top = new PullRequest(
-                43,
-                "on-top",
-                false,
-                Checks.PASSING,
-                Review.APPROVED,
-                Option.of(new PullRequestStack(7, 3, 3, List.empty())));
+                43, "on-top", false, Checks.PASSING, Review.APPROVED, Option.of(stack(7, 3, 41, 42, 43)));
         PullRequest other = new PullRequest(
-                40,
-                "elsewhere",
-                false,
-                Checks.PASSING,
-                Review.APPROVED,
-                Option.of(new PullRequestStack(8, 1, 2, List.empty())));
+                40, "elsewhere", false, Checks.PASSING, Review.APPROVED, Option.of(stack(8, 1, 40, 44)));
         Model stacked = Update.update(model(), new PullRequestsMsg.Loaded(List.of(bottom, middle, top, other)))
                 .model();
 

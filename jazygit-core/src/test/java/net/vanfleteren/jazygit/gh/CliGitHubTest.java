@@ -83,6 +83,20 @@ class CliGitHubTest {
                 .isLeft());
         assertTrue(CliGitHub.parse("95\tfix-abort-amend\tfalse\t\t\t96\t2\t2\t1:94:GONE\n")
                 .isLeft());
+        assertTrue(CliGitHub.parse("95\tfix-abort-amend\tfalse\t\t\t96\t2\t2\t1:94\n")
+                .isLeft());
+        assertTrue(CliGitHub.parse("95\tfix-abort-amend\tfalse\t\t\t96\t2\t2\t1:94:OPEN:x\n")
+                .isLeft());
+    }
+
+    @Test
+    void aStackWhosePullRequestsCannotBeReadHasNoEntries() {
+        assertEquals(
+                Option.of(new PullRequestStack(96, 2, 2, List.empty())),
+                CliGitHub.parse("95\tfix-abort-amend\tfalse\t\t\t96\t2\t2\t\n")
+                        .get()
+                        .head()
+                        .stack());
     }
 
     @Test

@@ -270,7 +270,13 @@ class PullRequestDialogTest {
                 false,
                 Checks.PASSING,
                 Review.APPROVED,
-                Option.of(new PullRequestStack(96, 1, 2, List.empty())));
+                Option.of(new PullRequestStack(
+                        96,
+                        1,
+                        2,
+                        List.of(
+                                new PullRequestStack.Entry(1, 42, State.OPEN),
+                                new PullRequestStack.Entry(2, 43, State.OPEN)))));
 
         String screen = screen(PullRequestPopup.loading(new Branch.Name("support_rename"), bottom)
                 .with(Either.right(READY)));
