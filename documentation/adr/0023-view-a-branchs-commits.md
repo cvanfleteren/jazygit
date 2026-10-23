@@ -29,7 +29,10 @@ of the branches, but only those that differ from its upstream, and only for a lo
 - The commits are compared with the base of the branch as ADR 0020 sets out, as the commits pane and the log of a
   highlighted branch are: those on the base are dimmed, and the title counts the others, e.g.
   `feature/x · 4 ahead of origin/main`. More than 300 ahead shows `300+ ahead` and dims nothing. A branch without a
-  base, such as the main branch, is shown unmarked. `b` does nothing there.
+  base, such as the main branch, is shown unmarked.
+- `b` lists only the commits not on the base, then the fork point, dimmed and marked `⑂ origin/main`, and the title
+  says `only 4 ahead of origin/main`, as in the other logs. It is the same setting, `RepoView.onlyAhead`: turning it
+  on or off in one log does so in all, and it does nothing for a branch without a base.
 - The title names the branch in place of the tabs, so clicking the title does nothing while the list is open.
   Clicking a row highlights it.
 - Highlighting a commit shows it in the content panel as a commit highlighted in the commits pane is shown: the same
@@ -37,7 +40,7 @@ of the branches, but only those that differ from its upstream, and only for a lo
 
 ### No actions
 
-Only moving through the list, Enter and Esc work in it. Enter on a commit does nothing. No action of the commits
+Only moving through the list, Enter, Esc and `b` work in it. Enter on a commit does nothing. No action of the commits
 pane (reword, fixup, cherry-pick, …), nor of the branches pane (`u`, checkout, …), nor `/` search, applies.
 
 ### How it is held
@@ -59,7 +62,7 @@ As the divergence view is, and next to it, not through it nor a stack of views:
 
 - Opening a branch takes a git process for its log, the few of ADR 0020 to compare it with its base, and each commit
   highlighted one more, as in the commits pane.
-- The commits of another branch can be looked at, but not acted on: cherry-picking from it, listing only what is
-  ahead (`b`), or searching are left for later.
+- The commits of another branch can be looked at, but not acted on: cherry-picking from it, or searching
+  are left for later.
 - The divergence view and this list are two drill-downs of the branches pane held side by side. A third would be the
   time to bring them under one.
