@@ -1437,6 +1437,22 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void aBranchThatFollowsADeletedLocalOneIsPushedToOrigin() throws Exception {
+        git("branch", "-q", "--track", "topic", "main");
+        git("checkout", "-q", "-b", "other");
+        git("branch", "-q", "-D", "main");
+
+        Branch topic = provider.allBranches()
+                .map(AllBranches::local)
+                .get()
+                .find(b -> b.name().equals(new Branch.Name("topic")))
+                .get();
+        assertEquals(Option.of(new BranchRef.Local(new Branch.Name("main"))), topic.goneUpstream());
+        assertEquals(Option.of("main"), topic.goneUpstream().map(BranchRef::name));
+        assertEquals(new RemoteBranch("origin", new Branch.Name("topic")), topic.pushTarget());
+    }
+
+    @Test
     void branchesKnowWhetherTheyExistOnTheirRemote() throws Exception {
         git("branch", "pushed");
         git("branch", "local-only");
