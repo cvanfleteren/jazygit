@@ -15,7 +15,7 @@ import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
 
 /**
- * The local branches, with the name of the current branch in bold. Space checks out the highlighted branch, P pushes it, R asks
+ * The local branches, with the name of the current branch in bold and a colour of its own. Space checks out the highlighted branch, P pushes it, R asks
  * for a new name for it, d asks where to delete it, n asks for the name of a new branch starting at it, w checks it
  * out in a new worktree.
  * A branch with a pull request shows its number, its CI checks and its review; one without shows the CI checks
@@ -48,7 +48,7 @@ class LocalBranchesList implements BranchesTabList {
         return new LoadableList.Row(List.of(
                         LoadableList.Seg.of("%4s ".formatted(TimeText.age(since))),
                         b.current()
-                                ? LoadableList.Seg.styled(b.name().value(), Theme.Classes.BOLD)
+                                ? LoadableList.Seg.styled(b.name().value(), Theme.Classes.CURRENT)
                                 : LoadableList.Seg.of(b.name().value()))
                 .appendAll(BranchSegs.worktree(b))
                 .appendAll(BranchSegs.sync(b))

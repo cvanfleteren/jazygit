@@ -349,8 +349,8 @@ class BranchesPanelTest {
 
             assertTrue(screen.contains("Branches │ Remotes │ Worktrees"), screen);
             // The sample status has changes.
-            assertTrue(screen.contains("* app ● main (main)"), screen);
-            assertTrue(screen.contains("  app-feature feature"), screen);
+            assertTrue(screen.contains("app ● main (main)"), screen);
+            assertTrue(screen.contains("app-feature feature"), screen);
         }
 
         assertEquals(

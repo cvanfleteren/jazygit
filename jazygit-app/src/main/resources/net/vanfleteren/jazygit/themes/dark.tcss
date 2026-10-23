@@ -57,6 +57,7 @@ ListElement-item:selected, TreeElement-node:selected, .selection {
 .review-changes { color: red; }
 .repo-branch { color: cyan; }
 .repo-location { color: magenta; }
+.current { color: yellow; text-style: bold; }
 
 Span.diff-header { text-style: bold; }
 Span.diff-added { color: green; }

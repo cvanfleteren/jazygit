@@ -172,6 +172,11 @@ public final class Theme {
         public static final String REPO_BRANCH = "repo-branch";
         public static final String REPO_LOCATION = "repo-location";
         /**
+         * The name of the checked-out branch and of the worktree that is shown: bold and in a colour, which still
+         * shows behind an open popup, where bold does not.
+         */
+        public static final String CURRENT = "current";
+        /**
          * The highlighted row of the left pane that is in use.
          */
         public static final String SELECTION = "selection";

@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 class LocalBranchesListTest {
 
     @Test
-    void theCurrentBranchShowsItsNameInBoldAndNoOtherMark() {
+    void theCurrentBranchStandsOutByTheStyleOfItsNameAlone() {
         LoadableList.Row current = LocalBranchesList.row(
                 new Branch(new Branch.Name("main"), true, new Sha("1")),
                 Duration.ofMinutes(5),
@@ -25,7 +25,7 @@ class LocalBranchesListTest {
 
         assertEquals("  5m main", current.text());
         assertEquals(
-                List.of(Option.none(), Option.of(Theme.Classes.BOLD)),
+                List.of(Option.none(), Option.of(Theme.Classes.CURRENT)),
                 current.segs().map(LoadableList.Seg::cssClass));
         assertEquals("  5m feature", other.text());
         assertEquals(List.of(Option.none(), Option.none()), other.segs().map(LoadableList.Seg::cssClass));

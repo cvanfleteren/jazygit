@@ -22,7 +22,7 @@ class WorktreesListTest {
                 true);
 
         assertEquals(
-                "  x (detached at 1234567) locked missing",
+                "x (detached at 1234567) locked missing",
                 WorktreesList.row(Repo.LOADING, detached).text());
         assertEquals(
                 List.of(
@@ -57,7 +57,7 @@ class WorktreesListTest {
 
         LoadableList.Row row = WorktreesList.row(repo, worktree);
 
-        assertEquals("  x ● feature ↑2 ↓1", row.text());
+        assertEquals("x ● feature ↑2 ↓1", row.text());
         assertEquals(
                 List.of(
                         Option.none(),
@@ -67,11 +67,28 @@ class WorktreesListTest {
                         Option.of(Theme.Classes.BEHIND)),
                 row.segs().map(LoadableList.Seg::cssClass));
         assertEquals(
-                "  x feature ↑2 ↓1",
+                "x feature ↑2 ↓1",
                 WorktreesList.row(
                                 repo.withWorktreeChanges(io.vavr.collection.HashMap.of(path.toString(), false)),
                                 worktree)
                         .text());
+    }
+
+    @Test
+    void theWorktreeThatIsShownStandsOutByTheStyleOfItsNameAlone() {
+        Worktree shown = new Worktree(
+                java.nio.file.Path.of("/repos/x"),
+                Option.of(new Sha("1234567890")),
+                Option.of(new Branch.Name("feature")),
+                false,
+                true,
+                Option.none(),
+                false);
+
+        LoadableList.Row row = WorktreesList.row(Repo.LOADING, shown);
+
+        assertEquals("x feature", row.text());
+        assertEquals(Option.of(Theme.Classes.CURRENT), row.segs().head().cssClass());
     }
 
     @Test
@@ -86,7 +103,7 @@ class WorktreesListTest {
                 false);
 
         assertEquals(
-                "  x feature locked: on usb",
+                "x feature locked: on usb",
                 WorktreesList.row(Repo.LOADING, locked).text());
     }
 }
