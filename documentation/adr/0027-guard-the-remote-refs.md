@@ -41,6 +41,10 @@ there. A pull reads only what its own fetch wrote.
 - The guard is declared by the command, as data, as its slot is (ADR 12); `Program` does the waiting. The model
   knows nothing of it: a pull asked for while a fetch runs shows its spinner as soon as it is asked for, and starts
   once the fetch is done.
+- A command waiting for the guard has left the queue of its executor, so stopping the program, when another
+  repository is shown or the same one is opened again, does not drop it with what is queued. `Program.stop()`
+  does: a command that gets its guard after the program stopped is skipped, and reports nothing. The locks are the
+  program's own, not shared by the programs of the same repository.
 - A command waiting for the guard on `git-io` holds up the commands after it there. They keep their order, which
   the model relies on (ADR 12). The commands that take the guard talk to the remote anyway, so they are already
   slow.
@@ -60,3 +64,7 @@ to a remote wait for a fetch.
   commands asked for after it.
 - A command that writes the remote-tracking refs must take the guard; one that does not can fail again as the pull
   did.
+- A pull or push that already runs when the repository is opened again still finishes, as it did before, and can
+  overlap the fetch the new program starts with: one of them can then fail on the lock of a ref. Locks shared by
+  the programs of a repository would keep that apart too, as state outside any program; that is left until it
+  shows up.

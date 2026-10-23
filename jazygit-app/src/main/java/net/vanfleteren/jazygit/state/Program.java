@@ -42,6 +42,8 @@ public final class Program {
     private final Map<Cmd.Slot, Future<Void>> latest = new EnumMap<>(Cmd.Slot.class);
     // What a command that names a guard holds while it runs, so another one that names it waits.
     private final Map<Cmd.Guard, Lock> guards = new EnumMap<>(Cmd.Guard.class);
+    // Set from the ui thread, read by the commands waiting for a guard.
+    private volatile boolean stopped;
     private Model model;
 
     private Program(
@@ -150,20 +152,30 @@ public final class Program {
     private void launch(Cmd cmd) {
         Option<Lock> guard = cmd.guard().map(guards::get);
         FutureTask<Void> task = new FutureTask<>(
-                () -> {
-                    Msg result = guarded(guard, () -> perform(env, cmd, bugs));
-                    Try.run(() -> ui.execute(() -> dispatch(result)));
-                },
+                () -> guarded(guard, () -> perform(env, cmd, bugs))
+                        .forEach(result -> Try.run(() -> ui.execute(() -> dispatch(result)))),
                 null);
         cmd.slot().forEach(slot -> Option.of(latest.put(slot, task)).forEach(older -> older.cancel(false)));
         // Once the app stops, the executors take nothing anymore, and what is left is dropped.
         Try.run(() -> (cmd.background() ? background : io).execute(task));
     }
 
-    private static Msg guarded(Option<Lock> guard, Supplier<Msg> perform) {
+    /**
+     * Stops the commands that wait for a guard: once they hold it, they are skipped, and report nothing. The
+     * executors drop what they have queued themselves, but a command that waits for its guard has left their queue.
+     */
+    public void stop() {
+        stopped = true;
+    }
+
+    /**
+     * What {@code perform} reports, holding {@code guard}, if any; nothing when the program stopped while it waited
+     * for it.
+     */
+    private Option<Msg> guarded(Option<Lock> guard, Supplier<Msg> perform) {
         guard.forEach(Lock::lock);
         try {
-            return perform.get();
+            return guard.isDefined() && stopped ? Option.none() : Option.of(perform.get());
         } finally {
             guard.forEach(Lock::unlock);
         }

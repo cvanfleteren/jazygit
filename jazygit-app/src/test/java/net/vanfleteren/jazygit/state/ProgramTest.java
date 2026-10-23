@@ -742,6 +742,31 @@ class ProgramTest {
         }
     }
 
+    @Test
+    void aCommandThatWaitsForItsGuardIsSkippedWhenTheProgramStopsMeanwhile() throws Exception {
+        ExecutorService io = Executors.newSingleThreadExecutor();
+        ExecutorService background = Executors.newFixedThreadPool(2);
+        try {
+            Program guarding = Program.start(new Env(provider, StubGitHub.empty()), io, background, task -> {});
+            java.util.List<String> ran = new CopyOnWriteArrayList<>();
+            CountDownLatch fetched = new CountDownLatch(1);
+            Option<Cmd.Guard> remoteRefs = Option.of(Cmd.Guard.REMOTE_REFS);
+
+            guarding.dispatch(new Asked(List.of(new Guarded("fetch", true, remoteRefs, fetched, ran))));
+            await(() -> ran.contains("fetch"));
+            guarding.dispatch(new Asked(List.of(new Guarded("pull", false, remoteRefs, new CountDownLatch(0), ran))));
+            guarding.stop();
+            fetched.countDown();
+            // Whatever io runs next runs once the pull had its turn.
+            io.submit(() -> {}).get(5, TimeUnit.SECONDS);
+
+            assertEquals(java.util.List.of("fetch"), ran);
+        } finally {
+            io.shutdownNow();
+            background.shutdownNow();
+        }
+    }
+
     private static void await(BooleanSupplier condition) throws InterruptedException {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
         while (!condition.getAsBoolean()) {
