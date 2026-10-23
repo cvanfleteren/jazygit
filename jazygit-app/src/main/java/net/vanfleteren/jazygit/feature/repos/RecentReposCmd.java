@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.HeadFile;
 import net.vanfleteren.jazygit.git.RepositoryIdentity;
 import net.vanfleteren.jazygit.keys.Scopes;
+import net.vanfleteren.jazygit.settings.RecentRepositories;
 import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
@@ -29,6 +30,21 @@ public sealed interface RecentReposCmd extends Cmd {
     }
 
     /**
+     * The recent repositories in {@code recent}, with what their HEAD points to, the last one opened first. The ones
+     * whose directory is gone are not kept anymore.
+     */
+    static List<RecentRepo> existing(RecentRepositories recent) {
+        List<Path> kept = recent.load();
+        List<Path> gone = kept.filter(directory -> !Files.isDirectory(directory));
+        if (gone.nonEmpty()) {
+            recent.forget(gone).onFailure(RecentReposCmd::notKept);
+        }
+        return kept.removeAll(gone)
+                .map(directory -> new RecentRepo(
+                        directory.toString(), RepositoryIdentity.labelOf(directory), HeadFile.read(directory)));
+    }
+
+    /**
      * Reads the recent repositories but the one shown, with what their HEAD points to. The ones whose directory
      * is gone are not kept anymore.
      */
@@ -36,15 +52,9 @@ public sealed interface RecentReposCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            List<Path> recent = env.recent().load();
-            List<Path> gone = recent.filter(directory -> !Files.isDirectory(directory));
-            if (gone.nonEmpty()) {
-                env.recent().forget(gone).onFailure(RecentReposCmd::notKept);
-            }
-            return new RecentReposMsg.Listed(recent.removeAll(gone)
-                    .remove(env.git().worktree())
-                    .map(directory -> new RecentRepo(
-                            directory.toString(), RepositoryIdentity.labelOf(directory), HeadFile.read(directory))));
+            String shown = env.git().worktree().toString();
+            return new RecentReposMsg.Listed(
+                    existing(env.recent()).filter(repo -> !repo.directory().equals(shown)));
         }
 
         @Override

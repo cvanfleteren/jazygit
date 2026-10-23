@@ -49,6 +49,7 @@ import net.vanfleteren.jazygit.feature.github.GitHubFeature;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.feature.help.HelpDialog;
 import net.vanfleteren.jazygit.feature.inprogress.InProgressDialogs;
+import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.feature.repos.RecentReposDialog;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelDialogs;
 import net.vanfleteren.jazygit.feature.stash.StashDialogs;
@@ -227,7 +228,7 @@ public class JazygitApp extends ToolkitApp {
      * Writes how a command threw to {@link #BUG_LOG}, as the terminal is the TUI's; failing that, it is lost. The
      * debug log gets it too, after what led up to it.
      */
-    private static void logBug(Throwable bug) {
+    static void logBug(Throwable bug) {
         LoggerFactory.getLogger(JazygitApp.class).error("A command threw", bug);
         StringWriter trace = new StringWriter();
         bug.printStackTrace(new PrintWriter(trace));
@@ -250,31 +251,74 @@ public class JazygitApp extends ToolkitApp {
     private static void start(StartupOptions options) {
         Path start = options.path().getOrElse(Path.of("")).toAbsolutePath();
         Option<Path> debugLog = Option.when(options.debug(), SettingsPaths::debugLog);
-        Either<String, JazygitApp> app = DebugLog.start(debugLog)
+        Either<String, Option<JazygitApp>> app = DebugLog.start(debugLog)
                 .toEither()
                 .mapLeft(failed -> Messages.get("debugLog.failed", debugLog.get(), ErrorText.reason(failed)))
-                .flatMap(logging -> CliGitInfoProvider.open(start).mapLeft(ErrorText::of))
-                .flatMap(provider -> Theme.createEngine()
+                .flatMap(logging -> Theme.createEngine()
                         .mapLeft(failed ->
-                                Messages.get("theme.loadFailed", failed.theme(), ErrorText.reason(failed.cause())))
-                        .map(engine -> {
-                            RecentRepositories recent = new RecentRepositoriesFile(
-                                    SettingsPaths.stateFile(),
-                                    directory ->
-                                            RepositoryIdentity.read(directory).map(RepositoryIdentity::commonDir));
-                            recent.opened(provider.worktree()).onFailure(JazygitApp::logBug);
-                            SettingsStore settings = new SettingsFile(SettingsPaths.configFile());
-                            SettingsStore.Loaded loaded = settings.load();
-                            Env env = env(
-                                    provider, loaded.settings(), settings, recent, Repositories.NONE, Terminal.NONE);
-                            return new JazygitApp(env, loaded, options.theme(), engine);
-                        }));
-        app.flatMap(jazygit -> Try.run(jazygit::run).toEither().mapLeft(ErrorText::reason))
+                                Messages.get("theme.loadFailed", failed.theme(), ErrorText.reason(failed.cause()))))
+                .flatMap(engine -> {
+                    RecentRepositories recent = new RecentRepositoriesFile(
+                            SettingsPaths.stateFile(),
+                            directory -> RepositoryIdentity.read(directory).map(RepositoryIdentity::commonDir));
+                    SettingsStore settings = new SettingsFile(SettingsPaths.configFile());
+                    SettingsStore.Loaded loaded = settings.load();
+                    return open(start, recent, loaded, options.theme(), engine)
+                            .map(opened -> opened.map(provider -> {
+                                recent.opened(provider.worktree()).onFailure(JazygitApp::logBug);
+                                Env env = env(
+                                        provider,
+                                        loaded.settings(),
+                                        settings,
+                                        recent,
+                                        Repositories.NONE,
+                                        Terminal.NONE);
+                                return new JazygitApp(env, loaded, options.theme(), engine);
+                            }));
+                });
+        // Quitting instead of choosing what to open starts no app.
+        app.flatMap(jazygit -> Try.run(() -> {
+                            if (jazygit.isDefined()) {
+                                jazygit.get().run();
+                            }
+                        })
+                        .toEither()
+                        .mapLeft(ErrorText::reason))
                 .orElseRun(problem -> {
                     System.err.println(problem);
                     System.exit(1);
                 });
         debugLog.forEach(log -> System.err.println(Messages.get("debugLog.written", log)));
+    }
+
+    /**
+     * The repository containing {@code start}. Outside one, the user is asked what to open instead (ADR 28), drawn
+     * as {@code settings} and {@code themeOverride} say: none when they quit.
+     */
+    private static Either<String, Option<CliGitInfoProvider>> open(
+            Path start,
+            RecentRepositories recent,
+            SettingsStore.Loaded settings,
+            Option<ThemeName> themeOverride,
+            StyleEngine engine) {
+        return CliGitInfoProvider.open(start)
+                .fold(
+                        error -> error instanceof GitError.NotARepository
+                                ? Try.of(() -> StartApp.choose(
+                                                start,
+                                                RecentReposCmd.existing(recent),
+                                                settings,
+                                                themeOverride,
+                                                engine))
+                                        .toEither()
+                                        .mapLeft(ErrorText::reason)
+                                        .flatMap(chosen -> chosen.fold(
+                                                () -> Either.right(Option.none()),
+                                                worktree -> CliGitInfoProvider.open(worktree)
+                                                        .mapLeft(ErrorText::of)
+                                                        .map(Option::of)))
+                                : Either.left(ErrorText.of(error)),
+                        provider -> Either.right(Option.of(provider)));
     }
 
     /**

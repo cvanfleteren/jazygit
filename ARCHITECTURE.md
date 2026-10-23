@@ -37,7 +37,7 @@ graph TD
     App["JazygitApp<br/><i>entry point, layout, popups, focus</i>"]
     UI["ui<br/><i>panels and widgets: render a Model</i>"]
     Keys["keys<br/><i>Keymap: every shortcut, declared once</i>"]
-    Feature["feature.*<br/><i>branch, commit, stage, stash, discard,<br/>github, fetch, error, help, theme, repos,<br/>settings, worktree, inprogress, edit</i>"]
+    Feature["feature.*<br/><i>branch, commit, stage, stash, discard,<br/>github, fetch, error, help, theme, repos,<br/>settings, worktree, inprogress, edit, start</i>"]
     State["state<br/><i>Model, Msg, Update, Cmd, Program</i>"]
     Git["git<br/><i>GitInfoProvider, CliGitInfoProvider, Cli*, GitProcess, GitError</i>"]
     GitModel["git.model<br/><i>Branch, Commit, RepoStatus, Sha, ...</i>"]
@@ -155,6 +155,23 @@ the repository on the thread of the command and then, on the render thread, stop
 without waiting for the git command that runs, and starts a new `Program` for the new one from scratch. The
 theme and the settings of the session stay. A repository that cannot be opened is forgotten, and the error is
 shown in the one still open.
+
+## Starting outside a repository
+
+When the start directory is in no repository, or does not exist, `main` runs `StartApp` before `JazygitApp`
+(`feature.start`, see `documentation/adr/0028-start-outside-a-repository.md`). It asks what to open instead:
+
+- `i` makes the folder a repository with a plain `git init` (`CliGitInfoProvider.init`), unless it does not exist;
+- `o` asks for the path of another folder, relative to the folder asked about, or from `~`. One inside a repository
+  opens it; one outside any is asked about in turn; a path that names no folder is said under the input;
+- `r` lists the recent repositories, when there are any;
+- `q`, Escape and Ctrl+C quit, with exit code 0.
+
+`StartApp` is Elm-like too, but small: its model is the app's `Model`, with no repository, so its dialogs are the
+app's own. `StartMsg` updates it, and the `StartCmd`s it asks for run on a thread of their own; they need no `Env`,
+as there is no repository yet. A repository that opens (`StartMsg.Opened`) ends it, with the working tree that
+`main` then opens as it would have opened the start directory. The theme and the settings are loaded first, so it
+is drawn as the app is.
 
 ## Worktrees
 

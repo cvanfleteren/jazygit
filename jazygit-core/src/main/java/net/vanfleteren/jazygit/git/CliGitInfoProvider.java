@@ -64,6 +64,16 @@ public final class CliGitInfoProvider implements GitInfoProvider {
                                         worktree, markers, CliMetadata.locate(worktree), HashMap::empty))));
     }
 
+    /**
+     * Makes {@code directory} a new repository with {@code git init}, as the user's git config has it, and opens it.
+     * In a repository already, git initialises it again, which changes nothing of what is in it.
+     */
+    public static Either<GitFailure<GitError>, CliGitInfoProvider> init(Path directory) {
+        return GitFailure.<GitError, List<ExecutedCommand>>widen(
+                        GitProcess.log(directory, GitCommand.git("init", "--quiet")))
+                .flatMap(log -> open(directory).mapLeft(error -> new GitFailure<>(error, log)));
+    }
+
     private static Either<UnexpectedOutput, Path> path(String raw) {
         return Try.of(() -> Path.of(raw.strip())).toEither().mapLeft(e -> new UnexpectedOutput(raw));
     }
