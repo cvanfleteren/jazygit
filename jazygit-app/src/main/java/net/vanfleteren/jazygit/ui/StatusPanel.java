@@ -164,7 +164,7 @@ public final class StatusPanel {
      * The local branch {@code commit} is the tip of, or else its short sha.
      */
     private static String name(Sha commit, List<Branch> branches) {
-        return branches.find(branch -> branch.tipOid().equals(commit))
+        return branches.find(branch -> branch.tip().equals(commit))
                 .map(branch -> branch.name().value())
                 .getOrElse(commit::shortSha);
     }

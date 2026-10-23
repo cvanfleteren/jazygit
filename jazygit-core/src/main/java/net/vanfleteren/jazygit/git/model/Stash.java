@@ -13,4 +13,4 @@ import java.time.Instant;
  * @param branch  the branch it was stashed on, as git's message names it; none when the message names none
  * @param time    when it was stashed
  */
-public record Stash(String ref, Sha sha, String message, Option<String> branch, Instant time) {}
+public record Stash(String ref, Sha sha, String message, Option<BranchName> branch, Instant time) {}

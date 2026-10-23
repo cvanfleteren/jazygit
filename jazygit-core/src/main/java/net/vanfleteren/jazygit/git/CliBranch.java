@@ -179,7 +179,8 @@ final class CliBranch {
      * @param track       how far the branch is from its upstream, e.g. {@code [ahead 1, behind 2]}; none when
      *                    they are equal, {@code [gone]} when the upstream does not exist
      * @param symref      what a symbolic ref points to, e.g. {@code refs/remotes/origin/main}
-     * @param upstreamRef the remote-tracking ref of the upstream, e.g. {@code refs/remotes/origin/main}
+     * @param upstreamRef the ref of the upstream: its remote-tracking ref, e.g. {@code refs/remotes/origin/main},
+     *                    or the branch itself for a local one, e.g. {@code refs/heads/main}
      * @param worktree    the root of the worktree the branch is checked out in, this one included; last, as a
      *                    path is free text
      */
@@ -237,11 +238,11 @@ final class CliBranch {
         }
 
         /**
-         * The remote-tracking ref of the branch it is pushed to: its upstream, or the one of the same name
-         * on {@code origin}.
+         * The remote-tracking ref of the branch it is pushed to, as {@link Branch#pushTarget()} says: its upstream,
+         * or the one of the same name on {@code origin} without one, or when it follows a local branch.
          */
         String pushedTo(BranchName branch) {
-            return upstreamRef.getOrElse(() -> ORIGIN + branch.value());
+            return upstreamRef.filter(ref -> ref.startsWith(REMOTES)).getOrElse(() -> ORIGIN + branch.value());
         }
 
         /**

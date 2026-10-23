@@ -5,20 +5,23 @@ import java.nio.file.Path;
 import java.time.Instant;
 
 /**
- * A git branch, with a flag indicating whether it is the currently checked-out branch.
+ * A local branch, as {@code git branch} lists it: one of {@code refs/heads}. The remote-tracking branches are
+ * {@link RemoteRef}s.
  *
- * @param tipOid    the commit the branch points to
+ * @param current   whether it is the branch checked out here
+ * @param tip       the commit the branch points to
  * @param tipTime   when that commit was made
- * @param hasRemote whether the branch also exists on its remote, according to the remote-tracking refs
+ * @param hasRemote whether the branch it is pushed to exists, according to the remote-tracking refs: its upstream,
+ *                  or {@code origin/<name>} without one
  * @param isDefault whether this is the repository's main branch, i.e. the default branch of the remote
- * @param tracking  what it follows on its remote: nothing, a remote-tracking branch, or one that is gone
+ * @param tracking  what it follows: nothing, a branch, or one that is gone
  * @param worktree  the root of the other worktree it is checked out in, if it is: git checks a branch out in
  *                  one worktree at a time, so it can be neither checked out nor deleted here
  */
 public record Branch(
         BranchName name,
         boolean current,
-        Sha tipOid,
+        Sha tip,
         Instant tipTime,
         boolean hasRemote,
         boolean isDefault,

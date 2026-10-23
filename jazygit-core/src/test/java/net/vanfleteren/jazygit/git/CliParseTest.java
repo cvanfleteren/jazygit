@@ -150,6 +150,21 @@ class CliParseTest {
     }
 
     @Test
+    void aBranchThatFollowsALocalOneIsOnItsRemoteWhenOriginHasItsName() {
+        String raw = ref("refs/heads/main", A, "2", " ", "", "", "", "", "", "")
+                + ref("refs/heads/feature", B, "1", "*", ".", "refs/heads/main", "", "", "refs/heads/main", "")
+                + ref("refs/remotes/origin/feature", B, "1", " ", "", "", "", "", "", "");
+
+        Branch feature = CliBranch.parseAll(raw)
+                .get()
+                .local()
+                .find(branch -> branch.name().equals(new BranchName("feature")))
+                .get();
+        assertEquals(new RemoteBranch("origin", new BranchName("feature")), feature.pushTarget());
+        assertEquals(List.of(true, true), List.of(feature.hasRemote(), feature.remoteDeletable()));
+    }
+
+    @Test
     void anUpstreamKeepsItsRemoteApartFromItsBranchEvenWhenTheRemoteNameHasASlash() {
         String raw = ref(
                 "refs/heads/local",
@@ -235,12 +250,14 @@ class CliParseTest {
                 CliStash.parse("stash@{0} without a separator\n").getLeft());
         assertEquals(
                 List.of(
-                        new Stash("stash@{0}", new Sha(A), "work", Option.of("main"), Instant.ofEpochSecond(60)),
+                        new Stash(
+                                "stash@{0}",
+                                new Sha(A), "work", Option.of(new BranchName("main")), Instant.ofEpochSecond(60)),
                         new Stash(
                                 "stash@{1}",
                                 new Sha(B),
                                 "WIP on feature/x: abc1234 Add widget",
-                                Option.of("feature/x"),
+                                Option.of(new BranchName("feature/x")),
                                 Instant.ofEpochSecond(61))),
                 CliStash.parse("stash@{0}\u001f" + A + "\u001fOn main: work\u001f60\n" + "stash@{1}\u001f" + B
                                 + "\u001fWIP on feature/x: abc1234 Add widget\u001f61\n")

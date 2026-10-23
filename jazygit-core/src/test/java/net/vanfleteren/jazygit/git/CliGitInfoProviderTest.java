@@ -29,7 +29,7 @@ class CliGitInfoProviderTest {
     private CliGitInfoProvider provider;
 
     private static List<Branch> withoutTimes(List<Branch> branches) {
-        return branches.map(b -> Fixtures.branch(b.name(), b.current(), b.tipOid()))
+        return branches.map(b -> Fixtures.branch(b.name(), b.current(), b.tip()))
                 .toList();
     }
 
@@ -1451,6 +1451,20 @@ class CliGitInfoProviderTest {
         assertEquals(Option.of(new BranchRef.Local(new BranchName("main"))), topic.goneUpstream());
         assertEquals(Option.of("main"), topic.goneUpstream().map(BranchRef::name));
         assertEquals(new RemoteBranch("origin", new BranchName("topic")), topic.pushTarget());
+    }
+
+    @Test
+    void aBranchThatFollowsALocalOneIsOnOriginUnderItsOwnName() throws Exception {
+        git("branch", "-q", "--track", "topic", "main");
+        git("update-ref", "refs/remotes/origin/topic", "HEAD");
+
+        Branch topic = provider.allBranches()
+                .map(AllBranches::local)
+                .get()
+                .find(b -> b.name().equals(new BranchName("topic")))
+                .get();
+        assertEquals(new RemoteBranch("origin", new BranchName("topic")), topic.pushTarget());
+        assertTrue(topic.hasRemote());
     }
 
     @Test

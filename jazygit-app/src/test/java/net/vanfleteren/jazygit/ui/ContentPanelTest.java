@@ -317,7 +317,8 @@ class ContentPanelTest {
 
     @Test
     void stashFocusedShowsTheHighlightedStashUnderAHeaderWhichCanBeFocused() throws Exception {
-        Stash stash = new Stash("stash@{0}", new Sha("5555"), "my work", Option.of("main"), Instant.EPOCH);
+        Stash stash =
+                new Stash("stash@{0}", new Sha("5555"), "my work", Option.of(new BranchName("main")), Instant.EPOCH);
         Model stashed = Update.update(TestModels.loaded(), new LoadMsg.StashesLoaded(List.of(stash)))
                 .model();
         Model selected = Update.update(
@@ -537,7 +538,8 @@ class ContentPanelTest {
 
     @Test
     void theStashAreaCannotBeFocusedWhileItsDetailLoadsOrItsStashIsGone() {
-        Stash stash = new Stash("stash@{0}", new Sha("5555"), "my work", Option.of("main"), Instant.EPOCH);
+        Stash stash =
+                new Stash("stash@{0}", new Sha("5555"), "my work", Option.of(new BranchName("main")), Instant.EPOCH);
         Model loading = Update.update(
                         Update.update(TestModels.loaded(), new LoadMsg.StashesLoaded(List.of(stash)))
                                 .model(),
