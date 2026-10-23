@@ -100,7 +100,8 @@ def test_a_path_git_refuses_is_said_and_can_be_corrected(tmp_path, env, outside)
 
     app.press("o")
     Jazygit(app, None).enter_text("Open the folder", "../bare.git")
-    app.wait_for("has no working tree")
+    # The error wraps wherever the temporary path leaves it, so only its start is sure to be on one line.
+    app.wait_for("The repository at")
     assert "../bare.git" in app.text(), "the path stays as it was typed"
 
     app.press("escape")
