@@ -52,9 +52,16 @@ public final class PullRequestUpdate {
                         model,
                         PullRequestPopup.class,
                         popup -> Option.when(
-                                popup.mergeable(),
+                                mergeable(model, popup),
                                 () -> new MergePullRequest(
-                                        popup.branch(), popup.pullRequest().number(), method)));
+                                        popup.branch(), popup.pullRequest().number(), popup.head(), method)));
+            case PullRequestMsg.MergeAsked(MergePullRequest cmd, var status, var commands) ->
+                MergeUpdate.asked(model, cmd, status, commands);
+            case PullRequestMsg.MergeTick() -> MergeUpdate.tick(model);
+            case PullRequestMsg.MergeChecked(int number, String id, var status) ->
+                MergeUpdate.checked(model, number, id, status);
+            case PullRequestMsg.MergeCheckFailed(int number, String id, var failure) ->
+                MergeUpdate.checkFailed(model, number, id);
             case PullRequestMsg.CloseChosen() ->
                 Update.confirm(
                         model,
@@ -82,8 +89,8 @@ public final class PullRequestUpdate {
                         mapShown(done.model(), cmd.number(), popup -> popup.withDraft(cmd.draft())), done.cmds()));
             }
             case PullRequestMsg.Ended(ChangingCmd cmd, var commands) -> {
-                // Done like any operation. The pull request is no longer open, which reading them again confirms;
-                // a merge changed the base branch on the remote, which a fetch brings in.
+                // Done like any operation. The pull request is no longer open, which reading them again confirms.
+                // A merge ends through MergeAsked instead.
                 Next done = OperationUpdate.succeeded(model, cmd, commands);
                 Model ended = done.model()
                         .mapGitHub(gitHub -> gitHub.withPullRequests(gitHub.pullRequests()
@@ -102,6 +109,14 @@ public final class PullRequestUpdate {
                         .getOrElse(() -> Next.of(model));
             case PullRequestMsg.InfoClosed() -> Next.of(model.withoutPopup(PullRequestPopup.class));
         };
+    }
+
+    /**
+     * Whether the pull request {@code popup} shows can be merged, as far as is known: also not while GitHub is
+     * merging it already.
+     */
+    static boolean mergeable(Model model, PullRequestPopup popup) {
+        return popup.mergeable() && !model.gitHub().merging(popup.pullRequest().number());
     }
 
     /**

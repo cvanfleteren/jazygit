@@ -27,6 +27,13 @@ public sealed interface AppError {
     record OperationFailed(Operation operation, Option<String> subject, Failure failure) implements AppError {}
 
     /**
+     * GitHub did not merge the pull request of {@code branch}, which it was asked to do in the background.
+     *
+     * @param message why, as GitHub says it
+     */
+    record MergeFailed(Branch.Name branch, String message) implements AppError {}
+
+    /**
      * A commit was asked for, but nothing has changed.
      */
     record NothingToCommit() implements AppError {}

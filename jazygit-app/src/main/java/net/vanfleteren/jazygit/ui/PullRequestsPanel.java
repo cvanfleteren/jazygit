@@ -7,6 +7,7 @@ import io.vavr.control.Option;
 import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import net.vanfleteren.jazygit.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -108,19 +109,27 @@ public final class PullRequestsPanel {
      *                      owner to keep the row short; the content panel shows it in full
      */
     static LoadableList.Row row(PullRequestSummary pr, Duration since, boolean anyRepository) {
+        return row(pr, since, anyRepository, Option.none());
+    }
+
+    /**
+     * The row of {@code pr}, as {@link #row(PullRequestSummary, Duration, boolean)}, with how {@code merge} goes
+     * instead of its checks and review while it goes, or went (ADR 23).
+     */
+    static LoadableList.Row row(
+            PullRequestSummary pr, Duration since, boolean anyRepository, Option<MergeStatus> merge) {
         String plain = pr.draft() ? Theme.Classes.DIM : "";
         String repository =
                 anyRepository ? pr.repository().substring(pr.repository().indexOf('/') + 1) : "";
         return new LoadableList.Row(List.of(
-                        Option.of(LoadableList.Seg.of("%4s ".formatted(TimeText.age(since)))),
-                        Option.of(LoadableList.Seg.styled(
+                        LoadableList.Seg.of("%4s ".formatted(TimeText.age(since))),
+                        LoadableList.Seg.styled(
                                 repository + "#" + pr.number(),
-                                pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST)),
-                        PullRequestSymbols.checks(pr.checks()).map(PullRequestsPanel::symbol),
-                        PullRequestSymbols.review(pr.review()).map(PullRequestsPanel::symbol),
-                        Option.of(seg(" " + pr.title(), plain)),
-                        Option.of(LoadableList.Seg.styled(" " + pr.author(), Theme.Classes.DIM)))
-                .flatMap(seg -> seg));
+                                pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST))
+                .appendAll(PullRequestSymbols.state(pr.stack(), pr.checks(), pr.review(), merge)
+                        .map(PullRequestsPanel::symbol))
+                .appendAll(List.of(
+                        seg(" " + pr.title(), plain), LoadableList.Seg.styled(" " + pr.author(), Theme.Classes.DIM))));
     }
 
     private static LoadableList.Seg seg(String text, String cssClass) {
@@ -159,7 +168,17 @@ public final class PullRequestsPanel {
         return list.render(
                 shown,
                 read -> read.pullRequests()
-                        .map(pr -> row(pr, Duration.between(pr.updatedAt(), model.now()), anyRepository)),
+                        .map(pr -> row(
+                                pr,
+                                Duration.between(pr.updatedAt(), model.now()),
+                                anyRepository,
+                                // The numbers of the merges are of this repository.
+                                Option.when(
+                                                model.prOverview()
+                                                        .ofThisRepository(pr)
+                                                        .getOrElse(false),
+                                                () -> model.gitHub().merge(pr.number()))
+                                        .flatMap(merge -> merge))),
                 id().equals(focusedId),
                 id().equals(activeId),
                 Pane.title(title(Messages.get(scope.titleKey()), shown)));

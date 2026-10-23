@@ -24,6 +24,8 @@ public final class ErrorText {
                 Messages.get(
                         operation.errorKey(),
                         subject.toList().<Object>map(s -> s).append(of(failure)).toJavaArray());
+            case AppError.MergeFailed(Branch.Name branch, String message) ->
+                Messages.get("error.mergePr.failed", branch.value(), message);
             case AppError.NothingToCommit() -> Messages.get("error.commit.nothing");
             case AppError.NothingToAmend() -> Messages.get("error.amend.nothing");
             case AppError.MergeNotAmendable() -> Messages.get("error.amendCommit.merge");

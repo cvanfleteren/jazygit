@@ -4,6 +4,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Failure;
 
@@ -98,6 +99,20 @@ public record PullRequestPopup(
                 && readDetails()
                         .exists(details ->
                                 !details.draft() && details.mergeable() != PullRequestDetails.Mergeable.CONFLICTING);
+    }
+
+    /**
+     * The commit its branch was at when it was read, which a merge is only done at; empty before it is read.
+     */
+    public String head() {
+        return readDetails().map(PullRequestDetails::head).getOrElse("");
+    }
+
+    /**
+     * Where it sits in its stack, if it is stacked: as it was read, else as it is listed.
+     */
+    public Option<PullRequestStack> stack() {
+        return readDetails().map(PullRequestDetails::stack).getOrElse(pullRequest::stack);
     }
 
     @Override

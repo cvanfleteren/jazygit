@@ -26,4 +26,14 @@ public sealed interface Notice {
      */
     record MoveStopped(StoppedOnConflicts stopped, Branch.Name branch, Sha oldest, Branch.Name target)
             implements Notice {}
+
+    /**
+     * GitHub added the pull request of {@code branch} to the merge queue of its base branch, which merges it later.
+     */
+    record MergeEnqueued(Branch.Name branch) implements Notice {}
+
+    /**
+     * GitHub was still merging the pull request of {@code branch} after so long that it is no longer asked about.
+     */
+    record MergeStillPending(Branch.Name branch) implements Notice {}
 }

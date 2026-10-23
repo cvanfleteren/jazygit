@@ -95,7 +95,9 @@ class LocalBranchesList implements BranchesTabList {
                         b,
                         Duration.between(b.tipTime(), model.now()),
                         BranchSegs.gitHub(
-                                model.gitHub().pullRequest(b), model.gitHub().checks(b)),
+                                model.gitHub().pullRequest(b),
+                                model.gitHub().merge(model.gitHub().pullRequest(b)),
+                                model.gitHub().checks(b)),
                         spinnerOf.apply(new BranchRef.Local(b.name())))),
                 focused,
                 active,

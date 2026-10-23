@@ -5,6 +5,7 @@ import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.function.Function;
+import net.vanfleteren.jazygit.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.git.model.*;
@@ -80,19 +81,25 @@ final class BranchSegs {
     }
 
     /**
-     * The pull request of a branch, with a leading space: its number (dimmed for a draft), how its CI checks
-     * are doing and where its review stands, each as a coloured symbol; nothing for a branch without one.
+     * The pull request of a branch, with a leading space: its number (dimmed for a draft), where it sits in its
+     * stack, then how its CI checks are doing and where its review stands, each as a coloured symbol; nothing for a
+     * branch without one.
      */
     static List<LoadableList.Seg> pullRequest(Option<PullRequest> pullRequest) {
+        return pullRequest(pullRequest, Option.none());
+    }
+
+    /**
+     * The pull request of a branch, as {@link #pullRequest(Option)}, but with how {@code merge} goes instead of its
+     * checks and review while it goes, or went (ADR 23).
+     */
+    static List<LoadableList.Seg> pullRequest(Option<PullRequest> pullRequest, Option<MergeStatus> merge) {
         return pullRequest
                 .toList()
-                .flatMap(pr -> List.of(
-                                Option.of(LoadableList.Seg.styled(
-                                        " #" + pr.number(),
-                                        pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST)),
-                                PullRequestSymbols.checks(pr.checks()).map(BranchSegs::symbol),
-                                PullRequestSymbols.review(pr.review()).map(BranchSegs::symbol))
-                        .flatMap(o -> o));
+                .flatMap(pr -> PullRequestSymbols.state(pr.stack(), pr.checks(), pr.review(), merge)
+                        .map(BranchSegs::symbol)
+                        .prepend(LoadableList.Seg.styled(
+                                " #" + pr.number(), pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST)));
     }
 
     /**
@@ -100,8 +107,17 @@ final class BranchSegs {
      * checks on its tip are doing; nothing for a branch with neither.
      */
     static List<LoadableList.Seg> gitHub(Option<PullRequest> pullRequest, Option<Checks> checks) {
+        return gitHub(pullRequest, Option.none(), checks);
+    }
+
+    /**
+     * How a branch is doing on GitHub, as {@link #gitHub(Option, Option)}, with how the merge of its pull request
+     * goes, if there is one.
+     */
+    static List<LoadableList.Seg> gitHub(
+            Option<PullRequest> pullRequest, Option<MergeStatus> merge, Option<Checks> checks) {
         return pullRequest.isDefined()
-                ? pullRequest(pullRequest)
+                ? pullRequest(pullRequest, merge)
                 : checks.flatMap(PullRequestSymbols::checks)
                         .map(BranchSegs::symbol)
                         .toList();

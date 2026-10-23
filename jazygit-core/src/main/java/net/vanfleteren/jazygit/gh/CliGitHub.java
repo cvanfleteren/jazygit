@@ -35,32 +35,46 @@ public final class CliGitHub implements GitHub {
     // The most lines of a diff of a pull request that are shown, as for the diffs of git.
     static final int MAX_DIFF_LINES = 5000;
 
-    private static final String LIMIT = "200";
-    private static final String FIELDS =
-            "number,headRefName,isDraft,isCrossRepository,reviewDecision,statusCheckRollup";
     // The state of a check, in jq: a check run that is not completed yet is PENDING; a commit status gives its state.
     private static final String CHECK_STATE = """
             (if .__typename == "CheckRun" \
             then (if .status == "COMPLETED" then (.conclusion // "") else "PENDING" end) \
             else (.state // "") end)""";
+    // Where a pull request sits in its stack, in GraphQL: both null when it is not stacked.
+    private static final String STACK_FIELDS = "stackEntry { position } stack { number size }";
+    // STACK_FIELDS as the fields of a line, in jq: the number of the stack, the position and the size, all empty when
+    // it is not stacked.
+    private static final String STACK_JQ = """
+            def stack: [(.stack.number // "" | tostring), (.stackEntry.position // "" | tostring), \
+            (.stack.size // "" | tostring)]; """;
+    /*
+     * The open pull requests of the repository, all pages of them, with the states of the checks on their last
+     * commit. gh fills in the repository of the working tree for {owner} and {repo}.
+     */
+    private static final String PRS_QUERY = """
+            query($owner: String!, $name: String!, $endCursor: String) { repository(owner: $owner, name: $name) { \
+            pullRequests(states: OPEN, first: 100, after: $endCursor) { pageInfo { hasNextPage endCursor } \
+            nodes { number headRefName isDraft isCrossRepository reviewDecision %s \
+            commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes { __typename \
+            ... on CheckRun { status conclusion } ... on StatusContext { state } } } } } } } } } } }""".formatted(STACK_FIELDS);
     /*
      * One line per pull request that is not from a fork:
-     * number, head branch, whether it is a draft, its review decision and the states of its checks, separated
-     * by tabs.
+     * number, head branch, whether it is a draft, its review decision, the states of its checks and the fields of
+     * STACK_JQ, separated by tabs.
      */
-    private static final String JQ = """
-            .[] | select(.isCrossRepository | not) \
+    private static final String JQ = STACK_JQ + """
+            .data.repository.pullRequests.nodes[] | select(.isCrossRepository | not) \
             | [(.number | tostring), .headRefName, (.isDraft | tostring), (.reviewDecision // ""), \
-            ([.statusCheckRollup[]? | %s] | join(","))] | @tsv""".formatted(CHECK_STATE);
-    private static final int FIELD_COUNT = 5;
+            ([.commits.nodes[0].commit.statusCheckRollup.contexts.nodes[]? | %s] | join(","))] + stack | @tsv""".formatted(CHECK_STATE);
+    private static final int FIELD_COUNT = 8;
 
     /*
      * What a list of pull requests shows of each, in GraphQL. The checks are those on its last commit.
      */
     private static final String SUMMARY_FRAGMENT = """
             fragment summary on PullRequest { number title url updatedAt isDraft isCrossRepository headRefName \
-            author { login } repository { nameWithOwner } reviewDecision \
-            commits(last: 1) { nodes { commit { statusCheckRollup { state } } } } }""";
+            author { login } repository { nameWithOwner } reviewDecision %s \
+            commits(last: 1) { nodes { commit { statusCheckRollup { state } } } } }""".formatted(STACK_FIELDS);
     /*
      * The open pull requests of the repository, the most recently updated first. gh fills in the repository of the
      * working tree for {owner} and {repo}.
@@ -82,10 +96,10 @@ public final class CliGitHub implements GitHub {
             authored: search(type: ISSUE, query: $authored, first: $limit) { issueCount nodes { ...summary } } } \
             """ + SUMMARY_FRAGMENT;
     // A pull request of SUMMARY_FRAGMENT as the fields of a line, in jq.
-    private static final String SUMMARY_FIELDS_JQ = """
+    private static final String SUMMARY_FIELDS_JQ = STACK_JQ + """
             def summary: [.repository.nameWithOwner, (.number | tostring), .title, (.author.login // ""), \
             .headRefName, (.isDraft | tostring), (.isCrossRepository | tostring), (.reviewDecision // ""), \
-            (.commits.nodes[0].commit.statusCheckRollup.state // ""), .updatedAt, .url]; """;
+            (.commits.nodes[0].commit.statusCheckRollup.state // ""), .updatedAt, .url] + stack; """;
     /*
      * Tab separated lines, each starting with what it is: a "list" line per list, with its name, the repository
      * it is of (empty for a search) and how many match, and a "pr" line per pull request, with the name of its
@@ -98,7 +112,7 @@ public final class CliGitHub implements GitHub {
             .data | to_entries[] | .key as $list | (["list", $list, "", (.value.issueCount | tostring)] | @tsv), \
             (.value.nodes[] | select(.number != null) | (["pr", $list] + summary) | @tsv)""";
     private static final int LIST_LINE_FIELDS = 4;
-    private static final int SUMMARY_LINE_FIELDS = 13;
+    private static final int SUMMARY_LINE_FIELDS = 16;
     // The base branch of a pull request on the first line, its body after it.
     private static final String PREVIEW_JQ = ".baseRefName + \"\\n\" + .body";
 
@@ -111,7 +125,7 @@ public final class CliGitHub implements GitHub {
     private static final String DETAILS_QUERY = """
             query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { \
             pullRequest(number: $number) { number title author { login } state isDraft headRefName baseRefName \
-            createdAt additions deletions changedFiles mergeable reviewDecision comments { totalCount } \
+            headRefOid %s createdAt additions deletions changedFiles mergeable reviewDecision comments { totalCount } \
             labels(first: 100) { nodes { name } } latestReviews(first: 100) { nodes { author { login } state } } \
             reviewRequests(first: 100) { nodes { requestedReviewer { ... on User { login } ... on Bot { login } \
             ... on Mannequin { login } ... on Team { name } } } } \
@@ -119,21 +133,23 @@ public final class CliGitHub implements GitHub {
             ... on HeadRefForcePushedEvent { createdAt } } } \
             commits(last: 1) { nodes { commit { committedDate statusCheckRollup { contexts(first: 100) { nodes { __typename \
             ... on CheckRun { name status conclusion } ... on StatusContext { context state } } } } } } } \
-            reviewThreads(last: 100) { totalCount nodes { isResolved comments { totalCount } } } } } }""";
+            reviewThreads(last: 100) { totalCount nodes { isResolved comments { totalCount } } } } } }""".formatted(STACK_FIELDS);
     /*
      * Tab separated lines, each starting with what it is: one "pr" line with the fields of the pull request, one
      * "threads" line with how many review threads it has, how many of them were read, and how many of those are
-     * unresolved and how many comments they hold, then a "label" line per label, a "review" line per latest review, a "requested" line per
-     * requested reviewer and a "check" line per check, with its state as in JQ.
+     * unresolved and how many comments they hold, a "stack" line with the fields of STACK_JQ when it is stacked,
+     * then a "label" line per label, a "review" line per latest review, a "requested" line per requested reviewer
+     * and a "check" line per check, with its state as in JQ.
      */
-    private static final String DETAILS_JQ = """
+    private static final String DETAILS_JQ = STACK_JQ + """
             .data.repository.pullRequest | \
             ((["pr", (.number | tostring), .title, (.author.login // ""), .state, \
             (.isDraft | tostring), .headRefName, .baseRefName, .createdAt, \
             ([.createdAt, .commits.nodes[0].commit.committedDate, .timelineItems.nodes[0].createdAt] \
             | map(select(. != null)) | max), (.additions | tostring), \
             (.deletions | tostring), (.changedFiles | tostring), (.mergeable // ""), (.reviewDecision // ""), \
-            (.comments.totalCount | tostring)] | @tsv), \
+            (.comments.totalCount | tostring), (.headRefOid // "")] | @tsv), \
+            (select(.stack != null) | ["stack"] + stack | @tsv), \
             (.reviewThreads | ["threads", (.totalCount | tostring), (.nodes | length | tostring), \
             ([.nodes[] | select(.isResolved | not)] | length | tostring), \
             ([.nodes[].comments.totalCount] | add // 0 | tostring)] | @tsv), \
@@ -144,7 +160,10 @@ public final class CliGitHub implements GitHub {
             (.commits.nodes[0].commit.statusCheckRollup.contexts.nodes[]? | ["check", \
             ((if .__typename == "CheckRun" then .name else .context end) // ""), \
             %s] | @tsv))""".formatted(CHECK_STATE);
-    private static final int DETAIL_FIELD_COUNT = 16;
+    private static final int DETAIL_FIELD_COUNT = 17;
+
+    // How a merge is doing, in jq: its status, its id while it is pending, and why when it failed.
+    private static final String MERGE_JQ = "[.status, (.details.uuid // \"\"), (.details.message // \"\")] | @tsv";
 
     /*
      * Tab separated lines, one per part of the conversation: what it is ("description", "comment", or the state of
@@ -269,14 +288,64 @@ public final class CliGitHub implements GitHub {
     }
 
     /**
-     * The flag that tells {@code gh pr merge} how to merge, so it does not ask.
+     * The command that has GitHub merge pull request {@code number} in the background, only while its branch is at
+     * {@code head}, unless that is empty. gh fills in the repository of the working tree for {owner} and {repo}.
      */
-    static String mergeFlag(MergeMethod method) {
+    static GhCommand mergeCommand(int number, String head, MergeMethod method) {
+        return gh(List.of(
+                        "api",
+                        "--method",
+                        "PUT",
+                        "repos/{owner}/{repo}/pulls/" + number + "/merge-async",
+                        "-f",
+                        "merge_method=" + mergeMethod(method))
+                .appendAll(head.isEmpty() ? List.empty() : List.of("-f", "sha=" + head))
+                .appendAll(List.of("--jq", MERGE_JQ))
+                .toJavaArray(String[]::new));
+    }
+
+    /**
+     * The command that asks GitHub how the merge {@code id} of pull request {@code number} is doing.
+     */
+    static GhCommand mergeStatusCommand(int number, String id) {
+        return gh("api", "repos/{owner}/{repo}/pulls/" + number + "/merge-async/" + id, "--jq", MERGE_JQ);
+    }
+
+    private static String mergeMethod(MergeMethod method) {
         return switch (method) {
-            case MERGE -> "--merge";
-            case SQUASH -> "--squash";
-            case REBASE -> "--rebase";
+            case MERGE -> "merge";
+            case SQUASH -> "squash";
+            case REBASE -> "rebase";
         };
+    }
+
+    /**
+     * Parses the line {@link #MERGE_JQ} prints.
+     */
+    static Either<UnexpectedOutput, MergeStatus> parseMergeStatus(String raw) {
+        List<String> fields =
+                List.of(raw.replaceAll("\\R+$", "").split("\t", -1)).map(CliGitHub::unescape);
+        Option<MergeStatus> status = Option.when(fields.size() == 3, fields).flatMap(f -> switch (f.get(0)) {
+            case "pending" -> Option.when(!f.get(1).isEmpty(), () -> new MergeStatus.Pending(f.get(1)));
+            case "merged" -> Option.of(new MergeStatus.Merged());
+            case "enqueued" -> Option.of(new MergeStatus.Enqueued());
+            case "failed" -> Option.of(new MergeStatus.Failed(f.get(2)));
+            default -> Option.none();
+        });
+        return status.toEither(() -> new UnexpectedOutput(raw));
+    }
+
+    /**
+     * Where a pull request sits in its stack, from the fields of {@link #STACK_JQ}: none when they are all empty,
+     * as it is not stacked, and a failure when they are not numbers.
+     */
+    private static Try<Option<PullRequestStack>> stack(List<String> fields) {
+        return fields.forAll(String::isEmpty)
+                ? Try.success(Option.none())
+                : Try.of(() -> Option.of(new PullRequestStack(
+                        Integer.parseInt(fields.get(0)),
+                        Integer.parseInt(fields.get(1)),
+                        Integer.parseInt(fields.get(2)))));
     }
 
     /**
@@ -294,13 +363,15 @@ public final class CliGitHub implements GitHub {
         List<String> fields = List.of(line.split("\t", -1));
         return Option.when(fields.size() == FIELD_COUNT, fields)
                 .flatMap(f -> Try.of(() -> Integer.parseInt(f.get(0)))
-                        .toOption()
-                        .map(number -> new PullRequest(
-                                number,
-                                f.get(1),
-                                f.get(2).equals("true"),
-                                checks(List.of(f.get(4).split(",")).filter(state -> !state.isEmpty())),
-                                review(f.get(3)))));
+                        .flatMap(number -> stack(f.drop(5))
+                                .map(stack -> new PullRequest(
+                                        number,
+                                        f.get(1),
+                                        f.get(2).equals("true"),
+                                        checks(List.of(f.get(4).split(",")).filter(state -> !state.isEmpty())),
+                                        review(f.get(3)),
+                                        stack)))
+                        .toOption());
     }
 
     /**
@@ -343,7 +414,8 @@ public final class CliGitHub implements GitHub {
     }
 
     private static Option<PullRequestSummary> summary(List<String> f) {
-        return Try.of(() -> new PullRequestSummary(
+        return stack(f.drop(11))
+                .flatMap(stack -> Try.of(() -> new PullRequestSummary(
                         f.get(0),
                         Integer.parseInt(f.get(1)),
                         f.get(2),
@@ -354,7 +426,8 @@ public final class CliGitHub implements GitHub {
                         checks(List.of(f.get(8)).filter(state -> !state.isEmpty())),
                         review(f.get(7)),
                         Instant.parse(f.get(9)),
-                        f.get(10)))
+                        f.get(10),
+                        stack)))
                 .toOption();
     }
 
@@ -409,8 +482,11 @@ public final class CliGitHub implements GitHub {
         List<Check> checks = lines.filter(f -> f.head().equals("check"))
                 // A check without a state yet, like a status nobody set, is neither passing nor failing.
                 .map(f -> new Check(f.get(1), checks(List.of(f.get(2)).filter(state -> !state.isEmpty()))));
+        Try<Option<PullRequestStack>> stack = lines.find(f -> f.head().equals("stack"))
+                .map(f -> stack(f.tail()))
+                .getOrElse(Try.success(Option.none()));
         return lines.find(f -> f.head().equals("pr"))
-                .flatMap(f -> threads.flatMap(reviewThreads -> Try.of(() -> new PullRequestDetails(
+                .flatMap(f -> threads.flatMap(reviewThreads -> stack.mapTry(pullRequestStack -> new PullRequestDetails(
                                 Integer.parseInt(f.get(1)),
                                 f.get(2),
                                 f.get(3),
@@ -429,7 +505,9 @@ public final class CliGitHub implements GitHub {
                                 reviewThreads,
                                 labels,
                                 reviewers,
-                                checks))
+                                checks,
+                                f.get(16),
+                                pullRequestStack))
                         .toOption()))
                 .toEither(() -> new UnexpectedOutput(raw));
     }
@@ -439,6 +517,7 @@ public final class CliGitHub implements GitHub {
             case "pr" -> fields.size() == DETAIL_FIELD_COUNT;
             case "label", "requested" -> fields.size() == 2;
             case "review", "check" -> fields.size() == 3;
+            case "stack" -> fields.size() == 4;
             case "threads" -> fields.size() == 5;
             default -> false;
         };
@@ -553,7 +632,19 @@ public final class CliGitHub implements GitHub {
     @Override
     public Either<GhError, List<PullRequest>> pullRequests() {
         return process.read(
-                gh("pr", "list", "--state", "open", "--limit", LIMIT, "--json", FIELDS, "--jq", JQ), CliGitHub::parse);
+                gh(
+                        "api",
+                        "graphql",
+                        "--paginate",
+                        "-F",
+                        "owner={owner}",
+                        "-F",
+                        "name={repo}",
+                        "-f",
+                        "query=" + PRS_QUERY,
+                        "--jq",
+                        JQ),
+                CliGitHub::parse);
     }
 
     @Override
@@ -703,8 +794,16 @@ public final class CliGitHub implements GitHub {
     }
 
     @Override
-    public Either<GhFailure, List<ExecutedCommand>> mergePullRequest(int number, MergeMethod method) {
-        return process.log(gh("pr", "merge", String.valueOf(number), mergeFlag(method)));
+    public Either<GhFailure, Merging> mergePullRequest(int number, String head, MergeMethod method) {
+        return process.run(mergeCommand(number, head, method))
+                .flatMap(output -> parseMergeStatus(output.stdout())
+                        .map(status -> new Merging(status, output.log()))
+                        .mapLeft(unexpected -> new GhFailure(unexpected, output.log())));
+    }
+
+    @Override
+    public Either<GhError, MergeStatus> mergeStatus(int number, String id) {
+        return process.read(mergeStatusCommand(number, id), CliGitHub::parseMergeStatus);
     }
 
     @Override

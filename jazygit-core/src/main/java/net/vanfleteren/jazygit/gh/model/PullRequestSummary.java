@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.gh.model;
 
+import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -18,6 +19,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
  * @param review     where its review stands
  * @param updatedAt  when it last changed
  * @param url        where it is on GitHub
+ * @param stack      where it sits in its stack, if it is stacked
  */
 public record PullRequestSummary(
         String repository,
@@ -30,12 +32,43 @@ public record PullRequestSummary(
         Checks checks,
         Review review,
         Instant updatedAt,
-        String url) {
+        String url,
+        Option<PullRequestStack> stack) {
+
+    /**
+     * One that is not stacked.
+     */
+    public PullRequestSummary(
+            String repository,
+            int number,
+            String title,
+            String author,
+            String headBranch,
+            boolean draft,
+            boolean fromFork,
+            Checks checks,
+            Review review,
+            Instant updatedAt,
+            String url) {
+        this(
+                repository,
+                number,
+                title,
+                author,
+                headBranch,
+                draft,
+                fromFork,
+                checks,
+                review,
+                updatedAt,
+                url,
+                Option.none());
+    }
 
     /**
      * It as the list of pull requests of its repository has it.
      */
     public PullRequest pullRequest() {
-        return new PullRequest(number, headBranch, draft, checks, review);
+        return new PullRequest(number, headBranch, draft, checks, review, stack);
     }
 }

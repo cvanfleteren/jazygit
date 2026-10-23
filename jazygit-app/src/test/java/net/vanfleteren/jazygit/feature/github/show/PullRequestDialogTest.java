@@ -10,6 +10,7 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -22,6 +23,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.*;
+import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -143,6 +145,59 @@ class PullRequestDialogTest {
         }
 
         assertEquals(java.util.List.of(new PullRequestMsg.RefreshChosen()), dispatched);
+    }
+
+    @Test
+    void aStackedPullRequestSaysWhatMergingItMergesToo() throws Exception {
+        PullRequestDetails stacked = new PullRequestDetails(
+                READY.number(),
+                READY.title(),
+                READY.author(),
+                READY.state(),
+                READY.draft(),
+                READY.headBranch(),
+                READY.baseBranch(),
+                READY.createdAt(),
+                READY.pushedAt(),
+                READY.additions(),
+                READY.deletions(),
+                READY.changedFiles(),
+                READY.mergeable(),
+                READY.review(),
+                READY.comments(),
+                READY.reviewThreads(),
+                READY.labels(),
+                READY.reviewers(),
+                READY.checks(),
+                "abc123",
+                Option.of(new PullRequestStack(96, 3, 3)));
+
+        String screen = screen(
+                PullRequestPopup.loading(new Branch.Name("support_rename"), PR).with(Either.right(stacked)));
+
+        assertTrue(screen.contains("    Stack  #96 · 3 of 3 · merging also merges the 2 below"), screen);
+        assertTrue(screen.contains("(m) Merge 3 PRs"), screen);
+        assertTrue(screen.contains("(s) Squash and merge 3 PRs"), screen);
+        assertTrue(screen.contains("(r) Rebase and merge 3 PRs"), screen);
+    }
+
+    @Test
+    void theBottomOfAStackMergesOnlyItself() throws Exception {
+        PullRequest bottom = new PullRequest(
+                42,
+                "support_rename",
+                false,
+                Checks.PASSING,
+                Review.APPROVED,
+                Option.of(new PullRequestStack(96, 1, 2)));
+
+        String screen = screen(PullRequestPopup.loading(new Branch.Name("support_rename"), bottom)
+                .with(Either.right(READY)));
+
+        // The details read without a stack say it is not stacked anymore.
+        assertFalse(screen.contains("Stack"), screen);
+        assertTrue(screen.contains("(s) Squash and merge "), screen);
+        assertFalse(screen.contains("PRs"), screen);
     }
 
     @Test

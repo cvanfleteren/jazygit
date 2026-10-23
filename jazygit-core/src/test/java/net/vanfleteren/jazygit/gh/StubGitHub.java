@@ -137,9 +137,18 @@ public interface StubGitHub extends GitHub {
     }
 
     @Override
-    default Either<GhFailure, List<ExecutedCommand>> mergePullRequest(int number, MergeMethod method) {
-        return Either.right(
-                List.of(ExecutedCommand.of("gh", "pr", "merge", String.valueOf(number), CliGitHub.mergeFlag(method))));
+    default Either<GhFailure, Merging> mergePullRequest(int number, String head, MergeMethod method) {
+        return Either.right(new Merging(
+                new MergeStatus.Pending("merge-" + number),
+                List.of(CliGitHub.mergeCommand(number, head, method).executed())));
+    }
+
+    /**
+     * Still pending.
+     */
+    @Override
+    default Either<GhError, MergeStatus> mergeStatus(int number, String id) {
+        return Either.right(new MergeStatus.Pending(id));
     }
 
     @Override

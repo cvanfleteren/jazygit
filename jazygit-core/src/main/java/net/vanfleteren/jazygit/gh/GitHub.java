@@ -93,9 +93,16 @@ public interface GitHub {
     Either<GhFailure, List<ExecutedCommand>> checkoutPullRequest(int number, Path in);
 
     /**
-     * Merges pull request {@code number} as {@code method} says, keeping its branch.
+     * Has GitHub merge pull request {@code number} in the background as {@code method} says, keeping its branch,
+     * together with the ones below it in its stack: only while its branch is still at {@code head}, unless that is
+     * empty, so what was pushed since it was read is not merged.
      */
-    Either<GhFailure, List<ExecutedCommand>> mergePullRequest(int number, MergeMethod method);
+    Either<GhFailure, Merging> mergePullRequest(int number, String head, MergeMethod method);
+
+    /**
+     * How the merge {@code id} of pull request {@code number} is doing.
+     */
+    Either<GhError, MergeStatus> mergeStatus(int number, String id);
 
     /**
      * Closes pull request {@code number} without merging it.
@@ -119,4 +126,12 @@ public interface GitHub {
      * @param commands the command log
      */
     record Created(Option<Integer> number, List<ExecutedCommand> commands) {}
+
+    /**
+     * A merge GitHub was asked for.
+     *
+     * @param status   how it is doing: pending, unless GitHub was done with it straight away
+     * @param commands the command log
+     */
+    record Merging(MergeStatus status, List<ExecutedCommand> commands) {}
 }

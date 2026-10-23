@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.gh.model;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 
 /**
  * An open pull request on GitHub.
@@ -10,8 +11,17 @@ import io.vavr.collection.List;
  * @param draft      whether it is still a draft
  * @param checks     how its CI checks are doing
  * @param review     where its review stands
+ * @param stack      where it sits in its stack, if it is stacked
  */
-public record PullRequest(int number, String headBranch, boolean draft, Checks checks, Review review) {
+public record PullRequest(
+        int number, String headBranch, boolean draft, Checks checks, Review review, Option<PullRequestStack> stack) {
+
+    /**
+     * One that is not stacked.
+     */
+    public PullRequest(int number, String headBranch, boolean draft, Checks checks, Review review) {
+        this(number, headBranch, draft, checks, review, Option.none());
+    }
 
     /**
      * The combined state of the CI checks of a pull request.
