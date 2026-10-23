@@ -602,10 +602,7 @@ public final class ContentPanel {
                                         new ScrolledContent.CommitChanges(commit, changes),
                                         commitText(commit, shownChanges(changes, options), styles)))
                                 .getOrElse(() -> loadingPanel(title))))
-                .getOrElse(() -> view.commits()
-                                .toOption()
-                                .exists(divergence -> divergence.ahead().isEmpty()
-                                        && divergence.behind().isEmpty())
+                .getOrElse(() -> view.commits().toOption().exists(Divergence::isEmpty)
                         ? dimPanel(title, Messages.get("content.noDivergence"))
                         : loadingPanel(title));
     }

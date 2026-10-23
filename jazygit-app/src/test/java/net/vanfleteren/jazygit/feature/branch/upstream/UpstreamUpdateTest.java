@@ -57,7 +57,8 @@ class UpstreamUpdateTest {
             new RemoteRef(ORIGIN_FEATURE, new Sha("f0f0"), Instant.EPOCH));
     private static final Commit AHEAD =
             new Commit(new Sha("ffff"), "Ada", "ada@example.com", Instant.EPOCH, "Local work", "");
-    private static final Divergence DIVERGENCE = new Divergence(List.of(AHEAD), 1, List.of(), 0);
+    private static final Divergence DIVERGENCE =
+            new Divergence(new Divergence.Side(List.of(AHEAD), 1), new Divergence.Side(List.of(), 0));
 
     private static Model with(Branch... branches) {
         return TestModels.localBranchesRead(loaded(), List.of(branches)).model();

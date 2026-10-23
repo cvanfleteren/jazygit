@@ -312,10 +312,11 @@ class CliGitInfoProviderTest {
 
         Divergence divergence = provider.divergence(side, main).get();
 
-        assertEquals(List.of("Side two", "Side one"), divergence.ahead().map(Commit::message));
-        assertEquals(2, divergence.aheadCount());
-        assertEquals(List.of("Main one"), divergence.behind().map(Commit::message));
-        assertEquals(1, divergence.behindCount());
+        assertEquals(
+                List.of("Side two", "Side one"), divergence.ahead().commits().map(Commit::message));
+        assertEquals(2, divergence.ahead().count());
+        assertEquals(List.of("Main one"), divergence.behind().commits().map(Commit::message));
+        assertEquals(1, divergence.behind().count());
         BranchRef gone = new BranchRef.Local(new Branch.Name("gone"));
         assertEquals(
                 new GitError.UnknownBranch(gone),
