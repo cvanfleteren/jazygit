@@ -312,7 +312,7 @@ class BranchesPane:
         rows = self.app.pane_text("Branches").splitlines()
         current = self.repo.current_branch()
         return (all(self._shows_sync(rows, branch) for branch in self.repo.branches())
-                and (not current or not self.repo.has_head() or f"* {current}" in self.app.pane_text("Branches")))
+                and (not current or not self.repo.has_head() or current in self.app.bold_in("Branches")))
 
     def _shows_sync(self, rows: list, branch: str) -> bool:
         """Whether a row shows branch, with the commits it has to push and to pull, and whether its upstream is
@@ -705,7 +705,7 @@ class WorktreesPane:
         self.repo = ui.repo
 
     def shows_worktrees(self) -> bool:
-        """Whether the pane shows each worktree git has and no other, the one shown marked, and which are locked
+        """Whether the pane shows each worktree git has and no other, the one shown in bold, and which are locked
         and whose directory is gone."""
         rows = [row for row in self.app.pane_text("Branches").splitlines() if row.strip()]
         worktrees = self.repo.worktree_list()
@@ -713,9 +713,9 @@ class WorktreesPane:
 
     def _shows(self, rows: list, worktree: dict) -> bool:
         path = Path(worktree["worktree"])
-        marked = "* " if path == self.repo.path else "  "
-        row = next((row for row in rows if row.startswith(marked + path.name + " ")), None)
+        row = next((row for row in rows if row.startswith(path.name + " ")), None)
         return (row is not None
+                and (path.name in self.app.bold_in("Branches")) == (path == self.repo.path)
                 and (" locked" in row) == ("locked" in worktree)
                 and (" missing" in row) == ("prunable" in worktree))
 

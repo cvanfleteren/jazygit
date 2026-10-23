@@ -129,6 +129,22 @@ class ThemeTest {
     }
 
     @Test
+    void everyThemeShowsTheCurrentBranchInBoldAndAColourThatStaysBehindAPopup() {
+        for (ThemeName name : ThemeName.values()) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
+            Style current = engine.resolve(new Node("Text", Set.of(Theme.Classes.CURRENT)))
+                    .toStyle();
+            Theme.Backdrop backdrop = Theme.backdrop(engine);
+            Style behindPopup = backdrop.dim(current);
+
+            assertTrue(current.addModifiers().contains(Modifier.BOLD), name.id());
+            assertTrue(behindPopup.fg().isPresent(), name.id());
+            assertNotEquals(backdrop.plain().fg(), behindPopup.fg(), name.id());
+        }
+    }
+
+    @Test
     void theDarkThemesBrightenPlainTextOnTheHighlightedRow() {
         for (ThemeName name : java.util.List.of(
                 ThemeName.DARK,

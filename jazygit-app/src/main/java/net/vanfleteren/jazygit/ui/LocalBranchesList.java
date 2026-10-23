@@ -15,7 +15,7 @@ import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
 
 /**
- * The local branches, with the current branch marked. Space checks out the highlighted branch, P pushes it, R asks
+ * The local branches, with the name of the current branch in bold and a colour of its own. Space checks out the highlighted branch, P pushes it, R asks
  * for a new name for it, d asks where to delete it, n asks for the name of a new branch starting at it, w checks it
  * out in a new worktree.
  * A branch with a pull request shows its number, its CI checks and its review; one without shows the CI checks
@@ -44,11 +44,12 @@ class LocalBranchesList implements BranchesTabList {
     /**
      * @param spinner the label and the spinner frame of a busy branch, as one text
      */
-    private static LoadableList.Row row(
-            Branch b, Duration since, List<LoadableList.Seg> gitHub, Option<String> spinner) {
-        return new LoadableList.Row(List.of(LoadableList.Seg.of("%4s ".formatted(TimeText.age(since))
-                        + (b.current() ? "* " : "  ")
-                        + b.name().value()))
+    static LoadableList.Row row(Branch b, Duration since, List<LoadableList.Seg> gitHub, Option<String> spinner) {
+        return new LoadableList.Row(List.of(
+                        LoadableList.Seg.of("%4s ".formatted(TimeText.age(since))),
+                        b.current()
+                                ? LoadableList.Seg.styled(b.name().value(), Theme.Classes.CURRENT)
+                                : LoadableList.Seg.of(b.name().value()))
                 .appendAll(BranchSegs.worktree(b))
                 .appendAll(BranchSegs.sync(b))
                 .appendAll(gitHub)

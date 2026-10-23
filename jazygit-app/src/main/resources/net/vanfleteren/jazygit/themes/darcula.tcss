@@ -71,6 +71,7 @@ ListElement-item:selected, TreeElement-node:selected, .selection {
 .review-changes { color: $removed; }
 .repo-branch { color: $hunk; }
 .repo-location { color: $meta; }
+.current { color: $warn; text-style: bold; }
 
 Span.diff-header { color: $meta; text-style: bold; }
 Span.diff-added { color: $added; }

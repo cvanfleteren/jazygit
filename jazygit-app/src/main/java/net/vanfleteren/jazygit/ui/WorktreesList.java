@@ -34,12 +34,15 @@ class WorktreesList implements BranchesTabList {
     }
 
     /**
-     * A worktree of {@code repo}: marked when it is the one shown, the name of its directory, marked when it has
+     * A worktree of {@code repo}: the name of its directory, in bold and a colour of its own when it is the one shown, marked when it has
      * changes, and what it has checked out, with how far its branch is from its upstream; then whether it is the
      * main one, locked, or gone from disk.
      */
     static LoadableList.Row row(Repo repo, Worktree worktree) {
-        return new LoadableList.Row(List.of(LoadableList.Seg.of((worktree.current() ? "* " : "  ") + worktree.name()))
+        return new LoadableList.Row(List.of(
+                        worktree.current()
+                                ? LoadableList.Seg.styled(worktree.name(), Theme.Classes.CURRENT)
+                                : LoadableList.Seg.of(worktree.name()))
                 .appendAll(changes(repo, worktree))
                 .append(checkedOut(worktree))
                 .appendAll(worktree.branch().flatMap(repo::branch).toList().flatMap(BranchSegs::sync))

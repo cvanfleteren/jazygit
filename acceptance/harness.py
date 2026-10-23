@@ -326,6 +326,19 @@ class App:
         row = self.screen.buffer[top]
         return "".join(row[x].data for x in range(self.screen.columns) if row[x].underscore).strip()
 
+    def bold_in(self, pane: str) -> list:
+        """The words the pane of the left column, by the first word of its title, shows in bold inside its
+        border."""
+        self.pump()
+        lines = self.screen.display
+        top = next((y for y, line in enumerate(lines) if line.startswith("╭" + pane)), None)
+        if top is None or "╮" not in lines[top]:
+            return []
+        width = lines[top].index("╮")
+        bottom = next((y for y in range(top + 1, len(lines)) if lines[y].startswith("╰")), len(lines))
+        rows = [self.screen.buffer[y] for y in range(top + 1, bottom)]
+        return " ".join("".join(row[x].data if row[x].bold else " " for x in range(1, width)) for row in rows).split()
+
     def pane_text(self, pane: str) -> str:
         """What the pane of the left column shows inside its border."""
         return "\n".join(text for text, _ in self.pane_rows(pane))
