@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.*;
 import org.junit.jupiter.api.Test;
 
@@ -92,6 +93,52 @@ class AheadUpdateTest {
         assertEquals(Option.of(COMMITS), model.repo().commits().toOption());
         assertInstanceOf(Loadable.Failed.class, model.repo().ahead());
         assertTrue(Update.update(model, new Msg.Tick()).cmds().contains(load));
+    }
+
+    @Test
+    void whatIsReadWithTheLogOfHeadIsReadAgainWhenTheBranchesArrivedMeanwhile() {
+        // At the start the status arrives first: the log is asked for before the branches tell its base.
+        Update.Next started = Update.update(Update.init("repo").model(), new LoadMsg.StatusLoaded(CLEAN));
+        Cmd.LoadAhead issued = ((Cmd.LoadCommits) started.cmds().single()).ahead();
+        Model branchesRead = Update.update(
+                        started.model(), new LoadMsg.BranchesLoaded(new AllBranches(BRANCHES, List.empty())))
+                .model();
+
+        Update.Next logRead =
+                Update.update(branchesRead, new LoadMsg.CommitsLoaded(COMMITS, issued, Either.right(Option.none())));
+
+        Cmd.LoadAhead current = AheadUpdate.ofHead(logRead.model());
+        assertNotEquals(issued, current);
+        assertTrue(logRead.cmds().contains(current));
+        Model read = Update.update(
+                        logRead.model(), new LoadMsg.AheadLoaded(current, Option.of(ahead(HEAD, origin("main")))))
+                .model();
+        assertEquals(Option.of(ahead(HEAD, origin("main"))), AheadUpdate.head(read));
+    }
+
+    @Test
+    void whatIsReadWithTheLogOfABranchIsReadAgainWhenTheMainBranchChangedMeanwhile() {
+        Update.Next selected = Update.update(loaded(), new SelectionMsg.BranchSelected(FEATURE_LOG));
+        Cmd.LoadAhead issued = ((Cmd.LoadBranchLog) selected.cmds().single()).ahead();
+        Model mainKnown = localBranchesRead(
+                        selected.model(),
+                        List.of(
+                                new Branch(MAIN, true, HEAD, Instant.EPOCH, false, true),
+                                new Branch(FEATURE, false, FEATURE_TIP)))
+                .model();
+
+        Update.Next logRead = Update.update(
+                mainKnown,
+                new LoadMsg.BranchLogLoaded(FEATURE_LOG, FEATURE_COMMITS, issued, Either.right(Option.none())));
+
+        Cmd.LoadAhead current = AheadUpdate.of(logRead.model(), FEATURE_LOG);
+        assertNotEquals(issued, current);
+        assertTrue(logRead.cmds().contains(current));
+        Model read = Update.update(
+                        logRead.model(),
+                        new LoadMsg.AheadLoaded(current, Option.of(ahead(FEATURE_TIP, origin("main")))))
+                .model();
+        assertEquals(Option.of(ahead(FEATURE_TIP, origin("main"))), AheadUpdate.branch(read, FEATURE_LOG));
     }
 
     @Test

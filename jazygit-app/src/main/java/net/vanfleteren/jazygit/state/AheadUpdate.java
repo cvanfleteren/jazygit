@@ -113,10 +113,13 @@ public final class AheadUpdate {
     }
 
     /**
-     * Keeps what {@code load} read, or that it failed, as {@link #loaded} and {@link #failed} do.
+     * Keeps what {@code load} read with a log, or that it failed, as {@link #loaded} and {@link #failed} do. It was
+     * asked for with the log, so the branches read since may tell another base: then it is read again for that one.
      */
     static Next read(Model model, Cmd.LoadAhead load, Either<Failure, Option<Ahead>> ahead) {
-        return ahead.fold(failure -> Next.of(failed(model, load, failure)), read -> loaded(model, load, read));
+        Next kept = ahead.fold(failure -> Next.of(failed(model, load, failure)), read -> loaded(model, load, read));
+        Cmd.LoadAhead current = load.branch().fold(() -> ofHead(kept.model()), branch -> of(kept.model(), branch));
+        return current.equals(load) ? kept : new Next(kept.model(), kept.cmds().append(current));
     }
 
     /**
