@@ -63,7 +63,8 @@ class JazygitAppWiringTest {
                         Tuple.of(JazygitApp.REFRESH_INTERVAL, Msg.Tick.class),
                         Tuple.of(Duration.ofMinutes(1), FetchMsg.Tick.class),
                         Tuple.of(Duration.ofMinutes(1), PrOverviewMsg.Tick.class),
-                        Tuple.of(Duration.ofMinutes(1), PullRequestMsg.Tick.class)),
+                        Tuple.of(Duration.ofMinutes(1), PullRequestMsg.Tick.class),
+                        Tuple.of(Duration.ofSeconds(2), PullRequestMsg.MergeTick.class)),
                 JazygitApp.TIMERS.map(
                         timer -> Tuple.of(timer.interval(), timer.msg().get().getClass())));
     }

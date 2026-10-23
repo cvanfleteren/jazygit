@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.github.show;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
+import net.vanfleteren.jazygit.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -66,7 +67,28 @@ public sealed interface PullRequestMsg extends Msg {
     record DraftSet(PullRequestCmd.SetDraft cmd, List<ExecutedCommand> commands) implements PullRequestMsg {}
 
     /**
-     * The pull request was merged or closed by running {@code commands}.
+     * GitHub was asked to merge the pull request, as {@code cmd} says, and said how that is doing.
+     */
+    record MergeAsked(PullRequestCmd.MergePullRequest cmd, MergeStatus status, List<ExecutedCommand> commands)
+            implements PullRequestMsg {}
+
+    /**
+     * Periodic prompt to ask GitHub how the merges it is doing are going.
+     */
+    record MergeTick() implements PullRequestMsg {}
+
+    /**
+     * GitHub said how the merge {@code id} of pull request {@code number} is doing.
+     */
+    record MergeChecked(int number, String id, MergeStatus status) implements PullRequestMsg {}
+
+    /**
+     * Asking GitHub how the merge {@code id} of pull request {@code number} is doing failed; the next tick asks again.
+     */
+    record MergeCheckFailed(int number, String id, Failure failure) implements PullRequestMsg {}
+
+    /**
+     * The pull request was closed by running {@code commands}.
      */
     record Ended(PullRequestCmd.ChangingCmd cmd, List<ExecutedCommand> commands) implements PullRequestMsg {}
 

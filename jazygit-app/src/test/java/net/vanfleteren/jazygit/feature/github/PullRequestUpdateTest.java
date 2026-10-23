@@ -32,13 +32,16 @@ import net.vanfleteren.jazygit.feature.worktree.add.NewWorktreePopup;
 import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
+import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
+import net.vanfleteren.jazygit.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.StubGitProvider;
@@ -891,7 +894,8 @@ class PullRequestUpdateTest {
         Next merging = Update.update(read, new PullRequestMsg.MergeChosen(MergeMethod.SQUASH));
         Next closing = Update.update(read, new PullRequestMsg.CloseChosen());
 
-        assertEquals(List.of(new MergePullRequest(new Branch.Name("feature"), 42, MergeMethod.SQUASH)), merging.cmds());
+        assertEquals(
+                List.of(new MergePullRequest(new Branch.Name("feature"), 42, "", MergeMethod.SQUASH)), merging.cmds());
         assertEquals(Option.none(), merging.model().popup());
         assertEquals(
                 Option.of(PullRequestCmd.MERGE_PR),
@@ -962,15 +966,36 @@ class PullRequestUpdateTest {
                 done.model().outcome().commandLog().last().commands().last().line());
     }
 
+    /**
+     * GitHub that merges each pull request as soon as it is asked to.
+     */
+    private static StubGitHub mergingAtOnce() {
+        return new StubGitHub() {
+            @Override
+            public Either<GhFailure, GitHub.Merging> mergePullRequest(int number, String head, MergeMethod method) {
+                return Either.right(new GitHub.Merging(new MergeStatus.Merged(), List.empty()));
+            }
+        };
+    }
+
+    /**
+     * {@code model} once GitHub was asked to merge pull request 42 of feature, and said it is doing so.
+     */
+    private static Model asked(Model model) {
+        MergePullRequest cmd = new MergePullRequest(FEATURE, 42, "abc123", MergeMethod.MERGE);
+        return Update.update(
+                        model.withBusyBranch(new BranchRef.Local(FEATURE), PullRequestCmd.MERGE_PR), cmd.run(env()))
+                .model();
+    }
+
     @Test
     void aMergedPullRequestIsReadAgainOnceAnEarlierReadIsDone() {
-        MergePullRequest cmd = new MergePullRequest(new Branch.Name("feature"), 42, MergeMethod.MERGE);
+        MergePullRequest cmd = new MergePullRequest(FEATURE, 42, "", MergeMethod.MERGE);
         // The running read started before the merge, and would list the pull request as still open.
-        Model merging = withPr().withBusyBranch(
-                        new BranchRef.Local(new Branch.Name("feature")), PullRequestCmd.MERGE_PR)
+        Model merging = withPr().withBusyBranch(new BranchRef.Local(FEATURE), PullRequestCmd.MERGE_PR)
                 .mapGitHub(gitHub -> gitHub.withReading(io.vavr.collection.HashSet.of(new LoadPullRequests())));
 
-        Next done = Update.update(merging, cmd.run(new Env(new StubGitProvider() {}, StubGitHub.empty())));
+        Next done = Update.update(merging, cmd.run(new Env(new StubGitProvider() {}, mergingAtOnce())));
         Next earlierRead = Update.update(done.model(), new PullRequestsMsg.Loaded(List.of()));
 
         assertFalse(done.cmds().contains(new LoadPullRequests()), done.cmds().toString());
@@ -980,23 +1005,238 @@ class PullRequestUpdateTest {
     }
 
     @Test
-    void aMergedPullRequestIsNoLongerListedAndThePullRequestsAreReadAgain() {
-        MergePullRequest cmd = new MergePullRequest(new Branch.Name("feature"), 42, MergeMethod.MERGE);
-        Model merging =
-                withPr().withBusyBranch(new BranchRef.Local(new Branch.Name("feature")), PullRequestCmd.MERGE_PR);
+    void aPullRequestGitHubMergedAtOnceShowsMergedUntilThePullRequestsAreReadAgain() {
+        MergePullRequest cmd = new MergePullRequest(FEATURE, 42, "", MergeMethod.MERGE);
+        Model merging = withPr().withBusyBranch(new BranchRef.Local(FEATURE), PullRequestCmd.MERGE_PR);
 
-        Next done = Update.update(merging, cmd.run(new Env(new StubGitProvider() {}, StubGitHub.empty())));
+        Next done = Update.update(merging, cmd.run(new Env(new StubGitProvider() {}, mergingAtOnce())));
 
-        assertEquals(
-                Option.none(),
-                done.model().gitHub().pullRequests().flatMap(open -> open.get(new Branch.Name("feature"))));
-        assertEquals(Option.none(), done.model().jobs().busy().get(new BranchRef.Local(new Branch.Name("feature"))));
+        assertEquals(Option.of(FEATURE_PR), done.model().gitHub().pullRequests().flatMap(open -> open.get(FEATURE)));
+        assertEquals(Option.of(new MergeStatus.Merged()), done.model().gitHub().merge(42));
+        assertEquals(Option.none(), done.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
         assertTrue(done.cmds().contains(new LoadPullRequests()), done.cmds().toString());
         // The merge changed the base branch on the remote.
         assertTrue(done.cmds().contains(new FetchCmd.ListRemotes()), done.cmds().toString());
+    }
+
+    @Test
+    void aMergeGitHubDoesInTheBackgroundLeavesTheBranchFreeAndIsPending() {
+        Model merging = asked(withPr());
+
+        assertEquals(Option.none(), merging.jobs().busy().get(new BranchRef.Local(FEATURE)));
         assertEquals(
-                "gh pr merge 42 --merge",
-                done.model().outcome().commandLog().last().commands().last().line());
+                Option.of(new MergeStatus.Pending("merge-42")), merging.gitHub().merge(42));
+        assertTrue(merging.gitHub().merging(42));
+        assertEquals(
+                "gh api --method PUT 'repos/{owner}/{repo}/pulls/42/merge-async' -f merge_method=merge -f sha=abc123",
+                merging.outcome().commandLog().last().commands().last().line().replaceAll(" --jq .*", ""));
+    }
+
+    @Test
+    void aPullRequestGitHubIsMergingIsNotMergedAgain() {
+        Model read = Update.update(
+                        Update.update(asked(withPr()), new PullRequestMsg.Requested(FEATURE))
+                                .model(),
+                        new PullRequestMsg.DetailsLoaded(
+                                42, StubGitHub.empty().pullRequestDetails(42).get()))
+                .model();
+
+        assertEquals(
+                List.empty(),
+                Update.update(read, new PullRequestMsg.MergeChosen(MergeMethod.SQUASH))
+                        .cmds());
+    }
+
+    @Test
+    void eachTickAsksGitHubOnceHowAPendingMergeIsDoing() {
+        Next ticked = Update.update(asked(withPr()), new PullRequestMsg.MergeTick());
+
+        assertEquals(List.of(new CheckMerge(42, "merge-42")), ticked.cmds());
+        // While it is asked, the next tick does not ask again.
+        assertEquals(
+                List.empty(),
+                Update.update(ticked.model(), new PullRequestMsg.MergeTick()).cmds());
+
+        Next stillPending = Update.update(
+                ticked.model(), new PullRequestMsg.MergeChecked(42, "merge-42", new MergeStatus.Pending("merge-42")));
+        assertEquals(
+                List.of(new CheckMerge(42, "merge-42")),
+                Update.update(stillPending.model(), new PullRequestMsg.MergeTick())
+                        .cmds());
+    }
+
+    @Test
+    void noTickAsksAnythingWithoutPendingMerges() {
+        Model model = withPr();
+
+        Next ticked = Update.update(model, new PullRequestMsg.MergeTick());
+
+        assertEquals(List.empty(), ticked.cmds());
+        assertEquals(model, ticked.model());
+    }
+
+    @Test
+    void aMergeThatAskingAboutFailedIsAskedAboutAgain() {
+        Model checking =
+                Update.update(asked(withPr()), new PullRequestMsg.MergeTick()).model();
+
+        Next failed = Update.update(
+                checking, new PullRequestMsg.MergeCheckFailed(42, "merge-42", refused("gh: Bad Gateway (HTTP 502)")));
+
+        assertEquals(Option.none(), failed.model().popup(ErrorPopup.class));
+        assertEquals(
+                List.of(new CheckMerge(42, "merge-42")),
+                Update.update(failed.model(), new PullRequestMsg.MergeTick()).cmds());
+    }
+
+    @Test
+    void aMergeGitHubFinishedReadsThePullRequestsAndTheRemotesAgain() {
+        Model checking =
+                Update.update(asked(withPr()), new PullRequestMsg.MergeTick()).model();
+
+        Next merged =
+                Update.update(checking, new PullRequestMsg.MergeChecked(42, "merge-42", new MergeStatus.Merged()));
+
+        assertEquals(
+                Option.of(new MergeStatus.Merged()), merged.model().gitHub().merge(42));
+        assertTrue(merged.cmds().contains(new LoadPullRequests()), merged.cmds().toString());
+        assertTrue(
+                merged.cmds().contains(new FetchCmd.ListRemotes()),
+                merged.cmds().toString());
+        assertEquals(
+                List.empty(),
+                Update.update(merged.model(), new PullRequestMsg.MergeTick()).cmds());
+    }
+
+    @Test
+    void aMergeGitHubFailedIsShownAsAnErrorAndStaysShownUntilItIsMergedAgain() {
+        Model checking =
+                Update.update(asked(withPr()), new PullRequestMsg.MergeTick()).model();
+
+        Model failed = Update.update(
+                        checking,
+                        new PullRequestMsg.MergeChecked(
+                                42, "merge-42", new MergeStatus.Failed("Required status check \"build\" is failing")))
+                .model();
+
+        assertEquals(
+                Option.of("Merging the pull request of feature failed: Required status check \"build\" is failing"),
+                errorText(failed));
+        assertEquals(
+                Option.of(new MergeStatus.Failed("Required status check \"build\" is failing")),
+                Update.update(failed, new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
+                        .model()
+                        .gitHub()
+                        .merge(42));
+        assertFalse(failed.gitHub().merging(42));
+        assertEquals(
+                Option.of(new MergeStatus.Pending("merge-42")),
+                asked(failed).gitHub().merge(42));
+    }
+
+    @Test
+    void aPullRequestGitHubAddedToTheMergeQueueSaysSo() {
+        Model checking =
+                Update.update(asked(withPr()), new PullRequestMsg.MergeTick()).model();
+
+        Model enqueued = Update.update(
+                        checking, new PullRequestMsg.MergeChecked(42, "merge-42", new MergeStatus.Enqueued()))
+                .model();
+
+        assertEquals(Option.of(new MergeStatus.Enqueued()), enqueued.gitHub().merge(42));
+        assertEquals(
+                Option.of(new Notice.MergeEnqueued(FEATURE)), enqueued.outcome().notice());
+    }
+
+    @Test
+    void anAnswerAboutAnEarlierMergeIsIgnored() {
+        Model checking =
+                Update.update(asked(withPr()), new PullRequestMsg.MergeTick()).model();
+
+        Next answered =
+                Update.update(checking, new PullRequestMsg.MergeChecked(42, "earlier", new MergeStatus.Merged()));
+
+        assertEquals(checking, answered.model());
+    }
+
+    @Test
+    void aMergeThatIsPendingForTooLongIsLeftToGitHub() {
+        Model merging = asked(withPr().withNow(Instant.parse("2026-10-23T10:00:00Z")));
+
+        Next ticked =
+                Update.update(merging.withNow(Instant.parse("2026-10-23T10:10:05Z")), new PullRequestMsg.MergeTick());
+
+        assertEquals(List.empty(), ticked.cmds());
+        assertEquals(Option.none(), ticked.model().gitHub().merge(42));
+        assertEquals(
+                Option.of(new Notice.MergeStillPending(FEATURE)),
+                ticked.model().outcome().notice());
+    }
+
+    /**
+     * {@code model} once GitHub said the merge of pull request {@code number}, from {@code branch}, goes as
+     * {@code status}.
+     */
+    private static Model askedFor(Model model, String branch, int number, MergeStatus status) {
+        MergePullRequest cmd = new MergePullRequest(new Branch.Name(branch), number, "", MergeMethod.MERGE);
+        return Update.update(model, new PullRequestMsg.MergeAsked(cmd, status, List.empty()))
+                .model();
+    }
+
+    /**
+     * Pull request 41 at the bottom of a stack, and 42 of feature on top of it.
+     */
+    private static Model stackOfTwo() {
+        PullRequest bottom = new PullRequest(
+                41, "base-work", false, Checks.PASSING, Review.APPROVED, Option.of(new PullRequestStack(7, 1, 2)));
+        PullRequest top = new PullRequest(
+                42, "feature", false, Checks.PASSING, Review.APPROVED, Option.of(new PullRequestStack(7, 2, 2)));
+        return Update.update(model(), new PullRequestsMsg.Loaded(List.of(bottom, top)))
+                .model();
+    }
+
+    @Test
+    void aPullRequestWhoseMergeFailedIsMergingWhileOneAboveItMergesTheStack() {
+        Model failedBelow = askedFor(stackOfTwo(), "base-work", 41, new MergeStatus.Failed("conflicts"));
+
+        Model merging = askedFor(failedBelow, "feature", 42, new MergeStatus.Pending("merge-42"));
+
+        assertEquals(
+                Option.of(new MergeStatus.Pending("merge-42")), merging.gitHub().merge(41));
+        assertTrue(merging.gitHub().merging(41));
+    }
+
+    @Test
+    void mergingAPullRequestOnItsOwnAfterTheStackFailedLeavesTheFailureAbove() {
+        Model failedAbove = askedFor(stackOfTwo(), "feature", 42, new MergeStatus.Failed("conflicts"));
+
+        Model merging = askedFor(failedAbove, "base-work", 41, new MergeStatus.Pending("merge-41"));
+
+        assertEquals(
+                Option.of(new MergeStatus.Pending("merge-41")), merging.gitHub().merge(41));
+        assertEquals(
+                Option.of(new MergeStatus.Failed("conflicts")), merging.gitHub().merge(42));
+    }
+
+    @Test
+    void mergingAStackedPullRequestMergesTheOnesBelowItToo() {
+        PullRequest bottom = new PullRequest(
+                41, "base-work", false, Checks.PASSING, Review.APPROVED, Option.of(new PullRequestStack(7, 1, 3)));
+        PullRequest middle = new PullRequest(
+                42, "feature", false, Checks.PASSING, Review.APPROVED, Option.of(new PullRequestStack(7, 2, 3)));
+        PullRequest top = new PullRequest(
+                43, "on-top", false, Checks.PASSING, Review.APPROVED, Option.of(new PullRequestStack(7, 3, 3)));
+        PullRequest other = new PullRequest(
+                40, "elsewhere", false, Checks.PASSING, Review.APPROVED, Option.of(new PullRequestStack(8, 1, 2)));
+        Model stacked = Update.update(model(), new PullRequestsMsg.Loaded(List.of(bottom, middle, top, other)))
+                .model();
+
+        Model merging = asked(stacked);
+
+        assertEquals(
+                Option.of(new MergeStatus.Pending("merge-42")), merging.gitHub().merge(41));
+        assertEquals(Option.none(), merging.gitHub().merge(43));
+        assertEquals(Option.none(), merging.gitHub().merge(40));
     }
 
     @Test
@@ -1013,13 +1253,13 @@ class PullRequestUpdateTest {
         // What gh says when e.g. a required check fails or a review is missing.
         StubGitHub refusing = new StubGitHub() {
             @Override
-            public Either<GhFailure, List<ExecutedCommand>> mergePullRequest(int number, MergeMethod method) {
+            public Either<GhFailure, GitHub.Merging> mergePullRequest(int number, String head, MergeMethod method) {
                 return Either.left(new GhFailure(
                         new GhError.CommandFailed(
                                 Option.of(
                                         "Pull request #42 is not mergeable: the base branch policy prohibits the merge."),
                                 1),
-                        List.of(ExecutedCommand.of("gh", "pr", "merge", "42", "--squash"))));
+                        List.of(ExecutedCommand.of("gh", "api", "--method", "PUT", "merge-async"))));
             }
         };
 

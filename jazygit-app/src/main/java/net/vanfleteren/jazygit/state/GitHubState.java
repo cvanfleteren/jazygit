@@ -1,10 +1,13 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
+import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import lombok.With;
+import net.vanfleteren.jazygit.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
@@ -24,6 +27,8 @@ import net.vanfleteren.jazygit.git.model.Upstream;
  *                            requests are read
  * @param again               the running reads to start again once they are done, as they may have missed a change
  *                            just made; see {@link GitHubReads}
+ * @param merges              the merges GitHub was asked for, by the number of their pull request, kept apart from
+ *                            what is read so a read does not wipe how they went; only in memory (ADR 24)
  */
 @With
 public record GitHubState(
@@ -31,10 +36,61 @@ public record GitHubState(
         Option<Failure> pullRequestsFailure,
         Option<GitHubChecks> branchChecks,
         Set<Cmd> reading,
-        Set<Cmd> again) {
+        Set<Cmd> again,
+        Map<Integer, PullRequestMerge> merges) {
 
-    public static final GitHubState NOT_READ =
-            new GitHubState(Option.none(), Option.none(), Option.none(), HashSet.empty(), HashSet.empty());
+    public static final GitHubState NOT_READ = new GitHubState(
+            Option.none(), Option.none(), Option.none(), HashSet.empty(), HashSet.empty(), HashMap.empty());
+
+    /**
+     * How the latest merge that merges pull request {@code number} went, or is going: the merge of it, or of one
+     * above it in its stack. Only one merge merges it, as a later one replaces it ({@link #withMerge}).
+     */
+    public Option<MergeStatus> merge(int number) {
+        return merges.values().find(merge -> merge.merges(number)).map(PullRequestMerge::status);
+    }
+
+    /**
+     * How the latest merge of {@code pullRequest} went, or is going, if there is one.
+     */
+    public Option<MergeStatus> merge(Option<PullRequest> pullRequest) {
+        return pullRequest.flatMap(pr -> merge(pr.number()));
+    }
+
+    /**
+     * Whether GitHub is merging pull request {@code number} still, so it is not to be merged again meanwhile.
+     */
+    public boolean merging(int number) {
+        return merge(number).exists(status -> status instanceof MergeStatus.Pending);
+    }
+
+    /**
+     * The numbers of the open pull requests below pull request {@code number} in its stack, which merging it merges
+     * too; none when it is not listed, or not stacked.
+     */
+    public List<Integer> below(int number) {
+        List<PullRequest> open =
+                pullRequests.map(byBranch -> byBranch.values().toList()).getOrElse(List.empty());
+        return open.find(pr -> pr.number() == number)
+                .flatMap(PullRequest::stack)
+                .map(stack -> open.filter(other -> other.stack()
+                                .exists(its -> its.number() == stack.number() && its.position() < stack.position()))
+                        .map(PullRequest::number)
+                        .sorted())
+                .getOrElse(List.empty());
+    }
+
+    /**
+     * This state with {@code merge} as the merge of its pull request, and of the ones below it: it replaces how earlier
+     * merges went for those, each of which still tells how it went for its own pull request, when that is not one of
+     * them.
+     */
+    public GitHubState withMerge(PullRequestMerge merge) {
+        List<Integer> merged = merge.below().prepend(merge.number());
+        return withMerges(merges.removeAll(merged)
+                .mapValues(earlier -> earlier.withoutBelow(merged))
+                .put(merge.number(), merge));
+    }
 
     /**
      * This state with the pull request {@code details} are about as they were just read: as it now is, or no

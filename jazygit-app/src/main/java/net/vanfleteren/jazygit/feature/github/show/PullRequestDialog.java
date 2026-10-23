@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewThreads;
+import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
@@ -55,12 +56,12 @@ public final class PullRequestDialog implements PopupView {
     // A longer title is cut.
     private static final int TITLE_LINES = 3;
     /*
-     * The most lines the details take: the title and a blank line; state, author, branch, created, pushed, changes
-     * and mergeable, and a blank line; review, reviewers, comments, threads and labels, and a blank line; the checks
-     * counted, listed, and how many more there are. The dialog is always this high, so it keeps its size
+     * The most lines the details take: the title and a blank line; state, author, branch, stack, created, pushed,
+     * changes and mergeable, and a blank line; review, reviewers, comments, threads and labels, and a blank line; the
+     * checks counted, listed, and how many more there are. The dialog is always this high, so it keeps its size
      * when the details arrive.
      */
-    private static final int CONTENT_HEIGHT = TITLE_LINES + 1 + 7 + 1 + 5 + 1 + 1 + LISTED_CHECKS + 1;
+    private static final int CONTENT_HEIGHT = TITLE_LINES + 1 + 8 + 1 + 5 + 1 + 1 + LISTED_CHECKS + 1;
 
     private final Clock clock;
     private final ChoiceList<PullRequestPopup> actions;
@@ -119,11 +120,36 @@ public final class PullRequestDialog implements PopupView {
     }
 
     /**
-     * Merging as {@code method} says; only for a pull request that can be merged, as far as is known.
+     * Merging as {@code method} says; only for a pull request that can be merged, as far as is known. One with others
+     * below it in its stack says how many it merges, as it merges those too.
      */
     private static Choice<PullRequestPopup> merge(char key, String labelKey, MergeMethod method) {
         return new Choice<>(
-                key, labelKey, () -> new PullRequestMsg.MergeChosen(method), (model, popup) -> popup.mergeable());
+                key,
+                popup -> popup.stack()
+                        .filter(stack -> stack.below() > 0)
+                        .map(stack -> Messages.get(labelKey + ".stack", String.valueOf(stack.position())))
+                        .getOrElse(() -> Messages.get(labelKey)),
+                () -> new PullRequestMsg.MergeChosen(method),
+                PullRequestUpdate::mergeable);
+    }
+
+    /**
+     * Where the pull request sits in its stack, and how many below it merging it merges too.
+     */
+    private static Line stack(PullRequestStack stack) {
+        String position = Messages.get(
+                "dialog.pullRequest.stack.position",
+                String.valueOf(stack.number()),
+                String.valueOf(stack.position()),
+                String.valueOf(stack.size()));
+        return stack.below() > 0
+                ? Line.labelled(
+                        "dialog.pullRequest.stack",
+                        text(position + " · "),
+                        text(Messages.get("dialog.pullRequest.stack.below", stack.below()))
+                                .addClass(Theme.Classes.CHECKS_RUNNING))
+                : Line.labelled("dialog.pullRequest.stack", text(position));
     }
 
     private static List<Line> failed(Failure failure) {
@@ -297,8 +323,9 @@ public final class PullRequestDialog implements PopupView {
                 .appendAll(Option.when(
                         !pr.author().isEmpty(),
                         () -> Line.labelled("dialog.pullRequest.author", text("@" + pr.author()))))
+                .append(Line.labelled("dialog.pullRequest.branch", text(pr.headBranch() + " → " + pr.baseBranch())))
+                .appendAll(pr.stack().map(PullRequestDialog::stack))
                 .appendAll(List.of(
-                        Line.labelled("dialog.pullRequest.branch", text(pr.headBranch() + " → " + pr.baseBranch())),
                         Line.labelled("dialog.pullRequest.created", text(when(pr.createdAt(), now))),
                         Line.labelled("dialog.pullRequest.pushed", text(when(pr.pushedAt(), now))),
                         Line.labelled(

@@ -5,9 +5,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.pull.PullCmd;
+import net.vanfleteren.jazygit.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.*;
 import org.junit.jupiter.api.Test;
 
@@ -39,6 +41,42 @@ class BranchSegsTest {
         assertEquals(
                 List.of(LoadableList.Seg.styled(" #37", Theme.Classes.DIM)),
                 BranchSegs.pullRequest(Option.of(new PullRequest(37, "b", true, Checks.NONE, Review.NONE))));
+    }
+
+    @Test
+    void aStackedPullRequestShowsWhereItSitsInItsStack() {
+        assertEquals(
+                List.of(
+                        LoadableList.Seg.styled(" #95", Theme.Classes.PULL_REQUEST),
+                        LoadableList.Seg.styled(" 📚2/3", Theme.Classes.DIM),
+                        LoadableList.Seg.styled(" ✅", Theme.Classes.CHECKS_PASSED)),
+                BranchSegs.pullRequest(Option.of(new PullRequest(
+                        95, "b", false, Checks.PASSING, Review.NONE, Option.of(new PullRequestStack(96, 2, 3))))));
+    }
+
+    @Test
+    void aMergeShowsHowItGoesInsteadOfTheChecksAndTheReview() {
+        Option<PullRequest> pr = Option.of(new PullRequest(42, "b", false, Checks.FAILING, Review.APPROVED));
+
+        assertEquals(
+                List.of(
+                        LoadableList.Seg.styled(" #42", Theme.Classes.PULL_REQUEST),
+                        LoadableList.Seg.styled(" 🔀", Theme.Classes.DIM)),
+                BranchSegs.pullRequest(pr, Option.of(new MergeStatus.Pending("u-1"))));
+        assertEquals(
+                " 🚦",
+                BranchSegs.pullRequest(pr, Option.of(new MergeStatus.Enqueued()))
+                        .last()
+                        .text());
+        assertEquals(
+                LoadableList.Seg.styled(" 💥", Theme.Classes.CHECKS_FAILED),
+                BranchSegs.pullRequest(pr, Option.of(new MergeStatus.Failed("no")))
+                        .last());
+        assertEquals(
+                " 🟣",
+                BranchSegs.pullRequest(pr, Option.of(new MergeStatus.Merged()))
+                        .last()
+                        .text());
     }
 
     @Test

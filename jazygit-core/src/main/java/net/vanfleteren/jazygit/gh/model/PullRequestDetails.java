@@ -30,6 +30,8 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
  * @param labels       its labels
  * @param reviewers    who reviewed it or is asked to
  * @param checks       its CI checks, one by one
+ * @param head         the commit its branch is at, empty when not known
+ * @param stack        where it sits in its stack, if it is stacked
  */
 public record PullRequestDetails(
         int number,
@@ -50,7 +52,56 @@ public record PullRequestDetails(
         ReviewThreads reviewThreads,
         List<String> labels,
         List<Reviewer> reviewers,
-        List<Check> checks) {
+        List<Check> checks,
+        String head,
+        Option<PullRequestStack> stack) {
+
+    /**
+     * One that is not stacked, at a commit that is not known.
+     */
+    public PullRequestDetails(
+            int number,
+            String title,
+            String author,
+            State state,
+            boolean draft,
+            String headBranch,
+            String baseBranch,
+            Instant createdAt,
+            Instant pushedAt,
+            int additions,
+            int deletions,
+            int changedFiles,
+            Mergeable mergeable,
+            Review review,
+            int comments,
+            ReviewThreads reviewThreads,
+            List<String> labels,
+            List<Reviewer> reviewers,
+            List<Check> checks) {
+        this(
+                number,
+                title,
+                author,
+                state,
+                draft,
+                headBranch,
+                baseBranch,
+                createdAt,
+                pushedAt,
+                additions,
+                deletions,
+                changedFiles,
+                mergeable,
+                review,
+                comments,
+                reviewThreads,
+                labels,
+                reviewers,
+                checks,
+                "",
+                Option.none());
+    }
 
     /**
      * This pull request, as a draft when {@code draft}, else as ready for review.
@@ -75,7 +126,9 @@ public record PullRequestDetails(
                 reviewThreads,
                 labels,
                 reviewers,
-                checks);
+                checks,
+                head,
+                stack);
     }
 
     /**
@@ -84,7 +137,8 @@ public record PullRequestDetails(
     public Option<PullRequest> listed() {
         return Option.when(
                 state == State.OPEN,
-                () -> new PullRequest(number, headBranch, draft, Checks.combined(checks.map(Check::state)), review));
+                () -> new PullRequest(
+                        number, headBranch, draft, Checks.combined(checks.map(Check::state)), review, stack));
     }
 
     public enum State {

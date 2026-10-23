@@ -13,6 +13,8 @@ import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.BranchChecks;
 import net.vanfleteren.jazygit.gh.model.GhLogin;
+import net.vanfleteren.jazygit.gh.model.MergeMethod;
+import net.vanfleteren.jazygit.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -22,6 +24,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.*;
 import net.vanfleteren.jazygit.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
+import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
@@ -31,9 +34,9 @@ class CliGitHubTest {
 
     @Test
     void parsesOneTabSeparatedLinePerPullRequest() {
-        String raw = "9\tfeature/login\tfalse\tAPPROVED\tSUCCESS,SKIPPED\n"
-                + "7\twip\ttrue\t\t\n"
-                + "5\tfix/npe\tfalse\tCHANGES_REQUESTED\tSUCCESS,PENDING\n";
+        String raw = "9\tfeature/login\tfalse\tAPPROVED\tSUCCESS,SKIPPED\t\t\t\n"
+                + "7\twip\ttrue\t\t\t\t\t\n"
+                + "5\tfix/npe\tfalse\tCHANGES_REQUESTED\tSUCCESS,PENDING\t\t\t\n";
 
         assertEquals(
                 Either.right(List.of(
@@ -44,14 +47,104 @@ class CliGitHubTest {
     }
 
     @Test
+    void aStackedPullRequestSaysWhereItSitsInItsStack() {
+        assertEquals(
+                Either.right(List.of(new PullRequest(
+                        95,
+                        "fix-abort-amend",
+                        false,
+                        Checks.NONE,
+                        Review.NONE,
+                        Option.of(new PullRequestStack(96, 2, 2))))),
+                CliGitHub.parse("95\tfix-abort-amend\tfalse\t\t\t96\t2\t2\n"));
+        assertTrue(
+                CliGitHub.parse("95\tfix-abort-amend\tfalse\t\t\t96\ttwo\t2\n").isLeft());
+    }
+
+    @Test
+    void aStackedPullRequestInAListSaysWhereItSitsInItsStack() {
+        String raw = "list\trepository\towner/repo\t1\n"
+                + "pr\trepository\towner/repo\t95\tFix\talice\tfix\tfalse\tfalse\t\t\t2026-10-15T08:00:00Z"
+                + "\thttps://github.com/owner/repo/pull/95\t96\t2\t2\n";
+
+        assertEquals(
+                Option.of(new PullRequestStack(96, 2, 2)),
+                CliGitHub.parseLists(raw)
+                        .get()
+                        .get("repository")
+                        .get()
+                        ._2
+                        .pullRequests()
+                        .head()
+                        .stack());
+    }
+
+    @Test
+    void theDetailsOfAStackedPullRequestSayWhereItSitsAndWhatItsHeadIs() {
+        String raw =
+                "pr\t95\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0"
+                        + "\tabc123\n"
+                        + "threads\t0\t0\t0\t0\n"
+                        + "stack\t96\t2\t2\n";
+
+        PullRequestDetails details = CliGitHub.parseDetails(raw).get();
+
+        assertEquals("abc123", details.head());
+        assertEquals(Option.of(new PullRequestStack(96, 2, 2)), details.stack());
+        assertEquals(
+                Option.of(new PullRequestStack(96, 2, 2)),
+                details.listed().get().stack());
+        assertTrue(CliGitHub.parseDetails(raw + "stack\t96\t2\n").isLeft());
+    }
+
+    @Test
+    void aMergeIsAskedOfTheRestApiWithItsMethodAndOnlyAtTheHeadThatWasRead() {
+        assertEquals(
+                List.of(
+                        "gh",
+                        "api",
+                        "--method",
+                        "PUT",
+                        "repos/{owner}/{repo}/pulls/95/merge-async",
+                        "-f",
+                        "merge_method=squash",
+                        "-f",
+                        "sha=abc123"),
+                CliGitHub.mergeCommand(95, "abc123", MergeMethod.SQUASH)
+                        .executed()
+                        .commandLine()
+                        .dropRight(2));
+        assertFalse(CliGitHub.mergeCommand(95, "", MergeMethod.REBASE)
+                .executed()
+                .commandLine()
+                .exists(arg -> arg.startsWith("sha=")));
+        assertEquals(
+                List.of("gh", "api", "repos/{owner}/{repo}/pulls/95/merge-async/u-1"),
+                CliGitHub.mergeStatusCommand(95, "u-1").executed().commandLine().dropRight(2));
+    }
+
+    @Test
+    void parsesHowAMergeIsDoing() {
+        assertEquals(Either.right(new MergeStatus.Pending("u-1")), CliGitHub.parseMergeStatus("pending\tu-1\t\n"));
+        assertEquals(Either.right(new MergeStatus.Merged()), CliGitHub.parseMergeStatus("merged\t\tMerged\n"));
+        assertEquals(Either.right(new MergeStatus.Enqueued()), CliGitHub.parseMergeStatus("enqueued\t\t\n"));
+        assertEquals(
+                Either.right(new MergeStatus.Failed("Required status check \"build\" is failing")),
+                CliGitHub.parseMergeStatus("failed\t\tRequired status check \"build\" is failing\n"));
+        assertTrue(CliGitHub.parseMergeStatus("pending\t\t\n").isLeft());
+        assertTrue(CliGitHub.parseMergeStatus("done\t\t\n").isLeft());
+        assertTrue(CliGitHub.parseMergeStatus("").isLeft());
+    }
+
+    @Test
     void parsesTheListsOfPullRequestsWithTheirRepositoryAndHowManyMatch() {
         String raw = "list\treviewRequested\t\t52\n"
                 + "pr\treviewRequested\tother/repo\t9\tFix the\\tlogin\talice\tfeature/login\tfalse\tfalse"
-                + "\tAPPROVED\tSUCCESS\t2026-10-16T21:39:59Z\thttps://github.com/other/repo/pull/9\n"
+                + "\tAPPROVED\tSUCCESS\t2026-10-16T21:39:59Z\thttps://github.com/other/repo/pull/9\t\t\t\n"
                 + "list\tauthored\t\t0\n"
                 + "list\trepository\towner/repo\t1\n"
                 + "pr\trepository\towner/repo\t7\tWIP\t\tpatch-1\ttrue\ttrue\t\t\t2026-10-15T08:00:00Z"
-                + "\thttps://github.com/owner/repo/pull/7\n";
+                + "\thttps://github.com/owner/repo/pull/7\t\t\t\n";
 
         var lists = CliGitHub.parseLists(raw).get();
 
@@ -293,7 +386,7 @@ class CliGitHubTest {
     void parsesTheDetailsOfAPullRequest() {
         String raw =
                 "pr\t42\tAdd\\trename\tcvf\tOPEN\ttrue\tsupport_rename\tmain\t2026-10-10T08:00:00Z\t2026-10-12T09:00:00Z\t120\t34\t7"
-                        + "\tMERGEABLE\tCHANGES_REQUESTED\t2\n"
+                        + "\tMERGEABLE\tCHANGES_REQUESTED\t2\t\n"
                         + "threads\t130\t100\t2\t12\n"
                         + "label\tui\n"
                         + "review\tbob\tCHANGES_REQUESTED\n"
@@ -334,7 +427,7 @@ class CliGitHubTest {
     @Test
     void aMergedPullRequestWithoutChecksLabelsOrReviewers() {
         String raw =
-                "pr\t5\tFix\t\tMERGED\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\n"
+                "pr\t5\tFix\t\tMERGED\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\t\n"
                         + "threads\t0\t0\t0\t0\n";
 
         assertEquals(
@@ -369,10 +462,10 @@ class CliGitHubTest {
         assertTrue(CliGitHub.parseDetails("something\telse\n").isLeft());
         // Without its review threads.
         assertTrue(CliGitHub.parseDetails(
-                        "pr\t5\tFix\t\tMERGED\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\n")
+                        "pr\t5\tFix\t\tMERGED\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\t\n")
                 .isLeft());
         assertTrue(CliGitHub.parseDetails(
-                        "pr\t5\tFix\t\tMERGED\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\n"
+                        "pr\t5\tFix\t\tMERGED\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\t\n"
                                 + "threads\tx\t0\t0\t0\n")
                 .isLeft());
     }
@@ -380,7 +473,7 @@ class CliGitHubTest {
     @Test
     void aCheckWithoutAStateYetIsNeitherPassingNorFailing() {
         String raw =
-                "pr\t5\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\n"
+                "pr\t5\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\t\n"
                         + "threads\t0\t0\t0\t0\n"
                         + "check\tci/status\t\n";
 
@@ -392,7 +485,7 @@ class CliGitHubTest {
     @Test
     void detailLinesWithTooFewFieldsAreUnexpectedOutput() {
         String pr =
-                "pr\t5\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\n"
+                "pr\t5\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\t\n"
                         + "threads\t0\t0\t0\t0\n";
 
         assertTrue(CliGitHub.parseDetails(pr + "check\tbuild\n").isLeft());

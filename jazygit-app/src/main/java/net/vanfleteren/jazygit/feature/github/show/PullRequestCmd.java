@@ -75,9 +75,11 @@ public sealed interface PullRequestCmd extends Cmd {
     }
 
     /**
-     * Merges pull request {@code number}, from {@code branch}, as {@code method} says.
+     * Asks GitHub to merge pull request {@code number}, from {@code branch}, as {@code method} says, while its branch
+     * is at {@code head}: GitHub merges it in the background (ADR 24).
      */
-    record MergePullRequest(Branch.Name branch, int number, MergeMethod method) implements PullRequestCmd, ChangingCmd {
+    record MergePullRequest(Branch.Name branch, int number, String head, MergeMethod method)
+            implements PullRequestCmd, ChangingCmd {
 
         @Override
         public Operation operation() {
@@ -86,7 +88,34 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub().mergePullRequest(number, method).fold(this::failedWith, this::succeeded);
+            return env.gitHub()
+                    .mergePullRequest(number, head, method)
+                    .fold(
+                            this::failedWith,
+                            merging -> new PullRequestMsg.MergeAsked(this, merging.status(), merging.commands()));
+        }
+    }
+
+    /**
+     * Asks GitHub how the merge {@code id} of pull request {@code number} is doing. Nobody waits for it.
+     */
+    record CheckMerge(int number, String id) implements PullRequestCmd {
+
+        @Override
+        public boolean background() {
+            return true;
+        }
+
+        @Override
+        public Msg run(Env env) {
+            return env.gitHub()
+                    .mergeStatus(number, id)
+                    .fold(this::failedWith, status -> new PullRequestMsg.MergeChecked(number, id, status));
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return new PullRequestMsg.MergeCheckFailed(number, id, failure);
         }
     }
 

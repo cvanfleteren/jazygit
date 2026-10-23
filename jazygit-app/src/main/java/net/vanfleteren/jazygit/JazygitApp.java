@@ -79,13 +79,16 @@ public class JazygitApp extends ToolkitApp {
     // In milliseconds; the acceptance tests tick faster, as each of their steps waits for the app to see a change.
     static final Duration REFRESH_INTERVAL = Duration.ofMillis(Long.getLong("jazygit.refreshInterval", 750));
     static final Duration FETCH_INTERVAL = Duration.ofMinutes(1);
+    // How often GitHub is asked how the merges it does in the background are going (ADR 24).
+    static final Duration MERGE_CHECK_INTERVAL = Duration.ofSeconds(2);
     // What is dispatched every so often: the time, the repository read again, and what the remotes and GitHub have.
     static final List<Timer> TIMERS = List.of(
             new Timer(TimeText.CLOCK_INTERVAL, () -> new Msg.Clock(Instant.now())),
             new Timer(REFRESH_INTERVAL, Msg.Tick::new),
             new Timer(FETCH_INTERVAL, FetchMsg.Tick::new),
             new Timer(FETCH_INTERVAL, PrOverviewMsg.Tick::new),
-            new Timer(FETCH_INTERVAL, PullRequestMsg.Tick::new));
+            new Timer(FETCH_INTERVAL, PullRequestMsg.Tick::new),
+            new Timer(MERGE_CHECK_INTERVAL, PullRequestMsg.MergeTick::new));
 
     // Rows of the command log panel, borders included.
     private static final int COMMAND_LOG_HEIGHT = CommandLogPanel.VISIBLE_LINES + 2;
