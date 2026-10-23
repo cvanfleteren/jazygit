@@ -159,6 +159,53 @@ class ChoiceDialogTest {
     }
 
     @Test
+    void filteringKeepsTheHighlightedOptionWhileItMatches() throws Exception {
+        try (ToolkitTestRunner runner = start(true)) {
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            type(runner, "/c");
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new Picked("b")), dispatched);
+    }
+
+    @Test
+    void filteringKeepsTheHighlightedOptionWhenOptionsBeforeItAreFilteredOut() throws Exception {
+        ChoiceDialog<PickPopup> four = new ChoiceDialog<>(
+                new ChoiceDialog.Spec<>(
+                        "pick",
+                        PickPopup.class,
+                        popup -> "Pick one",
+                        List.of(
+                                new Choice<>('m', "dialog.reset.mixed", () -> new Picked("m")),
+                                new Choice<>('a', "dialog.discard.all", () -> new Picked("a")),
+                                new Choice<>('b', "dialog.discard.unstaged", () -> new Picked("b")),
+                                new Choice<>('c', "dialog.discard.title", () -> new Picked("c"))),
+                        () -> new Picked("cancel")),
+                cursor);
+        Supplier<Element> view = () ->
+                stack(text("background"), four.render(cursor.on(open(true))).get());
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
+            SettledPilot.focus(runner, "pick");
+            RenderedText.of(runner, view);
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            // The mixed reset is filtered out, so the highlighted option moves up a line, neither to the first option
+            // nor to the one now on its old line.
+            type(runner, "/iscard");
+            String screen = RenderedText.ofLarge(runner, view);
+            assertFalse(screen.contains("Mixed reset"), screen);
+            assertTrue(screen.contains("(c) Discard changes"), screen);
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new Picked("b")), dispatched);
+    }
+
+    @Test
     void whileFilteringTheLettersGoIntoTheFilter() throws Exception {
         try (ToolkitTestRunner runner = start(true)) {
             type(runner, "/c");
@@ -232,6 +279,34 @@ class ChoiceDialogTest {
         }
 
         assertEquals(java.util.List.of(new Picked("preview b")), dispatched);
+    }
+
+    @Test
+    void whenTheHighlightedOptionIsFilteredOutEnterChoosesTheFirstOptionLeftNotItsHeading() throws Exception {
+        ChoiceDialog<PickPopup> grouped = new ChoiceDialog<>(
+                new ChoiceDialog.Spec<>(
+                        "pick",
+                        PickPopup.class,
+                        popup -> "Pick one",
+                        List.of(
+                                new Choice<PickPopup>('a', "dialog.discard.all", () -> new Picked("a"))
+                                        .withHeading("dialog.help.global"),
+                                new Choice<PickPopup>('b', "dialog.discard.unstaged", () -> new Picked("b"))
+                                        .withHeading("dialog.help.legend")),
+                        () -> new Picked("cancel")),
+                cursor);
+        Supplier<Element> view = () ->
+                stack(text("background"), grouped.render(cursor.on(open(true))).get());
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
+            SettledPilot.focus(runner, "pick");
+            RenderedText.of(runner, view);
+            type(runner, "/u");
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new Picked("b")), dispatched);
     }
 
     private static void type(ToolkitTestRunner runner, String keys) {

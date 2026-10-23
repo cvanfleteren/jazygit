@@ -155,6 +155,27 @@ class BranchesPanelTest {
     }
 
     @Test
+    void aDeletedBranchLeavesTheHighlightOnTheBranchThatTookItsPlace() throws Exception {
+        Model after = with(before, List.of(MAIN, OLD));
+
+        assertEquals(selecting("old"), highlightedAfterMovingTo(1, after));
+    }
+
+    @Test
+    void aBranchListedFirstNowStaysHighlighted() throws Exception {
+        Model after = with(before, List.of(OLD, MAIN, FEATURE));
+
+        assertEquals(selecting("old"), highlightedAfterMovingTo(2, after));
+    }
+
+    @Test
+    void whenTheLastBranchIsDeletedTheNewLastOneIsHighlighted() throws Exception {
+        Model after = with(before, List.of(MAIN, FEATURE));
+
+        assertEquals(selecting("feature"), highlightedAfterMovingTo(2, after));
+    }
+
+    @Test
     void shiftRAsksForANewNameForTheHighlightedBranch() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});

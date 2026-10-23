@@ -205,6 +205,19 @@ class PickDialogTest {
     }
 
     @Test
+    void filteringKeepsTheHighlightedRowWhenOthersBeforeItAreGone() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            type(runner, "/e");
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new Picked("release")), dispatched);
+    }
+
+    @Test
     void theReadlineKeysEditTheFilter() throws Exception {
         try (ToolkitTestRunner runner = start()) {
             type(runner, "/rel");
