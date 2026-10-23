@@ -578,7 +578,13 @@ class BranchesPanelTest {
                         new Loadable.Loaded<>(
                                 Option.of(new Ahead(new Sha("a2"), base, List.of(newer), false, Option.of(older))))))));
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        BranchesPanel sending = new BranchesPanel(dispatched::add, tab -> {});
+        java.util.List<String> opened = new java.util.ArrayList<>();
+        BranchesPanel sending = new BranchesPanel(
+                dispatched::add,
+                tab -> {},
+                () -> opened.add("commit"),
+                java.time.Clock.systemUTC(),
+                Theme.Highlights.DEFAULT);
         java.util.List<Option<Msg>> highlighted = new java.util.ArrayList<>();
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> sending.render(open, BranchesPanel.ID))) {
             SettledPilot.focus(testRunner, BranchesPanel.ID);
@@ -588,6 +594,7 @@ class BranchesPanelTest {
             SettledPilot.of(testRunner).pause();
             highlighted.add(sending.selectionChange(open));
             SettledPilot.of(testRunner).press(KeyCode.ENTER);
+            SettledPilot.of(testRunner).pause();
             SettledPilot.of(testRunner).press('b');
             SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
             SettledPilot.of(testRunner).press(']');
@@ -604,12 +611,108 @@ class BranchesPanelTest {
                         Option.of(new SelectionMsg.BranchCommitSelected(new Sha("a2"))),
                         Option.of(new SelectionMsg.BranchCommitSelected(new Sha("a1")))),
                 highlighted);
-        // Enter does nothing on a commit.
+        // Enter moves the focus to the highlighted commit, and sends nothing.
+        assertEquals(java.util.List.of("commit"), opened);
         assertEquals(
                 java.util.List.of(
                         new AheadMsg.Toggled(), new BranchCommitsMsg.Closed(), new BranchesTabMsg.Switched(1)),
                 dispatched);
         assertFalse(BranchesPanel.showsSpinner(open.withBusyBranch(feature, PushCmd.PUSH)));
+    }
+
+    /**
+     * {@code before} listing the commits of {@code branch}, with {@code log} read as the log of {@code logOf}.
+     */
+    private Model listing(BranchRef branch, BranchRef logOf, List<Commit> log) {
+        return before.mapRepoView(repoView -> repoView.withBranchCommits(Option.of(BranchCommitsView.of(branch)))
+                .withBranchLog(Option.of(new Preview<>(logOf, new Loadable.Loaded<>(log)))));
+    }
+
+    private static Commit commit(String sha, String message) {
+        return new Commit(new Sha(sha), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, message, "");
+    }
+
+    @Test
+    void theCommitsOfABranchOpenedAgainStartAtItsNewestEvenWhenTheOneBeforeHadTheHighlightedCommitToo()
+            throws Exception {
+        Commit shared = commit("a1", "Shared");
+        BranchRef feature = new BranchRef.Local(new Branch.Name("feature"));
+        BranchRef old = new BranchRef.Local(new Branch.Name("old"));
+        java.util.concurrent.atomic.AtomicReference<Model> shown = new java.util.concurrent.atomic.AtomicReference<>(
+                listing(feature, feature, List.of(commit("a2", "Ours"), shared)));
+        Option<Msg> highlighted;
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(shown.get(), BranchesPanel.ID))) {
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
+            RenderedText.of(testRunner, () -> panel.render(shown.get(), BranchesPanel.ID));
+            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner).pause();
+            assertEquals(
+                    Option.of(new SelectionMsg.BranchCommitSelected(shared.sha())), panel.selectionChange(shown.get()));
+            shown.set(before);
+            RenderedText.of(testRunner, () -> panel.render(shown.get(), BranchesPanel.ID));
+            shown.set(listing(old, old, List.of(commit("b1", "Theirs"), shared)));
+            RenderedText.of(testRunner, () -> panel.render(shown.get(), BranchesPanel.ID));
+            highlighted = panel.selectionChange(shown.get());
+            SettledPilot.of(testRunner).quit();
+        }
+
+        assertEquals(Option.of(new SelectionMsg.BranchCommitSelected(new Sha("b1"))), highlighted);
+    }
+
+    @Test
+    void theCommitsOfABranchWhoseLogIsStillReadShowThatAndThenStartAtItsNewest() throws Exception {
+        BranchRef feature = new BranchRef.Local(new Branch.Name("feature"));
+        BranchRef main = new BranchRef.Local(new Branch.Name("main"));
+        java.util.concurrent.atomic.AtomicReference<Model> shown = new java.util.concurrent.atomic.AtomicReference<>(
+                listing(feature, main, List.of(commit("c1", "On main"))));
+        String loading;
+        Option<Msg> whileLoading;
+        Option<Msg> highlighted;
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(shown.get(), BranchesPanel.ID))) {
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
+            loading = RenderedText.of(testRunner, () -> panel.render(shown.get(), BranchesPanel.ID));
+            whileLoading = panel.selectionChange(shown.get());
+            shown.set(listing(feature, feature, List.of(commit("a2", "Ours"), commit("a1", "Older"))));
+            RenderedText.of(testRunner, () -> panel.render(shown.get(), BranchesPanel.ID));
+            highlighted = panel.selectionChange(shown.get());
+            SettledPilot.of(testRunner).quit();
+        }
+
+        assertFalse(loading.contains("On main"), loading);
+        assertTrue(loading.contains(Placeholders.loading()), loading);
+        assertEquals(Option.none(), whileLoading);
+        assertEquals(Option.of(new SelectionMsg.BranchCommitSelected(new Sha("a2"))), highlighted);
+    }
+
+    @Test
+    void withOnlyTheCommitsAheadTheCommitsOfABranchEndAtTheForkPointWhichCanBeHighlighted() throws Exception {
+        Commit ours = commit("a3", "Ours");
+        Commit fork = commit("a2", "Fork");
+        BranchRef feature = new BranchRef.Local(new Branch.Name("feature"));
+        BranchRef base = new BranchRef.Local(new Branch.Name("main"));
+        Model open = listing(feature, feature, List.of(ours, fork, commit("a1", "Older")))
+                .mapRepoView(repoView -> repoView.withOnlyAhead(true)
+                        .withBranchAhead(Option.of(new Preview<>(
+                                feature,
+                                new Loadable.Loaded<>(Option.of(
+                                        new Ahead(ours.sha(), base, List.of(ours), false, Option.of(fork))))))));
+        String screen;
+        Option<Msg> highlighted;
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(open, BranchesPanel.ID))) {
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
+            screen = RenderedText.of(testRunner, () -> panel.render(open, BranchesPanel.ID));
+            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner).pause();
+            highlighted = panel.selectionChange(open);
+            SettledPilot.of(testRunner).quit();
+        }
+
+        assertTrue(screen.contains("a3 AL ○ Ours"), screen);
+        assertTrue(screen.contains("⑂ main Fork"), screen);
+        assertFalse(screen.contains("Older"), screen);
+        assertEquals(Option.of(new SelectionMsg.BranchCommitSelected(fork.sha())), highlighted);
     }
 
     /**

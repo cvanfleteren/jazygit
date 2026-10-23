@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.elements.Panel;
+import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
@@ -21,7 +22,7 @@ import net.vanfleteren.jazygit.ui.widgets.Pane;
 /**
  * The commits of a branch, local or remote, which the branches pane lists in place of the branches while they are
  * open: drawn as the commits pane draws those of HEAD, with the commits on the base of the branch dimmed. The keys
- * only move through them.
+ * only move through them; Enter moves the focus to the highlighted commit.
  */
 class BranchCommitsList {
 
@@ -33,15 +34,18 @@ class BranchCommitsList {
     /**
      * @param id         the id of the pane the commits are listed in
      * @param dispatch   receives the messages for the user's actions, on the render thread
+     * @param openCommit called when Enter is pressed on a commit, to move focus to its content
      * @param highlights how the highlighted commit is shown, also when the pane is not in use
      */
-    BranchCommitsList(String id, Consumer<Msg> dispatch, Theme.Highlights highlights) {
+    BranchCommitsList(String id, Consumer<Msg> dispatch, Runnable openCommit, Theme.Highlights highlights) {
         list = new LoadableList<>(
                 Messages.get("panel.branchCommits.title"),
                 id,
                 LoadableList.Reselect.following(Commit::sha),
                 highlights);
-        list.onKey(event -> PaneKeys.sending(keymap.handle(Scopes.BRANCH_COMMITS, event, selectedCommit()), dispatch));
+        list.onKey(event -> event.code() == KeyCode.ENTER
+                ? selectedCommit().map(commit -> openCommit)
+                : PaneKeys.sending(keymap.handle(Scopes.BRANCH_COMMITS, event, selectedCommit()), dispatch));
     }
 
     /**

@@ -43,8 +43,9 @@ of the branches, but only those that differ from its upstream, and only for a lo
 
 ### No actions
 
-Only moving through the list, Enter, Esc and `b` work in it. Enter on a commit does nothing. No action of the commits
-pane (reword, fixup, cherry-pick, …), nor of the branches pane (`u`, checkout, …), nor `/` search, applies.
+Only moving through the list, Enter, Esc and `b` work in it. Enter on a commit moves the focus to its diff, to scroll
+it, as Enter does in the commits pane and the divergence; it acts on nothing. No action of the commits pane (reword,
+fixup, cherry-pick, …), nor of the branches pane (`u`, checkout, …), nor `/` search, applies.
 
 ### How it is held
 

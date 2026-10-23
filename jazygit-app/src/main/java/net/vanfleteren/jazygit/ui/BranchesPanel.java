@@ -64,7 +64,8 @@ public class BranchesPanel {
     }
 
     /**
-     * @param openCommit called when Enter is pressed on a commit of the divergence, to move focus to its content
+     * @param openCommit called when Enter is pressed on a commit of the divergence or of a branch, to move focus to
+     *                   its content
      */
     public BranchesPanel(
             Consumer<Msg> dispatch,
@@ -79,7 +80,7 @@ public class BranchesPanel {
         remoteList = new RemoteBranchesList(ID, dispatch, clock, highlights);
         worktreeList = new WorktreesList(ID, dispatch, highlights);
         divergenceList = new DivergenceList(ID, dispatch, openCommit, highlights);
-        branchCommitsList = new BranchCommitsList(ID, dispatch, highlights);
+        branchCommitsList = new BranchCommitsList(ID, dispatch, openCommit, highlights);
     }
 
     /**

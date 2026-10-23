@@ -161,4 +161,36 @@ class BranchCommitsUpdateTest {
         assertEquals(Option.of(remote), view(open).map(BranchCommitsView::branch));
         assertEquals(Option.none(), view(gone.model()));
     }
+
+    @Test
+    void whatAHighlightedCommitChangedThatFailedToBeReadIsReadAgainOnTheNextTick() {
+        Model selected = Update.update(opened(featureLogRead()), new SelectionMsg.BranchCommitSelected(FEATURE_TIP))
+                .model();
+        Cmd.LoadCommitDetail load =
+                new Cmd.LoadCommitDetail(FEATURE_TIP, selected.preferences().diffOptions());
+
+        Model failed = Update.update(selected, new LoadMsg.Failed(load, refused("boom")))
+                .model();
+
+        assertTrue(
+                view(failed).flatMap(BranchCommitsView::detail).exists(d -> d.value() instanceof Loadable.Failed),
+                view(failed).toString());
+        assertTrue(
+                Update.tick(failed).cmds().contains(load),
+                Update.tick(failed).cmds().toString());
+    }
+
+    @Test
+    void theForkPointListedWithOnlyTheCommitsAheadIsFoundAlsoWhenTheLogStopsBeforeIt() {
+        Commit fork = new Commit(new Sha("eeee"), "Ada", "ada@example.com", Instant.EPOCH, "Fork", "");
+        BranchRef base = new BranchRef.Local(MAIN);
+        Model open = opened(featureLogRead())
+                .mapRepoView(repoView -> repoView.withOnlyAhead(true)
+                        .withBranchAhead(Option.of(new Preview<>(
+                                FEATURE,
+                                new Loadable.Loaded<>(Option.of(
+                                        new Ahead(FEATURE_TIP, base, FEATURE_COMMITS, false, Option.of(fork))))))));
+
+        assertEquals(Option.of(fork), view(open).flatMap(v -> v.commit(open, fork.sha())));
+    }
 }
