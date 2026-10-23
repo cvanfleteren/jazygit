@@ -5,6 +5,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import dev.tamboui.text.Span;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.StyledElement;
+import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
@@ -42,6 +45,17 @@ class ContentPanelTest {
 
     private static Commit merge(String sha, String... parents) {
         return plain(sha, parents);
+    }
+
+    /**
+     * The model with commit aaaa highlighted and its detail, {@code changes}, loaded.
+     */
+    private static Model showingCommit(String changes) {
+        return Update.update(
+                        Update.update(TestModels.loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa")))
+                                .model(),
+                        new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffOptions.DEFAULT, DiffText.of(changes)))
+                .model();
     }
 
     @Test
@@ -346,6 +360,177 @@ class ContentPanelTest {
             assertFalse(screen.contains("commit aaaa"), screen);
             assertTrue(screen.contains("+line 20"), screen);
         }
+    }
+
+    @Test
+    void aFocusedAreaScrollsSidewaysLeavesOnEscapeAndLeavesOtherKeysToTheApp() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        java.util.List<KeyEvent> global = new java.util.ArrayList<>();
+        java.util.concurrent.atomic.AtomicInteger leaves = new java.util.concurrent.atomic.AtomicInteger();
+        ContentPanel scrolling = new ContentPanel(
+                Theme.SpanStyles.NONE,
+                () -> {
+                    leaves.incrementAndGet();
+                    return true;
+                },
+                id -> {},
+                dispatched::add);
+        Model selected = showingCommit("+" + "x".repeat(300));
+        String area = scrolling.areaOfPane(selected, CommitsPanel.ID).get();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(selected, area))) {
+            testRunner.runner().eventRouter().addGlobalHandler(event -> {
+                if (event instanceof KeyEvent key) {
+                    global.add(key);
+                }
+                return EventResult.UNHANDLED;
+            });
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> scrolling.render(selected, area));
+            SettledPilot.of(testRunner).press('x');
+            SettledPilot.of(testRunner).press(KeyCode.RIGHT);
+            SettledPilot.of(testRunner).pause();
+            assertEquals(0, leaves.get());
+            SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
+            SettledPilot.of(testRunner).pause();
+        }
+
+        assertEquals(
+                java.util.List.of('x'),
+                List.ofAll(global).map(KeyEvent::character).toJavaList());
+        assertEquals(1, leaves.get());
+        Msg.ContentScrolled right = (Msg.ContentScrolled) dispatched.getLast();
+        assertEquals(new Scrolled(right.to().content(), 0, 1), right.to());
+    }
+
+    @Test
+    void theNavigationKeysScrollAFocusedArea() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        // The model takes where the area is scrolled to, as the app's does.
+        java.util.concurrent.atomic.AtomicReference<Model> model = new java.util.concurrent.atomic.AtomicReference<>(
+                showingCommit(List.range(0, 100).map(i -> "+" + "x".repeat(300)).mkString("\n")));
+        ContentPanel scrolling = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {
+            dispatched.add(msg);
+            model.set(Update.update(model.get(), msg).model());
+        });
+        String area = scrolling.areaOfPane(model.get(), CommitsPanel.ID).get();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(model.get(), area))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
+            List.of(KeyCode.END, KeyCode.UP, KeyCode.PAGE_UP, KeyCode.HOME, KeyCode.PAGE_DOWN, KeyCode.RIGHT)
+                    .appendAll(List.of(KeyCode.RIGHT, KeyCode.LEFT))
+                    .forEach(key -> SettledPilot.of(testRunner).press(key));
+            SettledPilot.of(testRunner).pause();
+        }
+
+        List<Scrolled> at = List.ofAll(dispatched).map(msg -> ((Msg.ContentScrolled) msg).to());
+        int bottom = at.get(0).row();
+        int page = at.get(4).row();
+        assertTrue(bottom > 0 && page > 1, at.toString());
+        assertEquals(List.of(bottom, bottom - 1, bottom - 1 - page, 0, page, page, page, page), at.map(Scrolled::row));
+        assertEquals(List.of(0, 0, 0, 0, 0, 1, 2, 1), at.map(Scrolled::column));
+    }
+
+    @Test
+    void escapeGoesToTheAppWhenTheAreaCannotBeLeft() throws Exception {
+        java.util.List<KeyEvent> global = new java.util.ArrayList<>();
+        Model selected = showingCommit("+added line");
+        String area = content.areaOfPane(selected, CommitsPanel.ID).get();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(selected, area))) {
+            testRunner.runner().eventRouter().addGlobalHandler(event -> {
+                if (event instanceof KeyEvent key) {
+                    global.add(key);
+                }
+                return EventResult.UNHANDLED;
+            });
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> content.render(selected, area));
+            SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
+            SettledPilot.of(testRunner).pause();
+        }
+
+        assertEquals(
+                java.util.List.of(KeyCode.ESCAPE),
+                List.ofAll(global).map(KeyEvent::code).toJavaList());
+    }
+
+    @Test
+    void theAreaScrollsOnFromWhereTheModelHasItScrolledSideways() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        ContentPanel scrolling = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
+        Model selected =
+                showingCommit(List.range(0, 100).map(i -> "+" + "x".repeat(300)).mkString("\n"));
+        String area = scrolling.areaOfPane(selected, CommitsPanel.ID).get();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(selected, area))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> scrolling.render(selected, area));
+            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner).pause();
+        }
+        ScrolledContent shown =
+                ((Msg.ContentScrolled) dispatched.getLast()).to().content();
+
+        // TamboUI does not draw the columns scrolled past, so the next scroll tells where the area was.
+        Model scrolled = selected.withScrolled(io.vavr.collection.HashMap.of(area, new Scrolled(shown, 0, 11)));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(scrolled, area))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> scrolling.render(scrolled, area));
+            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner).pause();
+        }
+        assertEquals(new Scrolled(shown, 1, 11), ((Msg.ContentScrolled) dispatched.getLast()).to());
+    }
+
+    @Test
+    void theCommitAreaCannotBeFocusedWhileItsDetailLoadsOrItsCommitIsGone() {
+        Model loading = Update.update(TestModels.loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa")))
+                .model();
+        assertEquals(Option.none(), content.areaOfPane(loading, CommitsPanel.ID));
+
+        Model gone = showingCommit("changes").mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(List.empty())));
+        assertEquals(Option.none(), content.areaOfPane(gone, CommitsPanel.ID));
+    }
+
+    @Test
+    void theStashAreaCannotBeFocusedWhileItsDetailLoadsOrItsStashIsGone() {
+        Stash stash = new Stash("stash@{0}", new Sha("5555"), "my work", Option.of("main"), Instant.EPOCH);
+        Model loading = Update.update(
+                        Update.update(TestModels.loaded(), new LoadMsg.StashesLoaded(List.of(stash)))
+                                .model(),
+                        new SelectionMsg.StashSelected(stash.sha()))
+                .model();
+        assertEquals(Option.none(), content.areaOfPane(loading, StashPanel.ID));
+
+        Model loaded = Update.update(
+                        loading, new LoadMsg.StashDetailLoaded(stash.sha(), DiffOptions.DEFAULT, DiffText.of("+a")))
+                .model();
+        assertTrue(content.areaOfPane(loaded, StashPanel.ID).isDefined());
+        Model gone = loaded.mapRepo(repo -> repo.withStashes(new Loadable.Loaded<>(List.empty())));
+        assertEquals(Option.none(), content.areaOfPane(gone, StashPanel.ID));
+    }
+
+    @Test
+    void theDivergenceAreaCanOnlyBeFocusedOnTheLocalTabOnceItsCommitIsLoaded() {
+        Model diverged = TestModels.loaded()
+                .mapRepoView(repoView -> repoView.withDivergence(Option.of(new DivergenceView(
+                        new Branch.Name("main"),
+                        new BranchRef.Remote(new RemoteBranch("origin", new Branch.Name("main"))),
+                        DivergenceView.Against.UPSTREAM,
+                        new Loadable.Loaded<>(new Divergence(List.of(plain("cccc")), 1, List.of(), 0)),
+                        Option.none()))));
+        Model loading = Update.update(diverged, new SelectionMsg.DivergenceCommitSelected(new Sha("cccc")))
+                .model();
+        assertEquals(Option.none(), content.areaOfPane(loading, BranchesPanel.ID));
+
+        Model loaded = Update.update(
+                        loading,
+                        new LoadMsg.CommitDetailLoaded(new Sha("cccc"), DiffOptions.DEFAULT, DiffText.of("+a")))
+                .model();
+        assertTrue(content.areaOfPane(loaded, BranchesPanel.ID).isDefined());
+        Model remoteTab = loaded.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.REMOTE));
+        assertEquals(Option.none(), content.areaOfPane(remoteTab, BranchesPanel.ID));
     }
 
     @Test

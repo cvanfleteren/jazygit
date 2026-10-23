@@ -8,11 +8,14 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.MouseButton;
 import dev.tamboui.tui.pilot.Pilot;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
+import java.util.function.Function;
 import net.vanfleteren.jazygit.state.Loadable;
 import org.junit.jupiter.api.Test;
 
 /**
- * A click highlights the row clicked on, wherever the list is scrolled to.
+ * A click highlights the row clicked on, wherever the list is scrolled to. When the value changes, the highlight
+ * stays on a row that is there.
  */
 class LoadableListTest {
 
@@ -76,5 +79,49 @@ class LoadableListTest {
 
             pilot.quit();
         }
+    }
+
+    @Test
+    void whenTheHighlightedLastRowIsGoneTheNewLastRowIsHighlighted() {
+        show(List.of("a", "b", "c"));
+        list.select(2);
+        show(List.of("a", "b"));
+
+        assertEquals(1, list.selectedIndex());
+        assertEquals(Option.of("b"), list.selected(Function.identity()));
+    }
+
+    @Test
+    void aHighlightPastTheItemsGivesTheLastItem() {
+        show(List.of("a", "b", "c"));
+        list.select(5);
+
+        assertEquals(Option.of("c"), list.selected(Function.identity()));
+    }
+
+    @Test
+    void followingKeepsTheHighlightOnItsItemAndWhereItWasWhenItIsGone() {
+        LoadableList<List<String>> following = new LoadableList<>(
+                "Items", ID, LoadableList.Reselect.following(Function.identity()), Theme.Highlights.DEFAULT);
+        show(following, List.of("a", "b", "c", "d"));
+        following.select(1);
+
+        show(following, List.of("x", "a", "b", "c", "d"));
+        assertEquals(Option.of("b"), following.selected(Function.identity()));
+
+        // Gone, so the item that came in its place.
+        show(following, List.of("x", "a", "c", "d"));
+        assertEquals(Option.of("c"), following.selected(Function.identity()));
+
+        show(following, List.of("c", "a", "d"));
+        assertEquals(Option.of("c"), following.selected(Function.identity()));
+    }
+
+    private void show(List<String> items) {
+        show(list, items);
+    }
+
+    private static void show(LoadableList<List<String>> list, List<String> items) {
+        list.render(new Loadable.Loaded<>(items), all -> all.map(LoadableList.Row::of), true, true);
     }
 }

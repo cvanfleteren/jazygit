@@ -159,6 +159,18 @@ class ChoiceDialogTest {
     }
 
     @Test
+    void filteringKeepsTheHighlightedOptionWhileItMatches() throws Exception {
+        try (ToolkitTestRunner runner = start(true)) {
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            type(runner, "/c");
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new Picked("b")), dispatched);
+    }
+
+    @Test
     void whileFilteringTheLettersGoIntoTheFilter() throws Exception {
         try (ToolkitTestRunner runner = start(true)) {
             type(runner, "/c");
@@ -232,6 +244,34 @@ class ChoiceDialogTest {
         }
 
         assertEquals(java.util.List.of(new Picked("preview b")), dispatched);
+    }
+
+    @Test
+    void whenTheHighlightedOptionIsFilteredOutEnterChoosesTheFirstOptionLeftNotItsHeading() throws Exception {
+        ChoiceDialog<PickPopup> grouped = new ChoiceDialog<>(
+                new ChoiceDialog.Spec<>(
+                        "pick",
+                        PickPopup.class,
+                        popup -> "Pick one",
+                        List.of(
+                                new Choice<PickPopup>('a', "dialog.discard.all", () -> new Picked("a"))
+                                        .withHeading("dialog.help.global"),
+                                new Choice<PickPopup>('b', "dialog.discard.unstaged", () -> new Picked("b"))
+                                        .withHeading("dialog.help.legend")),
+                        () -> new Picked("cancel")),
+                cursor);
+        Supplier<Element> view = () ->
+                stack(text("background"), grouped.render(cursor.on(open(true))).get());
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
+            SettledPilot.focus(runner, "pick");
+            RenderedText.of(runner, view);
+            type(runner, "/u");
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new Picked("b")), dispatched);
     }
 
     private static void type(ToolkitTestRunner runner, String keys) {
