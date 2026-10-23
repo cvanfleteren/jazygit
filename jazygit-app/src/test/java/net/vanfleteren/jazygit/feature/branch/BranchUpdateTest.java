@@ -32,7 +32,6 @@ import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchCmd;
 import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchPopup;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadStashes;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;

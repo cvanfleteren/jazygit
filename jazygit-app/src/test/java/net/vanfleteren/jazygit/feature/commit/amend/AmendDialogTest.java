@@ -13,7 +13,6 @@ import io.vavr.control.Option;
 import java.util.ArrayList;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
