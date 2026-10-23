@@ -7,7 +7,7 @@ import net.vanfleteren.jazygit.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.git.model.Branch;
 
 /**
- * A merge of a pull request that GitHub was asked for, which it does in the background (ADR 23).
+ * A merge of a pull request that GitHub was asked for, which it does in the background (ADR 24).
  *
  * @param number   the number of the pull request
  * @param branch   the branch it merges from
@@ -52,6 +52,13 @@ public record PullRequestMerge(
     public boolean givenUp(Instant now) {
         return status instanceof MergeStatus.Pending
                 && Duration.between(asked, now).compareTo(GIVEN_UP_AFTER) > 0;
+    }
+
+    /**
+     * This merge, no longer telling how it went for {@code numbers}, which a later merge merges.
+     */
+    public PullRequestMerge withoutBelow(List<Integer> numbers) {
+        return new PullRequestMerge(number, branch, below.removeAll(numbers), status, asked, checking);
     }
 
     /**

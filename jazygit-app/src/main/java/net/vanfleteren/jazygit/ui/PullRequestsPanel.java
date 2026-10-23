@@ -114,7 +114,7 @@ public final class PullRequestsPanel {
 
     /**
      * The row of {@code pr}, as {@link #row(PullRequestSummary, Duration, boolean)}, with how {@code merge} goes
-     * instead of its checks and review while it goes, or went (ADR 23).
+     * instead of its checks and review while it goes, or went (ADR 24).
      */
     static LoadableList.Row row(
             PullRequestSummary pr, Duration since, boolean anyRepository, Option<MergeStatus> merge) {

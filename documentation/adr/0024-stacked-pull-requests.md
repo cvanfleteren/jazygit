@@ -1,4 +1,4 @@
-# 23. Stacked pull requests
+# 24. Stacked pull requests
 
 Date: 2026-10-23
 
@@ -71,6 +71,10 @@ review, which no longer matter:
 
 - The ones below it in its stack show the same, as it merges them too; they are the ones listed below it when
   GitHub is asked for the merge.
+- A pull request shows how the latest merge that merges it goes: a later merge replaces how an earlier one went for
+  the pull requests it merges, so one whose own merge failed shows 🔀, and cannot be merged again, while one above it
+  merges the stack. Which is later is told by the order they are asked in, not by when: the time in the model only
+  moves every 5s.
 - A merged pull request shows 🟣 until the next read of the pull requests no longer lists it.
 - A failed one shows 💥 until it is merged again, so the failure stays seen after its popup is closed.
 - An enqueued one shows 🚦 until it is merged again, or no longer listed once the queue merged it; one the queue
@@ -87,3 +91,7 @@ review, which no longer matter:
   gh from the working tree.
 - A merge is no longer done when the dialog closes: it is seen done up to 2s after GitHub merges it.
 - Merging the top of a stack merges the ones below; only the line in the dialog and the count in the options say so.
+- GitHub Enterprise Server without stacked pull requests is not supported: GraphQL refuses every query that asks for
+  `stack` or `stackEntry` on a server that does not know them, and there may be no `merge-async`. Not only would stacks
+  not show, every pull request read and merge would fail. Asking without those fields, and merging with `gh pr merge`,
+  when a server does not have them, is left until a server needs it.

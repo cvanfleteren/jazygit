@@ -31,7 +31,7 @@ public final class PullRequestSymbols {
     private PullRequestSymbols() {}
 
     /**
-     * How a merge of a pull request goes, which shows instead of its checks and its review (ADR 23).
+     * How a merge of a pull request goes, which shows instead of its checks and its review (ADR 24).
      */
     public static Symbol merge(MergeStatus status) {
         return switch (status) {

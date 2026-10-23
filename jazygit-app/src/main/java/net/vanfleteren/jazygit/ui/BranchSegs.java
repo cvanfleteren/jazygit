@@ -91,7 +91,7 @@ final class BranchSegs {
 
     /**
      * The pull request of a branch, as {@link #pullRequest(Option)}, but with how {@code merge} goes instead of its
-     * checks and review while it goes, or went (ADR 23).
+     * checks and review while it goes, or went (ADR 24).
      */
     static List<LoadableList.Seg> pullRequest(Option<PullRequest> pullRequest, Option<MergeStatus> merge) {
         return pullRequest

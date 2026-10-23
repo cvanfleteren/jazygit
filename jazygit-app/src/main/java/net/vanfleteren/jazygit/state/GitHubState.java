@@ -28,7 +28,7 @@ import net.vanfleteren.jazygit.git.model.Upstream;
  * @param again               the running reads to start again once they are done, as they may have missed a change
  *                            just made; see {@link GitHubReads}
  * @param merges              the merges GitHub was asked for, by the number of their pull request, kept apart from
- *                            what is read so a read does not wipe how they went; only in memory (ADR 23)
+ *                            what is read so a read does not wipe how they went; only in memory (ADR 24)
  */
 @With
 public record GitHubState(
@@ -43,14 +43,11 @@ public record GitHubState(
             Option.none(), Option.none(), Option.none(), HashSet.empty(), HashSet.empty(), HashMap.empty());
 
     /**
-     * How the latest merge that merges pull request {@code number} went, or is going: the merge of it, else of one
-     * above it in its stack.
+     * How the latest merge that merges pull request {@code number} went, or is going: the merge of it, or of one
+     * above it in its stack. Only one merge merges it, as a later one replaces it ({@link #withMerge}).
      */
     public Option<MergeStatus> merge(int number) {
-        return merges.get(number)
-                .orElse(() ->
-                        merges.values().filter(merge -> merge.merges(number)).maxBy(PullRequestMerge::asked))
-                .map(PullRequestMerge::status);
+        return merges.values().find(merge -> merge.merges(number)).map(PullRequestMerge::status);
     }
 
     /**
@@ -84,10 +81,15 @@ public record GitHubState(
     }
 
     /**
-     * This state with {@code merge} as the merge of its pull request.
+     * This state with {@code merge} as the merge of its pull request, and of the ones below it: it replaces how earlier
+     * merges went for those, each of which still tells how it went for its own pull request, when that is not one of
+     * them.
      */
     public GitHubState withMerge(PullRequestMerge merge) {
-        return withMerges(merges.put(merge.number(), merge));
+        List<Integer> merged = merge.below().prepend(merge.number());
+        return withMerges(merges.removeAll(merged)
+                .mapValues(earlier -> earlier.withoutBelow(merged))
+                .put(merge.number(), merge));
     }
 
     /**

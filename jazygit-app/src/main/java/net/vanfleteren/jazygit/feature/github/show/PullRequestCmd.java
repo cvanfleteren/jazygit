@@ -76,7 +76,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
     /**
      * Asks GitHub to merge pull request {@code number}, from {@code branch}, as {@code method} says, while its branch
-     * is at {@code head}: GitHub merges it in the background (ADR 23).
+     * is at {@code head}: GitHub merges it in the background (ADR 24).
      */
     record MergePullRequest(Branch.Name branch, int number, String head, MergeMethod method)
             implements PullRequestCmd, ChangingCmd {

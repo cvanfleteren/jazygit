@@ -1173,6 +1173,51 @@ class PullRequestUpdateTest {
                 ticked.model().outcome().notice());
     }
 
+    /**
+     * {@code model} once GitHub said the merge of pull request {@code number}, from {@code branch}, goes as
+     * {@code status}.
+     */
+    private static Model askedFor(Model model, String branch, int number, MergeStatus status) {
+        MergePullRequest cmd = new MergePullRequest(new Branch.Name(branch), number, "", MergeMethod.MERGE);
+        return Update.update(model, new PullRequestMsg.MergeAsked(cmd, status, List.empty()))
+                .model();
+    }
+
+    /**
+     * Pull request 41 at the bottom of a stack, and 42 of feature on top of it.
+     */
+    private static Model stackOfTwo() {
+        PullRequest bottom = new PullRequest(
+                41, "base-work", false, Checks.PASSING, Review.APPROVED, Option.of(new PullRequestStack(7, 1, 2)));
+        PullRequest top = new PullRequest(
+                42, "feature", false, Checks.PASSING, Review.APPROVED, Option.of(new PullRequestStack(7, 2, 2)));
+        return Update.update(model(), new PullRequestsMsg.Loaded(List.of(bottom, top)))
+                .model();
+    }
+
+    @Test
+    void aPullRequestWhoseMergeFailedIsMergingWhileOneAboveItMergesTheStack() {
+        Model failedBelow = askedFor(stackOfTwo(), "base-work", 41, new MergeStatus.Failed("conflicts"));
+
+        Model merging = askedFor(failedBelow, "feature", 42, new MergeStatus.Pending("merge-42"));
+
+        assertEquals(
+                Option.of(new MergeStatus.Pending("merge-42")), merging.gitHub().merge(41));
+        assertTrue(merging.gitHub().merging(41));
+    }
+
+    @Test
+    void mergingAPullRequestOnItsOwnAfterTheStackFailedLeavesTheFailureAbove() {
+        Model failedAbove = askedFor(stackOfTwo(), "feature", 42, new MergeStatus.Failed("conflicts"));
+
+        Model merging = askedFor(failedAbove, "base-work", 41, new MergeStatus.Pending("merge-41"));
+
+        assertEquals(
+                Option.of(new MergeStatus.Pending("merge-41")), merging.gitHub().merge(41));
+        assertEquals(
+                Option.of(new MergeStatus.Failed("conflicts")), merging.gitHub().merge(42));
+    }
+
     @Test
     void mergingAStackedPullRequestMergesTheOnesBelowItToo() {
         PullRequest bottom = new PullRequest(

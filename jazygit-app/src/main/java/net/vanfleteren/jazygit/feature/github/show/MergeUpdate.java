@@ -12,7 +12,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.prs.PrOverviewUpdate;
 
 /**
- * Merging a pull request, which GitHub does in the background (ADR 23): the merge is kept in the model while GitHub
+ * Merging a pull request, which GitHub does in the background (ADR 24): the merge is kept in the model while GitHub
  * is asked every tick how it is doing, until it is merged, enqueued or failed.
  */
 final class MergeUpdate {
