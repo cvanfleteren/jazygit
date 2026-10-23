@@ -4,6 +4,8 @@ import static net.vanfleteren.jazygit.state.TestModels.errorText;
 import static net.vanfleteren.jazygit.state.TestModels.refused;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.vavr.collection.HashMap;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -675,11 +677,37 @@ class ProgramTest {
         assertEquals(java.util.List.of("third", "fourth"), heard);
     }
 
+    @Test
+    void gitIsReadOnTheIoExecutorAndGitHubInTheBackground() {
+        settleWithout(background);
+        assertEquals(new Loaded<>(provider.status), program.model().repo().status());
+
+        program.dispatch(new PullRequestsMsg.Refresh());
+        settleWithout(background);
+        assertEquals(
+                HashSet.<Cmd>of(new LoadPullRequests(), new LoadBranchChecks()),
+                program.model().gitHub().reading());
+
+        settleWithout(io);
+        assertEquals(HashSet.empty(), program.model().gitHub().reading());
+        assertEquals(Option.of(HashMap.empty()), program.model().gitHub().pullRequests());
+    }
+
     private void settle() {
         while (!io.isEmpty() || !background.isEmpty() || !ui.isEmpty()) {
             drain(io);
             drain(background);
             drain(ui);
+        }
+    }
+
+    // Runs everything except what is queued on {@code held}, which stays queued.
+    private void settleWithout(Queue<Runnable> held) {
+        java.util.List<Queue<Runnable>> run = java.util.List.of(io, background, ui).stream()
+                .filter(queue -> queue != held)
+                .toList();
+        while (run.stream().anyMatch(queue -> !queue.isEmpty())) {
+            run.forEach(ProgramTest::drain);
         }
     }
 

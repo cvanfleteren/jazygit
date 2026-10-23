@@ -14,6 +14,8 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import net.vanfleteren.jazygit.feature.github.comment.CommentMsg;
+import net.vanfleteren.jazygit.feature.github.comments.CommentsMsg;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -380,6 +382,21 @@ class PullRequestDialogTest {
 
         // DETAILS is a draft.
         assertEquals(java.util.List.of(new PullRequestMsg.DraftChosen(), new PullRequestMsg.CloseChosen()), dispatched);
+    }
+
+    @Test
+    void theCommentsAreWrittenAndViewedOnceTheDetailsAreRead() throws Exception {
+        PullRequestPopup loading = PullRequestPopup.loading(new Branch.Name("support_rename"), PR);
+        for (PullRequestPopup popup : List.of(loading, loading.with(Either.right(READY)))) {
+            try (ToolkitTestRunner runner = start(TestModels.loaded().openPopup(popup))) {
+                for (char key : new char[] {'c', 'v'}) {
+                    SettledPilot.of(runner).press(key);
+                    SettledPilot.of(runner).pause();
+                }
+            }
+        }
+
+        assertEquals(java.util.List.of(new CommentMsg.Requested(), new CommentsMsg.Requested()), dispatched);
     }
 
     @Test
