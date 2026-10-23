@@ -30,9 +30,12 @@ of the branches, but only those that differ from its upstream, and only for a lo
   highlighted branch are: those on the base are dimmed, and the title counts the others, e.g.
   `feature/x · 4 ahead of origin/main`. More than 300 ahead shows `300+ ahead` and dims nothing. A branch without a
   base, such as the main branch, is shown unmarked.
-- `b` lists only the commits not on the base, then the fork point, dimmed and marked `⑂ origin/main`, and the title
-  says `only 4 ahead of origin/main`, as in the other logs. It is the same setting, `RepoView.onlyAhead`: turning it
-  on or off in one log does so in all, and it does nothing for a branch without a base.
+- `b` lists only the commits not on the base, then the fork point, dimmed and marked `⑂ origin/main`, as in the
+  other logs. It is the same setting, `RepoView.onlyAhead`: turning it on or off in one log does so in all, and it
+  does nothing for a branch without a base.
+- In all the logs, the title no longer says `only` while `b` is on: it reads `4 ahead of origin/main` either way,
+  rather than one way listing all and another listing only those. The list itself shows which it is, ending at the
+  fork point. This changes what ADR 0020 has the title say.
 - The title names the branch in place of the tabs, so clicking the title does nothing while the list is open.
   Clicking a row highlights it.
 - Highlighting a commit shows it in the content panel as a commit highlighted in the commits pane is shown: the same
