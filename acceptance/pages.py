@@ -312,7 +312,7 @@ class BranchesPane:
         rows = self.app.pane_text("Branches").splitlines()
         current = self.repo.current_branch()
         return (all(self._shows_sync(rows, branch) for branch in self.repo.branches())
-                and (not current or not self.repo.has_head() or f"* {current}" in self.app.pane_text("Branches")))
+                and (not current or not self.repo.has_head() or current in self.app.bold_in("Branches")))
 
     def _shows_sync(self, rows: list, branch: str) -> bool:
         """Whether a row shows branch, with the commits it has to push and to pull, and whether its upstream is

@@ -24,9 +24,9 @@ class RemoteBranchesListTest {
         LoadableList.Row untracked =
                 RemoteBranchesList.row(FEATURE, Duration.ofMinutes(5), false, List.empty(), Option.none());
 
-        assertEquals("  5m   origin/feature", tracked.text());
+        assertEquals("  5m origin/feature", tracked.text());
         assertEquals(List.of(Option.of(Theme.Classes.DIM)), tracked.segs().map(LoadableList.Seg::cssClass));
-        assertEquals("  5m   origin/feature", untracked.text());
+        assertEquals("  5m origin/feature", untracked.text());
         assertEquals(List.of(Option.none()), untracked.segs().map(LoadableList.Seg::cssClass));
     }
 
@@ -39,7 +39,7 @@ class RemoteBranchesListTest {
                 BranchSegs.gitHub(Option.of(new PullRequest(42, "b", false, Checks.NONE, Review.NONE)), Option.none()),
                 Option.of("Pushing |"));
 
-        assertEquals("  5m   origin/feature #42 Pushing |", row.text());
+        assertEquals("  5m origin/feature #42 Pushing |", row.text());
         assertEquals(
                 List.of(Option.none(), Option.of(Theme.Classes.PULL_REQUEST), Option.of(Theme.Classes.SPINNER)),
                 row.segs().map(LoadableList.Seg::cssClass));

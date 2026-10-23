@@ -53,7 +53,7 @@ class RemoteBranchesList implements BranchesTabList {
      */
     static LoadableList.Row row(
             RemoteRef ref, Duration since, boolean tracked, List<LoadableList.Seg> gitHub, Option<String> spinner) {
-        String text = "%4s   ".formatted(TimeText.age(since)) + ref.branch().shortName();
+        String text = "%4s ".formatted(TimeText.age(since)) + ref.branch().shortName();
         return new LoadableList.Row(
                 List.of(tracked ? LoadableList.Seg.styled(text, Theme.Classes.DIM) : LoadableList.Seg.of(text))
                         .appendAll(gitHub)
