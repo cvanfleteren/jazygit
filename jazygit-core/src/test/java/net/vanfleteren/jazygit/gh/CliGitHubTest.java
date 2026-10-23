@@ -32,6 +32,26 @@ import org.junit.jupiter.api.io.TempDir;
 
 class CliGitHubTest {
 
+    /*
+     * The details of a pull request in state, at commit head, into main, as read through a gh that runs compare when
+     * asked how far behind its base it is, writing what it was asked with to the file "compared" in dir.
+     */
+    private static Either<GhError, PullRequestDetails> detailsFrom(Path dir, String state, String head, String compare)
+            throws Exception {
+        Path gh = Files.writeString(
+                dir.resolve("gh"),
+                "#!/bin/sh\n"
+                        + "case \"$*\" in\n"
+                        + "  *base=refs/heads/*) echo \" $* \" > '" + dir.resolve("compared") + "'; " + compare
+                        + " ;;\n"
+                        + "  *) printf 'pr\\t95\\tFix\\t\\t" + state
+                        + "\\tfalse\\tfix\\tmain\\t2026-01-01T00:00:00Z\\t2026-01-01T00:00:00Z\\t1\\t0\\t1\\tMERGEABLE"
+                        + "\\t\\t0\\t" + head + "\\nthreads\\t0\\t0\\t0\\t0\\n' ;;\n"
+                        + "esac\n");
+        gh.toFile().setExecutable(true);
+        return new CliGitHub(dir, gh.toString(), GhToken.NONE).pullRequestDetails(95);
+    }
+
     @Test
     void parsesOneTabSeparatedLinePerPullRequest() {
         String raw = "9\tfeature/login\tfalse\tAPPROVED\tSUCCESS,SKIPPED\t\t\t\n"
@@ -574,6 +594,42 @@ class CliGitHubTest {
                 .isLeft());
         assertTrue(CliGitHub.parseComments("comment\tIC_1\tbob\tyesterday\tfalse\tfalse\t\tx\n")
                 .isLeft());
+    }
+
+    @Test
+    void anOpenPullRequestIsComparedAtItsHeadWithItsBase(@TempDir Path dir) throws Exception {
+        assumeTrue(Files.isExecutable(Path.of("/bin/sh")), "no POSIX shell");
+
+        PullRequestDetails details =
+                detailsFrom(dir, "OPEN", "abc123", "echo 2").get();
+
+        assertEquals(Option.of(2), details.behindBase());
+        String asked = Files.readString(dir.resolve("compared"));
+        assertTrue(asked.contains(" base=refs/heads/main "), asked);
+        assertTrue(asked.contains(" head=abc123 "), asked);
+    }
+
+    @Test
+    void aPullRequestThatIsNoLongerOpenOrWithoutAKnownHeadIsNotCompared(@TempDir Path dir) throws Exception {
+        assumeTrue(Files.isExecutable(Path.of("/bin/sh")), "no POSIX shell");
+
+        assertEquals(
+                Option.none(),
+                detailsFrom(dir, "MERGED", "abc123", "echo 2").get().behindBase());
+        assertEquals(Option.none(), detailsFrom(dir, "OPEN", "", "echo 2").get().behindBase());
+        assertFalse(Files.exists(dir.resolve("compared")));
+    }
+
+    @Test
+    void theDetailsAreReadWhenComparingFails(@TempDir Path dir) throws Exception {
+        assumeTrue(Files.isExecutable(Path.of("/bin/sh")), "no POSIX shell");
+
+        assertEquals(
+                Option.none(),
+                detailsFrom(dir, "OPEN", "abc123", "exit 1").get().behindBase());
+        assertEquals(
+                Option.none(),
+                detailsFrom(dir, "OPEN", "abc123", "echo many").get().behindBase());
     }
 
     @Test

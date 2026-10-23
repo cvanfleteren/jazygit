@@ -777,7 +777,7 @@ public final class CliGitHub implements GitHub {
 
     /**
      * How many commits base branch {@code base} has that commit {@code head} does not; none when that cannot be read,
-     * which the details are shown without.
+     * also when the read fails, as the rest of the details read fine and come back without it.
      */
     private Option<Integer> behindBase(String base, String head) {
         return process.read(
