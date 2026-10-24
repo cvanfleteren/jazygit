@@ -391,8 +391,10 @@ class BranchesPane:
         locked = where == "worktree" and any(
             self.repo.worktrees()[path] == branch for path in self.repo.locked_worktrees())
         upstream = self.repo.upstream(branch)
-        # The app asks to delete anyway when the local branch has commits that no other ref keeps.
-        loses_commits = where != "remote" and self.repo.unique_commits(branch) > 0
+        # The app asks to delete anyway when the local branch has commits that no other ref keeps. With "both" it
+        # deletes the remote branch first, so that one does not keep them.
+        loses_commits = where != "remote" and self.repo.unique_commits(
+            branch, without=upstream if where == "both" else "") > 0
 
         def keys():
             self.app.press("d")
