@@ -253,8 +253,21 @@ public final class Update {
 
     /**
      * The next model, and the commands to run for it.
+     *
+     * @param quit whether the app stops once this is applied
      */
-    public record Next(Model model, List<Cmd> cmds) {
+    public record Next(Model model, List<Cmd> cmds, boolean quit) {
+
+        public Next(Model model, List<Cmd> cmds) {
+            this(model, cmds, false);
+        }
+
+        /**
+         * This, and the app stops.
+         */
+        public Next quitting() {
+            return new Next(model, cmds, true);
+        }
 
         public static Next of(Model model, Cmd... cmds) {
             return new Next(model, List.of(cmds));

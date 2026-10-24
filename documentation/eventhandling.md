@@ -110,8 +110,10 @@ the same keymap, so the help always lists the keys that work.
 
 ### 5. Dispatching the message
 
-`JazygitApp.dispatch` is the `Consumer<Msg>` that all panels and dialogs get. `Msg.Quit` stops the runner;
-every other message goes to `Program.dispatch`, on the render thread:
+`JazygitApp.dispatch` is the `Consumer<Msg>` that all panels and dialogs get. Every message, `Msg.Quit` too, goes
+to `Program.dispatch`, on the render thread. `Msg.Quit` may be refused, while a popup holds typed input; the
+runner stops only when the `Next` it returns has `quit` set. While a popup is open, the global handler takes
+every key, so what the popup leaves unhandled reaches neither the global keys nor TamboUI's quit key:
 
 1. `Update.update(model, msg)` calls `msg.apply(model)`. Every feature has its own `Msg` sub-interface whose
    `apply` delegates to that feature's update function, such as `RecentReposUpdate.update` or
