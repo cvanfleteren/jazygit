@@ -223,7 +223,7 @@ final class CliLog {
     /**
      * How many commits {@code revisions} select.
      */
-    private static Either<ProcessError, Integer> count(Path worktree, List<String> revisions) {
+    static Either<ProcessError, Integer> count(Path worktree, List<String> revisions) {
         return GitProcess.read(
                 worktree,
                 GitCommand.reading(

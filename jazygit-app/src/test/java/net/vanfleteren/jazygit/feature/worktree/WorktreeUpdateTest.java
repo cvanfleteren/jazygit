@@ -767,7 +767,7 @@ class WorktreeUpdateTest {
             }
 
             @Override
-            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name) {
+            public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name) {
                 ran.add("delete " + name.value());
                 return Either.right(List.empty());
             }
@@ -787,7 +787,7 @@ class WorktreeUpdateTest {
             }
 
             @Override
-            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name) {
+            public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name) {
                 ran.add("delete " + name.value());
                 return Either.right(List.empty());
             }
@@ -813,8 +813,9 @@ class WorktreeUpdateTest {
             }
 
             @Override
-            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name) {
-                return StubGitProvider.refused("git branch --delete --force " + name.value(), "ref is locked");
+            public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name) {
+                return GitFailure.widen(
+                        StubGitProvider.refused("git branch --delete " + name.value(), "ref is locked"));
             }
         };
         RemoveWorktreeCmd remove = new RemoveWorktreeCmd("/repos/app-taken", false, Option.of(TAKEN));
@@ -824,8 +825,7 @@ class WorktreeUpdateTest {
         assertEquals(
                 remove.failedWith(new GitFailure<>(
                         new GitError.CommandFailed("ref is locked", 1),
-                        StubGitProvider.executed(
-                                "git worktree remove /repos/app-taken", "git branch --delete --force taken"))),
+                        StubGitProvider.executed("git worktree remove /repos/app-taken", "git branch --delete taken"))),
                 failed);
         assertEquals(
                 Option.of("Removing the worktree /repos/app-taken and deleting its branch failed: ref is locked"),

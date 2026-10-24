@@ -180,7 +180,7 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(
+        public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
                 BranchName name, RemoteBranch remote, DeleteScope scope) {
             deleted.add(name.value() + (scope.local() ? " local" : "") + (scope.remote() ? " remote" : ""));
             return StubGitProvider.ran("git deleteBranch");

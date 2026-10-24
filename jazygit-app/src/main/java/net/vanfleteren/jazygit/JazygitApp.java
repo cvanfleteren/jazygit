@@ -45,6 +45,7 @@ import net.vanfleteren.jazygit.feature.commit.CommitFeature;
 import net.vanfleteren.jazygit.feature.discard.DiscardDialog;
 import net.vanfleteren.jazygit.feature.error.ErrorDialog;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
+import net.vanfleteren.jazygit.feature.forcedelete.ForceDeleteDialog;
 import net.vanfleteren.jazygit.feature.github.GitHubFeature;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.feature.help.HelpDialog;
@@ -129,6 +130,7 @@ public class JazygitApp extends ToolkitApp {
     private final List<PopupSlot> popups = List.of(
                     BranchFeature.popups(dispatch),
                     WorktreeFeature.popups(dispatch),
+                    ForceDeleteDialog.popups(dispatch),
                     GitHubFeature.popups(dispatch),
                     CommitFeature.popups(dispatch),
                     StashDialogs.popups(dispatch),

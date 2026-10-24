@@ -51,15 +51,28 @@ public interface GitInfoProvider {
 
     /**
      * Deletes the branch {@code name}, locally and/or {@code remote}, the branch it is pushed to. With both, the
-     * remote one goes first, so a failure leaves the local branch in place.
+     * remote one goes first, so a failure leaves the local branch in place. Locally, git refuses a branch that is
+     * not merged, which is a {@link GitError.NotFullyMerged}.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(
+    Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
             BranchName name, RemoteBranch remote, DeleteScope scope);
+
+    /**
+     * Deletes the local branch {@code name} when it is merged; git refuses one that is not, which is a
+     * {@link GitError.NotFullyMerged}.
+     */
+    Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name);
 
     /**
      * Deletes the local branch {@code name}, merged or not.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocalBranch(BranchName name);
+
+    /**
+     * How many commits of the local branch {@code name} no other branch, remote-tracking branch or tag has: the ones
+     * deleting it loses.
+     */
+    Either<ProcessError, Integer> countOnlyOn(BranchName name);
 
     /**
      * Renames the local branch {@code name} to {@code newName}; it keeps following the same upstream. Fails when a

@@ -1367,7 +1367,7 @@ class CliGitInfoProviderTest {
     @Test
     void aFailingCommandReportsTheCommandsRunUpToAndIncludingIt() {
         assertEquals(
-                List.of("git branch --delete --force -- missing"),
+                List.of("git branch --delete -- missing"),
                 provider.deleteBranch(
                                 new BranchName("missing"),
                                 new RemoteBranch("origin", new BranchName("missing")),
@@ -1846,23 +1846,103 @@ class CliGitInfoProviderTest {
     }
 
     @Test
-    void deleteLocalBranchRemovesAnUnmergedBranchWithoutTouchingTheRemote() throws Exception {
-        git("checkout", "-q", "-b", "topic");
-        Files.writeString(repo.resolve("topic.txt"), "topic\n");
-        git("add", "topic.txt");
-        git("commit", "-q", "-m", "Topic");
-        git("checkout", "-q", "main");
+    void deleteLocalBranchRefusesAnUnmergedBranchAndKeepsIt() throws Exception {
+        commitOnTopic("topic.txt");
+
+        GitFailure<GitError> failure =
+                provider.deleteLocalBranch(new BranchName("topic")).getLeft();
+
+        assertInstanceOf(GitError.NotFullyMerged.class, failure.error());
+        assertEquals(List.of("git branch --delete -- topic"), failure.commands().map(ExecutedCommand::line));
+        assertEquals(List.of("main", "topic"), localBranches());
+    }
+
+    @Test
+    void deleteBranchRefusesAnUnmergedBranchLocallyToo() throws Exception {
+        commitOnTopic("topic.txt");
+
+        assertInstanceOf(
+                GitError.NotFullyMerged.class,
+                provider.deleteBranch(
+                                new BranchName("topic"),
+                                new RemoteBranch("origin", new BranchName("topic")),
+                                DeleteScope.LOCAL)
+                        .getLeft()
+                        .error());
+        assertEquals(List.of("main", "topic"), localBranches());
+    }
+
+    @Test
+    void deleteLocalBranchRemovesAMergedBranch() throws Exception {
+        commitOnTopic("topic.txt");
+        git("merge", "-q", "--ff-only", "topic");
+
+        assertEquals(
+                List.of("git branch --delete -- topic"),
+                provider.deleteLocalBranch(new BranchName("topic")).get().map(ExecutedCommand::line));
+        assertEquals(List.of("main"), localBranches());
+    }
+
+    @Test
+    void forceDeleteLocalBranchRemovesAnUnmergedBranchWithoutTouchingTheRemote() throws Exception {
+        commitOnTopic("topic.txt");
 
         assertEquals(
                 List.of("git branch --delete --force -- topic"),
-                provider.deleteLocalBranch(new BranchName("topic")).get().map(ExecutedCommand::line));
-        assertEquals(
-                List.of("main"),
-                provider.allBranches()
-                        .map(AllBranches::local)
-                        .get()
-                        .map(b -> b.name().value())
-                        .toList());
+                provider.forceDeleteLocalBranch(new BranchName("topic")).get().map(ExecutedCommand::line));
+        assertEquals(List.of("main"), localBranches());
+    }
+
+    @Test
+    void countOnlyOnCountsTheCommitsNoOtherRefHas() throws Exception {
+        commitOnTopic("one.txt");
+        Files.writeString(repo.resolve("two.txt"), "two\n");
+        git("checkout", "-q", "topic");
+        git("add", "two.txt");
+        git("commit", "-q", "-m", "Two");
+        git("checkout", "-q", "main");
+
+        assertEquals(2, provider.countOnlyOn(new BranchName("topic")).get());
+
+        git("tag", "kept", "topic~1");
+        assertEquals(1, provider.countOnlyOn(new BranchName("topic")).get());
+
+        git("branch", "other", "topic");
+        assertEquals(0, provider.countOnlyOn(new BranchName("topic")).get());
+    }
+
+    @Test
+    void countOnlyOnIsNoneForABranchWhoseCommitsAreOnARemoteBranch() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        commitOnTopic("topic.txt");
+        git("push", "-q", "origin", "topic");
+
+        assertEquals(0, provider.countOnlyOn(new BranchName("topic")).get());
+        assertInstanceOf(
+                GitError.NotFullyMerged.class,
+                provider.deleteLocalBranch(new BranchName("topic")).getLeft().error());
+    }
+
+    /**
+     * Commits {@code file} on a new branch {@code topic}, which main does not have, and checks main out again.
+     */
+    private void commitOnTopic(String file) throws Exception {
+        git("checkout", "-q", "-b", "topic");
+        Files.writeString(repo.resolve(file), file + "\n");
+        git("add", file);
+        git("commit", "-q", "-m", file);
+        git("checkout", "-q", "main");
+    }
+
+    private List<String> localBranches() {
+        return provider.allBranches()
+                .map(AllBranches::local)
+                .get()
+                .map(b -> b.name().value())
+                .sorted()
+                .toList();
     }
 
     @Test

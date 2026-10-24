@@ -4,10 +4,13 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
+import net.vanfleteren.jazygit.feature.forcedelete.ForceDeleteCmd;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.state.Env;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Operation;
 
 /**
@@ -23,7 +26,9 @@ public sealed interface DeleteBranchCmd extends BranchCmd {
     }
 
     /**
-     * Deletes {@code branch} where {@code scope} says; on its remote, that is {@code remote}.
+     * Deletes {@code branch} where {@code scope} says; on its remote, that is {@code remote}. Locally, only when it
+     * is merged: when it is not, it is deleted anyway if no commit would be lost, and else whether to lose them is
+     * asked instead of being told it failed.
      */
     record DeleteBranch(BranchName branch, RemoteBranch remote, DeleteScope scope)
             implements DeleteBranchCmd, BranchCmd.KeepsBranchBusy {
@@ -36,6 +41,13 @@ public sealed interface DeleteBranchCmd extends BranchCmd {
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
             return git.deleteBranch(branch, remote, scope);
+        }
+
+        @Override
+        public Msg run(Env env) {
+            return env.git()
+                    .deleteBranch(branch, remote, scope)
+                    .fold(failure -> ForceDeleteCmd.refused(this, branch, failure, env.git()), this::succeeded);
         }
     }
 

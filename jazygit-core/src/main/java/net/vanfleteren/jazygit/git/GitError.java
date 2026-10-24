@@ -108,6 +108,14 @@ public sealed interface GitError {
     record WorktreeHasChanges(String explanation) implements GitError {}
 
     /**
+     * Git refused to delete a branch because it is not merged into its upstream, nor into HEAD when it has none.
+     * Forcing it deletes it anyway, losing the commits no other ref has.
+     *
+     * @param explanation git's explanation
+     */
+    record NotFullyMerged(String explanation) implements GitError {}
+
+    /**
      * The operation stopped on conflicts, and is left so for the user to resolve them and go on. It did not
      * finish, but it did not fail either: it waits for the user.
      *
