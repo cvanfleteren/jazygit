@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.forcedelete;
 import net.vanfleteren.jazygit.feature.forcedelete.ForceDeleteMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.forcedelete.ForceDeleteMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.forcedelete.ForceDeleteMsg.NotFullyMerged;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update;
@@ -17,10 +18,17 @@ public final class ForceDeleteUpdate {
 
     public static Next update(Model model, ForceDeleteMsg msg) {
         return switch (msg) {
-            // The deletion ran, and was refused; deleting it anyway is offered instead of the failure.
+            // The deletion ran, and was refused; deleting it anyway is offered instead of the failure. Whether its
+            // upstream is gone is as the model had it before: a remote branch deleted along with it does not count.
             case NotFullyMerged(var cmd, var branch, int lost, var commands) ->
                 Update.refresh(OperationUpdate.done(model, cmd, commands)
-                        .openPopupIfFree(new ForceDeleteBranchPopup(branch, lost)));
+                        .openPopupIfFree(new ForceDeleteBranchPopup(
+                                branch,
+                                lost,
+                                model.repo()
+                                        .branch(branch)
+                                        .flatMap(Branch::goneUpstream)
+                                        .isDefined())));
             case Cancelled() -> Next.of(model.withoutPopup(ForceDeleteBranchPopup.class));
             // Only a branch that is still there, not checked out here and that nothing runs on is deleted. One
             // checked out in another worktree is left to git to refuse: after removing a worktree the model still

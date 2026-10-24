@@ -170,7 +170,7 @@ class ForceDeleteTest {
                         deleting, new ForceDeleteMsg.NotFullyMerged(DELETE_BOTH, FEATURE, 3, NOT_MERGED.commands()))
                 .model();
 
-        assertEquals(Option.of(new ForceDeleteBranchPopup(FEATURE, 3)), asked.popup());
+        assertEquals(Option.of(new ForceDeleteBranchPopup(FEATURE, 3, false)), asked.popup());
         assertEquals(Option.none(), asked.jobs().busy().get(new BranchRef.Local(FEATURE)));
         assertEquals(Option.none(), TestModels.errorText(asked));
         assertEquals(
@@ -179,8 +179,31 @@ class ForceDeleteTest {
     }
 
     @Test
+    void theRefusalOfABranchWhoseUpstreamIsGoneSaysSo() {
+        Model model = TestModels.localBranchesRead(
+                        loaded(),
+                        List.of(
+                                Fixtures.branch(MAIN, true, new Sha("aaaa")),
+                                Fixtures.branch(
+                                        FEATURE,
+                                        false,
+                                        new Sha("ffff"),
+                                        Instant.EPOCH,
+                                        false,
+                                        false,
+                                        new Tracking.Gone(new BranchRef.Remote(new RemoteBranch("origin", FEATURE))))))
+                .model();
+
+        Model asked = Update.update(
+                        model, new ForceDeleteMsg.NotFullyMerged(DELETE_BOTH, FEATURE, 2, NOT_MERGED.commands()))
+                .model();
+
+        assertEquals(Option.of(new ForceDeleteBranchPopup(FEATURE, 2, true)), asked.popup());
+    }
+
+    @Test
     void confirmingDeletesTheBranchWithForce() {
-        Model asked = model().openPopup(new ForceDeleteBranchPopup(FEATURE, 3));
+        Model asked = model().openPopup(new ForceDeleteBranchPopup(FEATURE, 3, false));
 
         Next confirmed = Update.update(asked, new ForceDeleteMsg.Confirmed());
 
@@ -193,7 +216,7 @@ class ForceDeleteTest {
 
     @Test
     void cancellingKeepsTheBranch() {
-        Model asked = model().openPopup(new ForceDeleteBranchPopup(FEATURE, 3));
+        Model asked = model().openPopup(new ForceDeleteBranchPopup(FEATURE, 3, false));
 
         Next cancelled = Update.update(asked, new ForceDeleteMsg.Cancelled());
 
@@ -217,7 +240,7 @@ class ForceDeleteTest {
                                         new Tracking.None(),
                                         Option.of(Path.of("/repos/app-feature")))))
                 .model()
-                .openPopup(new ForceDeleteBranchPopup(FEATURE, 2));
+                .openPopup(new ForceDeleteBranchPopup(FEATURE, 2, false));
 
         assertEquals(
                 List.of(new ForceDeleteCmd(FEATURE)),
@@ -267,8 +290,8 @@ class ForceDeleteTest {
 
     @Test
     void theCheckedOutBranchIsNotDeletedEvenWhenConfirmed() {
-        Next confirmed =
-                Update.update(model().openPopup(new ForceDeleteBranchPopup(MAIN, 1)), new ForceDeleteMsg.Confirmed());
+        Next confirmed = Update.update(
+                model().openPopup(new ForceDeleteBranchPopup(MAIN, 1, false)), new ForceDeleteMsg.Confirmed());
 
         assertEquals(List.empty(), confirmed.cmds());
     }
@@ -286,11 +309,24 @@ class ForceDeleteTest {
     void thePopupSaysHowManyCommitsAreLost() {
         assertEquals(
                 "3 commits on feature are on no other branch and will be lost. Delete anyway?",
-                ForceDeleteDialog.SPEC.message().apply(new ForceDeleteBranchPopup(FEATURE, 3)));
+                ForceDeleteDialog.SPEC.message().apply(new ForceDeleteBranchPopup(FEATURE, 3, false)));
         assertEquals(
                 "1 commit on feature is on no other branch and will be lost. Delete anyway?",
-                ForceDeleteDialog.SPEC.message().apply(new ForceDeleteBranchPopup(FEATURE, 1)));
+                ForceDeleteDialog.SPEC.message().apply(new ForceDeleteBranchPopup(FEATURE, 1, false)));
         assertEquals(
-                "Delete branch feature", ForceDeleteDialog.SPEC.title().apply(new ForceDeleteBranchPopup(FEATURE, 1)));
+                "Delete branch feature",
+                ForceDeleteDialog.SPEC.title().apply(new ForceDeleteBranchPopup(FEATURE, 1, false)));
+    }
+
+    @Test
+    void thePopupOfABranchWhoseUpstreamIsGoneSaysTheCommitsMayBeOnMainAlready() {
+        assertEquals(
+                "2 commits on feature are on no other branch; its upstream is gone, so if its pull request was squash"
+                        + " merged they are on main already. Delete anyway?",
+                ForceDeleteDialog.SPEC.message().apply(new ForceDeleteBranchPopup(FEATURE, 2, true)));
+        assertEquals(
+                "1 commit on feature is on no other branch; its upstream is gone, so if its pull request was squash"
+                        + " merged it is on main already. Delete anyway?",
+                ForceDeleteDialog.SPEC.message().apply(new ForceDeleteBranchPopup(FEATURE, 1, true)));
     }
 }
