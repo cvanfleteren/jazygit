@@ -1925,6 +1925,24 @@ class CliGitInfoProviderTest {
                 provider.deleteLocalBranch(new BranchName("topic")).getLeft().error());
     }
 
+    @Test
+    void deletingTheBranchAndItsRemoteBranchLeavesCommitsOnlyItHadToBeCounted() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        commitOnTopic("topic.txt");
+        git("push", "-q", "origin", "topic");
+        assertEquals(0, provider.countOnlyOn(new BranchName("topic")).get());
+
+        GitFailure<GitError> failure = provider.deleteBranch(
+                        new BranchName("topic"), new RemoteBranch("origin", new BranchName("topic")), DeleteScope.BOTH)
+                .getLeft();
+
+        assertInstanceOf(GitError.NotFullyMerged.class, failure.error());
+        assertEquals(1, provider.countOnlyOn(new BranchName("topic")).get());
+        assertEquals(List.of("main", "topic"), localBranches());
+    }
+
     /**
      * Commits {@code file} on a new branch {@code topic}, which main does not have, and checks main out again.
      */

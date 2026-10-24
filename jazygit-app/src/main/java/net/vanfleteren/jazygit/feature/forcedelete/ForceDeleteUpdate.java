@@ -22,13 +22,15 @@ public final class ForceDeleteUpdate {
                 Update.refresh(OperationUpdate.done(model, cmd, commands)
                         .openPopupIfFree(new ForceDeleteBranchPopup(branch, lost)));
             case Cancelled() -> Next.of(model.withoutPopup(ForceDeleteBranchPopup.class));
-            // Only a branch that is still there, not checked out anywhere and that nothing runs on is deleted.
+            // Only a branch that is still there, not checked out here and that nothing runs on is deleted. One
+            // checked out in another worktree is left to git to refuse: after removing a worktree the model still
+            // lists the branch there until the refresh lands.
             case Confirmed() ->
                 Update.confirm(
                         model,
                         ForceDeleteBranchPopup.class,
                         popup -> model.idleBranch(popup.branch())
-                                .filter(branch -> !branch.current() && !branch.checkedOutElsewhere())
+                                .filter(branch -> !branch.current())
                                 .map(branch -> new ForceDeleteCmd(branch.name())));
         };
     }
