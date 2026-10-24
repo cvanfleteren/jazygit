@@ -82,6 +82,12 @@ public sealed interface AppError {
     record InvalidUpstream(String text) implements AppError {}
 
     /**
+     * A push was asked for, but the branch is only behind its upstream: there is nothing to push, and a force push
+     * would drop the commits of others.
+     */
+    record BehindUpstream(BranchName branch) implements AppError {}
+
+    /**
      * A pull, or a reset onto the upstream, was asked for, but the branch has no upstream.
      */
     record NoUpstream(BranchName branch) implements AppError {}

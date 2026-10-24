@@ -29,27 +29,49 @@ public final class PushUpdate {
                         .map(popup -> upstreamConfirmed(model, popup.upstream()))
                         .getOrElse(() -> Next.of(model));
             case PushMsg.ForceConfirmed() ->
-                Update.confirm(
+                model.popup(ForcePushPopup.class)
+                        .map(popup -> forceConfirmed(model, popup))
+                        .getOrElse(() -> Next.of(model));
+        };
+    }
+
+    /**
+     * A refresh may have changed the branch while the popup was open. Only a branch that is still diverged is force
+     * pushed; otherwise the popup closes and the request is handled again, so the user is told why.
+     */
+    private static Next forceConfirmed(Model model, ForcePushPopup popup) {
+        boolean stillDiverged =
+                model.repo().branch(popup.branch()).filter(PushUpdate::diverged).isDefined();
+        return stillDiverged
+                ? Update.confirm(
                         model,
                         ForcePushPopup.class,
-                        popup -> model.repo()
-                                .branch(popup.branch())
+                        p -> model.repo()
+                                .branch(p.branch())
                                 .flatMap(Branch::remoteUpstream)
-                                .map(upstream -> new Push(popup.branch(), upstream, PushMode.FORCE_WITH_LEASE)));
-        };
+                                .map(upstream -> new Push(p.branch(), upstream, PushMode.FORCE_WITH_LEASE)))
+                : requested(model.withoutPopup(ForcePushPopup.class), popup.branch());
     }
 
     private static Next requested(Model model, BranchName branch) {
         // A branch that is being pushed or deleted is not pushed meanwhile. A branch without an upstream on a
         // remote (none, one that is gone, or a local branch, which a push would move) is pushed where the user
-        // says. Pushing a diverged branch needs a force push, which the user must confirm.
+        // says. Pushing a diverged branch needs a force push, which the user must confirm; a branch that is only
+        // behind has nothing to push.
         return model.idleBranch(branch)
                 .map(known -> known.remoteUpstream()
-                        .map(upstream -> known.behind() > 0
+                        .map(upstream -> diverged(known)
                                 ? Update.ask(model, new ForcePushPopup(branch))
-                                : Update.start(model.clearError(), new Push(branch, upstream, PushMode.FAST_FORWARD)))
+                                : known.behind() > 0
+                                        ? Next.of(model.fail(new AppError.BehindUpstream(branch)))
+                                        : Update.start(
+                                                model.clearError(), new Push(branch, upstream, PushMode.FAST_FORWARD)))
                         .getOrElse(() -> Update.ask(model, new SetUpstreamPopup(branch))))
                 .getOrElse(() -> Next.of(model));
+    }
+
+    private static boolean diverged(Branch branch) {
+        return branch.ahead() > 0 && branch.behind() > 0;
     }
 
     /**
