@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.feature.commit.CommitDialog;
 import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
+import net.vanfleteren.jazygit.feature.help.HelpPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.StubGitProvider;
@@ -103,6 +104,127 @@ class JazygitAppWiringTest {
 
             assertEquals(CommitDialog.DESCRIPTION_ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
             assertEquals(CommitDialog.DESCRIPTION_ID, onRenderThread(testRunner, () -> app.drawnWith));
+        } finally {
+            app.onStop();
+        }
+    }
+
+    @Test
+    void qAndCtrlCDoNotQuitFromAListDialog() throws Exception {
+        TestApp app = new TestApp();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
+            app.start(testRunner);
+            SettledPilot.focus(testRunner, FilesPanel.ID, app.drawnAt::size);
+            Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
+            // The recent repositories, a list dialog.
+            pilot.press('r', KeyModifiers.CTRL);
+            awaitModel(testRunner, app, model -> model.popup().isDefined());
+            pilot.pause();
+
+            pilot.press('q');
+            pilot.press('Q');
+            pilot.press('c', KeyModifiers.CTRL);
+            pilot.pause();
+
+            assertEquals(0, app.quits.get());
+        } finally {
+            app.onStop();
+        }
+    }
+
+    @Test
+    void ctrlCInTheCommitDialogKeepsTheTypedMessage() throws Exception {
+        TestApp app = new TestApp();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
+            app.start(testRunner);
+            SettledPilot.focus(testRunner, FilesPanel.ID, app.drawnAt::size);
+            Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
+            pilot.press('c');
+            awaitModel(testRunner, app, model -> model.popup(CommitPopup.class).isDefined());
+            pilot.pause();
+            pilot.press('h');
+            pilot.press('i');
+            awaitModel(
+                    testRunner,
+                    app,
+                    model -> model.popup(CommitPopup.class)
+                            .exists(popup -> popup.message().summary().equals("hi")));
+
+            pilot.press('c', KeyModifiers.CTRL);
+            pilot.pause();
+
+            assertEquals(0, app.quits.get());
+            assertEquals(
+                    "hi",
+                    onRenderThread(
+                            testRunner,
+                            () -> app.model()
+                                    .popup(CommitPopup.class)
+                                    .get()
+                                    .message()
+                                    .summary()));
+        } finally {
+            app.onStop();
+        }
+    }
+
+    @Test
+    void theGlobalKeysDoNothingWhileAPopupIsOpen() throws Exception {
+        TestApp app = new TestApp();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
+            app.start(testRunner);
+            SettledPilot.focus(testRunner, FilesPanel.ID, app.drawnAt::size);
+            Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
+            pilot.press('c');
+            awaitModel(testRunner, app, model -> model.popup(CommitPopup.class).isDefined());
+            pilot.pause();
+
+            pilot.press('M');
+            pilot.press('p', KeyModifiers.CTRL);
+            pilot.pause();
+
+            assertEquals(
+                    Screen.REPOSITORY,
+                    onRenderThread(testRunner, () -> app.model().screen()));
+            assertEquals(
+                    true,
+                    onRenderThread(
+                            testRunner,
+                            () -> app.model().popup(CommitPopup.class).isDefined()));
+        } finally {
+            app.onStop();
+        }
+    }
+
+    @Test
+    void qInTheHelpDialogStillQuits() throws Exception {
+        TestApp app = new TestApp();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
+            app.start(testRunner);
+            SettledPilot.focus(testRunner, FilesPanel.ID, app.drawnAt::size);
+            Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
+            pilot.press('?');
+            awaitModel(testRunner, app, model -> model.popup(HelpPopup.class).isDefined());
+            pilot.pause();
+
+            pilot.press('q');
+
+            await(() -> app.quits.get() == 1, "the app quit");
+        } finally {
+            app.onStop();
+        }
+    }
+
+    @Test
+    void qQuitsWhenNoPopupIsOpen() throws Exception {
+        TestApp app = new TestApp();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
+            app.start(testRunner);
+            SettledPilot.focus(testRunner, FilesPanel.ID, app.drawnAt::size);
+
+            SettledPilot.of(testRunner, app.drawnAt::size).press('q');
+
+            await(() -> app.quits.get() == 1, "the app quit");
         } finally {
             app.onStop();
         }

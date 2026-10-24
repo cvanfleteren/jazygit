@@ -221,7 +221,7 @@ public final class HelpDialog implements PopupView {
      * Runs {@code key}, unless it does nothing for what is selected in the panel.
      */
     private void run(Key key) {
-        // Quitting is up to the app, which only sees the message as is.
+        // Quitting is up to the model, which only sees the message as is.
         key.action().forEach(msg -> dispatch.accept(msg instanceof Msg.Quit ? msg : new HelpMsg.Chosen(msg)));
     }
 

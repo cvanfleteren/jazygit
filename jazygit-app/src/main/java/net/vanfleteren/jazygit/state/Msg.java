@@ -15,13 +15,16 @@ public interface Msg {
     Update.Next apply(Model model);
 
     /**
-     * The user asked to quit. Quitting is up to the app, which stops before the model sees this.
+     * The user asked to quit. The app stops, unless the model holds something that would be lost: a commit message
+     * that was typed.
      */
     record Quit() implements Msg {
 
         @Override
         public Update.Next apply(Model model) {
-            return Update.Next.of(model);
+            return model.popup().exists(Popup::holdsInput)
+                    ? Update.Next.of(model)
+                    : Update.Next.of(model).quitting();
         }
     }
 

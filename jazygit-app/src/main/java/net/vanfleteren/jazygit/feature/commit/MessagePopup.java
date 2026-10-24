@@ -15,4 +15,9 @@ public interface MessagePopup extends Popup {
     CommitMessage message();
 
     MessagePopup withMessage(CommitMessage message);
+
+    @Override
+    default boolean holdsInput() {
+        return !message().summary().isBlank() || !message().description().isBlank();
+    }
 }

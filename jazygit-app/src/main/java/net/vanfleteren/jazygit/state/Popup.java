@@ -5,4 +5,12 @@ package net.vanfleteren.jazygit.state;
  * time: it lives in {@link Model#popup()}. Each feature defines the popups it opens, as records
  * implementing this interface.
  */
-public interface Popup {}
+public interface Popup {
+
+    /**
+     * Whether the user typed something into this popup that closing the app would lose.
+     */
+    default boolean holdsInput() {
+        return false;
+    }
+}

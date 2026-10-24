@@ -391,12 +391,18 @@ class BranchesPane:
         locked = where == "worktree" and any(
             self.repo.worktrees()[path] == branch for path in self.repo.locked_worktrees())
         upstream = self.repo.upstream(branch)
+        # The app asks to delete anyway when the local branch has commits that no other ref keeps. With "both" it
+        # deletes the remote branch first, so that one does not keep them.
+        loses_commits = where != "remote" and self.repo.unique_commits(
+            branch, without=upstream if where == "both" else "") > 0
 
         def keys():
             self.app.press("d")
             self.ui.confirm(f"Delete branch {branch}", key=key)
             if locked:
                 self.ui.confirm("Unlock worktree")
+            if loses_commits:
+                self.ui.confirm("anyway?")
 
         # Deleting both, or with the worktree, takes a git command for each.
         def done():
@@ -759,6 +765,7 @@ class WorktreesPane:
         self.select(name)
         path = self.path(name)
         checked_out = self.repo.worktrees()[path]
+        loses_commits = branch == "delete" and self.repo.unique_commits(checked_out) > 0
 
         def keys():
             self.app.press("d")
@@ -766,6 +773,8 @@ class WorktreesPane:
             if anyway:
                 # Titled as the question before, with a message that wraps where the path makes it: by its keys.
                 self.ui.confirm("(enter) confirm")
+            if loses_commits:
+                self.ui.confirm("anyway?")
 
         # Deleting its branch too is a git command of its own, after the removal.
         def done():

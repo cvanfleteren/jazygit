@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -39,6 +40,8 @@ final class TestApp extends JazygitApp {
     // thread.
     final java.util.List<Instant> drawnAt = new CopyOnWriteArrayList<>();
     String drawnWith;
+    // How often the app stopped.
+    final AtomicInteger quits = new AtomicInteger();
 
     TestApp() {
         this(new Env(new SampleData(), StubGitHub.empty()));
@@ -70,6 +73,14 @@ final class TestApp extends JazygitApp {
         drawnAt.add(Instant.now());
         drawnWith = runner.get().focusManager().focusedId();
         return render();
+    }
+
+    /**
+     * Counts, instead of stopping the test's runner.
+     */
+    @Override
+    public void quit() {
+        quits.incrementAndGet();
     }
 
     @Override
