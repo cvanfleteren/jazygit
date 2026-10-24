@@ -39,6 +39,8 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # PRs that Claude opens from an issue (ai-issue.yml) are pushed by the Claude app, a bot actor.
+          allowed_bots: claude
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
