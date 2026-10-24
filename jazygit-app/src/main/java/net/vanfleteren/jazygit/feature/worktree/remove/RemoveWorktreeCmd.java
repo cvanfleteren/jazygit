@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
+import net.vanfleteren.jazygit.feature.forcedelete.ForceDeleteCmd;
 import net.vanfleteren.jazygit.feature.worktree.WorktreeCmd;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
@@ -18,7 +19,8 @@ import net.vanfleteren.jazygit.state.Operation;
 /**
  * Removes the worktree at {@code location}; with {@code force}, also when it has changes. When it has changes and
  * this is not forced, the user is asked to force it instead of being told it failed. Once it is removed, the branch
- * it had checked out is deleted locally when it is {@code deleting}, which is busy meanwhile. When it is locked, it
+ * it had checked out is deleted locally when it is {@code deleting}, which is busy meanwhile; when that branch is not
+ * merged, it is deleted anyway if no commit would be lost, and else whether to lose them is asked. When it is locked, it
  * is unlocked first, as git does not remove a locked worktree, and locked again when it is not removed after all.
  *
  * @param unlocking why it was locked, when it is; empty when no reason was given
@@ -81,7 +83,8 @@ public record RemoveWorktreeCmd(String location, boolean force, Option<BranchNam
                         failure -> failure.error() instanceof GitError.WorktreeHasChanges
                                         && failure.cleanupFailed().isEmpty()
                                 ? new RemoveWorktreeMsg.NeedsForce(this, failure.commands())
-                                : failedWith(failure),
+                                : deleting.map(branch -> ForceDeleteCmd.refused(this, branch, failure, env.git()))
+                                        .getOrElse(() -> failedWith(failure)),
                         this::succeeded);
     }
 

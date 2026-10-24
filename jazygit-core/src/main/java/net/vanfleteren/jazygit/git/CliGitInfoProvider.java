@@ -346,14 +346,24 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
             BranchName name, RemoteBranch remote, DeleteScope scope) {
         return CliBranch.delete(worktree, name, remote, scope, credentials.get());
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name) {
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name) {
         return CliBranch.deleteLocal(worktree, name);
+    }
+
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocalBranch(BranchName name) {
+        return CliBranch.forceDeleteLocal(worktree, name);
+    }
+
+    @Override
+    public Either<ProcessError, Integer> countOnlyOn(BranchName name) {
+        return CliBranch.countOnlyOn(worktree, name);
     }
 
     @Override

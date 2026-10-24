@@ -270,14 +270,24 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteBranch(
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
             BranchName name, RemoteBranch remote, DeleteScope scope) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name) {
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name) {
         return ran();
+    }
+
+    @Override
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocalBranch(BranchName name) {
+        return ran();
+    }
+
+    @Override
+    default Either<ProcessError, Integer> countOnlyOn(BranchName name) {
+        return Either.right(0);
     }
 
     @Override

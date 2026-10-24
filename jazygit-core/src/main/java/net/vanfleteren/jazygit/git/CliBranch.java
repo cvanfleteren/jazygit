@@ -42,6 +42,9 @@ final class CliBranch {
     private static final String FORMAT = FIELDS.mkString(GitOutput.REF_FIELD_SEPARATOR);
     private static final Pattern AHEAD = Pattern.compile("ahead (\\d{1,9})");
     private static final Pattern BEHIND = Pattern.compile("behind (\\d{1,9})");
+    // What git says when it refuses to delete a branch that is not merged. It is matched in English, so git is run
+    // with the C locale.
+    private static final String NOT_FULLY_MERGED = "is not fully merged";
     // The checked out branch first, then the most recently committed to.
     private static final Comparator<Branch> ORDER = Comparator.comparing(Branch::current)
             .reversed()
@@ -69,10 +72,12 @@ final class CliBranch {
      * Deletes the branch {@code name} where {@code scope} says: locally, and/or {@code remote}, the branch it is
      * pushed to. With both, the remote one goes first, so a failure leaves the local branch in place.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> delete(
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> delete(
             Path worktree, BranchName name, RemoteBranch remote, DeleteScope scope, Map<String, String> credentials) {
         return GitFailure.sequence(
-                () -> scope.remote() ? deleteRemote(worktree, remote, credentials) : GitFailure.nothing(),
+                () -> scope.remote()
+                        ? GitFailure.<GitError, List<ExecutedCommand>>widen(deleteRemote(worktree, remote, credentials))
+                        : GitFailure.nothing(),
                 () -> scope.local() ? deleteLocal(worktree, name) : GitFailure.nothing());
     }
 
@@ -85,10 +90,38 @@ final class CliBranch {
     }
 
     /**
+     * Runs {@code git branch -d <name>} in {@code worktree}.
+     *
+     * @return the command lines that were run, or why git refused, {@link GitError.NotFullyMerged} when forcing it
+     * would delete the branch
+     */
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocal(Path worktree, BranchName name) {
+        return GitProcess.log(worktree, git("branch", "--delete", "--", name.value()))
+                .mapLeft(failure -> failure.map(CliBranch::classify));
+    }
+
+    /**
      * Runs {@code git branch -D <name>} in {@code worktree}.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocal(Path worktree, BranchName name) {
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocal(Path worktree, BranchName name) {
         return GitProcess.log(worktree, git("branch", "--delete", "--force", "--", name.value()));
+    }
+
+    /**
+     * How many commits of the local branch {@code name} no other branch, remote-tracking branch or tag has: the ones
+     * deleting it loses. Git matches the exclusion against the name {@code --branches} lists, without
+     * {@code refs/heads/}; a branch name cannot have the characters that make it a wider glob.
+     */
+    static Either<ProcessError, Integer> countOnlyOn(Path worktree, BranchName name) {
+        return CliLog.count(
+                worktree,
+                List.of(Refs.head(name), "--not", "--exclude=" + name.value(), "--branches", "--remotes", "--tags"));
+    }
+
+    static GitError classify(ProcessError error) {
+        return error instanceof GitError.CommandFailed failed && failed.says(NOT_FULLY_MERGED)
+                ? new GitError.NotFullyMerged(failed.explanation().getOrElse(""))
+                : error;
     }
 
     /**
