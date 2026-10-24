@@ -250,6 +250,26 @@ class CliMergeTest {
                 git("log", "-1", "--format=%s").strip());
     }
 
+    @Test
+    void aMergeCommitIntoMasterDoesNotNameIt() throws Exception {
+        git("branch", "-m", "main", "master");
+
+        CliMerge.merge(repo, new BranchName("feature"), MergeMode.MERGE_COMMIT).get();
+
+        assertEquals("Merge branch 'feature'", git("log", "-1", "--format=%s").strip());
+    }
+
+    @Test
+    void aMergeCommitOnADetachedHeadIsMergedIntoHeadLikeGitDoes() throws Exception {
+        git("checkout", "-q", "--detach");
+
+        CliMerge.merge(repo, new BranchName("feature"), MergeMode.MERGE_COMMIT).get();
+
+        assertEquals(
+                "Merge branch 'feature' into HEAD",
+                git("log", "-1", "--format=%s").strip());
+    }
+
     private void commitOnMain() throws Exception {
         write("c.txt", "main\n");
         git("add", ".");

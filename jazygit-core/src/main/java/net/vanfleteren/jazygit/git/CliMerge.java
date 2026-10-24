@@ -19,7 +19,8 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
  */
 final class CliMerge {
 
-    // The branches git does not name in a merge commit into them, unless merge.suppressDest says otherwise.
+    // The branches git does not name in a merge commit into them. Git also honours merge.suppressDest here, which
+    // is not read, so a user who set it still gets "into <branch>".
     private static final Set<String> DEFAULT_BRANCHES = HashSet.of("main", "master");
 
     private CliMerge() {}
@@ -43,7 +44,9 @@ final class CliMerge {
     /**
      * Merges the ref of {@code branch}, as a tag named like the branch would win over its bare name. Git would then
      * word the merge commit after the ref, so the message is given: the one git writes for a branch, which names
-     * the branch merged into unless that is a default one.
+     * the branch merged into unless that is a default one. This is built by hand, so it deviates from git where
+     * config changes the wording: {@code merge.suppressDest} is ignored, and {@code merge.branchdesc} is not used.
+     * With {@code merge.log} on, git's shortlog header names the ref instead of the branch.
      */
     private static Either<GitFailure<GitError>, List<ExecutedCommand>> withMessage(
             Path worktree, BranchName branch, String fastForward) {
@@ -56,9 +59,9 @@ final class CliMerge {
     }
 
     private static String message(BranchName branch, String current) {
-        // Nothing is named when HEAD is detached, as git does.
-        boolean named = !current.isEmpty() && !DEFAULT_BRANCHES.contains(current);
-        return "Merge branch '" + branch.value() + "'" + (named ? " into " + current : "");
+        // On a detached HEAD git merges "into HEAD", and `branch --show-current` prints nothing.
+        String into = current.isEmpty() ? "HEAD" : current;
+        return "Merge branch '" + branch.value() + "'" + (DEFAULT_BRANCHES.contains(into) ? "" : " into " + into);
     }
 
     private static Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Path worktree, BranchName branch) {
