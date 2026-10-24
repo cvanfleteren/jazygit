@@ -31,13 +31,13 @@ class StatusPanelTest {
         int repository = Messages.get("screen.repository").length();
         int pullRequests = Messages.get("screen.pullRequests").length();
 
-        assertEquals(Option.of(Screen.REPOSITORY), StatusPanel.screenAt(0));
-        assertEquals(Option.of(Screen.REPOSITORY), StatusPanel.screenAt(repository - 1));
-        assertEquals(Option.none(), StatusPanel.screenAt(repository + 1));
-        assertEquals(Option.of(Screen.PULL_REQUESTS), StatusPanel.screenAt(repository + 3));
-        assertEquals(Option.of(Screen.PULL_REQUESTS), StatusPanel.screenAt(repository + 3 + pullRequests - 1));
-        assertEquals(Option.none(), StatusPanel.screenAt(repository + 3 + pullRequests));
-        assertEquals(Option.none(), StatusPanel.screenAt(-1));
+        assertEquals(Option.of(Screen.REPOSITORY), StatusPanel.screenAt(0, 0));
+        assertEquals(Option.of(Screen.REPOSITORY), StatusPanel.screenAt(repository - 1, 0));
+        assertEquals(Option.none(), StatusPanel.screenAt(repository + 1, 0));
+        assertEquals(Option.of(Screen.PULL_REQUESTS), StatusPanel.screenAt(repository + 3, 0));
+        assertEquals(Option.of(Screen.PULL_REQUESTS), StatusPanel.screenAt(repository + 3 + pullRequests - 1, 0));
+        assertEquals(Option.none(), StatusPanel.screenAt(repository + 3 + pullRequests, 0));
+        assertEquals(Option.none(), StatusPanel.screenAt(-1, 0));
     }
 
     @Test

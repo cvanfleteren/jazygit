@@ -141,13 +141,16 @@ public final class PrOverviewUpdate {
 
     /**
      * The unseen pull requests of the repository after {@code read}, when they were {@code before}, if they were
-     * read before (ADR 29). The ones above the highest number read before were opened since, though the user's own
-     * are not unseen; the ones not open anymore are left out. Read for the first time, none are unseen, else every
-     * open one would be.
+     * read before (ADR 29). The highest number is the one of the pull request opened last, open or not, so one that
+     * is reopened is not new. The open ones above the highest number read before were opened since, though the user's
+     * own are not unseen; the ones not open anymore are left out. Read for the first time, none are unseen, else
+     * every open one would be.
      */
     static UnseenPullRequests unseen(Option<UnseenPullRequests> before, RepositoryPullRequests read) {
         List<PullRequestSummary> open = read.open().pullRequests();
-        int highest = open.map(PullRequestSummary::number).max().getOrElse(0);
+        // The open ones count too, should GitHub not have said which was opened last.
+        int highest =
+                open.map(PullRequestSummary::number).append(read.latest()).max().getOrElse(0);
         return before.map(kept -> new UnseenPullRequests(
                         Math.max(kept.highest(), highest),
                         kept.numbers()

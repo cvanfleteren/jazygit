@@ -25,6 +25,9 @@ It shows how many pull requests of the open repository were opened and not seen 
 - PR numbers only go up, so each repository keeps the highest number read. A pull request above it is new; each
   read raises it, and puts the new numbers in an **unseen** set. Not: new as "a number not read before", as a
   comment on an old pull request brings it into the 100, and would make it new.
+- The highest number is the one of the pull request opened last, in any state, which the same query asks for
+  (`latest: pullRequests(first: 1, orderBy: CREATED_AT)`). Not: the highest of the open ones, which lags when the
+  newest were merged or closed, and is 0 when none is open: one reopened above it would be new.
 - The first read of a repository only sets the highest number: nothing is unseen, else every open pull request
   would be.
 
@@ -67,5 +70,5 @@ It shows how many pull requests of the open repository were opened and not seen 
 - "This repo" is read every minute for as long as the app runs, not only while the screen is shown.
 - `state.toml` is written when the set changes: after a read with new pull requests, and when one is seen.
 - Tested by unit tests of the update (new above the highest number, the first read, seen on highlight, closed ones
-  leaving, the user's own left out, the tick while hidden), of the state file, of the title and the rows. The
-  acceptance tests run without GitHub, so none shows the count.
+  leaving, a reopened one not new, the user's own left out, the tick while hidden), of the state file, of the
+  title and the rows. The acceptance tests run without GitHub, so none shows the count.

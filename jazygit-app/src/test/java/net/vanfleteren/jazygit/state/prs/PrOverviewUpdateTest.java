@@ -68,9 +68,18 @@ class PrOverviewUpdateTest {
      */
     private static PrOverviewMsg repositoryRead(
             Option<String> viewer, Option<UnseenPullRequests> kept, PullRequestSummary... pullRequests) {
+        return repositoryRead(viewer, kept, 0, pullRequests);
+    }
+
+    /**
+     * The pull requests of the repository read as {@code viewer}, with {@code kept} kept for it, and {@code latest}
+     * the number of the one opened last.
+     */
+    private static PrOverviewMsg repositoryRead(
+            Option<String> viewer, Option<UnseenPullRequests> kept, int latest, PullRequestSummary... pullRequests) {
         return new PrOverviewMsg.RepositoryLoaded(
                 new RepositoryPullRequests(
-                        "Owner/Repo", new PullRequestList(List.of(pullRequests), pullRequests.length), viewer),
+                        "Owner/Repo", new PullRequestList(List.of(pullRequests), pullRequests.length), viewer, latest),
                 kept);
     }
 
@@ -147,6 +156,34 @@ class PrOverviewUpdateTest {
 
         assertEquals(Option.of(unseen(2)), read.model().prOverview().unseen());
         assertEquals(List.empty(), read.cmds());
+    }
+
+    @Test
+    void theHighestNumberIsTheOneOfThePullRequestOpenedLastSoAReopenedOneIsNotNew() {
+        PullRequestSummary reopened = pr("owner/repo", 12, Instant.parse("2026-10-17T00:00:00Z"));
+
+        Model none = Update.update(loaded(), repositoryRead(Option.none(), Option.none(), 45))
+                .model();
+        assertEquals(Option.of(unseen(45)), none.prOverview().unseen());
+
+        Next read = Update.update(none, repositoryRead(Option.none(), Option.none(), 45, reopened));
+        assertEquals(Option.of(unseen(45)), read.model().prOverview().unseen());
+        assertEquals(List.empty(), read.cmds());
+    }
+
+    @Test
+    void oneOfTheNewestThatWereMergedBeforeTheFirstReadIsNotNewWhenReopened() {
+        PullRequestSummary fortieth = pr("owner/repo", 40, Instant.parse("2026-10-16T00:00:00Z"));
+        PullRequestSummary reopened = pr("owner/repo", 43, Instant.parse("2026-10-17T00:00:00Z"));
+        PullRequestSummary opened = pr("owner/repo", 46, Instant.parse("2026-10-17T00:00:00Z"));
+
+        Model first = Update.update(loaded(), repositoryRead(Option.none(), Option.none(), 45, fortieth))
+                .model();
+        Model again = Update.update(first, repositoryRead(Option.none(), Option.none(), 46, opened, reopened, fortieth))
+                .model();
+
+        assertEquals(Option.of(unseen(46, 46)), again.prOverview().unseen());
+        assertFalse(again.prOverview().isUnseen(reopened));
     }
 
     @Test

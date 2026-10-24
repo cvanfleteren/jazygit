@@ -100,16 +100,9 @@ public final class StatusPanel {
     }
 
     /**
-     * The screen whose name in the title is {@code column} cells from the start of the title, if any; the
-     * separators between them are none.
-     */
-    static Option<Screen> screenAt(int column) {
-        return screenAt(column, 0);
-    }
-
-    /**
      * The screen whose name in the title with {@code unseen} new pull requests is {@code column} cells from the
-     * start of the title, if any; the count of the new ones is part of the name of the pull requests screen.
+     * start of the title, if any; the separators between them are none, and the count of the new ones is part of
+     * the name of the pull requests screen.
      */
     static Option<Screen> screenAt(int column, int unseen) {
         int separator = Span.raw(TITLE_SEPARATOR).width();
@@ -124,15 +117,8 @@ public final class StatusPanel {
 
     /**
      * The title of the panel: the names of the screens, the one shown in bold and underlined, the others dimmed,
-     * as the lists in the title of the branches pane.
-     */
-    static Line title(Screen shown) {
-        return title(shown, 0, Theme.SpanStyles.NONE);
-    }
-
-    /**
-     * The title of the panel, as {@link #title(Screen)}, with how many pull requests of the repository were
-     * opened and not seen yet after the name of their screen, in their own style, when there are any (ADR 29).
+     * as the lists in the title of the branches pane; with how many pull requests of the repository were opened
+     * and not seen yet after the name of their screen, in their own style, when there are any (ADR 29).
      */
     static Line title(Screen shown, int unseen, Theme.SpanStyles styles) {
         List<List<Span>> names = List.of(Screen.values())

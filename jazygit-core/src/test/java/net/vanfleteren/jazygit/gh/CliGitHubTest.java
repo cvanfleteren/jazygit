@@ -143,6 +143,28 @@ class CliGitHubTest {
     }
 
     @Test
+    void thePullRequestsOfTheRepositorySayWhichWasOpenedLast() {
+        String lists = "list\trepository\towner/repo\t0\n";
+
+        assertEquals(
+                142,
+                CliGitHub.parseRepositoryPullRequests("viewer\tbob\nlatest\t142\n" + lists)
+                        .get()
+                        .latest());
+        assertEquals(
+                0,
+                CliGitHub.parseRepositoryPullRequests("latest\t0\n" + lists)
+                        .get()
+                        .latest());
+        assertEquals(
+                0,
+                CliGitHub.parseRepositoryPullRequests("latest\tmany\n" + lists)
+                        .get()
+                        .latest());
+        assertEquals(0, CliGitHub.parseRepositoryPullRequests(lists).get().latest());
+    }
+
+    @Test
     void theDetailsOfAStackedPullRequestSayWhereItSitsAndWhatItsHeadIs() {
         String raw =
                 "pr\t95\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0"
