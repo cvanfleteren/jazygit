@@ -500,6 +500,93 @@ class PullRequestUpdateTest {
                 new RereadTitle(FEATURE, RELEASE.name(), remote("release")).run(new Env(git, StubGitHub.empty())));
     }
 
+    private static final Branch DEV = Fixtures.branch(
+            new BranchName("dev"),
+            false,
+            new Sha("6"),
+            Instant.EPOCH,
+            true,
+            false,
+            Option.of(new Upstream(
+                    new BranchRef.Remote(new RemoteBranch("origin", new BranchName("development"))), 0, 0)));
+
+    @Test
+    void aBaseIsMergedIntoUnderItsNameOnTheRemote() {
+        Model branches = localBranchesRead(loaded(), List.of(PUSHED, DEV, MAIN)).model();
+        Model loaded = Update.update(branches, new PullRequestsMsg.Loaded(List.empty()))
+                .model();
+        Model asked = Update.update(
+                        loaded,
+                        new CreatePullRequestMsg.TitleRead(
+                                FEATURE, FEATURE, List.of(MAIN.name(), DEV.name()), Option.of("Add login")))
+                .model();
+        Model picked = Update.update(asked, new BaseMoved(ListCursor.START.at(1), Option.of(DEV.name())))
+                .model();
+
+        Next created = Update.update(picked, new CreatePullRequestMsg.Confirmed());
+
+        assertEquals(
+                List.of(new CreatePullRequest(
+                        FEATURE, FEATURE, new BranchName("development"), new NewPullRequest("Add login", "", false))),
+                created.cmds());
+    }
+
+    @Test
+    void aParentRecordedUnderTheNameOnTheRemoteIsTheBaseOfThatName() {
+        StubGitProvider git = new StubGitProvider() {
+            @Override
+            public Either<GitError.ProcessError, Option<BranchName>> parentBranch(BranchName branch) {
+                return Either.right(Option.of(new BranchName("development")));
+            }
+
+            @Override
+            public Either<GitError.ProcessError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
+                throw new AssertionError("counted");
+            }
+        };
+        ReadParent read = new ReadParent(
+                FEATURE, List.of(new Base(MAIN.name(), remote("main")), new Base(DEV.name(), remote("development"))));
+
+        assertEquals(
+                new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(DEV.name())),
+                read.run(new Env(git, StubGitHub.empty())));
+    }
+
+    @Test
+    void aParentRecordedUnderALocalNameIsTheBaseOfThatName() {
+        ReadParent read = new ReadParent(
+                FEATURE, List.of(new Base(MAIN.name(), remote("main")), new Base(DEV.name(), remote("development"))));
+
+        assertEquals(
+                new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(DEV.name())),
+                read.run(new Env(parentRecorded("dev"), StubGitHub.empty())));
+    }
+
+    @Test
+    void aNameOnTheRemoteWinsOverTheSameLocalName() {
+        ReadParent read = new ReadParent(
+                FEATURE,
+                List.of(new Base(new BranchName("stable"), remote("main")), new Base(MAIN.name(), remote("trunk"))));
+
+        assertEquals(
+                new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(new BranchName("stable"))),
+                read.run(new Env(parentRecorded("main"), StubGitHub.empty())));
+    }
+
+    private static StubGitProvider parentRecorded(String name) {
+        return new StubGitProvider() {
+            @Override
+            public Either<GitError.ProcessError, Option<BranchName>> parentBranch(BranchName branch) {
+                return Either.right(Option.of(new BranchName(name)));
+            }
+
+            @Override
+            public Either<GitError.ProcessError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
+                throw new AssertionError("counted");
+            }
+        };
+    }
+
     @Test
     void confirmingCreatesThePullRequestAsEnteredAndKeepsTheBranchBusy() {
         NewPullRequest entered = new NewPullRequest(" Add login ", "Why", true);
