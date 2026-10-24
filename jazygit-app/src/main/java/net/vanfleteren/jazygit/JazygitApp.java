@@ -678,8 +678,8 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
-     * The left column of the pull requests screen: the status, the pull requests that ask for the user's review,
-     * the ones they opened, and the ones of the repository, sharing the height.
+     * The left column of the pull requests screen: the status, the pull requests of the repository, the ones that ask
+     * for the user's review, and the ones they opened, sharing the height.
      */
     private Column pullRequestPanes(Model model, String focusedId, String activeId) {
         List<Panel> panes = pullRequestsPanels.map(

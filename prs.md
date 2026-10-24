@@ -9,11 +9,12 @@ attention now?") and browsing the repo's PRs second.
   current tab highlighted.
 - The PRs tab only changes the left column: the status panel stays on top, with three stacked panes below it.
   The content pane, the command log and the fetch line stay.
+  - **This repo**: all open PRs of the current repo, including PRs from forks.
   - **Review requested**: open PRs that ask for your review, across all repos.
   - **My PRs**: your open PRs, across all repos.
-  - **This repo**: all open PRs of the current repo, including PRs from forks.
 - Each tab remembers its focused pane and its highlighted rows. The first time the PRs tab is shown, the first list
-  that is not empty gets the focus, starting with "Review requested".
+  that is not empty gets the focus, checking "Review requested", then "My PRs", then "This repo" (triage first, so
+  not the order the panes are drawn in).
 
 ## Data
 

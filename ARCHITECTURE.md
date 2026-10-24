@@ -271,11 +271,12 @@ alone (`PrOverviewMsg`, `PrOverviewUpdate`); only switching screens, and whether
 It lives in `state`, next to the other reads of GitHub, so the GitHub feature can read it again after changing a pull
 request. The design and the steps still to come are in `prs.md`.
 
-- **Review requested** and **My PRs** list the open pull requests that ask for the user's review and the ones they
-  opened, in any repository: one `gh api graphql` with two searches (`review-requested:@me`, `author:@me`), at most
-  50 each; the title says how many match when there are more. **This repo** lists the open pull requests of the
-  repository, forks included, at most 100: another `gh api graphql`, apart from the read for the branches pane, which
-  also tells which repository it is (`PrOverview.repositoryName`). The three share one fragment and one parser
+- The panes, top to bottom, are **This repo**, **Review requested** and **My PRs**. **Review requested** and
+  **My PRs** list the open pull requests that ask for the user's review and the ones they opened, in any repository:
+  one `gh api graphql` with two searches (`review-requested:@me`, `author:@me`), at most 50 each; the title says how
+  many match when there are more. **This repo** lists the open pull requests of the repository, forks included, at
+  most 100: another `gh api graphql`, apart from the read for the branches pane, which also tells which repository
+  it is (`PrOverview.repositoryName`). The three share one fragment and one parser
   (`CliGitHub.parseLists`), with the checks of the last commit of each.
 - They are read when the screen is shown, every minute while it is shown (`PrOverviewMsg.Tick`, from `JazygitApp`),
   with `r`, and after a pull request was merged, closed or turned into a draft. Failing to read them again keeps the

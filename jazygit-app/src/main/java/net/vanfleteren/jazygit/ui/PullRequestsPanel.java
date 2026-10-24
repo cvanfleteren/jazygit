@@ -29,7 +29,7 @@ import net.vanfleteren.jazygit.ui.widgets.Pane;
 public final class PullRequestsPanel {
 
     /**
-     * The id of the pane listing the pull requests that ask for the user's review, the first one.
+     * The id of the pane listing the pull requests that ask for the user's review, the one that gets the focus first when none lists any.
      */
     public static final String REVIEW_REQUESTED_ID = Scopes.PR_REVIEW_REQUESTED.id();
 
@@ -71,8 +71,8 @@ public final class PullRequestsPanel {
     }
 
     /**
-     * The panes of the pull requests screen, top to bottom: the ones that ask for the user's review, the ones they
-     * opened, and the ones of the repository.
+     * The panes of the pull requests screen, top to bottom: the ones of the repository, the ones that ask for the
+     * user's review, and the ones they opened.
      */
     public static List<PullRequestsPanel> all(
             Consumer<Msg> dispatch, Consumer<String> openPullRequest, Theme.Highlights highlights) {
@@ -91,7 +91,8 @@ public final class PullRequestsPanel {
     }
 
     /**
-     * The pane that gets the focus when the screen is shown the first time: the first one that lists any.
+     * The pane that gets the focus when the screen is shown the first time: the first one that lists any, in the
+     * order of triage (review requested, mine, the repository's), which is not the order they are drawn in.
      */
     public static String firstPane(PrOverview overview) {
         return List.of(Scopes.PR_REVIEW_REQUESTED.id(), Scopes.PR_AUTHORED.id(), Scopes.PR_REPOSITORY.id())
