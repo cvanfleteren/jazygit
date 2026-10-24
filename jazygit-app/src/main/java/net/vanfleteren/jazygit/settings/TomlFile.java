@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.LinkedHashMap;
+import java.util.function.Consumer;
 
 /**
  * Reading and writing a TOML file, which is never left written halfway.
@@ -52,6 +53,17 @@ final class TomlFile {
                     .onFailure(failed -> Try.run(() -> Files.deleteIfExists(temp)))
                     .get();
         });
+    }
+
+    /**
+     * Writes {@code file} with what {@code change} does to it, keeping the rest. A file that cannot be read is
+     * written anew, as nothing in it is worth keeping. One change at a time, so two in this app do not undo each
+     * other; another app writing at the same moment can still.
+     */
+    static synchronized Try<Path> change(Path file, Consumer<CommentedConfig> change) {
+        CommentedConfig config = Files.exists(file) ? read(file).getOrElse(TomlFile::newConfig) : newConfig();
+        change.accept(config);
+        return write(file, config);
     }
 
     private static Path move(Path temp, Path file) throws IOException {

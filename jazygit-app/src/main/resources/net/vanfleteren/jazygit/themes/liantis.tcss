@@ -60,6 +60,7 @@ ListElement-item:selected, TreeElement-node:selected, .selection {
 .behind { color: $removed; }
 .gone { color: $removed; }
 .pull-request { color: $accent; }
+.unseen { color: $warn; text-style: bold; }
 .checks-passed { color: $added; }
 .checks-failed { color: $removed; }
 .checks-running { color: $warn; }

@@ -138,7 +138,8 @@ new `Env` runs gh as the settings say now.
 
 The repositories opened last are state, not settings: jazygit writes them by itself, and they are not meant
 to be edited. They live in `state.toml`, as `recent-repositories`: the roots of their working trees, the
-last one opened first, at most 20.
+last one opened first, at most 20. The unseen pull requests of each repository live there too, as
+`unseen-pull-requests` (ADR 29); writing either keeps the other.
 
 - **Linux:** `$XDG_STATE_HOME/jazygit` if that is set to an absolute path, else `~/.local/state/jazygit`.
 - **macOS:** `$XDG_STATE_HOME/jazygit` if that is set, else `~/Library/Application Support/jazygit`.
@@ -281,6 +282,10 @@ request. The design and the steps still to come are in `prs.md`.
   with `r`, and after a pull request was merged, closed or turned into a draft. Failing to read them again keeps the
   ones read; `PrOverview.freshness` keeps when they were last read and which read failed since, which the line at the
   bottom says on this screen ("read 2m ago · last read failed"). gh runs as the account of the repository, so the lists are that account's.
+- **This repo** is also read while the screen is hidden: on the tick, and 3 seconds after a repository opens. The
+  pull requests opened since, but not by the user, are unseen until their row is highlighted; the name of the screen
+  counts them (`PRs ●2`) and their rows are marked (ADR 29). `PrOverview.unseen` holds them, with the highest number
+  read, and `SaveUnseenPullRequests` keeps them in `state.toml`.
 - `o` shows the pull request dialog, as for a branch, for a pull request of the repository, wherever it is listed;
   one of another repository opens in the browser, as `O` does for any (`gh pr view <url> --web`).
 - **The preview**: the content panel shows the pull request highlighted in the pane in use like a commit: a header,

@@ -68,6 +68,7 @@ ListElement-item:selected, TreeElement-node:selected, .selection {
 .behind { color: $bad; }
 .gone { color: $muted; }
 .pull-request { color: $hunk; }
+.unseen { color: $running; text-style: bold; }
 .checks-passed { color: $good; }
 .checks-failed { color: $bad; }
 .checks-running { color: $running; }

@@ -45,13 +45,15 @@ public final class StatusPanel {
     private StatusPanel() {}
 
     public static Panel render(Model model) {
-        return render(model, screen -> {});
+        return render(model, Theme.SpanStyles.NONE, screen -> {});
     }
 
     /**
+     * @param styles        the styles of the parts of the title
      * @param screenClicked called when the name of a screen in the title is clicked, with that screen
      */
-    public static Panel render(Model model, Consumer<Screen> screenClicked) {
+    public static Panel render(Model model, Theme.SpanStyles styles, Consumer<Screen> screenClicked) {
+        int unseen = model.prOverview().unseenCount();
         String branch = switch (model.repo().status()) {
             case Loadable.Loading<RepoStatus>() -> Placeholders.loading();
             case Loadable.Failed<RepoStatus>(Failure failure) -> Placeholders.error(failure);
@@ -76,20 +78,20 @@ public final class StatusPanel {
                                 repository.length(TextWidth.of(line)),
                                 text(label).addClass(Theme.Classes.IN_PROGRESS)))
                         .getOrElse(repository))
-                .title(title(model.screen()))
+                .title(title(model.screen(), unseen, styles))
                 .length(HEIGHT);
-        return panel.onMouseEvent(event -> titleClick(panel.renderedArea(), event, screenClicked));
+        return panel.onMouseEvent(event -> titleClick(panel.renderedArea(), event, unseen, screenClicked));
     }
 
     /**
-     * Shows the screen whose name in the title of the panel, drawn in {@code area}, is clicked. The title starts
-     * after the corner of the border.
+     * Shows the screen whose name in the title of the panel, drawn in {@code area} with {@code unseen} new pull
+     * requests, is clicked. The title starts after the corner of the border.
      */
-    private static EventResult titleClick(Rect area, MouseEvent event, Consumer<Screen> screenClicked) {
+    private static EventResult titleClick(Rect area, MouseEvent event, int unseen, Consumer<Screen> screenClicked) {
         return Option.when(
                         event.kind() == MouseEventKind.PRESS && event.isLeftButton() && event.y() == area.top(),
                         event.x() - area.left() - 1)
-                .flatMap(StatusPanel::screenAt)
+                .flatMap(column -> screenAt(column, unseen))
                 .map(clicked -> {
                     screenClicked.accept(clicked);
                     return EventResult.HANDLED;
@@ -102,14 +104,21 @@ public final class StatusPanel {
      * separators between them are none.
      */
     static Option<Screen> screenAt(int column) {
+        return screenAt(column, 0);
+    }
+
+    /**
+     * The screen whose name in the title with {@code unseen} new pull requests is {@code column} cells from the
+     * start of the title, if any; the count of the new ones is part of the name of the pull requests screen.
+     */
+    static Option<Screen> screenAt(int column, int unseen) {
         int separator = Span.raw(TITLE_SEPARATOR).width();
         List<Screen> screens = List.of(Screen.values());
         // Where the name of each screen starts: after the names and separators before it.
-        List<Integer> starts = screens.init()
-                .scanLeft(0, (start, screen) -> start + screenName(screen).width() + separator);
+        List<Integer> starts =
+                screens.init().scanLeft(0, (start, screen) -> start + nameWidth(screen, unseen) + separator);
         return screens.zip(starts)
-                .find(screen -> column >= screen._2
-                        && column < screen._2 + screenName(screen._1).width())
+                .find(screen -> column >= screen._2 && column < screen._2 + nameWidth(screen._1, unseen))
                 .map(screen -> screen._1);
     }
 
@@ -118,11 +127,42 @@ public final class StatusPanel {
      * as the lists in the title of the branches pane.
      */
     static Line title(Screen shown) {
-        List<Span> names = List.of(Screen.values())
-                .map(screen -> screen == shown
-                        ? screenName(screen).bold().underlined()
-                        : screenName(screen).dim());
-        return Line.from(names.intersperse(Span.raw(TITLE_SEPARATOR)).toJavaList());
+        return title(shown, 0, Theme.SpanStyles.NONE);
+    }
+
+    /**
+     * The title of the panel, as {@link #title(Screen)}, with how many pull requests of the repository were
+     * opened and not seen yet after the name of their screen, in their own style, when there are any (ADR 29).
+     */
+    static Line title(Screen shown, int unseen, Theme.SpanStyles styles) {
+        List<List<Span>> names = List.of(Screen.values())
+                .map(screen -> unseenCount(screen, unseen)
+                        .map(count -> Span.styled(count, styles.of(Theme.Classes.UNSEEN)))
+                        .prepend(
+                                screen == shown
+                                        ? screenName(screen).bold().underlined()
+                                        : screenName(screen).dim()));
+        return Line.from(names.intersperse(List.of(Span.raw(TITLE_SEPARATOR)))
+                .flatMap(spans -> spans)
+                .toJavaList());
+    }
+
+    /**
+     * How many pull requests were opened and not seen yet, after the name of {@code screen}: only after the one of
+     * the pull requests, and only when there are any.
+     */
+    private static List<String> unseenCount(Screen screen, int unseen) {
+        return screen == Screen.PULL_REQUESTS && unseen > 0
+                ? List.of(" " + PullRequestsPanel.UNSEEN_MARK + unseen)
+                : List.empty();
+    }
+
+    private static int nameWidth(Screen screen, int unseen) {
+        return screenName(screen).width()
+                + unseenCount(screen, unseen)
+                        .map(count -> Span.raw(count).width())
+                        .sum()
+                        .intValue();
     }
 
     private static Span screenName(Screen screen) {

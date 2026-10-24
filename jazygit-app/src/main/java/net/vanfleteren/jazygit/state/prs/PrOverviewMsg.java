@@ -1,9 +1,11 @@
 package net.vanfleteren.jazygit.state.prs;
 
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.MyPullRequests;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.model.RepositoryPullRequests;
+import net.vanfleteren.jazygit.settings.UnseenPullRequests;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -31,7 +33,8 @@ public sealed interface PrOverviewMsg extends Msg {
     record Chosen(Screen screen) implements PrOverviewMsg {}
 
     /**
-     * Periodic prompt to read the pull requests again, while they are shown.
+     * Periodic prompt to read the pull requests again: all of them while they are shown, else the ones of the
+     * repository, for the new ones (ADR 29).
      */
     record Tick() implements PrOverviewMsg {}
 
@@ -42,8 +45,11 @@ public sealed interface PrOverviewMsg extends Msg {
 
     /**
      * The pull requests of the repository were read; the model's clock tells when.
+     *
+     * @param kept the unseen pull requests that were kept for the repository, if any
      */
-    record RepositoryLoaded(RepositoryPullRequests pullRequests) implements PrOverviewMsg {}
+    record RepositoryLoaded(RepositoryPullRequests pullRequests, Option<UnseenPullRequests> kept)
+            implements PrOverviewMsg {}
 
     record RepositoryLoadFailed(Failure failure) implements PrOverviewMsg {}
 
@@ -62,4 +68,9 @@ public sealed interface PrOverviewMsg extends Msg {
     record PreviewLoaded(PullRequestSummary key, PullRequestPreview preview) implements PrOverviewMsg {}
 
     record PreviewLoadFailed(PullRequestSummary key, Failure failure) implements PrOverviewMsg {}
+
+    /**
+     * The unseen pull requests were kept, or could not be, which is not worth telling.
+     */
+    record UnseenKept() implements PrOverviewMsg {}
 }

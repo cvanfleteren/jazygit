@@ -5,6 +5,8 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.gh.model.RepositoryPullRequests;
+import net.vanfleteren.jazygit.settings.UnseenPullRequests;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
@@ -23,6 +25,10 @@ public final class PrOverviewUpdate {
      * The reads of what the screen shows.
      */
     private static final List<Cmd> LOADS = List.of(new LoadMyPullRequests(), new LoadRepositoryPullRequests());
+    /**
+     * The read while the screen is hidden, for the new pull requests of the repository (ADR 29).
+     */
+    private static final List<Cmd> HIDDEN_LOADS = List.of(new LoadRepositoryPullRequests());
 
     // The reads, as the freshness of the pull requests names them.
     private static final String REPOSITORY = "repository";
@@ -37,7 +43,8 @@ public final class PrOverviewUpdate {
             // The screen already shown stays as it is, without reading it again.
             case PrOverviewMsg.Chosen(Screen screen) ->
                 screen == model.screen() ? Next.of(model) : reloadIfShown(Next.of(model.withScreen(screen)));
-            case PrOverviewMsg.Tick() -> reloadIfShown(Next.of(model));
+            case PrOverviewMsg.Tick() ->
+                model.screen() == Screen.PULL_REQUESTS ? reload(Next.of(model)) : loaded(Next.of(model), HIDDEN_LOADS);
             default -> {
                 Step step = update(model.prOverview(), msg, model.now());
                 yield new Next(model.withPrOverview(step.overview()), step.cmds());
@@ -58,11 +65,16 @@ public final class PrOverviewUpdate {
                         .map(preview -> preview(loaded.overview(), preview.key(), loaded.cmds()))
                         .getOrElse(loaded);
             }
-            case PrOverviewMsg.RepositoryLoaded(var read) ->
-                Step.of(done(overview, new LoadRepositoryPullRequests())
+            case PrOverviewMsg.RepositoryLoaded(var read, var kept) -> {
+                PrOverview loaded = done(overview, new LoadRepositoryPullRequests())
                         .withFreshness(overview.freshness().succeeded(REPOSITORY, now))
                         .withRepository(overview.repository().reload(newestFirst(read.open())))
-                        .withRepositoryName(Option.of(read.repository())));
+                        .withRepositoryName(Option.of(read.repository()));
+                // What was kept is only of use until the model has its own.
+                Option<UnseenPullRequests> before = overview.unseen().orElse(kept);
+                UnseenPullRequests after = unseen(before, read);
+                yield kept(Step.of(loaded.withUnseen(Option.of(after))), before.contains(after));
+            }
             case PrOverviewMsg.RepositoryLoadFailed(Failure failure) ->
                 Step.of(done(overview, new LoadRepositoryPullRequests())
                         .withFreshness(overview.freshness().failed(REPOSITORY))
@@ -80,15 +92,16 @@ public final class PrOverviewUpdate {
             case PrOverviewMsg.Highlighted(PullRequestSummary pullRequest) -> {
                 PrOverview highlighted = overview.withHighlighted(Option.of(pullRequest));
                 // A pull request that changed since its preview was read is read again.
-                yield overview.preview().exists(preview -> preview.key().equals(pullRequest))
+                Step shown = overview.preview().exists(preview -> preview.key().equals(pullRequest))
                         ? Step.of(highlighted)
                         : preview(highlighted, pullRequest, List.empty());
+                yield seen(shown, pullRequest);
             }
             case PrOverviewMsg.PreviewLoaded(PullRequestSummary key, var preview) ->
                 Step.of(overview.withPreview(Preview.updated(overview.preview(), key, shown -> shown.reload(preview))));
             case PrOverviewMsg.PreviewLoadFailed(PullRequestSummary key, Failure failure) ->
                 Step.of(overview.withPreview(Preview.updated(overview.preview(), key, shown -> shown.failed(failure))));
-            case PrOverviewMsg.Toggled(), PrOverviewMsg.Tick() -> Step.of(overview);
+            case PrOverviewMsg.Toggled(), PrOverviewMsg.Tick(), PrOverviewMsg.UnseenKept() -> Step.of(overview);
             case PrOverviewMsg.Chosen(Screen screen) -> Step.of(overview);
         };
     }
@@ -97,9 +110,7 @@ public final class PrOverviewUpdate {
      * {@code next}, also reading the pull requests again, unless a read is still running.
      */
     public static Next reload(Next next) {
-        Step step = load(next.model().prOverview());
-        return new Next(
-                next.model().withPrOverview(step.overview()), next.cmds().appendAll(step.cmds()));
+        return loaded(next, LOADS);
     }
 
     /**
@@ -110,9 +121,71 @@ public final class PrOverviewUpdate {
         return next.model().screen() == Screen.PULL_REQUESTS ? reload(next) : next;
     }
 
+    /**
+     * {@code next}, also running {@code loads}, but the ones still running.
+     */
+    private static Next loaded(Next next, List<Cmd> loads) {
+        Step step = load(next.model().prOverview(), loads);
+        return new Next(
+                next.model().withPrOverview(step.overview()), next.cmds().appendAll(step.cmds()));
+    }
+
     private static Step load(PrOverview overview) {
-        List<Cmd> loads = LOADS.filter(load -> !overview.reading().contains(load));
+        return load(overview, LOADS);
+    }
+
+    private static Step load(PrOverview overview, List<Cmd> all) {
+        List<Cmd> loads = all.filter(load -> !overview.reading().contains(load));
         return new Step(overview.withReading(overview.reading().addAll(loads)), loads);
+    }
+
+    /**
+     * The unseen pull requests of the repository after {@code read}, when they were {@code before}, if they were
+     * read before (ADR 29). The ones above the highest number read before were opened since, though the user's own
+     * are not unseen; the ones not open anymore are left out. Read for the first time, none are unseen, else every
+     * open one would be.
+     */
+    static UnseenPullRequests unseen(Option<UnseenPullRequests> before, RepositoryPullRequests read) {
+        List<PullRequestSummary> open = read.open().pullRequests();
+        int highest = open.map(PullRequestSummary::number).max().getOrElse(0);
+        return before.map(kept -> new UnseenPullRequests(
+                        Math.max(kept.highest(), highest),
+                        kept.numbers()
+                                .retainAll(open.map(PullRequestSummary::number))
+                                .addAll(open.filter(pr -> pr.number() > kept.highest()
+                                                && !read.viewer().exists(pr.author()::equalsIgnoreCase))
+                                        .map(PullRequestSummary::number))))
+                .getOrElse(() -> UnseenPullRequests.upTo(highest));
+    }
+
+    /**
+     * {@code step}, with {@code pullRequest} seen, if it was not yet.
+     */
+    private static Step seen(Step step, PullRequestSummary pullRequest) {
+        PrOverview overview = step.overview();
+        return overview.isUnseen(pullRequest)
+                ? kept(
+                        new Step(
+                                overview.withUnseen(overview.unseen().map(unseen -> unseen.seen(pullRequest.number()))),
+                                step.cmds()),
+                        false)
+                : step;
+    }
+
+    /**
+     * {@code step}, also keeping the unseen pull requests it has for the next session, unless they are kept
+     * {@code already}.
+     */
+    private static Step kept(Step step, boolean already) {
+        PrOverview overview = step.overview();
+        return already
+                ? step
+                : new Step(
+                        overview,
+                        step.cmds()
+                                .appendAll(overview.repositoryName()
+                                        .flatMap(name -> overview.unseen()
+                                                .map(unseen -> new SaveUnseenPullRequests(name, unseen)))));
     }
 
     /**
