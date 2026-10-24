@@ -14,11 +14,13 @@ public record RemoteBranch(String remote, BranchName branch) {
 
     /**
      * The remote branch written as {@code <remote> <branch>}; none unless that is exactly two words.
-     * Neither a remote nor a branch name can contain whitespace.
+     * Neither a remote nor a branch name can contain whitespace or start with {@code -}.
      */
     public static Option<RemoteBranch> parse(String text) {
         String[] words = text.strip().split("\\s+");
-        return words.length == 2 ? Option.of(new RemoteBranch(words[0], new BranchName(words[1]))) : Option.none();
+        return words.length == 2 && !words[0].startsWith("-")
+                ? BranchName.parse(words[1]).map(branch -> new RemoteBranch(words[0], branch))
+                : Option.none();
     }
 
     /**

@@ -81,14 +81,14 @@ final class CliBranch {
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> rename(
             Path worktree, BranchName name, BranchName newName) {
-        return GitProcess.log(worktree, git("branch", "--move", name.value(), newName.value()));
+        return GitProcess.log(worktree, git("branch", "--move", "--", name.value(), newName.value()));
     }
 
     /**
      * Runs {@code git branch -D <name>} in {@code worktree}.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteLocal(Path worktree, BranchName name) {
-        return GitProcess.log(worktree, git("branch", "--delete", "--force", name.value()));
+        return GitProcess.log(worktree, git("branch", "--delete", "--force", "--", name.value()));
     }
 
     /**
