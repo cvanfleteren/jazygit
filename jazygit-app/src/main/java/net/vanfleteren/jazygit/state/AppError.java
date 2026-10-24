@@ -212,6 +212,13 @@ public sealed interface AppError {
     record ChangesBeforeMove(String target) implements AppError {}
 
     /**
+     * The commits of {@code branch} from {@code oldest} up are not moved, as {@code oldest} came in through
+     * {@code merge} and so does its parent, {@code parent}: {@code branch} would be left on a commit of the merged
+     * branch instead of one on its own line.
+     */
+    record MovedThroughMerge(Sha oldest, BranchName branch, Sha merge, Sha parent) implements AppError {}
+
+    /**
      * Deleting a remote branch was asked for, but it is the default branch of its remote.
      *
      * @param branch the short name of the remote branch, e.g. {@code origin/main}

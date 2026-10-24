@@ -195,12 +195,49 @@ class CliMoveCommitsTest {
         git("merge", "-q", "--no-ff", "-m", "merge side", "side");
 
         assertEquals(
-                new CommitRange(5, 1, 2),
+                new CommitRange(5, 1, 2, Option.none()),
                 CliLog.range(repo, FEATURE, sha("HEAD~3"), Option.of(new RemoteBranch("origin", FEATURE)))
                         .get());
         assertEquals(
-                new CommitRange(5, 1, 0),
+                new CommitRange(5, 1, 0, Option.none()),
                 CliLog.range(repo, FEATURE, sha("HEAD~3"), Option.none()).get());
+    }
+
+    @Test
+    void anOldestCommitWhoseParentCameInThroughAMergeNamesTheMerge() throws Exception {
+        mergeSide();
+
+        assertEquals(
+                Option.of(sha("HEAD~1")),
+                CliLog.range(repo, FEATURE, sha("side"), Option.none()).get().mergedThrough());
+    }
+
+    @Test
+    void anOldestCommitWhoseParentIsOnTheLineOfTheBranchNamesNoMerge() throws Exception {
+        mergeSide();
+
+        assertEquals(
+                Option.none(),
+                CliLog.range(repo, FEATURE, sha("side~1"), Option.none()).get().mergedThrough());
+        assertEquals(
+                Option.none(),
+                CliLog.range(repo, FEATURE, sha("HEAD~2"), Option.none()).get().mergedThrough());
+        assertEquals(
+                Option.none(),
+                CliLog.range(repo, FEATURE, sha("HEAD~4"), Option.none()).get().mergedThrough());
+    }
+
+    /**
+     * Merges a branch of two commits off "first stray" into feature, and commits on top: from the tip, the line of
+     * feature is "after the merge", the merge, "second stray", "first stray", "feature work" and "init".
+     */
+    private void mergeSide() throws Exception {
+        git("checkout", "-q", "-b", "side", "HEAD~1");
+        commit("e.txt", "e\n", "side one");
+        commit("f.txt", "f\n", "side two");
+        git("checkout", "-q", "feature");
+        git("merge", "-q", "--no-ff", "-m", "merge side", "side");
+        commit("g.txt", "g\n", "after the merge");
     }
 
     private void commit(String file, String content, String message) throws Exception {

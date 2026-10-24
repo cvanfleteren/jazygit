@@ -53,7 +53,7 @@ Six reviewers each took one area: the core git layer, the GitHub layer, the Elm 
 
 - **Init sits under the cursor on the start screen**, so a reflex Enter runs `git init ~`.
 - **Saving settings replaces a symlinked `config.toml`** (dotfiles managers) and narrows it to 0600.
-- **Move commits accepts a side-branch commit** reached through a merge, then resets `from` somewhere surprising.
+- **✔ Move commits accepts a side-branch commit** reached through a merge, then resets `from` somewhere surprising.
 - **Reset from the commits pane never says how many commits it leaves behind.**
 
 ## Guardrails that claim more than they check
