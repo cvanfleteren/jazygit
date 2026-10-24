@@ -2,8 +2,12 @@ package net.vanfleteren.jazygit.git;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.collection.Seq;
+import io.vavr.collection.Set;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
@@ -192,25 +196,50 @@ final class CliLog {
     }
 
     /**
-     * The commits of {@code branch} from {@code oldest} up to its tip, read with {@code git rev-list --parents},
-     * which lists each with its parents; and how many of them are on {@code upstream}, from how many are not.
+     * The commits of {@code branch} from {@code oldest} up to its tip, read with {@code git rev-list --parents
+     * --topo-order}, which lists each with its parents, and before its parents; how many of them are on
+     * {@code upstream}, from how many are not; and the merge {@code oldest} came in through, when it is not on the
+     * line of {@code branch} itself.
      */
     static Either<GitError, CommitRange> range(
             Path worktree, BranchName branch, Sha oldest, Option<RemoteBranch> upstream) {
         List<String> revisions = List.of(Refs.head(branch), "^" + oldest.value() + "^");
         return Either.narrow(GitProcess.read(
                         worktree,
-                        GitCommand.reading(List.of("rev-list", "--parents")
+                        GitCommand.reading(List.of("rev-list", "--parents", "--topo-order")
                                 .appendAll(revisions)
                                 .append("--")),
-                        raw -> Either.right(GitOutput.nonBlankLines(raw)))
-                .flatMap(lines -> upstream.map(remote ->
+                        raw -> Either.right(GitOutput.nonBlankLines(raw)
+                                .map(line -> List.of(line.split(" ")).map(Sha::new))))
+                .flatMap(commits -> upstream.map(remote ->
                                 count(worktree, revisions.append("^" + Refs.remote(remote.remote(), remote.branch()))))
-                        .getOrElse(() -> Either.right(lines.size()))
+                        .getOrElse(() -> Either.right(commits.size()))
                         .map(unpushed -> new CommitRange(
-                                lines.size(),
-                                lines.count(line -> line.split(" ").length > 2),
-                                lines.size() - unpushed))));
+                                commits.size(),
+                                commits.count(commit -> commit.size() > 2),
+                                commits.size() - unpushed,
+                                mergedThrough(commits, oldest)))));
+    }
+
+    /**
+     * The merge on the line of the branch, which its tip follows through first parents, that {@code oldest} came in
+     * through; none when {@code oldest} is on that line. {@code commits} run from the tip to {@code oldest}, each a
+     * sha followed by its parents, and before its parents. The merge is the last commit on the line that has
+     * {@code oldest} as an ancestor.
+     */
+    private static Option<Sha> mergedThrough(List<List<Sha>> commits, Sha oldest) {
+        Map<Sha, List<Sha>> parents = HashMap.ofEntries(commits.map(commit -> Tuple.of(commit.head(), commit.tail())));
+        Set<Sha> descendants = commits.reverse()
+                .foldLeft(
+                        HashSet.of(oldest),
+                        (found, commit) -> commit.tail().exists(found::contains) ? found.add(commit.head()) : found);
+        List<Sha> line = List.unfoldRight(
+                commits.headOption().map(List::head),
+                next -> next.filter(parents::containsKey)
+                        .map(sha -> Tuple.of(sha, parents.get(sha).flatMap(List::headOption))));
+        return line.contains(oldest)
+                ? Option.none()
+                : line.filter(descendants::contains).lastOption();
     }
 
     /**

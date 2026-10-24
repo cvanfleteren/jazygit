@@ -54,8 +54,8 @@ class MoveUpdateTest {
     private static final MoveBase ONTO_MAIN = new MoveBase.Onto(new BranchRef.Remote(ORIGIN_MAIN));
     private static final MoveBase ONTO_UPSTREAM = new MoveBase.Onto(new BranchRef.Remote(ORIGIN_FEATURE));
 
-    private static final CommitRange UNPUSHED = new CommitRange(2, 0, 0);
-    private static final CommitRange PUSHED = new CommitRange(2, 0, 1);
+    private static final CommitRange UNPUSHED = new CommitRange(2, 0, 0, Option.none());
+    private static final CommitRange PUSHED = new CommitRange(2, 0, 1, Option.none());
 
     private static Commit commit(String sha, List<String> parents) {
         return Fixtures.commit(
@@ -178,7 +178,9 @@ class MoveUpdateTest {
                         .model());
         assertEquals(
                 model,
-                Update.update(model, new MoveMsg.RangeRead(FEATURE, MIDDLE.sha(), new CommitRange(0, 0, 0)))
+                Update.update(
+                                model,
+                                new MoveMsg.RangeRead(FEATURE, MIDDLE.sha(), new CommitRange(0, 0, 0, Option.none())))
                         .model());
     }
 
@@ -193,13 +195,24 @@ class MoveUpdateTest {
 
     @Test
     void commitsWithAMergeOnlyMoveToANewBranchWhereTheyAre() {
-        Model asked = read(new CommitRange(2, 1, 0));
+        Model asked = read(new CommitRange(2, 1, 0, Option.none()));
 
         Next next = Update.update(typed(asked, "topic"), new MoveMsg.NameConfirmed());
 
         assertEquals(Option.none(), asked.popup(MoveTargetPopup.class));
         assertEquals(List.of(toTopic(Option.none(), Option.none())), next.cmds());
         assertEquals(Option.none(), next.model().popup(MoveBasePopup.class));
+    }
+
+    @Test
+    void anOldestCommitThatCameInThroughAMergeIsRefused() {
+        Model refused = read(new CommitRange(2, 1, 0, Option.of(TIP.sha())));
+
+        assertEquals(Option.none(), refused.popup(MoveTargetPopup.class));
+        assertEquals(Option.none(), refused.popup(MoveNamePopup.class));
+        assertEquals(
+                Option.of(new AppError.MovedThroughMerge(MIDDLE.sha(), FEATURE, TIP.sha(), ROOT.sha())),
+                refused.outcome().error());
     }
 
     @Test

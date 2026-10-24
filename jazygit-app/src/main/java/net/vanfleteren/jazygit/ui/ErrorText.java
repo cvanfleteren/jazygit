@@ -76,6 +76,13 @@ public final class ErrorText {
             case AppError.PullRequestCheckedOutHere(String pullRequest) ->
                 Messages.get("error.checkoutPr.here", pullRequest);
             case AppError.ChangesBeforeMove(String target) -> Messages.get("error.moveCommits.changes", target);
+            case AppError.MovedThroughMerge(Sha oldest, BranchName branch, Sha merge, Sha parent) ->
+                Messages.get(
+                        "error.moveCommits.throughMerge",
+                        oldest.shortSha(),
+                        branch.value(),
+                        merge.shortSha(),
+                        parent.shortSha());
             case AppError.DefaultBranch(String branch) -> Messages.get("error.deleteBranch.default", branch);
             case AppError.NotOnRemote(BranchName branch) -> Messages.get("error.browse.notOnRemote", branch.value());
             case AppError.PullRequestsNotRead() -> Messages.get("error.pullRequest.notRead");

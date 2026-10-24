@@ -83,25 +83,39 @@ public final class MoveUpdate {
     /**
      * Asks where the commits move to, unless the branch or the commit changed meanwhile. Commits that hold a merge
      * can only move to a new branch where they are, as they do not cherry-pick well, so then its name is asked
-     * straight away.
+     * straight away. An oldest commit that came in through a merge is refused, as the branch would be moved back
+     * onto a commit of the merged branch.
      */
     private static Next rangeRead(Model model, BranchName from, Sha oldest, CommitRange range) {
         return model.repo()
                 .currentBranch()
                 .filter(current -> current.name().equals(from) && range.commits() > 0)
                 .flatMap(current -> model.commit(oldest)
-                        .map(commit -> new MoveRequest(
-                                from,
-                                current.isDefault(),
-                                current.remoteUpstream(),
-                                commit,
-                                range,
-                                bases(model, current, range))))
-                .map(request -> Next.of(model.openPopupIfFree(
-                        range.merges() > 0
-                                ? new MoveNamePopup(request)
-                                : new MoveTargetPopup(request, others(model, from)))))
+                        .map(commit -> range.mergedThrough()
+                                .flatMap(merge -> commit.parents()
+                                        .headOption()
+                                        .map(parent -> Next.of(model.fail(
+                                                new AppError.MovedThroughMerge(oldest, from, merge, parent)))))
+                                .getOrElse(() -> asked(
+                                        model,
+                                        new MoveRequest(
+                                                from,
+                                                current.isDefault(),
+                                                current.remoteUpstream(),
+                                                commit,
+                                                range,
+                                                bases(model, current, range))))))
                 .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * Asks where the commits of {@code request} move to, or, when they hold a merge, the name of the new branch.
+     */
+    private static Next asked(Model model, MoveRequest request) {
+        return Next.of(model.openPopupIfFree(
+                request.range().merges() > 0
+                        ? new MoveNamePopup(request)
+                        : new MoveTargetPopup(request, others(model, request.from()))));
     }
 
     /**

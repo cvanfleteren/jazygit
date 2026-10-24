@@ -195,12 +195,31 @@ class CliMoveCommitsTest {
         git("merge", "-q", "--no-ff", "-m", "merge side", "side");
 
         assertEquals(
-                new CommitRange(5, 1, 2),
+                new CommitRange(5, 1, 2, Option.none()),
                 CliLog.range(repo, FEATURE, sha("HEAD~3"), Option.of(new RemoteBranch("origin", FEATURE)))
                         .get());
         assertEquals(
-                new CommitRange(5, 1, 0),
+                new CommitRange(5, 1, 0, Option.none()),
                 CliLog.range(repo, FEATURE, sha("HEAD~3"), Option.none()).get());
+    }
+
+    @Test
+    void anOldestCommitThatCameInThroughAMergeNamesTheMerge() throws Exception {
+        git("checkout", "-q", "-b", "side", "HEAD~2");
+        commit("e.txt", "e\n", "side one");
+        commit("f.txt", "f\n", "side two");
+        Sha sideTwo = sha("HEAD");
+        git("checkout", "-q", "feature");
+        git("merge", "-q", "--no-ff", "-m", "merge side", "side");
+        Sha merge = sha("HEAD");
+        commit("g.txt", "g\n", "after the merge");
+
+        assertEquals(
+                Option.of(merge),
+                CliLog.range(repo, FEATURE, sideTwo, Option.none()).get().mergedThrough());
+        assertEquals(
+                Option.none(),
+                CliLog.range(repo, FEATURE, sha("HEAD~2"), Option.none()).get().mergedThrough());
     }
 
     private void commit(String file, String content, String message) throws Exception {

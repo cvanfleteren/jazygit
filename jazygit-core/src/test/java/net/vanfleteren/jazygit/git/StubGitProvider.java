@@ -234,7 +234,7 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<GitError, CommitRange> commitRange(BranchName branch, Sha oldest, Option<RemoteBranch> upstream) {
-        return Either.right(new CommitRange(1, 0, 0));
+        return Either.right(new CommitRange(1, 0, 0, Option.none()));
     }
 
     @Override
