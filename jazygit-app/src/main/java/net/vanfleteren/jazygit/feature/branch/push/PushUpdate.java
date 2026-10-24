@@ -29,15 +29,28 @@ public final class PushUpdate {
                         .map(popup -> upstreamConfirmed(model, popup.upstream()))
                         .getOrElse(() -> Next.of(model));
             case PushMsg.ForceConfirmed() ->
-                Update.confirm(
+                model.popup(ForcePushPopup.class)
+                        .map(popup -> forceConfirmed(model, popup))
+                        .getOrElse(() -> Next.of(model));
+        };
+    }
+
+    /**
+     * A refresh may have changed the branch while the popup was open. Only a branch that is still diverged is force
+     * pushed; otherwise the popup closes and the request is handled again, so the user is told why.
+     */
+    private static Next forceConfirmed(Model model, ForcePushPopup popup) {
+        boolean stillDiverged =
+                model.repo().branch(popup.branch()).filter(PushUpdate::diverged).isDefined();
+        return stillDiverged
+                ? Update.confirm(
                         model,
                         ForcePushPopup.class,
-                        popup -> model.repo()
-                                .branch(popup.branch())
-                                .filter(PushUpdate::diverged)
+                        p -> model.repo()
+                                .branch(p.branch())
                                 .flatMap(Branch::remoteUpstream)
-                                .map(upstream -> new Push(popup.branch(), upstream, PushMode.FORCE_WITH_LEASE)));
-        };
+                                .map(upstream -> new Push(p.branch(), upstream, PushMode.FORCE_WITH_LEASE)))
+                : requested(model.withoutPopup(ForcePushPopup.class), popup.branch());
     }
 
     private static Next requested(Model model, BranchName branch) {

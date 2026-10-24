@@ -401,23 +401,24 @@ class BranchUpdateTest {
         assertEquals(Option.none(), cancelled.model().popup());
     }
 
+    private static List<Branch> featureTrackingBranches(int ahead, int behind) {
+        return List.of(
+                Fixtures.branch(new BranchName("main"), true, new Sha("aaaa")),
+                Fixtures.branch(
+                        new BranchName("feature"),
+                        false,
+                        new Sha("ffff"),
+                        Instant.EPOCH,
+                        true,
+                        false,
+                        Option.of(new Upstream(
+                                new BranchRef.Remote(new RemoteBranch("origin", new BranchName("feature"))),
+                                ahead,
+                                behind))));
+    }
+
     private static Model featureTracking(int ahead, int behind) {
-        return localBranchesRead(
-                        loaded(),
-                        List.of(
-                                Fixtures.branch(new BranchName("main"), true, new Sha("aaaa")),
-                                Fixtures.branch(
-                                        new BranchName("feature"),
-                                        false,
-                                        new Sha("ffff"),
-                                        Instant.EPOCH,
-                                        true,
-                                        false,
-                                        Option.of(new Upstream(
-                                                new BranchRef.Remote(
-                                                        new RemoteBranch("origin", new BranchName("feature"))),
-                                                ahead,
-                                                behind)))))
+        return localBranchesRead(loaded(), featureTrackingBranches(ahead, behind))
                 .model();
     }
 
@@ -434,27 +435,19 @@ class BranchUpdateTest {
     }
 
     @Test
-    void forceConfirmedDoesNothingOnceTheBranchIsNoLongerAhead() {
+    void forceConfirmedClosesThePopupAndExplainsOnceTheBranchIsNoLongerAhead() {
         Model asked = Update.update(featureTracking(1, 2), new PushMsg.Requested(new BranchName("feature")))
                 .model();
-        Model refreshed = localBranchesRead(
-                        asked,
-                        List.of(Fixtures.branch(
-                                new BranchName("feature"),
-                                false,
-                                new Sha("ffff"),
-                                Instant.EPOCH,
-                                true,
-                                false,
-                                Option.of(new Upstream(
-                                        new BranchRef.Remote(new RemoteBranch("origin", new BranchName("feature"))),
-                                        0,
-                                        2)))))
-                .model();
+        Model refreshed =
+                localBranchesRead(asked, featureTrackingBranches(0, 2)).model();
 
         Next next = Update.update(refreshed, new PushMsg.ForceConfirmed());
 
         assertEquals(List.of(), next.cmds());
+        assertEquals(Option.none(), next.model().popup(ForcePushPopup.class));
+        assertEquals(
+                Option.of("Branch feature is behind its upstream, so there is nothing to push; pull it instead"),
+                errorText(next.model()));
         assertEquals(
                 io.vavr.collection.HashSet.empty(), next.model().jobs().busy().keySet());
     }
