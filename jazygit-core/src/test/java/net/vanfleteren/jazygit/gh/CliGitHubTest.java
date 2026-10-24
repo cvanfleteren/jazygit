@@ -602,6 +602,37 @@ class CliGitHubTest {
     }
 
     @Test
+    void aFormFeedOrUnicodeLineSeparatorInATitleDoesNotSplitTheLine() {
+        String title = "a\fb c\u0085d\u000be f";
+
+        String lists = "list\trepository\towner/repo\t1\n"
+                + "pr\trepository\towner/repo\t95\t" + title + "\talice\tfix\tfalse\tfalse\t\t\t2026-10-15T08:00:00Z"
+                + "\thttps://github.com/owner/repo/pull/95\t96\t2\t2\t1:94:MERGED,2:95:OPEN\n";
+        assertTrue(CliGitHub.parseLists(lists).isRight());
+
+        String details = "pr\t95\t" + title
+                + "\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0"
+                + "\tabc123\t1\nthreads\t0\t0\t0\t0\n";
+        assertEquals(title, CliGitHub.parseDetails(details).get().title());
+    }
+
+    @Test
+    void aFormFeedOrUnicodeLineSeparatorInACommentStaysInItsBody() {
+        String body = "one\ftwo three";
+
+        assertEquals(
+                Either.right(List.of(new PullRequestComment(
+                        new PullRequestComment.Id("IC_1"),
+                        PullRequestComment.Kind.COMMENT,
+                        "bob",
+                        Instant.parse("2026-10-10T09:00:00Z"),
+                        body,
+                        false,
+                        Option.none()))),
+                CliGitHub.parseComments("comment\tIC_1\tbob\t2026-10-10T09:00:00Z\tfalse\tfalse\t\t" + body + "\n"));
+    }
+
+    @Test
     void aConversationWithoutAnything() {
         assertEquals(Either.right(List.empty()), CliGitHub.parseComments(""));
     }
