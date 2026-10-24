@@ -20,8 +20,8 @@ It shows how many pull requests of the open repository were opened and not seen 
 
 - Only pull requests of the open repository, opened since. Not new commits, comments or review requests on ones
   that were there.
-- Drafts count. Pull requests by the user do not: the login is the repository's `jazygit.githubUser`, otherwise
-  the active `gh` login.
+- Drafts count. Pull requests by the user do not: the login is the account the list is read as, which the same
+  query asks GitHub for (`viewer { login }`): the repository's `jazygit.githubUser`, otherwise the active `gh` login.
 - PR numbers only go up, so each repository keeps the highest number read. A pull request above it is new; each
   read raises it, and puts the new numbers in an **unseen** set. Not: new as "a number not read before", as a
   comment on an old pull request brings it into the 100, and would make it new.
@@ -38,8 +38,11 @@ It shows how many pull requests of the open repository were opened and not seen 
 
 ### Shown
 
-- The tab in the top title: `PRs ●2`, in the accent colour, only when there are any.
-- On the pull requests screen, a `●` before the number of each unseen row, in every pane it is in.
+- The tab in the top title: `PRs ●2`, only when there are any. A click on the count shows the screen, as one on
+  its name.
+- On the pull requests screen, a `●` before the number of each unseen row, in every pane it is in, in place of
+  the space after its age, so the rows do not shift.
+- Both in a class of their own, `.unseen`: the colour of the notices, in bold, in every theme.
 
 ### Read while the screen is hidden
 
@@ -52,7 +55,10 @@ It shows how many pull requests of the open repository were opened and not seen 
 ### Kept
 
 - The highest number and the unseen set are kept per repository, by `owner/name`, in `state.toml`, next to the
-  recent repositories. Pull requests opened while the app was closed are new at the next start.
+  recent repositories, in a table `[unseen-pull-requests."owner/name"]`. Pull requests opened while the app was
+  closed are new at the next start.
+- The list read brings what was kept for its repository along; the model goes by its own once it has it.
+- Writing it keeps what else the file has; the recent repositories, which wrote the file anew, now do so too.
 
 ## Consequences
 
@@ -61,4 +67,5 @@ It shows how many pull requests of the open repository were opened and not seen 
 - "This repo" is read every minute for as long as the app runs, not only while the screen is shown.
 - `state.toml` is written when the set changes: after a read with new pull requests, and when one is seen.
 - Tested by unit tests of the update (new above the highest number, the first read, seen on highlight, closed ones
-  leaving, the user's own left out, the early tick), and an acceptance test showing the count on the tab.
+  leaving, the user's own left out, the tick while hidden), of the state file, of the title and the rows. The
+  acceptance tests run without GitHub, so none shows the count.

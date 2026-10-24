@@ -6,8 +6,8 @@ import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
 
 /**
- * Reads the open pull requests of the repository, forks included. It runs in the background, as it talks to
- * GitHub, and nobody waits for it.
+ * Reads the open pull requests of the repository, forks included, and the unseen ones kept for it. It runs in the
+ * background, as it talks to GitHub, and nobody waits for it.
  */
 public record LoadRepositoryPullRequests() implements Cmd {
 
@@ -20,7 +20,10 @@ public record LoadRepositoryPullRequests() implements Cmd {
     public Msg run(Env env) {
         return env.gitHub()
                 .repositoryPullRequests()
-                .fold(this::failedWith, read -> new PrOverviewMsg.RepositoryLoaded(read));
+                .fold(
+                        this::failedWith,
+                        read -> new PrOverviewMsg.RepositoryLoaded(
+                                read, env.unseen().load(read.repository())));
     }
 
     @Override

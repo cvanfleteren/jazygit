@@ -122,6 +122,27 @@ class CliGitHubTest {
     }
 
     @Test
+    void thePullRequestsOfTheRepositorySayWhoTheyWereReadAs() {
+        String lists = "list\trepository\towner/repo\t1\n"
+                + "pr\trepository\towner/repo\t95\tFix\talice\tfix\tfalse\tfalse\t\t\t2026-10-15T08:00:00Z"
+                + "\thttps://github.com/owner/repo/pull/95\t96\t2\t2\t1:94:MERGED,2:95:OPEN\n";
+
+        var read =
+                CliGitHub.parseRepositoryPullRequests("viewer\tbob\n" + lists).get();
+        assertEquals("owner/repo", read.repository());
+        assertEquals(Option.of("bob"), read.viewer());
+        assertEquals(95, read.open().pullRequests().head().number());
+        assertEquals(
+                Option.none(),
+                CliGitHub.parseRepositoryPullRequests(lists).get().viewer());
+        assertEquals(
+                Option.none(),
+                CliGitHub.parseRepositoryPullRequests("viewer\t\n" + lists)
+                        .get()
+                        .viewer());
+    }
+
+    @Test
     void theDetailsOfAStackedPullRequestSayWhereItSitsAndWhatItsHeadIs() {
         String raw =
                 "pr\t95\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0"

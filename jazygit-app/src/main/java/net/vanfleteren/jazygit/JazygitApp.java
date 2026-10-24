@@ -81,6 +81,8 @@ public class JazygitApp extends ToolkitApp {
     // In milliseconds; the acceptance tests tick faster, as each of their steps waits for the app to see a change.
     static final Duration REFRESH_INTERVAL = Duration.ofMillis(Long.getLong("jazygit.refreshInterval", 750));
     static final Duration FETCH_INTERVAL = Duration.ofMinutes(1);
+    // How long after a repository opens its pull requests are first read, for the new ones (ADR 29).
+    static final Duration FIRST_PULL_REQUESTS_TICK = Duration.ofSeconds(3);
     // How often GitHub is asked how the merges it does in the background are going (ADR 24).
     static final Duration MERGE_CHECK_INTERVAL = Duration.ofSeconds(2);
     // What is dispatched every so often: the time, the repository read again, and what the remotes and GitHub have.
@@ -160,7 +162,8 @@ public class JazygitApp extends ToolkitApp {
      */
     public JazygitApp(
             Env env, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, StyleEngine styleEngine) {
-        this.env = new Env(env.git(), env.gitHub(), env.settings(), env.recent(), this::switchTo, this::handOver);
+        this.env = new Env(
+                env.git(), env.gitHub(), env.settings(), env.recent(), env.unseen(), this::switchTo, this::handOver);
         this.settings = settings;
         this.themeOverride = themeOverride;
         this.styleEngine = styleEngine;
@@ -180,6 +183,7 @@ public class JazygitApp extends ToolkitApp {
             Settings settings,
             SettingsStore store,
             RecentRepositories recent,
+            UnseenPullRequestsStore unseen,
             Repositories repositories,
             Terminal terminal) {
         GhToken token = new GhToken(git.worktree(), settings.gh(), () -> GitHubAccount.configured(git));
@@ -189,6 +193,7 @@ public class JazygitApp extends ToolkitApp {
                 new CliGitHub(git.worktree(), settings.gh(), token),
                 store,
                 recent,
+                unseen,
                 repositories,
                 terminal);
     }
@@ -268,6 +273,7 @@ public class JazygitApp extends ToolkitApp {
                                         loaded.settings(),
                                         settings,
                                         recent,
+                                        new UnseenPullRequestsFile(SettingsPaths.stateFile()),
                                         Repositories.NONE,
                                         Terminal.NONE);
                                 return new JazygitApp(env, loaded, options.theme(), engine);
@@ -498,6 +504,12 @@ public class JazygitApp extends ToolkitApp {
         // only once the fetch is done.
         dispatch.accept(new FetchMsg.Tick());
         dispatch.accept(new PullRequestsMsg.Refresh());
+        // The new pull requests show soon after the repository opens, not a minute later, but after the first reads
+        // (ADR 29); not to a repository switched away from meanwhile.
+        runner.schedule(
+                () -> runner.runOnRenderThread(() -> runtime.filter(running -> running.program() == program)
+                        .forEach(running -> program.dispatch(new PrOverviewMsg.Tick()))),
+                FIRST_PULL_REQUESTS_TICK);
     }
 
     /**
@@ -526,6 +538,7 @@ public class JazygitApp extends ToolkitApp {
                             last.preferences().settings(),
                             env.settings(),
                             env.recent(),
+                            env.unseen(),
                             env.repositories(),
                             env.terminal()),
                     new SettingsStore.Loaded(last.preferences().settings(), Option.none()),
@@ -666,7 +679,7 @@ public class JazygitApp extends ToolkitApp {
         Panel stash = stashPanel.render(model, focusedId, activeId);
         Option<Integer> stashHeight = stashHeight(model);
         return column(
-                StatusPanel.render(model, this::showScreen),
+                StatusPanel.render(model, Theme.spanStyles(styleEngine), this::showScreen),
                 filesPanel.render(model, focusedId, activeId).percent(FILES_PERCENT),
                 branches.percent(BRANCHES_PERCENT),
                 // With the stash sized to its content, the commits take what is left, which is
@@ -685,7 +698,7 @@ public class JazygitApp extends ToolkitApp {
         List<Panel> panes = pullRequestsPanels.map(
                 pane -> pane.render(model, focusedId, activeId).fill());
         return column(panes.<Element>map(pane -> pane)
-                .prepend(StatusPanel.render(model, this::showScreen))
+                .prepend(StatusPanel.render(model, Theme.spanStyles(styleEngine), this::showScreen))
                 .toJavaArray(Element[]::new));
     }
 

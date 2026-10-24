@@ -24,7 +24,8 @@ import net.vanfleteren.jazygit.ui.widgets.Pane;
 /**
  * A pane of the pull requests screen, listing pull requests: how long ago each changed, the name of its repository
  * when the list is of any, its number, how its checks and review are doing, its title and its author. Drafts are dimmed.
- * When more match than were read, the title says how many.
+ * One of the repository that was opened and not seen yet has a mark before its number (ADR 29). When more match than
+ * were read, the title says how many.
  */
 public final class PullRequestsPanel {
 
@@ -32,6 +33,11 @@ public final class PullRequestsPanel {
      * The id of the top pane, the one that gets the focus the first time the screen is shown.
      */
     public static final String FIRST_PANE_ID = Scopes.PR_REPOSITORY.id();
+
+    /**
+     * What marks a pull request that was opened and not seen yet, in its row and in the name of the screen.
+     */
+    static final String UNSEEN_MARK = "●";
 
     private final Scope<PullRequestSummary> scope;
     private final Function<PrOverview, Loadable<PullRequestList>> pullRequests;
@@ -97,23 +103,26 @@ public final class PullRequestsPanel {
      *                      owner to keep the row short; the content panel shows it in full
      */
     static LoadableList.Row row(PullRequestSummary pr, Duration since, boolean anyRepository) {
-        return row(pr, since, anyRepository, Option.none());
+        return row(pr, since, anyRepository, Option.none(), false);
     }
 
     /**
      * The row of {@code pr}, as {@link #row(PullRequestSummary, Duration, boolean)}, with how {@code merge} goes
      * instead of its checks and review while it goes, or went (ADR 24).
+     *
+     * @param unseen whether {@code pr} was opened and not seen yet, which the space before its number marks
      */
     static LoadableList.Row row(
-            PullRequestSummary pr, Duration since, boolean anyRepository, Option<MergeStatus> merge) {
+            PullRequestSummary pr, Duration since, boolean anyRepository, Option<MergeStatus> merge, boolean unseen) {
         String plain = pr.draft() ? Theme.Classes.DIM : "";
         String repository =
                 anyRepository ? pr.repository().substring(pr.repository().indexOf('/') + 1) : "";
-        return new LoadableList.Row(List.of(
-                        LoadableList.Seg.of("%4s ".formatted(TimeText.age(since))),
-                        LoadableList.Seg.styled(
-                                repository + "#" + pr.number(),
-                                pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST))
+        String age = "%4s".formatted(TimeText.age(since));
+        List<LoadableList.Seg> start = unseen
+                ? List.of(LoadableList.Seg.of(age), LoadableList.Seg.styled(UNSEEN_MARK, Theme.Classes.UNSEEN))
+                : List.of(LoadableList.Seg.of(age + " "));
+        return new LoadableList.Row(start.append(LoadableList.Seg.styled(
+                        repository + "#" + pr.number(), pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST))
                 .appendAll(PullRequestSymbols.state(pr.stack(), pr.checks(), pr.review(), merge)
                         .map(PullRequestsPanel::symbol))
                 .appendAll(List.of(
@@ -166,7 +175,8 @@ public final class PullRequestsPanel {
                                                         .ofThisRepository(pr)
                                                         .getOrElse(false),
                                                 () -> model.gitHub().merge(pr.number()))
-                                        .flatMap(merge -> merge))),
+                                        .flatMap(merge -> merge),
+                                model.prOverview().isUnseen(pr))),
                 id().equals(focusedId),
                 id().equals(activeId),
                 Pane.title(title(Messages.get(scope.titleKey()), shown)));

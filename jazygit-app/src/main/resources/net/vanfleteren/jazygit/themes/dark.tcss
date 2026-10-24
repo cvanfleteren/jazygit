@@ -50,6 +50,7 @@ ListElement-item:selected, TreeElement-node:selected, .selection {
 .behind { color: red; }
 .gone { color: red; text-style: dim; }
 .pull-request { color: cyan; }
+.unseen { color: yellow; text-style: bold; }
 .checks-passed { color: green; }
 .checks-failed { color: red; }
 .checks-running { color: yellow; }
