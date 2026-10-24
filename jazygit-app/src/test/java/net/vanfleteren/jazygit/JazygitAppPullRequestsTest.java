@@ -44,6 +44,9 @@ class JazygitAppPullRequestsTest {
             Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
 
             pilot.press('p', KeyModifiers.CTRL);
+            // The top pane, This repo, has the focus first; the preview is of the pull request highlighted in the
+            // focused pane.
+            SettledPilot.focus(testRunner, REVIEW_REQUESTED, app.drawnAt::size);
             awaitModel(
                     testRunner,
                     app,
@@ -51,7 +54,6 @@ class JazygitAppPullRequestsTest {
                             .preview()
                             .map(Preview::shown)
                             .exists(preview -> preview.value().toOption().isDefined()));
-            SettledPilot.focus(testRunner, REVIEW_REQUESTED, app.drawnAt::size);
 
             pilot.press(KeyCode.ENTER);
             await(
@@ -77,6 +79,7 @@ class JazygitAppPullRequestsTest {
             app.start(testRunner);
             Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
             pilot.press('p', KeyModifiers.CTRL);
+            SettledPilot.focus(testRunner, REVIEW_REQUESTED, app.drawnAt::size);
             awaitModel(
                     testRunner,
                     app,
@@ -84,7 +87,6 @@ class JazygitAppPullRequestsTest {
                             .preview()
                             .map(Preview::shown)
                             .exists(preview -> preview.value().toOption().isDefined()));
-            SettledPilot.focus(testRunner, REVIEW_REQUESTED, app.drawnAt::size);
             pilot.press('o');
             awaitModel(
                     testRunner,

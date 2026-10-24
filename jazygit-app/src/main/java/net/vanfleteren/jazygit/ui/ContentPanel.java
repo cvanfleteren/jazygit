@@ -341,7 +341,7 @@ public final class ContentPanel {
             case DIVERGENCE_AREA_ID, BRANCH_COMMIT_AREA_ID -> Option.of(BranchesPanel.ID);
             // It shows the pull request highlighted in whichever list of the pull requests screen is in use.
             case PULL_REQUEST_AREA_ID ->
-                Option.of(model.prOverview().listPane().getOrElse(PullRequestsPanel.REVIEW_REQUESTED_ID));
+                Option.of(model.prOverview().listPane().getOrElse(PullRequestsPanel.FIRST_PANE_ID));
             default -> Option.none();
         };
     }

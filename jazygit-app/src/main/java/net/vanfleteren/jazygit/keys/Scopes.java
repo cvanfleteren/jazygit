@@ -61,7 +61,7 @@ public final class Scopes {
      * The panes of the pull requests screen, top to bottom.
      */
     public static final io.vavr.collection.List<Scope<PullRequestSummary>> PULL_REQUESTS =
-            io.vavr.collection.List.of(PR_REVIEW_REQUESTED, PR_AUTHORED, PR_REPOSITORY);
+            io.vavr.collection.List.of(PR_REPOSITORY, PR_REVIEW_REQUESTED, PR_AUTHORED);
 
     private Scopes() {}
 }
