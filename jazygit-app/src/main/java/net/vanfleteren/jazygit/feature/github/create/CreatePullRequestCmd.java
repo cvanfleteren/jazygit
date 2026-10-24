@@ -39,7 +39,16 @@ public sealed interface CreatePullRequestCmd extends Cmd {
     /**
      * A branch a pull request can merge into, as {@code name}, and {@code ref}, the branch it is on its remote.
      */
-    record Base(BranchName name, BranchRef ref) {}
+    record Base(BranchName name, BranchRef ref) {
+
+        /**
+         * The name the branch has on its remote, which is what gh and the recorded parent call it; its own name
+         * when it is not on one.
+         */
+        BranchName remoteName() {
+            return ref instanceof BranchRef.Remote remote ? remote.branch().branch() : name;
+        }
+    }
 
     /**
      * Reads which of {@code bases} the branch {@code branch} was made from: the one recorded as such, or else the
@@ -55,8 +64,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
         public Msg run(Env env) {
             return env.git()
                     .parentBranch(branch)
-                    .map(recorded -> recorded.filter(
-                            name -> bases.exists(base -> base.name().equals(name))))
+                    .map(recorded -> recorded.flatMap(this::base))
                     .flatMap(recorded -> recorded.isDefined() ? Either.right(recorded) : closest(env))
                     .fold(error -> read(Option.none()), this::read);
         }
@@ -64,6 +72,13 @@ public sealed interface CreatePullRequestCmd extends Cmd {
         @Override
         public Msg failed(Failure failure) {
             return read(Option.none());
+        }
+
+        // The recorded parent is a name on the remote, or a local one when the branch was made from a local branch.
+        private Option<BranchName> base(BranchName recorded) {
+            return bases.find(base -> base.remoteName().equals(recorded))
+                    .orElse(() -> bases.find(base -> base.name().equals(recorded)))
+                    .map(Base::name);
         }
 
         private Either<GitError.ProcessError, Option<BranchName>> closest(Env env) {
@@ -168,7 +183,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
 
     /**
      * Creates a pull request from {@code branch}, as it is on its remote under the name {@code head}, into
-     * {@code base}, as {@code pullRequest} says.
+     * {@code base}, the name that branch has on its remote, as {@code pullRequest} says.
      */
     record CreatePullRequest(BranchName branch, BranchName head, BranchName base, NewPullRequest pullRequest)
             implements CreatePullRequestCmd, OperationCmd {

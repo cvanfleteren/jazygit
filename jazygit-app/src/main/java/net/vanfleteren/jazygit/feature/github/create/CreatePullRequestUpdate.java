@@ -72,7 +72,10 @@ public final class CreatePullRequestUpdate {
                         popup -> model.repo()
                                 .branch(popup.branch())
                                 .map(known -> new CreatePullRequest(
-                                        popup.branch(), popup.head(), popup.base(), stripped(popup.pullRequest()))));
+                                        popup.branch(),
+                                        popup.head(),
+                                        new Base(popup.base(), baseRef(model, popup.base())).remoteName(),
+                                        stripped(popup.pullRequest()))));
             case Cancelled() -> Next.of(model.withoutPopup(NewPullRequestPopup.class));
             // The branches may have been read again while the user was asked: with nothing to push any more, it was
             // pushed meanwhile or has diverged since, so it is asked about again as it is now.
