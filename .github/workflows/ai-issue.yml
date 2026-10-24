@@ -36,6 +36,8 @@ jobs:
             Implement GitHub issue #${{ github.event.issue.number }}.
             Title: ${{ github.event.issue.title }}
             Body: ${{ github.event.issue.body }}
+            
+            First, start by adding a comment to the issue with your plan for implementing it.
 
             Follow the conventions in agents.md / CLAUDE.md (functional style, immutable data).
             Create a branch named feature/issue-${{ github.event.issue.number }}, implement the change,
