@@ -43,6 +43,7 @@ public final class ErrorText {
                                         .getOrElse(() -> Messages.get("error.conflictsRemain", conflicts)))
                                 .toJavaArray());
             case AppError.InvalidUpstream(String text) -> Messages.get("error.upstream.invalid", text.strip());
+            case AppError.BehindUpstream(BranchName branch) -> Messages.get("error.push.behind", branch.value());
             case AppError.NoUpstream(BranchName branch) -> Messages.get("error.upstream.none", branch.value());
             case AppError.UpstreamGone(BranchName branch, String upstream) ->
                 Messages.get("error.upstream.gone", branch.value(), upstream);
