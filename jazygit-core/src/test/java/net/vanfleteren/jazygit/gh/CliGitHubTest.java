@@ -32,6 +32,10 @@ import org.junit.jupiter.api.io.TempDir;
 
 class CliGitHubTest {
 
+    // Not line ends to a tab-separated reader, only to \R.
+    private static final String LINE_SEPARATOR = Character.toString(0x2028);
+    private static final String PARAGRAPH_SEPARATOR = Character.toString(0x2029);
+
     // Pull request 95 on top of 94, which is merged already.
     private static final PullRequestStack STACK = new PullRequestStack(
             96,
@@ -182,6 +186,9 @@ class CliGitHubTest {
         assertEquals(
                 Either.right(new MergeStatus.Failed("Required status check \"build\" is failing")),
                 CliGitHub.parseMergeStatus("failed\t\tRequired status check \"build\" is failing\n"));
+        assertEquals(
+                Either.right(new MergeStatus.Failed("bad" + LINE_SEPARATOR)),
+                CliGitHub.parseMergeStatus("failed\t\tbad" + LINE_SEPARATOR + "\n"));
         assertTrue(CliGitHub.parseMergeStatus("pending\t\t\n").isLeft());
         assertTrue(CliGitHub.parseMergeStatus("done\t\t\n").isLeft());
         assertTrue(CliGitHub.parseMergeStatus("").isLeft());
@@ -603,12 +610,22 @@ class CliGitHubTest {
 
     @Test
     void aFormFeedOrUnicodeLineSeparatorInATitleDoesNotSplitTheLine() {
-        String title = "a\fb c\u0085d\u000be f";
+        String title = "a\fb" + LINE_SEPARATOR + "c\u0085d\u000be" + PARAGRAPH_SEPARATOR + "f";
 
         String lists = "list\trepository\towner/repo\t1\n"
                 + "pr\trepository\towner/repo\t95\t" + title + "\talice\tfix\tfalse\tfalse\t\t\t2026-10-15T08:00:00Z"
                 + "\thttps://github.com/owner/repo/pull/95\t96\t2\t2\t1:94:MERGED,2:95:OPEN\n";
-        assertTrue(CliGitHub.parseLists(lists).isRight());
+        assertEquals(
+                title,
+                CliGitHub.parseLists(lists)
+                        .get()
+                        .get("repository")
+                        .get()
+                        ._2
+                        .pullRequests()
+                        .find(pr -> pr.number() == 95)
+                        .get()
+                        .title());
 
         String details = "pr\t95\t" + title
                 + "\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0"
@@ -618,7 +635,7 @@ class CliGitHubTest {
 
     @Test
     void aFormFeedOrUnicodeLineSeparatorInACommentStaysInItsBody() {
-        String body = "one\ftwo three";
+        String body = "one\ftwo" + LINE_SEPARATOR + "three" + PARAGRAPH_SEPARATOR + "four";
 
         assertEquals(
                 Either.right(List.of(new PullRequestComment(
