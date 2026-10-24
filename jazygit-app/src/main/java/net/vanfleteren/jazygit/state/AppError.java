@@ -212,9 +212,9 @@ public sealed interface AppError {
     record ChangesBeforeMove(String target) implements AppError {}
 
     /**
-     * The commits of {@code branch} from {@code oldest} up are not moved, as {@code oldest} is not on the line of
-     * {@code branch} itself but came in through {@code merge}: {@code branch} would be left on {@code parent}, the
-     * parent of {@code oldest}, a commit of the merged branch.
+     * The commits of {@code branch} from {@code oldest} up are not moved, as {@code oldest} came in through
+     * {@code merge} and so does its parent, {@code parent}: {@code branch} would be left on a commit of the merged
+     * branch instead of one on its own line.
      */
     record MovedThroughMerge(Sha oldest, BranchName branch, Sha merge, Sha parent) implements AppError {}
 

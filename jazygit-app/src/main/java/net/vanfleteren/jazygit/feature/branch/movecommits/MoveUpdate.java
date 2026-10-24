@@ -83,8 +83,8 @@ public final class MoveUpdate {
     /**
      * Asks where the commits move to, unless the branch or the commit changed meanwhile. Commits that hold a merge
      * can only move to a new branch where they are, as they do not cherry-pick well, so then its name is asked
-     * straight away. An oldest commit that came in through a merge is refused, as the branch would be moved back
-     * onto a commit of the merged branch.
+     * straight away. An oldest commit whose parent came in through a merge is refused, as the branch would be moved
+     * back onto a commit of the merged branch.
      */
     private static Next rangeRead(Model model, BranchName from, Sha oldest, CommitRange range) {
         return model.repo()

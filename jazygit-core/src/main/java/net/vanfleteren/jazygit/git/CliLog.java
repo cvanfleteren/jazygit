@@ -198,8 +198,8 @@ final class CliLog {
     /**
      * The commits of {@code branch} from {@code oldest} up to its tip, read with {@code git rev-list --parents
      * --topo-order}, which lists each with its parents, and before its parents; how many of them are on
-     * {@code upstream}, from how many are not; and the merge {@code oldest} came in through, when it is not on the
-     * line of {@code branch} itself.
+     * {@code upstream}, from how many are not; and the merge {@code oldest} came in through, when its parent is not
+     * on the line of {@code branch} itself.
      */
     static Either<GitError, CommitRange> range(
             Path worktree, BranchName branch, Sha oldest, Option<RemoteBranch> upstream) {
@@ -223,9 +223,11 @@ final class CliLog {
 
     /**
      * The merge on the line of the branch, which its tip follows through first parents, that {@code oldest} came in
-     * through; none when {@code oldest} is on that line. {@code commits} run from the tip to {@code oldest}, each a
-     * sha followed by its parents, and before its parents. The merge is the last commit on the line that has
-     * {@code oldest} as an ancestor.
+     * through; none when the parent of {@code oldest}, where the branch is moved back to, is on that line.
+     * {@code commits} run from the tip to {@code oldest}, each a sha followed by its parents, and before its parents.
+     * The line leaves them at one commit, the first parent of the last commit on it, which is the parent of
+     * {@code oldest} only when that is on the line. The merge is the last commit on the line that has {@code oldest}
+     * as an ancestor.
      */
     private static Option<Sha> mergedThrough(List<List<Sha>> commits, Sha oldest) {
         Map<Sha, List<Sha>> parents = HashMap.ofEntries(commits.map(commit -> Tuple.of(commit.head(), commit.tail())));
@@ -237,7 +239,8 @@ final class CliLog {
                 commits.headOption().map(List::head),
                 next -> next.filter(parents::containsKey)
                         .map(sha -> Tuple.of(sha, parents.get(sha).flatMap(List::headOption))));
-        return line.contains(oldest)
+        Option<Sha> leftAt = line.lastOption().flatMap(parents::get).flatMap(List::headOption);
+        return leftAt.equals(parents.get(oldest).flatMap(List::headOption))
                 ? Option.none()
                 : line.filter(descendants::contains).lastOption();
     }

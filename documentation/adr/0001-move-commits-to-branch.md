@@ -134,4 +134,4 @@ Conflicts are the user's to resolve; anything else is undone, as for the other o
 - `--empty=drop` needs git 2.45 or newer.
 - Moving commits that are already pushed rewrites history on the old branch's upstream when force-push is chosen.
 
-An oldest commit that came in through a merge is not moved: see ADR 0030.
+A commit whose parent came in through a merge is not moved: see ADR 0030.
