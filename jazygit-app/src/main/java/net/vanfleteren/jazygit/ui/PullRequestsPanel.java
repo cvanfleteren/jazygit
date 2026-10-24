@@ -78,6 +78,8 @@ public final class PullRequestsPanel {
             Consumer<Msg> dispatch, Consumer<String> openPullRequest, Theme.Highlights highlights) {
         return List.of(
                 new PullRequestsPanel(
+                        Scopes.PR_REPOSITORY, PrOverview::repository, false, dispatch, openPullRequest, highlights),
+                new PullRequestsPanel(
                         Scopes.PR_REVIEW_REQUESTED,
                         PrOverview::reviewRequested,
                         true,
@@ -85,9 +87,7 @@ public final class PullRequestsPanel {
                         openPullRequest,
                         highlights),
                 new PullRequestsPanel(
-                        Scopes.PR_AUTHORED, PrOverview::authored, true, dispatch, openPullRequest, highlights),
-                new PullRequestsPanel(
-                        Scopes.PR_REPOSITORY, PrOverview::repository, false, dispatch, openPullRequest, highlights));
+                        Scopes.PR_AUTHORED, PrOverview::authored, true, dispatch, openPullRequest, highlights));
     }
 
     /**
