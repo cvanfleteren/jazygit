@@ -144,6 +144,12 @@ class Git:
         """The remote branch that branch tracks, such as "origin/main"; empty when it tracks none."""
         return self("for-each-ref", "--format=%(upstream:short)", f"refs/heads/{branch}")
 
+    def unique_commits(self, branch: str, without: str = "") -> int:
+        """How many commits only this local branch has: on no other branch, remote-tracking branch or tag.
+        The remote-tracking branch without is left out too, as when it is deleted first."""
+        return int(self("rev-list", "--count", branch, "--not", f"--exclude={branch}", "--branches",
+                        *([f"--exclude={without}"] if without else []), "--remotes", "--tags"))
+
     def sync(self, branch: str) -> str:
         """How branch stands to its upstream as this repository last fetched it, as git says it: "ahead 1,
         behind 2", "gone", or empty when it is in sync or tracks nothing."""

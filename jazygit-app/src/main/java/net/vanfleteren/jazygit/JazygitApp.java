@@ -109,14 +109,9 @@ public class JazygitApp extends ToolkitApp {
     private final SettingsStore.Loaded settings;
     private final Option<ThemeName> themeOverride;
     private final StyleEngine styleEngine;
-    // Quitting stops the runner, which the model knows nothing of.
-    private final Consumer<Msg> dispatch = msg -> {
-        if (msg instanceof Msg.Quit) {
-            runner().quit();
-        } else {
-            this.runtime.forEach(running -> running.program().dispatch(msg));
-        }
-    };
+    // Quitting is up to the model, which may refuse; the runner stops on what the update returns.
+    private final Consumer<Msg> dispatch =
+            msg -> this.runtime.forEach(running -> running.program().dispatch(msg));
     private final ContentPanel contentPanel;
     private final FilesPanel filesPanel = new FilesPanel(dispatch, () -> openContent(FilesPanel.ID), this::highlight);
     private final BranchesPanel branchesPanel = new BranchesPanel(
@@ -423,9 +418,13 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
-     * Dispatches what a key means wherever the focus is, if it means something there.
+     * Dispatches what a key means wherever the focus is, if it means something there. An open popup owns the keys:
+     * what it leaves unhandled reaches neither the global keys nor TamboUI's quit.
      */
     private EventResult handleGlobalKey(Event event) {
+        if (event instanceof KeyEvent && model().popup().isDefined()) {
+            return EventResult.HANDLED;
+        }
         return Option.of(event)
                 .filter(KeyEvent.class::isInstance)
                 .flatMap(key -> Keymap.standard().handleGlobal((KeyEvent) key))
@@ -489,7 +488,8 @@ public class JazygitApp extends ToolkitApp {
                 background,
                 runner::runOnRenderThread,
                 JazygitApp::logBug,
-                this::requestRedraw);
+                this::requestRedraw,
+                this::quit);
         runtime = Option.of(new Runtime(io, background, program));
         runner.focusManager().setFocus(PopupSlot.focusedPane(program.model()));
         // The first tick of the clock is a while off, and the ages the model shows are told from the start.

@@ -5,6 +5,7 @@ import static net.vanfleteren.jazygit.TestApp.awaitModel;
 import static net.vanfleteren.jazygit.TestApp.focusedId;
 import static net.vanfleteren.jazygit.TestApp.onRenderThread;
 import static net.vanfleteren.jazygit.TestApp.tickless;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.tui.event.KeyCode;
@@ -64,6 +65,39 @@ class JazygitAppPullRequestsTest {
                     testRunner,
                     app,
                     model -> model.popup(PullRequestPopup.class).isDefined());
+        } finally {
+            app.onStop();
+        }
+    }
+
+    @Test
+    void qAndCtrlCDoNotQuitFromTheMarkdownDialog() throws Exception {
+        TestApp app = new TestApp(new Env(new SampleData(), new ReviewRequested()));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
+            app.start(testRunner);
+            Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
+            pilot.press('p', KeyModifiers.CTRL);
+            awaitModel(
+                    testRunner,
+                    app,
+                    model -> model.prOverview()
+                            .preview()
+                            .map(Preview::shown)
+                            .exists(preview -> preview.value().toOption().isDefined()));
+            SettledPilot.focus(testRunner, REVIEW_REQUESTED, app.drawnAt::size);
+            pilot.press('o');
+            awaitModel(
+                    testRunner,
+                    app,
+                    model -> model.popup(PullRequestPopup.class).isDefined());
+            pilot.pause();
+
+            pilot.press('q');
+            pilot.press('Q');
+            pilot.press('c', KeyModifiers.CTRL);
+            pilot.pause();
+
+            assertEquals(0, app.quits.get());
         } finally {
             app.onStop();
         }

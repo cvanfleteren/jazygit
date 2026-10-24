@@ -179,8 +179,8 @@ public final class CommitDialog implements PopupView {
 
     /**
      * Cancels on Escape in a field, confirms on {@link #CONFIRM_KEY} and opens the message in the editor on
-     * {@link #EDITOR_KEY}. The dialog around the fields only gets keys after the global handlers, and those take
-     * Escape and Ctrl+S too.
+     * {@link #EDITOR_KEY}. The dialog around the fields gets no keys while the popup is open, as the global
+     * handler takes every key then, so the fields handle Escape themselves.
      */
     private EventResult keys(KeyEvent event) {
         if (event.code() == KeyCode.ESCAPE) {

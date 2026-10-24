@@ -38,6 +38,7 @@ public final class Program {
     private final Executor ui;
     private final Consumer<Throwable> bugs;
     private final Runnable modelChanged;
+    private final Runnable quit;
     // The command started last for each slot, to cancel when a newer one comes.
     private final Map<Cmd.Slot, Future<Void>> latest = new EnumMap<>(Cmd.Slot.class);
     // What a command that names a guard holds while it runs, so another one that names it waits.
@@ -47,8 +48,15 @@ public final class Program {
     private Model model;
 
     private Program(
-            Env env, Executor io, Executor background, Executor ui, Consumer<Throwable> bugs, Runnable modelChanged) {
+            Env env,
+            Executor io,
+            Executor background,
+            Executor ui,
+            Consumer<Throwable> bugs,
+            Runnable modelChanged,
+            Runnable quit) {
         this.env = env;
+        this.quit = quit;
         this.io = io;
         this.background = background;
         this.ui = ui;
@@ -102,7 +110,25 @@ public final class Program {
             Executor ui,
             Consumer<Throwable> bugs,
             Runnable modelChanged) {
-        Program program = new Program(env, io, background, ui, bugs, modelChanged);
+        return start(env, settings, themeOverride, landing, io, background, ui, bugs, modelChanged, () -> {});
+    }
+
+    /**
+     * As above; {@code quit} is run, on the {@code ui} executor's thread, once a message leaves a {@link Update.Next}
+     * that asks the app to stop.
+     */
+    public static Program start(
+            Env env,
+            SettingsStore.Loaded settings,
+            Option<ThemeName> themeOverride,
+            Landing landing,
+            Executor io,
+            Executor background,
+            Executor ui,
+            Consumer<Throwable> bugs,
+            Runnable modelChanged,
+            Runnable quit) {
+        Program program = new Program(env, io, background, ui, bugs, modelChanged, quit);
         program.apply(Update.init(env.git().repositoryName(), settings, themeOverride, landing));
         return program;
     }
@@ -143,6 +169,9 @@ public final class Program {
             modelChanged.run();
         }
         next.cmds().forEach(this::launch);
+        if (next.quit()) {
+            quit.run();
+        }
     }
 
     /**
