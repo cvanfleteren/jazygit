@@ -155,6 +155,7 @@ public final class Theme {
         public static final String BEHIND = "behind";
         public static final String GONE = "gone";
         public static final String PULL_REQUEST = "pull-request";
+        public static final String UNSEEN = "unseen";
         public static final String CHECKS_PASSED = "checks-passed";
         public static final String CHECKS_FAILED = "checks-failed";
         public static final String CHECKS_RUNNING = "checks-running";

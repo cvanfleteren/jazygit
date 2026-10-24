@@ -79,6 +79,15 @@ class PullRequestsPanelTest {
     }
 
     @Test
+    void anUnseenPullRequestIsMarkedBeforeItsNumber() {
+        LoadableList.Row unseen = PullRequestsPanel.row(pr(false), Duration.ofDays(2), false, Option.none(), true);
+        LoadableList.Row seen = PullRequestsPanel.row(pr(false), Duration.ofDays(2), false, Option.none(), false);
+
+        assertEquals(seen.text().replaceFirst(" #", "●#"), unseen.text());
+        assertEquals(Option.of(Theme.Classes.UNSEEN), unseen.segs().get(1).cssClass());
+    }
+
+    @Test
     void aDraftIsDimmed() {
         List<Option<String>> classes = PullRequestsPanel.row(pr(true), Duration.ofDays(2), false)
                 .segs()

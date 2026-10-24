@@ -83,11 +83,12 @@ public final class CliGitHub implements GitHub {
             author { login } repository { nameWithOwner } reviewDecision %s \
             commits(last: 1) { nodes { commit { statusCheckRollup { state } } } } }""".formatted(STACK_FIELDS);
     /*
-     * The open pull requests of the repository, the most recently updated first. gh fills in the repository of the
-     * working tree for {owner} and {repo}.
+     * The open pull requests of the repository, the most recently updated first, and the account gh runs as. gh fills
+     * in the repository of the working tree for {owner} and {repo}.
      */
     private static final String REPOSITORY_PRS_QUERY = """
-            query($owner: String!, $name: String!) { repository(owner: $owner, name: $name) { nameWithOwner \
+            query($owner: String!, $name: String!) { viewer { login } \
+            repository(owner: $owner, name: $name) { nameWithOwner \
             pullRequests(states: OPEN, first: 100, orderBy: {field: UPDATED_AT, direction: DESC}) \
             { totalCount nodes { ...summary } } } } """ + SUMMARY_FRAGMENT;
     private static final String MY_PRS_LIMIT = "50";
@@ -110,14 +111,17 @@ public final class CliGitHub implements GitHub {
     /*
      * Tab separated lines, each starting with what it is: a "list" line per list, with its name, the repository
      * it is of (empty for a search) and how many match, and a "pr" line per pull request, with the name of its
-     * list and the fields of SUMMARY_FIELDS_JQ.
+     * list and the fields of SUMMARY_FIELDS_JQ. The ones of the repository start with a "viewer" line, with the login
+     * gh runs as.
      */
     private static final String REPOSITORY_PRS_JQ = SUMMARY_FIELDS_JQ + """
-            .data.repository | (["list", "repository", .nameWithOwner, (.pullRequests.totalCount | tostring)] \
-            | @tsv), (.pullRequests.nodes[] | (["pr", "repository"] + summary) | @tsv)""";
+            (["viewer", .data.viewer.login] | @tsv), \
+            (.data.repository | (["list", "repository", .nameWithOwner, (.pullRequests.totalCount | tostring)] \
+            | @tsv), (.pullRequests.nodes[] | (["pr", "repository"] + summary) | @tsv))""";
     private static final String MY_PRS_JQ = SUMMARY_FIELDS_JQ + """
             .data | to_entries[] | .key as $list | (["list", $list, "", (.value.issueCount | tostring)] | @tsv), \
             (.value.nodes[] | select(.number != null) | (["pr", $list] + summary) | @tsv)""";
+    private static final String VIEWER_LINE = "viewer\t";
     private static final int LIST_LINE_FIELDS = 4;
     private static final int SUMMARY_LINE_FIELDS = 13 + STACK_FIELD_COUNT;
     // The base branch of a pull request on the first line, its body after it.
@@ -705,10 +709,22 @@ public final class CliGitHub implements GitHub {
                         "query=" + REPOSITORY_PRS_QUERY,
                         "--jq",
                         REPOSITORY_PRS_JQ),
-                raw -> parseLists(raw)
-                        .flatMap(lists -> lists.get("repository")
-                                .map(list -> new RepositoryPullRequests(list._1, list._2))
-                                .toEither(() -> new UnexpectedOutput(raw))));
+                CliGitHub::parseRepositoryPullRequests);
+    }
+
+    /**
+     * The open pull requests of the repository from what {@link #REPOSITORY_PRS_JQ} prints: a "viewer" line with the
+     * login gh runs as, and the lines {@link #parseLists(String)} reads.
+     */
+    static Either<UnexpectedOutput, RepositoryPullRequests> parseRepositoryPullRequests(String raw) {
+        List<String> lines = List.of(raw.split("\n"));
+        Option<String> viewer = lines.find(line -> line.startsWith(VIEWER_LINE))
+                .map(line -> unescape(line.substring(VIEWER_LINE.length())))
+                .filter(login -> !login.isBlank());
+        return parseLists(lines.filter(line -> !line.startsWith(VIEWER_LINE)).mkString("\n"))
+                .flatMap(lists -> lists.get("repository")
+                        .map(list -> new RepositoryPullRequests(list._1, list._2, viewer))
+                        .toEither(() -> new UnexpectedOutput(raw)));
     }
 
     @Override
