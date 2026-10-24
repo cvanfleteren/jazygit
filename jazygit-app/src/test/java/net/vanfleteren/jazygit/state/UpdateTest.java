@@ -194,7 +194,7 @@ class UpdateTest {
                         new LoadMsg.CommitsLoaded(
                                 before.repo().commits().getOrElse(List.empty()),
                                 TestModels.loadCommits().ahead(),
-                                io.vavr.control.Either.right(io.vavr.control.Option.none())))
+                                Either.right(Option.none())))
                 .model();
         assertFalse(Update.update(retried, new Tick()).cmds().contains(TestModels.loadCommits()));
     }

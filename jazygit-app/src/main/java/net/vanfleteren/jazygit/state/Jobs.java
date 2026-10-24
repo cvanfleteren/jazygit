@@ -16,7 +16,7 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp;
  * @param refreshing periodic loads that have been started and not finished yet, so a tick does not queue them again
  * @param failed     the reads of the log of HEAD, and of what is ahead on its base, that failed, whatever was kept of
  *                   them: a tick reads them again, as what is kept may be that of another HEAD
- * @param busy      the branches a git operation runs on right now, like a push or a delete, and that operation:
+ * @param busy       the branches a git operation runs on right now, like a push or a delete, and that operation:
  *                   they show a spinner, and take no other operation until it is done
  * @param fetching   the background fetch from the remotes that is running, if any; the next one waits
  * @param lastFetch  when a remote was last fetched from, and the remotes that failed the last time
