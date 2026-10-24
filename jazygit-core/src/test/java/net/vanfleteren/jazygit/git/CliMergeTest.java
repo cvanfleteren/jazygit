@@ -14,6 +14,8 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.zeroturnaround.exec.ProcessExecutor;
 
 /**
@@ -42,7 +44,7 @@ class CliMergeTest {
     @Test
     void fastForwardMovesTheBranchWhenItHasNothingOfItsOwn() throws Exception {
         assertEquals(
-                List.of("git merge --ff --no-edit feature"),
+                List.of("git merge --ff --no-edit -m 'Merge branch '\\''feature'\\''' refs/heads/feature"),
                 CliMerge.merge(repo, new BranchName("feature"), MergeMode.FAST_FORWARD)
                         .get()
                         .map(ExecutedCommand::line));
@@ -62,7 +64,7 @@ class CliMergeTest {
     @Test
     void mergeCommitIsMadeEvenWhenAFastForwardWouldDo() throws Exception {
         assertEquals(
-                List.of("git merge --no-ff --no-edit feature"),
+                List.of("git merge --no-ff --no-edit -m 'Merge branch '\\''feature'\\''' refs/heads/feature"),
                 CliMerge.merge(repo, new BranchName("feature"), MergeMode.MERGE_COMMIT)
                         .get()
                         .map(ExecutedCommand::line));
@@ -76,7 +78,7 @@ class CliMergeTest {
         String head = git("rev-parse", "HEAD");
 
         assertEquals(
-                List.of("git merge --squash feature"),
+                List.of("git merge --squash refs/heads/feature"),
                 CliMerge.merge(repo, new BranchName("feature"), MergeMode.SQUASH)
                         .get()
                         .map(ExecutedCommand::line));
@@ -90,7 +92,7 @@ class CliMergeTest {
         commitOnMain();
 
         assertEquals(
-                List.of("git merge --squash feature", "git commit --quiet --no-edit"),
+                List.of("git merge --squash refs/heads/feature", "git commit --quiet --no-edit"),
                 CliMerge.merge(repo, new BranchName("feature"), MergeMode.SQUASH_AND_COMMIT)
                         .get()
                         .map(ExecutedCommand::line));
@@ -106,7 +108,7 @@ class CliMergeTest {
         String head = git("rev-parse", "HEAD");
 
         assertEquals(
-                List.of("git merge --squash feature"),
+                List.of("git merge --squash refs/heads/feature"),
                 CliMerge.merge(repo, new BranchName("feature"), MergeMode.SQUASH_AND_COMMIT)
                         .get()
                         .map(ExecutedCommand::line));
@@ -138,7 +140,7 @@ class CliMergeTest {
                         2),
                 failure.error());
         assertEquals(
-                List.of("git merge --no-ff --no-edit conflicting"),
+                List.of("git merge --no-ff --no-edit -m 'Merge branch '\\''conflicting'\\''' refs/heads/conflicting"),
                 failure.commands().map(ExecutedCommand::line));
         assertTrue(Files.exists(repo.resolve(".git/MERGE_HEAD")));
         assertTrue(Files.readString(repo.resolve("a.txt")).contains("<<<<<<<"));
@@ -157,7 +159,8 @@ class CliMergeTest {
 
         assertEquals(new GitError.StoppedOnConflicts(Option.none(), 1), failure.error());
         assertEquals(
-                List.of("git merge --squash conflicting"), failure.commands().map(ExecutedCommand::line));
+                List.of("git merge --squash refs/heads/conflicting"),
+                failure.commands().map(ExecutedCommand::line));
         assertTrue(git("status", "--porcelain").contains("UU a.txt"));
         assertEquals(head, git("rev-parse", "HEAD"));
     }
@@ -172,7 +175,8 @@ class CliMergeTest {
 
         // Nothing was started, so nothing is undone.
         assertEquals(
-                List.of("git merge --ff --no-edit feature"), failure.commands().map(ExecutedCommand::line));
+                List.of("git merge --ff --no-edit -m 'Merge branch '\\''feature'\\''' refs/heads/feature"),
+                failure.commands().map(ExecutedCommand::line));
         assertEquals("A  b.txt\n", git("status", "--porcelain"));
     }
 
@@ -188,7 +192,7 @@ class CliMergeTest {
                 .getLeft();
 
         assertEquals(
-                List.of("git merge --no-ff --no-edit feature"),
+                List.of("git merge --no-ff --no-edit -m 'Merge branch '\\''feature'\\''' refs/heads/feature"),
                 failure.commands().map(ExecutedCommand::line));
         assertTrue(Files.exists(repo.resolve(".git/MERGE_HEAD")));
         assertEquals("resolved\n", Files.readString(repo.resolve("a.txt")));
@@ -206,8 +210,84 @@ class CliMergeTest {
         GitFailure<GitError> failure = CliMerge.merge(repo, new BranchName("feature"), MergeMode.SQUASH)
                 .getLeft();
 
-        assertEquals(List.of("git merge --squash feature"), failure.commands().map(ExecutedCommand::line));
+        assertEquals(
+                List.of("git merge --squash refs/heads/feature"),
+                failure.commands().map(ExecutedCommand::line));
         assertTrue(git("status", "--porcelain").contains("UU a.txt"));
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = MergeMode.class,
+            names = {"FAST_FORWARD", "MERGE_COMMIT", "SQUASH", "SQUASH_AND_COMMIT"})
+    void aTagNamedLikeTheBranchDoesNotWin(MergeMode mode) throws Exception {
+        // The tag is on main, so merging it would be "Already up to date".
+        git("tag", "feature", "main");
+
+        CliMerge.merge(repo, new BranchName("feature"), mode).get();
+
+        assertTrue(Files.exists(repo.resolve("b.txt")));
+    }
+
+    @Test
+    void aMergeCommitIsStillNamedAfterTheBranchNotItsRef() throws Exception {
+        git("tag", "feature", "main");
+
+        CliMerge.merge(repo, new BranchName("feature"), MergeMode.MERGE_COMMIT).get();
+
+        assertEquals("Merge branch 'feature'", git("log", "-1", "--format=%s").strip());
+    }
+
+    @Test
+    void aMergeCommitNamesTheBranchItIsMergedIntoLikeGitDoes() throws Exception {
+        git("checkout", "-qb", "develop");
+        git("tag", "feature", "main");
+
+        CliMerge.merge(repo, new BranchName("feature"), MergeMode.MERGE_COMMIT).get();
+
+        assertEquals(
+                "Merge branch 'feature' into develop",
+                git("log", "-1", "--format=%s").strip());
+    }
+
+    @Test
+    void aMergeCommitIntoMasterDoesNotNameIt() throws Exception {
+        git("branch", "-m", "main", "master");
+
+        CliMerge.merge(repo, new BranchName("feature"), MergeMode.MERGE_COMMIT).get();
+
+        assertEquals("Merge branch 'feature'", git("log", "-1", "--format=%s").strip());
+    }
+
+    @Test
+    void aMergeCommitOnADetachedHeadIsMergedIntoHeadLikeGitDoes() throws Exception {
+        git("checkout", "-q", "--detach");
+
+        CliMerge.merge(repo, new BranchName("feature"), MergeMode.MERGE_COMMIT).get();
+
+        assertEquals(
+                "Merge branch 'feature' into HEAD",
+                git("log", "-1", "--format=%s").strip());
+    }
+
+    @Test
+    void aMergeCommitHonoursMergeSuppressDest() throws Exception {
+        git("checkout", "-qb", "develop");
+        git("config", "merge.suppressDest", "develop");
+
+        CliMerge.merge(repo, new BranchName("feature"), MergeMode.MERGE_COMMIT).get();
+
+        assertEquals("Merge branch 'feature'", git("log", "-1", "--format=%s").strip());
+    }
+
+    @Test
+    void aMergeCommitWithMergeLogListsTheBranchNotItsRef() throws Exception {
+        git("config", "merge.log", "true");
+
+        CliMerge.merge(repo, new BranchName("feature"), MergeMode.MERGE_COMMIT).get();
+
+        String message = git("log", "-1", "--format=%B");
+        assertTrue(message.contains("* feature:"), message);
     }
 
     private void commitOnMain() throws Exception {

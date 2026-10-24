@@ -4,6 +4,7 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -27,16 +28,46 @@ final class CliMerge {
      */
     static Either<GitFailure<GitError>, List<ExecutedCommand>> merge(Path worktree, BranchName branch, MergeMode mode) {
         return switch (mode) {
-            case FAST_FORWARD -> Unfinished.runOrStop(worktree, git("merge", "--ff", "--no-edit", branch.value()));
-            case MERGE_COMMIT -> Unfinished.runOrStop(worktree, git("merge", "--no-ff", "--no-edit", branch.value()));
+            case FAST_FORWARD -> withMessage(worktree, branch, "--ff");
+            case MERGE_COMMIT -> withMessage(worktree, branch, "--no-ff");
             case SQUASH -> squash(worktree, branch);
             case SQUASH_AND_COMMIT ->
                 GitFailure.sequence(() -> squash(worktree, branch), () -> GitFailure.widen(commitStaged(worktree)));
         };
     }
 
+    /**
+     * Merges the ref of {@code branch}, as a tag named like the branch would win over its bare name. Git would then
+     * word the merge commit after the ref, so the message is given: the one {@code git fmt-merge-msg} writes for
+     * the branch, as it does for {@code git merge <branch>}, so the user's {@code merge.*} config applies.
+     */
+    private static Either<GitFailure<GitError>, List<ExecutedCommand>> withMessage(
+            Path worktree, BranchName branch, String fastForward) {
+        return message(worktree, branch)
+                .flatMap(message -> Unfinished.runOrStop(
+                        worktree, git("merge", fastForward, "--no-edit", "-m", message, Refs.head(branch))));
+    }
+
+    private static Either<GitFailure<GitError>, String> message(Path worktree, BranchName branch) {
+        return GitProcess.read(
+                        worktree,
+                        GitCommand.reading("rev-parse", "--verify", Refs.head(branch)),
+                        raw -> Either.right(raw.strip()))
+                .<GitFailure<GitError>>mapLeft(error -> new GitFailure<>(error, List.empty()))
+                .flatMap(sha -> TempFiles.using(
+                        "jazygit-merge",
+                        // What git merge hands to fmt-merge-msg for a local branch, as in FETCH_HEAD.
+                        file -> Files.writeString(file, sha + "\t\tbranch '" + branch.value() + "' of .\n"),
+                        failed -> new GitFailure<GitError>(failed, List.empty()),
+                        file -> GitProcess.read(
+                                        worktree,
+                                        GitCommand.reading("fmt-merge-msg", "--file", file.toString()),
+                                        raw -> Either.right(raw.strip()))
+                                .mapLeft(error -> new GitFailure<GitError>(error, List.empty()))));
+    }
+
     private static Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Path worktree, BranchName branch) {
-        return Unfinished.runOrStop(worktree, git("merge", "--squash", branch.value()));
+        return Unfinished.runOrStop(worktree, git("merge", "--squash", Refs.head(branch)));
     }
 
     /**
