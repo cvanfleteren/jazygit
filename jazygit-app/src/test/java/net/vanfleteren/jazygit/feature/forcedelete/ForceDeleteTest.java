@@ -37,6 +37,7 @@ class ForceDeleteTest {
 
     private static final BranchName MAIN = new BranchName("main");
     private static final BranchName FEATURE = new BranchName("feature");
+    private static final BranchRef ORIGIN_FEATURE = new BranchRef.Remote(new RemoteBranch("origin", FEATURE));
     private static final DeleteBranch DELETE_BOTH =
             new DeleteBranch(FEATURE, new RemoteBranch("origin", FEATURE), DeleteScope.BOTH);
     private static final GitFailure<GitError> NOT_MERGED = new GitFailure<>(
@@ -180,25 +181,35 @@ class ForceDeleteTest {
 
     @Test
     void theRefusalOfABranchWhoseUpstreamIsGoneSaysSo() {
-        Model model = TestModels.localBranchesRead(
+        Model asked = Update.update(
+                        tracking(new Tracking.Gone(ORIGIN_FEATURE)),
+                        new ForceDeleteMsg.NotFullyMerged(DELETE_BOTH, FEATURE, 2, NOT_MERGED.commands()))
+                .model();
+
+        assertEquals(Option.of(new ForceDeleteBranchPopup(FEATURE, 2, true)), asked.popup());
+    }
+
+    @Test
+    void anUpstreamDeletedAlongWithTheBranchDoesNotCountAsGone() {
+        Model asked = Update.update(
+                        tracking(new Tracking.Tracks(new Upstream(ORIGIN_FEATURE, 2, 0))),
+                        new ForceDeleteMsg.NotFullyMerged(DELETE_BOTH, FEATURE, 2, NOT_MERGED.commands()))
+                .model();
+
+        assertEquals(Option.of(new ForceDeleteBranchPopup(FEATURE, 2, false)), asked.popup());
+    }
+
+    /**
+     * main, checked out, and feature, with {@code tracking}.
+     */
+    private static Model tracking(Tracking tracking) {
+        return TestModels.localBranchesRead(
                         loaded(),
                         List.of(
                                 Fixtures.branch(MAIN, true, new Sha("aaaa")),
                                 Fixtures.branch(
-                                        FEATURE,
-                                        false,
-                                        new Sha("ffff"),
-                                        Instant.EPOCH,
-                                        false,
-                                        false,
-                                        new Tracking.Gone(new BranchRef.Remote(new RemoteBranch("origin", FEATURE))))))
+                                        FEATURE, false, new Sha("ffff"), Instant.EPOCH, false, false, tracking)))
                 .model();
-
-        Model asked = Update.update(
-                        model, new ForceDeleteMsg.NotFullyMerged(DELETE_BOTH, FEATURE, 2, NOT_MERGED.commands()))
-                .model();
-
-        assertEquals(Option.of(new ForceDeleteBranchPopup(FEATURE, 2, true)), asked.popup());
     }
 
     @Test
@@ -319,14 +330,14 @@ class ForceDeleteTest {
     }
 
     @Test
-    void thePopupOfABranchWhoseUpstreamIsGoneSaysTheCommitsMayBeOnMainAlready() {
+    void thePopupOfABranchWhoseUpstreamIsGoneSaysTheChangesMayHaveBeenMergedAlready() {
         assertEquals(
                 "2 commits on feature are on no other branch; its upstream is gone, so if its pull request was squash"
-                        + " merged they are on main already. Delete anyway?",
+                        + " merged, their changes are already on the branch it was merged into. Delete anyway?",
                 ForceDeleteDialog.SPEC.message().apply(new ForceDeleteBranchPopup(FEATURE, 2, true)));
         assertEquals(
                 "1 commit on feature is on no other branch; its upstream is gone, so if its pull request was squash"
-                        + " merged it is on main already. Delete anyway?",
+                        + " merged, its changes are already on the branch it was merged into. Delete anyway?",
                 ForceDeleteDialog.SPEC.message().apply(new ForceDeleteBranchPopup(FEATURE, 1, true)));
     }
 }
