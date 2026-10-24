@@ -270,6 +270,26 @@ class CliMergeTest {
                 git("log", "-1", "--format=%s").strip());
     }
 
+    @Test
+    void aMergeCommitHonoursMergeSuppressDest() throws Exception {
+        git("checkout", "-qb", "develop");
+        git("config", "merge.suppressDest", "develop");
+
+        CliMerge.merge(repo, new BranchName("feature"), MergeMode.MERGE_COMMIT).get();
+
+        assertEquals("Merge branch 'feature'", git("log", "-1", "--format=%s").strip());
+    }
+
+    @Test
+    void aMergeCommitWithMergeLogListsTheBranchNotItsRef() throws Exception {
+        git("config", "merge.log", "true");
+
+        CliMerge.merge(repo, new BranchName("feature"), MergeMode.MERGE_COMMIT).get();
+
+        String message = git("log", "-1", "--format=%B");
+        assertTrue(message.contains("* feature:"), message);
+    }
+
     private void commitOnMain() throws Exception {
         write("c.txt", "main\n");
         git("add", ".");

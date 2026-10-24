@@ -2,10 +2,9 @@ package net.vanfleteren.jazygit.git;
 
 import static net.vanfleteren.jazygit.git.GitCommand.git;
 
-import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
-import io.vavr.collection.Set;
 import io.vavr.control.Either;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -18,10 +17,6 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
  * or while the repository is in the middle of something else, which is then left alone.
  */
 final class CliMerge {
-
-    // The branches git does not name in a merge commit into them. Git also honours merge.suppressDest here, which
-    // is not read, so a user who set it still gets "into <branch>".
-    private static final Set<String> DEFAULT_BRANCHES = HashSet.of("main", "master");
 
     private CliMerge() {}
 
@@ -43,25 +38,32 @@ final class CliMerge {
 
     /**
      * Merges the ref of {@code branch}, as a tag named like the branch would win over its bare name. Git would then
-     * word the merge commit after the ref, so the message is given: the one git writes for a branch, which names
-     * the branch merged into unless that is a default one. This is built by hand, so it deviates from git where
-     * config changes the wording: {@code merge.suppressDest} is ignored, and {@code merge.branchdesc} is not used.
-     * With {@code merge.log} on, git's shortlog header names the ref instead of the branch.
+     * word the merge commit after the ref, so the message is given: the one {@code git fmt-merge-msg} writes for
+     * the branch, as it does for {@code git merge <branch>}, so the user's {@code merge.*} config applies.
      */
     private static Either<GitFailure<GitError>, List<ExecutedCommand>> withMessage(
             Path worktree, BranchName branch, String fastForward) {
-        return GitProcess.read(
-                        worktree, GitCommand.reading("branch", "--show-current"), raw -> Either.right(raw.strip()))
-                .<GitFailure<GitError>>mapLeft(error -> new GitFailure<>(error, List.empty()))
-                .flatMap(current -> Unfinished.runOrStop(
-                        worktree,
-                        git("merge", fastForward, "--no-edit", "-m", message(branch, current), Refs.head(branch))));
+        return message(worktree, branch)
+                .flatMap(message -> Unfinished.runOrStop(
+                        worktree, git("merge", fastForward, "--no-edit", "-m", message, Refs.head(branch))));
     }
 
-    private static String message(BranchName branch, String current) {
-        // On a detached HEAD git merges "into HEAD", and `branch --show-current` prints nothing.
-        String into = current.isEmpty() ? "HEAD" : current;
-        return "Merge branch '" + branch.value() + "'" + (DEFAULT_BRANCHES.contains(into) ? "" : " into " + into);
+    private static Either<GitFailure<GitError>, String> message(Path worktree, BranchName branch) {
+        return GitProcess.read(
+                        worktree,
+                        GitCommand.reading("rev-parse", "--verify", Refs.head(branch)),
+                        raw -> Either.right(raw.strip()))
+                .<GitFailure<GitError>>mapLeft(error -> new GitFailure<>(error, List.empty()))
+                .flatMap(sha -> TempFiles.using(
+                        "jazygit-merge",
+                        // What git merge hands to fmt-merge-msg for a local branch, as in FETCH_HEAD.
+                        file -> Files.writeString(file, sha + "\t\tbranch '" + branch.value() + "' of .\n"),
+                        failed -> new GitFailure<GitError>(failed, List.empty()),
+                        file -> GitProcess.read(
+                                        worktree,
+                                        GitCommand.reading("fmt-merge-msg", "--file", file.toString()),
+                                        raw -> Either.right(raw.strip()))
+                                .mapLeft(error -> new GitFailure<GitError>(error, List.empty()))));
     }
 
     private static Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Path worktree, BranchName branch) {
