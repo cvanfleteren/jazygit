@@ -258,7 +258,7 @@ public final class CliGitHub implements GitHub {
      * Parses the lines {@link #LOGINS_JQ} prints.
      */
     static Either<UnexpectedOutput, List<GhLogin>> parseLogins(String raw) {
-        return List.of(raw.split("\\R"))
+        return List.of(raw.split("\n"))
                 .filter(line -> !line.isBlank())
                 .map(line -> List.of(line.split("\t", -1)).map(CliGitHub::unescape))
                 .map(fields -> Option.when(fields.size() == 4, fields)
@@ -341,7 +341,7 @@ public final class CliGitHub implements GitHub {
      */
     static Either<UnexpectedOutput, MergeStatus> parseMergeStatus(String raw) {
         List<String> fields =
-                List.of(raw.replaceAll("\\R+$", "").split("\t", -1)).map(CliGitHub::unescape);
+                List.of(raw.replaceFirst("\n\\z", "").split("\t", -1)).map(CliGitHub::unescape);
         Option<MergeStatus> status = Option.when(fields.size() == 3, fields).flatMap(f -> switch (f.get(0)) {
             case "pending" -> Option.when(!f.get(1).isEmpty(), () -> new MergeStatus.Pending(f.get(1)));
             case "merged" -> Option.of(new MergeStatus.Merged());
@@ -384,7 +384,7 @@ public final class CliGitHub implements GitHub {
      * Parses the lines the jq filter of {@link #pullRequests()} prints.
      */
     static Either<UnexpectedOutput, List<PullRequest>> parse(String raw) {
-        return List.of(raw.split("\\R"))
+        return List.of(raw.split("\n"))
                 .filter(line -> !line.isBlank())
                 .map(line -> pullRequest(line).toEither(() -> new UnexpectedOutput(line)))
                 .transform(Either::sequenceRight)
@@ -411,7 +411,7 @@ public final class CliGitHub implements GitHub {
      * the repository it is of, empty for a search.
      */
     static Either<UnexpectedOutput, Map<String, Tuple2<String, PullRequestList>>> parseLists(String raw) {
-        List<List<String>> lines = List.of(raw.split("\\R"))
+        List<List<String>> lines = List.of(raw.split("\n"))
                 .filter(line -> !line.isBlank())
                 .map(line -> List.of(line.split("\t", -1)).map(CliGitHub::unescape));
         Option<List<String>> unknown = lines.find(fields -> !knownListsLine(fields));
@@ -467,7 +467,7 @@ public final class CliGitHub implements GitHub {
      * Parses the lines the jq filter of {@link #branchChecks()} prints.
      */
     static Either<UnexpectedOutput, BranchChecks> parseBranchChecks(String raw) {
-        List<List<String>> lines = List.of(raw.split("\\R"))
+        List<List<String>> lines = List.of(raw.split("\n"))
                 .filter(line -> !line.isBlank())
                 .map(line -> List.of(line.split("\t", -1)).map(CliGitHub::unescape));
         Option<List<String>> unknown =
@@ -490,7 +490,7 @@ public final class CliGitHub implements GitHub {
      * Parses the lines the jq filter of {@link #pullRequestDetails(int)} prints.
      */
     static Either<UnexpectedOutput, PullRequestDetails> parseDetails(String raw) {
-        List<List<String>> lines = List.of(raw.split("\\R"))
+        List<List<String>> lines = List.of(raw.split("\n"))
                 .filter(line -> !line.isBlank())
                 .map(line -> List.of(line.split("\t", -1)).map(CliGitHub::unescape));
         Option<List<String>> unknown = lines.find(fields -> !known(fields));
@@ -571,7 +571,7 @@ public final class CliGitHub implements GitHub {
      * Parses the lines the jq filter of {@link #pullRequestComments(int)} prints.
      */
     static Either<UnexpectedOutput, List<PullRequestComment>> parseComments(String raw) {
-        return Either.sequenceRight(List.of(raw.split("\\R"))
+        return Either.sequenceRight(List.of(raw.split("\n"))
                         .filter(line -> !line.isBlank())
                         .map(line -> comment(List.of(line.split("\t", -1)).map(CliGitHub::unescape))
                                 .toEither(() -> new UnexpectedOutput(line))))
