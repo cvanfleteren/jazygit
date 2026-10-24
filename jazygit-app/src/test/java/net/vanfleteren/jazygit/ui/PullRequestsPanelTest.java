@@ -11,7 +11,6 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.state.Loadable;
-import net.vanfleteren.jazygit.state.prs.PrOverview;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -62,20 +61,8 @@ class PullRequestsPanelTest {
     }
 
     @Test
-    void theFirstPaneThatListsAnyGetsTheFocusTheFirstTime() {
-        PullRequestList one = new PullRequestList(List.of(pr(false)), 1);
-
-        assertEquals("prReviewRequested", PullRequestsPanel.firstPane(PrOverview.INITIAL));
-        assertEquals(
-                "prRepository",
-                PullRequestsPanel.firstPane(PrOverview.INITIAL
-                        .withReviewRequested(new Loadable.Loaded<>(PullRequestList.EMPTY))
-                        .withRepository(new Loadable.Loaded<>(one))));
-        assertEquals(
-                "prAuthored",
-                PullRequestsPanel.firstPane(PrOverview.INITIAL
-                        .withAuthored(new Loadable.Loaded<>(one))
-                        .withRepository(new Loadable.Loaded<>(one))));
+    void theTopPaneGetsTheFocusTheFirstTime() {
+        assertEquals("prRepository", PullRequestsPanel.FIRST_PANE_ID);
     }
 
     @Test

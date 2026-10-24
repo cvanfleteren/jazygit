@@ -29,9 +29,9 @@ import net.vanfleteren.jazygit.ui.widgets.Pane;
 public final class PullRequestsPanel {
 
     /**
-     * The id of the pane listing the pull requests that ask for the user's review, the first one.
+     * The id of the top pane, the one that gets the focus the first time the screen is shown.
      */
-    public static final String REVIEW_REQUESTED_ID = Scopes.PR_REVIEW_REQUESTED.id();
+    public static final String FIRST_PANE_ID = Scopes.PR_REPOSITORY.id();
 
     private final Scope<PullRequestSummary> scope;
     private final Function<PrOverview, Loadable<PullRequestList>> pullRequests;
@@ -71,12 +71,14 @@ public final class PullRequestsPanel {
     }
 
     /**
-     * The panes of the pull requests screen, top to bottom: the ones that ask for the user's review, the ones they
-     * opened, and the ones of the repository.
+     * The panes of the pull requests screen, top to bottom: the ones of the repository, the ones that ask for the
+     * user's review, and the ones they opened.
      */
     public static List<PullRequestsPanel> all(
             Consumer<Msg> dispatch, Consumer<String> openPullRequest, Theme.Highlights highlights) {
         return List.of(
+                new PullRequestsPanel(
+                        Scopes.PR_REPOSITORY, PrOverview::repository, false, dispatch, openPullRequest, highlights),
                 new PullRequestsPanel(
                         Scopes.PR_REVIEW_REQUESTED,
                         PrOverview::reviewRequested,
@@ -85,21 +87,7 @@ public final class PullRequestsPanel {
                         openPullRequest,
                         highlights),
                 new PullRequestsPanel(
-                        Scopes.PR_AUTHORED, PrOverview::authored, true, dispatch, openPullRequest, highlights),
-                new PullRequestsPanel(
-                        Scopes.PR_REPOSITORY, PrOverview::repository, false, dispatch, openPullRequest, highlights));
-    }
-
-    /**
-     * The pane that gets the focus when the screen is shown the first time: the first one that lists any.
-     */
-    public static String firstPane(PrOverview overview) {
-        return List.of(Scopes.PR_REVIEW_REQUESTED.id(), Scopes.PR_AUTHORED.id(), Scopes.PR_REPOSITORY.id())
-                .zip(List.of(overview.reviewRequested(), overview.authored(), overview.repository()))
-                .find(pane ->
-                        pane._2.toOption().exists(read -> !read.pullRequests().isEmpty()))
-                .map(pane -> pane._1)
-                .getOrElse(REVIEW_REQUESTED_ID);
+                        Scopes.PR_AUTHORED, PrOverview::authored, true, dispatch, openPullRequest, highlights));
     }
 
     /**

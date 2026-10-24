@@ -33,8 +33,7 @@ public record PopupSlot(PopupView view, Function<Model, String> returnTo) {
      */
     public static String focusedPane(Model model) {
         return model.shownPane()
-                .getOrElse(() -> model.screen() == Screen.PULL_REQUESTS
-                        ? PullRequestsPanel.firstPane(model.prOverview())
-                        : FilesPanel.ID);
+                .getOrElse(
+                        () -> model.screen() == Screen.PULL_REQUESTS ? PullRequestsPanel.FIRST_PANE_ID : FilesPanel.ID);
     }
 }
