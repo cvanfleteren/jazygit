@@ -128,7 +128,9 @@ stays. Saving keeps the other keys, their order and their comments. It writes a 
 over the old one, and leaves a file that is not valid TOML alone. A symlinked `config.toml` stays a link: the
 file it leads to is replaced and keeps its permissions. A `.lock` file beside `config.toml` and `state.toml`
 themselves, not beside what a link leads to, is locked while they are read and written, so two jazygits do not
-undo each other. When saving fails, the error is shown, and
+undo each other. It is kept, as a lock nobody can see is none. When the whole directory is the link (GNU Stow
+does that when `~/.config/jazygit` does not exist yet), the lock is in the dotfiles repository after all: add
+`config.toml.lock` and `state.toml.lock` to its `.gitignore`. When saving fails, the error is shown, and
 the setting still holds until jazygit stops.
 
 Ctrl+S shows the settings (`feature.settings`): the gh executable, the theme, and the GitHub account of the
