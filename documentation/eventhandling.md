@@ -43,7 +43,8 @@ key:
 2. **The focused element**: first its `handleKeyEvent(event, true)`, then the handler set with
    `onKeyEvent(...)`.
 3. **The global handlers**, in the order they were added with `eventRouter().addGlobalHandler(...)`.
-4. **All other elements**, with `handleKeyEvent(event, false)`.
+4. **All other elements**, with `handleKeyEvent(event, false)`. This step is never reached for a key while a popup
+   is open, because the global handler takes every key then (see section 5).
 5. **Escape** clears the focus.
 
 If nothing handled the key and it is the quit key, `ToolkitRunner` quits.
@@ -97,7 +98,8 @@ While the help popup is open, its list has the focus, so `HelpDialog.handleKey` 
   (`Global.handle`).
 
 Running a row dispatches `HelpMsg.Chosen(msg)`. `HelpUpdate` closes the popup and applies `msg` to the model,
-as if the key had been pressed in the panel. `Msg.Quit` is dispatched as it is, because only the app can quit.
+as if the key had been pressed in the panel. `Msg.Quit` is dispatched as it is, and the model decides whether the
+app stops.
 
 ### 4. Where the keys are declared
 

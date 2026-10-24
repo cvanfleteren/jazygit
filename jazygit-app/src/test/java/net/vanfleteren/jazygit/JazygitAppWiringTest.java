@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.feature.commit.CommitDialog;
 import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
+import net.vanfleteren.jazygit.feature.help.HelpPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.StubGitProvider;
@@ -190,6 +191,25 @@ class JazygitAppWiringTest {
                     onRenderThread(
                             testRunner,
                             () -> app.model().popup(CommitPopup.class).isDefined()));
+        } finally {
+            app.onStop();
+        }
+    }
+
+    @Test
+    void qInTheHelpDialogStillQuits() throws Exception {
+        TestApp app = new TestApp();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
+            app.start(testRunner);
+            SettledPilot.focus(testRunner, FilesPanel.ID, app.drawnAt::size);
+            Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
+            pilot.press('?');
+            awaitModel(testRunner, app, model -> model.popup(HelpPopup.class).isDefined());
+            pilot.pause();
+
+            pilot.press('q');
+
+            await(() -> app.quits.get() == 1, "the app quit");
         } finally {
             app.onStop();
         }
