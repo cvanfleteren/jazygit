@@ -40,7 +40,8 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # PRs that Claude opens from an issue (ai-issue.yml) are pushed by the Claude app, a bot actor.
-          allowed_bots: claude
+          # Commits that Claude adds on request (claude-on-demand.yml) are pushed as github-actions.
+          allowed_bots: claude,github-actions
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
