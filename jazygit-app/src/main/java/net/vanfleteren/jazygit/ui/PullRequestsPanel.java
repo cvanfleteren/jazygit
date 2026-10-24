@@ -29,9 +29,9 @@ import net.vanfleteren.jazygit.ui.widgets.Pane;
 public final class PullRequestsPanel {
 
     /**
-     * The id of the pane listing the pull requests that ask for the user's review, the one that gets the focus first when none lists any.
+     * The id of the top pane, the one that gets the focus the first time the screen is shown.
      */
-    public static final String REVIEW_REQUESTED_ID = Scopes.PR_REVIEW_REQUESTED.id();
+    public static final String FIRST_PANE_ID = Scopes.PR_REPOSITORY.id();
 
     private final Scope<PullRequestSummary> scope;
     private final Function<PrOverview, Loadable<PullRequestList>> pullRequests;
@@ -88,19 +88,6 @@ public final class PullRequestsPanel {
                         highlights),
                 new PullRequestsPanel(
                         Scopes.PR_AUTHORED, PrOverview::authored, true, dispatch, openPullRequest, highlights));
-    }
-
-    /**
-     * The pane that gets the focus when the screen is shown the first time: the first one that lists any, in the
-     * order of triage (review requested, mine, the repository's), which is not the order they are drawn in.
-     */
-    public static String firstPane(PrOverview overview) {
-        return List.of(Scopes.PR_REVIEW_REQUESTED.id(), Scopes.PR_AUTHORED.id(), Scopes.PR_REPOSITORY.id())
-                .zip(List.of(overview.reviewRequested(), overview.authored(), overview.repository()))
-                .find(pane ->
-                        pane._2.toOption().exists(read -> !read.pullRequests().isEmpty()))
-                .map(pane -> pane._1)
-                .getOrElse(REVIEW_REQUESTED_ID);
     }
 
     /**

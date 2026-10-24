@@ -12,9 +12,8 @@ attention now?") and browsing the repo's PRs second.
   - **This repo**: all open PRs of the current repo, including PRs from forks.
   - **Review requested**: open PRs that ask for your review, across all repos.
   - **My PRs**: your open PRs, across all repos.
-- Each tab remembers its focused pane and its highlighted rows. The first time the PRs tab is shown, the first list
-  that is not empty gets the focus, checking "Review requested", then "My PRs", then "This repo" (triage first, so
-  not the order the panes are drawn in).
+- Each tab remembers its focused pane and its highlighted rows. The first time the PRs tab is shown, the top pane
+  ("This repo") gets the focus.
 
 ## Data
 
