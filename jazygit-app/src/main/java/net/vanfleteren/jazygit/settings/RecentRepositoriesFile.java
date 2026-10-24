@@ -6,11 +6,12 @@ import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 /**
  * The recent repositories in the state file, which only jazygit writes. Every change reads the file again first,
- * so the repositories another jazygit kept meanwhile stay; when both write at the same moment, the last one wins.
+ * under a lock, so the repositories another jazygit kept meanwhile stay.
  */
 public final class RecentRepositoriesFile implements RecentRepositories {
 
@@ -71,10 +72,11 @@ public final class RecentRepositoriesFile implements RecentRepositories {
      * Writes what {@code change} makes of the recent repositories in the file, keeping what else it has.
      */
     private Try<List<Path>> change(Function<List<Path>, List<Path>> change) {
-        List<Path> changed = change.apply(load());
-        return TomlFile.change(
-                        file,
-                        config -> config.set(KEY, changed.map(Path::toString).toJavaList()))
-                .map(written -> changed);
+        AtomicReference<List<Path>> changed = new AtomicReference<>(List.empty());
+        return TomlFile.change(file, config -> {
+                    changed.set(change.apply(paths(config)));
+                    config.set(KEY, changed.get().map(Path::toString).toJavaList());
+                })
+                .map(written -> changed.get());
     }
 }

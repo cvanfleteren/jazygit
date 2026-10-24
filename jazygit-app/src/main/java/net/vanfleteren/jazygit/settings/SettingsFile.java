@@ -42,6 +42,13 @@ public final class SettingsFile implements SettingsStore {
 
     @Override
     public Either<SettingsProblem, Settings> save(Settings previous, Settings next) {
+        return TomlFile.locked(file, () -> saved(previous, next))
+                .toEither()
+                .<SettingsProblem>mapLeft(cause -> new SettingsProblem.Unwritable(file, TomlFile.reason(cause)))
+                .map(written -> next);
+    }
+
+    private Try<Path> saved(Settings previous, Settings next) {
         // A file that cannot be read is left alone, rather than replaced by one with only these settings.
         Try<CommentedConfig> current = Files.exists(file) ? TomlFile.read(file) : Try.success(TomlFile.newConfig());
         return current.map(config -> next.entries()
@@ -58,9 +65,6 @@ public final class SettingsFile implements SettingsStore {
                             changed.remove(key);
                             return changed;
                         }))
-                .flatMap(config -> TomlFile.write(file, config))
-                .toEither()
-                .<SettingsProblem>mapLeft(cause -> new SettingsProblem.Unwritable(file, TomlFile.reason(cause)))
-                .map(written -> next);
+                .flatMap(config -> TomlFile.write(file, config));
     }
 }

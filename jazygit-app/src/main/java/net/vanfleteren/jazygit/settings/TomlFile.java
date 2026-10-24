@@ -11,13 +11,17 @@ import io.vavr.control.Try;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringWriter;
+import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.LinkedHashMap;
+import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Reading and writing a TOML file, which is never left written halfway.
@@ -37,6 +41,7 @@ final class TomlFile {
 
     /**
      * Writes {@code config} next to {@code file} and then moves it over it, so the file is never written halfway.
+     * A symlink is followed, so the file it leads to is the one replaced, and that file keeps its permissions.
      */
     static Try<Path> write(Path file, CommentedConfig config) {
         return Try.of(() -> {
@@ -44,26 +49,72 @@ final class TomlFile {
             TomlWriter writer = new TomlWriter();
             writer.setIndent(IndentStyle.NONE);
             writer.write(config, text);
-            Path dir = Files.createDirectories(file.toAbsolutePath().getParent());
-            Path temp = Files.writeString(
-                    Files.createTempFile(dir, file.getFileName().toString(), ".tmp"),
-                    text.toString(),
-                    StandardCharsets.UTF_8);
-            return Try.of(() -> move(temp, file))
+            Path target = target(file);
+            Path dir = Files.createDirectories(target.getParent());
+            // Created like any new file, with the default permissions rather than the owner-only of a temp file.
+            Path temp = Files.createFile(dir.resolve(target.getFileName() + "." + UUID.randomUUID() + ".tmp"));
+            return Try.of(() -> {
+                        keepPermissions(target, temp);
+                        Files.writeString(temp, text.toString(), StandardCharsets.UTF_8);
+                        return move(temp, target);
+                    })
                     .onFailure(failed -> Try.run(() -> Files.deleteIfExists(temp)))
                     .get();
         });
     }
 
     /**
-     * Writes {@code file} with what {@code change} does to it, keeping the rest. A file that cannot be read is
-     * written anew, as nothing in it is worth keeping. One change at a time, so two in this app do not undo each
-     * other; another app writing at the same moment can still.
+     * Runs {@code action} holding a lock on a {@code .lock} file next to {@code file}, so that two changes, in this
+     * app or in two, do not both read the file and then each write over the other.
      */
-    static synchronized Try<Path> change(Path file, Consumer<CommentedConfig> change) {
-        CommentedConfig config = Files.exists(file) ? read(file).getOrElse(TomlFile::newConfig) : newConfig();
-        change.accept(config);
-        return write(file, config);
+    static synchronized <T> Try<T> locked(Path file, Supplier<Try<T>> action) {
+        return Try.withResources(() -> lock(file)).of(lock -> action.get()).flatMap(result -> result);
+    }
+
+    /**
+     * Writes {@code file} with what {@code change} does to it, keeping the rest. A file that cannot be read is
+     * written anew, as nothing in it is worth keeping.
+     */
+    static Try<Path> change(Path file, Consumer<CommentedConfig> change) {
+        return locked(file, () -> {
+            CommentedConfig config = Files.exists(file) ? read(file).getOrElse(TomlFile::newConfig) : newConfig();
+            change.accept(config);
+            return write(file, config);
+        });
+    }
+
+    /**
+     * A channel holding the lock until it is closed. The JVM itself allows one lock per file, hence {@code synchronized}
+     * on {@link #locked}.
+     */
+    private static FileChannel lock(Path file) throws IOException {
+        Path target = target(file);
+        Files.createDirectories(target.getParent());
+        FileChannel channel = FileChannel.open(
+                target.resolveSibling(target.getFileName() + ".lock"),
+                StandardOpenOption.CREATE,
+                StandardOpenOption.WRITE);
+        try {
+            channel.lock();
+            return channel;
+        } catch (IOException | RuntimeException failed) {
+            channel.close();
+            throw failed;
+        }
+    }
+
+    /**
+     * The file a symlink leads to, or {@code file} itself when it is no symlink.
+     */
+    private static Path target(Path file) throws IOException {
+        Path absolute = file.toAbsolutePath();
+        return Files.exists(absolute) ? absolute.toRealPath() : absolute;
+    }
+
+    private static void keepPermissions(Path from, Path to) throws IOException {
+        if (Files.exists(from) && Files.getFileStore(from).supportsFileAttributeView("posix")) {
+            Files.setPosixFilePermissions(to, Files.getPosixFilePermissions(from));
+        }
     }
 
     private static Path move(Path temp, Path file) throws IOException {

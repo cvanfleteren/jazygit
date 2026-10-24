@@ -8,6 +8,7 @@ import io.vavr.control.Option;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import net.vanfleteren.jazygit.settings.SettingsStore.Loaded;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -259,5 +260,41 @@ class SettingsFileTest {
         settingsFile().save(wide, Settings.DEFAULT);
 
         assertFalse(Files.readString(file()).contains("width"), Files.readString(file()));
+    }
+
+    @Test
+    void savingThroughASymlinkKeepsTheLinkAndChangesWhatItLeadsTo() throws IOException {
+        Path real = Files.createDirectories(dir.resolve("dotfiles")).resolve("config.toml");
+        Files.writeString(real, "");
+        Files.createDirectories(file().getParent());
+        Files.createSymbolicLink(file(), real);
+
+        settingsFile().save(Settings.DEFAULT, DARCULA);
+
+        assertTrue(Files.isSymbolicLink(file()));
+        assertEquals(DARCULA, new SettingsFile(real).load().settings());
+    }
+
+    @Test
+    void savingKeepsThePermissionsOfTheFile() throws IOException {
+        write("");
+        Files.setPosixFilePermissions(file(), PosixFilePermissions.fromString("rw-r--r--"));
+
+        settingsFile().save(Settings.DEFAULT, DARCULA);
+
+        assertEquals(PosixFilePermissions.fromString("rw-r--r--"), Files.getPosixFilePermissions(file()));
+    }
+
+    @Test
+    void changesFromManyThreadsLoseNone() throws InterruptedException {
+        java.util.List<Thread> threads = java.util.stream.IntStream.range(0, 8)
+                .mapToObj(i -> new Thread(() -> new RecentRepositoriesFile(file()).opened(Path.of("/repos/" + i))))
+                .toList();
+        threads.forEach(Thread::start);
+        for (Thread thread : threads) {
+            thread.join();
+        }
+
+        assertEquals(8, new RecentRepositoriesFile(file()).load().size());
     }
 }
