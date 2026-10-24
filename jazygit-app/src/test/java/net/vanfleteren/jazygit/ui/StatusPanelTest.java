@@ -31,13 +31,28 @@ class StatusPanelTest {
         int repository = Messages.get("screen.repository").length();
         int pullRequests = Messages.get("screen.pullRequests").length();
 
-        assertEquals(Option.of(Screen.REPOSITORY), StatusPanel.screenAt(0));
-        assertEquals(Option.of(Screen.REPOSITORY), StatusPanel.screenAt(repository - 1));
-        assertEquals(Option.none(), StatusPanel.screenAt(repository + 1));
-        assertEquals(Option.of(Screen.PULL_REQUESTS), StatusPanel.screenAt(repository + 3));
-        assertEquals(Option.of(Screen.PULL_REQUESTS), StatusPanel.screenAt(repository + 3 + pullRequests - 1));
-        assertEquals(Option.none(), StatusPanel.screenAt(repository + 3 + pullRequests));
-        assertEquals(Option.none(), StatusPanel.screenAt(-1));
+        assertEquals(Option.of(Screen.REPOSITORY), StatusPanel.screenAt(0, 0));
+        assertEquals(Option.of(Screen.REPOSITORY), StatusPanel.screenAt(repository - 1, 0));
+        assertEquals(Option.none(), StatusPanel.screenAt(repository + 1, 0));
+        assertEquals(Option.of(Screen.PULL_REQUESTS), StatusPanel.screenAt(repository + 3, 0));
+        assertEquals(Option.of(Screen.PULL_REQUESTS), StatusPanel.screenAt(repository + 3 + pullRequests - 1, 0));
+        assertEquals(Option.none(), StatusPanel.screenAt(repository + 3 + pullRequests, 0));
+        assertEquals(Option.none(), StatusPanel.screenAt(-1, 0));
+    }
+
+    @Test
+    void theNewPullRequestsAreCountedAfterTheNameOfTheirScreenAndAClickOnTheCountShowsIt() {
+        String pullRequests = Messages.get("screen.pullRequests");
+        int start = Messages.get("screen.repository").length() + 3;
+
+        assertEquals(
+                Messages.get("screen.repository") + " │ " + pullRequests + " ●2",
+                StatusPanel.title(Screen.REPOSITORY, 2, Theme.SpanStyles.NONE).rawContent());
+        assertEquals(
+                Messages.get("screen.repository") + " │ " + pullRequests,
+                StatusPanel.title(Screen.REPOSITORY, 0, Theme.SpanStyles.NONE).rawContent());
+        assertEquals(Option.of(Screen.PULL_REQUESTS), StatusPanel.screenAt(start + pullRequests.length() + 2, 2));
+        assertEquals(Option.none(), StatusPanel.screenAt(start + pullRequests.length() + 3, 2));
     }
 
     @Test

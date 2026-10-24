@@ -68,13 +68,13 @@ public final class RecentRepositoriesFile implements RecentRepositories {
     }
 
     /**
-     * Writes what {@code change} makes of the recent repositories in the file. A file that cannot be read is
-     * written anew, as nothing in it is worth keeping.
+     * Writes what {@code change} makes of the recent repositories in the file, keeping what else it has.
      */
     private Try<List<Path>> change(Function<List<Path>, List<Path>> change) {
         List<Path> changed = change.apply(load());
-        CommentedConfig config = TomlFile.newConfig();
-        config.set(KEY, changed.map(Path::toString).toJavaList());
-        return TomlFile.write(file, config).map(written -> changed);
+        return TomlFile.change(
+                        file,
+                        config -> config.set(KEY, changed.map(Path::toString).toJavaList()))
+                .map(written -> changed);
     }
 }

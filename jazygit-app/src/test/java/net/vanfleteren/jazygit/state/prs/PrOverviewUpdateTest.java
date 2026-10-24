@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.TreeSet;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
@@ -16,6 +17,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.model.RepositoryPullRequests;
+import net.vanfleteren.jazygit.settings.UnseenPullRequests;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
@@ -26,7 +28,8 @@ import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
 /**
- * The pull requests screen: switching to it, and reading the pull requests it shows.
+ * The pull requests screen: switching to it, reading the pull requests it shows, and which of them were opened and
+ * not seen yet.
  */
 class PrOverviewUpdateTest {
 
@@ -57,17 +60,187 @@ class PrOverviewUpdateTest {
     }
 
     private static PrOverviewMsg repositoryRead(PullRequestSummary... pullRequests) {
-        return new PrOverviewMsg.RepositoryLoaded(new RepositoryPullRequests(
-                "Owner/Repo", new PullRequestList(List.of(pullRequests), pullRequests.length)));
+        return repositoryRead(Option.none(), Option.none(), pullRequests);
+    }
+
+    /**
+     * The pull requests of the repository read as {@code viewer}, with {@code kept} kept for it.
+     */
+    private static PrOverviewMsg repositoryRead(
+            Option<String> viewer, Option<UnseenPullRequests> kept, PullRequestSummary... pullRequests) {
+        return repositoryRead(viewer, kept, 0, pullRequests);
+    }
+
+    /**
+     * The pull requests of the repository read as {@code viewer}, with {@code kept} kept for it, and {@code latest}
+     * the number of the one opened last.
+     */
+    private static PrOverviewMsg repositoryRead(
+            Option<String> viewer, Option<UnseenPullRequests> kept, int latest, PullRequestSummary... pullRequests) {
+        return new PrOverviewMsg.RepositoryLoaded(
+                new RepositoryPullRequests(
+                        "Owner/Repo", new PullRequestList(List.of(pullRequests), pullRequests.length), viewer, latest),
+                kept);
+    }
+
+    private static UnseenPullRequests unseen(int highest, Integer... numbers) {
+        return new UnseenPullRequests(highest, TreeSet.of(numbers));
+    }
+
+    /**
+     * {@code model} after the pull requests of the repository were read, as the user {@code bob}, once with
+     * {@code first} and then with {@code then}.
+     */
+    private static Next readTwice(Model model, List<PullRequestSummary> first, List<PullRequestSummary> then) {
+        Model once = Update.update(
+                        model,
+                        repositoryRead(Option.of("bob"), Option.none(), first.toJavaArray(PullRequestSummary[]::new)))
+                .model();
+        return Update.update(
+                once, repositoryRead(Option.of("bob"), Option.none(), then.toJavaArray(PullRequestSummary[]::new)));
+    }
+
+    private static PullRequestSummary by(String author, PullRequestSummary pr) {
+        return new PullRequestSummary(
+                pr.repository(),
+                pr.number(),
+                pr.title(),
+                author,
+                pr.headBranch(),
+                pr.draft(),
+                pr.fromFork(),
+                pr.checks(),
+                pr.review(),
+                pr.updatedAt(),
+                pr.url());
     }
 
     @Test
-    void theRepositoryScreenShowsFirstAndNothingIsReadForThePullRequestsUntilTheirsIsShown() {
+    void theRepositoryScreenShowsFirstAndATickOnItOnlyReadsThePullRequestsOfTheRepository() {
         Model model = loaded();
 
         assertEquals(Screen.REPOSITORY, model.screen());
+        Next ticked = Update.update(model, new PrOverviewMsg.Tick());
+        assertEquals(List.of(new LoadRepositoryPullRequests()), ticked.cmds());
         assertEquals(
-                List.empty(), Update.update(model, new PrOverviewMsg.Tick()).cmds());
+                List.empty(),
+                Update.update(ticked.model(), new PrOverviewMsg.Tick()).cmds());
+    }
+
+    @Test
+    void theFirstReadOfTheRepositoryHasNoneUnseenAndKeepsTheHighestNumber() {
+        Next read = Update.update(loaded(), repositoryRead(NEW, OLD));
+
+        assertEquals(Option.of(unseen(2)), read.model().prOverview().unseen());
+        assertEquals(0, read.model().prOverview().unseenCount());
+        assertEquals(List.of(new SaveUnseenPullRequests("Owner/Repo", unseen(2))), read.cmds());
+    }
+
+    @Test
+    void oneAboveTheHighestNumberReadIsUnseenButNotOneTheUserOpened() {
+        PullRequestSummary third = pr("owner/repo", 3, Instant.parse("2026-10-17T00:00:00Z"));
+        PullRequestSummary fourth = by("Bob", pr("owner/repo", 4, Instant.parse("2026-10-17T00:00:00Z")));
+
+        Next read = readTwice(loaded(), List.of(OLD), List.of(fourth, third, OLD));
+
+        assertEquals(Option.of(unseen(4, 3)), read.model().prOverview().unseen());
+        assertEquals(1, read.model().prOverview().unseenCount());
+        assertTrue(read.model().prOverview().isUnseen(third));
+        assertFalse(read.model().prOverview().isUnseen(fourth));
+        assertEquals(List.of(new SaveUnseenPullRequests("Owner/Repo", unseen(4, 3))), read.cmds());
+    }
+
+    @Test
+    void anOldPullRequestThatIsReadForTheFirstTimeIsNotUnseen() {
+        Next read = readTwice(loaded(), List.of(NEW), List.of(NEW, OLD));
+
+        assertEquals(Option.of(unseen(2)), read.model().prOverview().unseen());
+        assertEquals(List.empty(), read.cmds());
+    }
+
+    @Test
+    void theHighestNumberIsTheOneOfThePullRequestOpenedLastSoAReopenedOneIsNotNew() {
+        PullRequestSummary reopened = pr("owner/repo", 12, Instant.parse("2026-10-17T00:00:00Z"));
+
+        Model none = Update.update(loaded(), repositoryRead(Option.none(), Option.none(), 45))
+                .model();
+        assertEquals(Option.of(unseen(45)), none.prOverview().unseen());
+
+        Next read = Update.update(none, repositoryRead(Option.none(), Option.none(), 45, reopened));
+        assertEquals(Option.of(unseen(45)), read.model().prOverview().unseen());
+        assertEquals(List.empty(), read.cmds());
+    }
+
+    @Test
+    void oneOfTheNewestThatWereMergedBeforeTheFirstReadIsNotNewWhenReopened() {
+        PullRequestSummary fortieth = pr("owner/repo", 40, Instant.parse("2026-10-16T00:00:00Z"));
+        PullRequestSummary reopened = pr("owner/repo", 43, Instant.parse("2026-10-17T00:00:00Z"));
+        PullRequestSummary opened = pr("owner/repo", 46, Instant.parse("2026-10-17T00:00:00Z"));
+
+        Model first = Update.update(loaded(), repositoryRead(Option.none(), Option.none(), 45, fortieth))
+                .model();
+        Model again = Update.update(first, repositoryRead(Option.none(), Option.none(), 46, opened, reopened, fortieth))
+                .model();
+
+        assertEquals(Option.of(unseen(46, 46)), again.prOverview().unseen());
+        assertFalse(again.prOverview().isUnseen(reopened));
+    }
+
+    @Test
+    void whatWasKeptCountsUntilTheModelHasItsOwn() {
+        Next read = Update.update(loaded(), repositoryRead(Option.none(), Option.of(unseen(1)), NEW, OLD));
+
+        assertEquals(Option.of(unseen(2, 2)), read.model().prOverview().unseen());
+
+        Model own = read.model();
+        assertEquals(
+                Option.of(unseen(2, 2)),
+                Update.update(own, repositoryRead(Option.none(), Option.of(unseen(5)), NEW, OLD))
+                        .model()
+                        .prOverview()
+                        .unseen());
+    }
+
+    @Test
+    void oneThatIsNotOpenAnymoreIsNotUnseenAnymore() {
+        Model unseenTwo = Update.update(loaded(), repositoryRead(Option.none(), Option.of(unseen(1)), NEW, OLD))
+                .model();
+
+        Next closed = Update.update(unseenTwo, repositoryRead(OLD));
+
+        assertEquals(Option.of(unseen(2)), closed.model().prOverview().unseen());
+        assertEquals(List.of(new SaveUnseenPullRequests("Owner/Repo", unseen(2))), closed.cmds());
+    }
+
+    @Test
+    void highlightingAnUnseenPullRequestOfTheRepositorySeesItAndKeepsThat() {
+        Model unseenTwo = Update.update(loaded(), repositoryRead(Option.none(), Option.of(unseen(1)), NEW, OLD))
+                .model();
+
+        Next elsewhere = Update.update(unseenTwo, new PrOverviewMsg.Highlighted(pr("other/repo", 2, NEW.updatedAt())));
+        assertEquals(1, elsewhere.model().prOverview().unseenCount());
+
+        Next seen = Update.update(unseenTwo, new PrOverviewMsg.Highlighted(NEW));
+        assertEquals(Option.of(unseen(2)), seen.model().prOverview().unseen());
+        assertEquals(
+                List.of(new LoadPullRequestPreview(NEW), new SaveUnseenPullRequests("Owner/Repo", unseen(2))),
+                seen.cmds());
+        assertEquals(
+                List.empty(),
+                Update.update(seen.model(), new PrOverviewMsg.Highlighted(NEW)).cmds());
+    }
+
+    @Test
+    void aFailedReadKeepsTheUnseenPullRequests() {
+        Model unseenTwo = Update.update(loaded(), repositoryRead(Option.none(), Option.of(unseen(1)), NEW, OLD))
+                .model();
+
+        assertEquals(
+                Option.of(unseen(2, 2)),
+                Update.update(unseenTwo, new PrOverviewMsg.RepositoryLoadFailed(refused("offline")))
+                        .model()
+                        .prOverview()
+                        .unseen());
     }
 
     @Test
