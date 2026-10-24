@@ -134,7 +134,7 @@ public final class PrOverviewUpdate {
      * while, say offline.
      */
     private static Loadable<PullRequestList> failed(Loadable<PullRequestList> list, Failure failure) {
-        return list instanceof Loadable.Loaded ? list : new Loadable.Failed<>(failure);
+        return list.failed(failure);
     }
 
     private static PullRequestList newestFirst(PullRequestList list) {

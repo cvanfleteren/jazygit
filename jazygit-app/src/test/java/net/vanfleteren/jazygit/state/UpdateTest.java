@@ -27,11 +27,25 @@ class UpdateTest {
 
     @Test
     void branchesThatCannotBeReadFailBothListsAsTheyAreReadTogether() {
-        Model failed = Update.update(loaded(), new LoadMsg.Failed(new LoadBranches(), refused("boom")))
+        Model failed = Update.update(
+                        Update.init("repo").model(), new LoadMsg.Failed(new LoadBranches(), refused("boom")))
                 .model();
 
         assertInstanceOf(Failed.class, failed.repo().branches());
         assertInstanceOf(Failed.class, failed.repo().remoteBranches());
+    }
+
+    @Test
+    void aFailedReadKeepsWhatWasReadBefore() {
+        Model before = loaded();
+        Model after = Update.update(before, new LoadMsg.Failed(new LoadBranches(), refused("boom")))
+                .model();
+        Model afterStatus = Update.update(after, new LoadMsg.Failed(new LoadStatus(), refused("boom")))
+                .model();
+        Model afterCommits = Update.update(afterStatus, new LoadMsg.Failed(TestModels.loadCommits(), refused("boom")))
+                .model();
+
+        assertEquals(before.repo(), afterCommits.repo());
     }
 
     @Test
@@ -149,7 +163,9 @@ class UpdateTest {
 
     @Test
     void failuresAreStoredAndRetriedOnTheNextTick() {
-        Model model = Update.update(loaded(), new LoadMsg.Failed(TestModels.loadCommits(), refused("boom")))
+        Model model = Update.update(
+                        loaded().mapRepo(repo -> repo.withCommits(Loadable.loading())),
+                        new LoadMsg.Failed(TestModels.loadCommits(), refused("boom")))
                 .model();
         assertEquals(new Failed<>(refused("boom")), model.repo().commits());
         assertEquals(

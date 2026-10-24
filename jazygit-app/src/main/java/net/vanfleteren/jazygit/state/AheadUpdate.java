@@ -142,7 +142,7 @@ public final class AheadUpdate {
     static Model failed(Model model, Cmd.LoadAhead load, Failure failure) {
         return load.branch()
                 .fold(
-                        () -> model.mapRepo(repo -> repo.withAhead(new Loadable.Failed<>(failure))),
+                        () -> model.mapRepo(repo -> repo.withAhead(repo.ahead().failed(failure))),
                         branch -> model.mapRepoView(repoView -> repoView.withBranchAhead(
                                 Preview.updated(repoView.branchAhead(), branch, preview -> preview.failed(failure)))));
     }
