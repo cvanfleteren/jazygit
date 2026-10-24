@@ -3,9 +3,14 @@ package net.vanfleteren.jazygit.settings;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
+import io.vavr.control.Try;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -109,6 +114,22 @@ class RecentRepositoriesFileTest {
                 """);
 
         assertEquals(List.of(A, B), recent().load());
+    }
+
+    @Test
+    void openingFromManyThreadsLosesNone() throws InterruptedException {
+        ExecutorService executor = Executors.newFixedThreadPool(8);
+        try {
+            executor.invokeAll(IntStream.range(0, 8)
+                            .<Callable<Object>>mapToObj(
+                                    i -> () -> new RecentRepositoriesFile(file()).opened(Path.of("/repos/" + i)))
+                            .toList())
+                    .forEach(done -> Try.of(done::get).get());
+        } finally {
+            executor.shutdown();
+        }
+
+        assertEquals(8, recent().load().size());
     }
 
     @Test
