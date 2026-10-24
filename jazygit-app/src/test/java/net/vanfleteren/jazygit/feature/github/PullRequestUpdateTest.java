@@ -553,6 +553,41 @@ class PullRequestUpdateTest {
     }
 
     @Test
+    void aParentRecordedUnderALocalNameIsTheBaseOfThatName() {
+        ReadParent read = new ReadParent(
+                FEATURE, List.of(new Base(MAIN.name(), remote("main")), new Base(DEV.name(), remote("development"))));
+
+        assertEquals(
+                new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(DEV.name())),
+                read.run(new Env(parentRecorded("dev"), StubGitHub.empty())));
+    }
+
+    @Test
+    void aNameOnTheRemoteWinsOverTheSameLocalName() {
+        ReadParent read = new ReadParent(
+                FEATURE,
+                List.of(new Base(new BranchName("stable"), remote("main")), new Base(MAIN.name(), remote("trunk"))));
+
+        assertEquals(
+                new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(new BranchName("stable"))),
+                read.run(new Env(parentRecorded("main"), StubGitHub.empty())));
+    }
+
+    private static StubGitProvider parentRecorded(String name) {
+        return new StubGitProvider() {
+            @Override
+            public Either<GitError.ProcessError, Option<BranchName>> parentBranch(BranchName branch) {
+                return Either.right(Option.of(new BranchName(name)));
+            }
+
+            @Override
+            public Either<GitError.ProcessError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
+                throw new AssertionError("counted");
+            }
+        };
+    }
+
+    @Test
     void confirmingCreatesThePullRequestAsEnteredAndKeepsTheBranchBusy() {
         NewPullRequest entered = new NewPullRequest(" Add login ", "Why", true);
 
