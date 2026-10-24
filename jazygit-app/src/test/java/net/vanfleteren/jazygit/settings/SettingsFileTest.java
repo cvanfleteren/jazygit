@@ -5,10 +5,16 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import io.vavr.control.Try;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import net.vanfleteren.jazygit.settings.SettingsStore.Loaded;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -278,23 +284,58 @@ class SettingsFileTest {
     @Test
     void savingKeepsThePermissionsOfTheFile() throws IOException {
         write("");
-        Files.setPosixFilePermissions(file(), PosixFilePermissions.fromString("rw-r--r--"));
+        Files.setPosixFilePermissions(file(), PosixFilePermissions.fromString("rw-rw----"));
 
         settingsFile().save(Settings.DEFAULT, DARCULA);
 
-        assertEquals(PosixFilePermissions.fromString("rw-r--r--"), Files.getPosixFilePermissions(file()));
+        assertEquals(PosixFilePermissions.fromString("rw-rw----"), Files.getPosixFilePermissions(file()));
     }
 
     @Test
-    void changesFromManyThreadsLoseNone() throws InterruptedException {
-        java.util.List<Thread> threads = java.util.stream.IntStream.range(0, 8)
-                .mapToObj(i -> new Thread(() -> new RecentRepositoriesFile(file()).opened(Path.of("/repos/" + i))))
-                .toList();
-        threads.forEach(Thread::start);
-        for (Thread thread : threads) {
-            thread.join();
+    void savingThroughASymlinkWhoseTargetDoesNotExistYetCreatesTheTarget() throws IOException {
+        Path real = Files.createDirectories(dir.resolve("dotfiles")).resolve("config.toml");
+        Files.createDirectories(file().getParent());
+        Files.createSymbolicLink(file(), real);
+
+        settingsFile().save(Settings.DEFAULT, DARCULA);
+
+        assertTrue(Files.isSymbolicLink(file()));
+        assertEquals(DARCULA, new SettingsFile(real).load().settings());
+    }
+
+    @Test
+    void savingThroughASymlinkLeavesNoLockFileWhereItLeads() throws IOException {
+        Path real = Files.createDirectories(dir.resolve("dotfiles")).resolve("config.toml");
+        Files.writeString(real, "");
+        Files.createDirectories(file().getParent());
+        Files.createSymbolicLink(file(), real);
+
+        settingsFile().save(Settings.DEFAULT, DARCULA);
+
+        try (Stream<Path> files = Files.list(real.getParent())) {
+            assertEquals(java.util.List.of(real), files.toList());
+        }
+    }
+
+    @Test
+    void savesAndChangesFromManyThreadsLoseNone() throws InterruptedException {
+        ExecutorService executor = Executors.newFixedThreadPool(8);
+        try {
+            executor.invokeAll(IntStream.range(0, 16)
+                            .<Callable<Object>>mapToObj(i -> () -> i == 0
+                                    ? settingsFile().save(Settings.DEFAULT, DARCULA)
+                                    : TomlFile.change(file(), config -> config.set("key" + i, i)))
+                            .toList())
+                    .forEach(done -> Try.of(done::get).get());
+        } finally {
+            executor.shutdown();
         }
 
-        assertEquals(8, new RecentRepositoriesFile(file()).load().size());
+        assertEquals(DARCULA, settingsFile().load().settings());
+        assertEquals(
+                15,
+                TomlFile.read(file()).get().entrySet().stream()
+                        .filter(entry -> entry.getKey().startsWith("key"))
+                        .count());
     }
 }

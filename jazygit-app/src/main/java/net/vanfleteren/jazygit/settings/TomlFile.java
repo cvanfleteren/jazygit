@@ -28,6 +28,8 @@ import java.util.function.Supplier;
  */
 final class TomlFile {
 
+    private static final int MAX_LINKS = 40;
+
     private TomlFile() {}
 
     static Try<CommentedConfig> read(Path file) {
@@ -64,8 +66,9 @@ final class TomlFile {
     }
 
     /**
-     * Runs {@code action} holding a lock on a {@code .lock} file next to {@code file}, so that two changes, in this
-     * app or in two, do not both read the file and then each write over the other.
+     * Runs {@code action} holding a lock on a {@code .lock} file next to {@code file} itself, not next to what a
+     * symlink leads to, so no file is left in a dotfiles repository. Two changes, in this app or in two, then do not
+     * both read the file and each write over the other.
      */
     static synchronized <T> Try<T> locked(Path file, Supplier<Try<T>> action) {
         return Try.withResources(() -> lock(file)).of(lock -> action.get()).flatMap(result -> result);
@@ -88,10 +91,10 @@ final class TomlFile {
      * on {@link #locked}.
      */
     private static FileChannel lock(Path file) throws IOException {
-        Path target = target(file);
-        Files.createDirectories(target.getParent());
+        Path absolute = file.toAbsolutePath();
+        Files.createDirectories(absolute.getParent());
         FileChannel channel = FileChannel.open(
-                target.resolveSibling(target.getFileName() + ".lock"),
+                absolute.resolveSibling(absolute.getFileName() + ".lock"),
                 StandardOpenOption.CREATE,
                 StandardOpenOption.WRITE);
         try {
@@ -107,8 +110,20 @@ final class TomlFile {
      * The file a symlink leads to, or {@code file} itself when it is no symlink.
      */
     private static Path target(Path file) throws IOException {
-        Path absolute = file.toAbsolutePath();
-        return Files.exists(absolute) ? absolute.toRealPath() : absolute;
+        return target(file.toAbsolutePath(), MAX_LINKS);
+    }
+
+    private static Path target(Path absolute, int linksLeft) throws IOException {
+        if (Files.exists(absolute)) {
+            return absolute.toRealPath();
+        }
+        if (!Files.isSymbolicLink(absolute)) {
+            return absolute;
+        }
+        if (linksLeft == 0) {
+            throw new IOException("Too many symbolic links: " + absolute);
+        }
+        return target(absolute.resolveSibling(Files.readSymbolicLink(absolute)), linksLeft - 1);
     }
 
     private static void keepPermissions(Path from, Path to) throws IOException {

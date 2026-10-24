@@ -125,7 +125,10 @@ file never stops the app:
 A change in the app, like choosing a theme, updates the `Model` and returns a `Cmd.SaveSettings` with the
 settings before and after. It writes only the settings that changed, so a hand edit made while jazygit runs
 stays. Saving keeps the other keys, their order and their comments. It writes a temporary file and moves it
-over the old one, and leaves a file that is not valid TOML alone. When saving fails, the error is shown, and
+over the old one, and leaves a file that is not valid TOML alone. A symlinked `config.toml` stays a link: the
+file it leads to is replaced and keeps its permissions. A `.lock` file beside `config.toml` and `state.toml`
+themselves, not beside what a link leads to, is locked while they are read and written, so two jazygits do not
+undo each other. When saving fails, the error is shown, and
 the setting still holds until jazygit stops.
 
 Ctrl+S shows the settings (`feature.settings`): the gh executable, the theme, and the GitHub account of the
