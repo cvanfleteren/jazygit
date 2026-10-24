@@ -2,7 +2,9 @@ package net.vanfleteren.jazygit.git;
 
 import static net.vanfleteren.jazygit.git.GitCommand.git;
 
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Set;
 import io.vavr.control.Either;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
@@ -17,6 +19,9 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
  */
 final class CliMerge {
 
+    // The branches git does not name in a merge commit into them, unless merge.suppressDest says otherwise.
+    private static final Set<String> DEFAULT_BRANCHES = HashSet.of("main", "master");
+
     private CliMerge() {}
 
     /**
@@ -27,16 +32,37 @@ final class CliMerge {
      */
     static Either<GitFailure<GitError>, List<ExecutedCommand>> merge(Path worktree, BranchName branch, MergeMode mode) {
         return switch (mode) {
-            case FAST_FORWARD -> Unfinished.runOrStop(worktree, git("merge", "--ff", "--no-edit", branch.value()));
-            case MERGE_COMMIT -> Unfinished.runOrStop(worktree, git("merge", "--no-ff", "--no-edit", branch.value()));
+            case FAST_FORWARD -> withMessage(worktree, branch, "--ff");
+            case MERGE_COMMIT -> withMessage(worktree, branch, "--no-ff");
             case SQUASH -> squash(worktree, branch);
             case SQUASH_AND_COMMIT ->
                 GitFailure.sequence(() -> squash(worktree, branch), () -> GitFailure.widen(commitStaged(worktree)));
         };
     }
 
+    /**
+     * Merges the ref of {@code branch}, as a tag named like the branch would win over its bare name. Git would then
+     * word the merge commit after the ref, so the message is given: the one git writes for a branch, which names
+     * the branch merged into unless that is a default one.
+     */
+    private static Either<GitFailure<GitError>, List<ExecutedCommand>> withMessage(
+            Path worktree, BranchName branch, String fastForward) {
+        return GitProcess.read(
+                        worktree, GitCommand.reading("branch", "--show-current"), raw -> Either.right(raw.strip()))
+                .<GitFailure<GitError>>mapLeft(error -> new GitFailure<>(error, List.empty()))
+                .flatMap(current -> Unfinished.runOrStop(
+                        worktree,
+                        git("merge", fastForward, "--no-edit", "-m", message(branch, current), Refs.head(branch))));
+    }
+
+    private static String message(BranchName branch, String current) {
+        // Nothing is named when HEAD is detached, as git does.
+        boolean named = !current.isEmpty() && !DEFAULT_BRANCHES.contains(current);
+        return "Merge branch '" + branch.value() + "'" + (named ? " into " + current : "");
+    }
+
     private static Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Path worktree, BranchName branch) {
-        return Unfinished.runOrStop(worktree, git("merge", "--squash", branch.value()));
+        return Unfinished.runOrStop(worktree, git("merge", "--squash", Refs.head(branch)));
     }
 
     /**

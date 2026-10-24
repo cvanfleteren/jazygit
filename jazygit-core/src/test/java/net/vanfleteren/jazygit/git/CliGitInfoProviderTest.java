@@ -554,7 +554,30 @@ class CliGitInfoProviderTest {
 
         List<String> executed = provider.rebase(new BranchName("main")).get().map(ExecutedCommand::line);
 
-        assertEquals(List.of("git rebase --autostash --keep-empty --rebase-merges --no-autosquash main"), executed);
+        assertEquals(
+                List.of("git rebase --autostash --keep-empty --rebase-merges --no-autosquash refs/heads/main"),
+                executed);
+        assertEquals(
+                List.of("Feature work", "Main work", "Initial commit"),
+                provider.commits().get().map(Commit::message).toList());
+    }
+
+    @Test
+    void rebaseOntoABranchIgnoresATagWithTheSameName() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Feature work");
+        git("checkout", "-q", "main");
+        git("tag", "other", "main");
+        Files.writeString(repo.resolve("m.txt"), "m\n");
+        git("add", "m.txt");
+        git("commit", "-q", "-m", "Main work");
+        git("branch", "other", "main");
+        git("checkout", "-q", "feature");
+
+        provider.rebase(new BranchName("other")).get();
+
         assertEquals(
                 List.of("Feature work", "Main work", "Initial commit"),
                 provider.commits().get().map(Commit::message).toList());

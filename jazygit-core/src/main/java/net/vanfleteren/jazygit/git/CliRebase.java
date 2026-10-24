@@ -61,13 +61,13 @@ final class CliRebase {
 
     /**
      * Rebases the checked out branch onto {@code onto}:
-     * {@code git rebase --autostash --keep-empty --rebase-merges --no-autosquash <onto>}. Merges are recreated instead of
+     * {@code git rebase --autostash --keep-empty --rebase-merges --no-autosquash refs/heads/<onto>}. Merges are recreated instead of
      * flattened, and fixup commits stay where they are whatever {@code rebase.autoSquash} says.
      *
      * @return the command lines that were run
      */
     static Either<GitFailure<GitError>, List<ExecutedCommand>> onto(Path worktree, BranchName onto) {
-        return rebase(worktree, git(REBASE.append("--no-autosquash").append(onto.value())));
+        return rebase(worktree, git(REBASE.append("--no-autosquash").append(Refs.head(onto))));
     }
 
     /**
