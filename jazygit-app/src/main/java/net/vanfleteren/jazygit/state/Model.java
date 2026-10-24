@@ -142,6 +142,7 @@ public record Model(
      */
     public Model drawn() {
         return mapJobs(jobs -> jobs.withRefreshing(HashSet.empty())
+                .withFailed(HashSet.empty())
                 .withWorktreeChangesRead(Option.none())
                 .withReadAt(HashMap.empty()));
     }

@@ -25,7 +25,8 @@ public final class LoadUpdate {
     private LoadUpdate() {}
 
     public static Next update(Model model, LoadMsg msg) {
-        Model done = model.mapJobs(jobs -> jobs.withRefreshing(jobs.refreshing().remove(msg.cmd())));
+        Model done = model.mapJobs(
+                jobs -> jobs.withRefreshing(jobs.refreshing().remove(msg.cmd())).withoutFailedRead(msg.cmd()));
         return switch (msg) {
             // What was read with other diff options than the ones now chosen is dropped, whatever came of it.
             case LoadMsg m when stale(done, m.cmd()) -> Next.of(done);
@@ -89,7 +90,10 @@ public final class LoadUpdate {
                 metadataChecked(done, Cmd.CheckMetadata.GUARDED.map(load -> Tuple.of(load, Option.none())));
             case LoadMsg.Failed(Cmd.Load cmd, Failure failure) ->
                 Next.of(failed(
-                        done.mapJobs(jobs -> jobs.withReadAt(jobs.readAt().remove(cmd))), cmd, failure));
+                        done.mapJobs(jobs ->
+                                jobs.withReadAt(jobs.readAt().remove(cmd)).withFailedRead(cmd)),
+                        cmd,
+                        failure));
         };
     }
 
@@ -270,16 +274,21 @@ public final class LoadUpdate {
     private static Model failed(Model model, Cmd.Load cmd, Failure failure) {
         return switch (cmd) {
             case Cmd.CheckMetadata() -> model;
-            case Cmd.LoadStatus() -> model.mapRepo(repo -> repo.withStatus(new Failed<>(failure)));
+            // What was read before stays: reading again can fail for a while, say on a timeout.
+            case Cmd.LoadStatus() ->
+                model.mapRepo(repo -> repo.withStatus(repo.status().failed(failure)));
             case Cmd.LoadBranches() ->
-                model.mapRepo(
-                        repo -> repo.withBranches(new Failed<>(failure)).withRemoteBranches(new Failed<>(failure)));
-            case Cmd.LoadStashes() -> model.mapRepo(repo -> repo.withStashes(new Failed<>(failure)));
-            case Cmd.LoadWorktrees() -> model.mapRepo(repo -> repo.withWorktrees(new Failed<>(failure)));
+                model.mapRepo(repo -> repo.withBranches(repo.branches().failed(failure))
+                        .withRemoteBranches(repo.remoteBranches().failed(failure)));
+            case Cmd.LoadStashes() ->
+                model.mapRepo(repo -> repo.withStashes(repo.stashes().failed(failure)));
+            case Cmd.LoadWorktrees() ->
+                model.mapRepo(repo -> repo.withWorktrees(repo.worktrees().failed(failure)));
             // Which worktrees have changes is a detail: when the whole read fails, what was read before stays, and
             // a later tick tries again. A single worktree that cannot be read is left out of a read that succeeds.
             case Cmd.LoadWorktreeChanges _ -> worktreeChangesRead(model);
-            case LoadCommits _ -> model.mapRepo(repo -> repo.withCommits(new Failed<>(failure)));
+            case LoadCommits _ ->
+                model.mapRepo(repo -> repo.withCommits(repo.commits().failed(failure)));
             case Cmd.SearchCommits load ->
                 model.mapRepoView(repoView -> repoView.withCommitSearch(repoView.commitSearch()
                         .map(search ->

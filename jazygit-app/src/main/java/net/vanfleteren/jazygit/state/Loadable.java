@@ -42,6 +42,14 @@ public sealed interface Loadable<T> {
         return toOption().contains(value) ? this : new Loaded<>(value);
     }
 
+    /**
+     * Why reading again failed: a value that was loaded stays, as reading it again can fail for a while, say
+     * on a timeout.
+     */
+    default Loadable<T> failed(Failure failure) {
+        return this instanceof Loaded<T> ? this : new Failed<>(failure);
+    }
+
     record Loading<T>() implements Loadable<T> {}
 
     record Loaded<T>(T value) implements Loadable<T> {}

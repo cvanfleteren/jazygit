@@ -87,7 +87,9 @@ class AheadUpdateTest {
     @Test
     void theLogOfHeadIsShownWhenItsCommitsNotOnItsBaseCannotBeRead() {
         Cmd.LoadAhead load = loadCommits().ahead();
-        Model model = Update.update(loaded(), new LoadMsg.CommitsLoaded(COMMITS, load, Either.left(refused("boom"))))
+        Model model = Update.update(
+                        loaded().mapRepo(repo -> repo.withAhead(Loadable.loading())),
+                        new LoadMsg.CommitsLoaded(COMMITS, load, Either.left(refused("boom"))))
                 .model();
 
         assertEquals(Option.of(COMMITS), model.repo().commits().toOption());
@@ -142,9 +144,20 @@ class AheadUpdateTest {
     }
 
     @Test
-    void aRetryThatCameBackIsNoLongerRunning() {
+    void aFailedReadOfAheadIsRetriedAlthoughWhatWasReadStays() {
         Cmd.LoadAhead load = AheadUpdate.ofHead(loaded());
         Model failed = Update.update(loaded(), new LoadMsg.Failed(load, refused("boom")))
+                .model();
+        assertEquals(loaded().repo().ahead(), failed.repo().ahead());
+        assertTrue(Update.refresh(failed).cmds().contains(load));
+    }
+
+    @Test
+    void aRetryThatCameBackIsNoLongerRunning() {
+        Cmd.LoadAhead load = AheadUpdate.ofHead(loaded());
+        Model failed = Update.update(
+                        loaded().mapRepo(repo -> repo.withAhead(Loadable.loading())),
+                        new LoadMsg.Failed(load, refused("boom")))
                 .model();
         Model retrying = Update.update(failed, new Msg.Tick()).model();
         assertTrue(retrying.jobs().refreshing().contains(load));
@@ -321,7 +334,7 @@ class AheadUpdateTest {
 
     @Test
     void aFailedReadIsTriedAgainOnTheNextRefresh() {
-        Model model = loaded();
+        Model model = loaded().mapRepo(repo -> repo.withAhead(Loadable.loading()));
         Cmd.LoadAhead load = AheadUpdate.ofHead(model);
 
         Model failed = Update.update(model, load.failed(refused("no"))).model();
