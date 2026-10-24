@@ -18,7 +18,7 @@ public final class ForceDeleteDialog {
             ForceDeleteBranchPopup.class,
             popup -> Messages.get("dialog.deleteBranch.title", popup.branch().value()),
             popup -> Messages.get(
-                    "dialog.forceDeleteBranch.message",
+                    popup.gone() ? "dialog.forceDeleteBranch.gone" : "dialog.forceDeleteBranch.message",
                     popup.lost(),
                     popup.branch().value()),
             ForceDeleteMsg.Confirmed::new,
