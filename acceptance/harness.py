@@ -103,6 +103,13 @@ class Git:
         return subprocess.run(["git", "rev-parse", "--verify", "-q", "HEAD"], cwd=self.path, env=self.env,
                               capture_output=True).returncode == 0
 
+    def is_repository(self) -> bool:
+        """Whether git reads the folder as a repository of its own. git init makes .git before what goes in it, such
+        as HEAD, so for a moment the folder has a .git that git does not read as a repository yet."""
+        git_dir = subprocess.run(["git", "rev-parse", "--absolute-git-dir"], cwd=self.path, env=self.env,
+                                 capture_output=True, text=True)
+        return git_dir.returncode == 0 and Path(git_dir.stdout.strip()) == self.path.resolve() / ".git"
+
     def write(self, name: str, content: str):
         file = self.path / name
         file.parent.mkdir(parents=True, exist_ok=True)

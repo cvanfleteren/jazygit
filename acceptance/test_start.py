@@ -37,7 +37,7 @@ def test_init_makes_the_folder_a_repository_and_opens_it(tmp_path, env, outside)
     app.press("i")
 
     repo = Git(path, env)
-    eventually(lambda: (path / ".git").is_dir(), "the folder to be a repository")
+    eventually(repo.is_repository, "the folder to be a repository")
     Jazygit(app, repo).caught_up()
     assert not repo.has_head()
 
@@ -118,7 +118,7 @@ def test_another_folder_in_no_repository_is_asked_about(tmp_path, env, outside):
     app.wait_for("other is not inside a git repository")
 
     app.press("i")
-    eventually(lambda: (other / ".git").is_dir(), "the other folder to be a repository")
+    eventually(Git(other, env).is_repository, "the other folder to be a repository")
 
 
 def test_a_path_that_does_not_exist_cannot_be_made_a_repository(tmp_path, outside):
