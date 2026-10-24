@@ -1344,7 +1344,7 @@ class CliGitInfoProviderTest {
     @Test
     void aFailingCommandReportsTheCommandsRunUpToAndIncludingIt() {
         assertEquals(
-                List.of("git branch --delete --force missing"),
+                List.of("git branch --delete --force -- missing"),
                 provider.deleteBranch(
                                 new BranchName("missing"),
                                 new RemoteBranch("origin", new BranchName("missing")),
@@ -1831,7 +1831,7 @@ class CliGitInfoProviderTest {
         git("checkout", "-q", "main");
 
         assertEquals(
-                List.of("git branch --delete --force topic"),
+                List.of("git branch --delete --force -- topic"),
                 provider.deleteLocalBranch(new BranchName("topic")).get().map(ExecutedCommand::line));
         assertEquals(
                 List.of("main"),
@@ -1858,7 +1858,7 @@ class CliGitInfoProviderTest {
         git("push", "-q", "--set-upstream", "origin", "feature");
 
         assertEquals(
-                List.of("git branch --move feature topic"),
+                List.of("git branch --move -- feature topic"),
                 provider.renameBranch(new BranchName("feature"), new BranchName("topic"))
                         .get()
                         .map(command -> command.line()));
@@ -1885,6 +1885,22 @@ class CliGitInfoProviderTest {
 
         assertTrue(provider.renameBranch(new BranchName("feature"), new BranchName("topic"))
                 .isLeft());
+        assertTrue(provider.allBranches()
+                .map(AllBranches::local)
+                .get()
+                .exists(b -> b.name().equals(new BranchName("feature"))));
+    }
+
+    @Test
+    void renameBranchToAnOptionLookalikeLeavesBothBranchesAsTheyWere() throws Exception {
+        git("branch", "feature");
+        git("checkout", "-q", "feature");
+        String main = git("rev-parse", "main");
+
+        assertTrue(provider.renameBranch(new BranchName("main"), new BranchName("--force"))
+                .isLeft());
+
+        assertEquals(main, git("rev-parse", "main"));
         assertTrue(provider.allBranches()
                 .map(AllBranches::local)
                 .get()
