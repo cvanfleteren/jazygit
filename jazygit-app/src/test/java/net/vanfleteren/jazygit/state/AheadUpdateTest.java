@@ -144,6 +144,15 @@ class AheadUpdateTest {
     }
 
     @Test
+    void aFailedReadOfAheadIsRetriedAlthoughWhatWasReadStays() {
+        Cmd.LoadAhead load = AheadUpdate.ofHead(loaded());
+        Model failed = Update.update(loaded(), new LoadMsg.Failed(load, refused("boom")))
+                .model();
+        assertEquals(loaded().repo().ahead(), failed.repo().ahead());
+        assertTrue(Update.refresh(failed).cmds().contains(load));
+    }
+
+    @Test
     void aRetryThatCameBackIsNoLongerRunning() {
         Cmd.LoadAhead load = AheadUpdate.ofHead(loaded());
         Model failed = Update.update(

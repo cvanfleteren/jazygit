@@ -25,7 +25,8 @@ public final class LoadUpdate {
     private LoadUpdate() {}
 
     public static Next update(Model model, LoadMsg msg) {
-        Model done = model.mapJobs(jobs -> jobs.withRefreshing(jobs.refreshing().remove(msg.cmd())));
+        Model done = model.mapJobs(
+                jobs -> jobs.withRefreshing(jobs.refreshing().remove(msg.cmd())).withoutFailedRead(msg.cmd()));
         return switch (msg) {
             // What was read with other diff options than the ones now chosen is dropped, whatever came of it.
             case LoadMsg m when stale(done, m.cmd()) -> Next.of(done);
@@ -89,7 +90,10 @@ public final class LoadUpdate {
                 metadataChecked(done, Cmd.CheckMetadata.GUARDED.map(load -> Tuple.of(load, Option.none())));
             case LoadMsg.Failed(Cmd.Load cmd, Failure failure) ->
                 Next.of(failed(
-                        done.mapJobs(jobs -> jobs.withReadAt(jobs.readAt().remove(cmd))), cmd, failure));
+                        done.mapJobs(jobs ->
+                                jobs.withReadAt(jobs.readAt().remove(cmd)).withFailedRead(cmd)),
+                        cmd,
+                        failure));
         };
     }
 

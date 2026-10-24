@@ -130,8 +130,8 @@ public final class AheadUpdate {
     static Next loaded(Model model, Cmd.LoadAhead load, Option<Ahead> ahead) {
         return load.branch()
                 .fold(
-                        () -> searchFollowed(model.mapRepo(
-                                repo -> repo.withAhead(repo.ahead().reload(ahead)))),
+                        () -> searchFollowed(model.mapJobs(jobs -> jobs.withoutFailedRead(load))
+                                .mapRepo(repo -> repo.withAhead(repo.ahead().reload(ahead)))),
                         branch -> Next.of(model.mapRepoView(repoView -> repoView.withBranchAhead(
                                 Preview.updated(repoView.branchAhead(), branch, preview -> preview.reload(ahead))))));
     }
@@ -142,7 +142,8 @@ public final class AheadUpdate {
     static Model failed(Model model, Cmd.LoadAhead load, Failure failure) {
         return load.branch()
                 .fold(
-                        () -> model.mapRepo(repo -> repo.withAhead(repo.ahead().failed(failure))),
+                        () -> model.mapJobs(jobs -> jobs.withFailedRead(load))
+                                .mapRepo(repo -> repo.withAhead(repo.ahead().failed(failure))),
                         branch -> model.mapRepoView(repoView -> repoView.withBranchAhead(
                                 Preview.updated(repoView.branchAhead(), branch, preview -> preview.failed(failure)))));
     }
@@ -185,7 +186,10 @@ public final class AheadUpdate {
      */
     static List<Cmd.Load> retries(Model model) {
         return List.<Cmd.Load>empty()
-                .appendAll(Option.when(model.repo().ahead() instanceof Loadable.Failed, () -> ofHead(model)))
+                .appendAll(Option.when(
+                        model.repo().ahead() instanceof Loadable.Failed
+                                || model.jobs().headAheadFailed(),
+                        () -> ofHead(model)))
                 .appendAll(model.repoView()
                         .branchAhead()
                         .filter(preview -> preview.value() instanceof Loadable.Failed)

@@ -182,6 +182,24 @@ class UpdateTest {
     }
 
     @Test
+    void aFailedLogReadIsRetriedAlthoughTheOldLogStays() {
+        Model before = loaded();
+        Model failed = Update.update(before, new LoadMsg.Failed(TestModels.loadCommits(), refused("boom")))
+                .model();
+        assertEquals(before.repo().commits(), failed.repo().commits());
+        assertTrue(Update.update(failed, new Tick()).cmds().contains(TestModels.loadCommits()));
+
+        Model retried = Update.update(
+                        Update.update(failed, new Tick()).model(),
+                        new LoadMsg.CommitsLoaded(
+                                before.repo().commits().getOrElse(List.empty()),
+                                TestModels.loadCommits().ahead(),
+                                io.vavr.control.Either.right(io.vavr.control.Option.none())))
+                .model();
+        assertFalse(Update.update(retried, new Tick()).cmds().contains(TestModels.loadCommits()));
+    }
+
+    @Test
     void aRetryThatIsStillRunningIsNotStartedAgain() {
         Model failed = Update.update(loaded(), new LoadMsg.Failed(TestModels.loadCommits(), refused("boom")))
                 .model();
