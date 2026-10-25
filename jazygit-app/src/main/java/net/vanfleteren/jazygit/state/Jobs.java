@@ -27,6 +27,9 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp;
  * @param ghExecutableEntered the gh executable the user entered last, to be checked before it is used, if any:
  *                            none inside for the one on the PATH. Checks can finish in another order than they
  *                            were asked for; only the check of this one decides
+ * @param ticks      how many ticks there were, which tells when a read that failed is tried again
+ * @param retries    the reads that failed the last time they ran, with how often they failed in a row and the tick
+ *                   they last failed on: a tick only tries one again once it waited longer the more it failed
  */
 @With
 public record Jobs(
@@ -37,7 +40,9 @@ public record Jobs(
         Freshness lastFetch,
         Option<Instant> worktreeChangesRead,
         Map<Cmd.Load, MetadataStamp> readAt,
-        Option<Option<String>> ghExecutableEntered) {
+        Option<Option<String>> ghExecutableEntered,
+        long ticks,
+        Map<Cmd.Load, Retry> retries) {
 
     public static final Jobs IDLE = new Jobs(
             HashSet.empty(),
@@ -47,7 +52,51 @@ public record Jobs(
             Freshness.NEVER,
             Option.none(),
             HashMap.empty(),
-            Option.none());
+            Option.none(),
+            0,
+            HashMap.empty());
+
+    /**
+     * Caps how long a tick waits before trying a read that failed again at {@code 2^6} = 64 ticks, under a minute at
+     * the default interval.
+     */
+    private static final int MAX_BACKOFF_SHIFT = 6;
+
+    /**
+     * These jobs one tick further.
+     */
+    public Jobs ticked() {
+        return withTicks(ticks + 1);
+    }
+
+    /**
+     * These jobs knowing that {@code load} ran, and whether it {@code failed}: one more failure in a row, or none.
+     */
+    public Jobs withRead(Cmd.Load load, boolean failed) {
+        return withRetries(
+                failed
+                        ? retries.put(
+                                load,
+                                new Retry(retries.get(load).map(Retry::failures).getOrElse(0) + 1, ticks))
+                        : retries.remove(load));
+    }
+
+    /**
+     * These jobs keeping only the failures of {@code loads}, the reads that are still to be tried again: those of a
+     * preview that is no longer shown, say, are forgotten.
+     */
+    public Jobs retainingRetries(Set<Cmd.Load> loads) {
+        return withRetries(retries.filterKeys(loads::contains));
+    }
+
+    /**
+     * Whether a tick tries {@code load} again: once it waited one tick after failing the first time, then twice as
+     * long after each failure in a row, up to {@code 2^MAX_BACKOFF_SHIFT} ticks. One that never failed always is.
+     */
+    public boolean retryDue(Cmd.Load load) {
+        return retries.get(load)
+                .forAll(retry -> ticks - retry.tick() >= 1L << Math.min(retry.failures() - 1, MAX_BACKOFF_SHIFT));
+    }
 
     /**
      * These jobs knowing that {@code load} failed, if it is one that is read again for that: the log of HEAD, and
@@ -100,4 +149,9 @@ public record Jobs(
     public Jobs withoutBusyBranch(BranchRef branch) {
         return withBusy(busy.remove(branch));
     }
+
+    /**
+     * A read that failed {@code failures} times in a row, the last time on tick {@code tick}.
+     */
+    public record Retry(int failures, long tick) {}
 }

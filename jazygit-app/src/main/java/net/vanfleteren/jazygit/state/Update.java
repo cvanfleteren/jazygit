@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.settings.SettingsStore;
@@ -134,20 +135,43 @@ public final class Update {
      * files to tell.
      */
     public static Next refresh(Model model) {
-        return reload(model, PERIODIC);
+        return reload(model, PERIODIC, load -> true);
     }
 
     /**
      * Reads the repository again on a tick, as {@link #refresh(Model)} does, but the branches, the stashes and the
      * worktrees only once the files they are read from changed: each takes a git process, and they hardly change
-     * while the user does nothing.
+     * while the user does nothing. What failed to load is only tried again once it waited long enough
+     * ({@link Jobs#retryDue}), so that a read that keeps failing, like the preview of a commit that is gone, does not
+     * take a git process on every tick.
      */
     public static Next tick(Model model) {
-        return reload(model, TICKED);
+        Model ticked = model.mapJobs(Jobs::ticked);
+        return reload(ticked, TICKED, ticked.jobs()::retryDue);
     }
 
-    private static Next reload(Model model, List<Cmd.Load> periodic) {
-        List<Cmd.Load> retries = List.<Cmd.Load>empty()
+    /**
+     * @param due whether to try a load that failed again now
+     */
+    private static Next reload(Model model, List<Cmd.Load> periodic, Predicate<Cmd.Load> due) {
+        List<Cmd.Load> retries = retries(model);
+        List<Cmd.Load> loads = periodic.appendAll(retries.filter(due))
+                .filter(cmd -> !model.jobs().refreshing().contains(cmd))
+                .appendAll(worktreeChanges(model)
+                        .filter(load -> model.jobs()
+                                .worktreeChangesRead()
+                                .forAll(read -> !model.now().isBefore(read.plus(WORKTREE_CHANGES_INTERVAL)))));
+        return new Next(
+                model.mapJobs(jobs ->
+                        jobs.withRefreshing(jobs.refreshing().addAll(loads)).retainingRetries(retries.toSet())),
+                List.narrow(loads));
+    }
+
+    /**
+     * The loads to run again as they failed, while their failure is still shown.
+     */
+    private static List<Cmd.Load> retries(Model model) {
+        return List.<Cmd.Load>empty()
                 .appendAll(Option.when(
                         model.repo().commits() instanceof Failed || model.jobs().commitsFailed(),
                         () -> new LoadCommits(AheadUpdate.ofHead(model))))
@@ -164,7 +188,7 @@ public final class Update {
                         .commitDetail()
                         .filter(detail -> detail.value() instanceof Failed)
                         .map(detail -> new LoadCommitDetail(
-                                detail.key(), model.preferences().diffOptions())))
+                                detail.key(), model.preferences().diffOptions(), Slot.COMMIT_DETAIL)))
                 .appendAll(model.repoView()
                         .divergence()
                         .filter(view -> view.commits() instanceof Failed)
@@ -174,26 +198,18 @@ public final class Update {
                         .flatMap(DivergenceView::detail)
                         .filter(detail -> detail.value() instanceof Failed)
                         .map(detail -> new LoadCommitDetail(
-                                detail.key(), model.preferences().diffOptions())))
+                                detail.key(), model.preferences().diffOptions(), Slot.DIVERGENCE_DETAIL)))
                 .appendAll(model.repoView()
                         .branchCommits()
                         .flatMap(BranchCommitsView::detail)
                         .filter(detail -> detail.value() instanceof Failed)
                         .map(detail -> new LoadCommitDetail(
-                                detail.key(), model.preferences().diffOptions())))
+                                detail.key(), model.preferences().diffOptions(), Slot.BRANCH_COMMITS_DETAIL)))
                 .appendAll(model.repoView()
                         .stashDetail()
                         .filter(detail -> detail.value() instanceof Failed)
                         .map(detail -> new Cmd.LoadStashDetail(
                                 detail.key(), model.preferences().diffOptions())));
-        List<Cmd.Load> loads = periodic.appendAll(retries)
-                .filter(cmd -> !model.jobs().refreshing().contains(cmd))
-                .appendAll(worktreeChanges(model)
-                        .filter(load -> model.jobs()
-                                .worktreeChangesRead()
-                                .forAll(read -> !model.now().isBefore(read.plus(WORKTREE_CHANGES_INTERVAL)))));
-        return new Next(
-                model.mapJobs(jobs -> jobs.withRefreshing(jobs.refreshing().addAll(loads))), List.narrow(loads));
     }
 
     /**

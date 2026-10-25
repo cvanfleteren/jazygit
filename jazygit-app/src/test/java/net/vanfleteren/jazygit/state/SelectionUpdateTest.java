@@ -3,6 +3,8 @@ package net.vanfleteren.jazygit.state;
 import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.vavr.Tuple;
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.*;
@@ -20,6 +22,8 @@ import org.junit.jupiter.api.Test;
  * The selection transitions: highlighting a branch or files loads their log or diff.
  */
 class SelectionUpdateTest {
+
+    private static final LoadCommitDetail DETAIL = new LoadCommitDetail(new Sha("aaaa"), DiffOptions.DEFAULT);
 
     @Test
     void selectingABranchLoadsItsLogOnce() {
@@ -109,6 +113,70 @@ class SelectionUpdateTest {
         assertTrue(Update.update(model, new Tick())
                 .cmds()
                 .contains(new LoadCommitDetail(new Sha("aaaa"), DiffOptions.DEFAULT)));
+    }
+
+    @Test
+    void changesThatKeepFailingAreTriedAgainLessAndLessOften() {
+        Model failed = failedDetail(selectedCommit());
+
+        // Each tick that tries again fails again; it waits 1, 2, 4 and then 8 ticks.
+        List<Integer> tried = List.rangeClosed(1, 16)
+                .foldLeft(Tuple.of(failed, List.<Integer>empty()), (state, tick) -> {
+                    Next next = Update.tick(state._1());
+                    return next.cmds().contains(DETAIL)
+                            ? Tuple.of(failedDetail(next.model()), state._2().append(tick))
+                            : Tuple.of(next.model(), state._2());
+                })
+                ._2();
+
+        assertEquals(List.of(1, 3, 7, 15), tried);
+    }
+
+    @Test
+    void changesThatFailedAreTriedAgainAtOnceOnARefreshAndForgottenOnceRead() {
+        Model failedTwice =
+                failedDetail(Update.tick(failedDetail(selectedCommit())).model());
+
+        // The next tick that tries again is two ticks off.
+        assertFalse(Update.tick(failedTwice).cmds().contains(DETAIL));
+        assertTrue(Update.refresh(failedTwice).cmds().contains(DETAIL));
+
+        Model read = Update.update(
+                        failedTwice,
+                        new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffOptions.DEFAULT, DiffText.of("changes")))
+                .model();
+        assertEquals(HashMap.empty(), read.jobs().retries());
+    }
+
+    @Test
+    void aSkippedLoadIsNoLongerRunningAndIsNoFailure() {
+        Model running = failedDetail(failedDetail(selectedCommit()))
+                .mapJobs(jobs -> jobs.withRefreshing(jobs.refreshing().add(DETAIL)));
+
+        Model skipped = Update.update(running, new LoadMsg.Skipped(DETAIL)).model();
+
+        assertFalse(skipped.jobs().refreshing().contains(DETAIL));
+        // The backoff of a retry that a newer highlight skipped stays.
+        assertEquals(running.jobs().retries(), skipped.jobs().retries());
+        assertNotEquals(HashMap.empty(), skipped.jobs().retries());
+    }
+
+    private static Model selectedCommit() {
+        return Update.update(loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa")))
+                .model();
+    }
+
+    private static Model failedDetail(Model model) {
+        return Update.update(model, new LoadMsg.Failed(DETAIL, refused("boom"))).model();
+    }
+
+    @Test
+    void eachViewReadsTheCommitItHighlightsInItsOwnSlot() {
+        assertEquals(
+                Option.of(Cmd.Slot.COMMIT_DETAIL), new LoadCommitDetail(new Sha("aaaa"), DiffOptions.DEFAULT).slot());
+        assertEquals(
+                Option.of(Cmd.Slot.DIVERGENCE_DETAIL),
+                new LoadCommitDetail(new Sha("aaaa"), DiffOptions.DEFAULT, Cmd.Slot.DIVERGENCE_DETAIL).slot());
     }
 
     @Test

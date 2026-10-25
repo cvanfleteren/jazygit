@@ -144,7 +144,9 @@ public record Model(
         return mapJobs(jobs -> jobs.withRefreshing(HashSet.empty())
                 .withFailed(HashSet.empty())
                 .withWorktreeChangesRead(Option.none())
-                .withReadAt(HashMap.empty()));
+                .withReadAt(HashMap.empty())
+                .withTicks(0)
+                .withRetries(HashMap.empty()));
     }
 
     /**

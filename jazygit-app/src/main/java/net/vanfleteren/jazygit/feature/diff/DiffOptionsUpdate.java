@@ -41,12 +41,17 @@ public final class DiffOptionsUpdate {
                 .appendAll(model.repoView().fileDiff().map(diff -> new Cmd.LoadFileDiff(diff.key(), options)))
                 .appendAll(model.repoView()
                         .commitDetail()
-                        .toList()
-                        .appendAll(model.repoView().divergence().flatMap(DivergenceView::detail))
-                        .appendAll(model.repoView().branchCommits().flatMap(BranchCommitsView::detail))
-                        .map(detail -> new Cmd.LoadCommitDetail(detail.key(), options)))
-                .appendAll(model.repoView().stashDetail().map(detail -> new Cmd.LoadStashDetail(detail.key(), options)))
-                .distinct();
+                        .map(detail -> new Cmd.LoadCommitDetail(detail.key(), options, Cmd.Slot.COMMIT_DETAIL)))
+                .appendAll(model.repoView()
+                        .divergence()
+                        .flatMap(DivergenceView::detail)
+                        .map(detail -> new Cmd.LoadCommitDetail(detail.key(), options, Cmd.Slot.DIVERGENCE_DETAIL)))
+                .appendAll(model.repoView()
+                        .branchCommits()
+                        .flatMap(BranchCommitsView::detail)
+                        .map(detail -> new Cmd.LoadCommitDetail(detail.key(), options, Cmd.Slot.BRANCH_COMMITS_DETAIL)))
+                .appendAll(
+                        model.repoView().stashDetail().map(detail -> new Cmd.LoadStashDetail(detail.key(), options)));
         return new Next(
                 model.mapPreferences(preferences -> preferences.withDiffOptions(options))
                         .mapRepoView(repoView -> repoView.withFileDiff(reloading(repoView.fileDiff()))

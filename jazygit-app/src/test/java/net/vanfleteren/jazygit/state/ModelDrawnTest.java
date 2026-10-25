@@ -44,7 +44,9 @@ class ModelDrawnTest {
     @Test
     void theLoadsRunningAndWhenTheyReadAreNotDrawn() {
         Model loading = model.mapJobs(jobs -> jobs.withRefreshing(HashSet.of(new Cmd.LoadStatus()))
-                .withWorktreeChangesRead(Option.of(Instant.EPOCH)));
+                .withWorktreeChangesRead(Option.of(Instant.EPOCH))
+                .ticked()
+                .withRead(new Cmd.LoadStatus(), true));
 
         assertEquals(model.drawn(), loading.drawn());
     }

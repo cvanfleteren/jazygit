@@ -170,11 +170,14 @@ class UpstreamUpdateTest {
     @Test
     void aHighlightedCommitOfTheDivergenceShowsWhatItChanged() {
         Next next = Update.update(viewing(), new SelectionMsg.DivergenceCommitSelected(AHEAD.sha()));
-        assertEquals(List.of(new Cmd.LoadCommitDetail(AHEAD.sha(), DiffOptions.DEFAULT)), next.cmds());
+        assertEquals(
+                List.of(new Cmd.LoadCommitDetail(AHEAD.sha(), DiffOptions.DEFAULT, Cmd.Slot.DIVERGENCE_DETAIL)),
+                next.cmds());
 
         Model shown = Update.update(
                         next.model(),
-                        new LoadMsg.CommitDetailLoaded(AHEAD.sha(), DiffOptions.DEFAULT, DiffText.of("diff")))
+                        new LoadMsg.CommitDetailLoaded(
+                                AHEAD.sha(), DiffOptions.DEFAULT, DiffText.of("diff"), Cmd.Slot.DIVERGENCE_DETAIL))
                 .model();
 
         assertEquals(

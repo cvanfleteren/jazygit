@@ -24,7 +24,7 @@ Six reviewers each took one area: the core git layer, the GitHub layer, the Elm 
 
 - **✔ No guard around updates.** `Program.dispatch` runs `Update.update` unguarded, so a bug in any update shows TamboUI's error screen and ends the app. No `errorHandler` is set, so view exceptions do the same and are never logged.
 - **✔ A failed read empties the pane.** `LoadUpdate.failed` replaces the loaded value with `Failed`, against the `Repo` javadoc. One timed-out `for-each-ref` empties both branch tabs, resets the cursors, and drops the "in progress" guard while it lasts.
-- **Unbounded preview reads.** Each highlight move queues its own `git show` on the single `git-io` queue, with no slot and no dedupe. Failed previews are retried every tick with no backoff.
+- **✔ Unbounded preview reads.** Each highlight move queues its own `git show` on the single `git-io` queue, with no slot and no dedupe. Failed previews are retried every tick with no backoff.
 - **Processes:**
     - "Cut off" output is still read whole into memory (OOM on huge files).
     - A timeout kills git but not its hooks, ssh or pinentry, and those children keep the TUI's terminal.

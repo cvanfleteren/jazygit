@@ -50,3 +50,6 @@ of the last one is used as before, panel or not: it was the user's last choice.
 
 - Up to 4 git or gh processes run in the background at once.
 - `Program` keeps the last command of each slot; it is only touched on the UI thread.
+
+Amended by ADR 31: the branch log, the commit details, the stash detail and the file diff take a slot
+too, a cancelled load reports `LoadMsg.Skipped` instead of nothing, and failed reads back off on the tick.
