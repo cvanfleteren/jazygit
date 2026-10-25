@@ -12,9 +12,10 @@ is nowhere to put that at all.
 
 GitHub tells, in GraphQL, for every check run its `status` (`QUEUED`, `IN_PROGRESS`, …), `startedAt` and
 `completedAt`, empty while it is queued, and its workflow run, through `checkSuite.workflowRun`: `createdAt`,
-`runAttempt`, `event` and the workflow's name. That is `null` for a check run made by an app other than GitHub Actions
-(Codecov, SonarCloud, …): it has no workflow and no run start. A re-run keeps the `createdAt` of the first attempt; there is no time an attempt started. A commit status (the
-older API) has no timing, and only its latest state shows.
+`runAttempt`, `event` and the workflow's name. That is `null` for a check run made by an app other than GitHub
+Actions (Codecov, SonarCloud, …): it has no workflow and no run start. A re-run keeps the `createdAt` of the first
+attempt; there is no time an attempt started. A commit status (the older API) has no timing, and only its latest
+state shows.
 
 It does not tell how long a check usually takes; that has to be learned from runs that are done. Checks wait for each
 other: on #140, `package` ran from 2s to 60s into its run and `acceptance`, which needs it, from 62s to 254s. Which
@@ -33,8 +34,8 @@ take still; the checks together show when they are expected to be done, or that 
   start plus its median duration, and the run's start plus its median finish.
 - The checks together are expected done at the latest of those, of the checks not done. They are not known when
   one of those is not: a check with too little history, a queued check of an app other than Actions, or a commit
-  status that is pending. Not: an estimate of
-  what is known with a count of what is not; they are not done before the unknown one is.
+  status that is pending. Not: an estimate of what is known with a count of what is not; they are not done before
+  the unknown one is.
 - The median of the newest 20 runs that passed, given at least 3; under 3, the check is not known. Runs that
   failed, were cancelled or skipped stop early and are left out. Only first attempts: a re-run's `createdAt` is the
   first attempt's.
@@ -52,13 +53,17 @@ take still; the checks together show when they are expected to be done, or that 
 - Every read that brings check timing adds the checks that passed to the history: the details of a pull request,
   the pending branches and the checks popup. A sample is `{ id, duration, finished, event, at }`: the check run's
   `databaseId`, its duration and when after its run's start it finished in seconds, the event of its run, and when
-  it finished.
+  it finished. A check of an app other than Actions has no run, so its sample has no `finished` and no `event`, and
+  it is estimated from its duration alone.
 - The first time a check that is not done is seen while the repository was last topped up more than a day ago, or
-  never, one `gh api graphql` reads the checks of the last 20 merged pull requests and of the last 20
-  commits of the default branch: those cover the workflows that only run on a push. Not when a repository is
-  opened, so one without running checks never costs a call. Estimates show `…` while it runs. When it is tried, successful or not, `topped-up = <instant>` is written for the
-  repository, and that, not the age of the samples, gates the next one: a quiet repository, an empty result and a
-  failing `gh` all wait the day out, so it is at most one a day per repository.
+  never, one `gh api graphql` reads the checks of the last 20 merged pull requests and of the last 20 commits of the
+  default branch: those cover the workflows that only run on a push. Not when a repository is opened, so one without
+  running checks never costs a call. Estimates show `…` while it runs.
+- When the top-up is tried, successful or not, the instant is kept, and that, not the age of the samples, gates the
+  next one: a quiet repository, an empty result and a failing `gh` all wait the day out, so it is at most one a day
+  per repository. The gate goes by the instant in memory (`GitHubState`, next to the history), set as the top-up
+  starts; `topped-up` in the file only carries it across restarts and to other jazygits. A file that cannot be
+  written then does not bring the top-up back every minute.
 - Not: only learning locally, as a new developer would only know the pull requests they looked at, and history
   would go stale on a repository they rarely watch. Not: only asking GitHub, every hour, without a file.
 - The event is kept but not part of the key: a workflow that runs on both pushes and pull requests pools them, and
@@ -67,14 +72,28 @@ take still; the checks together show when they are expected to be done, or that 
 ### Kept
 
 - In `check-timings.toml`, next to `state.toml`: what jazygit keeps by itself, but it changes as checks finish and
-  grows with repositories and checks, so apart from the recent repositories, and it can be deleted alone. By
-  repository (`owner/name`), then by `"<workflow>/<check>"`.
+  grows with repositories and checks, so apart from the recent repositories, and it can be deleted alone. A table
+  per repository (`owner/name`) holds when it was last topped up, and a sub-table `checks` holds the samples of each
+  check by its key, `"<workflow>/<check>"` or `"<app slug>/<check>"`, so no check can clash with `topped-up`:
+
+  ```toml
+  [repo."owner/name"]
+  topped-up = 2026-10-25T10:00:00Z
+
+  [repo."owner/name".checks]
+  "Build/acceptance" = [{ id = 121, duration = 192, finished = 254, event = "pull_request", at = 2026-10-24T22:22:37Z }]
+  "codecov/patch" = [{ id = 133, duration = 41, at = 2026-10-24T22:21:02Z }]
+  ```
+
+  Durations are in seconds. TOML has no null, so a sample of an app other than Actions leaves out `finished` and
+  `event`.
 - `RecordCheckTimings` writes only the new samples: under `TomlFile.change`'s lock it reads the file, adds them,
   drops those already there by id, and keeps the newest 20 per check, dropping checks not seen for 90 days. Never the
   history in memory over the file, so two jazygits do not lose each other's samples. What it wrote for the
   repository replaces `GitHubState.checkHistory`, so this one learns what the other wrote.
-- Read into `GitHubState.checkHistory` when a repository is opened. A failed write raises no error; the samples stay
-  in memory. A file that cannot be read is empty, and the next write writes it anew.
+- Read into `GitHubState.checkHistory` when a repository is opened, with `topped-up`. A failed write raises no
+  error; the samples, and when it was topped up, stay in memory. A file that cannot be read is empty, and the next
+  write writes it anew.
 - The repository is the one the read was made against, as `gh` fills in `{owner}/{repo}`; a fork is not special.
 - Not: SQLite. It handles writes from several processes itself, but the history is bounded and small, it is written
   a few times per CI run, and a native library would complicate the native image. It fits once the history is kept
@@ -83,8 +102,9 @@ take still; the checks together show when they are expected to be done, or that 
 ### Read
 
 - The details of a pull request ask for `status startedAt completedAt databaseId` of each check run and its
-  `checkSuite { app { slug } workflowRun { createdAt runAttempt event workflow { name } } }`. `PullRequestDetails.Check` gets its workflow, its
-  phase (queued, running or done) and these times. `Checks` stays as it is, so the lists do not change.
+  `checkSuite { app { slug } workflowRun { createdAt runAttempt event workflow { name } } }`.
+  `PullRequestDetails.Check` gets its workflow or app, its phase (queued, running or done) and these times. `Checks`
+  stays as it is, so the lists do not change.
 - The branches are read as before, one state per branch. After that, when any is pending, one query reads the checks
   with their timing of at most 10 of them, by alias: the checked-out branch, the default branch, then the others by
   name. No call when none is pending.
@@ -107,9 +127,9 @@ so seconds would stutter.
   ```
 
   `💤` is new, and the rest of its line is dimmed: a queued check is not running yet. A colour emoji ignores dimming
-  in most terminals, so the text carries it. Not `⏸`, which most terminals show one column wide and some
-  two, so the names after it would not line up. A commit status shows `running` and nothing more. The dialog keeps
-  its height.
+  in most terminals, so the text carries it. Not `⏸`, which most terminals show one column wide and some two, so
+  the names after it would not line up. A commit status shows `running` and nothing more. The dialog keeps its
+  height.
 - **The branches pane**: after the running symbol, `main ⏳ ~4m`, `feat/x #146 ⏳ ~3m`, `⏳ ?`, `⏳ late`; on every
   branch of which the timing was read.
 - **The checks popup**: `c` on a branch whose tip has checks, with or without a pull request. It lists every check:
@@ -134,6 +154,8 @@ are constants next to each other in one class, not settings, so they can become 
 - A check that varies a lot, like `claude-review` (16s to 174s), gets an estimate that is often off, and overdue
   when it is only slow.
 - The estimate is a pure function, unit tested: queued, running, overdue and its grace, too little history, a
-  commit status, a check of an app other than Actions (running and queued), a re-run, all done. The file is tested for merging, duplicates, pruning, two writers, a broken
-  file and the top-up's day, also after a failed or empty top-up; the parsing of the new fields and the top-up, the dialog's lines, the branches pane and the popup too. The
-  acceptance tests run without GitHub, so none shows an estimate.
+  commit status, a check of an app other than Actions (running and queued), a re-run, all done. The file is tested
+  for merging, duplicates, pruning, two writers, a broken file, a sample without `finished` and `event`, and
+  `topped-up` next to the checks. The update is tested for the top-up's day, also after a failed or empty top-up and
+  when the file cannot be written. The parsing of the new fields and the top-up, the dialog's lines, the branches
+  pane and the popup are tested too. The acceptance tests run without GitHub, so none shows an estimate.
