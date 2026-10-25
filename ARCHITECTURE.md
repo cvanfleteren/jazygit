@@ -459,6 +459,12 @@ runs one git process per tick instead of four. An operation that is done reads a
 the app. A periodic load is skipped while an equal one is still running: `Model.refreshing` holds the loads that are
 running. See `documentation/adr/0015-check-metadata-before-loading.md`.
 
+A read that failed is tried again on a tick only once it waited 1, 2, 4… up to 64 ticks after each failure in a row
+(`Jobs.retries`, `Jobs.retryDue`); `Update.refresh` tries it at once. The previews (a branch's log, a commit's or a
+stash's changes, the files' diff) each take a slot, so highlighting faster than git answers only reads the last item;
+a load cancelled that way reports `LoadMsg.Skipped`, which takes it out of `refreshing`. See
+`documentation/adr/0031-preview-slots-and-retry-backoff.md`.
+
 The model is told the time apart from that, every 5 s, by `Msg.Clock`, which only sets `Model.now`: the ages it
 shows are in minutes ("now" under one), so a slow clock is enough, and an idle app draws a frame every 5 s. Only
 how long ago the remotes were fetched, or the pull requests read, counts in steps of 10 s under a minute; those

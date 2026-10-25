@@ -150,13 +150,15 @@ class SelectionUpdateTest {
 
     @Test
     void aSkippedLoadIsNoLongerRunningAndIsNoFailure() {
-        Model running = selectedCommit()
+        Model running = failedDetail(failedDetail(selectedCommit()))
                 .mapJobs(jobs -> jobs.withRefreshing(jobs.refreshing().add(DETAIL)));
 
         Model skipped = Update.update(running, new LoadMsg.Skipped(DETAIL)).model();
 
         assertFalse(skipped.jobs().refreshing().contains(DETAIL));
-        assertEquals(HashMap.empty(), skipped.jobs().retries());
+        // The backoff of a retry that a newer highlight skipped stays.
+        assertEquals(running.jobs().retries(), skipped.jobs().retries());
+        assertNotEquals(HashMap.empty(), skipped.jobs().retries());
     }
 
     private static Model selectedCommit() {
