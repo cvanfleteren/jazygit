@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.time.Duration;
@@ -13,6 +14,7 @@ import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
+import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.CheckRun;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -69,6 +71,24 @@ class CheckTimesUpdateTest {
 
     private static Model knowing(CheckHistory history, Option<Instant> toppedUp) {
         return model().mapGitHub(gitHub -> gitHub.withCheckTimes(Option.of(CheckTimes.of(REPO, history, toppedUp))));
+    }
+
+    /**
+     * Keeps what is kept of the repository in {@code file}.
+     */
+    private static CheckTimingsStore keeping(AtomicReference<Kept> file) {
+        return new CheckTimingsStore() {
+            @Override
+            public Option<Kept> load(String repository) {
+                return Option.of(file.get());
+            }
+
+            @Override
+            public Try<Kept> change(String repository, UnaryOperator<Kept> change) {
+                file.set(change.apply(file.get()));
+                return Try.success(file.get());
+            }
+        };
     }
 
     private static Env env(CheckTimingsStore store) {
@@ -252,6 +272,38 @@ class CheckTimesUpdateTest {
     }
 
     @Test
+    void aTopUpAnotherJazygitDidWithinADayIsNotDoneAgain() {
+        Instant other = NOW.minusSeconds(3600);
+        AtomicReference<Kept> file = new AtomicReference<>(new Kept(List.empty(), Option.of(other)));
+        Env env = new Env(
+                new StubGitProvider() {},
+                new StubGitHub() {
+                    @Override
+                    public Either<GhError, RecentChecks> recentChecks() {
+                        throw new AssertionError("read from GitHub again");
+                    }
+                },
+                null,
+                null,
+                null,
+                keeping(file),
+                Repositories.NONE,
+                Terminal.NONE);
+
+        Msg skipped = new TopUpCheckTimes(REPO, NOW).run(env);
+
+        assertEquals(new CheckTimesMsg.TopUpSkipped(REPO, other), skipped);
+        assertEquals(Option.of(other), file.get().toppedUp());
+        Next next = Update.update(
+                knowing(fresh())
+                        .mapGitHub(gitHub ->
+                                gitHub.withCheckTimes(gitHub.checkTimes().map(times -> times.withTopUp(NOW)))),
+                skipped);
+        assertFalse(times(next).toppingUp());
+        assertEquals(Option.of(other), times(next).toppedUp());
+    }
+
+    @Test
     void whenAnotherJazygitToppedUpLaterThatCounts() {
         Instant later = NOW.minusSeconds(60);
 
@@ -306,20 +358,9 @@ class CheckTimesUpdateTest {
     @Test
     void recordingAddsToWhatIsKeptAndTellsAllThatIsKept() {
         Run run = new Run("Build/verify", 9, 100, 110, "push", NOW.minusSeconds(600));
-        Instant toppedUp = NOW.minusSeconds(3600);
+        Instant toppedUp = NOW.minus(CheckTimings.TOP_UP_AFTER).minusSeconds(1);
         AtomicReference<Kept> file = new AtomicReference<>(new Kept(List.of(run), Option.of(toppedUp)));
-        Env env = env(new CheckTimingsStore() {
-            @Override
-            public Option<Kept> load(String repository) {
-                return Option.of(file.get());
-            }
-
-            @Override
-            public Try<Kept> change(String repository, UnaryOperator<Kept> change) {
-                file.set(change.apply(file.get()));
-                return Try.success(file.get());
-            }
-        });
+        Env env = env(keeping(file));
 
         CheckTimesMsg.Recorded recorded =
                 (CheckTimesMsg.Recorded) new RecordCheckTimes(REPO, List.of(LEARNED), NOW, true).run(env);

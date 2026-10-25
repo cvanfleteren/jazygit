@@ -75,7 +75,9 @@ public sealed interface CheckTimesCmd extends Cmd {
 
     /**
      * Reads the checks that ran lately on {@code repository} from GitHub, keeping first that this was tried at
-     * {@code now}, so that neither this jazygit nor another tries again that day, whether it works or not.
+     * {@code now}, so that neither this jazygit nor another tries again that day, whether it works or not. When
+     * another jazygit kept that it tried in the last day, it is not tried again; that is decided under the file's
+     * lock, so two jazygits do not both try.
      */
     record TopUpCheckTimes(String repository, Instant now) implements CheckTimesCmd {
 
@@ -83,8 +85,17 @@ public sealed interface CheckTimesCmd extends Cmd {
         public Msg run(Env env) {
             // Kept or not, the gate in memory holds this jazygit to one try a day.
             return env.checkTimings()
-                    .change(repository, kept -> kept.withToppedUp(now))
-                    .fold(failed -> topUp(env), kept -> topUp(env));
+                    .change(
+                            repository,
+                            kept -> kept.toppedUp().exists(at -> CheckTimes.toppedUpLately(at, now))
+                                    ? kept
+                                    : kept.withToppedUp(now))
+                    .fold(
+                            failed -> topUp(env),
+                            kept -> kept.toppedUp()
+                                    .filter(at -> !at.equals(now))
+                                    .<Msg>map(at -> new CheckTimesMsg.TopUpSkipped(repository, at))
+                                    .getOrElse(() -> topUp(env)));
         }
 
         private Msg topUp(Env env) {

@@ -53,13 +53,27 @@ public record CheckTimes(String repository, CheckHistory history, boolean toppin
     }
 
     /**
+     * This, not reading the checks that ran lately from GitHub after all, as another jazygit did at {@code at}.
+     */
+    public CheckTimes withTopUpSkipped(Instant at) {
+        return new CheckTimes(repository, history, false, Option.of(at));
+    }
+
+    /**
      * Whether to read the checks that ran lately from GitHub at {@code now}: they are not being read, and were not
-     * read, or tried to be, in the last {@link CheckTimings#TOP_UP_AFTER}; not the age of the history, so a quiet
-     * repository, an empty result and a failing {@code gh} all wait the day out.
+     * read, or tried to be, lately; not the age of the history, so a quiet repository, an empty result and a
+     * failing {@code gh} all wait the day out.
      */
     public boolean topUpDue(Instant now) {
-        return !toppingUp
-                && toppedUp.forAll(at -> at.plus(CheckTimings.TOP_UP_AFTER).isBefore(now));
+        return !toppingUp && !toppedUp.exists(at -> toppedUpLately(at, now));
+    }
+
+    /**
+     * Whether reading the checks that ran lately from GitHub at {@code at} is lately at {@code now}: in the last
+     * {@link CheckTimings#TOP_UP_AFTER}.
+     */
+    public static boolean toppedUpLately(Instant at, Instant now) {
+        return !at.plus(CheckTimings.TOP_UP_AFTER).isBefore(now);
     }
 
     /**

@@ -49,6 +49,8 @@ public final class CheckTimesUpdate {
                         ? Next.of(done)
                         : Next.of(done, new RecordCheckTimes(repository, unknown, model.now(), false));
             }
+            case CheckTimesMsg.TopUpSkipped(String repository, Instant toppedUp) ->
+                Next.of(mapKnown(model, repository, times -> times.withTopUpSkipped(toppedUp)));
             case CheckTimesMsg.TopUpFailed(String repository) ->
                 Next.of(mapKnown(model, repository, CheckTimes::withTopUpDone));
         };
