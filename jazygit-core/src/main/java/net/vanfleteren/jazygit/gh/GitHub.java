@@ -54,6 +54,12 @@ public interface GitHub {
     Either<GhError, PullRequestDetails> pullRequestDetails(int number);
 
     /**
+     * The checks that ran lately on the repository, to learn how long they take from: on the pull requests merged
+     * last and on the last commits of its default branch.
+     */
+    Either<GhError, RecentChecks> recentChecks();
+
+    /**
      * The conversation on pull request {@code number}: its description, unless it is empty, then its comments and
      * the reviews that say something, oldest first. A review says something when it has text, approves, asks for
      * changes or was dismissed; pending reviews, which only their author sees, are left out.

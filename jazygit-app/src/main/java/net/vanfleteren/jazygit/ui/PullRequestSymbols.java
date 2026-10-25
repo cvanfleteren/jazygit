@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestComment;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewerState;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 
@@ -18,6 +19,8 @@ public final class PullRequestSymbols {
     private static final Symbol PASSED = new Symbol("✅", Theme.Classes.CHECKS_PASSED);
     private static final Symbol FAILED = new Symbol("❌", Theme.Classes.CHECKS_FAILED);
     private static final Symbol RUNNING = new Symbol("⏳", Theme.Classes.CHECKS_RUNNING);
+    // Not ⏸, which most terminals show one column wide, and some two.
+    private static final Symbol QUEUED = new Symbol("💤", Theme.Classes.DIM);
     private static final Symbol APPROVED = new Symbol("👍", Theme.Classes.REVIEW_APPROVED);
     private static final Symbol CHANGES = new Symbol("👎", Theme.Classes.REVIEW_CHANGES);
     private static final Symbol TO_REVIEW = new Symbol("?", Theme.Classes.DIM);
@@ -84,6 +87,13 @@ public final class PullRequestSymbols {
             case FAILING -> Option.of(FAILED);
             case PENDING -> Option.of(RUNNING);
         };
+    }
+
+    /**
+     * How one check is doing: as {@link #checks(Checks)}, but waiting to start while it is queued (ADR 30).
+     */
+    public static Option<Symbol> check(Check check) {
+        return check.queued() ? Option.of(QUEUED) : checks(check.state());
     }
 
     /**

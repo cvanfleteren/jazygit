@@ -35,6 +35,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
  * @param stack        where it sits in its stack, if it is stacked
  * @param behindBase   how many commits its base branch has that its branch does not, as the base moved on since its
  *                     branch was made; empty when not known
+ * @param repository   the repository it is of, as {@code owner/name}; empty when not known
  */
 public record PullRequestDetails(
         int number,
@@ -59,10 +60,12 @@ public record PullRequestDetails(
         List<Check> checks,
         String head,
         Option<PullRequestStack> stack,
-        Option<Integer> behindBase) {
+        Option<Integer> behindBase,
+        String repository) {
 
     /**
-     * One that is not stacked, at a commit that is not known, not known to be behind its base.
+     * One that is not stacked, at a commit that is not known, not known to be behind its base, of a repository that
+     * is not known.
      */
     public PullRequestDetails(
             int number,
@@ -108,7 +111,8 @@ public record PullRequestDetails(
                 checks,
                 "",
                 Option.none(),
-                Option.none());
+                Option.none(),
+                "");
     }
 
     /**
@@ -138,7 +142,8 @@ public record PullRequestDetails(
                 checks,
                 head,
                 stack,
-                behindBase);
+                behindBase,
+                repository);
     }
 
     /**
@@ -168,7 +173,8 @@ public record PullRequestDetails(
                 checks,
                 head,
                 stack,
-                Option.of(behind));
+                Option.of(behind),
+                repository);
     }
 
     /**
@@ -241,7 +247,30 @@ public record PullRequestDetails(
      * One CI check.
      *
      * @param name  the name of the check run, or the context of the commit status
-     * @param state how it is doing; never {@link Checks#NONE}
+     * @param state how it is doing; {@link Checks#NONE} for a status nobody set
+     * @param run   when it ran, for a check run of a workflow; none for a commit status, which GitHub does not time
      */
-    public record Check(String name, Checks state) {}
+    public record Check(String name, Checks state, Option<CheckRun> run) {
+
+        /**
+         * A check without timing.
+         */
+        public Check(String name, Checks state) {
+            this(name, state, Option.none());
+        }
+
+        /**
+         * Whether it is done: it passed or failed.
+         */
+        public boolean done() {
+            return state == Checks.PASSING || state == Checks.FAILING;
+        }
+
+        /**
+         * Whether it waits to start: a check run that is not done and did not start yet.
+         */
+        public boolean queued() {
+            return !done() && run.exists(timed -> timed.startedAt().isEmpty());
+        }
+    }
 }

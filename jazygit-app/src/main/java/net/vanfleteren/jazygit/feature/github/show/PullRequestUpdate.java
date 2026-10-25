@@ -35,8 +35,13 @@ public final class PullRequestUpdate {
             case PullRequestMsg.SummaryRequested(var pullRequest) ->
                 Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
             // The branches pane shows the pull request as it was just read too, also when the dialog is closed.
+            // How long its checks take is learned from them too (ADR 30).
             case PullRequestMsg.DetailsLoaded(int number, var details) ->
-                Next.of(shown(model.mapGitHub(gitHub -> gitHub.withRead(details)), number, Either.right(details)));
+                CheckTimesUpdate.read(
+                        Next.of(shown(
+                                model.mapGitHub(gitHub -> gitHub.withRead(details)), number, Either.right(details))),
+                        details.repository(),
+                        details.checks());
             case PullRequestMsg.DetailsFailed(int number, var failure) ->
                 Next.of(shown(model, number, Either.left(failure)));
             // The dialog stays open, so the pull request can still be merged or closed from it.

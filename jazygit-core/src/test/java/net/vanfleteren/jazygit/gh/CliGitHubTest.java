@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.BranchChecks;
+import net.vanfleteren.jazygit.gh.model.CheckRun;
 import net.vanfleteren.jazygit.gh.model.GhLogin;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
@@ -26,6 +27,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.gh.model.RecentChecks;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -583,6 +585,74 @@ class CliGitHubTest {
         assertEquals(
                 List.of(new Check("ci/status", Checks.NONE)),
                 CliGitHub.parseDetails(raw).get().checks());
+    }
+
+    @Test
+    void theChecksOfAPullRequestAreTimedAndItsRepositoryKnown() {
+        String raw = "repo\tcvanfleteren/jazygit\n"
+                + "pr\t5\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\t\t1\n"
+                + "threads\t0\t0\t0\t0\n"
+                + "check\tacceptance\tPENDING\t121\tBuild\t\t\t\t401\t2026-10-24T22:18:29Z\t1\tpull_request\n"
+                + "check\tverify\tSUCCESS\t122\tBuild\tSUCCESS\t2026-10-24T22:18:31Z\t2026-10-24T22:20:25Z"
+                + "\t401\t2026-10-24T22:18:29Z\t2\tpush\n"
+                + "check\tci/status\tPENDING\t\t\t\t\t\t\t\t\t\n";
+
+        PullRequestDetails details = CliGitHub.parseDetails(raw).get();
+
+        assertEquals("cvanfleteren/jazygit", details.repository());
+        assertEquals(
+                List.of(
+                        new Check(
+                                "acceptance",
+                                Checks.PENDING,
+                                Option.of(new CheckRun(
+                                        121,
+                                        "Build",
+                                        "",
+                                        Option.none(),
+                                        Option.none(),
+                                        401,
+                                        Instant.parse("2026-10-24T22:18:29Z"),
+                                        1,
+                                        "pull_request"))),
+                        new Check(
+                                "verify",
+                                Checks.PASSING,
+                                Option.of(new CheckRun(
+                                        122,
+                                        "Build",
+                                        "SUCCESS",
+                                        Option.of(Instant.parse("2026-10-24T22:18:31Z")),
+                                        Option.of(Instant.parse("2026-10-24T22:20:25Z")),
+                                        401,
+                                        Instant.parse("2026-10-24T22:18:29Z"),
+                                        2,
+                                        "push"))),
+                        new Check("ci/status", Checks.PENDING)),
+                details.checks());
+        assertTrue(details.checks().head().queued());
+        assertFalse(details.checks().last().queued());
+    }
+
+    @Test
+    void aCheckWhoseTimingCannotBeReadIsNotTimed() {
+        assertEquals(
+                new Check("verify", Checks.PENDING),
+                CliGitHub.check(List.of("verify", "PENDING", "x", "Build", "", "", "", "401", "nope", "1", "push")));
+    }
+
+    @Test
+    void parsesTheChecksThatRanLately() {
+        String raw = "repo\tcvanfleteren/jazygit\n"
+                + "check\tverify\tSUCCESS\t122\tBuild\tSUCCESS\t2026-10-24T22:18:31Z\t2026-10-24T22:20:25Z"
+                + "\t401\t2026-10-24T22:18:29Z\t1\tpush\n";
+
+        RecentChecks recent = CliGitHub.parseRecentChecks(raw).get();
+
+        assertEquals("cvanfleteren/jazygit", recent.repository());
+        assertEquals(List.of("verify"), recent.checks().map(Check::name));
+        assertTrue(CliGitHub.parseRecentChecks("check\tverify\n").isLeft());
+        assertTrue(CliGitHub.parseRecentChecks(raw + "check\tverify\n").isLeft());
     }
 
     @Test

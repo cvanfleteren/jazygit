@@ -23,6 +23,7 @@ public final class SettingsPaths {
     private static final String FILE = "config.toml";
     private static final String STATE_FILE = "state.toml";
     private static final String DEBUG_LOG = "debug.log";
+    private static final String CHECK_TIMINGS = "check-timings.toml";
 
     private SettingsPaths() {}
 
@@ -81,6 +82,21 @@ public final class SettingsPaths {
                 .getOrElse(() -> standardStateDir(osName.toLowerCase(Locale.ROOT), env, home)
                         .resolve(APP))
                 .resolve(STATE_FILE);
+    }
+
+    /**
+     * How long the checks took, of the user running this (ADR 30).
+     */
+    public static Path checkTimingsFile() {
+        return checkTimingsFile(stateFile());
+    }
+
+    /**
+     * How long the checks took, that goes with the state file {@code stateFile}: next to it, as jazygit keeps it by
+     * itself too.
+     */
+    public static Path checkTimingsFile(Path stateFile) {
+        return stateFile.resolveSibling(CHECK_TIMINGS);
     }
 
     /**

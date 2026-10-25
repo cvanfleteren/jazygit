@@ -29,6 +29,8 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
  *                            just made; see {@link GitHubReads}
  * @param merges              the merges GitHub was asked for, by the number of their pull request, kept apart from
  *                            what is read so a read does not wipe how they went; only in memory (ADR 24)
+ * @param checkTimes          how long the checks of the repository took, as far as it was learned; none until a read
+ *                            told which repository it is (ADR 30)
  */
 @With
 public record GitHubState(
@@ -37,10 +39,17 @@ public record GitHubState(
         Option<GitHubChecks> branchChecks,
         Set<Cmd> reading,
         Set<Cmd> again,
-        Map<Integer, PullRequestMerge> merges) {
+        Map<Integer, PullRequestMerge> merges,
+        Option<CheckTimes> checkTimes) {
 
     public static final GitHubState NOT_READ = new GitHubState(
-            Option.none(), Option.none(), Option.none(), HashSet.empty(), HashSet.empty(), HashMap.empty());
+            Option.none(),
+            Option.none(),
+            Option.none(),
+            HashSet.empty(),
+            HashSet.empty(),
+            HashMap.empty(),
+            Option.none());
 
     /**
      * How the latest merge that merges pull request {@code number} went, or is going: the merge of it, or of one
