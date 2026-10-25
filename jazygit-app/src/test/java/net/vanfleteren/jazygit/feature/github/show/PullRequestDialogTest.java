@@ -35,6 +35,7 @@ import net.vanfleteren.jazygit.state.CheckTimes;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.ui.CheckRows;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.Theme;
@@ -612,8 +613,11 @@ class PullRequestDialogTest {
     void aQueuedCheckIsDimmedAllAlongARunningOneOnlyInItsTime() {
         List<Check> all = List.of(timed("acceptance", 120, Option.none()), timed("package", 120, Option.of(118)));
 
-        List<StyledElement<?>> queued = PullRequestDialog.notDone(all.head(), 10, all, Option.of(learned()), NOW);
-        List<StyledElement<?>> running = PullRequestDialog.notDone(all.last(), 10, all, Option.of(learned()), NOW);
+        // After the symbol, the name and how it is doing.
+        List<StyledElement<?>> queued = CheckRows.row(all.head(), all, Option.of(learned()), NOW, 10, false)
+                .tail();
+        List<StyledElement<?>> running = CheckRows.row(all.last(), all, Option.of(learned()), NOW, 10, false)
+                .tail();
 
         assertTrue(queued.forAll(piece -> piece.cssClasses().contains(Theme.Classes.DIM)));
         assertFalse(running.head().cssClasses().contains(Theme.Classes.DIM));

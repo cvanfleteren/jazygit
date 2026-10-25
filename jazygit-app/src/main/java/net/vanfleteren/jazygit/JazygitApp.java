@@ -47,6 +47,7 @@ import net.vanfleteren.jazygit.feature.error.ErrorDialog;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
 import net.vanfleteren.jazygit.feature.forcedelete.ForceDeleteDialog;
 import net.vanfleteren.jazygit.feature.github.GitHubFeature;
+import net.vanfleteren.jazygit.feature.github.checks.ChecksMsg;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.feature.help.HelpDialog;
 import net.vanfleteren.jazygit.feature.inprogress.InProgressDialogs;
@@ -92,6 +93,7 @@ public class JazygitApp extends ToolkitApp {
             new Timer(FETCH_INTERVAL, FetchMsg.Tick::new),
             new Timer(FETCH_INTERVAL, PrOverviewMsg.Tick::new),
             new Timer(FETCH_INTERVAL, PullRequestMsg.Tick::new),
+            new Timer(FETCH_INTERVAL, ChecksMsg.Tick::new),
             new Timer(MERGE_CHECK_INTERVAL, PullRequestMsg.MergeTick::new));
 
     // Rows of the command log panel, borders included.
