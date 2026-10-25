@@ -132,11 +132,22 @@ public sealed interface LoadMsg extends Msg {
         }
     }
 
-    record CommitDetailLoaded(Sha sha, DiffOptions options, DiffText changes) implements LoadMsg {
+    /**
+     * The changes of the commit {@code sha}, read for the preview whose slot is {@code preview}; every preview of
+     * it shows them.
+     */
+    record CommitDetailLoaded(Sha sha, DiffOptions options, DiffText changes, Cmd.Slot preview) implements LoadMsg {
+
+        /**
+         * The changes of the commit {@code sha}, read for the commits pane.
+         */
+        public CommitDetailLoaded(Sha sha, DiffOptions options, DiffText changes) {
+            this(sha, options, changes, Cmd.Slot.COMMIT_DETAIL);
+        }
 
         @Override
         public Cmd.Load cmd() {
-            return new Cmd.LoadCommitDetail(sha, options);
+            return new Cmd.LoadCommitDetail(sha, options, preview);
         }
     }
 
@@ -157,4 +168,9 @@ public sealed interface LoadMsg extends Msg {
     }
 
     record Failed(Cmd.Load cmd, Failure failure) implements LoadMsg {}
+
+    /**
+     * {@code cmd} did not run: a newer load for its {@link Cmd#slot() slot} was asked for before it started.
+     */
+    record Skipped(Cmd.Load cmd) implements LoadMsg {}
 }

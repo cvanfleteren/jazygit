@@ -77,10 +77,18 @@ public interface Cmd {
 
     /**
      * The slot this command takes, if it is only wanted until a newer one for that slot is asked for: the newer
-     * one cancels it when it has not started yet, and it then reports nothing. Only a command whose result the
-     * model drops once a newer one is asked for may take one, as nothing else may wait for its answer.
+     * one cancels it when it has not started yet, and it then reports only {@link #skipped()}. Only a command whose
+     * result the model drops once a newer one is asked for may take one, as nothing else may wait for its answer.
      */
     default Option<Slot> slot() {
+        return Option.none();
+    }
+
+    /**
+     * What this command reports when a newer one for its {@link #slot() slot} cancelled it before it started, if
+     * anything.
+     */
+    default Option<Msg> skipped() {
         return Option.none();
     }
 
@@ -99,7 +107,31 @@ public interface Cmd {
         /**
          * The preview of the highlighted pull request.
          */
-        PULL_REQUEST_PREVIEW
+        PULL_REQUEST_PREVIEW,
+        /**
+         * The log of the highlighted branch.
+         */
+        BRANCH_LOG,
+        /**
+         * The changes of the commit highlighted in the commits pane.
+         */
+        COMMIT_DETAIL,
+        /**
+         * The changes of the commit highlighted in the divergence that is open.
+         */
+        DIVERGENCE_DETAIL,
+        /**
+         * The changes of the commit highlighted in the commits of a branch that are open.
+         */
+        BRANCH_COMMITS_DETAIL,
+        /**
+         * The changes of the stash highlighted.
+         */
+        STASH_DETAIL,
+        /**
+         * The diff of the files highlighted.
+         */
+        FILE_DIFF
     }
 
     /**
@@ -122,6 +154,14 @@ public interface Cmd {
         @Override
         default Msg failed(Failure failure) {
             return new LoadMsg.Failed(this, failure);
+        }
+
+        /**
+         * A skipped load is no longer running either.
+         */
+        @Override
+        default Option<Msg> skipped() {
+            return Option.of(new LoadMsg.Skipped(this));
         }
     }
 
@@ -306,6 +346,11 @@ public interface Cmd {
     record LoadBranchLog(BranchRef branch, LoadAhead ahead) implements Load {
 
         @Override
+        public Option<Slot> slot() {
+            return Option.of(Slot.BRANCH_LOG);
+        }
+
+        @Override
         public Msg run(Env env) {
             return env.git()
                     .log(branch)
@@ -328,17 +373,39 @@ public interface Cmd {
         }
     }
 
-    record LoadCommitDetail(Sha sha, DiffOptions options) implements DiffLoad {
+    /**
+     * Reads the changes of the commit {@code sha}, for the preview whose slot is {@code preview}: the commit detail of
+     * the commits pane, of a divergence or of the commits of a branch. Each takes its own slot, so that highlighting
+     * a commit in one does not skip the read another one waits for.
+     */
+    record LoadCommitDetail(Sha sha, DiffOptions options, Slot preview) implements DiffLoad {
+
+        /**
+         * Reads the changes of the commit {@code sha} highlighted in the commits pane.
+         */
+        public LoadCommitDetail(Sha sha, DiffOptions options) {
+            this(sha, options, Slot.COMMIT_DETAIL);
+        }
+
+        @Override
+        public Option<Slot> slot() {
+            return Option.of(preview);
+        }
 
         @Override
         public Msg run(Env env) {
             return env.git()
                     .commitChanges(sha, options)
-                    .fold(this::failedWith, changes -> new LoadMsg.CommitDetailLoaded(sha, options, changes));
+                    .fold(this::failedWith, changes -> new LoadMsg.CommitDetailLoaded(sha, options, changes, preview));
         }
     }
 
     record LoadStashDetail(Sha sha, DiffOptions options) implements DiffLoad {
+
+        @Override
+        public Option<Slot> slot() {
+            return Option.of(Slot.STASH_DETAIL);
+        }
 
         @Override
         public Msg run(Env env) {
@@ -349,6 +416,11 @@ public interface Cmd {
     }
 
     record LoadFileDiff(List<FileEntry> files, DiffOptions options) implements DiffLoad {
+
+        @Override
+        public Option<Slot> slot() {
+            return Option.of(Slot.FILE_DIFF);
+        }
 
         @Override
         public Msg run(Env env) {

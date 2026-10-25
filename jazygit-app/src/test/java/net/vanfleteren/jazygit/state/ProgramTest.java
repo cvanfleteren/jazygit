@@ -598,6 +598,34 @@ class ProgramTest {
         assertEquals(java.util.List.of("other"), provider.logLoads);
     }
 
+    @Test
+    void highlightingBranchesFasterThanTheirLogsAreReadOnlyReadsTheLogOfTheLastOne() {
+        settle();
+
+        program.dispatch(new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName("main"))));
+        program.dispatch(new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName("feature"))));
+        program.dispatch(new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName("other"))));
+        settle();
+
+        assertEquals(java.util.List.of("other"), provider.logLoads);
+        assertEquals(
+                Option.of(new Loaded<>(List.of(FakeProvider.commit("other-tip")))),
+                program.model().repoView().branchLog().map(Preview::value));
+    }
+
+    @Test
+    void aReloadThatIsSkippedForANewerHighlightIsNoLongerRunning() {
+        settle();
+        Cmd.LoadBranchLog reload = TestModels.loadBranchLog(new BranchRef.Local(new BranchName("main")));
+
+        program.dispatch(new Refreshing(reload));
+        program.dispatch(new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName("other"))));
+        settle();
+
+        assertEquals(java.util.List.of("other"), provider.logLoads);
+        assertEquals(false, program.model().jobs().refreshing().contains(reload));
+    }
+
     /**
      * Runs queued IO and UI work until both queues are empty.
      */
@@ -626,6 +654,18 @@ class ProgramTest {
         @Override
         public Update.Next apply(Model model) {
             return new Update.Next(model, cmds);
+        }
+    }
+
+    /**
+     * Asks for {@code load} as a periodic reload does: it is running until it reports.
+     */
+    private record Refreshing(Cmd.Load load) implements Msg {
+
+        @Override
+        public Update.Next apply(Model model) {
+            return Update.Next.of(
+                    model.mapJobs(jobs -> jobs.withRefreshing(jobs.refreshing().add(load))), load);
         }
     }
 

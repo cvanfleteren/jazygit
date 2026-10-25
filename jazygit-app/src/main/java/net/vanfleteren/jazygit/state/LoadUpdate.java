@@ -25,9 +25,14 @@ public final class LoadUpdate {
     private LoadUpdate() {}
 
     public static Next update(Model model, LoadMsg msg) {
-        Model done = model.mapJobs(
-                jobs -> jobs.withRefreshing(jobs.refreshing().remove(msg.cmd())).withoutFailedRead(msg.cmd()));
+        Model done = model.mapJobs(jobs -> jobs.withRefreshing(jobs.refreshing().remove(msg.cmd()))
+                .withoutFailedRead(msg.cmd())
+                .withRead(msg.cmd(), msg instanceof LoadMsg.Failed));
         return switch (msg) {
+            // A skipped load read nothing, and is not a failure to try again later.
+            case Skipped(var cmd) ->
+                Next.of(model.mapJobs(
+                        jobs -> jobs.withRefreshing(jobs.refreshing().remove(cmd))));
             // What was read with other diff options than the ones now chosen is dropped, whatever came of it.
             case LoadMsg m when stale(done, m.cmd()) -> Next.of(done);
             case StatusLoaded(RepoStatus status) ->
@@ -73,7 +78,7 @@ public final class LoadUpdate {
                         .map(view -> view.load().equals(msg.cmd())
                                 ? view.withCommits(view.commits().reload(divergence))
                                 : view))));
-            case CommitDetailLoaded(Sha sha, var options, DiffText changes) ->
+            case CommitDetailLoaded(Sha sha, var options, DiffText changes, var preview) ->
                 Next.of(withDetail(
                         done.mapRepoView(repoView -> repoView.withCommitDetail(
                                 Preview.updated(repoView.commitDetail(), sha, d -> d.reload(changes)))),
@@ -294,7 +299,7 @@ public final class LoadUpdate {
                         .map(search ->
                                 search.load().equals(load) ? search.withResults(new Failed<>(failure)) : search)));
             case Cmd.LoadAhead load -> AheadUpdate.failed(model, load, failure);
-            case LoadCommitDetail(Sha sha, var options) ->
+            case LoadCommitDetail(Sha sha, var options, var preview) ->
                 withDetail(
                         model.mapRepoView(repoView -> repoView.withCommitDetail(
                                 Preview.updated(repoView.commitDetail(), sha, d -> d.failed(failure)))),

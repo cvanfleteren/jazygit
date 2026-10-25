@@ -102,11 +102,13 @@ class BranchCommitsUpdateTest {
         Model read = Update.update(
                         selected.model(),
                         new LoadMsg.CommitDetailLoaded(
-                                FEATURE_TIP, open.preferences().diffOptions(), CHANGES))
+                                FEATURE_TIP, open.preferences().diffOptions(), CHANGES, Cmd.Slot.BRANCH_COMMITS_DETAIL))
                 .model();
 
         assertEquals(
-                List.of(new Cmd.LoadCommitDetail(FEATURE_TIP, open.preferences().diffOptions())), selected.cmds());
+                List.of(new Cmd.LoadCommitDetail(
+                        FEATURE_TIP, open.preferences().diffOptions(), Cmd.Slot.BRANCH_COMMITS_DETAIL)),
+                selected.cmds());
         assertEquals(
                 Option.of(new Loadable.Loaded<>(CHANGES)),
                 view(read).flatMap(BranchCommitsView::detail).map(Preview::value));
@@ -124,7 +126,9 @@ class BranchCommitsUpdateTest {
         assertTrue(
                 ignoring.cmds()
                         .contains(new Cmd.LoadCommitDetail(
-                                FEATURE_TIP, ignoring.model().preferences().diffOptions())),
+                                FEATURE_TIP,
+                                ignoring.model().preferences().diffOptions(),
+                                Cmd.Slot.BRANCH_COMMITS_DETAIL)),
                 ignoring.cmds().toString());
     }
 
@@ -167,8 +171,8 @@ class BranchCommitsUpdateTest {
     void whatAHighlightedCommitChangedThatFailedToBeReadIsReadAgainOnTheNextTick() {
         Model selected = Update.update(opened(featureLogRead()), new SelectionMsg.BranchCommitSelected(FEATURE_TIP))
                 .model();
-        Cmd.LoadCommitDetail load =
-                new Cmd.LoadCommitDetail(FEATURE_TIP, selected.preferences().diffOptions());
+        Cmd.LoadCommitDetail load = new Cmd.LoadCommitDetail(
+                FEATURE_TIP, selected.preferences().diffOptions(), Cmd.Slot.BRANCH_COMMITS_DETAIL);
 
         Model failed = Update.update(selected, new LoadMsg.Failed(load, refused("boom")))
                 .model();

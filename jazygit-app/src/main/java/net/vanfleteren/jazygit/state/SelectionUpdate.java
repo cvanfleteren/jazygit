@@ -37,7 +37,7 @@ public final class SelectionUpdate {
                         sha,
                         model.repoView().commitDetail(),
                         detail -> model.mapRepoView(repoView -> repoView.withCommitDetail(detail)),
-                        detail(model));
+                        detail(model, Cmd.Slot.COMMIT_DETAIL));
             case DivergenceCommitSelected(var sha) ->
                 model.repoView()
                         .divergence()
@@ -47,7 +47,7 @@ public final class SelectionUpdate {
                                 view.detail(),
                                 detail -> model.mapRepoView(
                                         repoView -> repoView.withDivergence(Option.of(view.withDetail(detail)))),
-                                detail(model)))
+                                detail(model, Cmd.Slot.DIVERGENCE_DETAIL)))
                         .getOrElse(() -> Next.of(model));
             case BranchCommitSelected(var sha) ->
                 model.repoView()
@@ -58,7 +58,7 @@ public final class SelectionUpdate {
                                 view.detail(),
                                 detail -> model.mapRepoView(
                                         repoView -> repoView.withBranchCommits(Option.of(view.withDetail(detail)))),
-                                detail(model)))
+                                detail(model, Cmd.Slot.BRANCH_COMMITS_DETAIL)))
                         .getOrElse(() -> Next.of(model));
             case FilesSelected(var files) ->
                 selected(
@@ -77,8 +77,8 @@ public final class SelectionUpdate {
         };
     }
 
-    private static Function<Sha, Cmd.Load> detail(Model model) {
-        return sha -> new LoadCommitDetail(sha, model.preferences().diffOptions());
+    private static Function<Sha, Cmd.Load> detail(Model model, Cmd.Slot slot) {
+        return sha -> new LoadCommitDetail(sha, model.preferences().diffOptions(), slot);
     }
 
     /**

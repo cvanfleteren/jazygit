@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.util.EnumMap;
@@ -40,7 +42,7 @@ public final class Program {
     private final Runnable modelChanged;
     private final Runnable quit;
     // The command started last for each slot, to cancel when a newer one comes.
-    private final Map<Cmd.Slot, Future<Void>> latest = new EnumMap<>(Cmd.Slot.class);
+    private final Map<Cmd.Slot, Tuple2<Cmd, Future<Void>>> latest = new EnumMap<>(Cmd.Slot.class);
     // What a command that names a guard holds while it runs, so another one that names it waits.
     private final Map<Cmd.Guard, Lock> guards = new EnumMap<>(Cmd.Guard.class);
     // Set from the ui thread, read by the commands waiting for a guard.
@@ -176,7 +178,8 @@ public final class Program {
 
     /**
      * Performs {@code cmd} on its executor, once it holds its guard, if it names one. One that takes a slot cancels
-     * the one that took it before, if that one has not started yet: it is skipped, and reports nothing.
+     * the one that took it before, if that one has not started yet: it is skipped, and reports only
+     * {@link Cmd#skipped()}.
      */
     private void launch(Cmd cmd) {
         Option<Lock> guard = cmd.guard().map(guards::get);
@@ -184,7 +187,11 @@ public final class Program {
                 () -> guarded(guard, () -> perform(env, cmd, bugs))
                         .forEach(result -> Try.run(() -> ui.execute(() -> dispatch(result)))),
                 null);
-        cmd.slot().forEach(slot -> Option.of(latest.put(slot, task)).forEach(older -> older.cancel(false)));
+        cmd.slot()
+                .flatMap(slot -> Option.of(latest.put(slot, Tuple.of(cmd, task))))
+                .filter(older -> older._2().cancel(false))
+                .flatMap(older -> older._1().skipped())
+                .forEach(skipped -> Try.run(() -> ui.execute(() -> dispatch(skipped))));
         // Once the app stops, the executors take nothing anymore, and what is left is dropped.
         Try.run(() -> (cmd.background() ? background : io).execute(task));
     }
