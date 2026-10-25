@@ -96,11 +96,12 @@ so seconds would stutter.
   ⏳ acceptance     running 2m · ~2m left
   ⏳ claude-review  running 3m · overdue
   ⏳ verify         running <1m · ? left
-  ⏸ package        queued · ~4m left
+  💤 package        queued · ~4m left
   ```
 
-  `⏸`, dimmed, is new: a queued check is not running yet. A commit status shows `running` and nothing more. The dialog
-  keeps its height.
+  `💤`, dimmed, is new: a queued check is not running yet. Not `⏸`, which most terminals show one column wide and some
+  two, so the names after it would not line up. A commit status shows `running` and nothing more. The dialog keeps
+  its height.
 - **The branches pane**: after the running symbol, `main ⏳ ~4m`, `feat/x #146 ⏳ ~3m`, `⏳ ?`, `⏳ late`; on every
   branch of which the timing was read.
 - **The checks popup**: `c` on a branch whose tip has checks, with or without a pull request. It lists every check:
