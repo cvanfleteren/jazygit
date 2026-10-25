@@ -5,6 +5,7 @@ import static dev.tamboui.toolkit.Toolkit.text;
 
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
+import dev.tamboui.toolkit.elements.TextElement;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Clock;
@@ -21,10 +22,14 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewThreads;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.gh.timing.CheckHistory;
+import net.vanfleteren.jazygit.gh.timing.Eta;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.state.CheckTimes;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.ui.CheckTimesText;
 import net.vanfleteren.jazygit.ui.ErrorText;
 import net.vanfleteren.jazygit.ui.PullRequestSymbols;
 import net.vanfleteren.jazygit.ui.PullRequestSymbols.Symbol;
@@ -53,6 +58,8 @@ public final class PullRequestDialog implements PopupView {
     private static final String INDENT = " ".repeat(LABEL_COLUMN + 2);
     // The failed and running checks listed one by one; the rest are counted.
     private static final int LISTED_CHECKS = 8;
+    // A longer name of a check is cut, to leave room for how long it runs.
+    private static final int CHECK_NAME_WIDTH = 30;
     // A longer title is cut.
     private static final int TITLE_LINES = 3;
     /*
@@ -215,9 +222,11 @@ public final class PullRequestDialog implements PopupView {
     }
 
     /**
-     * How many checks failed, are running and passed, then the failed and running ones by name.
+     * How many checks failed, are running and passed, and when they are expected to be done; then the failed ones
+     * by name, and the ones not done with how long they run and are expected to take still: the running ones before
+     * the queued ones, each the soonest done first (ADR 32).
      */
-    private static List<Line> checks(List<Check> checks) {
+    private static List<Line> checks(List<Check> checks, Option<CheckTimes> times, Instant now) {
         if (checks.isEmpty()) {
             return List.of(Line.labelled(
                     "dialog.pullRequest.checks",
@@ -226,20 +235,28 @@ public final class PullRequestDialog implements PopupView {
         List<StyledElement<?>> counts = List.of(
                         count(checks, Checks.FAILING, "dialog.pullRequest.checks.failed"),
                         count(checks, Checks.PENDING, "dialog.pullRequest.checks.running"),
-                        count(checks, Checks.PASSING, "dialog.pullRequest.checks.passed"))
+                        count(checks, Checks.PASSING, "dialog.pullRequest.checks.passed"),
+                        CheckTimesText.together(eta(checks, times), learning(times), now)
+                                .map(together -> List.<StyledElement<?>>of(text(together))))
                 .flatMap(o -> o)
                 .zipWithIndex()
                 .flatMap(indexed -> indexed._2 > 0 ? indexed._1.prepend(text(" · ")) : indexed._1);
-        List<Check> notPassed = checks.filter(check -> check.state() != Checks.PASSING)
-                .sortBy(check -> check.state() == Checks.FAILING ? 0 : 1);
+        List<Check> notPassed = checks.filter(check -> check.state() != Checks.PASSING);
+        List<Check> listed = order(notPassed, checks, times).take(LISTED_CHECKS);
+        int nameWidth = Math.min(
+                CHECK_NAME_WIDTH,
+                listed.filter(check -> !check.done())
+                        .map(check -> TextWidth.of(check.name()))
+                        .max()
+                        .getOrElse(0));
         return List.of(Line.pieces(List.<StyledElement<?>>of(label("dialog.pullRequest.checks"))
                         .appendAll(counts)))
-                .appendAll(notPassed
-                        .take(LISTED_CHECKS)
-                        .map(check -> Line.pieces(List.<StyledElement<?>>of(text(INDENT))
-                                .appendAll(
-                                        PullRequestSymbols.checks(check.state()).map(PullRequestDialog::symbol))
-                                .append(text(" " + check.name())))))
+                .appendAll(listed.map(check -> Line.pieces(List.<StyledElement<?>>of(text(INDENT))
+                        .appendAll(PullRequestSymbols.check(check).map(PullRequestDialog::symbol))
+                        .appendAll(
+                                check.done()
+                                        ? List.of(text(" " + check.name()))
+                                        : notDone(check, nameWidth, checks, times, now)))))
                 .appendAll(Option.when(
                         notPassed.size() > LISTED_CHECKS,
                         () -> Line.of(text(INDENT
@@ -247,6 +264,52 @@ public final class PullRequestDialog implements PopupView {
                                                 "dialog.pullRequest.checks.more",
                                                 String.valueOf(notPassed.size() - LISTED_CHECKS)))
                                 .addClass(Theme.Classes.DIM))));
+    }
+
+    /**
+     * The name of {@code check}, one of {@code all} that is not done, padded to {@code nameWidth}, and how long it
+     * runs and is expected to take still. A queued one is dimmed all along, as its emoji ignores dimming (ADR 32).
+     */
+    static List<StyledElement<?>> notDone(
+            Check check, int nameWidth, List<Check> all, Option<CheckTimes> times, Instant now) {
+        TextElement name = text(" " + padded(check.name(), nameWidth) + "  ");
+        return List.of(
+                check.queued() ? name.addClass(Theme.Classes.DIM) : name,
+                text(CheckTimesText.of(check, eta(check, all, times), learning(times), now))
+                        .addClass(Theme.Classes.DIM));
+    }
+
+    /**
+     * The checks {@code notPassed} of {@code all}, the failed ones first, then the running ones, then the queued
+     * ones, each the soonest done first and those not known last.
+     */
+    private static List<Check> order(List<Check> notPassed, List<Check> all, Option<CheckTimes> times) {
+        return notPassed
+                .sortBy(check -> eta(check, all, times) instanceof Eta.Expected(Instant at) ? at : Instant.MAX)
+                .sortBy(check -> check.state() == Checks.FAILING ? 0 : check.queued() ? 2 : 1);
+    }
+
+    /**
+     * When {@code check}, one of the checks {@code all}, is expected to be done, as far as was learned.
+     */
+    private static Eta eta(Check check, List<Check> all, Option<CheckTimes> times) {
+        return times.map(known -> known.eta(check, all)).getOrElse(() -> Eta.of(check, all, CheckHistory.EMPTY));
+    }
+
+    private static Eta eta(List<Check> all, Option<CheckTimes> times) {
+        return times.map(known -> known.eta(all)).getOrElse(() -> Eta.of(all, CheckHistory.EMPTY));
+    }
+
+    /**
+     * {@code name}, cut to {@code width} columns, or with spaces after it to take them.
+     */
+    private static String padded(String name, int width) {
+        String cut = TextWidth.cut(name, width);
+        return cut + " ".repeat(Math.max(0, width - TextWidth.of(cut)));
+    }
+
+    private static boolean learning(Option<CheckTimes> times) {
+        return times.exists(CheckTimes::toppingUp);
     }
 
     /**
@@ -284,7 +347,14 @@ public final class PullRequestDialog implements PopupView {
     public Option<Element> render(Model model) {
         return model.popup(PullRequestPopup.class).map(popup -> {
             List<Line> lines = popup.details()
-                    .map(read -> read.fold(PullRequestDialog::failed, pr -> details(pr, model.now())))
+                    .map(read -> read.fold(
+                            PullRequestDialog::failed,
+                            pr -> details(
+                                    pr,
+                                    model.now(),
+                                    model.gitHub()
+                                            .checkTimes()
+                                            .filter(times -> times.repository().equals(pr.repository())))))
                     .getOrElse(() -> loading(popup));
             int blanks = CONTENT_HEIGHT - lines.map(Line::height).sum().intValue();
             return DialogFrame.withHint(
@@ -323,7 +393,7 @@ public final class PullRequestDialog implements PopupView {
                         text(TimeText.spinnerFrame(clock.instant())).addClass(Theme.Classes.SPINNER))));
     }
 
-    private List<Line> details(PullRequestDetails pr, Instant now) {
+    private List<Line> details(PullRequestDetails pr, Instant now, Option<CheckTimes> times) {
         return List.of(
                         Line.wrapped(pr.title(), Theme.Classes.BOLD, TITLE_LINES),
                         Line.blank(),
@@ -360,7 +430,7 @@ public final class PullRequestDialog implements PopupView {
                         () -> Line.labelled(
                                 "dialog.pullRequest.labels", text(pr.labels().mkString(", ")))))
                 .append(Line.blank())
-                .appendAll(checks(pr.checks()));
+                .appendAll(checks(pr.checks(), times, now));
     }
 
     private static String threads(ReviewThreads threads) {

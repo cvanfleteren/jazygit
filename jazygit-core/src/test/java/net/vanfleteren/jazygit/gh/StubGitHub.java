@@ -70,6 +70,14 @@ public interface StubGitHub extends GitHub {
     }
 
     /**
+     * The repository {@code owner/repo} without checks that ran.
+     */
+    @Override
+    default Either<GhError, RecentChecks> recentChecks() {
+        return Either.right(new RecentChecks("owner/repo", List.empty()));
+    }
+
+    /**
      * No description, comments or reviews.
      */
     @Override

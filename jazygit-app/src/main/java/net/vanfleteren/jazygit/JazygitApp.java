@@ -163,7 +163,14 @@ public class JazygitApp extends ToolkitApp {
     public JazygitApp(
             Env env, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, StyleEngine styleEngine) {
         this.env = new Env(
-                env.git(), env.gitHub(), env.settings(), env.recent(), env.unseen(), this::switchTo, this::handOver);
+                env.git(),
+                env.gitHub(),
+                env.settings(),
+                env.recent(),
+                env.unseen(),
+                env.checkTimings(),
+                this::switchTo,
+                this::handOver);
         this.settings = settings;
         this.themeOverride = themeOverride;
         this.styleEngine = styleEngine;
@@ -184,6 +191,7 @@ public class JazygitApp extends ToolkitApp {
             SettingsStore store,
             RecentRepositories recent,
             UnseenPullRequestsStore unseen,
+            CheckTimingsStore checkTimings,
             Repositories repositories,
             Terminal terminal) {
         GhToken token = new GhToken(git.worktree(), settings.gh(), () -> GitHubAccount.configured(git));
@@ -194,6 +202,7 @@ public class JazygitApp extends ToolkitApp {
                 store,
                 recent,
                 unseen,
+                checkTimings,
                 repositories,
                 terminal);
     }
@@ -274,6 +283,7 @@ public class JazygitApp extends ToolkitApp {
                                         settings,
                                         recent,
                                         new UnseenPullRequestsFile(SettingsPaths.stateFile()),
+                                        new CheckTimingsFile(SettingsPaths.checkTimingsFile()),
                                         Repositories.NONE,
                                         Terminal.NONE);
                                 return new JazygitApp(env, loaded, options.theme(), engine);
@@ -539,6 +549,7 @@ public class JazygitApp extends ToolkitApp {
                             env.settings(),
                             env.recent(),
                             env.unseen(),
+                            env.checkTimings(),
                             env.repositories(),
                             env.terminal()),
                     new SettingsStore.Loaded(last.preferences().settings(), Option.none()),

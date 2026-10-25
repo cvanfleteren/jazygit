@@ -7,16 +7,20 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.feature.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.feature.github.comments.CommentsMsg;
+import net.vanfleteren.jazygit.gh.model.CheckRun;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -24,12 +28,16 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.*;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.gh.timing.CheckHistory;
+import net.vanfleteren.jazygit.gh.timing.CheckSample;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.state.CheckTimes;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
+import net.vanfleteren.jazygit.ui.Theme;
 import org.junit.jupiter.api.Test;
 
 class PullRequestDialogTest {
@@ -116,7 +124,89 @@ class PullRequestDialogTest {
                 DETAILS.checks(),
                 head,
                 Option.none(),
-                Option.none());
+                Option.none(),
+                "");
+    }
+
+    /**
+     * READY with {@code checks}, of repository {@code owner/repo}.
+     */
+    private static PullRequestDetails withChecks(List<Check> checks) {
+        return new PullRequestDetails(
+                READY.number(),
+                READY.title(),
+                READY.author(),
+                READY.state(),
+                READY.draft(),
+                READY.headBranch(),
+                READY.baseBranch(),
+                READY.createdAt(),
+                READY.pushedAt(),
+                READY.additions(),
+                READY.deletions(),
+                READY.changedFiles(),
+                READY.commits(),
+                READY.mergeable(),
+                READY.review(),
+                READY.comments(),
+                READY.reviewThreads(),
+                READY.labels(),
+                READY.reviewers(),
+                checks,
+                "abc123",
+                Option.none(),
+                Option.none(),
+                "owner/repo");
+    }
+
+    /**
+     * A check of workflow {@code Build} that is not done, of a run created {@code createdAgo} seconds before NOW: queued
+     * without {@code startedAgo}, else running since then.
+     */
+    private static Check timed(String name, int createdAgo, Option<Integer> startedAgo) {
+        return new Check(
+                name,
+                Checks.PENDING,
+                Option.of(new CheckRun(
+                        name.length(),
+                        "Build",
+                        "",
+                        startedAgo.map(NOW::minusSeconds),
+                        Option.none(),
+                        1,
+                        NOW.minusSeconds(createdAgo),
+                        1,
+                        "pull_request")));
+    }
+
+    /**
+     * What was learned of {@code owner/repo}: package runs 60s, done 60s into its run; acceptance waits for it, runs
+     * 190s and is done 254s in.
+     */
+    private static CheckTimes learned() {
+        List<CheckSample> samples = List.range(0, 3)
+                .flatMap(i -> List.of(
+                        new CheckSample(
+                                "Build/package",
+                                i,
+                                Duration.ofSeconds(60),
+                                Duration.ofSeconds(60),
+                                "pull_request",
+                                NOW.minusSeconds(3600 + i)),
+                        new CheckSample(
+                                "Build/acceptance",
+                                10 + i,
+                                Duration.ofSeconds(190),
+                                Duration.ofSeconds(254),
+                                "pull_request",
+                                NOW.minusSeconds(3600 + i))));
+        return CheckTimes.of("owner/repo", CheckHistory.EMPTY.with(samples, NOW), Option.none());
+    }
+
+    private String timedScreen(List<Check> checks, CheckTimes times) throws Exception {
+        return screen(
+                PullRequestPopup.loading(new BranchName("support_rename"), PR).with(Either.right(withChecks(checks))),
+                model -> model.mapGitHub(gitHub -> gitHub.withCheckTimes(Option.of(times))));
     }
 
     private static int hintLine(String screen) {
@@ -259,7 +349,8 @@ class PullRequestDialogTest {
                 READY.checks(),
                 "abc123",
                 Option.of(stack),
-                Option.none());
+                Option.none(),
+                "");
     }
 
     @Test
@@ -497,6 +588,74 @@ class PullRequestDialogTest {
     }
 
     @Test
+    void saysHowLongTheChecksRunAndAreExpectedToTakeStill() throws Exception {
+        String screen = timedScreen(
+                List.of(
+                        timed("verify", 120, Option.of(30)),
+                        timed("acceptance", 120, Option.none()),
+                        timed("package", 120, Option.of(118)),
+                        new Check("ci/status", Checks.PENDING)),
+                learned());
+
+        // verify and the status are not known, so neither is when they are all done.
+        assertTrue(screen.contains("Checks  ⏳ 4 running · done in ?"), screen);
+        assertTrue(screen.contains("⏳ package     running 1m · <1m left"), screen);
+        assertTrue(screen.contains("⏳ verify      running <1m · ? left"), screen);
+        assertTrue(screen.contains("⏳ ci/status   running"), screen);
+        assertTrue(screen.contains("💤 acceptance  queued · ~2m left"), screen);
+        // Running before queued, the soonest done first, those not known last.
+        assertTrue(screen.indexOf("package") < screen.indexOf("verify"), screen);
+        assertTrue(screen.indexOf("ci/status") < screen.indexOf("acceptance"), screen);
+    }
+
+    @Test
+    void aQueuedCheckIsDimmedAllAlongARunningOneOnlyInItsTime() {
+        List<Check> all = List.of(timed("acceptance", 120, Option.none()), timed("package", 120, Option.of(118)));
+
+        List<StyledElement<?>> queued = PullRequestDialog.notDone(all.head(), 10, all, Option.of(learned()), NOW);
+        List<StyledElement<?>> running = PullRequestDialog.notDone(all.last(), 10, all, Option.of(learned()), NOW);
+
+        assertTrue(queued.forAll(piece -> piece.cssClasses().contains(Theme.Classes.DIM)));
+        assertFalse(running.head().cssClasses().contains(Theme.Classes.DIM));
+        assertTrue(running.last().cssClasses().contains(Theme.Classes.DIM));
+    }
+
+    @Test
+    void aLongFailedNameDoesNotPushTheTimesOfTheOthersOut() throws Exception {
+        String screen = timedScreen(
+                List.of(new Check("integration-tests-windows", Checks.FAILING), timed("verify", 120, Option.of(30))),
+                learned());
+
+        assertTrue(screen.contains("❌ integration-tests-windows"), screen);
+        assertTrue(screen.contains("⏳ verify  running <1m · ? left"), screen);
+    }
+
+    @Test
+    void saysWhenTheChecksAreExpectedToBeDoneTogether() throws Exception {
+        String screen = timedScreen(
+                List.of(timed("package", 120, Option.of(118)), timed("acceptance", 120, Option.none())), learned());
+
+        assertTrue(screen.contains("Checks  ⏳ 2 running · done in ~2m"), screen);
+    }
+
+    @Test
+    void aCheckPastItsEstimateIsOverdue() throws Exception {
+        String screen = timedScreen(List.of(timed("acceptance", 500, Option.of(400))), learned());
+
+        assertTrue(screen.contains("Checks  ⏳ 1 running · taking longer than usual"), screen);
+        assertTrue(screen.contains("⏳ acceptance  running 6m · overdue"), screen);
+    }
+
+    @Test
+    void whileTheChecksThatRanLatelyAreReadEstimatesAreComing() throws Exception {
+        String screen = timedScreen(
+                List.of(timed("verify", 120, Option.of(30))), learned().withTopUp(NOW));
+
+        assertTrue(screen.contains("Checks  ⏳ 1 running · done in …"), screen);
+        assertTrue(screen.contains("⏳ verify  running <1m · … left"), screen);
+    }
+
+    @Test
     void tellsWhyTheDetailsCouldNotBeRead() throws Exception {
         String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR)
                 .with(Either.left(refused("not logged in"))));
@@ -674,7 +833,11 @@ class PullRequestDialogTest {
     }
 
     private String screen(PullRequestPopup popup) throws Exception {
-        Model model = TestModels.loaded().withNow(NOW).openPopup(popup);
+        return screen(popup, model -> model);
+    }
+
+    private String screen(PullRequestPopup popup, UnaryOperator<Model> change) throws Exception {
+        Model model = change.apply(TestModels.loaded().withNow(NOW)).openPopup(popup);
         try (ToolkitTestRunner runner = start(model)) {
             // About a terminal filling a 1920x1080 screen.
             return RenderedText.ofSize(runner, () -> view(model), 120, 50);

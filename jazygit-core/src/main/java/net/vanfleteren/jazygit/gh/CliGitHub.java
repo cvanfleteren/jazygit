@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Mergeable;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewThreads;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Reviewer;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewerState;
+import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -40,6 +41,23 @@ public final class CliGitHub implements GitHub {
             (if .__typename == "CheckRun" \
             then (if .status == "COMPLETED" then (.conclusion // "") else "PENDING" end) \
             else (.state // "") end)""";
+    // What there is to know of a check run of a workflow and when it ran, in GraphQL (ADR 32).
+    private static final String CHECK_RUN_FIELDS = """
+            databaseId name status conclusion startedAt completedAt \
+            checkSuite { workflowRun { databaseId createdAt runAttempt event workflow { name } } }""";
+    /*
+     * A check as the fields of a line, in jq: its name, its state as in CHECK_STATE, and for a check run of a
+     * workflow the fields of CHECK_RUN_FIELDS, empty for the rest: its id, its workflow, its conclusion, when it
+     * started and was done, and the id, creation, attempt and event of its workflow run.
+     */
+    private static final String CHECK_JQ = """
+            def check: [((if .__typename == "CheckRun" then .name else .context end) // ""), %s] + \
+            (if .__typename == "CheckRun" and .checkSuite.workflowRun != null \
+            then (.checkSuite.workflowRun as $run | [(.databaseId | tostring), ($run.workflow.name // ""), \
+            (.conclusion // ""), (.startedAt // ""), (.completedAt // ""), ($run.databaseId | tostring), \
+            $run.createdAt, ($run.runAttempt | tostring), ($run.event // "")]) \
+            else ["", "", "", "", "", "", "", "", ""] end); """.formatted(CHECK_STATE);
+    private static final int CHECK_FIELD_COUNT = 1 + 11;
     // Where a pull request sits in its stack, and the pull requests of it, in GraphQL: both null when it is not
     // stacked.
     private static final String STACK_FIELDS = """
@@ -138,25 +156,25 @@ public final class CliGitHub implements GitHub {
      */
     private static final String DETAILS_QUERY = """
             query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { \
-            pullRequest(number: $number) { number title author { login } state isDraft headRefName baseRefName \
-            headRefOid %s createdAt additions deletions changedFiles mergeable reviewDecision comments { totalCount } \
+            nameWithOwner pullRequest(number: $number) { number title author { login } state isDraft headRefName \
+            baseRefName headRefOid %s createdAt additions deletions changedFiles mergeable reviewDecision comments { totalCount } \
             labels(first: 100) { nodes { name } } latestReviews(first: 100) { nodes { author { login } state } } \
             reviewRequests(first: 100) { nodes { requestedReviewer { ... on User { login } ... on Bot { login } \
             ... on Mannequin { login } ... on Team { name } } } } \
             timelineItems(last: 1, itemTypes: [HEAD_REF_FORCE_PUSHED_EVENT]) { nodes { \
             ... on HeadRefForcePushedEvent { createdAt } } } \
             commits(last: 1) { totalCount nodes { commit { committedDate statusCheckRollup { contexts(first: 100) { nodes { __typename \
-            ... on CheckRun { name status conclusion } ... on StatusContext { context state } } } } } } } \
-            reviewThreads(last: 100) { totalCount nodes { isResolved comments { totalCount } } } } } }""".formatted(STACK_FIELDS);
+            ... on CheckRun { %s } ... on StatusContext { context state } } } } } } } \
+            reviewThreads(last: 100) { totalCount nodes { isResolved comments { totalCount } } } } } }""".formatted(STACK_FIELDS, CHECK_RUN_FIELDS);
     /*
-     * Tab separated lines, each starting with what it is: one "pr" line with the fields of the pull request, one
-     * "threads" line with how many review threads it has, how many of them were read, and how many of those are
-     * unresolved and how many comments they hold, a "stack" line with the fields of STACK_JQ when it is stacked,
+     * Tab separated lines, each starting with what it is: a "repo" line with the repository as owner/name, one "pr"
+     * line with the fields of the pull request, one "threads" line with how many review threads it has, how many of
+     * them were read, and how many of those are unresolved and how many comments they hold, a "stack" line with the fields of STACK_JQ when it is stacked,
      * then a "label" line per label, a "review" line per latest review, a "requested" line per requested reviewer
-     * and a "check" line per check, with its state as in JQ.
+     * and a "check" line per check, with the fields of CHECK_JQ.
      */
-    private static final String DETAILS_JQ = STACK_JQ + """
-            .data.repository.pullRequest | \
+    private static final String DETAILS_JQ = STACK_JQ + CHECK_JQ + """
+            .data.repository | (["repo", .nameWithOwner] | @tsv), (.pullRequest | \
             ((["pr", (.number | tostring), .title, (.author.login // ""), .state, \
             (.isDraft | tostring), .headRefName, .baseRefName, .createdAt, \
             ([.createdAt, .commits.nodes[0].commit.committedDate, .timelineItems.nodes[0].createdAt] \
@@ -171,10 +189,26 @@ public final class CliGitHub implements GitHub {
             (.latestReviews.nodes[]? | ["review", (.author.login // ""), .state] | @tsv), \
             (.reviewRequests.nodes[]? | ["requested", ((.requestedReviewer.login // .requestedReviewer.name) // "")] \
             | @tsv), \
-            (.commits.nodes[0].commit.statusCheckRollup.contexts.nodes[]? | ["check", \
-            ((if .__typename == "CheckRun" then .name else .context end) // ""), \
-            %s] | @tsv))""".formatted(CHECK_STATE);
+            (.commits.nodes[0].commit.statusCheckRollup.contexts.nodes[]? | ["check"] + check | @tsv)))""";
     private static final int DETAIL_FIELD_COUNT = 18;
+    /*
+     * The check runs on the last commit of the pull requests merged last, and on the last commits of the default
+     * branch, to learn how long checks take from (ADR 32). gh fills in the repository of the working tree for
+     * {owner} and {repo}.
+     */
+    private static final String RECENT_CHECKS_QUERY = """
+            query($owner: String!, $name: String!, $count: Int!) { repository(owner: $owner, name: $name) { \
+            nameWithOwner \
+            pullRequests(first: $count, states: MERGED, orderBy: { field: UPDATED_AT, direction: DESC }) { nodes { \
+            commits(last: 1) { nodes { commit { %1$s } } } } } \
+            defaultBranchRef { target { ... on Commit { history(first: $count) { nodes { %1$s } } } } } } }""".formatted(
+                    "statusCheckRollup { contexts(first: 100) { nodes { __typename ... on CheckRun { %s } } } }"
+                            .formatted(CHECK_RUN_FIELDS));
+    // A "repo" line with the repository as owner/name, then a "check" line per check run of RECENT_CHECKS_QUERY.
+    private static final String RECENT_CHECKS_JQ = CHECK_JQ + """
+            .data.repository | (["repo", .nameWithOwner] | @tsv), \
+            ((.pullRequests.nodes[]?.commits.nodes[]?.commit, .defaultBranchRef.target.history.nodes[]?) \
+            | .statusCheckRollup.contexts.nodes[]? | select(.__typename == "CheckRun") | ["check"] + check | @tsv)""";
     /*
      * How many commits base branch $base has that commit $head does not: GitHub's mergeable only says whether a pull
      * request merges without conflicts, not that its base moved on. gh fills in the repository of the working tree
@@ -518,9 +552,9 @@ public final class CliGitHub implements GitHub {
                                 Integer.parseInt(f.get(3)),
                                 Integer.parseInt(f.get(4))))
                         .toOption());
-        List<Check> checks = lines.filter(f -> f.head().equals("check"))
-                // A check without a state yet, like a status nobody set, is neither passing nor failing.
-                .map(f -> new Check(f.get(1), checks(List.of(f.get(2)).filter(state -> !state.isEmpty()))));
+        List<Check> checks = lines.filter(f -> f.head().equals("check")).map(f -> check(f.tail()));
+        String repository =
+                lines.find(f -> f.head().equals("repo")).map(f -> f.get(1)).getOrElse("");
         Try<Option<PullRequestStack>> stack = lines.find(f -> f.head().equals("stack"))
                 .map(f -> stack(f.tail()))
                 .getOrElse(Try.success(Option.none()));
@@ -548,8 +582,54 @@ public final class CliGitHub implements GitHub {
                                 checks,
                                 f.get(16),
                                 pullRequestStack,
-                                Option.none()))
+                                Option.none(),
+                                repository))
                         .toOption()))
+                .toEither(() -> new UnexpectedOutput(raw));
+    }
+
+    /**
+     * The check that {@code fields} of a line of {@link #CHECK_JQ} tell. A check without a state yet, like a status
+     * nobody set, is neither passing nor failing. A check run whose timing cannot be read is not timed.
+     */
+    static Check check(List<String> fields) {
+        Checks state = checks(List.of(fields.get(1)).filter(value -> !value.isEmpty()));
+        Option<CheckRun> run =
+                fields.size() < CHECK_FIELD_COUNT - 1 || fields.get(2).isEmpty()
+                        ? Option.none()
+                        : Try.of(() -> new CheckRun(
+                                        Long.parseLong(fields.get(2)),
+                                        fields.get(3),
+                                        fields.get(4),
+                                        instant(fields.get(5)),
+                                        instant(fields.get(6)),
+                                        Long.parseLong(fields.get(7)),
+                                        Instant.parse(fields.get(8)),
+                                        Integer.parseInt(fields.get(9)),
+                                        fields.get(10)))
+                                .toOption();
+        return new Check(fields.get(0), state, run);
+    }
+
+    private static Option<Instant> instant(String value) {
+        return value.isEmpty() ? Option.none() : Option.of(Instant.parse(value));
+    }
+
+    /**
+     * Parses the lines {@link #RECENT_CHECKS_JQ} prints, keeping the check runs of a workflow.
+     */
+    static Either<UnexpectedOutput, RecentChecks> parseRecentChecks(String raw) {
+        List<List<String>> lines = List.of(raw.split("\n"))
+                .filter(line -> !line.isBlank())
+                .map(line -> List.of(line.split("\t", -1)).map(CliGitHub::unescape));
+        return lines.find(f -> f.head().equals("repo") && f.size() == 2)
+                .filter(repo ->
+                        lines.forAll(f -> f.head().equals("repo") || f.head().equals("check") && known(f)))
+                .map(repo -> new RecentChecks(
+                        repo.get(1),
+                        lines.filter(f -> f.head().equals("check"))
+                                .map(f -> check(f.tail()))
+                                .filter(check -> check.run().isDefined())))
                 .toEither(() -> new UnexpectedOutput(raw));
     }
 
@@ -567,7 +647,10 @@ public final class CliGitHub implements GitHub {
         return switch (fields.head()) {
             case "pr" -> fields.size() == DETAIL_FIELD_COUNT;
             case "label", "requested" -> fields.size() == 2;
-            case "review", "check" -> fields.size() == 3;
+            case "repo" -> fields.size() == 2;
+            case "review" -> fields.size() == 3;
+            // Without the timing of CHECK_JQ too, as it was read before.
+            case "check" -> fields.size() == 3 || fields.size() == CHECK_FIELD_COUNT;
             case "stack" -> fields.size() == 1 + STACK_FIELD_COUNT;
             case "threads" -> fields.size() == 5;
             default -> false;
@@ -852,6 +935,25 @@ public final class CliGitHub implements GitHub {
                         CliGitHub::parseBehind)
                 .toOption()
                 .flatMap(behind -> behind);
+    }
+
+    @Override
+    public Either<GhError, RecentChecks> recentChecks() {
+        return process.read(
+                gh(
+                        "api",
+                        "graphql",
+                        "-F",
+                        "owner={owner}",
+                        "-F",
+                        "name={repo}",
+                        "-F",
+                        "count=" + CheckTimings.TOP_UP_COMMITS,
+                        "-f",
+                        "query=" + RECENT_CHECKS_QUERY,
+                        "--jq",
+                        RECENT_CHECKS_JQ),
+                CliGitHub::parseRecentChecks);
     }
 
     @Override
