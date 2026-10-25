@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import net.vanfleteren.jazygit.feature.commit.CommitDialog;
 import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
+import net.vanfleteren.jazygit.feature.github.checks.ChecksMsg;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.feature.help.HelpPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
@@ -65,6 +66,7 @@ class JazygitAppWiringTest {
                         Tuple.of(Duration.ofMinutes(1), FetchMsg.Tick.class),
                         Tuple.of(Duration.ofMinutes(1), PrOverviewMsg.Tick.class),
                         Tuple.of(Duration.ofMinutes(1), PullRequestMsg.Tick.class),
+                        Tuple.of(Duration.ofMinutes(1), ChecksMsg.Tick.class),
                         Tuple.of(Duration.ofSeconds(2), PullRequestMsg.MergeTick.class)),
                 JazygitApp.TIMERS.map(
                         timer -> Tuple.of(timer.interval(), timer.msg().get().getClass())));

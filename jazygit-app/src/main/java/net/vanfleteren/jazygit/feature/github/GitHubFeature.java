@@ -5,6 +5,7 @@ import java.util.function.Consumer;
 import net.vanfleteren.jazygit.feature.FeatureAction;
 import net.vanfleteren.jazygit.feature.github.browse.BrowseAction;
 import net.vanfleteren.jazygit.feature.github.checkout.CheckoutPullRequestAction;
+import net.vanfleteren.jazygit.feature.github.checks.ShowChecksAction;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestAction;
 import net.vanfleteren.jazygit.feature.github.show.ShowPullRequestAction;
 import net.vanfleteren.jazygit.keys.Keymap;
@@ -15,8 +16,8 @@ import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 
 /**
- * The GitHub operations: showing a pull request and what is done from there, creating one, checking one out, and
- * opening a branch or pull request in the browser. Adding an operation is adding its subpackage, and listing its
+ * The GitHub operations: showing a pull request and what is done from there, showing the checks of a branch,
+ * creating a pull request, checking one out, and opening a branch or pull request in the browser. Adding an operation is adding its subpackage, and listing its
  * action here.
  */
 public final class GitHubFeature {
@@ -33,6 +34,7 @@ public final class GitHubFeature {
      */
     private static final List<FeatureAction> ACTIONS = List.of(
             ShowPullRequestAction.ACTION,
+            ShowChecksAction.ACTION,
             CheckoutPullRequestAction.ACTION,
             REFRESH,
             CreatePullRequestAction.ACTION,
