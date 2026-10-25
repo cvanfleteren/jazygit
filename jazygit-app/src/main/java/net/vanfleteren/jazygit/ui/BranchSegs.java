@@ -106,17 +106,13 @@ final class BranchSegs {
             Option<PullRequest> pullRequest, Option<MergeStatus> merge, Option<String> eta) {
         return pullRequest
                 .toList()
-                .flatMap(pr -> (merge.isDefined()
-                                ? PullRequestSymbols.state(pr.stack(), pr.checks(), pr.review(), merge)
-                                        .map(BranchSegs::symbol)
-                                : pr.stack()
-                                        .map(PullRequestSymbols::stack)
-                                        .toList()
-                                        .appendAll(PullRequestSymbols.checks(pr.checks()))
-                                        .map(BranchSegs::symbol)
-                                        .appendAll(etaSeg(pr.checks(), eta))
-                                        .appendAll(PullRequestSymbols.review(pr.review())
-                                                .map(BranchSegs::symbol)))
+                .flatMap(pr -> PullRequestSymbols.state(
+                                pr.stack(),
+                                pr.checks(),
+                                eta.map(text -> new PullRequestSymbols.Symbol(text, Theme.Classes.DIM)),
+                                pr.review(),
+                                merge)
+                        .map(BranchSegs::symbol)
                         .prepend(LoadableList.Seg.styled(
                                 " #" + pr.number(), pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST)));
     }

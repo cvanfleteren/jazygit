@@ -26,20 +26,41 @@ public final class BranchChecksUpdate {
                                 .withPendingChecks(gitHub.pendingChecks().map(pending -> pending.pendingIn(checks)))),
                         new LoadBranchChecks());
                 List<BranchName> pending = pending(done.model(), checks);
-                yield pending.isEmpty()
+                yield pending.isEmpty() || readingRuns(done.model())
                         ? done
-                        : new Next(done.model(), done.cmds().append(new LoadBranchCheckRuns(pending)));
+                        : startRuns(done, new LoadBranchCheckRuns(pending));
             }
             // Like for the pull requests, a failure is no reason to bother the user: the checks read last stay.
             case BranchChecksMsg.LoadFailed(var failure) -> GitHubReads.done(model, new LoadBranchChecks());
             // How long the checks take is learned from them too.
             case BranchChecksMsg.RunsLoaded(PendingChecks checks) ->
                 CheckTimesUpdate.read(
-                        Next.of(model.mapGitHub(gitHub -> gitHub.withPendingChecks(Option.of(checks)))),
+                        Next.of(runsDone(model).mapGitHub(gitHub -> gitHub.withPendingChecks(Option.of(checks)))),
                         checks.repository(),
                         checks.byBranch().values().toList().flatMap(runs -> runs));
-            case BranchChecksMsg.RunsFailed(var failure) -> Next.of(model);
+            case BranchChecksMsg.RunsFailed(var failure) -> Next.of(runsDone(model));
         };
+    }
+
+    /**
+     * Whether the checks of the pending branches are being read. Like the other reads from GitHub, one runs at a
+     * time, so an older read cannot finish last and replace what a newer one read (see {@link GitHubReads}); the
+     * next read of the branch checks starts another when needed.
+     */
+    private static boolean readingRuns(Model model) {
+        return model.gitHub().reading().exists(read -> read instanceof LoadBranchCheckRuns);
+    }
+
+    private static Next startRuns(Next next, LoadBranchCheckRuns read) {
+        return new Next(
+                next.model()
+                        .mapGitHub(gitHub -> gitHub.withReading(gitHub.reading().add(read))),
+                next.cmds().append(read));
+    }
+
+    private static Model runsDone(Model model) {
+        return model.mapGitHub(
+                gitHub -> gitHub.withReading(gitHub.reading().filter(read -> !(read instanceof LoadBranchCheckRuns))));
     }
 
     /**

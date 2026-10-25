@@ -674,6 +674,19 @@ class CliGitHubTest {
     }
 
     @Test
+    void theBranchesAreAskedForByTheirFullRefInTheVariablesOfTheirAlias(@TempDir Path dir) throws Exception {
+        assumeTrue(Files.isExecutable(Path.of("/bin/sh")), "no POSIX shell");
+        Path gh = Files.writeString(
+                dir.resolve("gh"), "#!/bin/sh\necho \" $* \" > '" + dir.resolve("asked") + "'\necho 'repo\to/r'\n");
+        gh.toFile().setExecutable(true);
+
+        new CliGitHub(dir, gh.toString(), GhToken.NONE).branchCheckRuns(List.of("feat/x", "main"));
+
+        String asked = Files.readString(dir.resolve("asked"));
+        assertTrue(asked.contains(" -f b0=refs/heads/feat/x -f b1=refs/heads/main "), asked);
+    }
+
+    @Test
     void parsesTheChecksThatRanLately() {
         String raw = "repo\tcvanfleteren/jazygit\n"
                 + "check\tverify\tSUCCESS\t122\tBuild\tSUCCESS\t2026-10-24T22:18:31Z\t2026-10-24T22:20:25Z"

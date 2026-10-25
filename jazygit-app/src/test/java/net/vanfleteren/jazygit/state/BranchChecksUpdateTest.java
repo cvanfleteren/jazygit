@@ -142,6 +142,33 @@ class BranchChecksUpdateTest {
     }
 
     @Test
+    void theChecksOfPendingBranchesAreNotReadTwiceAtOnceSoAnOlderReadCannotReplaceANewerOne() {
+        Next first = Update.update(loaded(), new BranchChecksMsg.Loaded(pending("feature")));
+        assertEquals(1, first.cmds().size());
+
+        Next second = Update.update(first.model(), new BranchChecksMsg.Loaded(pending("feature")));
+        assertEquals(List.empty(), second.cmds());
+
+        Model done = Update.update(
+                        second.model(),
+                        new BranchChecksMsg.RunsLoaded(new PendingChecks(
+                                "owner/repo", HashMap.of(new BranchName("feature"), List.of(running("verify"))))))
+                .model();
+        assertEquals(
+                1,
+                Update.update(done, new BranchChecksMsg.Loaded(pending("feature")))
+                        .cmds()
+                        .size());
+        Model failed = Update.update(second.model(), new BranchChecksMsg.RunsFailed(refused("offline")))
+                .model();
+        assertEquals(
+                1,
+                Update.update(failed, new BranchChecksMsg.Loaded(pending("feature")))
+                        .cmds()
+                        .size());
+    }
+
+    @Test
     void atMostTenPendingBranchesAreReadAndNoneWhenNoneIsPending() {
         Next many = Update.update(
                 loaded(),
