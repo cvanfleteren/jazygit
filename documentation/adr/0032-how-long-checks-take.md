@@ -1,4 +1,4 @@
-# 30. How long checks take, and when they are done
+# 32. How long checks take, and when they are done
 
 Date: 2026-10-25
 
@@ -11,8 +11,9 @@ says how long a check has been running, whether it is still queued, or when they
 is nowhere to put that at all.
 
 GitHub tells, in GraphQL, for every check run its `status` (`QUEUED`, `IN_PROGRESS`, …), `startedAt` and
-`completedAt`, empty while it is queued, and its workflow run: `createdAt`, `runAttempt`, `event` and the workflow's
-name. A re-run keeps the `createdAt` of the first attempt; there is no time an attempt started. A commit status (the
+`completedAt`, empty while it is queued, and its workflow run, through `checkSuite.workflowRun`: `createdAt`,
+`runAttempt`, `event` and the workflow's name. That is `null` for a check run made by an app other than GitHub Actions
+(Codecov, SonarCloud, …): it has no workflow and no run start. A re-run keeps the `createdAt` of the first attempt; there is no time an attempt started. A commit status (the
 older API) has no timing, and only its latest state shows.
 
 It does not tell how long a check usually takes; that has to be learned from runs that are done. Checks wait for each
@@ -31,11 +32,15 @@ take still; the checks together show when they are expected to be done, or that 
 - A queued check is expected at the run's start plus its median finish. A running one at the later of its own
   start plus its median duration, and the run's start plus its median finish.
 - The checks together are expected done at the latest of those, of the checks not done. They are not known when
-  one of those is not: a check with too little history, or a commit status that is pending. Not: an estimate of
+  one of those is not: a check with too little history, a queued check of an app other than Actions, or a commit
+  status that is pending. Not: an estimate of
   what is known with a count of what is not; they are not done before the unknown one is.
 - The median of the newest 20 runs that passed, given at least 3; under 3, the check is not known. Runs that
   failed, were cancelled or skipped stop early and are left out. Only first attempts: a re-run's `createdAt` is the
   first attempt's.
+- A check run of an app other than Actions is keyed by `"<app slug>/<check>"` (`checkSuite.app.slug`), and has no run
+  start: its history is only its duration, and a running one is expected at its own start plus its median duration.
+  A queued one is not known, as it has no run start to count from.
 - A re-run being watched starts at the earliest `startedAt` of its checks; its queued checks are not known while
   none started.
 - Past its estimate, a check is overdue only after one more minute, the interval the checks are read at: one just
@@ -48,10 +53,12 @@ take still; the checks together show when they are expected to be done, or that 
   the pending branches and the checks popup. A sample is `{ id, duration, finished, event, at }`: the check run's
   `databaseId`, its duration and when after its run's start it finished in seconds, the event of its run, and when
   it finished.
-- The first time a check that is not done is seen while the repository has no history, or its newest sample is more
-  than a day old, one `gh api graphql` reads the checks of the last 20 merged pull requests and of the last 20
+- The first time a check that is not done is seen while the repository was last topped up more than a day ago, or
+  never, one `gh api graphql` reads the checks of the last 20 merged pull requests and of the last 20
   commits of the default branch: those cover the workflows that only run on a push. Not when a repository is
-  opened, so one without running checks never costs a call. Estimates show `…` while it runs.
+  opened, so one without running checks never costs a call. Estimates show `…` while it runs. When it is tried, successful or not, `topped-up = <instant>` is written for the
+  repository, and that, not the age of the samples, gates the next one: a quiet repository, an empty result and a
+  failing `gh` all wait the day out, so it is at most one a day per repository.
 - Not: only learning locally, as a new developer would only know the pull requests they looked at, and history
   would go stale on a repository they rarely watch. Not: only asking GitHub, every hour, without a file.
 - The event is kept but not part of the key: a workflow that runs on both pushes and pull requests pools them, and
@@ -76,7 +83,7 @@ take still; the checks together show when they are expected to be done, or that 
 ### Read
 
 - The details of a pull request ask for `status startedAt completedAt databaseId` of each check run and its
-  `workflowRun { createdAt runAttempt event workflow { name } }`. `PullRequestDetails.Check` gets its workflow, its
+  `checkSuite { app { slug } workflowRun { createdAt runAttempt event workflow { name } } }`. `PullRequestDetails.Check` gets its workflow, its
   phase (queued, running or done) and these times. `Checks` stays as it is, so the lists do not change.
 - The branches are read as before, one state per branch. After that, when any is pending, one query reads the checks
   with their timing of at most 10 of them, by alias: the checked-out branch, the default branch, then the others by
@@ -99,7 +106,8 @@ so seconds would stutter.
   💤 package        queued · ~4m left
   ```
 
-  `💤`, dimmed, is new: a queued check is not running yet. Not `⏸`, which most terminals show one column wide and some
+  `💤` is new, and the rest of its line is dimmed: a queued check is not running yet. A colour emoji ignores dimming
+  in most terminals, so the text carries it. Not `⏸`, which most terminals show one column wide and some
   two, so the names after it would not line up. A commit status shows `running` and nothing more. The dialog keeps
   its height.
 - **The branches pane**: after the running symbol, `main ⏳ ~4m`, `feat/x #146 ⏳ ~3m`, `⏳ ?`, `⏳ late`; on every
@@ -126,6 +134,6 @@ are constants next to each other in one class, not settings, so they can become 
 - A check that varies a lot, like `claude-review` (16s to 174s), gets an estimate that is often off, and overdue
   when it is only slow.
 - The estimate is a pure function, unit tested: queued, running, overdue and its grace, too little history, a
-  commit status, a re-run, all done. The file is tested for merging, duplicates, pruning, two writers and a broken
-  file; the parsing of the new fields and the top-up, the dialog's lines, the branches pane and the popup too. The
+  commit status, a check of an app other than Actions (running and queued), a re-run, all done. The file is tested for merging, duplicates, pruning, two writers, a broken
+  file and the top-up's day, also after a failed or empty top-up; the parsing of the new fields and the top-up, the dialog's lines, the branches pane and the popup too. The
   acceptance tests run without GitHub, so none shows an estimate.
