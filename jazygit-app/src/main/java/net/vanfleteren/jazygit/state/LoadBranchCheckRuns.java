@@ -5,7 +5,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 
 /**
  * Reads the checks, one by one and with their timing, on the tips of {@code branches} on GitHub, whose checks are
- * pending (ADR 30). It runs in the background, as it talks to GitHub, and nobody waits for it.
+ * pending (ADR 32). It runs in the background, as it talks to GitHub, and nobody waits for it.
  */
 public record LoadBranchCheckRuns(List<BranchName> branches) implements Cmd {
 

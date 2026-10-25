@@ -19,7 +19,7 @@ public final class BranchChecksUpdate {
 
     public static Next update(Model model, BranchChecksMsg msg) {
         return switch (msg) {
-            // The branches whose checks are pending are read one by one too, to tell when they are done (ADR 30).
+            // The branches whose checks are pending are read one by one too, to tell when they are done (ADR 32).
             case BranchChecksMsg.Loaded(GitHubChecks checks) -> {
                 Next done = GitHubReads.done(
                         model.mapGitHub(gitHub -> gitHub.withBranchChecks(Option.of(checks))

@@ -8,7 +8,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.git.model.BranchName;
 
 /**
- * The checks, one by one and with their timing, on the branches on GitHub whose checks are pending (ADR 30).
+ * The checks, one by one and with their timing, on the branches on GitHub whose checks are pending (ADR 32).
  *
  * @param repository the repository, as {@code owner/name}
  * @param byBranch   the checks on the tip of each of those branches

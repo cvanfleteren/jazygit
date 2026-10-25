@@ -63,7 +63,7 @@ public final class PullRequestSymbols {
 
     /**
      * As {@link #state(Option, Checks, Review, Option)}, with {@code eta}, when the checks are expected to be done,
-     * right after the symbol of the checks while they run (ADR 30).
+     * right after the symbol of the checks while they run (ADR 32).
      */
     public static List<Symbol> state(
             Option<PullRequestStack> stack,

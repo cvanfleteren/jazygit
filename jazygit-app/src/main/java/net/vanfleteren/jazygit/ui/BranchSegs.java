@@ -100,7 +100,7 @@ final class BranchSegs {
 
     /**
      * The pull request of a branch, as {@link #pullRequest(Option, Option)}, with when its checks are expected to be
-     * done, {@code eta}, after their symbol while they run (ADR 30).
+     * done, {@code eta}, after their symbol while they run (ADR 32).
      */
     static List<LoadableList.Seg> pullRequest(
             Option<PullRequest> pullRequest, Option<MergeStatus> merge, Option<String> eta) {
@@ -145,7 +145,7 @@ final class BranchSegs {
 
     /**
      * How a branch is doing on GitHub, as {@link #gitHub(Option, Option, Option)}, with when its checks are expected
-     * to be done, {@code eta}, after their symbol while they run (ADR 30).
+     * to be done, {@code eta}, after their symbol while they run (ADR 32).
      */
     static List<LoadableList.Seg> gitHub(
             Option<PullRequest> pullRequest, Option<MergeStatus> merge, Option<Checks> checks, Option<String> eta) {
@@ -160,7 +160,7 @@ final class BranchSegs {
 
     /**
      * When the checks of a branch are expected to be done, as the lists show it, from what {@code model} knows
-     * (ADR 30).
+     * (ADR 32).
      */
     static Option<String> eta(Model model, Option<Eta> eta) {
         return eta.flatMap(known -> CheckTimesText.brief(known, model.gitHub().learningCheckTimes(), model.now()));

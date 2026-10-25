@@ -15,7 +15,7 @@ public sealed interface BranchChecksMsg extends Msg {
     record LoadFailed(Failure failure) implements BranchChecksMsg {}
 
     /**
-     * The checks of the branches whose checks are pending were read one by one, with their timing (ADR 30).
+     * The checks of the branches whose checks are pending were read one by one, with their timing (ADR 32).
      */
     record RunsLoaded(PendingChecks checks) implements BranchChecksMsg {}
 
