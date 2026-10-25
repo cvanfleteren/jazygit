@@ -56,6 +56,20 @@ public final class CheckTimesText {
     }
 
     /**
+     * When the checks of a branch are expected to be done, {@code eta}, at {@code now}, to show next to their symbol
+     * in a list: {@code ~4m}, {@code ?}, {@code late}, or {@code …} while the checks that ran lately are read;
+     * nothing when they are done.
+     */
+    public static Option<String> brief(Eta eta, boolean learning, Instant now) {
+        return switch (eta) {
+            case Eta.Done done -> Option.none();
+            case Eta.Unknown unknown -> Option.of(unknown(learning));
+            case Eta.Expected expected ->
+                Option.of(expected.overdue(now) ? Messages.get("checks.late") : left(expected.left(now)));
+        };
+    }
+
+    /**
      * How {@code check}, which is not done, is doing at {@code now}, with {@code eta}: "running 2m · ~2m left",
      * "queued · ~4m left", "running 3m · overdue"; only "running" for a commit status, which is not timed.
      */

@@ -11,6 +11,8 @@ import net.vanfleteren.jazygit.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.timing.CheckHistory;
+import net.vanfleteren.jazygit.gh.timing.Eta;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -31,6 +33,8 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
  *                            what is read so a read does not wipe how they went; only in memory (ADR 24)
  * @param checkTimes          how long the checks of the repository took, as far as it was learned; none until a read
  *                            told which repository it is (ADR 32)
+ * @param pendingChecks       the checks one by one, with their timing, of the branches on GitHub whose checks are
+ *                            pending; none until they were read once (ADR 32)
  */
 @With
 public record GitHubState(
@@ -40,7 +44,8 @@ public record GitHubState(
         Set<Cmd> reading,
         Set<Cmd> again,
         Map<Integer, PullRequestMerge> merges,
-        Option<CheckTimes> checkTimes) {
+        Option<CheckTimes> checkTimes,
+        Option<PendingChecks> pendingChecks) {
 
     public static final GitHubState NOT_READ = new GitHubState(
             Option.none(),
@@ -49,6 +54,7 @@ public record GitHubState(
             HashSet.empty(),
             HashSet.empty(),
             HashMap.empty(),
+            Option.none(),
             Option.none());
 
     /**
@@ -144,6 +150,37 @@ public record GitHubState(
         return branchChecks
                 .filter(checks -> checks.remotes().contains(remote.remote()))
                 .flatMap(checks -> checks.byBranch().get(remote.branch()));
+    }
+
+    /**
+     * When the checks on the branch {@code branch} follows on GitHub are expected to be done, while they are pending
+     * and were read one by one (ADR 32).
+     */
+    public Option<Eta> eta(Branch branch) {
+        return branch.remoteUpstream().flatMap(this::eta);
+    }
+
+    /**
+     * When the checks on {@code remote}, a branch on GitHub, are expected to be done, while they are pending and were
+     * read one by one (ADR 32).
+     */
+    public Option<Eta> eta(RemoteBranch remote) {
+        return checks(remote)
+                .filter(state -> state == Checks.PENDING)
+                .flatMap(state -> pendingChecks)
+                .flatMap(pending -> pending.byBranch()
+                        .get(remote.branch())
+                        .map(checks -> checkTimes
+                                .filter(times -> times.repository().equals(pending.repository()))
+                                .map(times -> times.eta(checks))
+                                .getOrElse(() -> Eta.of(checks, CheckHistory.EMPTY))));
+    }
+
+    /**
+     * Whether the checks that ran lately are being read from GitHub, to estimate from.
+     */
+    public boolean learningCheckTimes() {
+        return checkTimes.exists(CheckTimes::toppingUp);
     }
 
     private boolean onGitHub(RemoteBranch remote) {

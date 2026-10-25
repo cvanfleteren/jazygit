@@ -70,6 +70,14 @@ public interface StubGitHub extends GitHub {
     }
 
     /**
+     * The repository {@code owner/repo} without checks on any branch.
+     */
+    @Override
+    default Either<GhError, BranchCheckRuns> branchCheckRuns(List<String> branches) {
+        return Either.right(new BranchCheckRuns("owner/repo", HashMap.empty()));
+    }
+
+    /**
      * The repository {@code owner/repo} without checks that ran.
      */
     @Override

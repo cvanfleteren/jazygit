@@ -204,6 +204,21 @@ public final class CliGitHub implements GitHub {
             defaultBranchRef { target { ... on Commit { history(first: $count) { nodes { %1$s } } } } } } }""".formatted(
                     "statusCheckRollup { contexts(first: 100) { nodes { __typename ... on CheckRun { %s } } } }"
                             .formatted(CHECK_RUN_FIELDS));
+    /*
+     * The checks on the tips of branches, each in an alias b0, b1, … whose branch is in the variable of that name.
+     * gh fills in the repository of the working tree for {owner} and {repo}.
+     */
+    private static final String BRANCH_CHECK_RUNS_QUERY = """
+            query($owner: String!, $name: String!%s) { repository(owner: $owner, name: $name) { nameWithOwner %s } }""";
+    private static final String BRANCH_CHECK_RUNS_REF = """
+            b%1$d: ref(qualifiedName: $b%1$d) { name target { ... on Commit { statusCheckRollup { \
+            contexts(first: 100) { nodes { __typename ... on CheckRun { %2$s } \
+            ... on StatusContext { context state } } } } } } }""";
+    // A "repo" line with the repository as owner/name, then a "check" line per check of each branch, with its name.
+    private static final String BRANCH_CHECK_RUNS_JQ = CHECK_JQ + """
+            .data.repository | (["repo", .nameWithOwner] | @tsv), \
+            (to_entries[] | select(.key | test("^b[0-9]+$")) | .value | select(. != null) | .name as $branch \
+            | .target.statusCheckRollup.contexts.nodes[]? | ["check", $branch] + check | @tsv)""";
     // A "repo" line with the repository as owner/name, then a "check" line per check run of RECENT_CHECKS_QUERY.
     private static final String RECENT_CHECKS_JQ = CHECK_JQ + """
             .data.repository | (["repo", .nameWithOwner] | @tsv), \
@@ -616,6 +631,35 @@ public final class CliGitHub implements GitHub {
     }
 
     /**
+     * The query of {@link #branchCheckRuns(List)} for {@code count} branches.
+     */
+    static String branchCheckRunsQuery(int count) {
+        List<Integer> aliases = List.range(0, count);
+        return BRANCH_CHECK_RUNS_QUERY.formatted(
+                aliases.map(i -> ", $b" + i + ": String!").mkString(),
+                aliases.map(i -> BRANCH_CHECK_RUNS_REF.formatted(i, CHECK_RUN_FIELDS))
+                        .mkString(" "));
+    }
+
+    /**
+     * Parses the lines {@link #BRANCH_CHECK_RUNS_JQ} prints.
+     */
+    static Either<UnexpectedOutput, BranchCheckRuns> parseBranchCheckRuns(String raw) {
+        List<List<String>> lines = List.of(raw.split("\n"))
+                .filter(line -> !line.isBlank())
+                .map(line -> List.of(line.split("\t", -1)).map(CliGitHub::unescape));
+        return lines.find(f -> f.head().equals("repo") && f.size() == 2)
+                .filter(repo -> lines.forAll(
+                        f -> f.head().equals("repo") || f.head().equals("check") && f.size() == CHECK_FIELD_COUNT + 1))
+                .map(repo -> new BranchCheckRuns(
+                        repo.get(1),
+                        lines.filter(f -> f.head().equals("check"))
+                                .groupBy(f -> f.get(1))
+                                .mapValues(checks -> checks.map(f -> check(f.drop(2))))))
+                .toEither(() -> new UnexpectedOutput(raw));
+    }
+
+    /**
      * Parses the lines {@link #RECENT_CHECKS_JQ} prints, keeping the check runs of a workflow.
      */
     static Either<UnexpectedOutput, RecentChecks> parseRecentChecks(String raw) {
@@ -935,6 +979,18 @@ public final class CliGitHub implements GitHub {
                         CliGitHub::parseBehind)
                 .toOption()
                 .flatMap(behind -> behind);
+    }
+
+    @Override
+    public Either<GhError, BranchCheckRuns> branchCheckRuns(List<String> branches) {
+        return process.read(
+                gh(List.of("api", "graphql", "-F", "owner={owner}", "-F", "name={repo}")
+                        .appendAll(branches.zipWithIndex()
+                                .flatMap(branch -> List.of("-f", "b" + branch._2 + "=refs/heads/" + branch._1)))
+                        .appendAll(List.of(
+                                "-f", "query=" + branchCheckRunsQuery(branches.size()), "--jq", BRANCH_CHECK_RUNS_JQ))
+                        .toJavaArray(String[]::new)),
+                CliGitHub::parseBranchCheckRuns);
     }
 
     @Override

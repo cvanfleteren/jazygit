@@ -58,10 +58,26 @@ public final class PullRequestSymbols {
      */
     public static List<Symbol> state(
             Option<PullRequestStack> stack, Checks checks, Review review, Option<MergeStatus> merge) {
+        return state(stack, checks, Option.none(), review, merge);
+    }
+
+    /**
+     * As {@link #state(Option, Checks, Review, Option)}, with {@code eta}, when the checks are expected to be done,
+     * right after the symbol of the checks while they run (ADR 32).
+     */
+    public static List<Symbol> state(
+            Option<PullRequestStack> stack,
+            Checks checks,
+            Option<Symbol> eta,
+            Review review,
+            Option<MergeStatus> merge) {
         return stack.map(PullRequestSymbols::stack)
                 .toList()
                 .appendAll(merge.map(status -> List.of(merge(status)))
-                        .getOrElse(() -> checks(checks).toList().appendAll(review(review))));
+                        .getOrElse(() -> checks(checks)
+                                .toList()
+                                .appendAll(eta.filter(symbol -> checks == Checks.PENDING))
+                                .appendAll(review(review))));
     }
 
     /**
