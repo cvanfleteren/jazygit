@@ -8,7 +8,8 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.git.model.BranchName;
 
 /**
- * The checks, one by one and with their timing, on the branches on GitHub whose checks are pending (ADR 32).
+ * The checks, one by one and with their timing, on branches on GitHub (ADR 32): those whose checks are pending, for
+ * the branches pane, or the one the checks popup shows, whatever its checks are.
  *
  * @param repository the repository, as {@code owner/name}
  * @param byBranch   the checks on the tip of each of those branches
@@ -17,6 +18,13 @@ public record PendingChecks(String repository, Map<BranchName, List<Check>> byBr
 
     public static PendingChecks of(BranchCheckRuns runs) {
         return new PendingChecks(runs.repository(), runs.byBranch().mapKeys(BranchName::new));
+    }
+
+    /**
+     * The checks on the tip of {@code branch}, in no particular order; none when it was not read.
+     */
+    public List<Check> of(BranchName branch) {
+        return byBranch.get(branch).getOrElse(List.empty());
     }
 
     /**

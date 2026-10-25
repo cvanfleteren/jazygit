@@ -40,7 +40,7 @@ public record ChecksPopup(
      * shown when reading them again fails, marked stale.
      */
     public ChecksPopup with(Either<Failure, PendingChecks> read) {
-        return read.isLeft() && read()
+        return read.isLeft() && wasRead()
                 ? new ChecksPopup(branch, onGitHub, checks, false, Option.of(read.getLeft()))
                 : new ChecksPopup(branch, onGitHub, Option.of(read), false, Option.none());
     }
@@ -62,12 +62,13 @@ public record ChecksPopup(
     /**
      * The checks read, in no particular order; none while they are first read, or when that failed.
      */
-    public List<Check> read(Either<Failure, PendingChecks> checks) {
-        return checks.map(pending -> pending.byBranch().get(onGitHub.branch()).getOrElse(List.empty()))
+    public List<Check> checksRead() {
+        return checks.flatMap(Either::toOption)
+                .map(read -> read.of(onGitHub.branch()))
                 .getOrElse(List.empty());
     }
 
-    private boolean read() {
+    private boolean wasRead() {
         return checks.exists(Either::isRight);
     }
 }

@@ -24,7 +24,9 @@ import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.state.BranchChecksMsg;
 import net.vanfleteren.jazygit.state.CheckTimesCmd;
 import net.vanfleteren.jazygit.state.GitHubChecks;
+import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PendingChecks;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
@@ -92,7 +94,10 @@ class ChecksUpdateTest {
     void aRemoteBranchShowsItsOwnChecks() {
         Next next = Update.update(model(Checks.FAILING), new ChecksMsg.Requested(new BranchRef.Remote(FEATURE)));
 
-        assertTrue(next.model().popup(ChecksPopup.class).isDefined());
+        assertEquals(
+                Option.of(ChecksPopup.loading(new BranchRef.Remote(FEATURE), FEATURE)),
+                next.model().popup(ChecksPopup.class));
+        assertEquals(List.of(new LoadChecks(FEATURE)), next.cmds());
     }
 
     @Test
@@ -129,7 +134,59 @@ class ChecksUpdateTest {
     }
 
     @Test
+    void whatWasReadOfAnotherBranchLeavesThePopupAsItIs() {
+        RemoteBranch other = new RemoteBranch("origin", new BranchName("other"));
+
+        assertEquals(
+                shown(),
+                Update.update(shown(), new ChecksMsg.Loaded(other, READ)).model());
+        assertEquals(
+                shown(),
+                Update.update(shown(), new ChecksMsg.Failed(other, refused("offline")))
+                        .model());
+    }
+
+    @Test
+    void whatIsReadAfterClosingIsLearnedFromWithoutShowingItAgain() {
+        Model closed = Update.update(shown(), new ChecksMsg.Closed()).model();
+
+        Next next = Update.update(closed, new ChecksMsg.Loaded(FEATURE, READ));
+
+        assertEquals(Option.none(), next.model().popup(ChecksPopup.class));
+        assertEquals(
+                List.of(new CheckTimesCmd.RecordCheckTimes(
+                        "owner/repo",
+                        List.of(CheckSample.of(PASSED).get()),
+                        next.model().now(),
+                        false)),
+                next.cmds());
+    }
+
+    @Test
+    void theChecksKeepWhereTheyAreScrolledToWhenReadAgainAndStartAtTheTopWhenShownAgain() {
+        Model scrolled = Update.update(
+                        Update.update(shown(), new ChecksMsg.Loaded(FEATURE, READ))
+                                .model(),
+                        new Msg.ListCursorChanged(ListCursor.START.at(3)))
+                .model();
+
+        Model readAgain = Update.update(
+                        Update.update(scrolled, new ChecksMsg.RefreshChosen()).model(),
+                        new ChecksMsg.Loaded(FEATURE, READ))
+                .model();
+        assertEquals(ListCursor.START.at(3), readAgain.listCursor());
+
+        Model shownAgain = Update.update(
+                        Update.update(readAgain, new ChecksMsg.Closed()).model(), new ChecksMsg.Requested(MINE))
+                .model();
+        assertEquals(ListCursor.START, shownAgain.listCursor());
+    }
+
+    @Test
     void theChecksAreReadAgainByHandAndEveryMinuteOnceRead() {
+        Model none = model(Checks.PENDING);
+        assertEquals(Next.of(none), Update.update(none, new ChecksMsg.Tick()));
+
         assertEquals(List.empty(), Update.update(shown(), new ChecksMsg.Tick()).cmds());
 
         Model read = Update.update(shown(), new ChecksMsg.Loaded(FEATURE, READ)).model();

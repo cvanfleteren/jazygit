@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.github.checks;
 
-import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -37,7 +36,7 @@ public final class ChecksUpdate {
                 CheckTimesUpdate.read(
                         Next.of(shown(model, branch, Either.right(checks))),
                         checks.repository(),
-                        checks.byBranch().get(branch.branch()).getOrElse(List.empty()));
+                        checks.of(branch.branch()));
             case ChecksMsg.Failed(RemoteBranch branch, Failure failure) ->
                 Next.of(shown(model, branch, Either.left(failure)));
             case ChecksMsg.RefreshChosen(), ChecksMsg.Tick() ->

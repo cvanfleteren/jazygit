@@ -9,7 +9,6 @@ import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
-import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Clock;
 import java.time.Instant;
@@ -20,9 +19,9 @@ import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.CheckTimes;
 import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.PendingChecks;
 import net.vanfleteren.jazygit.ui.CheckRows;
 import net.vanfleteren.jazygit.ui.ErrorText;
 import net.vanfleteren.jazygit.ui.Theme;
@@ -48,10 +47,6 @@ public final class ChecksDialog implements PopupView {
 
     private final Consumer<Msg> dispatch;
     private final Clock clock;
-    // How far the checks are scrolled: the first one shown. Where a list is scrolled is the view's (ADR 2).
-    private int scrolled;
-    // The branch whose checks were scrolled; another one starts at the top.
-    private Option<BranchRef> scrolledOf = Option.none();
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
@@ -76,17 +71,18 @@ public final class ChecksDialog implements PopupView {
     @Override
     public Option<Element> render(Model model) {
         return model.popup(ChecksPopup.class).map(popup -> {
-            if (!scrolledOf.contains(popup.branch())) {
-                scrolled = 0;
-                scrolledOf = Option.of(popup.branch());
-            }
+            List<Check> all = popup.checksRead();
+            // How far the checks are scrolled is the line of the popup's list cursor: the first one shown (ADR 2).
+            ListCursor cursor = model.listCursor();
+            int last = Math.max(0, all.size() - VISIBLE_CHECKS);
+            int first = Math.clamp(cursor.line().getOrElse(0), 0, last);
             Option<CheckTimes> times = popup.checks()
                     .flatMap(read -> read.toOption())
                     .flatMap(read -> model.gitHub()
                             .checkTimes()
                             .filter(known -> known.repository().equals(read.repository())));
             List<StyledElement<?>> lines = popup.checks()
-                    .map(read -> read.fold(ChecksDialog::failed, checks -> checks(popup, checks, times, model.now())))
+                    .map(read -> read.fold(ChecksDialog::failed, checks -> checks(all, first, times, model.now())))
                     .getOrElse(this::loading);
             int blanks = CONTENT_HEIGHT - lines.size();
             return DialogFrame.withHint(
@@ -96,7 +92,7 @@ public final class ChecksDialog implements PopupView {
                             lines.appendAll(List.fill(Math.max(0, blanks), () -> text(""))))
                     .id(ID)
                     .focusable()
-                    .onKeyEvent(this::keys)
+                    .onKeyEvent(event -> keys(event, cursor, first, last))
                     // The lines, the blank line and the hint, plus the border.
                     .length(CONTENT_HEIGHT + 2 + 2);
         });
@@ -135,41 +131,46 @@ public final class ChecksDialog implements PopupView {
     }
 
     /**
-     * The counts, and the checks that fit from where they are scrolled to.
+     * The counts, and the checks that fit from the {@code first} one shown.
      */
-    private List<StyledElement<?>> checks(
-            ChecksPopup popup, PendingChecks read, Option<CheckTimes> times, Instant now) {
-        List<Check> all = popup.read(Either.right(read));
+    private static List<StyledElement<?>> checks(List<Check> all, int first, Option<CheckTimes> times, Instant now) {
         if (all.isEmpty()) {
             return List.of(text(Messages.get("dialog.checks.none")).addClass(Theme.Classes.DIM));
         }
         List<Check> ordered = CheckRows.order(all, all, times);
-        scrolled = Math.max(0, Math.min(scrolled, ordered.size() - VISIBLE_CHECKS));
         int nameWidth = CheckRows.nameWidth(ordered);
         return List.<StyledElement<?>>of(row(CheckRows.counts(all, times, now).toJavaArray(StyledElement[]::new)))
                 .append(text(""))
-                .appendAll(ordered.drop(scrolled)
+                .appendAll(ordered.drop(first)
                         .take(VISIBLE_CHECKS)
                         .map(check -> row(CheckRows.row(check, all, times, now, nameWidth, true)
                                 .toJavaArray(StyledElement[]::new))));
     }
 
-    private EventResult keys(KeyEvent event) {
+    /**
+     * @param first the check shown first, as drawn
+     * @param last  the furthest the checks scroll to: the first one shown when the last one is at the bottom
+     */
+    private EventResult keys(KeyEvent event, ListCursor cursor, int first, int last) {
         if (event.code() == KeyCode.ESCAPE || event.code() == KeyCode.ENTER) {
             dispatch.accept(new ChecksMsg.Closed());
         } else if (event.isChar('R')) {
             dispatch.accept(new ChecksMsg.RefreshChosen());
         } else if (event.isChar('j') || event.code() == KeyCode.DOWN) {
-            scrolled++;
+            scroll(cursor, first + 1, last);
         } else if (event.isChar('k') || event.code() == KeyCode.UP) {
-            scrolled = Math.max(0, scrolled - 1);
+            scroll(cursor, first - 1, last);
         } else if (event.code() == KeyCode.PAGE_DOWN) {
-            scrolled += VISIBLE_CHECKS;
+            scroll(cursor, first + VISIBLE_CHECKS, last);
         } else if (event.code() == KeyCode.PAGE_UP) {
-            scrolled = Math.max(0, scrolled - VISIBLE_CHECKS);
+            scroll(cursor, first - VISIBLE_CHECKS, last);
         } else {
             return EventResult.UNHANDLED;
         }
         return EventResult.HANDLED;
+    }
+
+    private void scroll(ListCursor cursor, int first, int last) {
+        dispatch.accept(new Msg.ListCursorChanged(cursor.at(Math.clamp(first, 0, last))));
     }
 }

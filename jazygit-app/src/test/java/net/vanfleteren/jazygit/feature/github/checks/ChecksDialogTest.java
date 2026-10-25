@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PendingChecks;
@@ -83,21 +84,30 @@ class ChecksDialogTest {
     }
 
     @Test
-    void manyChecksScroll() throws Exception {
-        ChecksPopup many =
-                read(List.range(0, 20).map(i -> check("check" + (char) ('a' + i), Checks.PASSING, 300, Option.of(60))));
-        Model model = TestModels.loaded().withNow(NOW).openPopup(many);
+    void manyChecksScrollFromTheLineOfTheListCursor() throws Exception {
+        Model model = TestModels.loaded().withNow(NOW).openPopup(many());
 
-        try (ToolkitTestRunner runner = start(model)) {
-            String top = RenderedText.ofSize(runner, () -> view(model), 120, 50);
-            assertTrue(top.contains("checka"), top);
-            assertFalse(top.contains("checkt"), top);
+        String top = screen(model);
+        assertTrue(top.contains("checka"), top);
+        assertFalse(top.contains("checkt"), top);
 
-            SettledPilot.of(runner).press(KeyCode.PAGE_DOWN);
-            String bottom = RenderedText.ofSize(runner, () -> view(model), 120, 50);
-            assertFalse(bottom.contains("checka "), bottom);
-            assertTrue(bottom.contains("checkt"), bottom);
-        }
+        String bottom = screen(model.withListCursor(ListCursor.START.at(4)));
+        assertFalse(bottom.contains("checka "), bottom);
+        assertTrue(bottom.contains("checkt"), bottom);
+        // Past the end, the last checks stay at the bottom.
+        assertEquals(bottom, screen(model.withListCursor(ListCursor.START.at(10))));
+    }
+
+    @Test
+    void theKeysScrollAsFarAsTheLastCheck() throws Exception {
+        Model model = TestModels.loaded().withNow(NOW).openPopup(many());
+
+        // 20 checks of which 16 are shown: they scroll 4 at most.
+        assertEquals(List.of(1, 4, 0), scrolledTo(model, 'j', KeyCode.PAGE_DOWN, 'k'));
+        assertEquals(
+                List.of(4, 3, 4, 0),
+                scrolledTo(
+                        model.withListCursor(ListCursor.START.at(4)), KeyCode.DOWN, KeyCode.UP, 'j', KeyCode.PAGE_UP));
     }
 
     @Test
@@ -117,19 +127,48 @@ class ChecksDialogTest {
     }
 
     @Test
-    void refreshIsChosenWithCapitalRAndEscapeCloses() throws Exception {
+    void refreshIsChosenWithCapitalRAndEscapeOrEnterCloses() throws Exception {
         Model model = TestModels.loaded().withNow(NOW).openPopup(read(List.empty()));
         try (ToolkitTestRunner runner = start(model)) {
             SettledPilot.of(runner).press('R');
             SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).press(KeyCode.ENTER);
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new ChecksMsg.RefreshChosen(), new ChecksMsg.Closed()), dispatched);
+        assertEquals(
+                java.util.List.of(new ChecksMsg.RefreshChosen(), new ChecksMsg.Closed(), new ChecksMsg.Closed()),
+                dispatched);
+    }
+
+    private static ChecksPopup many() {
+        return read(List.range(0, 20).map(i -> check("check" + (char) ('a' + i), Checks.PASSING, 300, Option.of(60))));
+    }
+
+    /**
+     * The first check shown after each key in {@code keys}, each pressed on {@code model} as it is.
+     */
+    private List<Integer> scrolledTo(Model model, Object... keys) throws Exception {
+        dispatched.clear();
+        try (ToolkitTestRunner runner = start(model)) {
+            for (Object key : keys) {
+                if (key instanceof Character c) {
+                    SettledPilot.of(runner).press(c);
+                } else {
+                    SettledPilot.of(runner).press((KeyCode) key);
+                }
+            }
+            SettledPilot.of(runner).pause();
+        }
+        return List.ofAll(dispatched)
+                .map(msg -> ((Msg.ListCursorChanged) msg).cursor().line().get());
     }
 
     private String screen(ChecksPopup popup) throws Exception {
-        Model model = TestModels.loaded().withNow(NOW).openPopup(popup);
+        return screen(TestModels.loaded().withNow(NOW).openPopup(popup));
+    }
+
+    private String screen(Model model) throws Exception {
         try (ToolkitTestRunner runner = start(model)) {
             return RenderedText.ofSize(runner, () -> view(model), 120, 50);
         }
