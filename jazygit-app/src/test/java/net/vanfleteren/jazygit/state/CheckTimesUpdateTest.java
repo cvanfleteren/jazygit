@@ -274,7 +274,9 @@ class CheckTimesUpdateTest {
     @Test
     void aTopUpAnotherJazygitDidWithinADayIsNotDoneAgain() {
         Instant other = NOW.minusSeconds(3600);
-        AtomicReference<Kept> file = new AtomicReference<>(new Kept(List.empty(), Option.of(other)));
+        // What the other jazygit learned when it topped up.
+        Run learned = new Run("Build/verify", 9, 100, 110, "push", other);
+        AtomicReference<Kept> file = new AtomicReference<>(new Kept(List.of(learned), Option.of(other)));
         Env env = new Env(
                 new StubGitProvider() {},
                 new StubGitHub() {
@@ -292,7 +294,7 @@ class CheckTimesUpdateTest {
 
         Msg skipped = new TopUpCheckTimes(REPO, NOW).run(env);
 
-        assertEquals(new CheckTimesMsg.TopUpSkipped(REPO, other), skipped);
+        assertEquals(other, ((CheckTimesMsg.TopUpSkipped) skipped).toppedUp());
         assertEquals(Option.of(other), file.get().toppedUp());
         Next next = Update.update(
                 knowing(fresh())
@@ -301,6 +303,9 @@ class CheckTimesUpdateTest {
                 skipped);
         assertFalse(times(next).toppingUp());
         assertEquals(Option.of(other), times(next).toppedUp());
+        assertEquals(
+                List.of(9L),
+                times(next).history().samples().get("Build/verify").get().map(CheckSample::id));
     }
 
     @Test

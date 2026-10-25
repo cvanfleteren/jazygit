@@ -53,9 +53,10 @@ public record CheckTimes(String repository, CheckHistory history, boolean toppin
     }
 
     /**
-     * This, not reading the checks that ran lately from GitHub after all, as another jazygit did at {@code at}.
+     * This, not reading the checks that ran lately from GitHub after all, as another jazygit did at {@code at}, but
+     * with {@code history}, kept with what it learned.
      */
-    public CheckTimes withTopUpSkipped(Instant at) {
+    public CheckTimes withTopUpSkipped(CheckHistory history, Instant at) {
         return new CheckTimes(repository, history, false, Option.of(at));
     }
 

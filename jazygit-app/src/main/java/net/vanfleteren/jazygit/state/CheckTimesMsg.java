@@ -37,9 +37,10 @@ public sealed interface CheckTimesMsg extends Msg {
 
     /**
      * The checks that ran lately on {@code repository} were not read from GitHub, as another jazygit did so, or
-     * tried, at {@code toppedUp}, in the last day.
+     * tried, at {@code toppedUp}, in the last day; the history kept of it is {@code history}, with what that
+     * jazygit learned.
      */
-    record TopUpSkipped(String repository, Instant toppedUp) implements CheckTimesMsg {}
+    record TopUpSkipped(String repository, CheckHistory history, Instant toppedUp) implements CheckTimesMsg {}
 
     /**
      * Reading the checks that ran lately on {@code repository} from GitHub failed.

@@ -19,6 +19,21 @@ public sealed interface CheckTimesCmd extends Cmd {
     }
 
     /**
+     * The history the kept {@code runs} tell.
+     */
+    private static CheckHistory history(List<Run> runs) {
+        return new CheckHistory(runs.map(run -> new CheckSample(
+                        run.check(),
+                        run.id(),
+                        Duration.ofSeconds(run.duration()),
+                        Duration.ofSeconds(run.finished()),
+                        run.event(),
+                        run.at()))
+                .groupBy(CheckSample::check)
+                .mapValues(ofCheck -> ofCheck.sortBy(CheckSample::at).reverse()));
+    }
+
+    /**
      * Adds {@code samples} to the history kept of {@code repository} at {@code now}, and reads it; with none, only
      * reads it. When {@code topUp}, the checks that ran lately are read from GitHub next, if they were not lately.
      */
@@ -44,18 +59,6 @@ public sealed interface CheckTimesCmd extends Cmd {
         @Override
         public Msg failed(Failure failure) {
             return new CheckTimesMsg.NotRecorded(repository, samples, topUp);
-        }
-
-        private static CheckHistory history(List<Run> runs) {
-            return new CheckHistory(runs.map(run -> new CheckSample(
-                            run.check(),
-                            run.id(),
-                            Duration.ofSeconds(run.duration()),
-                            Duration.ofSeconds(run.finished()),
-                            run.event(),
-                            run.at()))
-                    .groupBy(CheckSample::check)
-                    .mapValues(ofCheck -> ofCheck.sortBy(CheckSample::at).reverse()));
         }
 
         private static List<Run> runs(CheckHistory history) {
@@ -94,7 +97,8 @@ public sealed interface CheckTimesCmd extends Cmd {
                             failed -> topUp(env),
                             kept -> kept.toppedUp()
                                     .filter(at -> !at.equals(now))
-                                    .<Msg>map(at -> new CheckTimesMsg.TopUpSkipped(repository, at))
+                                    .<Msg>map(
+                                            at -> new CheckTimesMsg.TopUpSkipped(repository, history(kept.runs()), at))
                                     .getOrElse(() -> topUp(env)));
         }
 
