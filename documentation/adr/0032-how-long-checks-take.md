@@ -147,8 +147,10 @@ are constants next to each other in one class, not settings, so they can become 
 
 ## Consequences
 
-- Built in three steps: the dialog with what is shared (the timing read, the history and its file, the estimate),
-  then the branches pane, then the checks popup.
+- Built in four steps: the dialog with what is shared (the timing read, the history and its file, the estimate),
+  then the branches pane, then the checks popup, then the check runs of apps other than Actions. Until that last
+  step those are neither learned nor estimated: their key, sample and estimate wait for `checkSuite.app.slug`, and a
+  commit with one shows `done in ?` while it runs.
 - One more `gh api graphql` a minute while a branch is pending, and at most one a day per repository to top up.
 - A new repository, or a new workflow, shows `?` until it has 3 runs that passed, unless the top-up finds them.
 - A check that varies a lot, like `claude-review` (16s to 174s), gets an estimate that is often off, and overdue
