@@ -8,6 +8,7 @@ import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
+import net.vanfleteren.jazygit.gh.timing.Eta;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.*;
@@ -94,12 +95,39 @@ final class BranchSegs {
      * checks and review while it goes, or went (ADR 24).
      */
     static List<LoadableList.Seg> pullRequest(Option<PullRequest> pullRequest, Option<MergeStatus> merge) {
+        return pullRequest(pullRequest, merge, Option.none());
+    }
+
+    /**
+     * The pull request of a branch, as {@link #pullRequest(Option, Option)}, with when its checks are expected to be
+     * done, {@code eta}, after their symbol while they run (ADR 30).
+     */
+    static List<LoadableList.Seg> pullRequest(
+            Option<PullRequest> pullRequest, Option<MergeStatus> merge, Option<String> eta) {
         return pullRequest
                 .toList()
-                .flatMap(pr -> PullRequestSymbols.state(pr.stack(), pr.checks(), pr.review(), merge)
-                        .map(BranchSegs::symbol)
+                .flatMap(pr -> (merge.isDefined()
+                                ? PullRequestSymbols.state(pr.stack(), pr.checks(), pr.review(), merge)
+                                        .map(BranchSegs::symbol)
+                                : pr.stack()
+                                        .map(PullRequestSymbols::stack)
+                                        .toList()
+                                        .appendAll(PullRequestSymbols.checks(pr.checks()))
+                                        .map(BranchSegs::symbol)
+                                        .appendAll(etaSeg(pr.checks(), eta))
+                                        .appendAll(PullRequestSymbols.review(pr.review())
+                                                .map(BranchSegs::symbol)))
                         .prepend(LoadableList.Seg.styled(
                                 " #" + pr.number(), pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST)));
+    }
+
+    /**
+     * When checks that are {@code checks} are expected to be done, {@code eta}, dimmed with a leading space: only
+     * while they run.
+     */
+    private static Option<LoadableList.Seg> etaSeg(Checks checks, Option<String> eta) {
+        return eta.filter(text -> checks == Checks.PENDING)
+                .map(text -> LoadableList.Seg.styled(" " + text, Theme.Classes.DIM));
     }
 
     /**
@@ -116,11 +144,30 @@ final class BranchSegs {
      */
     static List<LoadableList.Seg> gitHub(
             Option<PullRequest> pullRequest, Option<MergeStatus> merge, Option<Checks> checks) {
+        return gitHub(pullRequest, merge, checks, Option.none());
+    }
+
+    /**
+     * How a branch is doing on GitHub, as {@link #gitHub(Option, Option, Option)}, with when its checks are expected
+     * to be done, {@code eta}, after their symbol while they run (ADR 30).
+     */
+    static List<LoadableList.Seg> gitHub(
+            Option<PullRequest> pullRequest, Option<MergeStatus> merge, Option<Checks> checks, Option<String> eta) {
         return pullRequest.isDefined()
-                ? pullRequest(pullRequest, merge)
-                : checks.flatMap(PullRequestSymbols::checks)
-                        .map(BranchSegs::symbol)
-                        .toList();
+                ? pullRequest(pullRequest, merge, eta)
+                : checks.toList()
+                        .flatMap(state -> PullRequestSymbols.checks(state)
+                                .map(BranchSegs::symbol)
+                                .toList()
+                                .appendAll(etaSeg(state, eta)));
+    }
+
+    /**
+     * When the checks of a branch are expected to be done, as the lists show it, from what {@code model} knows
+     * (ADR 30).
+     */
+    static Option<String> eta(Model model, Option<Eta> eta) {
+        return eta.flatMap(known -> CheckTimesText.brief(known, model.gitHub().learningCheckTimes(), model.now()));
     }
 
     private static LoadableList.Seg symbol(PullRequestSymbols.Symbol symbol) {

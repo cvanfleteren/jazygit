@@ -54,6 +54,11 @@ public interface GitHub {
     Either<GhError, PullRequestDetails> pullRequestDetails(int number);
 
     /**
+     * The checks on the tips of {@code branches} of the repository, one by one and with their timing.
+     */
+    Either<GhError, BranchCheckRuns> branchCheckRuns(List<String> branches);
+
+    /**
      * The checks that ran lately on the repository, to learn how long they take from: on the pull requests merged
      * last and on the last commits of its default branch.
      */

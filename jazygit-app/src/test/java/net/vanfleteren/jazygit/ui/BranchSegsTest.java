@@ -107,6 +107,37 @@ class BranchSegsTest {
     }
 
     @Test
+    void runningChecksSayWhenTheyAreExpectedToBeDone() {
+        PullRequest running = new PullRequest(38, "b", false, Checks.PENDING, Review.APPROVED);
+
+        assertEquals(
+                List.of(
+                        LoadableList.Seg.styled(" #38", Theme.Classes.PULL_REQUEST),
+                        LoadableList.Seg.styled(" ⏳", Theme.Classes.CHECKS_RUNNING),
+                        LoadableList.Seg.styled(" ~4m", Theme.Classes.DIM),
+                        LoadableList.Seg.styled(" 👍", Theme.Classes.REVIEW_APPROVED)),
+                BranchSegs.gitHub(Option.of(running), Option.none(), Option.none(), Option.of("~4m")));
+        assertEquals(
+                List.of(
+                        LoadableList.Seg.styled(" ⏳", Theme.Classes.CHECKS_RUNNING),
+                        LoadableList.Seg.styled(" late", Theme.Classes.DIM)),
+                BranchSegs.gitHub(Option.none(), Option.none(), Option.of(Checks.PENDING), Option.of("late")));
+        // Only while they run, and not while the pull request is merged.
+        assertEquals(
+                List.of(LoadableList.Seg.styled(" ✅", Theme.Classes.CHECKS_PASSED)),
+                BranchSegs.gitHub(Option.none(), Option.none(), Option.of(Checks.PASSING), Option.of("~4m")));
+        assertEquals(
+                List.of(
+                        LoadableList.Seg.styled(" #38", Theme.Classes.PULL_REQUEST),
+                        LoadableList.Seg.styled(" 🔀", Theme.Classes.DIM)),
+                BranchSegs.gitHub(
+                        Option.of(running),
+                        Option.of(new MergeStatus.Pending("u-1")),
+                        Option.none(),
+                        Option.of("~4m")));
+    }
+
+    @Test
     void aBranchWhoseUpstreamIsGoneSaysSo() {
         assertEquals(
                 List.of(LoadableList.Seg.styled(" gone", Theme.Classes.GONE)),

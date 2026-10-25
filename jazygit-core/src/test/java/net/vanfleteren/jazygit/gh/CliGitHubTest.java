@@ -11,6 +11,7 @@ import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.BranchCheckRuns;
 import net.vanfleteren.jazygit.gh.model.BranchChecks;
 import net.vanfleteren.jazygit.gh.model.CheckRun;
 import net.vanfleteren.jazygit.gh.model.GhLogin;
@@ -639,6 +640,37 @@ class CliGitHubTest {
         assertEquals(
                 new Check("verify", Checks.PENDING),
                 CliGitHub.check(List.of("verify", "PENDING", "x", "Build", "", "", "", "401", "nope", "1", "push")));
+    }
+
+    @Test
+    void parsesTheChecksOfBranchesByBranch() {
+        String raw = "repo\tcvanfleteren/jazygit\n"
+                + "check\tmain\tverify\tPENDING\t122\tBuild\t\t2026-10-24T22:18:31Z\t\t401\t2026-10-24T22:18:29Z\t1\tpush\n"
+                + "check\tfeat/x\tci/status\tSUCCESS\t\t\t\t\t\t\t\t\t\n";
+
+        BranchCheckRuns runs = CliGitHub.parseBranchCheckRuns(raw).get();
+
+        assertEquals("cvanfleteren/jazygit", runs.repository());
+        assertEquals(
+                List.of("feat/x", "main"), runs.byBranch().keySet().toList().sorted());
+        assertEquals(
+                Option.of(Instant.parse("2026-10-24T22:18:31Z")),
+                runs.byBranch().get("main").get().head().run().get().startedAt());
+        assertEquals(
+                List.of(new Check("ci/status", Checks.PASSING)),
+                runs.byBranch().get("feat/x").get());
+        assertTrue(CliGitHub.parseBranchCheckRuns(raw + "check\tmain\tverify\tPENDING\n")
+                .isLeft());
+    }
+
+    @Test
+    void theChecksOfEachBranchAreReadInAnAliasOfTheirOwn() {
+        String query = CliGitHub.branchCheckRunsQuery(2);
+
+        assertTrue(query.contains("$name: String!, $b0: String!, $b1: String!)"), query);
+        assertTrue(query.contains("b0: ref(qualifiedName: $b0)"), query);
+        assertTrue(query.contains("b1: ref(qualifiedName: $b1)"), query);
+        assertFalse(query.contains("$b2"), query);
     }
 
     @Test

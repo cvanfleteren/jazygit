@@ -30,6 +30,15 @@ class CheckTimesTextTest {
     }
 
     @Test
+    void whenTheChecksOfABranchAreDoneInBrief() {
+        assertEquals(Option.none(), CheckTimesText.brief(new Eta.Done(), false, NOW));
+        assertEquals(Option.of("?"), CheckTimesText.brief(new Eta.Unknown(), false, NOW));
+        assertEquals(Option.of("…"), CheckTimesText.brief(new Eta.Unknown(), true, NOW));
+        assertEquals(Option.of("~4m"), CheckTimesText.brief(new Eta.Expected(NOW.plusSeconds(240)), false, NOW));
+        assertEquals(Option.of("late"), CheckTimesText.brief(new Eta.Expected(NOW.minusSeconds(61)), false, NOW));
+    }
+
+    @Test
     void whenTheChecksAreDoneTogether() {
         assertEquals(Option.none(), CheckTimesText.together(new Eta.Done(), false, NOW));
         assertEquals(Option.of("done in ?"), CheckTimesText.together(new Eta.Unknown(), false, NOW));

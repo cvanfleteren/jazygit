@@ -14,9 +14,13 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.BranchChecks;
+import net.vanfleteren.jazygit.gh.model.CheckRun;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.timing.CheckTimings;
+import net.vanfleteren.jazygit.gh.timing.Eta;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -86,6 +90,103 @@ class BranchChecksUpdateTest {
                 new BranchChecksMsg.Loaded(new GitHubChecks(
                         HashSet.of("upstream", "mirror"), HashMap.of(new BranchName("main"), Checks.PASSING))),
                 msg);
+    }
+
+    private static Branch branch(String name, boolean current, boolean isDefault, String upstream) {
+        return Fixtures.branch(
+                new BranchName(name),
+                current,
+                new Sha("abc"),
+                Instant.EPOCH,
+                true,
+                isDefault,
+                Option.of(new Upstream(new BranchRef.Remote(remote("origin", upstream)), 0, 0)));
+    }
+
+    private static GitHubChecks pending(String... branches) {
+        return new GitHubChecks(
+                HashSet.of("origin"),
+                List.of(branches)
+                        .toMap(branch -> new BranchName(branch), branch -> Checks.PENDING)
+                        .put(new BranchName("done"), Checks.PASSING));
+    }
+
+    private static PullRequestDetails.Check running(String name) {
+        return new PullRequestDetails.Check(
+                name,
+                Checks.PENDING,
+                Option.of(new CheckRun(
+                        name.length(),
+                        "Build",
+                        "",
+                        Option.of(Instant.EPOCH.plusSeconds(10)),
+                        Option.none(),
+                        1,
+                        Instant.EPOCH,
+                        1,
+                        "push")));
+    }
+
+    @Test
+    void theBranchesWhoseChecksArePendingAreReadOneByOneTheCheckedOutAndTheDefaultOneFirst() {
+        Model model = TestModels.localBranchesRead(
+                        loaded(), List.of(branch("main", false, true, "trunk"), branch("mine", true, false, "zeta")))
+                .model();
+
+        Next next = Update.update(model, new BranchChecksMsg.Loaded(pending("alpha", "trunk", "zeta")));
+
+        assertEquals(
+                List.of(new LoadBranchCheckRuns(
+                        List.of("zeta", "trunk", "alpha").map(BranchName::new))),
+                next.cmds());
+    }
+
+    @Test
+    void atMostTenPendingBranchesAreReadAndNoneWhenNoneIsPending() {
+        Next many = Update.update(
+                loaded(),
+                new BranchChecksMsg.Loaded(pending(
+                        List.range(0, 12).map(i -> "b" + (char) ('a' + i)).toJavaArray(String[]::new))));
+
+        assertEquals(
+                CheckTimings.PENDING_BRANCHES,
+                ((LoadBranchCheckRuns) many.cmds().last()).branches().size());
+        assertEquals(
+                List.empty(),
+                Update.update(loaded(), new BranchChecksMsg.Loaded(ON_ORIGIN)).cmds());
+    }
+
+    @Test
+    void aPendingBranchReadOneByOneHasAnEtaAndTeachesHowLongItsChecksTake() {
+        Model model = Update.update(loaded(), new BranchChecksMsg.Loaded(pending("feature")))
+                .model();
+
+        Next read = Update.update(
+                model,
+                new BranchChecksMsg.RunsLoaded(new PendingChecks(
+                        "owner/repo", HashMap.of(new BranchName("feature"), List.of(running("verify"))))));
+
+        assertEquals(Option.of(new Eta.Unknown()), read.model().gitHub().eta(remote("origin", "feature")));
+        assertEquals(Option.none(), read.model().gitHub().eta(remote("origin", "done")));
+        assertEquals(
+                List.of(new CheckTimesCmd.RecordCheckTimes(
+                        "owner/repo", List.empty(), read.model().now(), true)),
+                read.cmds());
+    }
+
+    @Test
+    void aBranchNoLongerPendingNoLongerHasAnEta() {
+        Model read = Update.update(
+                        Update.update(loaded(), new BranchChecksMsg.Loaded(pending("feature")))
+                                .model(),
+                        new BranchChecksMsg.RunsLoaded(new PendingChecks(
+                                "owner/repo", HashMap.of(new BranchName("feature"), List.of(running("verify"))))))
+                .model();
+
+        Model done = Update.update(read, new BranchChecksMsg.Loaded(pending())).model();
+
+        assertEquals(Option.none(), done.gitHub().eta(remote("origin", "feature")));
+        assertEquals(HashMap.empty(), done.gitHub().pendingChecks().get().byBranch());
     }
 
     @Test

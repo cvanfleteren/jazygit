@@ -72,7 +72,8 @@ class RemoteBranchesList implements BranchesTabList {
                         BranchSegs.gitHub(
                                 model.gitHub().pullRequest(ref.branch()),
                                 model.gitHub().merge(model.gitHub().pullRequest(ref.branch())),
-                                model.gitHub().checks(ref.branch())),
+                                model.gitHub().checks(ref.branch()),
+                                BranchSegs.eta(model, model.gitHub().eta(ref.branch()))),
                         spinnerOf.apply(new BranchRef.Remote(ref.branch())))),
                 focused,
                 active,
