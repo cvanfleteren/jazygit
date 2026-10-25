@@ -5,10 +5,11 @@ import java.time.Duration;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.gh.timing.CheckSample;
+import net.vanfleteren.jazygit.settings.CheckTimingsStore.Kept;
 import net.vanfleteren.jazygit.settings.CheckTimingsStore.Run;
 
 /**
- * Learning how long the checks of a repository take (ADR 30). They run in the background, as nobody waits for them.
+ * Learning how long the checks of a repository take (ADR 32). They run in the background, as nobody waits for them.
  */
 public sealed interface CheckTimesCmd extends Cmd {
 
@@ -19,7 +20,7 @@ public sealed interface CheckTimesCmd extends Cmd {
 
     /**
      * Adds {@code samples} to the history kept of {@code repository} at {@code now}, and reads it; with none, only
-     * reads it. When {@code topUp}, the checks that ran lately are read from GitHub next, if the history is old.
+     * reads it. When {@code topUp}, the checks that ran lately are read from GitHub next, if they were not lately.
      */
     record RecordCheckTimes(String repository, List<CheckSample> samples, Instant now, boolean topUp)
             implements CheckTimesCmd {
@@ -27,18 +28,17 @@ public sealed interface CheckTimesCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return samples.isEmpty()
-                    ? new CheckTimesMsg.Recorded(
-                            repository,
-                            env.checkTimings()
-                                    .load(repository)
-                                    .map(RecordCheckTimes::history)
-                                    .getOrElse(CheckHistory.EMPTY),
-                            topUp)
+                    ? recorded(env.checkTimings().load(repository).getOrElse(Kept.EMPTY))
                     : env.checkTimings()
-                            .change(repository, kept -> runs(history(kept).with(samples, now)))
-                            .fold(
-                                    failed -> new CheckTimesMsg.NotRecorded(repository, samples, topUp),
-                                    kept -> new CheckTimesMsg.Recorded(repository, history(kept), topUp));
+                            .change(
+                                    repository,
+                                    kept -> kept.withRuns(
+                                            runs(history(kept.runs()).with(samples, now))))
+                            .fold(failed -> new CheckTimesMsg.NotRecorded(repository, samples, topUp), this::recorded);
+        }
+
+        private Msg recorded(Kept kept) {
+            return new CheckTimesMsg.Recorded(repository, history(kept.runs()), kept.toppedUp(), topUp);
         }
 
         @Override
@@ -74,12 +74,20 @@ public sealed interface CheckTimesCmd extends Cmd {
     }
 
     /**
-     * Reads the checks that ran lately on {@code repository} from GitHub.
+     * Reads the checks that ran lately on {@code repository} from GitHub, keeping first that this was tried at
+     * {@code now}, so that neither this jazygit nor another tries again that day, whether it works or not.
      */
-    record TopUpCheckTimes(String repository) implements CheckTimesCmd {
+    record TopUpCheckTimes(String repository, Instant now) implements CheckTimesCmd {
 
         @Override
         public Msg run(Env env) {
+            // Kept or not, the gate in memory holds this jazygit to one try a day.
+            return env.checkTimings()
+                    .change(repository, kept -> kept.withToppedUp(now))
+                    .fold(failed -> topUp(env), kept -> topUp(env));
+        }
+
+        private Msg topUp(Env env) {
             return env.gitHub()
                     .recentChecks()
                     .fold(this::failedWith, recent -> new CheckTimesMsg.ToppedUp(repository, recent));

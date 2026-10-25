@@ -16,10 +16,14 @@ import java.util.function.UnaryOperator;
 
 /**
  * How long the checks took, in a file of its own next to the state file, as it changes whenever checks are done and
- * grows with the repositories and their checks (ADR 30). A table per repository, with the runs of each check:
+ * grows with the repositories and their checks (ADR 32). A table per repository, with when its checks were last
+ * topped up from GitHub, and a sub-table with the runs of each check, so no check can clash with {@code topped-up}:
  *
  * <pre>
- * [repos."owner/name"]
+ * [repo."owner/name"]
+ * topped-up = 2026-10-25T10:00:00Z
+ *
+ * [repo."owner/name".checks]
  * "Build/acceptance" = [{id = 121, duration = 192, finished = 254, event = "pull_request", at = 2026-10-24T22:22:37Z}]
  * </pre>
  *
@@ -31,7 +35,10 @@ public final class CheckTimingsFile implements CheckTimingsStore {
     /**
      * The key of the repositories in the file.
      */
-    static final String KEY = "repos";
+    static final String KEY = "repo";
+
+    private static final String TOPPED_UP = "topped-up";
+    private static final String CHECKS = "checks";
 
     private static final String ID = "id";
     private static final String DURATION = "duration";
@@ -50,8 +57,16 @@ public final class CheckTimingsFile implements CheckTimingsStore {
         return List.of(KEY, repository);
     }
 
+    private static Kept kept(Config config, String repository) {
+        return new Kept(
+                runs(config, repository),
+                Option.ofOptional(config.getOptional(
+                                path(repository).append(TOPPED_UP).toJavaList()))
+                        .flatMap(at -> Try.of(() -> instant(at)).toOption()));
+    }
+
     private static List<Run> runs(Config config, String repository) {
-        return config.getOptional(path(repository).toJavaList())
+        return config.getOptional(path(repository).append(CHECKS).toJavaList())
                 .filter(Config.class::isInstance)
                 .map(found -> List.ofAll(((Config) found).entrySet())
                         .flatMap(entry -> entry.getValue() instanceof java.util.List<?> runs
@@ -77,7 +92,16 @@ public final class CheckTimingsFile implements CheckTimingsStore {
         return at instanceof TemporalAccessor temporal ? Instant.from(temporal) : Instant.parse((String) at);
     }
 
-    private static Config table(CommentedConfig parent, List<Run> runs) {
+    private static Config table(CommentedConfig parent, Kept kept) {
+        Config table = parent.createSubConfig();
+        kept.toppedUp()
+                .forEach(
+                        at -> table.set(List.of(TOPPED_UP).toJavaList(), OffsetDateTime.ofInstant(at, ZoneOffset.UTC)));
+        table.set(List.of(CHECKS).toJavaList(), checks(parent, kept.runs()));
+        return table;
+    }
+
+    private static Config checks(CommentedConfig parent, List<Run> runs) {
         Config table = parent.createSubConfig();
         runs.groupBy(Run::check)
                 .forEach((check, ofCheck) -> table.set(
@@ -97,20 +121,20 @@ public final class CheckTimingsFile implements CheckTimingsStore {
     }
 
     @Override
-    public Option<List<Run>> load(String repository) {
+    public Option<Kept> load(String repository) {
         return !Files.exists(file)
                 ? Option.none()
                 : TomlFile.read(file)
                         .toOption()
-                        .map(config -> runs(config, repository))
-                        .filter(runs -> !runs.isEmpty());
+                        .map(config -> kept(config, repository))
+                        .filter(kept -> !kept.equals(Kept.EMPTY));
     }
 
     @Override
-    public Try<List<Run>> change(String repository, UnaryOperator<List<Run>> change) {
-        AtomicReference<List<Run>> changed = new AtomicReference<>(List.empty());
+    public Try<Kept> change(String repository, UnaryOperator<Kept> change) {
+        AtomicReference<Kept> changed = new AtomicReference<>(Kept.EMPTY);
         return TomlFile.change(file, config -> {
-                    changed.set(change.apply(runs(config, repository)));
+                    changed.set(change.apply(kept(config, repository)));
                     config.set(path(repository).toJavaList(), table(config, changed.get()));
                 })
                 .map(written -> changed.get());

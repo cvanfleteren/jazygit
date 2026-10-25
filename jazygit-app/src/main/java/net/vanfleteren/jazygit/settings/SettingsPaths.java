@@ -85,7 +85,7 @@ public final class SettingsPaths {
     }
 
     /**
-     * How long the checks took, of the user running this (ADR 30).
+     * How long the checks took, of the user running this (ADR 32).
      */
     public static Path checkTimingsFile() {
         return checkTimingsFile(stateFile());

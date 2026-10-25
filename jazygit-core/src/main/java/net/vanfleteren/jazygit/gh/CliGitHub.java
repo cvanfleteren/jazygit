@@ -41,7 +41,7 @@ public final class CliGitHub implements GitHub {
             (if .__typename == "CheckRun" \
             then (if .status == "COMPLETED" then (.conclusion // "") else "PENDING" end) \
             else (.state // "") end)""";
-    // What there is to know of a check run of a workflow and when it ran, in GraphQL (ADR 30).
+    // What there is to know of a check run of a workflow and when it ran, in GraphQL (ADR 32).
     private static final String CHECK_RUN_FIELDS = """
             databaseId name status conclusion startedAt completedAt \
             checkSuite { workflowRun { databaseId createdAt runAttempt event workflow { name } } }""";
@@ -193,7 +193,7 @@ public final class CliGitHub implements GitHub {
     private static final int DETAIL_FIELD_COUNT = 18;
     /*
      * The check runs on the last commit of the pull requests merged last, and on the last commits of the default
-     * branch, to learn how long checks take from (ADR 30). gh fills in the repository of the working tree for
+     * branch, to learn how long checks take from (ADR 32). gh fills in the repository of the working tree for
      * {owner} and {repo}.
      */
     private static final String RECENT_CHECKS_QUERY = """

@@ -90,7 +90,7 @@ public final class PullRequestSymbols {
     }
 
     /**
-     * How one check is doing: as {@link #checks(Checks)}, but waiting to start while it is queued (ADR 30).
+     * How one check is doing: as {@link #checks(Checks)}, but waiting to start while it is queued (ADR 32).
      */
     public static Option<Symbol> check(Check check) {
         return check.queued() ? Option.of(QUEUED) : checks(check.state());

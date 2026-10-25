@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.gh.timing;
 import java.time.Duration;
 
 /**
- * How the time checks take is learned and estimated (ADR 30), in one place, so they can become settings.
+ * How the time checks take is learned and estimated (ADR 32), in one place, so they can become settings.
  */
 public final class CheckTimings {
 
@@ -18,15 +18,10 @@ public final class CheckTimings {
     public static final int MIN_SAMPLES = 3;
 
     /**
-     * How old the newest run kept of a repository may get before its recent checks are read from GitHub.
+     * How long after the recent checks of a repository were read from GitHub they are read again at the soonest:
+     * also after that failed, or found nothing newer.
      */
     public static final Duration TOP_UP_AFTER = Duration.ofDays(1);
-
-    /**
-     * How long after reading the recent checks from GitHub they are read again at the soonest: also after that
-     * failed, or found nothing newer.
-     */
-    public static final Duration TOP_UP_RETRY = Duration.ofHours(1);
 
     /**
      * How many merged pull requests, and commits of the default branch, the recent checks are read of.

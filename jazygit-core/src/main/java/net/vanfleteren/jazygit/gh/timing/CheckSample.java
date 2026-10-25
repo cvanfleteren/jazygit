@@ -7,7 +7,7 @@ import net.vanfleteren.jazygit.gh.model.CheckRun;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
 
 /**
- * One run of a check that passed, as the time checks take is learned from (ADR 30).
+ * One run of a check that passed, as the time checks take is learned from (ADR 32).
  *
  * @param check    the check, as {@link #key} names it
  * @param id       the id of the check run, so that it is learned from once

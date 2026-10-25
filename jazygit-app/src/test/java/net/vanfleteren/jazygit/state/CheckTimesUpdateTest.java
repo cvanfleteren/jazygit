@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.gh.timing.CheckSample;
 import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.settings.CheckTimingsStore;
+import net.vanfleteren.jazygit.settings.CheckTimingsStore.Kept;
 import net.vanfleteren.jazygit.settings.CheckTimingsStore.Run;
 import net.vanfleteren.jazygit.state.CheckTimesCmd.RecordCheckTimes;
 import net.vanfleteren.jazygit.state.CheckTimesCmd.TopUpCheckTimes;
@@ -31,7 +32,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
 /**
- * Learning how long the checks of the repository take, from what is read of them (ADR 30).
+ * Learning how long the checks of the repository take, from what is read of them (ADR 32).
  */
 class CheckTimesUpdateTest {
 
@@ -63,7 +64,33 @@ class CheckTimesUpdateTest {
     }
 
     private static Model knowing(CheckHistory history) {
-        return model().mapGitHub(gitHub -> gitHub.withCheckTimes(Option.of(CheckTimes.of(REPO, history))));
+        return knowing(history, Option.none());
+    }
+
+    private static Model knowing(CheckHistory history, Option<Instant> toppedUp) {
+        return model().mapGitHub(gitHub -> gitHub.withCheckTimes(Option.of(CheckTimes.of(REPO, history, toppedUp))));
+    }
+
+    private static Env env(CheckTimingsStore store) {
+        return new Env(
+                new StubGitProvider() {},
+                StubGitHub.empty(),
+                null,
+                null,
+                null,
+                store,
+                Repositories.NONE,
+                Terminal.NONE);
+    }
+
+    /**
+     * {@code model} after {@code next}'s cmds ran against {@code env}, and what they told came back.
+     */
+    private static Next ran(Next next, Env env) {
+        return next.cmds().foldLeft(Next.of(next.model()), (done, cmd) -> {
+            Next after = Update.update(done.model(), cmd.run(env));
+            return new Next(after.model(), done.cmds().appendAll(after.cmds()));
+        });
     }
 
     private static CheckHistory fresh() {
@@ -111,38 +138,55 @@ class CheckTimesUpdateTest {
     }
 
     @Test
-    void anEmptyHistoryIsToppedUpFromGitHubWhenAChecksIsNotDone() {
-        Next next = Update.update(model(), new CheckTimesMsg.Recorded(REPO, CheckHistory.EMPTY, true));
+    void aRepositoryNeverToppedUpIsToppedUpFromGitHubWhenACheckIsNotDone() {
+        Next next = Update.update(model(), new CheckTimesMsg.Recorded(REPO, CheckHistory.EMPTY, Option.none(), true));
 
-        assertEquals(List.of(new TopUpCheckTimes(REPO)), next.cmds());
+        assertEquals(List.of(new TopUpCheckTimes(REPO, NOW)), next.cmds());
         assertTrue(times(next).toppingUp());
+        assertEquals(Option.of(NOW), times(next).toppedUp());
     }
 
     @Test
-    void notWhenAllAreDoneOrTheHistoryIsFresh() {
+    void aNewRepositoryIsToppedUpThoughTheReadBringsACheckThatPassed() {
+        Next next = ran(
+                CheckTimesUpdate.read(Next.of(model()), REPO, List.of(PASSED, PENDING)), env(CheckTimingsStore.NONE));
+
+        assertEquals(List.of(new TopUpCheckTimes(REPO, NOW)), next.cmds());
+        assertEquals(fresh(), times(next).history());
+    }
+
+    @Test
+    void notWhenAllAreDoneOrItWasToppedUpWithinADay() {
         assertEquals(
                 List.empty(),
-                Update.update(model(), new CheckTimesMsg.Recorded(REPO, CheckHistory.EMPTY, false))
+                Update.update(model(), new CheckTimesMsg.Recorded(REPO, CheckHistory.EMPTY, Option.none(), false))
                         .cmds());
         assertEquals(
                 List.empty(),
-                Update.update(model(), new CheckTimesMsg.Recorded(REPO, fresh(), true))
+                Update.update(
+                                model(),
+                                new CheckTimesMsg.Recorded(
+                                        REPO,
+                                        CheckHistory.EMPTY,
+                                        Option.of(NOW.minus(CheckTimings.TOP_UP_AFTER)),
+                                        true))
                         .cmds());
     }
 
     @Test
-    void anOldHistoryIsToppedUpOnTheNextReadOfACheckNotDone() {
-        Model old = knowing(fresh()).withNow(NOW.plus(CheckTimings.TOP_UP_AFTER).plusSeconds(1));
+    void aTopUpOverADayAgoIsDoneAgainThoughTheHistoryIsFresh() {
+        Model old =
+                knowing(fresh(), Option.of(NOW.minus(CheckTimings.TOP_UP_AFTER).minusSeconds(1)));
 
         Next next = CheckTimesUpdate.read(Next.of(old), REPO, List.of(PASSED, PENDING));
 
-        assertEquals(List.of(new TopUpCheckTimes(REPO)), next.cmds());
+        assertEquals(List.of(new TopUpCheckTimes(REPO, NOW)), next.cmds());
     }
 
     @Test
     void whatWasToppedUpIsKeptWhenNotKnownYet() {
         Model toppingUp = knowing(fresh())
-                .mapGitHub(gitHub -> gitHub.withCheckTimes(gitHub.checkTimes().map(CheckTimes::withTopUp)));
+                .mapGitHub(gitHub -> gitHub.withCheckTimes(gitHub.checkTimes().map(times -> times.withTopUp(NOW))));
         Check another = check(3, "verify", "SUCCESS", 1);
 
         Next next = Update.update(
@@ -157,25 +201,66 @@ class CheckTimesUpdateTest {
     }
 
     @Test
-    void aFailedTopUpIsNotTriedAgainForAnHour() {
+    void aFailedOrEmptyTopUpIsNotTriedAgainForADay() {
+        Model started = Update.update(
+                        model(), new CheckTimesMsg.Recorded(REPO, CheckHistory.EMPTY, Option.none(), true))
+                .model();
+
+        for (CheckTimesMsg done : List.of(
+                new CheckTimesMsg.TopUpFailed(REPO),
+                new CheckTimesMsg.ToppedUp(REPO, new RecentChecks(REPO, List.empty())))) {
+            Model after = Update.update(started, done).model();
+
+            assertFalse(times(Next.of(after)).toppingUp());
+            assertEquals(
+                    List.empty(),
+                    CheckTimesUpdate.read(
+                                    Next.of(after.withNow(NOW.plus(CheckTimings.TOP_UP_AFTER))), REPO, List.of(PENDING))
+                            .cmds());
+            assertEquals(
+                    List.of(new TopUpCheckTimes(
+                            REPO, NOW.plus(CheckTimings.TOP_UP_AFTER).plusSeconds(1))),
+                    CheckTimesUpdate.read(
+                                    Next.of(after.withNow(
+                                            NOW.plus(CheckTimings.TOP_UP_AFTER).plusSeconds(1))),
+                                    REPO,
+                                    List.of(PENDING))
+                            .cmds());
+        }
+    }
+
+    @Test
+    void aFileThatCannotBeWrittenDoesNotBringTheTopUpBack() {
         Model failed = Update.update(
-                        Update.update(model(), new CheckTimesMsg.Recorded(REPO, CheckHistory.EMPTY, true))
+                        Update.update(
+                                        model(),
+                                        new CheckTimesMsg.Recorded(REPO, CheckHistory.EMPTY, Option.none(), true))
                                 .model(),
                         new CheckTimesMsg.TopUpFailed(REPO))
                 .model();
 
-        assertFalse(times(Next.of(failed)).toppingUp());
+        // The file still says it was never topped up, or could not keep the samples.
         assertEquals(
                 List.empty(),
-                CheckTimesUpdate.read(Next.of(failed), REPO, List.of(PENDING)).cmds());
-        assertEquals(
-                List.of(new TopUpCheckTimes(REPO)),
-                CheckTimesUpdate.read(
-                                Next.of(failed.withNow(
-                                        NOW.plus(CheckTimings.TOP_UP_RETRY).plusSeconds(1))),
-                                REPO,
-                                List.of(PENDING))
+                Update.update(failed, new CheckTimesMsg.Recorded(REPO, fresh(), Option.none(), true))
                         .cmds());
+        assertEquals(
+                List.empty(),
+                Update.update(failed, new CheckTimesMsg.NotRecorded(REPO, List.of(LEARNED), true))
+                        .cmds());
+        assertEquals(Option.of(NOW), times(Next.of(failed)).toppedUp());
+    }
+
+    @Test
+    void whenAnotherJazygitToppedUpLaterThatCounts() {
+        Instant later = NOW.minusSeconds(60);
+
+        Next next = Update.update(
+                knowing(fresh(), Option.of(NOW.minus(CheckTimings.TOP_UP_AFTER).minusSeconds(1))),
+                new CheckTimesMsg.Recorded(REPO, fresh(), Option.of(later), true));
+
+        assertEquals(List.empty(), next.cmds());
+        assertEquals(Option.of(later), times(next).toppedUp());
     }
 
     @Test
@@ -220,42 +305,41 @@ class CheckTimesUpdateTest {
 
     @Test
     void recordingAddsToWhatIsKeptAndTellsAllThatIsKept() {
-        Run kept = new Run("Build/verify", 9, 100, 110, "push", NOW.minusSeconds(600));
-        AtomicReference<List<Run>> file = new AtomicReference<>(List.of(kept));
-        CheckTimingsStore store = new CheckTimingsStore() {
+        Run run = new Run("Build/verify", 9, 100, 110, "push", NOW.minusSeconds(600));
+        Instant toppedUp = NOW.minusSeconds(3600);
+        AtomicReference<Kept> file = new AtomicReference<>(new Kept(List.of(run), Option.of(toppedUp)));
+        Env env = env(new CheckTimingsStore() {
             @Override
-            public Option<List<Run>> load(String repository) {
+            public Option<Kept> load(String repository) {
                 return Option.of(file.get());
             }
 
             @Override
-            public Try<List<Run>> change(String repository, UnaryOperator<List<Run>> change) {
+            public Try<Kept> change(String repository, UnaryOperator<Kept> change) {
                 file.set(change.apply(file.get()));
                 return Try.success(file.get());
             }
-        };
-        Env env = new Env(
-                new StubGitProvider() {},
-                StubGitHub.empty(),
-                null,
-                null,
-                null,
-                store,
-                Repositories.NONE,
-                Terminal.NONE);
+        });
 
-        Msg recorded = new RecordCheckTimes(REPO, List.of(LEARNED), NOW, true).run(env);
+        CheckTimesMsg.Recorded recorded =
+                (CheckTimesMsg.Recorded) new RecordCheckTimes(REPO, List.of(LEARNED), NOW, true).run(env);
 
-        CheckHistory history = ((CheckTimesMsg.Recorded) recorded).history();
+        CheckHistory history = recorded.history();
+        assertEquals(Option.of(toppedUp), recorded.toppedUp());
         assertEquals(
                 List.of("Build/package", "Build/verify"),
                 history.samples().keySet().toList().sorted());
         assertEquals(
                 Duration.ofSeconds(110),
                 history.samples().get("Build/verify").get().head().finished());
-        assertEquals(2, file.get().size());
+        assertEquals(2, file.get().runs().size());
         assertEquals(
                 history,
                 ((CheckTimesMsg.Recorded) new RecordCheckTimes(REPO, List.empty(), NOW, true).run(env)).history());
+
+        new TopUpCheckTimes(REPO, NOW).run(env);
+
+        assertEquals(Option.of(NOW), file.get().toppedUp());
+        assertEquals(2, file.get().runs().size());
     }
 }

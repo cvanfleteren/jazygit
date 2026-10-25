@@ -5,6 +5,7 @@ import static dev.tamboui.toolkit.Toolkit.text;
 
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
+import dev.tamboui.toolkit.elements.TextElement;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Clock;
@@ -223,7 +224,7 @@ public final class PullRequestDialog implements PopupView {
     /**
      * How many checks failed, are running and passed, and when they are expected to be done; then the failed ones
      * by name, and the ones not done with how long they run and are expected to take still: the running ones before
-     * the queued ones, each the soonest done first (ADR 30).
+     * the queued ones, each the soonest done first (ADR 32).
      */
     private static List<Line> checks(List<Check> checks, Option<CheckTimes> times, Instant now) {
         if (checks.isEmpty()) {
@@ -244,7 +245,10 @@ public final class PullRequestDialog implements PopupView {
         List<Check> listed = order(notPassed, checks, times).take(LISTED_CHECKS);
         int nameWidth = Math.min(
                 CHECK_NAME_WIDTH,
-                listed.map(check -> TextWidth.of(check.name())).max().getOrElse(0));
+                listed.filter(check -> !check.done())
+                        .map(check -> TextWidth.of(check.name()))
+                        .max()
+                        .getOrElse(0));
         return List.of(Line.pieces(List.<StyledElement<?>>of(label("dialog.pullRequest.checks"))
                         .appendAll(counts)))
                 .appendAll(listed.map(check -> Line.pieces(List.<StyledElement<?>>of(text(INDENT))
@@ -252,11 +256,7 @@ public final class PullRequestDialog implements PopupView {
                         .appendAll(
                                 check.done()
                                         ? List.of(text(" " + check.name()))
-                                        : List.of(
-                                                text(" " + padded(check.name(), nameWidth) + "  "),
-                                                text(CheckTimesText.of(
-                                                                check, eta(check, checks, times), learning(times), now))
-                                                        .addClass(Theme.Classes.DIM))))))
+                                        : notDone(check, nameWidth, checks, times, now)))))
                 .appendAll(Option.when(
                         notPassed.size() > LISTED_CHECKS,
                         () -> Line.of(text(INDENT
@@ -264,6 +264,19 @@ public final class PullRequestDialog implements PopupView {
                                                 "dialog.pullRequest.checks.more",
                                                 String.valueOf(notPassed.size() - LISTED_CHECKS)))
                                 .addClass(Theme.Classes.DIM))));
+    }
+
+    /**
+     * The name of {@code check}, one of {@code all} that is not done, padded to {@code nameWidth}, and how long it
+     * runs and is expected to take still. A queued one is dimmed all along, as its emoji ignores dimming (ADR 32).
+     */
+    static List<StyledElement<?>> notDone(
+            Check check, int nameWidth, List<Check> all, Option<CheckTimes> times, Instant now) {
+        TextElement name = text(" " + padded(check.name(), nameWidth) + "  ");
+        return List.of(
+                check.queued() ? name.addClass(Theme.Classes.DIM) : name,
+                text(CheckTimesText.of(check, eta(check, all, times), learning(times), now))
+                        .addClass(Theme.Classes.DIM));
     }
 
     /**

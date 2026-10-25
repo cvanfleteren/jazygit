@@ -35,7 +35,7 @@ public final class PullRequestUpdate {
             case PullRequestMsg.SummaryRequested(var pullRequest) ->
                 Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
             // The branches pane shows the pull request as it was just read too, also when the dialog is closed.
-            // How long its checks take is learned from them too (ADR 30).
+            // How long its checks take is learned from them too (ADR 32).
             case PullRequestMsg.DetailsLoaded(int number, var details) ->
                 CheckTimesUpdate.read(
                         Next.of(shown(

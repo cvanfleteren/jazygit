@@ -3,8 +3,6 @@ package net.vanfleteren.jazygit.gh.timing;
 import static net.vanfleteren.jazygit.gh.timing.CheckTimingFixtures.T0;
 import static net.vanfleteren.jazygit.gh.timing.CheckTimingFixtures.samples;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -76,15 +74,6 @@ class CheckHistoryTest {
                 .with(samples("verify", new int[] {1}, new int[] {1}, T0), T0);
 
         assertEquals(List.of("Build/verify"), history.samples().keySet().toList());
-    }
-
-    @Test
-    void staleWithoutRunsOrWhenTheNewestIsOverADayOld() {
-        CheckHistory history = CheckHistory.EMPTY.with(samples("verify", new int[] {1}, new int[] {1}, T0), T0);
-
-        assertTrue(CheckHistory.EMPTY.stale(T0));
-        assertFalse(history.stale(T0.plus(CheckTimings.TOP_UP_AFTER)));
-        assertTrue(history.stale(T0.plus(CheckTimings.TOP_UP_AFTER).plusSeconds(1)));
     }
 
     @Test

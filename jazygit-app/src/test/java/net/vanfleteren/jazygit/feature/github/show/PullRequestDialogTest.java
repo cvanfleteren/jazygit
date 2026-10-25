@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
@@ -36,6 +37,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
+import net.vanfleteren.jazygit.ui.Theme;
 import org.junit.jupiter.api.Test;
 
 class PullRequestDialogTest {
@@ -198,7 +200,7 @@ class PullRequestDialogTest {
                                 Duration.ofSeconds(254),
                                 "pull_request",
                                 NOW.minusSeconds(3600 + i))));
-        return CheckTimes.of("owner/repo", CheckHistory.EMPTY.with(samples, NOW));
+        return CheckTimes.of("owner/repo", CheckHistory.EMPTY.with(samples, NOW), Option.none());
     }
 
     private String timedScreen(List<Check> checks, CheckTimes times) throws Exception {
@@ -607,6 +609,28 @@ class PullRequestDialogTest {
     }
 
     @Test
+    void aQueuedCheckIsDimmedAllAlongARunningOneOnlyInItsTime() {
+        List<Check> all = List.of(timed("acceptance", 120, Option.none()), timed("package", 120, Option.of(118)));
+
+        List<StyledElement<?>> queued = PullRequestDialog.notDone(all.head(), 10, all, Option.of(learned()), NOW);
+        List<StyledElement<?>> running = PullRequestDialog.notDone(all.last(), 10, all, Option.of(learned()), NOW);
+
+        assertTrue(queued.forAll(piece -> piece.cssClasses().contains(Theme.Classes.DIM)));
+        assertFalse(running.head().cssClasses().contains(Theme.Classes.DIM));
+        assertTrue(running.last().cssClasses().contains(Theme.Classes.DIM));
+    }
+
+    @Test
+    void aLongFailedNameDoesNotPushTheTimesOfTheOthersOut() throws Exception {
+        String screen = timedScreen(
+                List.of(new Check("integration-tests-windows", Checks.FAILING), timed("verify", 120, Option.of(30))),
+                learned());
+
+        assertTrue(screen.contains("❌ integration-tests-windows"), screen);
+        assertTrue(screen.contains("⏳ verify  running <1m · ? left"), screen);
+    }
+
+    @Test
     void saysWhenTheChecksAreExpectedToBeDoneTogether() throws Exception {
         String screen = timedScreen(
                 List.of(timed("package", 120, Option.of(118)), timed("acceptance", 120, Option.none())), learned());
@@ -625,7 +649,7 @@ class PullRequestDialogTest {
     @Test
     void whileTheChecksThatRanLatelyAreReadEstimatesAreComing() throws Exception {
         String screen = timedScreen(
-                List.of(timed("verify", 120, Option.of(30))), learned().withTopUp());
+                List.of(timed("verify", 120, Option.of(30))), learned().withTopUp(NOW));
 
         assertTrue(screen.contains("Checks  ⏳ 1 running · done in …"), screen);
         assertTrue(screen.contains("⏳ verify  running <1m · … left"), screen);

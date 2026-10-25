@@ -4,7 +4,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 
 /**
- * A check run of a GitHub Actions workflow, with when it ran (ADR 30).
+ * A check run of a GitHub Actions workflow, with when it ran (ADR 32).
  *
  * @param id           its id on GitHub, which tells it apart from every other run of the same check
  * @param workflow     the name of its workflow

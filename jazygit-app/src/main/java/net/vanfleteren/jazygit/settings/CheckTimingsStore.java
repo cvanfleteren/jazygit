@@ -7,7 +7,7 @@ import java.time.Instant;
 import java.util.function.UnaryOperator;
 
 /**
- * Where how long the checks of each repository took is kept, from one session to the next (ADR 30). It is state
+ * Where how long the checks of each repository took is kept, from one session to the next (ADR 32). It is state
  * that jazygit keeps by itself rather than settings: failing to read it gives none, and failing to write it is not
  * worth telling.
  */
@@ -18,26 +18,45 @@ public interface CheckTimingsStore {
      */
     CheckTimingsStore NONE = new CheckTimingsStore() {
         @Override
-        public Option<List<Run>> load(String repository) {
+        public Option<Kept> load(String repository) {
             return Option.none();
         }
 
         @Override
-        public Try<List<Run>> change(String repository, UnaryOperator<List<Run>> change) {
-            return Try.success(change.apply(List.empty()));
+        public Try<Kept> change(String repository, UnaryOperator<Kept> change) {
+            return Try.success(change.apply(Kept.EMPTY));
         }
     };
 
     /**
-     * The runs kept of {@code repository}, as {@code owner/name}; none when none were kept or they cannot be read.
+     * What is kept of {@code repository}, as {@code owner/name}; none when nothing was kept or it cannot be read.
      */
-    Option<List<Run>> load(String repository);
+    Option<Kept> load(String repository);
 
     /**
-     * Keeps what {@code change} makes of the runs kept of {@code repository}, as {@code owner/name}, as they are
-     * kept now, so that what another jazygit kept meanwhile is not lost; what was kept then.
+     * Keeps what {@code change} makes of what is kept of {@code repository}, as {@code owner/name}, as it is kept
+     * now, so that what another jazygit kept meanwhile is not lost; what was kept then.
      */
-    Try<List<Run>> change(String repository, UnaryOperator<List<Run>> change);
+    Try<Kept> change(String repository, UnaryOperator<Kept> change);
+
+    /**
+     * What is kept of one repository.
+     *
+     * @param runs     the runs of its checks
+     * @param toppedUp when the checks that ran lately were last read from GitHub, or that was tried; none when never
+     */
+    record Kept(List<Run> runs, Option<Instant> toppedUp) {
+
+        public static final Kept EMPTY = new Kept(List.empty(), Option.none());
+
+        public Kept withRuns(List<Run> runs) {
+            return new Kept(runs, toppedUp);
+        }
+
+        public Kept withToppedUp(Instant toppedUp) {
+            return new Kept(runs, Option.of(toppedUp));
+        }
+    }
 
     /**
      * One run of a check that passed.

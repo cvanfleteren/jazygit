@@ -10,7 +10,7 @@ import java.util.Comparator;
 import java.util.function.Function;
 
 /**
- * How long the checks of one repository took, as learned from their runs that passed (ADR 30).
+ * How long the checks of one repository took, as learned from their runs that passed (ADR 32).
  *
  * @param samples the runs of each check, by {@link CheckSample#key}, the newest first
  */
@@ -40,16 +40,6 @@ public record CheckHistory(Map<String, List<CheckSample>> samples) {
      */
     public List<CheckSample> unknown(List<CheckSample> runs) {
         return runs.filter(run -> !samples.get(run.check()).exists(known -> known.exists(k -> k.id() == run.id())));
-    }
-
-    /**
-     * Whether its newest run is older than {@link CheckTimings#TOP_UP_AFTER} at {@code now}, or it has none.
-     */
-    public boolean stale(Instant now) {
-        return samples.values()
-                .map(runs -> runs.head().at())
-                .max()
-                .forAll(newest -> newest.isBefore(now.minus(CheckTimings.TOP_UP_AFTER)));
     }
 
     /**

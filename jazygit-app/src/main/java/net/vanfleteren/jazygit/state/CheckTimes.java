@@ -9,48 +9,57 @@ import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.gh.timing.Eta;
 
 /**
- * How long the checks of the repository took, as far as it was learned (ADR 30).
+ * How long the checks of the repository took, as far as it was learned (ADR 32).
  *
  * @param repository the repository, as {@code owner/name}
  * @param history    how long its checks took
  * @param toppingUp  whether the checks that ran lately are being read from GitHub
- * @param toppedUp   when they were last read from GitHub, or that failed; none when not in this session
+ * @param toppedUp   when reading them from GitHub was last started, here or by another jazygit; none when never
  */
 public record CheckTimes(String repository, CheckHistory history, boolean toppingUp, Option<Instant> toppedUp) {
 
     /**
-     * What was learned of {@code repository} so far: {@code history}, not read from GitHub yet.
+     * What was learned of {@code repository} so far: {@code history}, last topped up from GitHub at
+     * {@code toppedUp}.
      */
-    public static CheckTimes of(String repository, CheckHistory history) {
-        return new CheckTimes(repository, history, false, Option.none());
-    }
-
-    public CheckTimes withHistory(CheckHistory history) {
-        return new CheckTimes(repository, history, toppingUp, toppedUp);
+    public static CheckTimes of(String repository, CheckHistory history, Option<Instant> toppedUp) {
+        return new CheckTimes(repository, history, false, toppedUp);
     }
 
     /**
-     * This, reading the checks that ran lately from GitHub.
+     * This, with {@code history}, and topped up last at the later of when it was here and {@code toppedUp}: what is
+     * in memory is not undone by a file that could not be written.
      */
-    public CheckTimes withTopUp() {
-        return new CheckTimes(repository, history, true, toppedUp);
+    public CheckTimes withKept(CheckHistory history, Option<Instant> toppedUp) {
+        return new CheckTimes(
+                repository,
+                history,
+                toppingUp,
+                List.of(this.toppedUp, toppedUp).flatMap(at -> at).max());
     }
 
     /**
-     * This, done reading the checks that ran lately from GitHub at {@code now}, whether that worked or not.
+     * This, reading the checks that ran lately from GitHub, which started at {@code now}.
      */
-    public CheckTimes withTopUpDone(Instant now) {
-        return new CheckTimes(repository, history, false, Option.of(now));
+    public CheckTimes withTopUp(Instant now) {
+        return new CheckTimes(repository, history, true, Option.of(now));
     }
 
     /**
-     * Whether to read the checks that ran lately from GitHub at {@code now}: the history is empty or old, and they
-     * are not being read, nor were read in the last {@link CheckTimings#TOP_UP_RETRY}.
+     * This, done reading the checks that ran lately from GitHub, whether that worked or not.
+     */
+    public CheckTimes withTopUpDone() {
+        return new CheckTimes(repository, history, false, toppedUp);
+    }
+
+    /**
+     * Whether to read the checks that ran lately from GitHub at {@code now}: they are not being read, and were not
+     * read, or tried to be, in the last {@link CheckTimings#TOP_UP_AFTER}; not the age of the history, so a quiet
+     * repository, an empty result and a failing {@code gh} all wait the day out.
      */
     public boolean topUpDue(Instant now) {
         return !toppingUp
-                && history.stale(now)
-                && toppedUp.forAll(at -> at.plus(CheckTimings.TOP_UP_RETRY).isBefore(now));
+                && toppedUp.forAll(at -> at.plus(CheckTimings.TOP_UP_AFTER).isBefore(now));
     }
 
     /**

@@ -1,12 +1,14 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
+import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.RecentChecks;
 import net.vanfleteren.jazygit.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.gh.timing.CheckSample;
 
 /**
- * Learning how long the checks of a repository take (ADR 30).
+ * Learning how long the checks of a repository take (ADR 32).
  */
 public sealed interface CheckTimesMsg extends Msg {
 
@@ -16,10 +18,12 @@ public sealed interface CheckTimesMsg extends Msg {
     }
 
     /**
-     * The history kept of {@code repository} is {@code history}, with what was just learned. When {@code topUp},
-     * the checks that ran lately are to be read from GitHub, if it is old.
+     * The history kept of {@code repository} is {@code history}, with what was just learned, and its checks were
+     * last topped up from GitHub at {@code toppedUp}. When {@code topUp}, the checks that ran lately are to be read
+     * from GitHub, if they were not lately.
      */
-    record Recorded(String repository, CheckHistory history, boolean topUp) implements CheckTimesMsg {}
+    record Recorded(String repository, CheckHistory history, Option<Instant> toppedUp, boolean topUp)
+            implements CheckTimesMsg {}
 
     /**
      * {@code samples} of {@code repository} could not be kept; they are still learned, for this session.

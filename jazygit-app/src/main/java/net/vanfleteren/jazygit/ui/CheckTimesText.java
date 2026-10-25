@@ -9,7 +9,7 @@ import net.vanfleteren.jazygit.gh.timing.Eta;
 import net.vanfleteren.jazygit.i18n.Messages;
 
 /**
- * How long checks have run and are expected to take still (ADR 30), in whole minutes: the clock moves in steps of 5s
+ * How long checks have run and are expected to take still (ADR 32), in whole minutes: the clock moves in steps of 5s
  * and GitHub's times are not on it, so seconds would stutter.
  */
 public final class CheckTimesText {

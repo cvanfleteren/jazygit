@@ -8,7 +8,7 @@ import net.vanfleteren.jazygit.gh.model.CheckRun;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
 
 /**
- * When a check, or the checks of a commit together, are expected to be done (ADR 30).
+ * When a check, or the checks of a commit together, are expected to be done (ADR 32).
  */
 public sealed interface Eta {
 
