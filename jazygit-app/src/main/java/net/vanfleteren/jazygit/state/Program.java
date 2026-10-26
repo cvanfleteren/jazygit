@@ -179,7 +179,7 @@ public final class Program {
      * {@code msg} for the debug log, handled at {@code now}: only its type, as a message can hold a whole repository's
      * commits. A command that is done tells which one it was, how long it ran and what it reported.
      */
-    private String described(Msg msg, Instant now) {
+    String described(Msg msg, Instant now) {
         return msg instanceof Msg.Done(long id, Option<Msg> result)
                 ? "Done "
                         + model.jobs()
