@@ -54,6 +54,8 @@ public final class PullRequestDialog implements PopupView {
     // The labels right-aligned in a column of this many characters, then two spaces and the value.
     private static final int LABEL_COLUMN = 11;
     private static final String INDENT = " ".repeat(LABEL_COLUMN + 2);
+    // A check listed after the indent takes the rest of the line, how it is doing lined up on the right.
+    private static final int CHECK_WIDTH = DialogFrame.contentWidth(WIDTH) - INDENT.length();
     // The failed and running checks listed one by one; the rest are counted.
     private static final int LISTED_CHECKS = 8;
     // A longer title is cut.
@@ -220,7 +222,7 @@ public final class PullRequestDialog implements PopupView {
     /**
      * How many checks failed, are running and passed, and when they are expected to be done; then the failed ones
      * by name, and the ones not done with how long they run and are expected to take still: the running ones before
-     * the queued ones, each the soonest done first (ADR 32).
+     * the queued ones, each the soonest done first (ADR 32), lined up on the right as in the checks popup.
      */
     private static List<Line> checks(List<Check> checks, Option<CheckTimes> times, Instant now) {
         if (checks.isEmpty()) {
@@ -230,11 +232,11 @@ public final class PullRequestDialog implements PopupView {
         }
         List<Check> notPassed = checks.filter(check -> check.state() != Checks.PASSING);
         List<Check> listed = CheckRows.order(notPassed, checks, times).take(LISTED_CHECKS);
-        int nameWidth = CheckRows.nameWidth(listed.filter(check -> !check.done()));
+        int doingWidth = CheckRows.doingWidth(listed, checks, times, now, false);
         return List.of(Line.pieces(List.<StyledElement<?>>of(label("dialog.pullRequest.checks"))
                         .appendAll(CheckRows.counts(checks, times, now))))
                 .appendAll(listed.map(check -> Line.pieces(List.<StyledElement<?>>of(text(INDENT))
-                        .appendAll(CheckRows.row(check, checks, times, now, nameWidth, false)))))
+                        .appendAll(CheckRows.filling(check, checks, times, now, CHECK_WIDTH, doingWidth, false)))))
                 .appendAll(Option.when(
                         notPassed.size() > LISTED_CHECKS,
                         () -> Line.of(text(INDENT
