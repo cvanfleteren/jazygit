@@ -86,9 +86,9 @@ public final class CheckRows {
 
     /**
      * {@code check}, one of the checks {@code all} of a commit: its symbol and its name, and for one that is not done
-     * how it is doing, dimmed: {@code ⏳ acceptance  running 2m · ~2m left}; a queued one is dimmed all along, as its
+     * how it is doing, dimmed: {@code ⏳ acceptance  running 2m 30s · ~1m 5s left}; a queued one is dimmed all along, as its
      * emoji ignores dimming. One that is done shows how long it took when {@code took}: {@code ✅ verify  2m},
-     * {@code ❌ lint  failed after 1m}.
+     * {@code ❌ lint  failed after 1m 30s}.
      */
     public static List<StyledElement<?>> row(
             Check check, List<Check> all, Option<CheckTimes> times, Instant now, int nameWidth, boolean took) {
@@ -125,11 +125,14 @@ public final class CheckRows {
 
     /**
      * How wide the column {@link #filling} shows how {@code listed}, some of the checks {@code all} of a commit, are
-     * doing in is: as wide as the widest.
+     * doing in is: as wide as the widest, and while one runs as wide as one that runs can get, so the names do not move
+     * as the seconds do (ADR 34).
      */
     public static int doingWidth(List<Check> listed, List<Check> all, Option<CheckTimes> times, Instant now) {
         return listed.flatMap(check -> doing(check, all, times, now, true))
                 .map(TextWidth::of)
+                .appendAll(Option.when(
+                        listed.exists(check -> !check.done()), () -> TextWidth.of(CheckTimesText.widestRunning())))
                 .max()
                 .getOrElse(0);
     }
