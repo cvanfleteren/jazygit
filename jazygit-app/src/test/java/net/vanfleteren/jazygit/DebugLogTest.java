@@ -27,6 +27,14 @@ class DebugLogTest {
     }
 
     @Test
+    void everyLineTellsWhenItHappened() {
+        var properties = DebugLog.properties(Option.of(Path.of("debug.log")));
+
+        assertEquals(Option.of("true"), properties.get("org.slf4j.simpleLogger.showDateTime"));
+        assertEquals(Option.of("yyyy-MM-dd HH:mm:ss.SSS"), properties.get("org.slf4j.simpleLogger.dateTimeFormat"));
+    }
+
+    @Test
     void theEnvironmentsZtExecLogsStayOut() {
         assertEquals(
                 Option.of("info"),

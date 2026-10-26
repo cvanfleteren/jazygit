@@ -42,7 +42,7 @@ final class DebugLog {
                         SIMPLE_LOGGER + "defaultLogLevel", "debug",
                         SIMPLE_LOGGER + "logFile", log.toString(),
                         SIMPLE_LOGGER + "showDateTime", "true",
-                        SIMPLE_LOGGER + "dateTimeFormat", "HH:mm:ss.SSS",
+                        SIMPLE_LOGGER + "dateTimeFormat", "yyyy-MM-dd HH:mm:ss.SSS",
                         // zt-exec logs the environment of every command it starts, which holds the gh token.
                         SIMPLE_LOGGER + "log.org.zeroturnaround.exec", "info"));
     }
