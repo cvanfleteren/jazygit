@@ -4,6 +4,10 @@ import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.concurrent.Executor;
@@ -15,7 +19,8 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
-import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.Update.Launch;
+import net.vanfleteren.jazygit.state.Update.Step;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +38,8 @@ public final class Program {
 
     // The messages handled, for the debug log.
     private static final Logger LOG = LoggerFactory.getLogger(Program.class);
+    // The time of the programs started without one: it stands still, as the model's did until a clock came.
+    private static final Clock STILL = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC);
 
     private final Env env;
     private final Executor io;
@@ -41,8 +48,9 @@ public final class Program {
     private final Consumer<Throwable> bugs;
     private final Runnable modelChanged;
     private final Runnable quit;
+    private final Clock clock;
     // The command started last for each slot, to cancel when a newer one comes.
-    private final Map<Cmd.Slot, Tuple2<Cmd, Future<Void>>> latest = new EnumMap<>(Cmd.Slot.class);
+    private final Map<Cmd.Slot, Tuple2<Launch, Future<Void>>> latest = new EnumMap<>(Cmd.Slot.class);
     // What a command that names a guard holds while it runs, so another one that names it waits.
     private final Map<Cmd.Guard, Lock> guards = new EnumMap<>(Cmd.Guard.class);
     // Set from the ui thread, read by the commands waiting for a guard.
@@ -56,9 +64,11 @@ public final class Program {
             Executor ui,
             Consumer<Throwable> bugs,
             Runnable modelChanged,
-            Runnable quit) {
+            Runnable quit,
+            Clock clock) {
         this.env = env;
         this.quit = quit;
+        this.clock = clock;
         this.io = io;
         this.background = background;
         this.ui = ui;
@@ -112,12 +122,13 @@ public final class Program {
             Executor ui,
             Consumer<Throwable> bugs,
             Runnable modelChanged) {
-        return start(env, settings, themeOverride, landing, io, background, ui, bugs, modelChanged, () -> {});
+        return start(env, settings, themeOverride, landing, io, background, ui, bugs, modelChanged, () -> {}, STILL);
     }
 
     /**
-     * As above; {@code quit} is run, on the {@code ui} executor's thread, once a message leaves a {@link Update.Next}
-     * that asks the app to stop.
+     * As above, at the time {@code clock} tells, which the model is told with every message; the programs above
+     * are told a time that stands still. {@code quit} is run, on the {@code ui} executor's thread, once a message
+     * leaves a {@link Step} that asks the app to stop.
      */
     public static Program start(
             Env env,
@@ -129,9 +140,10 @@ public final class Program {
             Executor ui,
             Consumer<Throwable> bugs,
             Runnable modelChanged,
-            Runnable quit) {
-        Program program = new Program(env, io, background, ui, bugs, modelChanged, quit);
-        program.apply(Update.init(env.git().repositoryName(), settings, themeOverride, landing));
+            Runnable quit,
+            Clock clock) {
+        Program program = new Program(env, io, background, ui, bugs, modelChanged, quit, clock);
+        program.apply(Update.begin(env.git().repositoryName(), settings, themeOverride, landing, clock.instant()));
         return program;
     }
 
@@ -155,45 +167,76 @@ public final class Program {
     }
 
     public void dispatch(Msg msg) {
-        // Only the type: a message can hold a whole repository's commits. The clock's ticks come too often to tell.
+        Instant now = clock.instant();
+        // The clock's ticks come too often to tell.
         if (LOG.isDebugEnabled() && !(msg instanceof Msg.Tick || msg instanceof Msg.Clock)) {
-            LOG.debug(msg.getClass()
-                    .getName()
-                    .substring(msg.getClass().getPackageName().length() + 1));
+            LOG.debug(described(msg, now));
         }
-        apply(Update.update(model, msg));
+        apply(Update.step(model, msg, now));
     }
 
-    private void apply(Next next) {
+    /**
+     * {@code msg} for the debug log, handled at {@code now}: only its type, as a message can hold a whole repository's
+     * commits. A command that is done tells which one it was, how long it ran and what it reported.
+     */
+    private String described(Msg msg, Instant now) {
+        return msg instanceof Msg.Done(long id, Option<Msg> result)
+                ? "Done "
+                        + model.jobs()
+                                .running()
+                                .get(id)
+                                .map(running -> type(running.cmd()) + " "
+                                        + Duration.between(running.started(), now)
+                                                .toMillis() + "ms")
+                                .getOrElse("?")
+                        + result.map(reported -> " → " + type(reported)).getOrElse("")
+                : type(msg);
+    }
+
+    private static String type(Object value) {
+        return value.getClass()
+                .getName()
+                .substring(value.getClass().getPackageName().length() + 1)
+                .replace('$', '.');
+    }
+
+    private void apply(Step next) {
         Model before = model;
         model = next.model();
         if (before == null || !model.drawn().equals(before.drawn())) {
             modelChanged.run();
         }
-        next.cmds().forEach(this::launch);
+        next.launches().forEach(this::launch);
         if (next.quit()) {
             quit.run();
         }
     }
 
     /**
-     * Performs {@code cmd} on its executor, once it holds its guard, if it names one. One that takes a slot cancels
-     * the one that took it before, if that one has not started yet: it is skipped, and reports only
-     * {@link Cmd#skipped()}.
+     * Performs the command of {@code launch} on its executor, once it holds its guard, if it names one, and reports
+     * it {@link Msg.Done done} with what it reported. One that takes a slot cancels the one that took it before, if
+     * that one has not started yet: it is skipped, and reports only {@link Cmd#skipped()}, if anything.
      */
-    private void launch(Cmd cmd) {
+    private void launch(Launch launch) {
+        Cmd cmd = launch.cmd();
         Option<Lock> guard = cmd.guard().map(guards::get);
         FutureTask<Void> task = new FutureTask<>(
-                () -> guarded(guard, () -> perform(env, cmd, bugs))
-                        .forEach(result -> Try.run(() -> ui.execute(() -> dispatch(result)))),
+                () -> guarded(guard, () -> perform(env, cmd, bugs)).forEach(result -> done(launch, Option.of(result))),
                 null);
         cmd.slot()
-                .flatMap(slot -> Option.of(latest.put(slot, Tuple.of(cmd, task))))
+                .flatMap(slot -> Option.of(latest.put(slot, Tuple.of(launch, task))))
                 .filter(older -> older._2().cancel(false))
-                .flatMap(older -> older._1().skipped())
-                .forEach(skipped -> Try.run(() -> ui.execute(() -> dispatch(skipped))));
+                .map(Tuple2::_1)
+                .forEach(older -> done(older, older.cmd().skipped()));
         // Once the app stops, the executors take nothing anymore, and what is left is dropped.
         Try.run(() -> (cmd.background() ? background : io).execute(task));
+    }
+
+    /**
+     * Reports, on the {@code ui} executor's thread, that the command of {@code launch} is done, with {@code result}.
+     */
+    private void done(Launch launch, Option<Msg> result) {
+        Try.run(() -> ui.execute(() -> dispatch(new Msg.Done(launch.id(), result))));
     }
 
     /**

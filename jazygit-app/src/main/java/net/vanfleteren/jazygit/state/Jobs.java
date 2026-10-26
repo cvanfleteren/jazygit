@@ -1,7 +1,9 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
+import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
@@ -30,6 +32,9 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp;
  * @param ticks      how many ticks there were, which tells when a read that failed is tried again
  * @param retries    the reads that failed the last time they ran, with how often they failed in a row and the tick
  *                   they last failed on: a tick only tries one again once it waited longer the more it failed
+ * @param running    every command that runs, by the id it was given when it was asked for, until it is done (ADR 33):
+ *                   queued, waiting for its guard or running, the user waits for it all the same
+ * @param nextId     the id the next command that is asked for gets
  */
 @With
 public record Jobs(
@@ -42,7 +47,9 @@ public record Jobs(
         Map<Cmd.Load, MetadataStamp> readAt,
         Option<Option<String>> ghExecutableEntered,
         long ticks,
-        Map<Cmd.Load, Retry> retries) {
+        Map<Cmd.Load, Retry> retries,
+        Map<Long, Running> running,
+        long nextId) {
 
     public static final Jobs IDLE = new Jobs(
             HashSet.empty(),
@@ -54,7 +61,9 @@ public record Jobs(
             HashMap.empty(),
             Option.none(),
             0,
-            HashMap.empty());
+            HashMap.empty(),
+            HashMap.empty(),
+            0);
 
     /**
      * Caps how long a tick waits before trying a read that failed again at {@code 2^6} = 64 ticks, under a minute at
@@ -149,6 +158,28 @@ public record Jobs(
     public Jobs withoutBusyBranch(BranchRef branch) {
         return withBusy(busy.remove(branch));
     }
+
+    /**
+     * These jobs with {@code cmds} asked for at {@code now}: each runs, with the next id. The ids are given in the
+     * order of {@code cmds}.
+     */
+    public Jobs withStarted(List<Cmd> cmds, Instant now) {
+        return withRunning(running.merge(HashMap.ofEntries(cmds.zipWithIndex()
+                        .map(cmd -> Tuple.of(nextId + cmd._2(), new Running(cmd._1(), now))))))
+                .withNextId(nextId + cmds.size());
+    }
+
+    /**
+     * These jobs with the command {@code id} done.
+     */
+    public Jobs withDone(long id) {
+        return withRunning(running.remove(id));
+    }
+
+    /**
+     * A command that runs, asked for at {@code started}.
+     */
+    public record Running(Cmd cmd, Instant started) {}
 
     /**
      * A read that failed {@code failures} times in a row, the last time on tick {@code tick}.

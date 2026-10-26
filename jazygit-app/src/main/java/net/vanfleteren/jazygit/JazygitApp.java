@@ -88,7 +88,7 @@ public class JazygitApp extends ToolkitApp {
     static final Duration MERGE_CHECK_INTERVAL = Duration.ofSeconds(2);
     // What is dispatched every so often: the time, the repository read again, and what the remotes and GitHub have.
     static final List<Timer> TIMERS = List.of(
-            new Timer(TimeText.CLOCK_INTERVAL, () -> new Msg.Clock(Instant.now())),
+            new Timer(TimeText.CLOCK_INTERVAL, Msg.Clock::new),
             new Timer(REFRESH_INTERVAL, Msg.Tick::new),
             new Timer(FETCH_INTERVAL, FetchMsg.Tick::new),
             new Timer(FETCH_INTERVAL, PrOverviewMsg.Tick::new),
@@ -507,11 +507,10 @@ public class JazygitApp extends ToolkitApp {
                 runner::runOnRenderThread,
                 JazygitApp::logBug,
                 this::requestRedraw,
-                this::quit);
+                this::quit,
+                Clock.systemUTC());
         runtime = Option.of(new Runtime(io, background, program));
         runner.focusManager().setFocus(PopupSlot.focusedPane(program.model()));
-        // The first tick of the clock is a while off, and the ages the model shows are told from the start.
-        dispatch.accept(new Msg.Clock(Instant.now()));
         // The first tick of the fetch is a while off, so it fetches now; the pull requests show from the start, not
         // only once the fetch is done.
         dispatch.accept(new FetchMsg.Tick());

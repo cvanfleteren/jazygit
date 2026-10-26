@@ -726,6 +726,38 @@ class ProgramTest {
         assertEquals(java.util.List.of("third", "fourth"), heard);
     }
 
+    @Test
+    void everyCommandRunsUntilItIsDoneWhateverCameOfIt() {
+        settle();
+        java.util.List<String> ran = new ArrayList<>();
+        java.util.List<String> heard = new ArrayList<>();
+
+        program.dispatch(
+                new Asked(List.of(new Latest("first", ran, heard), new Throws(), new Latest("second", ran, heard))));
+        assertEquals(3, program.model().jobs().running().size());
+        settle();
+
+        // The first was skipped, as the second took its slot; the one that threw failed.
+        assertEquals(java.util.List.of("second"), ran);
+        assertEquals(HashMap.empty(), program.model().jobs().running());
+    }
+
+    /**
+     * A command that has a bug.
+     */
+    private record Throws() implements Cmd {
+
+        @Override
+        public Msg run(Env env) {
+            throw new IllegalStateException("bug");
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return new Asked(List.empty());
+        }
+    }
+
     /**
      * Notes in {@code ran} that it ran, then waits for {@code release}; it runs where {@code background} says, and
      * holds {@code guard}, if any.
