@@ -41,8 +41,11 @@ import org.junit.jupiter.api.Test;
 class CommentsDialogTest {
 
     private static final PullRequestPopup SHOWN = PullRequestPopup.loading(
-                    new BranchName("feature"), new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED))
-            .with(Either.right(StubGitHub.empty().pullRequestDetails(42).get()));
+                    new BranchName("feature"),
+                    new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED),
+                    Instant.EPOCH,
+                    0)
+            .with(Either.right(StubGitHub.empty().pullRequestDetails(42).get()), 0);
     private static final Size WIDE = new Size(140, 30);
     // Under 100 columns, the list is above the comment, a third of the popup high.
     private static final Size NARROW = new Size(90, 24);

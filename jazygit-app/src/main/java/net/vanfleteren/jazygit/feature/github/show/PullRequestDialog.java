@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.state.CheckTimes;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Reading;
 import net.vanfleteren.jazygit.ui.CheckRows;
 import net.vanfleteren.jazygit.ui.ErrorText;
 import net.vanfleteren.jazygit.ui.PullRequestSymbols;
@@ -116,7 +117,7 @@ public final class PullRequestDialog implements PopupView {
                                 'R',
                                 "dialog.pullRequest.refresh",
                                 PullRequestMsg.RefreshChosen::new,
-                                PullRequestUpdate::refreshable)),
+                                PullRequestUpdate::refreshChoosable)),
                 PullRequestMsg.InfoClosed::new,
                 dispatch);
     }
@@ -253,12 +254,12 @@ public final class PullRequestDialog implements PopupView {
     }
 
     /**
-     * Whether the dialog shows a spinner in {@code model}: while the details of the pull request are read, the
-     * first time or again.
+     * Whether the dialog shows a spinner in {@code model}: while the details of the pull request are read the first
+     * time, or again as the user asked.
      */
     public static boolean showsSpinner(Model model) {
         return model.popup(PullRequestPopup.class)
-                .exists(popup -> popup.details().isEmpty() || popup.refreshing());
+                .exists(popup -> popup.details().isEmpty() || popup.reading() == Reading.ASKED);
     }
 
     @Override
@@ -289,12 +290,13 @@ public final class PullRequestDialog implements PopupView {
     }
 
     /**
-     * The number of the pull request; then a spinner while it is read again, or a mark when that failed.
+     * The number of the pull request; then a spinner while it is read again as the user asked (ADR 34), or a mark
+     * when a read failed.
      */
     private String title(PullRequestPopup popup) {
         String title = Messages.get(
                 "dialog.pullRequest.title", String.valueOf(popup.pullRequest().number()));
-        return popup.refreshing()
+        return popup.reading() == Reading.ASKED
                 ? title + " " + TimeText.spinnerFrame(clock.instant())
                 : popup.refreshFailed()
                         .map(failure -> title + " · " + Messages.get("dialog.pullRequest.stale"))

@@ -39,7 +39,7 @@ class CommentsUpdateTest {
     private static final PullRequestDetails DETAILS =
             StubGitHub.empty().pullRequestDetails(42).get();
     private static final PullRequestPopup SHOWN =
-            PullRequestPopup.loading(FEATURE, FEATURE_PR).with(Either.right(DETAILS));
+            PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH, 0).with(Either.right(DETAILS), 0);
     private static final PullRequestComment DESCRIPTION =
             comment(PullRequestComment.DESCRIPTION.value(), Kind.DESCRIPTION, "Adds it");
     private static final PullRequestComment FIRST = comment("IC_1", Kind.COMMENT, "Nice");
@@ -71,9 +71,9 @@ class CommentsUpdateTest {
 
     @Test
     void theCommentsAreOnlyShownOnceTheDetailsAreRead() {
-        Model loading = loaded().openPopup(PullRequestPopup.loading(FEATURE, FEATURE_PR));
-        Model failed =
-                loaded().openPopup(PullRequestPopup.loading(FEATURE, FEATURE_PR).with(Either.left(refused("offline"))));
+        Model loading = loaded().openPopup(PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH, 0));
+        Model failed = loaded().openPopup(PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH, 0)
+                .with(Either.left(refused("offline")), 0));
 
         assertEquals(Next.of(loading), Update.update(loading, new CommentsMsg.Requested()));
         assertEquals(Next.of(failed), Update.update(failed, new CommentsMsg.Requested()));
@@ -172,13 +172,13 @@ class CommentsUpdateTest {
 
     @Test
     void whatChangesThePullRequestChangesTheDialogTheCommentsGoBackTo() {
-        PullRequestPopup loading = PullRequestPopup.loading(FEATURE, FEATURE_PR);
+        PullRequestPopup loading = PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH, 0);
         Model reading = loaded().openPopup(CommentsPopup.loading(loading));
         Model commenting = loaded().openPopup(CommentPopup.on(CommentsPopup.loading(loading)));
 
-        Model read = Update.update(reading, new PullRequestMsg.DetailsLoaded(42, DETAILS))
+        Model read = Update.update(reading, new PullRequestMsg.DetailsLoaded(42, 0, DETAILS))
                 .model();
-        Model readWhileCommenting = Update.update(commenting, new PullRequestMsg.DetailsLoaded(42, DETAILS))
+        Model readWhileCommenting = Update.update(commenting, new PullRequestMsg.DetailsLoaded(42, 0, DETAILS))
                 .model();
 
         assertEquals(Option.of(SHOWN), read.popup(CommentsPopup.class).map(CommentsPopup::shown));

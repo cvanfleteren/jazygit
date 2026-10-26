@@ -28,13 +28,14 @@ import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PendingChecks;
+import net.vanfleteren.jazygit.state.Reading;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
 /**
- * Showing the checks on the tip of a branch one by one, and reading them again (ADR 32).
+ * Showing the checks on the tip of a branch one by one, and reading them again (ADR 32, ADR 34).
  */
 class ChecksUpdateTest {
 
@@ -55,6 +56,9 @@ class ChecksUpdateTest {
                     "push")));
     private static final PendingChecks READ =
             new PendingChecks("owner/repo", HashMap.of(new BranchName("feature"), List.of(PASSED)));
+    private static final PendingChecks RUNNING = new PendingChecks(
+            "owner/repo",
+            HashMap.of(new BranchName("feature"), List.of(PASSED, new Check("ci/status", Checks.PENDING))));
 
     /**
      * The sample model with a local branch {@code mine} that follows {@code origin/feature}, whose checks are
@@ -86,7 +90,9 @@ class ChecksUpdateTest {
     void theChecksOfALocalBranchAreThoseOfTheBranchItFollowsOnGitHub() {
         Next next = Update.update(model(Checks.PENDING), new ChecksMsg.Requested(MINE));
 
-        assertEquals(Option.of(ChecksPopup.loading(MINE, FEATURE)), next.model().popup(ChecksPopup.class));
+        assertEquals(
+                Option.of(ChecksPopup.loading(MINE, FEATURE, Instant.EPOCH)),
+                next.model().popup(ChecksPopup.class));
         assertTrue(next.cmds().contains(new LoadChecks(FEATURE)), next.cmds().toString());
     }
 
@@ -95,7 +101,7 @@ class ChecksUpdateTest {
         Next next = Update.update(model(Checks.FAILING), new ChecksMsg.Requested(new BranchRef.Remote(FEATURE)));
 
         assertEquals(
-                Option.of(ChecksPopup.loading(new BranchRef.Remote(FEATURE), FEATURE)),
+                Option.of(ChecksPopup.loading(new BranchRef.Remote(FEATURE), FEATURE, Instant.EPOCH)),
                 next.model().popup(ChecksPopup.class));
         assertEquals(List.of(new LoadChecks(FEATURE)), next.cmds());
     }
@@ -122,7 +128,7 @@ class ChecksUpdateTest {
         Next next = Update.update(shown(), new ChecksMsg.Loaded(FEATURE, READ));
 
         assertEquals(
-                Option.of(ChecksPopup.loading(MINE, FEATURE).with(Either.right(READ))),
+                Option.of(ChecksPopup.loading(MINE, FEATURE, Instant.EPOCH).with(Either.right(READ))),
                 next.model().popup(ChecksPopup.class));
         assertEquals(
                 List.of(new CheckTimesCmd.RecordCheckTimes(
@@ -183,19 +189,86 @@ class ChecksUpdateTest {
     }
 
     @Test
-    void theChecksAreReadAgainByHandAndEveryMinuteOnceRead() {
+    void theChecksAreReadAgainByHandOnceRead() {
         Model none = model(Checks.PENDING);
         assertEquals(Next.of(none), Update.update(none, new ChecksMsg.Tick()));
 
-        assertEquals(List.empty(), Update.update(shown(), new ChecksMsg.Tick()).cmds());
+        assertEquals(
+                List.empty(),
+                Update.update(shown(), new ChecksMsg.RefreshChosen()).cmds());
 
         Model read = Update.update(shown(), new ChecksMsg.Loaded(FEATURE, READ)).model();
-        Next again = Update.update(read, new ChecksMsg.RefreshChosen());
+        Next again = Update.update(read.withNow(Instant.EPOCH.plusSeconds(5)), new ChecksMsg.RefreshChosen());
 
         assertEquals(List.of(new LoadChecks(FEATURE)), again.cmds());
-        assertTrue(again.model().popup(ChecksPopup.class).get().refreshing());
+        ChecksPopup reading = again.model().popup(ChecksPopup.class).get();
+        assertEquals(Reading.ASKED, reading.reading());
+        assertEquals(Instant.EPOCH.plusSeconds(5), reading.readAt());
         assertEquals(
-                List.empty(), Update.update(again.model(), new ChecksMsg.Tick()).cmds());
+                List.empty(),
+                Update.update(again.model().withNow(Instant.EPOCH.plusSeconds(3600)), new ChecksMsg.Tick())
+                        .cmds());
+    }
+
+    @Test
+    void whileACheckIsNotDoneEveryTickReadsThemAgainByItself() {
+        assertEquals(List.empty(), Update.update(shown(), new ChecksMsg.Tick()).cmds());
+
+        Model read =
+                Update.update(shown(), new ChecksMsg.Loaded(FEATURE, RUNNING)).model();
+        Next again = Update.update(read.withNow(Instant.EPOCH.plusSeconds(10)), new ChecksMsg.Tick());
+
+        assertEquals(List.of(new LoadChecks(FEATURE)), again.cmds());
+        ChecksPopup reading = again.model().popup(ChecksPopup.class).get();
+        assertEquals(Reading.BY_ITSELF, reading.reading());
+        assertEquals(Instant.EPOCH.plusSeconds(10), reading.readAt());
+    }
+
+    @Test
+    void onceAllAreDoneATickReadsThemAgainAMinuteAfterTheLastRead() {
+        Model read = Update.update(shown(), new ChecksMsg.Loaded(FEATURE, READ)).model();
+
+        assertEquals(
+                List.empty(),
+                Update.update(read.withNow(Instant.EPOCH.plusSeconds(54)), new ChecksMsg.Tick())
+                        .cmds());
+        // The tick a minute on can come a few ms short of it.
+        assertEquals(
+                List.of(new LoadChecks(FEATURE)),
+                Update.update(read.withNow(Instant.EPOCH.plusSeconds(60).minusMillis(3)), new ChecksMsg.Tick())
+                        .cmds());
+    }
+
+    @Test
+    void afterAReadFailedTheyAreReadAgainEveryMinuteOnly() {
+        Model read =
+                Update.update(shown(), new ChecksMsg.Loaded(FEATURE, RUNNING)).model();
+        Model reading = Update.update(read.withNow(Instant.EPOCH.plusSeconds(10)), new ChecksMsg.Tick())
+                .model();
+        Model failed = Update.update(reading, new ChecksMsg.Failed(FEATURE, refused("offline")))
+                .model();
+
+        assertEquals(
+                List.empty(),
+                Update.update(failed.withNow(Instant.EPOCH.plusSeconds(20)), new ChecksMsg.Tick())
+                        .cmds());
+        assertEquals(
+                List.of(new LoadChecks(FEATURE)),
+                Update.update(failed.withNow(Instant.EPOCH.plusSeconds(70)), new ChecksMsg.Tick())
+                        .cmds());
+    }
+
+    @Test
+    void refreshingWhileTheyAreReadByThemselvesShowsThatReadAsAsked() {
+        Model read =
+                Update.update(shown(), new ChecksMsg.Loaded(FEATURE, RUNNING)).model();
+        Model quiet = Update.update(read.withNow(Instant.EPOCH.plusSeconds(10)), new ChecksMsg.Tick())
+                .model();
+
+        Next asked = Update.update(quiet, new ChecksMsg.RefreshChosen());
+
+        assertEquals(List.empty(), asked.cmds());
+        assertEquals(Reading.ASKED, asked.model().popup(ChecksPopup.class).get().reading());
     }
 
     @Test

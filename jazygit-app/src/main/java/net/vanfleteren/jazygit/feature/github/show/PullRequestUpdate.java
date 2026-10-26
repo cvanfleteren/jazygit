@@ -1,8 +1,11 @@
 package net.vanfleteren.jazygit.feature.github.show;
 
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import net.vanfleteren.jazygit.feature.fetch.FetchUpdate;
 import net.vanfleteren.jazygit.feature.github.browse.BrowsePullRequestCmd;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestUpdate;
@@ -36,14 +39,28 @@ public final class PullRequestUpdate {
                 Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
             // The branches pane shows the pull request as it was just read too, also when the dialog is closed.
             // How long its checks take is learned from them too (ADR 32).
-            case PullRequestMsg.DetailsLoaded(int number, var details) ->
+            // A read that a later one was taken before, or that started before a change, is not taken: it would show
+            // older details, or the change undone, here and on the branch; failing, it says nothing of them (ADR 34).
+            case PullRequestMsg.DetailsLoaded(int number, long read, var details)
+            when !model.gitHub().current(number, read) -> Next.of(notTaken(model, number, read));
+            case PullRequestMsg.DetailsFailed(int number, long read, var failure)
+            when !model.gitHub().current(number, read) -> Next.of(notTaken(model, number, read));
+            case PullRequestMsg.DetailsLoaded(int number, long read, var details) ->
                 CheckTimesUpdate.read(
                         Next.of(shown(
-                                model.mapGitHub(gitHub -> gitHub.withRead(details)), number, Either.right(details))),
+                                model.mapGitHub(
+                                        gitHub -> gitHub.withRead(details).withReadTaken(number, read)),
+                                number,
+                                read,
+                                Either.right(details))),
                         details.repository(),
                         details.checks());
-            case PullRequestMsg.DetailsFailed(int number, var failure) ->
-                Next.of(shown(model, number, Either.left(failure)));
+            case PullRequestMsg.DetailsFailed(int number, long read, var failure) ->
+                Next.of(shown(
+                        model.mapGitHub(gitHub -> gitHub.withReadTaken(number, read)),
+                        number,
+                        read,
+                        Either.left(failure)));
             // The dialog stays open, so the pull request can still be merged or closed from it.
             case PullRequestMsg.OpenConfirmed() ->
                 model.popup(PullRequestPopup.class)
@@ -87,11 +104,16 @@ public final class PullRequestUpdate {
                                                 popup.pullRequest().number(),
                                                 !draft))))
                         .getOrElse(() -> Next.of(model));
-            // Done like any operation, which reads the pull requests again. The dialog shows the change at once.
+            // Done like any operation, which reads the pull requests again. The dialog shows the change at once, and
+            // a read of it that started before is not taken (ADR 34).
             case PullRequestMsg.DraftSet(SetDraft cmd, var commands) -> {
                 Next done = OperationUpdate.succeeded(model, cmd, commands);
                 yield PrOverviewUpdate.reloadIfShown(new Next(
-                        mapShown(done.model(), cmd.number(), popup -> popup.withDraft(cmd.draft())), done.cmds()));
+                        mapShown(
+                                done.model().mapGitHub(gitHub -> gitHub.withChanged(cmd.number())),
+                                cmd.number(),
+                                popup -> popup.withDraft(cmd.draft())),
+                        done.cmds()));
             }
             case PullRequestMsg.Ended(ChangingCmd cmd, var commands) -> {
                 // Done like any operation. The pull request is no longer open, which reading them again confirms.
@@ -104,14 +126,16 @@ public final class PullRequestUpdate {
                 yield PrOverviewUpdate.reloadIfShown(
                         FetchUpdate.requested(PullRequestsUpdate.loadAnyway(new Next(ended, done.cmds()))));
             }
-            // Only the dialog itself is read again, not the one kept under a popup opened from it.
-            case PullRequestMsg.RefreshChosen(), PullRequestMsg.Tick() ->
+            // Only the dialog itself is read again, not the one kept under a popup opened from it. R while it reads by
+            // itself shows that read as asked for, rather than starting a second one.
+            case PullRequestMsg.RefreshChosen() ->
                 model.popup(PullRequestPopup.class)
-                        .filter(popup -> refreshable(model, popup))
-                        .map(popup -> Next.of(
-                                model.openPopup(popup.readingAgain()),
-                                new LoadPullRequestDetails(popup.pullRequest().number())))
-                        .getOrElse(() -> Next.of(model));
+                        .filter(popup -> popup.reading() == Reading.BY_ITSELF
+                                && readRunning(model, popup)
+                                && !busy(model, popup))
+                        .map(popup -> Next.of(model.openPopup(popup.asked())))
+                        .getOrElse(() -> readAgain(model, popup -> true, Reading.ASKED));
+            case PullRequestMsg.Tick() -> readAgain(model, popup -> popup.dueByItself(model.now()), Reading.BY_ITSELF);
             case PullRequestMsg.InfoClosed() -> Next.of(model.withoutPopup(PullRequestPopup.class));
         };
     }
@@ -126,20 +150,66 @@ public final class PullRequestUpdate {
 
     /**
      * Whether the pull request {@code popup} shows can be turned into a draft, or marked ready for review: it is
-     * open, and its branch is not busy, e.g. with doing that already. Nor while it is read again: a read that
-     * started before the change could come back after it, and show it undone.
+     * open, and its branch is not busy, e.g. with doing that already. Nor while it is read again as the user asked,
+     * which would show a spinner and then not be taken. A read that started before the change is not taken once it is
+     * done (ADR 34).
      */
     static boolean draftChangeable(Model model, PullRequestPopup popup) {
-        return popup.open() && !popup.refreshing() && !busy(model, popup);
+        return popup.open() && popup.reading() != Reading.ASKED && !busy(model, popup);
     }
 
     /**
-     * Whether the pull request {@code popup} shows can be read again: once the first read is done, no other is
-     * running, and its branch is not busy, e.g. with turning it into a draft, which a read running meanwhile could
-     * miss, and then show undone.
+     * Whether {@code R} reads the pull request {@code popup} shows again: when it can be read again, or the dialog
+     * reads it by itself, which then shows as asked for.
+     */
+    static boolean refreshChoosable(Model model, PullRequestPopup popup) {
+        return refreshable(model, popup) || popup.reading() == Reading.BY_ITSELF && !busy(model, popup);
+    }
+
+    /**
+     * Whether the pull request {@code popup} shows can be read again: once the first read is done, no other that is
+     * still taken runs, and its branch is not busy, e.g. with turning it into a draft, which a read running meanwhile
+     * could miss, and then show undone.
      */
     static boolean refreshable(Model model, PullRequestPopup popup) {
-        return popup.refreshable() && !busy(model, popup);
+        return popup.details().isDefined() && !readRunning(model, popup) && !busy(model, popup);
+    }
+
+    /**
+     * Whether the pull request {@code popup} shows reads, by a read that is still taken when it comes back.
+     */
+    private static boolean readRunning(Model model, PullRequestPopup popup) {
+        return popup.refreshing() && model.gitHub().current(popup.number(), popup.read());
+    }
+
+    /**
+     * {@code model} giving out the next read of the details of pull request {@code number}, and that read (ADR 34).
+     */
+    public static Tuple2<Model, LoadPullRequestDetails> read(Model model, int number) {
+        return Tuple.of(
+                model.mapGitHub(GitHubState::withReadGivenOut),
+                new LoadPullRequestDetails(number, model.gitHub().nextRead()));
+    }
+
+    /**
+     * {@code model} reading the pull request shown again, as {@code reading} tells, when it can be and {@code due};
+     * else as it is.
+     */
+    private static Next readAgain(Model model, Predicate<PullRequestPopup> due, Reading reading) {
+        return model.popup(PullRequestPopup.class)
+                .filter(popup -> refreshable(model, popup) && due.test(popup))
+                .map(popup -> read(model, popup.number())
+                        .apply((given, load) ->
+                                Next.of(given.openPopup(popup.readingAgain(reading, model.now(), load.read())), load)))
+                .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * {@code model} once read {@code read} of pull request {@code number} came back too late to be taken: the dialog
+     * that shows it, if one does, no longer reads when it waited for that read.
+     */
+    private static Model notTaken(Model model, int number, long read) {
+        return mapShown(model, number, popup -> popup.notTaken(read));
     }
 
     private static boolean busy(Model model, PullRequestPopup popup) {
@@ -147,11 +217,11 @@ public final class PullRequestUpdate {
     }
 
     /**
-     * {@code model} showing what was read about pull request {@code number}; unchanged when it is no longer
-     * shown, as the user closed it, or opened another one, while it was being read.
+     * {@code model} showing what read {@code read} brought about pull request {@code number}; unchanged when it is
+     * no longer shown, as the user closed it, or opened another one, while it was being read.
      */
-    private static Model shown(Model model, int number, Either<Failure, PullRequestDetails> read) {
-        return mapShown(model, number, popup -> popup.with(read));
+    private static Model shown(Model model, int number, long read, Either<Failure, PullRequestDetails> result) {
+        return mapShown(model, number, popup -> popup.with(result, read));
     }
 
     /**
@@ -191,8 +261,10 @@ public final class PullRequestUpdate {
      * Shows {@code pullRequest}, from {@code branch}, reading what there is to know about it.
      */
     private static Next show(Model model, BranchName branch, PullRequest pullRequest) {
-        return Next.of(
-                Update.ask(model, PullRequestPopup.loading(branch, pullRequest)).model(),
-                new LoadPullRequestDetails(pullRequest.number()));
+        return read(model, pullRequest.number())
+                .apply((given, load) -> Next.of(
+                        Update.ask(given, PullRequestPopup.loading(branch, pullRequest, model.now(), load.read()))
+                                .model(),
+                        load));
     }
 }

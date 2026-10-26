@@ -40,6 +40,17 @@ public final class CheckTimings {
     public static final Duration GRACE = Duration.ofMinutes(1);
 
     /**
+     * How often a dialog that lists checks is told to read them again, which it does while one is not done (ADR 34).
+     */
+    public static final Duration READ_WHILE_PENDING = Duration.ofSeconds(10);
+
+    /**
+     * How long after its last read a dialog that lists checks reads them again when they are all done, for a re-run,
+     * a push, or a review: a minute, less half a tick, as the tick a minute on can come a few ms short of it (ADR 34).
+     */
+    public static final Duration READ_WHEN_DONE = Duration.ofMinutes(1).minus(READ_WHILE_PENDING.dividedBy(2));
+
+    /**
      * How many branches whose checks are pending have their checks read with their timing at once.
      */
     public static final int PENDING_BRANCHES = 10;

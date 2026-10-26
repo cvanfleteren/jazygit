@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.github.checks;
 
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.util.function.Predicate;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -11,12 +12,13 @@ import net.vanfleteren.jazygit.state.CheckTimesUpdate;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.PendingChecks;
+import net.vanfleteren.jazygit.state.Reading;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
  * Showing the checks on the tip of a branch one by one, with how long they took or run, and reading them again by
- * hand and every minute, as the pull request dialog does (ADR 19, ADR 32).
+ * hand and by itself, as the pull request dialog does (ADR 19, ADR 32, ADR 34).
  */
 public final class ChecksUpdate {
 
@@ -27,7 +29,7 @@ public final class ChecksUpdate {
             case ChecksMsg.Requested(BranchRef branch) ->
                 onGitHub(model, branch)
                         .map(remote -> Next.of(
-                                Update.ask(model, ChecksPopup.loading(branch, remote))
+                                Update.ask(model, ChecksPopup.loading(branch, remote, model.now()))
                                         .model(),
                                 new LoadChecks(remote)))
                         .getOrElse(() -> Next.of(model));
@@ -39,13 +41,27 @@ public final class ChecksUpdate {
                         checks.of(branch.branch()));
             case ChecksMsg.Failed(RemoteBranch branch, Failure failure) ->
                 Next.of(shown(model, branch, Either.left(failure)));
-            case ChecksMsg.RefreshChosen(), ChecksMsg.Tick() ->
+            // R while it reads by itself shows that read as asked for, rather than starting a second one.
+            case ChecksMsg.RefreshChosen() ->
                 model.popup(ChecksPopup.class)
-                        .filter(ChecksPopup::refreshable)
-                        .map(popup -> Next.of(model.openPopup(popup.readingAgain()), new LoadChecks(popup.onGitHub())))
-                        .getOrElse(() -> Next.of(model));
+                        .filter(popup -> popup.reading() == Reading.BY_ITSELF)
+                        .map(popup -> Next.of(model.openPopup(popup.readingAgain(Reading.ASKED, popup.readAt()))))
+                        .getOrElse(() -> readAgain(model, popup -> true, Reading.ASKED));
+            case ChecksMsg.Tick() -> readAgain(model, popup -> popup.dueByItself(model.now()), Reading.BY_ITSELF);
             case ChecksMsg.Closed() -> Next.of(model.withoutPopup(ChecksPopup.class));
         };
+    }
+
+    /**
+     * {@code model} reading the checks shown again, as {@code reading} tells, when they can be and {@code due}; else
+     * as it is.
+     */
+    private static Next readAgain(Model model, Predicate<ChecksPopup> due, Reading reading) {
+        return model.popup(ChecksPopup.class)
+                .filter(popup -> popup.refreshable() && due.test(popup))
+                .map(popup -> Next.of(
+                        model.openPopup(popup.readingAgain(reading, model.now())), new LoadChecks(popup.onGitHub())))
+                .getOrElse(() -> Next.of(model));
     }
 
     /**

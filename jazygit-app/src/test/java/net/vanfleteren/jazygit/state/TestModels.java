@@ -71,6 +71,14 @@ public final class TestModels {
     }
 
     /**
+     * The id of the last read of the details of a pull request given out in {@code model}: the one a dialog that just
+     * started a read waits for (ADR 34).
+     */
+    public static long lastRead(Model model) {
+        return model.gitHub().nextRead() - 1;
+    }
+
+    /**
      * A model with the sample status, branches and commits loaded and nothing running.
      */
     public static Model loaded() {

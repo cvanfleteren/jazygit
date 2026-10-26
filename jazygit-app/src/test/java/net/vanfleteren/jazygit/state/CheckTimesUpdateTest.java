@@ -355,7 +355,7 @@ class CheckTimesUpdateTest {
                 Option.none(),
                 REPO);
 
-        Next next = Update.update(model(), new PullRequestMsg.DetailsLoaded(42, details));
+        Next next = Update.update(model(), new PullRequestMsg.DetailsLoaded(42, 0, details));
 
         assertTrue(next.cmds().contains(new RecordCheckTimes(REPO, List.of(LEARNED), NOW, false)), next.toString());
     }

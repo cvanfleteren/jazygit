@@ -179,9 +179,10 @@ public sealed interface PullRequestCmd extends Cmd {
     }
 
     /**
-     * Reads the details of pull request {@code number}, which the user is waiting for.
+     * Reads the details of pull request {@code number}, which the user is waiting for, as read {@code read}: what it
+     * brings is only taken while no later read was, nor a change made since it started (ADR 34).
      */
-    record LoadPullRequestDetails(int number) implements PullRequestCmd {
+    record LoadPullRequestDetails(int number, long read) implements PullRequestCmd {
 
         @Override
         public Option<Label> label() {
@@ -192,12 +193,12 @@ public sealed interface PullRequestCmd extends Cmd {
         public Msg run(Env env) {
             return env.gitHub()
                     .pullRequestDetails(number)
-                    .fold(this::failedWith, details -> new PullRequestMsg.DetailsLoaded(number, details));
+                    .fold(this::failedWith, details -> new PullRequestMsg.DetailsLoaded(number, read, details));
         }
 
         @Override
         public Msg failed(Failure failure) {
-            return new PullRequestMsg.DetailsFailed(number, failure);
+            return new PullRequestMsg.DetailsFailed(number, read, failure);
         }
     }
 }

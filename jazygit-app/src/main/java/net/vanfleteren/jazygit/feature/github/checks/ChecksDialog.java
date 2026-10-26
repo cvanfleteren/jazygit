@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Reading;
 import net.vanfleteren.jazygit.ui.CheckRows;
 import net.vanfleteren.jazygit.ui.ErrorText;
 import net.vanfleteren.jazygit.ui.Theme;
@@ -33,7 +34,8 @@ import net.vanfleteren.jazygit.ui.widgets.PopupView;
  * Popup listing the checks on the tip of a branch one by one (ADR 32): how many are in each state and when they are
  * expected to be done; then each, the failed ones first, then the running, the queued and the passed ones, with how
  * long it took, or runs and is expected to take still. It scrolls when they do not all fit. While they are read
- * again, they stay shown with a spinner in the title; when that fails, the title says they are stale.
+ * again, they stay shown, with a spinner in the title when the user asked for that (ADR 34); when that fails, the
+ * title says they are stale.
  */
 public final class ChecksDialog implements PopupView {
 
@@ -101,18 +103,20 @@ public final class ChecksDialog implements PopupView {
     }
 
     /**
-     * Whether the dialog shows a spinner in {@code model}: while its checks are first read, or read again.
+     * Whether the dialog shows a spinner in {@code model}: while its checks are first read, or read again as the user
+     * asked.
      */
     public static boolean showsSpinner(Model model) {
-        return model.popup(ChecksPopup.class).exists(popup -> popup.checks().isEmpty() || popup.refreshing());
+        return model.popup(ChecksPopup.class)
+                .exists(popup -> popup.checks().isEmpty() || popup.reading() == Reading.ASKED);
     }
 
     /**
-     * The branch; then a spinner while its checks are read again, or a mark when that failed.
+     * The branch; then a spinner while its checks are read again as the user asked, or a mark when a read failed.
      */
     private String title(ChecksPopup popup) {
         String title = Messages.get("dialog.checks.title", name(popup.branch()));
-        return popup.refreshing()
+        return popup.reading() == Reading.ASKED
                 ? title + " " + TimeText.spinnerFrame(clock.instant())
                 : popup.refreshFailed()
                         .map(failure -> title + " · " + Messages.get("dialog.checks.stale"))

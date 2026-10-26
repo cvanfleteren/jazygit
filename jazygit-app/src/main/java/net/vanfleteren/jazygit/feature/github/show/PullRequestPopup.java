@@ -2,47 +2,75 @@ package net.vanfleteren.jazygit.feature.github.show;
 
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.Reading;
 
 /**
  * Showing the pull request of {@code branch}.
  *
  * @param pullRequest   what is known of it from the list of pull requests
  * @param details       what was read about it, or why that failed; nothing while it is first being read
- * @param refreshing    whether it is being read again, while {@code details} stay shown
+ * @param reading       whether it is being read again, while {@code details} stay shown, and why
  * @param refreshFailed why reading it again failed the last time, so the details shown are stale; nothing once a
  *                      read succeeds
+ * @param readAt        when the last read of it started
+ * @param read          the id of the last read of it that it started, which it waits for while it reads (ADR 34)
  */
 public record PullRequestPopup(
         BranchName branch,
         PullRequest pullRequest,
         Option<Either<Failure, PullRequestDetails>> details,
-        boolean refreshing,
-        Option<Failure> refreshFailed)
+        Reading reading,
+        Option<Failure> refreshFailed,
+        Instant readAt,
+        long read)
         implements ShowsPullRequest {
 
     /**
-     * The popup while its details are being read.
+     * The popup while its details are being read, from {@code now}, by read {@code read}.
      */
-    public static PullRequestPopup loading(BranchName branch, PullRequest pullRequest) {
-        return new PullRequestPopup(branch, pullRequest, Option.none(), false, Option.none());
+    public static PullRequestPopup loading(BranchName branch, PullRequest pullRequest, Instant now, long read) {
+        return new PullRequestPopup(branch, pullRequest, Option.none(), Reading.NOT, Option.none(), now, read);
     }
 
     /**
-     * The popup showing {@code read}: the details, or why reading them failed. Details that were read already
-     * stay shown when reading them again fails, marked stale. How far the base moved on is read apart from the rest
-     * and can fail alone: the count shown stays when the pull request is still open at the same commit on the same
-     * base, where the base can only have moved on further.
+     * The popup showing {@code result}, of read {@code id}: the details, or why reading them failed. Details that
+     * were read already stay shown when reading them again fails, marked stale. How far the base moved on is read
+     * apart from the rest and can fail alone: the count shown stays when the pull request is still open at the same
+     * commit on the same base, where the base can only have moved on further. Only the read it waits for changes it:
+     * one it did not start, like one of the dialog before it was opened again, is left to the pull requests listed
+     * (ADR 34).
      */
-    public PullRequestPopup with(Either<Failure, PullRequestDetails> read) {
-        return read.isLeft() && detailsRead()
-                ? new PullRequestPopup(branch, pullRequest, details, false, Option.of(read.getLeft()))
-                : new PullRequestPopup(
-                        branch, pullRequest, Option.of(read.map(this::keepingBehindBase)), false, Option.none());
+    public PullRequestPopup with(Either<Failure, PullRequestDetails> result, long id) {
+        return id != read
+                ? this
+                : result.isLeft() && detailsRead()
+                        ? new PullRequestPopup(
+                                branch, pullRequest, details, Reading.NOT, Option.of(result.getLeft()), readAt, read)
+                        : new PullRequestPopup(
+                                branch,
+                                pullRequest,
+                                Option.of(result.map(this::keepingBehindBase)),
+                                Reading.NOT,
+                                Option.none(),
+                                readAt,
+                                read);
+    }
+
+    /**
+     * The popup once read {@code id} came back too late to be taken (ADR 34): what it shows stays, and when that is
+     * the read it waits for, it no longer reads.
+     */
+    PullRequestPopup notTaken(long id) {
+        return id == read
+                ? new PullRequestPopup(branch, pullRequest, details, Reading.NOT, refreshFailed, readAt, read)
+                : this;
     }
 
     private PullRequestDetails keepingBehindBase(PullRequestDetails read) {
@@ -59,17 +87,36 @@ public record PullRequestPopup(
     }
 
     /**
-     * The popup while its details are read again.
+     * The popup while its details are read again from {@code now} by read {@code id}, as {@code reading} tells.
      */
-    PullRequestPopup readingAgain() {
-        return new PullRequestPopup(branch, pullRequest, details, true, refreshFailed);
+    public PullRequestPopup readingAgain(Reading reading, Instant now, long id) {
+        return new PullRequestPopup(branch, pullRequest, details, reading, refreshFailed, now, id);
     }
 
     /**
-     * Whether its details can be read again: once the first read is done, and no other is running.
+     * The popup showing the read it does by itself as one asked for.
      */
-    public boolean refreshable() {
-        return details.isDefined() && !refreshing;
+    PullRequestPopup asked() {
+        return new PullRequestPopup(branch, pullRequest, details, Reading.ASKED, refreshFailed, readAt, read);
+    }
+
+    /**
+     * Whether its details are read again, while they stay shown.
+     */
+    public boolean refreshing() {
+        return reading != Reading.NOT;
+    }
+
+    /**
+     * Whether its details are due to be read again by themselves at {@code now}: one of its checks is not done, as far
+     * as the last read that did not fail tells, or the last read started {@link CheckTimings#READ_WHEN_DONE} ago or
+     * more. After a read failed, the details shown are stale, so they are read every minute, as ADR 19 has a failing
+     * read do (ADR 34).
+     */
+    public boolean dueByItself(Instant now) {
+        return refreshFailed.isEmpty()
+                        && readDetails().exists(read -> read.checks().exists(check -> !check.done()))
+                || !now.isBefore(readAt.plus(CheckTimings.READ_WHEN_DONE));
     }
 
     /**
@@ -80,8 +127,10 @@ public record PullRequestPopup(
                 branch,
                 pullRequest,
                 details.map(read -> read.map(pr -> pr.withDraft(draft))),
-                refreshing,
-                refreshFailed);
+                reading,
+                refreshFailed,
+                readAt,
+                read);
     }
 
     /**

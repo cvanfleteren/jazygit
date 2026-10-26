@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Jobs;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Reading;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.TimeText;
@@ -36,7 +37,10 @@ class SpinnersTest {
     private static final Instant NOW = Instant.parse("2026-10-26T10:00:00Z");
     private static final BranchRef.Local FEATURE = new BranchRef.Local(new BranchName("feature"));
     private static final PullRequestPopup PULL_REQUEST = PullRequestPopup.loading(
-            new BranchName("feature"), new PullRequest(42, "feature", true, Checks.PASSING, Review.APPROVED));
+            new BranchName("feature"),
+            new PullRequest(42, "feature", true, Checks.PASSING, Review.APPROVED),
+            Instant.EPOCH,
+            0);
 
     @Test
     void noneShowsWhenNothingRuns() {
@@ -57,8 +61,8 @@ class SpinnersTest {
     @Test
     void thePullRequestDialogShowsOneWhileItsDetailsAreRead() {
         assertTrue(Spinners.shown(LOADED.openPopup(PULL_REQUEST), NOW));
-        assertFalse(
-                Spinners.shown(LOADED.openPopup(PULL_REQUEST.with(Either.left(TestModels.refused("offline")))), NOW));
+        assertFalse(Spinners.shown(
+                LOADED.openPopup(PULL_REQUEST.with(Either.left(TestModels.refused("offline")), 0)), NOW));
     }
 
     @Test
@@ -70,13 +74,15 @@ class SpinnersTest {
     }
 
     @Test
-    void theChecksDialogShowsOneWhileItsChecksAreReadAndReadAgain() {
-        ChecksPopup loading = ChecksPopup.loading(FEATURE, new RemoteBranch("origin", new BranchName("feature")));
+    void theChecksDialogShowsOneWhileItsChecksAreFirstReadAndReadAgainAsAsked() {
+        ChecksPopup loading =
+                ChecksPopup.loading(FEATURE, new RemoteBranch("origin", new BranchName("feature")), Instant.EPOCH);
         ChecksPopup read = loading.with(Either.left(TestModels.refused("offline")));
 
         assertTrue(Spinners.shown(LOADED.openPopup(loading), NOW));
         assertFalse(Spinners.shown(LOADED.openPopup(read), NOW));
-        assertTrue(Spinners.shown(LOADED.openPopup(read.readingAgain()), NOW));
+        assertFalse(Spinners.shown(LOADED.openPopup(read.readingAgain(Reading.BY_ITSELF, NOW)), NOW));
+        assertTrue(Spinners.shown(LOADED.openPopup(read.readingAgain(Reading.ASKED, NOW)), NOW));
     }
 
     @Test
