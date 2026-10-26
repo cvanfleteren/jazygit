@@ -36,7 +36,7 @@ class CheckTimesTextTest {
 
     @Test
     void howLongDownToTheMinuteFromAnHourOn() {
-        assertEquals("1h 0m", CheckTimesText.duration(Duration.ofSeconds(3600)));
+        assertEquals("1h", CheckTimesText.duration(Duration.ofSeconds(3600)));
         assertEquals("1h 5m", CheckTimesText.duration(Duration.ofSeconds(65 * 60 + 59)));
     }
 
@@ -47,6 +47,8 @@ class CheckTimesTextTest {
         assertEquals("~4m 55s", CheckTimesText.left(Duration.ofSeconds(297)));
         assertEquals("~5m", CheckTimesText.left(Duration.ofSeconds(298)));
         assertEquals("~8m", CheckTimesText.left(Duration.ofSeconds(7 * 60 + 40)));
+        assertEquals("~1h", CheckTimesText.left(Duration.ofSeconds(3610)));
+        assertEquals("~1h 15m", CheckTimesText.left(Duration.ofSeconds(4500)));
     }
 
     @Test
@@ -55,6 +57,8 @@ class CheckTimesTextTest {
         assertEquals(Option.of("?"), CheckTimesText.brief(new Eta.Unknown(), false, NOW));
         assertEquals(Option.of("…"), CheckTimesText.brief(new Eta.Unknown(), true, NOW));
         assertEquals(Option.of("~4m"), CheckTimesText.brief(new Eta.Expected(NOW.plusSeconds(240)), false, NOW));
+        assertEquals(Option.of("~1h"), CheckTimesText.brief(new Eta.Expected(NOW.plusSeconds(3600)), false, NOW));
+        assertEquals(Option.of("~1h 15m"), CheckTimesText.brief(new Eta.Expected(NOW.plusSeconds(4500)), false, NOW));
         assertEquals(Option.of("~2m"), CheckTimesText.brief(new Eta.Expected(NOW.plusSeconds(90)), false, NOW));
         assertEquals(Option.of("<1m"), CheckTimesText.brief(new Eta.Expected(NOW.plusSeconds(59)), false, NOW));
         assertEquals(Option.of("<1m"), CheckTimesText.brief(new Eta.Expected(NOW.minusSeconds(30)), false, NOW));

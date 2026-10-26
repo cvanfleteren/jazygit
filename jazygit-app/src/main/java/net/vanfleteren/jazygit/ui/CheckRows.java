@@ -125,11 +125,14 @@ public final class CheckRows {
 
     /**
      * How wide the column {@link #filling} shows how {@code listed}, some of the checks {@code all} of a commit, are
-     * doing in is: as wide as the widest.
+     * doing in is: as wide as the widest, and while one runs as wide as one that runs can get, so the names do not move
+     * as the seconds do (ADR 34).
      */
     public static int doingWidth(List<Check> listed, List<Check> all, Option<CheckTimes> times, Instant now) {
         return listed.flatMap(check -> doing(check, all, times, now, true))
                 .map(TextWidth::of)
+                .appendAll(Option.when(
+                        listed.exists(check -> !check.done()), () -> TextWidth.of(CheckTimesText.widestRunning())))
                 .max()
                 .getOrElse(0);
     }

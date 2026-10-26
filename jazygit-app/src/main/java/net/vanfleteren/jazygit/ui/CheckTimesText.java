@@ -73,12 +73,25 @@ public final class CheckTimesText {
     }
 
     /**
-     * {@code minutes}, one or more: {@code 2m}, {@code 1h 5m}.
+     * {@code minutes}, one or more: {@code 2m}, {@code 1h}, {@code 1h 5m}; a whole hour without its {@code 0m}, as a
+     * whole minute is without its {@code 0s}.
      */
     private static String minutes(long minutes) {
         return minutes < 60
                 ? Messages.get("checks.minutes", String.valueOf(minutes))
-                : Messages.get("checks.hours", String.valueOf(minutes / 60), String.valueOf(minutes % 60));
+                : minutes % 60 == 0
+                        ? Messages.get("checks.wholeHours", String.valueOf(minutes / 60))
+                        : Messages.get("checks.hours", String.valueOf(minutes / 60), String.valueOf(minutes % 60));
+    }
+
+    /**
+     * How a check that runs shows how it is doing at its widest, {@code running 59m 55s · ~4m 55s left}, so a column
+     * of them can keep its width while their seconds move on.
+     */
+    public static String widestRunning() {
+        return Messages.get("checks.runningFor", duration(Duration.ofSeconds(3599)))
+                + " · "
+                + Messages.get("checks.left", left(Duration.ofSeconds(297)));
     }
 
     /**

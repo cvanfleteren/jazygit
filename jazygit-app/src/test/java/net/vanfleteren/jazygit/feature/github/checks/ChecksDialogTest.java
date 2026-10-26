@@ -29,8 +29,10 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PendingChecks;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.CheckRows;
+import net.vanfleteren.jazygit.ui.CheckTimesText;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
+import net.vanfleteren.jazygit.ui.TextWidth;
 import net.vanfleteren.jazygit.ui.Theme;
 import org.junit.jupiter.api.Test;
 
@@ -145,6 +147,18 @@ class ChecksDialogTest {
         assertTrue(top.contains(checkb), top);
         assertFalse(scrolled.contains("checka"), scrolled);
         assertTrue(scrolled.contains(checkb), scrolled);
+    }
+
+    @Test
+    void whileACheckRunsTheTimingsKeepTheirWidthAsTheSecondsMoveOn() {
+        // 7m 55s, then 8m: a narrower time, which would move the names.
+        List<Check> running = List.of(check("verify", Checks.PENDING, 475, Option.none()));
+        List<Check> done = List.of(check("verify", Checks.PASSING, 475, Option.of(60)));
+
+        int widest = TextWidth.of(CheckTimesText.widestRunning());
+        assertEquals(widest, CheckRows.doingWidth(running, running, Option.none(), NOW));
+        assertEquals(widest, CheckRows.doingWidth(running, running, Option.none(), NOW.plusSeconds(5)));
+        assertEquals(TextWidth.of("1m"), CheckRows.doingWidth(done, done, Option.none(), NOW));
     }
 
     @Test
