@@ -13,29 +13,31 @@ class CheckTimesTextTest {
     private static final Instant NOW = Instant.parse("2026-10-25T10:00:00Z");
 
     @Test
-    void howLongToTheNearestFiveSecondsUnderFiveMinutes() {
-        assertEquals("0s", CheckTimesText.duration(Duration.ofSeconds(2)));
-        assertEquals("5s", CheckTimesText.duration(Duration.ofSeconds(3)));
-        assertEquals("45s", CheckTimesText.duration(Duration.ofSeconds(44)));
-        assertEquals("1m", CheckTimesText.duration(Duration.ofSeconds(58)));
-        assertEquals("2m 5s", CheckTimesText.duration(Duration.ofSeconds(126)));
-        assertEquals("4m 55s", CheckTimesText.duration(Duration.ofSeconds(297)));
-        assertEquals("0s", CheckTimesText.duration(Duration.ofSeconds(-5)));
+    void howLongDownToFiveSecondsUnderFiveMinutes() {
+        assertEquals("<5s", CheckTimesText.duration(Duration.ofSeconds(4)));
+        assertEquals("<5s", CheckTimesText.duration(Duration.ofSeconds(-5)));
+        assertEquals("5s", CheckTimesText.duration(Duration.ofSeconds(5)));
+        assertEquals("45s", CheckTimesText.duration(Duration.ofSeconds(49)));
+        assertEquals("55s", CheckTimesText.duration(Duration.ofSeconds(59)));
+        assertEquals("1m", CheckTimesText.duration(Duration.ofSeconds(60)));
+        assertEquals("2m 5s", CheckTimesText.duration(Duration.ofSeconds(129)));
+        assertEquals("4m 55s", CheckTimesText.duration(Duration.ofSeconds(299)));
     }
 
     @Test
-    void howLongToTheNearestMinuteFromFiveMinutesOn() {
-        assertEquals("5m", CheckTimesText.duration(Duration.ofSeconds(298)));
-        assertEquals("7m", CheckTimesText.duration(Duration.ofSeconds(7 * 60 + 29)));
-        assertEquals("8m", CheckTimesText.duration(Duration.ofSeconds(7 * 60 + 30)));
-        assertEquals("1h 5m", CheckTimesText.duration(Duration.ofMinutes(65)));
+    void howLongDownToWholeMinutesFromFiveMinutesOn() {
+        assertEquals("5m", CheckTimesText.duration(Duration.ofSeconds(300)));
+        assertEquals("7m", CheckTimesText.duration(Duration.ofSeconds(7 * 60 + 40)));
+        assertEquals("1h 5m", CheckTimesText.duration(Duration.ofSeconds(65 * 60 + 59)));
     }
 
     @Test
-    void howLongStillRoundedAsHowLong() {
+    void howLongStillToTheNearestStep() {
         assertEquals("~5s", CheckTimesText.left(Duration.ofSeconds(3)));
         assertEquals("~1m 30s", CheckTimesText.left(Duration.ofSeconds(89)));
-        assertEquals("~7m", CheckTimesText.left(Duration.ofSeconds(7 * 60 + 10)));
+        assertEquals("~4m 55s", CheckTimesText.left(Duration.ofSeconds(297)));
+        assertEquals("~5m", CheckTimesText.left(Duration.ofSeconds(298)));
+        assertEquals("~8m", CheckTimesText.left(Duration.ofSeconds(7 * 60 + 40)));
     }
 
     @Test

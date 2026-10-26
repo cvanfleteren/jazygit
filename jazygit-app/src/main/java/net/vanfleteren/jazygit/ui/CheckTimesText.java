@@ -14,35 +14,43 @@ import net.vanfleteren.jazygit.i18n.Messages;
  */
 public final class CheckTimesText {
 
-    // From how long on a time in a dialog is rounded to the minute, not to 5s.
+    // From how long on a time in a dialog is shown in whole minutes, not to 5s.
     private static final long TO_THE_SECOND = Duration.ofMinutes(5).toSeconds();
 
     private CheckTimesText() {}
 
     /**
-     * How long it is since {@code since}, in a dialog: {@code 45s}, {@code 2m}, {@code 2m 5s}, to the nearest 5s; from
-     * 5m on to the nearest minute, {@code 7m}, {@code 1h 5m}.
+     * How long it is since {@code since}, in a dialog, rounded down as a clock that counts up: {@code <5s}, {@code 45s},
+     * {@code 2m}, {@code 2m 5s} to 5s; from 5m on in whole minutes, {@code 7m}, {@code 1h 5m}.
      */
     public static String duration(Duration since) {
-        long seconds = Math.max(0, Math.round(since.toSeconds() / 5.0) * 5);
-        return seconds >= TO_THE_SECOND
-                ? minutes(Math.round(since.toSeconds() / 60.0))
-                : seconds < 60
-                        ? Messages.get("checks.seconds", String.valueOf(seconds))
-                        : seconds % 60 == 0
-                                ? minutes(seconds / 60)
-                                : Messages.get(
-                                        "checks.minutesSeconds",
-                                        String.valueOf(seconds / 60),
-                                        String.valueOf(seconds % 60));
+        long seconds = since.toSeconds();
+        return seconds < 5
+                ? Messages.get("checks.underFiveSeconds")
+                : seconds >= TO_THE_SECOND ? minutes(seconds / 60) : toFiveSeconds(seconds / 5 * 5);
     }
 
     /**
-     * How long something is expected to take still, {@code left}, in a dialog, rounded as {@link #duration}:
-     * {@code ~45s}, {@code ~2m 5s}, {@code ~7m}. Only when it is not {@link #due}.
+     * How long something is expected to take still, {@code left}, in a dialog, to the nearest 5s, {@code ~45s},
+     * {@code ~2m 5s}; from 5m on to the nearest minute, {@code ~7m}. Only when it is not {@link #due}.
      */
     public static String left(Duration left) {
-        return Messages.get("checks.about", duration(left));
+        long seconds = Math.round(left.toSeconds() / 5.0) * 5;
+        return Messages.get(
+                "checks.about",
+                seconds >= TO_THE_SECOND ? minutes(Math.round(left.toSeconds() / 60.0)) : toFiveSeconds(seconds));
+    }
+
+    /**
+     * {@code seconds}, a step of 5s under 5m: {@code 45s}, {@code 2m}, {@code 2m 5s}.
+     */
+    private static String toFiveSeconds(long seconds) {
+        return seconds < 60
+                ? Messages.get("checks.seconds", String.valueOf(seconds))
+                : seconds % 60 == 0
+                        ? minutes(seconds / 60)
+                        : Messages.get(
+                                "checks.minutesSeconds", String.valueOf(seconds / 60), String.valueOf(seconds % 60));
     }
 
     /**

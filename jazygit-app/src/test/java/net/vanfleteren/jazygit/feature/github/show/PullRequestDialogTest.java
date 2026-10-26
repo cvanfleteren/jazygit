@@ -600,7 +600,7 @@ class PullRequestDialogTest {
 
         // verify and the status are not known, so neither is when they are all done.
         assertTrue(screen.contains("Checks  ⏳ 4 running · done in ?"), screen);
-        assertTrue(screen.contains("⏳ package     running 2m · due"), screen);
+        assertTrue(screen.contains("⏳ package     running 1m 55s · due"), screen);
         assertTrue(screen.contains("⏳ verify      running 30s · ? left"), screen);
         assertTrue(screen.contains("⏳ ci/status   running"), screen);
         assertTrue(screen.contains("💤 acceptance  queued · ~2m 15s left"), screen);
@@ -647,7 +647,7 @@ class PullRequestDialogTest {
         String screen = timedScreen(List.of(timed("acceptance", 500, Option.of(400))), learned());
 
         assertTrue(screen.contains("Checks  ⏳ 1 running · taking longer than usual"), screen);
-        assertTrue(screen.contains("⏳ acceptance  running 7m · overdue"), screen);
+        assertTrue(screen.contains("⏳ acceptance  running 6m · overdue"), screen);
     }
 
     @Test
