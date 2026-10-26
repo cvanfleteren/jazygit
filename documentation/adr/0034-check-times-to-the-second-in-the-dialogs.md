@@ -35,8 +35,14 @@ how they are drawn, and how often the dialogs read.
   `~45s`, `~2m 5s`; from 5m on to the nearest minute, `~7m`. Not: seconds on a long estimate, which claims more than
   is known. Not: an estimate in whole minutes also under 5m: the `~` says it is rough, and both times moving on
   together is what shows that something happens.
-- Not padded: `2m 5s`, not `2m 05s`, as a duration and not a clock. The column the checks popup lines the times up
-  in can grow by a column once a minute.
+- Every time of an hour or more, how long a check runs or how long it is expected to take still, in the dialogs and in
+  the branches pane, is written in hours and minutes, `1h 5m`, and a whole hour without its `0m`, `1h`, as a whole
+  minute is without its `0s`.
+- Not padded: `2m 5s`, not `2m 05s`, as a duration and not a clock. So the time of a check that runs changes its width
+  as its seconds move on, `7m 5s`, `7m 10s`, `8m`. While a check runs, the column the checks popup lines the times up
+  in is as wide as the time of a check that runs can get, `running 59m 55s · ~4m 55s left`, so the names before it do
+  not move, nor get cut at another place, every few seconds. Not: padding the seconds, `8m 00s`; nor a column as wide
+  as the widest time shown, which moves the names.
 - A check whose estimate rounds to no time left, or is past, but which is not overdue yet, shows `due`:
   `running 2m 30s · due`, and the checks together `done any moment`. So `~5s left` is followed by `due`, never
   `~0s left`. Not: `<1m left`, which comes after `~5s left` and would count up again; nor `~5s left`, which
@@ -73,26 +79,28 @@ how they are drawn, and how often the dialogs read.
   as it does every command (ADR 33). Not: a spinner in the title every 10s.
 - Each popup keeps how it reads in place of `refreshing`: not, by itself, or asked for. When a read by itself
   fails, the title says the details are stale as before.
-- `R` while the dialog reads by itself does not start a second read: the read that runs becomes one asked for, and
-  the spinner shows. Not: `R` disabled for a second every 10s, with nothing to say why.
-- Turning the pull request into a draft, or marking it ready, stays possible while the dialog reads by itself. The
-  read that runs then may have started before the change, and come back with how it was before (ADR 19), before or
-  after the change is done (`DraftSet`). So choosing the change marks that read to be dropped: a fourth way of
-  reading, by itself but dropped (`Reading.DROPPED`). That the read of the pull request is to be dropped is also
-  kept apart from the dialog, by its number (`GitHubState`), so it is dropped when the dialog was closed meanwhile, or
-  opened again. When it comes back, all of it is dropped: the dialog, and the
-  pull request the branches pane lists (`GitHubState.withRead`), keep how they were, and nothing is learned from its
-  checks. A dropped read that fails is dropped too, and does not mark the details stale: it says nothing of the pull
-  request as it is since the change. Either way the dialog no longer reads, so ticks read again. The change shows
-  once it is done, and a later tick reads it: the next one while a check is not done, else within a minute of when
-  the dropped read started (`readAt`). Not: reading at once after a dropped read, which would take `readAt` set
-  back, for a change that already shows. While it is read as asked, or first read,
-  the change waits as before. Not: the change disabled for a second every 10s, with nothing to say why; nor taking
-  what such a read brings, which would show the change undone; nor telling the read apart by the branch being busy,
-  which it no longer is when the read comes back after the change.
-- `R` waits while a read to be dropped runs, as while the branch is busy: that read ends soon after the change, and
-  the next tick reads again. Not: `R` turning it into a read asked for, which would show a spinner and then drop
-  what it brings.
+- `R` while the dialog reads by itself does not start a second read: the read that runs becomes one asked for, and the
+  spinner shows. Not: `R` disabled for a second every 10s, with nothing to say why.
+- Every read of the details of a pull request gets an id, counted up in `GitHubState` (`nextRead`), which its result
+  carries. A result is taken only when its id is at least the lowest one still taken for that pull request
+  (`readsFrom`). Taking it moves that past it, so an older read that comes back later is not taken. A change to the
+  pull request, turned into a draft or marked ready (`DraftSet`), or a comment sent, moves it past every read given
+  out so far. A result that is not taken changes nothing: not the dialog, not the pull request the branches pane lists
+  (`GitHubState.withRead`), not what is learned from its checks; failing, it marks nothing stale. The dialog keeps the
+  id of the read it started last (`read`): when that one is not taken, it no longer reads, so ticks read again. ADR 19
+  named counting the reads as the alternative to waiting.
+- So turning the pull request into a draft, or marking it ready, stays possible while the dialog reads by itself. A
+  read that comes back before the change is done is taken, as that was how it was then, and the change shows once it
+  is done; one that comes back after it is not taken, also once the dialog was closed or opened again. While it is
+  read as asked, or first read, the change waits as before, rather than show a spinner for a read that is then not
+  taken. Not: the change disabled for a second every 10s, with nothing to say why; nor marking the read that runs to
+  be dropped, by the number of its pull request, which drops the wrong one when the dialog is opened again meanwhile
+  and its own read comes back first, and leaves that dialog reading for good.
+- After a change, a later tick reads again: the next one while a check is not done, else within a minute of when the
+  last read started. `R` while a read that is no longer taken runs starts a new one, asked for. Not: reading at once
+  after the change, which already shows.
+- Only the details of a pull request are read with ids. The other reads of GitHub start again once done, or are told
+  apart by what they read (ADR 12); reading them with ids too is for another ADR.
 
 ## Consequences
 
@@ -100,11 +108,14 @@ how they are drawn, and how often the dialogs read.
   `readAt`, and the quiet reads.
 - Up to six times as many calls while a dialog is open on checks that are not done.
 - The bottom line shows a read of the checks for about a second every 10s while one is not done.
-- Tested: how long down to 5s under an hour and to the minute from an hour on, and what is left to the nearest, to 5s
-  and to the minute from 5m on, `<5s`, `due` past `~5s left` and `done any moment`, the minutes kept in the branches
-  pane; when a tick reads, for checks that are and are not done, and a tick that comes a few ms short of the minute,
-  and every minute only after a read failed; that only `R` and the first read show the spinner, `R` during a read by
-  itself, and that a read by itself that fails marks the details stale; a draft changed while the dialog reads by
-  itself, with that read coming back before and after the change is done, dropped from the dialog and the branches
-  pane alike, also once the dialog was closed, and a dropped read that fails, which marks nothing stale and lets ticks
-  read again; `R` while a read to be dropped runs.
+- `LoadPullRequestDetails`, `DetailsLoaded` and `DetailsFailed` carry the id of their read.
+- Tested: how long down to 5s under an hour and to the minute from an hour on, `59m 55s` then `1h`, and what is left
+  to the nearest, to 5s and to the minute from 5m on, `<5s`, `due` past `~5s left` and `done any moment`, the minutes
+  kept in the branches pane, and the column of the times keeping its width while a check runs; when a tick reads, for
+  checks that are and are not done, and a tick that comes a few ms short of the minute, and every minute only after a
+  read failed; that only `R` and the first read show the spinner, `R` during a read by itself, and that a read by
+  itself that fails marks the details stale; a draft changed while the dialog reads by itself, with that read coming
+  back before the change is done, taken, and after it, not taken, in the dialog and the branches pane alike, also once
+  the dialog was closed; a dialog opened again whose own read comes back before one that is no longer taken; a read
+  not taken that fails, which marks nothing stale and lets ticks read again; `R` while a read that is no longer taken
+  runs.
