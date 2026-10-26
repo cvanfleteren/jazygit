@@ -7,7 +7,6 @@ import io.vavr.control.Try;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.concurrent.Executor;
@@ -38,8 +37,6 @@ public final class Program {
 
     // The messages handled, for the debug log.
     private static final Logger LOG = LoggerFactory.getLogger(Program.class);
-    // The time of the programs started without one: it stands still, as the model's did until a clock came.
-    private static final Clock STILL = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC);
 
     private final Env env;
     private final Executor io;
@@ -82,53 +79,21 @@ public final class Program {
     /**
      * Creates the program and starts its initial loads.
      *
-     * @param env        what the commands run against
-     * @param io         where git is called; a single thread keeps git commands from running concurrently
-     * @param background where {@link Cmd#background() background} commands run, so they do not hold up the
-     *                   others; several at once may
-     * @param ui         the thread that owns the model, i.e. the render thread
-     */
-    public static Program start(Env env, Executor io, Executor background, Executor ui) {
-        return start(
-                env,
-                SettingsStore.Loaded.DEFAULT,
-                Option.none(),
-                Landing.START,
-                io,
-                background,
-                ui,
-                bug -> {},
-                () -> {});
-    }
-
-    /**
-     * Creates the program and starts its initial loads.
-     *
+     * @param env           what the commands run against
      * @param settings      the settings the session starts with
      * @param themeOverride the theme for this session instead of the saved one, if any
      * @param landing       where the repository is shown at first
+     * @param io            where git is called; a single thread keeps git commands from running concurrently
+     * @param background    where {@link Cmd#background() background} commands run, so they do not hold up the
+     *                      others; several at once may
+     * @param ui            the thread that owns the model, i.e. the render thread
      * @param bugs          told about every command that threw, which the user is only shown the message of
      * @param modelChanged  told on the {@code ui} executor's thread whenever a message leaves a model that draws
      *                      differently from the one before ({@link Model#drawn()}), starting with the first; the
      *                      screen has to be drawn again
-     */
-    public static Program start(
-            Env env,
-            SettingsStore.Loaded settings,
-            Option<ThemeName> themeOverride,
-            Landing landing,
-            Executor io,
-            Executor background,
-            Executor ui,
-            Consumer<Throwable> bugs,
-            Runnable modelChanged) {
-        return start(env, settings, themeOverride, landing, io, background, ui, bugs, modelChanged, () -> {}, STILL);
-    }
-
-    /**
-     * As above, at the time {@code clock} tells, which the model is told with every message; the programs above
-     * are told a time that stands still. {@code quit} is run, on the {@code ui} executor's thread, once a message
-     * leaves a {@link Step} that asks the app to stop.
+     * @param quit          run on the {@code ui} executor's thread once a message leaves a {@link Step} that asks
+     *                      the app to stop
+     * @param clock         the time the model is told with every message
      */
     public static Program start(
             Env env,
