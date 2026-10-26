@@ -1072,6 +1072,46 @@ class PullRequestUpdateTest {
         assertEquals(Reading.NOT, popup.reading());
     }
 
+    @Test
+    void aReadDroppedBeforeTheDraftChangeIsDoneLeavesTheDialogAndTheBranchesAsTheyWere() {
+        Model quiet = Update.update(aMinuteOn(showingDetails()), new PullRequestMsg.Tick())
+                .model();
+        PullRequestDetails before =
+                quiet.popup(PullRequestPopup.class).get().details().get().get();
+        Next drafting = Update.update(quiet, new PullRequestMsg.DraftChosen());
+
+        // The quiet read comes back while the change still runs, with the branch busy.
+        Model dropped = Update.update(drafting.model(), new PullRequestMsg.DetailsLoaded(42, before.withDraft(true)))
+                .model();
+        assertEquals(drafting.model().gitHub(), dropped.gitHub());
+        assertEquals(Reading.NOT, dropped.popup(PullRequestPopup.class).get().reading());
+
+        Model drafted = Update.update(dropped, ((SetDraft) drafting.cmds().head()).run(env()))
+                .model();
+        assertEquals(
+                Option.of(true), drafted.popup(PullRequestPopup.class).get().draft());
+    }
+
+    @Test
+    void refreshingWaitsWhileAReadToBeDroppedRuns() {
+        Model quiet = Update.update(aMinuteOn(showingDetails()), new PullRequestMsg.Tick())
+                .model();
+        Next drafting = Update.update(quiet, new PullRequestMsg.DraftChosen());
+        Model drafted = Update.update(
+                        drafting.model(), ((SetDraft) drafting.cmds().head()).run(env()))
+                .model();
+        assertEquals(
+                Reading.DROPPED, drafted.popup(PullRequestPopup.class).get().reading());
+        assertEquals(
+                List.empty(),
+                Update.update(drafted, new PullRequestMsg.RefreshChosen()).cmds());
+        assertEquals(
+                drafted.popup(PullRequestPopup.class),
+                Update.update(drafted, new PullRequestMsg.RefreshChosen())
+                        .model()
+                        .popup(PullRequestPopup.class));
+    }
+
     private static Model showingDetails() {
         Model shown =
                 Update.update(withPr(), new PullRequestMsg.Requested(FEATURE)).model();
