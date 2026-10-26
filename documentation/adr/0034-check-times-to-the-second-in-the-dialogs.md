@@ -47,9 +47,10 @@ how they are drawn, and how often the dialogs read.
 ### Read
 
 - The checks popup and the pull request dialog are each told every 10s to read again (`ChecksMsg.Tick`,
-  `PullRequestMsg.Tick`), not every minute. A tick reads when no read runs and a check is not done, or when the last
-  read started a minute ago or more (`model.now()`): a check just done shows within 10s, and once all are done the
-  dialog is read every minute, for a re-run, a push, or a review. Not: a second timer of 10s next to the one of a
+  `PullRequestMsg.Tick`), not every minute. A tick reads only when no read runs, and then when a check is not done,
+  or when the last read started a minute ago or more (`model.now()`): a check just done shows within 10s, and once
+  all are done the dialog is read every minute, for a re-run, a push, or a review. A read that hangs gets no second
+  one next to it. Not: a second timer of 10s next to the one of a
   minute, which would leave the minute as a rule no test could see.
 - The minute is counted with half a tick to spare: a tick reads once `now - readAt` is 55s or more. The time a
   message is handled is exact (ADR 33), so the tick a minute after the one that read can come a few ms short of the
@@ -71,10 +72,17 @@ how they are drawn, and how often the dialogs read.
 - `R` while the dialog reads by itself does not start a second read: the read that runs becomes one asked for, and
   the spinner shows. Not: `R` disabled for a second every 10s, with nothing to say why.
 - Turning the pull request into a draft, or marking it ready, stays possible while the dialog reads by itself. The
-  read that runs then may have started before the change, and come back with how it was before (ADR 19), so the
-  popup drops what that read brings: the change already shows, and the next tick reads it. While it is read as
-  asked, or first read, the change waits as before. Not: the change disabled for a second every 10s, with nothing to
-  say why; nor taking what such a read brings, which would show the change undone.
+  read that runs then may have started before the change, and come back with how it was before (ADR 19), before or
+  after the change is done (`DraftSet`). So choosing the change marks that read to be dropped: a fourth way of
+  reading, by itself but dropped (`Reading.DROPPED`). When it comes back, all of it is dropped: the dialog, and the
+  pull request the branches pane lists (`GitHubState.withRead`), keep how they were, and nothing is learned from its
+  checks; the change shows once it is done, and the next tick reads it. While it is read as asked, or first read,
+  the change waits as before. Not: the change disabled for a second every 10s, with nothing to say why; nor taking
+  what such a read brings, which would show the change undone; nor telling the read apart by the branch being busy,
+  which it no longer is when the read comes back after the change.
+- `R` waits while a read to be dropped runs, as while the branch is busy: that read ends soon after the change, and
+  the next tick reads again. Not: `R` turning it into a read asked for, which would show a spinner and then drop
+  what it brings.
 
 ## Consequences
 
@@ -86,4 +94,5 @@ how they are drawn, and how often the dialogs read.
   `done any moment`, the minutes kept in the branches pane; when a tick reads, for checks that are and are not done,
   and a tick that comes a few ms short of the minute; that only `R` and the first read show the spinner, `R` during
   a read by itself, and that a read by itself that fails marks the details stale; a draft changed while the dialog
-  reads by itself, with what that read brings dropped.
+  reads by itself, with that read coming back before and after the change is done, dropped from the dialog and the
+  branches pane alike; `R` while a read to be dropped runs.
