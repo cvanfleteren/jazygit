@@ -38,8 +38,9 @@ class CommentDialogTest {
     private static final PullRequestPopup SHOWN = PullRequestPopup.loading(
                     new BranchName("feature"),
                     new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED),
-                    Instant.EPOCH)
-            .with(Either.right(StubGitHub.empty().pullRequestDetails(42).get()));
+                    Instant.EPOCH,
+                    0)
+            .with(Either.right(StubGitHub.empty().pullRequestDetails(42).get()), 0);
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private Model model = TestModels.loaded().openPopup(CommentPopup.on(SHOWN));

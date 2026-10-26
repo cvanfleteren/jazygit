@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.github.comment;
 
 import static net.vanfleteren.jazygit.state.TestModels.errorText;
+import static net.vanfleteren.jazygit.state.TestModels.lastRead;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static net.vanfleteren.jazygit.state.TestModels.refused;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -60,7 +61,7 @@ class CommentUpdateTest {
     private static final PullRequestDetails DETAILS =
             StubGitHub.empty().pullRequestDetails(42).get();
     private static final PullRequestPopup SHOWN =
-            PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH).with(Either.right(DETAILS));
+            PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH, 0).with(Either.right(DETAILS), 0);
     private static final ExecutedCommand NVIM = ExecutedCommand.of("nvim", "PR_COMMENT.md");
 
     private static Model showing() {
@@ -85,28 +86,30 @@ class CommentUpdateTest {
 
     @Test
     void aClosedOrMergedPullRequestTakesCommentsToo() {
-        PullRequestPopup merged = PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH)
-                .with(Either.right(new PullRequestDetails(
-                        DETAILS.number(),
-                        DETAILS.title(),
-                        DETAILS.author(),
-                        PullRequestDetails.State.MERGED,
-                        DETAILS.draft(),
-                        DETAILS.headBranch(),
-                        DETAILS.baseBranch(),
-                        DETAILS.createdAt(),
-                        DETAILS.createdAt(),
-                        DETAILS.additions(),
-                        DETAILS.deletions(),
-                        DETAILS.changedFiles(),
-                        1,
-                        DETAILS.mergeable(),
-                        DETAILS.review(),
-                        DETAILS.comments(),
-                        DETAILS.reviewThreads(),
-                        DETAILS.labels(),
-                        DETAILS.reviewers(),
-                        DETAILS.checks())));
+        PullRequestPopup merged = PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH, 0)
+                .with(
+                        Either.right(new PullRequestDetails(
+                                DETAILS.number(),
+                                DETAILS.title(),
+                                DETAILS.author(),
+                                PullRequestDetails.State.MERGED,
+                                DETAILS.draft(),
+                                DETAILS.headBranch(),
+                                DETAILS.baseBranch(),
+                                DETAILS.createdAt(),
+                                DETAILS.createdAt(),
+                                DETAILS.additions(),
+                                DETAILS.deletions(),
+                                DETAILS.changedFiles(),
+                                1,
+                                DETAILS.mergeable(),
+                                DETAILS.review(),
+                                DETAILS.comments(),
+                                DETAILS.reviewThreads(),
+                                DETAILS.labels(),
+                                DETAILS.reviewers(),
+                                DETAILS.checks())),
+                        0);
 
         Next next = Update.update(loaded().openPopup(merged), new CommentMsg.Requested());
 
@@ -115,9 +118,9 @@ class CommentUpdateTest {
 
     @Test
     void noCommentBeforeTheDetailsAreRead() {
-        Model loading = loaded().openPopup(PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH));
-        Model failed = loaded().openPopup(PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH)
-                .with(Either.left(refused("offline"))));
+        Model loading = loaded().openPopup(PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH, 0));
+        Model failed = loaded().openPopup(PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH, 0)
+                .with(Either.left(refused("offline")), 0));
 
         assertEquals(loading, Update.update(loading, new CommentMsg.Requested()).model());
         assertEquals(failed, Update.update(failed, new CommentMsg.Requested()).model());
@@ -178,20 +181,21 @@ class CommentUpdateTest {
     @Test
     void detailsReadWhileCommentingShowInThePullRequestGoneBackTo() {
         Model commenting =
-                loaded().openPopup(CommentPopup.on(PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH)));
+                loaded().openPopup(CommentPopup.on(PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH, 0)));
 
-        Model read = Update.update(commenting, new PullRequestMsg.DetailsLoaded(42, DETAILS))
+        Model read = Update.update(commenting, new PullRequestMsg.DetailsLoaded(42, 0, DETAILS))
                 .model();
 
         assertEquals(
-                Option.of(PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH)
-                        .with(Either.right(DETAILS))),
+                Option.of(PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH, 0)
+                        .with(Either.right(DETAILS), 0)),
                 read.popup(CommentPopup.class).map(CommentPopup::from));
         // Details of another pull request change nothing.
         assertEquals(
-                commenting,
-                Update.update(commenting, new PullRequestMsg.DetailsLoaded(7, DETAILS))
-                        .model());
+                commenting.popup(),
+                Update.update(commenting, new PullRequestMsg.DetailsLoaded(7, 0, DETAILS))
+                        .model()
+                        .popup());
     }
 
     @Test
@@ -246,7 +250,7 @@ class CommentUpdateTest {
         assertEquals(
                 Option.of(comments.withHighlighted(Option.none())), sent.model().popup());
         assertTrue(
-                sent.cmds().contains(new LoadPullRequestDetails(42)),
+                sent.cmds().contains(new LoadPullRequestDetails(42, lastRead(sent.model()))),
                 sent.cmds().toString());
         assertTrue(sent.cmds().contains(new LoadComments(42)), sent.cmds().toString());
     }
@@ -261,7 +265,7 @@ class CommentUpdateTest {
 
         assertEquals(Option.of(SHOWN), sent.model().popup());
         assertTrue(
-                sent.cmds().contains(new LoadPullRequestDetails(42)),
+                sent.cmds().contains(new LoadPullRequestDetails(42, lastRead(sent.model()))),
                 sent.cmds().toString());
         assertEquals(
                 "gh pr comment 42 --body 'Looks good'",
@@ -277,7 +281,7 @@ class CommentUpdateTest {
 
         assertEquals(Option.none(), sent.model().popup());
         assertTrue(
-                !sent.cmds().contains(new LoadPullRequestDetails(42)),
+                !sent.cmds().exists(LoadPullRequestDetails.class::isInstance),
                 sent.cmds().toString());
     }
 

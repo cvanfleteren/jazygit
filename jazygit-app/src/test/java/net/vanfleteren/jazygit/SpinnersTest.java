@@ -39,7 +39,8 @@ class SpinnersTest {
     private static final PullRequestPopup PULL_REQUEST = PullRequestPopup.loading(
             new BranchName("feature"),
             new PullRequest(42, "feature", true, Checks.PASSING, Review.APPROVED),
-            Instant.EPOCH);
+            Instant.EPOCH,
+            0);
 
     @Test
     void noneShowsWhenNothingRuns() {
@@ -60,8 +61,8 @@ class SpinnersTest {
     @Test
     void thePullRequestDialogShowsOneWhileItsDetailsAreRead() {
         assertTrue(Spinners.shown(LOADED.openPopup(PULL_REQUEST), NOW));
-        assertFalse(
-                Spinners.shown(LOADED.openPopup(PULL_REQUEST.with(Either.left(TestModels.refused("offline")))), NOW));
+        assertFalse(Spinners.shown(
+                LOADED.openPopup(PULL_REQUEST.with(Either.left(TestModels.refused("offline")), 0)), NOW));
     }
 
     @Test

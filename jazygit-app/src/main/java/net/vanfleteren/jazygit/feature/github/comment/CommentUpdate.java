@@ -6,8 +6,8 @@ import net.vanfleteren.jazygit.feature.github.comment.CommentCmd.AddComment;
 import net.vanfleteren.jazygit.feature.github.comment.CommentCmd.EditComment;
 import net.vanfleteren.jazygit.feature.github.comments.CommentsCmd.LoadComments;
 import net.vanfleteren.jazygit.feature.github.comments.CommentsPopup;
-import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.LoadPullRequestDetails;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
+import net.vanfleteren.jazygit.feature.github.show.PullRequestUpdate;
 import net.vanfleteren.jazygit.feature.github.show.ShowsPullRequest;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -63,19 +63,21 @@ public final class CommentUpdate {
             case CommentMsg.EditorFailed(Failure failure) ->
                 Next.of(CommandLog.append(model, CommentCmd.EDIT_COMMENT, failure.commands())
                         .fail(new AppError.OperationFailed(CommentCmd.EDIT_COMMENT, Option.none(), failure)));
+            // A read of the pull request that started before the comment was sent is not taken (ADR 34).
             case CommentMsg.Sent(AddComment cmd, var commands) -> {
                 Next done = OperationUpdate.succeeded(model, cmd, commands);
-                yield done.model()
-                        .popup(CommentPopup.class)
+                Model changed = done.model().mapGitHub(gitHub -> gitHub.withChanged(cmd.number()));
+                yield changed.popup(CommentPopup.class)
                         .filter(popup -> popup.number() == cmd.number())
-                        .map(popup -> new Next(
-                                done.model().openPopup(sentFrom(popup.from())),
-                                done.cmds()
-                                        .append(new LoadPullRequestDetails(cmd.number()))
-                                        .appendAll(Option.when(
-                                                popup.from() instanceof CommentsPopup,
-                                                () -> new LoadComments(cmd.number())))))
-                        .getOrElse(done);
+                        .map(popup -> PullRequestUpdate.read(changed, cmd.number())
+                                .apply((given, load) -> new Next(
+                                        given.openPopup(sentFrom(popup.from())),
+                                        done.cmds()
+                                                .append(load)
+                                                .appendAll(Option.when(
+                                                        popup.from() instanceof CommentsPopup,
+                                                        () -> new LoadComments(cmd.number()))))))
+                        .getOrElse(() -> new Next(changed, done.cmds()));
             }
             // The popup stays open, with the comment, to send it again or to copy it.
             case CommentMsg.SendFailed(AddComment cmd, Failure failure) -> {

@@ -35,9 +35,11 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
  *                            told which repository it is (ADR 32)
  * @param pendingChecks       the checks one by one, with their timing, of the branches on GitHub whose checks are
  *                            pending; none until they were read once (ADR 32)
- * @param dropping            the pull requests, by number, whose read that runs is dropped when it comes back, as it
- *                            started before a change it would show undone; kept apart from the dialog, which can be
- *                            closed meanwhile (ADR 34)
+ * @param nextRead            the id the next read of the details of a pull request gets, higher than every one
+ *                            given out before (ADR 34)
+ * @param readsFrom           by the number of a pull request, the lowest id of a read of its details that is still
+ *                            taken: past the last one taken, and past every one given out before a change to it, so a
+ *                            read that started earlier does not show the change undone (ADR 34)
  */
 @With
 public record GitHubState(
@@ -49,7 +51,8 @@ public record GitHubState(
         Map<Integer, PullRequestMerge> merges,
         Option<CheckTimes> checkTimes,
         Option<PendingChecks> pendingChecks,
-        Set<Integer> dropping) {
+        long nextRead,
+        Map<Integer, Long> readsFrom) {
 
     public static final GitHubState NOT_READ = new GitHubState(
             Option.none(),
@@ -60,7 +63,8 @@ public record GitHubState(
             HashMap.empty(),
             Option.none(),
             Option.none(),
-            HashSet.empty());
+            0,
+            HashMap.empty());
 
     /**
      * How the latest merge that merges pull request {@code number} went, or is going: the merge of it, or of one
@@ -116,6 +120,36 @@ public record GitHubState(
      * This state with the pull request {@code details} are about as they were just read: as it now is, or no
      * longer listed once it is merged or closed. Unchanged when it is not listed.
      */
+    /**
+     * The state once the read with id {@link #nextRead} was given out.
+     */
+    public GitHubState withReadGivenOut() {
+        return withNextRead(nextRead + 1);
+    }
+
+    /**
+     * Whether read {@code read} of the details of pull request {@code number} is still taken when it comes back: no
+     * later one was taken, and it started after the last change to it.
+     */
+    public boolean current(int number, long read) {
+        return read >= readsFrom.getOrElse(number, 0L);
+    }
+
+    /**
+     * The state once read {@code read} of the details of pull request {@code number} was taken: one that started
+     * before it is no longer.
+     */
+    public GitHubState withReadTaken(int number, long read) {
+        return withReadsFrom(readsFrom.put(number, read + 1));
+    }
+
+    /**
+     * The state once pull request {@code number} was changed: no read of it given out before is taken anymore.
+     */
+    public GitHubState withChanged(int number) {
+        return withReadsFrom(readsFrom.put(number, nextRead));
+    }
+
     public GitHubState withRead(PullRequestDetails details) {
         return withPullRequests(pullRequests.map(open -> open.find(listed -> listed._2.number() == details.number())
                 .map(listed -> details.listed().fold(() -> open.remove(listed._1), now -> open.put(listed._1, now)))

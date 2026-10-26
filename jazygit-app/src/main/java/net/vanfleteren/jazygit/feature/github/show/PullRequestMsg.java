@@ -35,11 +35,11 @@ public sealed interface PullRequestMsg extends Msg {
     record SummaryRequested(PullRequestSummary pullRequest) implements PullRequestMsg {}
 
     /**
-     * The details of pull request {@code number} were read.
+     * The details of pull request {@code number} were read, by read {@code read}.
      */
-    record DetailsLoaded(int number, PullRequestDetails details) implements PullRequestMsg {}
+    record DetailsLoaded(int number, long read, PullRequestDetails details) implements PullRequestMsg {}
 
-    record DetailsFailed(int number, Failure failure) implements PullRequestMsg {}
+    record DetailsFailed(int number, long read, Failure failure) implements PullRequestMsg {}
 
     /**
      * The user asked to open the pull request that is shown in the browser.

@@ -207,8 +207,8 @@ class PullRequestDialogTest {
 
     private String timedScreen(List<Check> checks, CheckTimes times) throws Exception {
         return screen(
-                PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH)
-                        .with(Either.right(withChecks(checks))),
+                PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                        .with(Either.right(withChecks(checks)), 0),
                 model -> model.mapGitHub(gitHub -> gitHub.withCheckTimes(Option.of(times))));
     }
 
@@ -218,10 +218,10 @@ class PullRequestDialogTest {
 
     @Test
     void whileACheckIsNotDoneTheDetailsAreDueToBeReadAgainByThemselves() {
-        PullRequestPopup running = PullRequestPopup.loading(new BranchName("support_rename"), PR, NOW)
-                .with(Either.right(withChecks(List.of(timed("verify", 120, Option.of(30))))));
-        PullRequestPopup done = PullRequestPopup.loading(new BranchName("support_rename"), PR, NOW)
-                .with(Either.right(withChecks(List.empty())));
+        PullRequestPopup running = PullRequestPopup.loading(new BranchName("support_rename"), PR, NOW, 0)
+                .with(Either.right(withChecks(List.of(timed("verify", 120, Option.of(30))))), 0);
+        PullRequestPopup done = PullRequestPopup.loading(new BranchName("support_rename"), PR, NOW, 0)
+                .with(Either.right(withChecks(List.empty())), 0);
 
         assertTrue(running.dueByItself(NOW.plusSeconds(10)));
         assertFalse(done.dueByItself(NOW.plusSeconds(54)));
@@ -236,7 +236,7 @@ class PullRequestDialogTest {
 
     @Test
     void showsTheBranchWhileTheDetailsAreRead() throws Exception {
-        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH));
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0));
 
         assertTrue(screen.contains("Pull request #42"), screen);
         assertTrue(screen.contains("Branch  support_rename"), screen);
@@ -249,9 +249,9 @@ class PullRequestDialogTest {
 
     @Test
     void whileReadAgainAsAskedTheDetailsStayWithASpinnerInTheTitle() throws Exception {
-        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH)
-                .with(Either.right(DETAILS))
-                .readingAgain(Reading.ASKED, NOW));
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(DETAILS), 0)
+                .readingAgain(Reading.ASKED, NOW, 1));
 
         assertTrue(
                 screen.contains("Pull request #42 " + net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(NOW)), screen);
@@ -261,9 +261,9 @@ class PullRequestDialogTest {
 
     @Test
     void whileReadAgainByItselfTheTitleShowsNoSpinner() throws Exception {
-        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH)
-                .with(Either.right(DETAILS))
-                .readingAgain(Reading.BY_ITSELF, NOW));
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(DETAILS), 0)
+                .readingAgain(Reading.BY_ITSELF, NOW, 1));
 
         assertFalse(
                 screen.contains("Pull request #42 " + net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(NOW)), screen);
@@ -273,10 +273,10 @@ class PullRequestDialogTest {
 
     @Test
     void detailsThatFailedToBeReadAgainAreMarkedStale() throws Exception {
-        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH)
-                .with(Either.right(DETAILS))
-                .readingAgain(Reading.BY_ITSELF, NOW)
-                .with(Either.left(refused("gh: offline"))));
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(DETAILS), 0)
+                .readingAgain(Reading.BY_ITSELF, NOW, 1)
+                .with(Either.left(refused("gh: offline")), 0));
 
         assertTrue(screen.contains("Pull request #42 · not up to date"), screen);
         assertTrue(screen.contains("Add rename support to the files panel"), screen);
@@ -285,8 +285,8 @@ class PullRequestDialogTest {
     @Test
     void refreshIsChosenWithCapitalR() throws Exception {
         Model model = TestModels.loaded()
-                .openPopup(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH)
-                        .with(Either.right(DETAILS)));
+                .openPopup(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                        .with(Either.right(DETAILS), 0));
         try (ToolkitTestRunner runner = start(model)) {
             SettledPilot.of(runner).press('R');
             SettledPilot.of(runner).pause();
@@ -306,8 +306,8 @@ class PullRequestDialogTest {
                         new PullRequestStack.Entry(2, 41, State.OPEN),
                         new PullRequestStack.Entry(3, 42, State.OPEN))));
 
-        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH)
-                .with(Either.right(stacked)));
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(stacked), 0));
 
         assertTrue(screen.contains("    Stack  #96 · 3 of 3 · merging also merges the 2 below"), screen);
         assertTrue(screen.contains("(m) Merge 3 PRs"), screen);
@@ -326,8 +326,8 @@ class PullRequestDialogTest {
                         new PullRequestStack.Entry(2, 41, State.OPEN),
                         new PullRequestStack.Entry(3, 42, State.OPEN))));
 
-        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH)
-                .with(Either.right(stacked)));
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(stacked), 0));
 
         assertTrue(screen.contains("    Stack  #96 · 3 of 3 · merging also merges the 1 below"), screen);
         assertTrue(screen.contains("(s) Squash and merge 2 PRs"), screen);
@@ -341,8 +341,8 @@ class PullRequestDialogTest {
                 2,
                 List.of(new PullRequestStack.Entry(1, 7, State.MERGED), new PullRequestStack.Entry(2, 8, State.OPEN))));
 
-        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH)
-                .with(Either.right(stacked)));
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(stacked), 0));
 
         assertTrue(screen.contains("    Stack  #9 · 2 of 2"), screen);
         assertFalse(screen.contains("merging also merges"), screen);
@@ -397,8 +397,8 @@ class PullRequestDialogTest {
                                 new PullRequestStack.Entry(1, 42, State.OPEN),
                                 new PullRequestStack.Entry(2, 43, State.OPEN)))));
 
-        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), bottom, Instant.EPOCH)
-                .with(Either.right(READY)));
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), bottom, Instant.EPOCH, 0)
+                .with(Either.right(READY), 0));
 
         // The details read without a stack say it is not stacked anymore.
         assertFalse(screen.contains("Stack"), screen);
@@ -408,8 +408,8 @@ class PullRequestDialogTest {
 
     @Test
     void showsTheDetailsAsLabelledRows() throws Exception {
-        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH)
-                .with(Either.right(DETAILS)));
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(DETAILS), 0));
 
         assertTrue(screen.contains("Add rename support to the files panel"), screen);
         assertTrue(screen.contains("    State  Open · Draft"), screen);
@@ -433,10 +433,10 @@ class PullRequestDialogTest {
 
     @Test
     void saysHowFarTheBaseMovedOnWhileStillMergeable() throws Exception {
-        String behind = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH)
-                .with(Either.right(DETAILS.withBehindBase(3))));
-        String upToDate = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH)
-                .with(Either.right(DETAILS.withBehindBase(0))));
+        String behind = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(DETAILS.withBehindBase(3)), 0));
+        String upToDate = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(DETAILS.withBehindBase(0)), 0));
 
         assertTrue(behind.contains("   Branch  support_rename → main · 3 behind"), behind);
         assertTrue(behind.contains("Mergeable  yes"), behind);
@@ -445,13 +445,13 @@ class PullRequestDialogTest {
 
     @Test
     void aRefreshThatCouldNotTellHowFarBehindKeepsTheCountForTheSameCommitOnTheSameBase() throws Exception {
-        PullRequestPopup shown = PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH)
-                .with(Either.right(at("abc123", "main").withBehindBase(3)));
+        PullRequestPopup shown = PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(at("abc123", "main").withBehindBase(3)), 0);
 
-        String same = screen(shown.with(Either.right(at("abc123", "main"))));
-        String pushed = screen(shown.with(Either.right(at("def456", "main"))));
-        String retargeted = screen(shown.with(Either.right(at("abc123", "develop"))));
-        String upToDate = screen(shown.with(Either.right(at("abc123", "main").withBehindBase(0))));
+        String same = screen(shown.with(Either.right(at("abc123", "main")), 0));
+        String pushed = screen(shown.with(Either.right(at("def456", "main")), 0));
+        String retargeted = screen(shown.with(Either.right(at("abc123", "develop")), 0));
+        String upToDate = screen(shown.with(Either.right(at("abc123", "main").withBehindBase(0)), 0));
 
         assertTrue(same.contains("support_rename → main · 3 behind"), same);
         assertFalse(pushed.contains("behind"), pushed);
@@ -461,8 +461,8 @@ class PullRequestDialogTest {
 
     @Test
     void countsOneFileAndOneCommitInTheSingular() throws Exception {
-        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH)
-                .with(Either.right(READY)));
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(READY), 0));
 
         assertTrue(screen.contains("  Changes  +1 −1 in 1 file, 1 commit"), screen);
     }
@@ -492,32 +492,32 @@ class PullRequestDialogTest {
                 READY.reviewers(),
                 READY.checks());
 
-        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH)
-                .with(Either.right(empty)));
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(empty), 0));
 
         assertTrue(screen.contains("  Changes  +0 −0 in 0 files, 0 commits"), screen);
     }
 
     @Test
     void countsNoReviewThreads() throws Exception {
-        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH)
-                .with(Either.right(READY)));
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(READY), 0));
 
         assertTrue(screen.contains("  Threads  0 "), screen);
     }
 
     @Test
     void saysWhenAllReviewThreadsAreResolved() throws Exception {
-        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH)
-                .with(Either.right(readyWith(new ReviewThreads(1, 1, 0, 1)))));
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(readyWith(new ReviewThreads(1, 1, 0, 1))), 0));
 
         assertTrue(screen.contains("  Threads  1 with 1 comment, all resolved"), screen);
     }
 
     @Test
     void doesNotSayAllAreResolvedWhenNotAllThreadsWereRead() throws Exception {
-        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH)
-                .with(Either.right(readyWith(new ReviewThreads(130, 100, 0, 180)))));
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(readyWith(new ReviewThreads(130, 100, 0, 180))), 0));
 
         assertTrue(screen.contains("  Threads  130 with 180 comments "), screen);
         assertFalse(screen.contains("resolved"), screen);
@@ -573,8 +573,8 @@ class PullRequestDialogTest {
                 DETAILS.reviewers(),
                 DETAILS.checks());
 
-        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH)
-                .with(Either.right(wide)));
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(wide), 0));
 
         assertTrue(screen.contains("終わり"), screen);
         assertTrue(screen.contains("    State  Open · Draft"), screen);
@@ -605,8 +605,8 @@ class PullRequestDialogTest {
                 List.empty(),
                 checks);
 
-        String screen = screen(
-                PullRequestPopup.loading(new BranchName("a"), PR, Instant.EPOCH).with(Either.right(details)));
+        String screen = screen(PullRequestPopup.loading(new BranchName("a"), PR, Instant.EPOCH, 0)
+                .with(Either.right(details), 0));
 
         assertTrue(screen.contains("check7"), screen);
         assertFalse(screen.contains("check8"), screen);
@@ -689,8 +689,8 @@ class PullRequestDialogTest {
 
     @Test
     void tellsWhyTheDetailsCouldNotBeRead() throws Exception {
-        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH)
-                .with(Either.left(refused("not logged in"))));
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.left(refused("not logged in")), 0));
 
         assertTrue(screen.contains("Could not read the pull request: not logged in"), screen);
         assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
@@ -723,22 +723,22 @@ class PullRequestDialogTest {
                 List.of("ui"),
                 DETAILS.reviewers(),
                 checks);
-        PullRequestPopup loading = PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH);
+        PullRequestPopup loading = PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0);
 
         int hintLine = hintLine(screen(loading));
 
-        assertEquals(hintLine, hintLine(screen(loading.with(Either.right(DETAILS)))));
-        String fullestScreen = screen(loading.with(Either.right(fullest)));
+        assertEquals(hintLine, hintLine(screen(loading.with(Either.right(DETAILS), 0))));
+        String fullestScreen = screen(loading.with(Either.right(fullest), 0));
         assertEquals(hintLine, hintLine(fullestScreen));
         // The last action still fits under the tallest details.
         assertTrue(fullestScreen.contains("(R) Refresh"), fullestScreen);
-        assertEquals(hintLine, hintLine(screen(loading.with(Either.left(refused("offline"))))));
+        assertEquals(hintLine, hintLine(screen(loading.with(Either.left(refused("offline")), 0))));
     }
 
     @Test
     void listsWhatCanBeDoneWithThePullRequest() throws Exception {
-        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH)
-                .with(Either.right(READY)));
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(READY), 0));
 
         assertTrue(screen.contains("(o) Open in browser"), screen);
         assertTrue(screen.contains("(d) Convert to draft"), screen);
@@ -751,8 +751,8 @@ class PullRequestDialogTest {
     @Test
     void lettersMergeOrCloseAPullRequestThatIsReady() throws Exception {
         Model model = TestModels.loaded()
-                .openPopup(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH)
-                        .with(Either.right(READY)));
+                .openPopup(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                        .with(Either.right(READY), 0));
         try (ToolkitTestRunner runner = start(model)) {
             for (char key : new char[] {'d', 'm', 's', 'r', 'x', 'o'}) {
                 SettledPilot.of(runner).press(key);
@@ -773,8 +773,8 @@ class PullRequestDialogTest {
 
     @Test
     void aDraftCanBeMarkedReadyOrClosedButNotMergedAndNothingIsDoneBeforeTheDetailsAreRead() throws Exception {
-        PullRequestPopup loading = PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH);
-        for (PullRequestPopup popup : List.of(loading, loading.with(Either.right(DETAILS)))) {
+        PullRequestPopup loading = PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0);
+        for (PullRequestPopup popup : List.of(loading, loading.with(Either.right(DETAILS), 0))) {
             try (ToolkitTestRunner runner = start(TestModels.loaded().openPopup(popup))) {
                 for (char key : new char[] {'d', 'm', 'x'}) {
                     SettledPilot.of(runner).press(key);
@@ -789,8 +789,8 @@ class PullRequestDialogTest {
 
     @Test
     void theCommentsAreWrittenAndViewedOnceTheDetailsAreRead() throws Exception {
-        PullRequestPopup loading = PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH);
-        for (PullRequestPopup popup : List.of(loading, loading.with(Either.right(READY)))) {
+        PullRequestPopup loading = PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0);
+        for (PullRequestPopup popup : List.of(loading, loading.with(Either.right(READY), 0))) {
             try (ToolkitTestRunner runner = start(TestModels.loaded().openPopup(popup))) {
                 for (char key : new char[] {'c', 'v'}) {
                     SettledPilot.of(runner).press(key);
@@ -805,8 +805,8 @@ class PullRequestDialogTest {
     @Test
     void aMergedOrClosedPullRequestIsNeitherChangedMergedNorClosed() throws Exception {
         for (State state : List.of(State.MERGED, State.CLOSED)) {
-            PullRequestPopup popup = PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH)
-                    .with(Either.right(readyIn(state)));
+            PullRequestPopup popup = PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                    .with(Either.right(readyIn(state)), 0);
             try (ToolkitTestRunner runner = start(TestModels.loaded().openPopup(popup))) {
                 for (char key : new char[] {'d', 'm', 's', 'r', 'x'}) {
                     SettledPilot.of(runner).press(key);
@@ -844,8 +844,8 @@ class PullRequestDialogTest {
 
     @Test
     void aDraftOffersToMarkItReadyForReview() throws Exception {
-        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH)
-                .with(Either.right(DETAILS)));
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(DETAILS), 0));
 
         assertTrue(screen.contains("(d) Mark ready for review"), screen);
     }
@@ -853,7 +853,7 @@ class PullRequestDialogTest {
     @Test
     void enterOpensInTheBrowserAndEscapeCloses() throws Exception {
         Model model = TestModels.loaded()
-                .openPopup(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH));
+                .openPopup(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0));
         try (ToolkitTestRunner runner = start(model)) {
             SettledPilot.of(runner).press(KeyCode.ENTER);
             SettledPilot.of(runner).pause();

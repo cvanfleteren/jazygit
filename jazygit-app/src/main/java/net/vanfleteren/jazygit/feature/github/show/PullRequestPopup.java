@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.state.Reading;
  * @param refreshFailed why reading it again failed the last time, so the details shown are stale; nothing once a
  *                      read succeeds
  * @param readAt        when the last read of it started
+ * @param read          the id of the last read of it that it started, which it waits for while it reads (ADR 34)
  */
 public record PullRequestPopup(
         BranchName branch,
@@ -27,32 +28,46 @@ public record PullRequestPopup(
         Option<Either<Failure, PullRequestDetails>> details,
         Reading reading,
         Option<Failure> refreshFailed,
-        Instant readAt)
+        Instant readAt,
+        long read)
         implements ShowsPullRequest {
 
     /**
-     * The popup while its details are being read, from {@code now}.
+     * The popup while its details are being read, from {@code now}, by read {@code read}.
      */
-    public static PullRequestPopup loading(BranchName branch, PullRequest pullRequest, Instant now) {
-        return new PullRequestPopup(branch, pullRequest, Option.none(), Reading.NOT, Option.none(), now);
+    public static PullRequestPopup loading(BranchName branch, PullRequest pullRequest, Instant now, long read) {
+        return new PullRequestPopup(branch, pullRequest, Option.none(), Reading.NOT, Option.none(), now, read);
     }
 
     /**
-     * The popup showing {@code read}: the details, or why reading them failed. Details that were read already
-     * stay shown when reading them again fails, marked stale. How far the base moved on is read apart from the rest
-     * and can fail alone: the count shown stays when the pull request is still open at the same commit on the same
-     * base, where the base can only have moved on further.
+     * The popup showing {@code result}, of read {@code id}: the details, or why reading them failed. Details that
+     * were read already stay shown when reading them again fails, marked stale. How far the base moved on is read
+     * apart from the rest and can fail alone: the count shown stays when the pull request is still open at the same
+     * commit on the same base, where the base can only have moved on further. It still reads when {@code id} is not
+     * the read it waits for.
      */
-    public PullRequestPopup with(Either<Failure, PullRequestDetails> read) {
-        return read.isLeft() && detailsRead()
-                ? new PullRequestPopup(branch, pullRequest, details, Reading.NOT, Option.of(read.getLeft()), readAt)
+    public PullRequestPopup with(Either<Failure, PullRequestDetails> result, long id) {
+        Reading after = id == read ? Reading.NOT : reading;
+        return result.isLeft() && detailsRead()
+                ? new PullRequestPopup(branch, pullRequest, details, after, Option.of(result.getLeft()), readAt, read)
                 : new PullRequestPopup(
                         branch,
                         pullRequest,
-                        Option.of(read.map(this::keepingBehindBase)),
-                        Reading.NOT,
+                        Option.of(result.map(this::keepingBehindBase)),
+                        after,
                         Option.none(),
-                        readAt);
+                        readAt,
+                        read);
+    }
+
+    /**
+     * The popup once read {@code id} came back too late to be taken (ADR 34): what it shows stays, and when that is
+     * the read it waits for, it no longer reads.
+     */
+    PullRequestPopup notTaken(long id) {
+        return id == read
+                ? new PullRequestPopup(branch, pullRequest, details, Reading.NOT, refreshFailed, readAt, read)
+                : this;
     }
 
     private PullRequestDetails keepingBehindBase(PullRequestDetails read) {
@@ -69,29 +84,17 @@ public record PullRequestPopup(
     }
 
     /**
-     * The popup while its details are read again from {@code now}, as {@code reading} tells.
+     * The popup while its details are read again from {@code now} by read {@code id}, as {@code reading} tells.
      */
-    PullRequestPopup readingAgain(Reading reading, Instant now) {
-        return new PullRequestPopup(branch, pullRequest, details, reading, refreshFailed, now);
+    PullRequestPopup readingAgain(Reading reading, Instant now, long id) {
+        return new PullRequestPopup(branch, pullRequest, details, reading, refreshFailed, now, id);
     }
 
     /**
-     * The popup dropping what the read it does by itself brings, as that started before a change it would show
-     * undone; as it is when it does not read by itself.
+     * The popup showing the read it does by itself as one asked for.
      */
-    PullRequestPopup droppingRead() {
-        return reading == Reading.BY_ITSELF
-                ? new PullRequestPopup(branch, pullRequest, details, Reading.DROPPED, refreshFailed, readAt)
-                : this;
-    }
-
-    /**
-     * The popup once the read it dropped came back: it no longer reads, and shows what it did.
-     */
-    PullRequestPopup readDropped() {
-        return reading == Reading.DROPPED
-                ? new PullRequestPopup(branch, pullRequest, details, Reading.NOT, refreshFailed, readAt)
-                : this;
+    PullRequestPopup asked() {
+        return new PullRequestPopup(branch, pullRequest, details, Reading.ASKED, refreshFailed, readAt, read);
     }
 
     /**
@@ -130,7 +133,8 @@ public record PullRequestPopup(
                 details.map(read -> read.map(pr -> pr.withDraft(draft))),
                 reading,
                 refreshFailed,
-                readAt);
+                readAt,
+                read);
     }
 
     /**
