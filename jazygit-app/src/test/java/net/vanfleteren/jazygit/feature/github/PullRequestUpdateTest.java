@@ -1093,6 +1093,27 @@ class PullRequestUpdateTest {
     }
 
     @Test
+    void aDroppedReadThatFailsMarksNothingStaleAndLetsTicksReadAgain() {
+        Model quiet = Update.update(aMinuteOn(showingDetails()), new PullRequestMsg.Tick())
+                .model();
+        Next drafting = Update.update(quiet, new PullRequestMsg.DraftChosen());
+        Model drafted = Update.update(
+                        drafting.model(), ((SetDraft) drafting.cmds().head()).run(env()))
+                .model();
+
+        Model failed = Update.update(drafted, new PullRequestMsg.DetailsFailed(42, refused("gh: offline")))
+                .model();
+
+        PullRequestPopup popup = failed.popup(PullRequestPopup.class).get();
+        assertEquals(Option.none(), popup.refreshFailed());
+        assertEquals(Option.of(true), popup.draft());
+        assertEquals(Reading.NOT, popup.reading());
+        assertEquals(
+                List.of(new LoadPullRequestDetails(42)),
+                Update.update(aMinuteOn(failed), new PullRequestMsg.Tick()).cmds());
+    }
+
+    @Test
     void refreshingWaitsWhileAReadToBeDroppedRuns() {
         Model quiet = Update.update(aMinuteOn(showingDetails()), new PullRequestMsg.Tick())
                 .model();
