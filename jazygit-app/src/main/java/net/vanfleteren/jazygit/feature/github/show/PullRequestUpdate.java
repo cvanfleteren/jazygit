@@ -37,9 +37,12 @@ public final class PullRequestUpdate {
                 Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
             // The branches pane shows the pull request as it was just read too, also when the dialog is closed.
             // How long its checks take is learned from them too (ADR 32).
-            // A read dropped as it started before a draft change would show that change undone, here and on the branch.
+            // A read dropped as it started before a draft change would show that change undone, here and on the branch,
+            // also once the dialog was closed meanwhile; failing, it says nothing of the pull request since.
             case PullRequestMsg.DetailsLoaded(int number, var details)
-            when dropped(model, number) -> Next.of(shown(model, number, Either.right(details)));
+            when dropped(model, number) -> Next.of(droppedRead(model, number));
+            case PullRequestMsg.DetailsFailed(int number, var failure)
+            when dropped(model, number) -> Next.of(droppedRead(model, number));
             case PullRequestMsg.DetailsLoaded(int number, var details) ->
                 CheckTimesUpdate.read(
                         Next.of(shown(
@@ -85,7 +88,7 @@ public final class PullRequestUpdate {
                         .filter(popup -> draftChangeable(model, popup))
                         .flatMap(popup -> popup.draft()
                                 .map(draft -> Update.start(
-                                        model.openPopup(popup.droppingRead()).clearError(),
+                                        droppingRead(model, popup).clearError(),
                                         new SetDraft(
                                                 popup.branch(),
                                                 popup.pullRequest().number(),
@@ -169,12 +172,33 @@ public final class PullRequestUpdate {
     }
 
     /**
-     * Whether the read of pull request {@code number} that comes back is dropped by the dialog that shows it.
+     * {@code model} dropping what the read the pull request {@code popup} does by itself brings, as a change starts
+     * that it would show undone; as it is when it does not read by itself.
+     */
+    private static Model droppingRead(Model model, PullRequestPopup popup) {
+        return popup.reading() == Reading.BY_ITSELF
+                ? model.openPopup(popup.droppingRead())
+                        .mapGitHub(gitHub -> gitHub.withDropping(
+                                gitHub.dropping().add(popup.pullRequest().number())))
+                : model;
+    }
+
+    /**
+     * Whether the read of pull request {@code number} that comes back is dropped.
      */
     private static boolean dropped(Model model, int number) {
-        return model.popup(ShowsPullRequest.class)
-                .filter(popup -> popup.number() == number)
-                .exists(popup -> popup.pullRequestPopup().reading() == Reading.DROPPED);
+        return model.gitHub().dropping().contains(number);
+    }
+
+    /**
+     * {@code model} once the dropped read of pull request {@code number} came back: no longer dropping its reads, and
+     * the dialog that shows it, if one does, no longer reading.
+     */
+    private static Model droppedRead(Model model, int number) {
+        return mapShown(
+                model.mapGitHub(gitHub -> gitHub.withDropping(gitHub.dropping().remove(number))),
+                number,
+                PullRequestPopup::readDropped);
     }
 
     private static boolean busy(Model model, PullRequestPopup popup) {

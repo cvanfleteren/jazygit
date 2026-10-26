@@ -27,6 +27,7 @@ import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PendingChecks;
+import net.vanfleteren.jazygit.state.Reading;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.CheckRows;
 import net.vanfleteren.jazygit.ui.CheckTimesText;
@@ -34,6 +35,7 @@ import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.TextWidth;
 import net.vanfleteren.jazygit.ui.Theme;
+import net.vanfleteren.jazygit.ui.TimeText;
 import org.junit.jupiter.api.Test;
 
 class ChecksDialogTest {
@@ -87,6 +89,32 @@ class ChecksDialogTest {
 
     private static ChecksPopup read(List<Check> checks) {
         return LOADING.with(Either.right(new PendingChecks("owner/repo", HashMap.of(new BranchName("main"), checks))));
+    }
+
+    @Test
+    void whileReadAgainAsAskedTheTitleShowsASpinner() throws Exception {
+        ChecksPopup shown = read(List.of(check("verify", Checks.PENDING, 30, Option.none())));
+
+        assertTrue(screen(shown.readingAgain(Reading.ASKED, NOW))
+                .contains("Checks of main " + TimeText.spinnerFrame(NOW)));
+    }
+
+    @Test
+    void whileReadAgainByItselfTheTitleShowsNoSpinner() throws Exception {
+        String screen = screen(read(List.of(check("verify", Checks.PENDING, 30, Option.none())))
+                .readingAgain(Reading.BY_ITSELF, NOW));
+
+        assertTrue(screen.contains("Checks of main"), screen);
+        assertFalse(screen.contains("Checks of main " + TimeText.spinnerFrame(NOW)), screen);
+    }
+
+    @Test
+    void aReadByItselfThatFailsMarksTheChecksStale() throws Exception {
+        String screen = screen(read(List.of(check("verify", Checks.PENDING, 30, Option.none())))
+                .readingAgain(Reading.BY_ITSELF, NOW)
+                .with(Either.left(refused("offline"))));
+
+        assertTrue(screen.contains("Checks of main · not up to date"), screen);
     }
 
     @Test

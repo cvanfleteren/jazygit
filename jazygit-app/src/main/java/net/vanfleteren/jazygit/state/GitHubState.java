@@ -35,6 +35,9 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
  *                            told which repository it is (ADR 32)
  * @param pendingChecks       the checks one by one, with their timing, of the branches on GitHub whose checks are
  *                            pending; none until they were read once (ADR 32)
+ * @param dropping            the pull requests, by number, whose read that runs is dropped when it comes back, as it
+ *                            started before a change it would show undone; kept apart from the dialog, which can be
+ *                            closed meanwhile (ADR 34)
  */
 @With
 public record GitHubState(
@@ -45,7 +48,8 @@ public record GitHubState(
         Set<Cmd> again,
         Map<Integer, PullRequestMerge> merges,
         Option<CheckTimes> checkTimes,
-        Option<PendingChecks> pendingChecks) {
+        Option<PendingChecks> pendingChecks,
+        Set<Integer> dropping) {
 
     public static final GitHubState NOT_READ = new GitHubState(
             Option.none(),
@@ -55,7 +59,8 @@ public record GitHubState(
             HashSet.empty(),
             HashMap.empty(),
             Option.none(),
-            Option.none());
+            Option.none(),
+            HashSet.empty());
 
     /**
      * How the latest merge that merges pull request {@code number} went, or is going: the merge of it, or of one

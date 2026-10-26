@@ -1004,9 +1004,6 @@ class PullRequestUpdateTest {
     }
 
     /**
-     * The pull request of the feature branch shown, with its details read.
-     */
-    /**
      * {@code model} a minute after the pull request was read, when it is read again by itself also with its checks
      * done (ADR 34).
      */
@@ -1062,14 +1059,19 @@ class PullRequestUpdateTest {
                 Reading.DROPPED,
                 drafting.model().popup(PullRequestPopup.class).get().reading());
 
-        // The quiet read started before the change, and comes back after it, with how it was before.
-        Model drafted = Update.update(drafting.model(), cmd.run(env())).model();
-        PullRequestPopup popup = Update.update(drafted, new PullRequestMsg.DetailsLoaded(42, before))
-                .model()
-                .popup(PullRequestPopup.class)
-                .get();
+        // The quiet read started before the change, and comes back after it, with how it was before; the pull
+        // requests read again after the change list it as a draft.
+        Model drafted = Update.update(
+                        Update.update(drafting.model(), cmd.run(env())).model(),
+                        new PullRequestsMsg.Loaded(
+                                List.of(new PullRequest(42, "feature", true, Checks.PASSING, Review.APPROVED))))
+                .model();
+        Model dropped = Update.update(drafted, new PullRequestMsg.DetailsLoaded(42, before))
+                .model();
+        PullRequestPopup popup = dropped.popup(PullRequestPopup.class).get();
         assertEquals(Option.of(true), popup.draft());
         assertEquals(Reading.NOT, popup.reading());
+        assertEquals(drafted.gitHub().pullRequests(), dropped.gitHub().pullRequests());
     }
 
     @Test
@@ -1083,7 +1085,8 @@ class PullRequestUpdateTest {
         // The quiet read comes back while the change still runs, with the branch busy.
         Model dropped = Update.update(drafting.model(), new PullRequestMsg.DetailsLoaded(42, before.withDraft(true)))
                 .model();
-        assertEquals(drafting.model().gitHub(), dropped.gitHub());
+        assertEquals(drafting.model().gitHub().pullRequests(), dropped.gitHub().pullRequests());
+        assertTrue(dropped.gitHub().dropping().isEmpty());
         assertEquals(Reading.NOT, dropped.popup(PullRequestPopup.class).get().reading());
 
         Model drafted = Update.update(dropped, ((SetDraft) drafting.cmds().head()).run(env()))
@@ -1133,6 +1136,110 @@ class PullRequestUpdateTest {
                         .popup(PullRequestPopup.class));
     }
 
+    /**
+     * {@code details} with one check that runs, of a commit status, which is not timed.
+     */
+    private static PullRequestDetails withARunningCheck(PullRequestDetails details) {
+        return new PullRequestDetails(
+                details.number(),
+                details.title(),
+                details.author(),
+                details.state(),
+                details.draft(),
+                details.headBranch(),
+                details.baseBranch(),
+                details.createdAt(),
+                details.pushedAt(),
+                details.additions(),
+                details.deletions(),
+                details.changedFiles(),
+                details.commits(),
+                details.mergeable(),
+                details.review(),
+                details.comments(),
+                details.reviewThreads(),
+                details.labels(),
+                details.reviewers(),
+                List.of(new PullRequestDetails.Check("ci/status", Checks.PENDING)),
+                details.head(),
+                details.stack(),
+                details.behindBase(),
+                details.repository());
+    }
+
+    @Test
+    void whileACheckIsNotDoneATickReadsTheDetailsAgainTenSecondsOn() {
+        Model shown =
+                Update.update(withPr(), new PullRequestMsg.Requested(FEATURE)).model();
+        Model running = Update.update(
+                        shown,
+                        new PullRequestMsg.DetailsLoaded(
+                                42,
+                                withARunningCheck(StubGitHub.empty()
+                                        .pullRequestDetails(42)
+                                        .get())))
+                .model();
+
+        assertEquals(
+                List.of(new LoadPullRequestDetails(42)),
+                Update.update(running.withNow(running.now().plusSeconds(10)), new PullRequestMsg.Tick())
+                        .cmds());
+    }
+
+    @Test
+    void afterAReadFailedTheDetailsAreReadAgainEveryMinuteOnly() {
+        Model shown =
+                Update.update(withPr(), new PullRequestMsg.Requested(FEATURE)).model();
+        Model running = Update.update(
+                        shown,
+                        new PullRequestMsg.DetailsLoaded(
+                                42,
+                                withARunningCheck(StubGitHub.empty()
+                                        .pullRequestDetails(42)
+                                        .get())))
+                .model();
+        Model reading = Update.update(running.withNow(running.now().plusSeconds(10)), new PullRequestMsg.Tick())
+                .model();
+        Model failed = Update.update(reading, new PullRequestMsg.DetailsFailed(42, refused("gh: offline")))
+                .model();
+
+        assertEquals(
+                List.empty(),
+                Update.update(failed.withNow(failed.now().plusSeconds(10)), new PullRequestMsg.Tick())
+                        .cmds());
+        assertEquals(
+                List.of(new LoadPullRequestDetails(42)),
+                Update.update(aMinuteOn(failed), new PullRequestMsg.Tick()).cmds());
+    }
+
+    @Test
+    void aReadDroppedAfterTheDialogWasClosedLeavesTheBranchesAsTheyWere() {
+        Model quiet = Update.update(aMinuteOn(showingDetails()), new PullRequestMsg.Tick())
+                .model();
+        PullRequestDetails before =
+                quiet.popup(PullRequestPopup.class).get().details().get().get();
+        Next drafting = Update.update(quiet, new PullRequestMsg.DraftChosen());
+        Model drafted = Update.update(
+                        drafting.model(), ((SetDraft) drafting.cmds().head()).run(env()))
+                .model();
+        Model closed = Update.update(drafted, new PullRequestMsg.InfoClosed()).model();
+        // The pull requests read again after the change list it as a draft.
+        Model listed = Update.update(
+                        closed,
+                        new PullRequestsMsg.Loaded(
+                                List.of(new PullRequest(42, "feature", true, Checks.PASSING, Review.APPROVED))))
+                .model();
+
+        Model dropped = Update.update(listed, new PullRequestMsg.DetailsLoaded(42, before))
+                .model();
+
+        assertEquals(listed.gitHub().pullRequests(), dropped.gitHub().pullRequests());
+        assertTrue(dropped.gitHub().dropping().isEmpty());
+    }
+
+    /**
+     * The pull request of the feature branch shown, with its details read.
+     */
     private static Model showingDetails() {
         Model shown =
                 Update.update(withPr(), new PullRequestMsg.Requested(FEATURE)).model();

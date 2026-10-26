@@ -73,11 +73,14 @@ public record ChecksPopup(
     }
 
     /**
-     * Whether the checks are due to be read again by themselves at {@code now}: one of them is not done, or the last
-     * read started {@link CheckTimings#READ_WHEN_DONE} ago or more (ADR 34).
+     * Whether the checks are due to be read again by themselves at {@code now}: one of them is not done, as far as the
+     * last read that did not fail tells, or the last read started {@link CheckTimings#READ_WHEN_DONE} ago or more.
+     * After a read failed, the checks shown are stale, so they are read every minute, as ADR 19 has a failing read do
+     * (ADR 34).
      */
     public boolean dueByItself(Instant now) {
-        return checksRead().exists(check -> !check.done()) || !now.isBefore(readAt.plus(CheckTimings.READ_WHEN_DONE));
+        return refreshFailed.isEmpty() && checksRead().exists(check -> !check.done())
+                || !now.isBefore(readAt.plus(CheckTimings.READ_WHEN_DONE));
     }
 
     /**

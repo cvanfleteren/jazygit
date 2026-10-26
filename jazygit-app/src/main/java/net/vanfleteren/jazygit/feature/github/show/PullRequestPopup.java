@@ -39,24 +39,20 @@ public record PullRequestPopup(
 
     /**
      * The popup showing {@code read}: the details, or why reading them failed. Details that were read already
-     * stay shown when reading them again fails, marked stale. A read that is dropped changes nothing but that it is
-     * done. How far the base moved on is read apart from the rest
+     * stay shown when reading them again fails, marked stale. How far the base moved on is read apart from the rest
      * and can fail alone: the count shown stays when the pull request is still open at the same commit on the same
      * base, where the base can only have moved on further.
      */
     public PullRequestPopup with(Either<Failure, PullRequestDetails> read) {
-        return reading == Reading.DROPPED
-                ? new PullRequestPopup(branch, pullRequest, details, Reading.NOT, refreshFailed, readAt)
-                : read.isLeft() && detailsRead()
-                        ? new PullRequestPopup(
-                                branch, pullRequest, details, Reading.NOT, Option.of(read.getLeft()), readAt)
-                        : new PullRequestPopup(
-                                branch,
-                                pullRequest,
-                                Option.of(read.map(this::keepingBehindBase)),
-                                Reading.NOT,
-                                Option.none(),
-                                readAt);
+        return read.isLeft() && detailsRead()
+                ? new PullRequestPopup(branch, pullRequest, details, Reading.NOT, Option.of(read.getLeft()), readAt)
+                : new PullRequestPopup(
+                        branch,
+                        pullRequest,
+                        Option.of(read.map(this::keepingBehindBase)),
+                        Reading.NOT,
+                        Option.none(),
+                        readAt);
     }
 
     private PullRequestDetails keepingBehindBase(PullRequestDetails read) {
@@ -90,6 +86,15 @@ public record PullRequestPopup(
     }
 
     /**
+     * The popup once the read it dropped came back: it no longer reads, and shows what it did.
+     */
+    PullRequestPopup readDropped() {
+        return reading == Reading.DROPPED
+                ? new PullRequestPopup(branch, pullRequest, details, Reading.NOT, refreshFailed, readAt)
+                : this;
+    }
+
+    /**
      * Whether its details are read again, while they stay shown.
      */
     public boolean refreshing() {
@@ -104,11 +109,14 @@ public record PullRequestPopup(
     }
 
     /**
-     * Whether its details are due to be read again by themselves at {@code now}: one of its checks is not done, or
-     * the last read started {@link CheckTimings#READ_WHEN_DONE} ago or more (ADR 34).
+     * Whether its details are due to be read again by themselves at {@code now}: one of its checks is not done, as far
+     * as the last read that did not fail tells, or the last read started {@link CheckTimings#READ_WHEN_DONE} ago or
+     * more. After a read failed, the details shown are stale, so they are read every minute, as ADR 19 has a failing
+     * read do (ADR 34).
      */
     public boolean dueByItself(Instant now) {
-        return readDetails().exists(read -> read.checks().exists(check -> !check.done()))
+        return refreshFailed.isEmpty()
+                        && readDetails().exists(read -> read.checks().exists(check -> !check.done()))
                 || !now.isBefore(readAt.plus(CheckTimings.READ_WHEN_DONE));
     }
 

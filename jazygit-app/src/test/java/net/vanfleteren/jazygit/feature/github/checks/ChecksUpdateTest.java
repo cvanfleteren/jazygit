@@ -240,6 +240,25 @@ class ChecksUpdateTest {
     }
 
     @Test
+    void afterAReadFailedTheyAreReadAgainEveryMinuteOnly() {
+        Model read =
+                Update.update(shown(), new ChecksMsg.Loaded(FEATURE, RUNNING)).model();
+        Model reading = Update.update(read.withNow(Instant.EPOCH.plusSeconds(10)), new ChecksMsg.Tick())
+                .model();
+        Model failed = Update.update(reading, new ChecksMsg.Failed(FEATURE, refused("offline")))
+                .model();
+
+        assertEquals(
+                List.empty(),
+                Update.update(failed.withNow(Instant.EPOCH.plusSeconds(20)), new ChecksMsg.Tick())
+                        .cmds());
+        assertEquals(
+                List.of(new LoadChecks(FEATURE)),
+                Update.update(failed.withNow(Instant.EPOCH.plusSeconds(70)), new ChecksMsg.Tick())
+                        .cmds());
+    }
+
+    @Test
     void refreshingWhileTheyAreReadByThemselvesShowsThatReadAsAsked() {
         Model read =
                 Update.update(shown(), new ChecksMsg.Loaded(FEATURE, RUNNING)).model();
