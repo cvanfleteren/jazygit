@@ -3,7 +3,10 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.concurrent.Executor;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd;
 import net.vanfleteren.jazygit.feature.commit.MessageEdited;
 import net.vanfleteren.jazygit.feature.commit.MessagePopup;
@@ -12,6 +15,7 @@ import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.ui.ErrorText;
 
 /**
@@ -35,7 +39,36 @@ public final class TestModels {
     public static final List<Commit> FEATURE_COMMITS =
             List.of(Fixtures.commit(new Sha("ffff"), "Ada", "ada@example.com", Instant.EPOCH, "Feature", ""));
 
+    // The time of the programs started without one: it stands still.
+    private static final Clock STILL = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC);
+
     private TestModels() {}
+
+    /**
+     * The program over {@code env}, started with the default settings at a time that stands still, telling no one
+     * about bugs, changes to the model or the app stopping.
+     */
+    public static Program program(Env env, Executor io, Executor background, Executor ui) {
+        return program(env, io, background, ui, () -> {});
+    }
+
+    /**
+     * As above, telling {@code modelChanged} whenever the model draws differently.
+     */
+    public static Program program(Env env, Executor io, Executor background, Executor ui, Runnable modelChanged) {
+        return Program.start(
+                env,
+                SettingsStore.Loaded.DEFAULT,
+                Option.none(),
+                Landing.START,
+                io,
+                background,
+                ui,
+                bug -> {},
+                modelChanged,
+                () -> {},
+                STILL);
+    }
 
     /**
      * A model with the sample status, branches and commits loaded and nothing running.
@@ -48,7 +81,7 @@ public final class TestModels {
      * The model after all of the provider's data has been loaded.
      */
     public static Model loaded(GitInfoProvider provider) {
-        return Program.start(new Env(provider, StubGitHub.empty()), Runnable::run, Runnable::run, Runnable::run)
+        return program(new Env(provider, StubGitHub.empty()), Runnable::run, Runnable::run, Runnable::run)
                 .model();
     }
 
@@ -56,8 +89,7 @@ public final class TestModels {
      * The model after all of the provider's data, and the log of {@code branch}, has been loaded.
      */
     public static Model loaded(GitInfoProvider provider, String branch) {
-        Program program =
-                Program.start(new Env(provider, StubGitHub.empty()), Runnable::run, Runnable::run, Runnable::run);
+        Program program = program(new Env(provider, StubGitHub.empty()), Runnable::run, Runnable::run, Runnable::run);
         program.dispatch(new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName(branch))));
         return program.model();
     }
@@ -140,8 +172,7 @@ public final class TestModels {
      * The model after all of the provider's data, and the diff of {@code files}, has been loaded.
      */
     public static Model withFilesSelected(GitInfoProvider provider, io.vavr.collection.List<FileEntry> files) {
-        Program program =
-                Program.start(new Env(provider, StubGitHub.empty()), Runnable::run, Runnable::run, Runnable::run);
+        Program program = program(new Env(provider, StubGitHub.empty()), Runnable::run, Runnable::run, Runnable::run);
         program.dispatch(new SelectionMsg.FilesSelected(files));
         return program.model();
     }

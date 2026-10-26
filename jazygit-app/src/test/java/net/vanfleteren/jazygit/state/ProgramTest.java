@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import static net.vanfleteren.jazygit.state.TestModels.errorText;
+import static net.vanfleteren.jazygit.state.TestModels.program;
 import static net.vanfleteren.jazygit.state.TestModels.refused;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -261,8 +262,7 @@ class ProgramTest {
     private final Queue<Runnable> io = new ArrayDeque<>();
     private final Queue<Runnable> ui = new ArrayDeque<>();
     private final Queue<Runnable> background = new ArrayDeque<>();
-    private final Program program =
-            Program.start(new Env(provider, StubGitHub.empty()), io::add, background::add, ui::add);
+    private final Program program = program(new Env(provider, StubGitHub.empty()), io::add, background::add, ui::add);
 
     @Test
     void initialLoadFillsTheModel() {
@@ -281,15 +281,11 @@ class ProgramTest {
     @Test
     void aMessageThatChangesTheModelSaysSoAndOneThatDoesNotSaysNothing() {
         AtomicInteger changes = new AtomicInteger();
-        Program told = Program.start(
+        Program told = program(
                 new Env(provider, StubGitHub.empty()),
-                SettingsStore.Loaded.DEFAULT,
-                Option.none(),
-                Landing.START,
                 Runnable::run,
                 Runnable::run,
                 Runnable::run,
-                bug -> {},
                 changes::incrementAndGet);
         told.dispatch(new Msg.Focused("commits", false));
         int focused = changes.get();
@@ -305,16 +301,8 @@ class ProgramTest {
     void loadsThatBringNothingNewDoNotSayTheModelChanged() {
         AtomicInteger changes = new AtomicInteger();
         Queue<Runnable> queued = new ArrayDeque<>();
-        Program told = Program.start(
-                new Env(provider, StubGitHub.empty()),
-                SettingsStore.Loaded.DEFAULT,
-                Option.none(),
-                Landing.START,
-                queued::add,
-                queued::add,
-                queued::add,
-                bug -> {},
-                changes::incrementAndGet);
+        Program told = program(
+                new Env(provider, StubGitHub.empty()), queued::add, queued::add, queued::add, changes::incrementAndGet);
         told.dispatch(new Msg.Tick());
         drain(queued);
         int loaded = changes.get();
@@ -794,7 +782,7 @@ class ProgramTest {
         ExecutorService background = Executors.newFixedThreadPool(2);
         try {
             // The messages the commands answer with are not handled: only which commands ran counts.
-            Program guarding = Program.start(new Env(provider, StubGitHub.empty()), io, background, task -> {});
+            Program guarding = program(new Env(provider, StubGitHub.empty()), io, background, task -> {});
             java.util.List<String> ran = new CopyOnWriteArrayList<>();
             CountDownLatch fetched = new CountDownLatch(1);
             CountDownLatch done = new CountDownLatch(0);
@@ -823,7 +811,7 @@ class ProgramTest {
         ExecutorService io = Executors.newSingleThreadExecutor();
         ExecutorService background = Executors.newFixedThreadPool(2);
         try {
-            Program guarding = Program.start(new Env(provider, StubGitHub.empty()), io, background, task -> {});
+            Program guarding = program(new Env(provider, StubGitHub.empty()), io, background, task -> {});
             java.util.List<String> ran = new CopyOnWriteArrayList<>();
             CountDownLatch fetched = new CountDownLatch(1);
             Option<Cmd.Guard> remoteRefs = Option.of(Cmd.Guard.REMOTE_REFS);
