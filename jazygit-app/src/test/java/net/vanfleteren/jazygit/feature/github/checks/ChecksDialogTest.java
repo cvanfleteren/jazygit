@@ -85,6 +85,44 @@ class ChecksDialogTest {
     }
 
     @Test
+    void aLongNameIsCutToLeaveRoomForTheTimingAtTheBorder() throws Exception {
+        String longName = "x".repeat(80);
+        String screen = screen(read(List.of(check(longName, Checks.PASSING, 300, Option.of(60)))));
+
+        // 78 columns: the symbol takes 2, a space 1, the name 71 of which the last is the ellipsis, then 2 and "1m".
+        assertFalse(screen.contains("x".repeat(71)), screen);
+        assertTrue(screen.contains("✅ " + "x".repeat(70) + "…  1m│"), screen);
+    }
+
+    @Test
+    void aLongNameOfACheckNotTimedIsCutAtTheBorder() throws Exception {
+        String longName = "y".repeat(90);
+        String screen = screen(read(List.of(new Check(longName, Checks.PASSING))));
+
+        assertFalse(screen.contains(longName), screen);
+        // 78 columns: the symbol takes 2, a space 1, so the name keeps 75 of which the last is the ellipsis.
+        assertTrue(screen.contains("✅ " + "y".repeat(74) + "…│"), screen);
+    }
+
+    @Test
+    void theTimingsKeepTheirColumnWhenTheWidestIsScrolledOutOfView() throws Exception {
+        // checka failed after 10m, the widest; the 16 others passed after 1m.
+        ChecksPopup popup = read(List.range(0, 17)
+                .map(i -> i == 0
+                        ? check("checka", Checks.FAILING, 900, Option.of(600))
+                        : check("check" + (char) ('a' + i), Checks.PASSING, 300, Option.of(60))));
+        Model model = TestModels.loaded().withNow(NOW).openPopup(popup);
+
+        String top = screen(model);
+        String scrolled = screen(model.withListCursor(ListCursor.START.at(1)));
+
+        assertTrue(top.contains("checka" + " ".repeat(53) + "failed after 10m│"), top);
+        assertTrue(top.contains("checkb" + " ".repeat(67) + "1m│"), top);
+        assertFalse(scrolled.contains("checka"), scrolled);
+        assertTrue(scrolled.contains("checkb" + " ".repeat(67) + "1m│"), scrolled);
+    }
+
+    @Test
     void manyChecksScrollFromTheLineOfTheListCursor() throws Exception {
         Model model = TestModels.loaded().withNow(NOW).openPopup(many());
 

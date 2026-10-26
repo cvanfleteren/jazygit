@@ -41,7 +41,7 @@ public final class ChecksDialog implements PopupView {
 
     private static final int WIDTH = 80;
     // The columns inside the border, which the checks take to line up how they are doing on the right.
-    private static final int CONTENT_WIDTH = WIDTH - 2;
+    private static final int CONTENT_WIDTH = DialogFrame.contentWidth(WIDTH);
     // The checks listed at once; the others are scrolled to.
     private static final int VISIBLE_CHECKS = 16;
     // The counts, a blank line and the checks. The dialog is always this high, so it keeps its size when they arrive.

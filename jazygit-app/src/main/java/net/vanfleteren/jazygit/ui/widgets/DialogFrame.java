@@ -28,7 +28,18 @@ public final class DialogFrame {
      */
     public static final int FRAME = 2 + 2;
 
+    // The columns the border takes, on both sides together.
+    private static final int BORDER = 2;
+
     private DialogFrame() {}
+
+    /**
+     * The columns inside the border of a popup {@code width} wide, which is what content that fills its width has
+     * to draw in: the padding takes none of them sideways, so it is {@link #FRAME} that is too wide for this.
+     */
+    public static int contentWidth(int width) {
+        return width - BORDER;
+    }
 
     /**
      * {@code text}, wrapped at the content width of a popup {@code width} wide, and cut after {@code maxLines}.
