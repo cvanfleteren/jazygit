@@ -13,7 +13,7 @@ import net.vanfleteren.jazygit.ui.TextWidth;
 import net.vanfleteren.jazygit.ui.Theme;
 
 /**
- * The frame every popup is drawn in: a rounded border with the title, padding, and optionally a dimmed hint
+ * The frame every popup is drawn in: a rounded border with the title, and optionally a dimmed hint
  * about the keys under the content.
  */
 public final class DialogFrame {
@@ -24,11 +24,19 @@ public final class DialogFrame {
     public static final int LIST_WIDTH = 40;
 
     /**
-     * The columns the border and the padding take, on both sides together.
+     * The columns the border takes, on both sides together. There is no padding sideways: the content is drawn right
+     * inside the border.
      */
-    public static final int FRAME = 2 + 2;
+    public static final int FRAME = 2;
 
     private DialogFrame() {}
+
+    /**
+     * The columns inside the border of a popup {@code width} wide, which content that fills its width draws in.
+     */
+    public static int contentWidth(int width) {
+        return width - FRAME;
+    }
 
     /**
      * {@code text}, wrapped at the content width of a popup {@code width} wide, and cut after {@code maxLines}.
@@ -45,14 +53,14 @@ public final class DialogFrame {
      * The lines {@link #wrapped} takes.
      */
     public static int wrappedHeight(String text, int width, int maxLines) {
-        return TextWidth.lines(text, width - FRAME, maxLines);
+        return TextWidth.lines(text, contentWidth(width), maxLines);
     }
 
     /**
      * A popup showing {@code content}.
      */
     public static DialogElement of(String title, int width, Element... content) {
-        return dialog(title, content).rounded().width(width).padding(1);
+        return dialog(title, content).rounded().width(width);
     }
 
     /**
