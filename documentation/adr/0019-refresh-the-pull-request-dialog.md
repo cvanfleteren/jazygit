@@ -47,4 +47,5 @@ waiting that second.
 - No error is raised: a failing tick would raise one every minute.
 
 Amended by ADR 34: the dialog is told to read again every 10s, and reads while a check is not done or a minute
-after its last read; only a read asked for with `R` shows a spinner in the title.
+after its last read; only a read asked for with `R` shows a spinner in the title. A draft can be changed while it
+reads by itself, and what that read brings is then dropped.

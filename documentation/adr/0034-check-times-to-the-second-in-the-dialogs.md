@@ -26,14 +26,18 @@ how they are drawn, and how often the dialogs read.
 ### Shown
 
 - In the checks popup and the pull request dialog, every time, how long a check runs or took and how long it is
-  expected to take still, is rounded to the nearest 5s: `45s`, `2m 5s`, `2m`. A time that rounds to 5m or more is
-  rounded to the nearest minute, as it was: `7m`, `1h 5m`. Not: seconds on every time, which a long one does not
-  need. Not: seconds only on how long a check runs, as that is exact and an estimate is not: the `~` says the
-  estimate is rough, and both moving on together is what shows that something happens.
+  expected to take still, is shown to 5s under 5m: `45s`, `2m 5s`, `2m`; from 5m on in whole minutes, as it was:
+  `7m`, `1h 5m`. Not: seconds on every time, which a long one does not need. Not: seconds only on how long a check
+  runs, as that is exact and an estimate is not: the `~` says the estimate is rough, and both moving on together is
+  what shows that something happens.
+- How long a check runs or took is rounded down, as it was, like a clock that counts up: a check that has run 7m 40s
+  shows `running 7m`, not `8m`, which it has not run yet. Under 5s it shows `<5s`, as the branches pane shows
+  `<1m`: `running <5s`. How long it is expected to take still is rounded to the nearest step, as it was.
 - Not padded: `2m 5s`, not `2m 05s`, as a duration and not a clock. The column the checks popup lines the times up
   in can grow by a column once a minute.
-- A check past its estimate but not overdue yet shows `due`: `running 2m 30s · due`, and the checks together
-  `done any moment`. Not: `<1m left`, which comes after `~5s left` and would count up again; nor `~5s left`, which
+- A check whose estimate rounds to no time left, or is past, but which is not overdue yet, shows `due`:
+  `running 2m 30s · due`, and the checks together `done any moment`. So `~5s left` is followed by `due`, never
+  `~0s left`. Not: `<1m left`, which comes after `~5s left` and would count up again; nor `~5s left`, which
   would stand still for a minute.
 - The branches pane keeps whole minutes, `~4m`, `<1m` and `late`, as ADR 32 has it: it has no room for seconds, and
   is read once a minute.
@@ -44,9 +48,13 @@ how they are drawn, and how often the dialogs read.
 
 - The checks popup and the pull request dialog are each told every 10s to read again (`ChecksMsg.Tick`,
   `PullRequestMsg.Tick`), not every minute. A tick reads when no read runs and a check is not done, or when the last
-  read started a minute or more ago (`model.now()`): a check just done shows within 10s, and once all are done the
+  read started a minute ago or more (`model.now()`): a check just done shows within 10s, and once all are done the
   dialog is read every minute, for a re-run, a push, or a review. Not: a second timer of 10s next to the one of a
   minute, which would leave the minute as a rule no test could see.
+- The minute is counted with half a tick to spare: a tick reads once `now - readAt` is 55s or more. The time a
+  message is handled is exact (ADR 33), so the tick a minute after the one that read can come a few ms short of the
+  minute, and the read would slip to the tick after, 70s. Not: counting ticks since the last read, which is one more
+  thing to keep.
 - Each popup keeps when its last read started (`readAt`): set when it opens and whenever it reads again, by `R` too.
 - The pull request dialog reads all its details as before, two `gh api graphql` calls, as the checks are part of
   them. Not: its checks alone every 10s and the rest every minute, a second read of the same checks.
@@ -60,6 +68,13 @@ how they are drawn, and how often the dialogs read.
   as it does every command (ADR 33). Not: a spinner in the title every 10s.
 - Each popup keeps how it reads in place of `refreshing`: not, by itself, or asked for. When a read by itself
   fails, the title says the details are stale as before.
+- `R` while the dialog reads by itself does not start a second read: the read that runs becomes one asked for, and
+  the spinner shows. Not: `R` disabled for a second every 10s, with nothing to say why.
+- Turning the pull request into a draft, or marking it ready, stays possible while the dialog reads by itself. The
+  read that runs then may have started before the change, and come back with how it was before (ADR 19), so the
+  popup drops what that read brings: the change already shows, and the next tick reads it. While it is read as
+  asked, or first read, the change waits as before. Not: the change disabled for a second every 10s, with nothing to
+  say why; nor taking what such a read brings, which would show the change undone.
 
 ## Consequences
 
@@ -67,6 +82,8 @@ how they are drawn, and how often the dialogs read.
   `readAt`, and the quiet reads.
 - Up to six times as many calls while a dialog is open on checks that are not done.
 - The bottom line shows a read of the checks for about a second every 10s while one is not done.
-- Tested: the rounding to 5s and to minutes, `due` and `done any moment`, the minutes kept in the branches pane;
-  when a tick reads, for checks that are and are not done and around the minute; that only `R` and the first read
-  show the spinner, and that a read by itself that fails marks the details stale.
+- Tested: how long down and what is left to the nearest, to 5s and to minutes, `<5s`, `due` past `~5s left` and
+  `done any moment`, the minutes kept in the branches pane; when a tick reads, for checks that are and are not done,
+  and a tick that comes a few ms short of the minute; that only `R` and the first read show the spinner, `R` during
+  a read by itself, and that a read by itself that fails marks the details stale; a draft changed while the dialog
+  reads by itself, with what that read brings dropped.
