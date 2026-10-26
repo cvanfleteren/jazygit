@@ -50,7 +50,9 @@ how they are drawn, and how often the dialogs read.
   `PullRequestMsg.Tick`), not every minute. A tick reads only when no read runs, and then when a check is not done,
   or when the last read started a minute ago or more (`model.now()`): a check just done shows within 10s, and once
   all are done the dialog is read every minute, for a re-run, a push, or a review. A read that hangs gets no second
-  one next to it. Not: a second timer of 10s next to the one of a
+  one next to it. After a read failed, the checks shown are stale and say nothing of what still runs, so the dialog
+  reads every minute, as ADR 19 has a failing tick do, until a read succeeds: not 360 failing calls an hour while
+  offline, or more while GraphQL refuses for its rate. Not: a second timer of 10s next to the one of a
   minute, which would leave the minute as a rule no test could see.
 - The minute is counted with half a tick to spare: a tick reads once `now - readAt` is 55s or more. The time a
   message is handled is exact (ADR 33), so the tick a minute after the one that read can come a few ms short of the
@@ -74,7 +76,9 @@ how they are drawn, and how often the dialogs read.
 - Turning the pull request into a draft, or marking it ready, stays possible while the dialog reads by itself. The
   read that runs then may have started before the change, and come back with how it was before (ADR 19), before or
   after the change is done (`DraftSet`). So choosing the change marks that read to be dropped: a fourth way of
-  reading, by itself but dropped (`Reading.DROPPED`). When it comes back, all of it is dropped: the dialog, and the
+  reading, by itself but dropped (`Reading.DROPPED`). That the read of the pull request is to be dropped is also
+  kept apart from the dialog, by its number (`GitHubState`), so it is dropped when the dialog was closed meanwhile, or
+  opened again. When it comes back, all of it is dropped: the dialog, and the
   pull request the branches pane lists (`GitHubState.withRead`), keep how they were, and nothing is learned from its
   checks. A dropped read that fails is dropped too, and does not mark the details stale: it says nothing of the pull
   request as it is since the change. Either way the dialog no longer reads, so ticks read again. The change shows
@@ -96,8 +100,8 @@ how they are drawn, and how often the dialogs read.
 - The bottom line shows a read of the checks for about a second every 10s while one is not done.
 - Tested: how long down and what is left to the nearest, to 5s and to minutes, `<5s`, `due` past `~5s left` and
   `done any moment`, the minutes kept in the branches pane; when a tick reads, for checks that are and are not done,
-  and a tick that comes a few ms short of the minute; that only `R` and the first read show the spinner, `R` during
+  and a tick that comes a few ms short of the minute, and every minute only after a read failed; that only `R` and the first read show the spinner, `R` during
   a read by itself, and that a read by itself that fails marks the details stale; a draft changed while the dialog
   reads by itself, with that read coming back before and after the change is done, dropped from the dialog and the
-  branches pane alike, and a dropped read that fails, which marks nothing stale and lets ticks read again; `R` while
+  branches pane alike, also once the dialog was closed, and a dropped read that fails, which marks nothing stale and lets ticks read again; `R` while
   a read to be dropped runs.
