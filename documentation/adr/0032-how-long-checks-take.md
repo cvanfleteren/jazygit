@@ -162,5 +162,6 @@ are constants next to each other in one class, not settings, so they can become 
   when the file cannot be written. The parsing of the new fields and the top-up, the dialog's lines, the branches
   pane and the popup are tested too. The acceptance tests run without GitHub, so none shows an estimate.
 
-Amended by ADR 34: the checks popup and the pull request dialog show how long a check runs to 5s, its estimate to
-5s under 5m, and `due` past it; they read every 10s while a check is not done. The branches pane keeps whole minutes.
+Amended by ADR 34: the checks popup and the pull request dialog show how long a check runs to 5s under an hour, its
+estimate to 5s under 5m, and `due` past it; they read every 10s while a check is not done. The branches pane keeps
+whole minutes. Every time of an hour or more is written `1h 5m`, or `1h`, in the branches pane too.
