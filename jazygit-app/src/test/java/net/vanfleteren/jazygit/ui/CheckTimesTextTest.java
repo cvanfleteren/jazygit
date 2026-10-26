@@ -105,8 +105,20 @@ class CheckTimesTextTest {
     @Test
     void aQueuedCheckCanBeDue() {
         assertEquals(
-                "queued · due",
+                "queued 2m · due",
                 CheckTimesText.of(check(Option.none()), new Eta.Expected(NOW.minusSeconds(10)), false, NOW));
+    }
+
+    @Test
+    void aQueuedCheckSaysHowLongSinceItsRunWasCreatedOnlyOfAFirstAttempt() {
+        Check rerun = new Check(
+                "verify",
+                Checks.PENDING,
+                Option.of(new CheckRun(
+                        1, "Build", "", Option.none(), Option.none(), 1, NOW.minusSeconds(200), 2, "push")));
+
+        assertEquals("queued 2m · ? left", CheckTimesText.of(check(Option.none()), new Eta.Unknown(), false, NOW));
+        assertEquals("queued · ? left", CheckTimesText.of(rerun, new Eta.Unknown(), false, NOW));
     }
 
     /**

@@ -125,7 +125,7 @@ public final class CheckTimesText {
 
     /**
      * How {@code check}, which is not done, is doing at {@code now}, with {@code eta}: "running 2m · ~2m 5s left",
-     * "queued · ~4m left", "running 2m 30s · due", "running 3m · overdue"; only "running" for a commit status, which
+     * "queued 1m 30s · ~4m left", "running 2m 30s · due", "running 3m · overdue"; only "running" for a commit status, which
      * is not timed.
      */
     public static String of(Check check, Eta eta, boolean learning, Instant now) {
@@ -133,7 +133,7 @@ public final class CheckTimesText {
             return Messages.get("checks.running");
         }
         String state = check.queued()
-                ? Messages.get("checks.queued")
+                ? queued(check, now)
                 : check.run()
                         .flatMap(CheckRun::startedAt)
                         .map(started -> Messages.get("checks.runningFor", duration(Duration.between(started, now))))
@@ -146,6 +146,17 @@ public final class CheckTimesText {
             case Eta.Done done -> "";
         };
         return left.isEmpty() ? state : state + " · " + left;
+    }
+
+    /**
+     * How long {@code check}, which is queued, has been queued at {@code now}: since its workflow run was created,
+     * "queued 3m 20s"; only "queued" for a re-run, as GitHub does not say when an attempt started (ADR 35).
+     */
+    private static String queued(Check check, Instant now) {
+        return check.run()
+                .filter(run -> run.runAttempt() == 1)
+                .map(run -> Messages.get("checks.queuedFor", duration(Duration.between(run.runCreatedAt(), now))))
+                .getOrElse(() -> Messages.get("checks.queued"));
     }
 
     private static String unknown(boolean learning) {
