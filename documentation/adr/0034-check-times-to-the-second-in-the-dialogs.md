@@ -76,7 +76,11 @@ how they are drawn, and how often the dialogs read.
   after the change is done (`DraftSet`). So choosing the change marks that read to be dropped: a fourth way of
   reading, by itself but dropped (`Reading.DROPPED`). When it comes back, all of it is dropped: the dialog, and the
   pull request the branches pane lists (`GitHubState.withRead`), keep how they were, and nothing is learned from its
-  checks; the change shows once it is done, and the next tick reads it. While it is read as asked, or first read,
+  checks. A dropped read that fails is dropped too, and does not mark the details stale: it says nothing of the pull
+  request as it is since the change. Either way the dialog no longer reads, so ticks read again. The change shows
+  once it is done, and a later tick reads it: the next one while a check is not done, else within a minute of when
+  the dropped read started (`readAt`). Not: reading at once after a dropped read, which would take `readAt` set
+  back, for a change that already shows. While it is read as asked, or first read,
   the change waits as before. Not: the change disabled for a second every 10s, with nothing to say why; nor taking
   what such a read brings, which would show the change undone; nor telling the read apart by the branch being busy,
   which it no longer is when the read comes back after the change.
@@ -95,4 +99,5 @@ how they are drawn, and how often the dialogs read.
   and a tick that comes a few ms short of the minute; that only `R` and the first read show the spinner, `R` during
   a read by itself, and that a read by itself that fails marks the details stale; a draft changed while the dialog
   reads by itself, with that read coming back before and after the change is done, dropped from the dialog and the
-  branches pane alike; `R` while a read to be dropped runs.
+  branches pane alike, and a dropped read that fails, which marks nothing stale and lets ticks read again; `R` while
+  a read to be dropped runs.
