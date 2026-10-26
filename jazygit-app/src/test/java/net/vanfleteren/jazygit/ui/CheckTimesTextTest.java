@@ -31,8 +31,13 @@ class CheckTimesTextTest {
     void howLongDownToFiveSecondsAlsoFromFiveMinutesOn() {
         assertEquals("5m", CheckTimesText.duration(Duration.ofSeconds(300)));
         assertEquals("7m 40s", CheckTimesText.duration(Duration.ofSeconds(7 * 60 + 41)));
-        assertEquals("1h 5m", CheckTimesText.duration(Duration.ofSeconds(65 * 60 + 4)));
-        assertEquals("1h 5m 55s", CheckTimesText.duration(Duration.ofSeconds(65 * 60 + 59)));
+        assertEquals("59m 55s", CheckTimesText.duration(Duration.ofSeconds(3599)));
+    }
+
+    @Test
+    void howLongDownToTheMinuteFromAnHourOn() {
+        assertEquals("1h 0m", CheckTimesText.duration(Duration.ofSeconds(3600)));
+        assertEquals("1h 5m", CheckTimesText.duration(Duration.ofSeconds(65 * 60 + 59)));
     }
 
     @Test
