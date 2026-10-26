@@ -9,49 +9,81 @@ import net.vanfleteren.jazygit.gh.timing.Eta;
 import net.vanfleteren.jazygit.i18n.Messages;
 
 /**
- * How long checks have run and are expected to take still (ADR 32), in whole minutes: the clock moves in steps of 5s
- * and GitHub's times are not on it, so seconds would stutter.
+ * How long checks have run and are expected to take still (ADR 32): in the dialogs to the nearest 5s while that is
+ * under 5m, else to the nearest minute (ADR 34); in the branches pane, which has no room for seconds, in whole minutes.
  */
 public final class CheckTimesText {
+
+    // From how long on a time in a dialog is rounded to the minute, not to 5s.
+    private static final long TO_THE_SECOND = Duration.ofMinutes(5).toSeconds();
 
     private CheckTimesText() {}
 
     /**
-     * How long it is since {@code since}: {@code <1m}, {@code 2m}, {@code 1h 5m}.
+     * How long it is since {@code since}, in a dialog: {@code 45s}, {@code 2m}, {@code 2m 5s}, to the nearest 5s; from
+     * 5m on to the nearest minute, {@code 7m}, {@code 1h 5m}.
      */
     public static String duration(Duration since) {
-        long minutes = Math.max(0, since.toMinutes());
-        return minutes == 0
-                ? Messages.get("checks.underAMinute")
-                : minutes < 60
-                        ? Messages.get("checks.minutes", String.valueOf(minutes))
-                        : Messages.get("checks.hours", String.valueOf(minutes / 60), String.valueOf(minutes % 60));
+        long seconds = Math.max(0, Math.round(since.toSeconds() / 5.0) * 5);
+        return seconds >= TO_THE_SECOND
+                ? minutes(Math.round(since.toSeconds() / 60.0))
+                : seconds < 60
+                        ? Messages.get("checks.seconds", String.valueOf(seconds))
+                        : seconds % 60 == 0
+                                ? minutes(seconds / 60)
+                                : Messages.get(
+                                        "checks.minutesSeconds",
+                                        String.valueOf(seconds / 60),
+                                        String.valueOf(seconds % 60));
     }
 
     /**
-     * How long something is expected to take still, {@code left}: {@code ~3m}, to the nearest minute, or
-     * {@code <1m}, also once it is past.
+     * How long something is expected to take still, {@code left}, in a dialog, rounded as {@link #duration}:
+     * {@code ~45s}, {@code ~2m 5s}, {@code ~7m}. Only when it is not {@link #due}.
      */
     public static String left(Duration left) {
-        long minutes = Math.round(left.toSeconds() / 60.0);
+        return Messages.get("checks.about", duration(left));
+    }
+
+    /**
+     * Whether what is expected to take {@code left} still, in a dialog, should be done by now: it rounds to no time
+     * left, or is past.
+     */
+    private static boolean due(Duration left) {
+        return Math.round(left.toSeconds() / 5.0) <= 0;
+    }
+
+    /**
+     * How long something is expected to take still, {@code left}, in the branches pane: {@code ~3m}, to the nearest
+     * minute, or {@code <1m}, also once it is past.
+     */
+    private static String leftInMinutes(Duration left) {
         return left.toSeconds() < 60
                 ? Messages.get("checks.underAMinute")
-                : Messages.get("checks.about", duration(Duration.ofMinutes(minutes)));
+                : Messages.get("checks.about", minutes(Math.round(left.toSeconds() / 60.0)));
+    }
+
+    /**
+     * {@code minutes}, one or more: {@code 2m}, {@code 1h 5m}.
+     */
+    private static String minutes(long minutes) {
+        return minutes < 60
+                ? Messages.get("checks.minutes", String.valueOf(minutes))
+                : Messages.get("checks.hours", String.valueOf(minutes / 60), String.valueOf(minutes % 60));
     }
 
     /**
      * How the checks of a commit are expected to be done together, {@code eta}, at {@code now}: "done in ~3m",
-     * "done in ?", or "…" for the estimate while the checks that ran lately are read; nothing when they are done.
+     * "done any moment" once that is due, "done in ?", or "…" for the estimate while the checks that ran lately are
+     * read; nothing when they are done.
      */
     public static Option<String> together(Eta eta, boolean learning, Instant now) {
         return switch (eta) {
             case Eta.Done done -> Option.none();
             case Eta.Unknown unknown -> Option.of(Messages.get("checks.doneIn", unknown(learning)));
-            case Eta.Expected expected ->
-                Option.of(
-                        expected.overdue(now)
-                                ? Messages.get("checks.longerThanUsual")
-                                : Messages.get("checks.doneIn", left(expected.left(now))));
+            case Eta.Expected expected when expected.overdue(now) -> Option.of(Messages.get("checks.longerThanUsual"));
+            case Eta.Expected expected when due(expected.left(now)) -> Option.of(Messages.get("checks.doneAnyMoment"));
+            case Eta.Expected expected -> Option.of(Messages.get("checks.doneIn", left(expected.left(now))));
         };
     }
 
@@ -65,13 +97,14 @@ public final class CheckTimesText {
             case Eta.Done done -> Option.none();
             case Eta.Unknown unknown -> Option.of(unknown(learning));
             case Eta.Expected expected ->
-                Option.of(expected.overdue(now) ? Messages.get("checks.late") : left(expected.left(now)));
+                Option.of(expected.overdue(now) ? Messages.get("checks.late") : leftInMinutes(expected.left(now)));
         };
     }
 
     /**
-     * How {@code check}, which is not done, is doing at {@code now}, with {@code eta}: "running 2m · ~2m left",
-     * "queued · ~4m left", "running 3m · overdue"; only "running" for a commit status, which is not timed.
+     * How {@code check}, which is not done, is doing at {@code now}, with {@code eta}: "running 2m · ~2m 5s left",
+     * "queued · ~4m left", "running 2m 30s · due", "running 3m · overdue"; only "running" for a commit status, which
+     * is not timed.
      */
     public static String of(Check check, Eta eta, boolean learning, Instant now) {
         if (check.run().isEmpty()) {
@@ -85,6 +118,7 @@ public final class CheckTimesText {
                         .getOrElse(() -> Messages.get("checks.running"));
         String left = switch (eta) {
             case Eta.Expected expected when expected.overdue(now) -> Messages.get("checks.overdue");
+            case Eta.Expected expected when due(expected.left(now)) -> Messages.get("checks.due");
             case Eta.Expected expected -> Messages.get("checks.left", left(expected.left(now)));
             case Eta.Unknown u -> Messages.get("checks.left", unknown(learning));
             case Eta.Done done -> "";

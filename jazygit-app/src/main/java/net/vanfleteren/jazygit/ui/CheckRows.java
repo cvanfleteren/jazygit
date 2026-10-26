@@ -86,9 +86,9 @@ public final class CheckRows {
 
     /**
      * {@code check}, one of the checks {@code all} of a commit: its symbol and its name, and for one that is not done
-     * how it is doing, dimmed: {@code ⏳ acceptance  running 2m · ~2m left}; a queued one is dimmed all along, as its
+     * how it is doing, dimmed: {@code ⏳ acceptance  running 2m 30s · ~1m 5s left}; a queued one is dimmed all along, as its
      * emoji ignores dimming. One that is done shows how long it took when {@code took}: {@code ✅ verify  2m},
-     * {@code ❌ lint  failed after 1m}.
+     * {@code ❌ lint  failed after 1m 30s}.
      */
     public static List<StyledElement<?>> row(
             Check check, List<Check> all, Option<CheckTimes> times, Instant now, int nameWidth, boolean took) {
