@@ -165,3 +165,6 @@ are constants next to each other in one class, not settings, so they can become 
 Amended by ADR 34: the checks popup and the pull request dialog show how long a check runs to 5s under an hour, its
 estimate to 5s under 5m, and `due` past it; they read every 10s while a check is not done. The branches pane keeps
 whole minutes. Every time of an hour or more is written `1h 5m`, or `1h`, in the branches pane too.
+
+Amended by ADR 36: a workflow run also waits for the checks its history says it has and that GitHub has not made
+yet, like a job that `needs` others, while one of its checks is not done.
