@@ -38,17 +38,26 @@ public final class FetchLine {
      * The line for {@code model} at {@code now}, the time the frame is drawn, on a screen {@code width} columns wide.
      */
     public static StyledElement<?> render(Model model, Instant now, int width) {
-        TextElement left = text(model.repoView()
+        String cherryPick = model.repoView()
                 .cherryPick()
                 .map(commit -> Messages.get("status.cherryPick", commit.shortSha()))
-                .getOrElse(""));
+                .getOrElse("");
         String fresh = freshness(model);
         String freshText = working(model, now).isDefined() && !fresh.isEmpty() ? SEPARATOR + fresh : fresh;
         List<StyledElement<?>> right = working(model, now)
                 .map(work -> {
                     String spinner = TimeText.spinnerFrame(now) + " ";
+                    String more = work.more() > 0 ? " " + Messages.get("work.more", String.valueOf(work.more())) : "";
+                    // Only the label is cut: the cherry-pick, how many more run and how fresh the screen is stay whole.
                     String label = TextWidth.cut(
-                            work, width - TextWidth.of(spinner) - TextWidth.of(freshText) - TextWidth.of(SEPARATOR));
+                                    work.label(),
+                                    width
+                                            - TextWidth.of(cherryPick)
+                                            - TextWidth.of(spinner)
+                                            - TextWidth.of(more)
+                                            - TextWidth.of(freshText)
+                                            - TextWidth.of(SEPARATOR))
+                            + more;
                     return List.<StyledElement<?>>of(
                             text(spinner).addClass(Theme.Classes.SPINNER).length(TextWidth.of(spinner)),
                             text(label).addClass(Theme.Classes.DIM).length(TextWidth.of(label)));
@@ -57,6 +66,7 @@ public final class FetchLine {
                 .appendAll(Option.when(
                         !freshText.isEmpty(),
                         () -> text(freshText).addClass(Theme.Classes.DIM).length(TextWidth.of(freshText))));
+        TextElement left = text(cherryPick);
         return right.isEmpty() ? left : row(right.prepend(left.fill()).toJavaArray(StyledElement[]::new));
     }
 
@@ -75,7 +85,7 @@ public final class FetchLine {
      * What runs at {@code now}: the command that ran longest of those that show, and how many more show; else what
      * lingers. Nothing while no command shows.
      */
-    static Option<String> working(Model model, Instant now) {
+    static Option<Working> working(Model model, Instant now) {
         List<Jobs.Running> shown = model.jobs()
                 .running()
                 .toList()
@@ -84,12 +94,11 @@ public final class FetchLine {
                 .filter(running -> running.shown(now))
                 .sortBy(Jobs.Running::started);
         return shown.headOption()
-                .map(first -> labelText(first.label())
-                        + (shown.size() > 1 ? " " + Messages.get("work.more", String.valueOf(shown.size() - 1)) : ""))
+                .map(first -> new Working(labelText(first.label()), shown.size() - 1))
                 .orElse(() -> model.jobs()
                         .lingering()
                         .filter(lingering -> now.isBefore(lingering.until()))
-                        .map(lingering -> labelText(lingering.label())));
+                        .map(lingering -> new Working(labelText(lingering.label()), 0)));
     }
 
     /**
@@ -123,4 +132,9 @@ public final class FetchLine {
                 .flatMap(part -> part)
                 .mkString(SEPARATOR);
     }
+
+    /**
+     * What runs: the text of the label of one command, and how many more show.
+     */
+    record Working(String label, int more) {}
 }

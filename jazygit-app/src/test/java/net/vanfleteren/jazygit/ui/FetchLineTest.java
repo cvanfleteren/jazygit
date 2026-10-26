@@ -8,6 +8,10 @@ import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.fetch.FetchCmd;
+import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd;
+import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Freshness;
 import net.vanfleteren.jazygit.state.Jobs;
@@ -27,7 +31,7 @@ class FetchLineTest {
 
     private static String rendered(Model model, Instant now, int width) throws Exception {
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> FetchLine.render(model, now, width))) {
-            return RenderedText.of(runner, () -> FetchLine.render(model, now, width))
+            return RenderedText.ofSize(runner, () -> FetchLine.render(model, now, width), width, 1)
                     .strip();
         }
     }
@@ -122,12 +126,58 @@ class FetchLineTest {
     }
 
     @Test
+    void theCherryPickKeepsTheLeftAndOnlyTheLabelIsCut() throws Exception {
+        Instant now = START.plusSeconds(1);
+        Commit copied = TestModels.FEATURE_COMMITS.head();
+        Model model = running(
+                TestModels.loaded()
+                        .withNow(now)
+                        .mapRepoView(view -> view.withCherryPick(Option.of(copied)))
+                        .mapJobs(
+                                jobs -> jobs.withLastFetch(Freshness.NEVER.succeeded("origin", now.minusSeconds(120)))),
+                new FetchCmd.Fetch("origin"),
+                START);
+        String cherryPick = "Copied " + copied.shortSha()
+                + " to cherry-pick · V to cherry-pick onto the checked out branch · Esc to cancel";
+        String spinner = TimeText.spinnerFrame(now) + " ";
+        String fresh = " · fetched 2m ago";
+
+        assertEquals(
+                cherryPick + "   " + spinner + "Fe…" + fresh,
+                rendered(model, now, TextWidth.of(cherryPick + "   " + spinner + "Fe…" + fresh)));
+    }
+
+    @Test
+    void howManyMoreRunIsKeptWholeAsTheLabelIsCut() throws Exception {
+        Instant now = START.plusSeconds(1);
+        Model model = running(
+                running(TestModels.loaded(), new FetchCmd.Fetch("origin"), START),
+                new Cmd.LoadStatus(),
+                START.plusMillis(100));
+        String spinner = TimeText.spinnerFrame(now) + " ";
+
+        assertEquals(spinner + "Fe… +1", rendered(model, now, TextWidth.of(" · " + spinner + "Fe… +1")));
+    }
+
+    @Test
     void theLabelsOfCommandsAndOperations() {
         assertEquals("Working…", FetchLine.labelText(Label.WORKING));
         assertEquals(
                 "Fetching origin",
                 FetchLine.labelText(new FetchCmd.Fetch("origin").label().get()));
         assertEquals("Reading pull request #12345", FetchLine.labelText(Label.of("work.pullRequest", "12345")));
+        BranchName feature = new BranchName("feature");
+        BranchRef base = new BranchRef.Local(new BranchName("main"));
+        assertEquals(
+                "Reading the title of feature",
+                FetchLine.labelText(new CreatePullRequestCmd.ReadTitle(feature, feature, List.empty(), base)
+                        .label()
+                        .get()));
+        assertEquals(
+                "Reading the title of feature",
+                FetchLine.labelText(new CreatePullRequestCmd.RereadTitle(feature, new BranchName("main"), base)
+                        .label()
+                        .get()));
         assertEquals(
                 "Push feature", FetchLine.labelText(Label.of("work.operation", Label.of("log.title.push"), "feature")));
     }

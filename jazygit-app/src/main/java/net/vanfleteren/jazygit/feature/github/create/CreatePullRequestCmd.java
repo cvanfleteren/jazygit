@@ -116,6 +116,11 @@ public sealed interface CreatePullRequestCmd extends Cmd {
             implements CreatePullRequestCmd {
 
         @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.title", branch.value()));
+        }
+
+        @Override
         public Msg run(Env env) {
             return read(firstSubject(env, branch, baseRef));
         }
@@ -138,7 +143,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
 
         @Override
         public Option<Label> label() {
-            return Option.of(Label.of("work.base", branch.value()));
+            return Option.of(Label.of("work.title", branch.value()));
         }
 
         @Override
