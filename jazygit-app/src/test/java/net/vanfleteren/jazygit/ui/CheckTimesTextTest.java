@@ -13,20 +13,22 @@ class CheckTimesTextTest {
     private static final Instant NOW = Instant.parse("2026-10-25T10:00:00Z");
 
     @Test
-    void howLongInWholeMinutes() {
-        assertEquals("<1m", CheckTimesText.duration(Duration.ofSeconds(59)));
-        assertEquals("1m", CheckTimesText.duration(Duration.ofSeconds(119)));
+    void howLongToTheNearestFiveSeconds() {
+        assertEquals("0s", CheckTimesText.duration(Duration.ofSeconds(2)));
+        assertEquals("5s", CheckTimesText.duration(Duration.ofSeconds(3)));
+        assertEquals("1m", CheckTimesText.duration(Duration.ofSeconds(59)));
+        assertEquals("1m 55s", CheckTimesText.duration(Duration.ofSeconds(117)));
         assertEquals("59m", CheckTimesText.duration(Duration.ofMinutes(59)));
         assertEquals("1h 5m", CheckTimesText.duration(Duration.ofMinutes(65)));
-        assertEquals("<1m", CheckTimesText.duration(Duration.ofSeconds(-5)));
+        assertEquals("0s", CheckTimesText.duration(Duration.ofSeconds(-5)));
     }
 
     @Test
-    void howLongStillToTheNearestMinute() {
-        assertEquals("<1m", CheckTimesText.left(Duration.ofSeconds(59)));
-        assertEquals("<1m", CheckTimesText.left(Duration.ofSeconds(-30)));
-        assertEquals("~1m", CheckTimesText.left(Duration.ofSeconds(89)));
-        assertEquals("~2m", CheckTimesText.left(Duration.ofSeconds(90)));
+    void howLongStillToTheNearestFiveSeconds() {
+        assertEquals("<5s", CheckTimesText.left(Duration.ofSeconds(2)));
+        assertEquals("<5s", CheckTimesText.left(Duration.ofSeconds(-30)));
+        assertEquals("~5s", CheckTimesText.left(Duration.ofSeconds(3)));
+        assertEquals("~1m 30s", CheckTimesText.left(Duration.ofSeconds(89)));
     }
 
     @Test
@@ -46,7 +48,7 @@ class CheckTimesTextTest {
         assertEquals(
                 Option.of("done in ~3m"), CheckTimesText.together(new Eta.Expected(NOW.plusSeconds(180)), false, NOW));
         assertEquals(
-                Option.of("done in <1m"), CheckTimesText.together(new Eta.Expected(NOW.minusSeconds(60)), false, NOW));
+                Option.of("done in <5s"), CheckTimesText.together(new Eta.Expected(NOW.minusSeconds(60)), false, NOW));
         assertEquals(
                 Option.of("taking longer than usual"),
                 CheckTimesText.together(new Eta.Expected(NOW.minusSeconds(61)), false, NOW));

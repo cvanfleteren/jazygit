@@ -9,34 +9,37 @@ import net.vanfleteren.jazygit.gh.timing.Eta;
 import net.vanfleteren.jazygit.i18n.Messages;
 
 /**
- * How long checks have run and are expected to take still (ADR 32), in whole minutes: the clock moves in steps of 5s
- * and GitHub's times are not on it, so seconds would stutter.
+ * How long checks have run and are expected to take still (ADR 32), in seconds rounded to the nearest 5: the clock moves
+ * in steps of 5s.
  */
 public final class CheckTimesText {
 
     private CheckTimesText() {}
 
     /**
-     * How long it is since {@code since}: {@code <1m}, {@code 2m}, {@code 1h 5m}.
+     * How long it is since {@code since}, to the nearest 5s: {@code 0s}, {@code 45s}, {@code 2m}, {@code 2m 5s}, {@code 1h 5m}.
      */
     public static String duration(Duration since) {
-        long minutes = Math.max(0, since.toMinutes());
+        long seconds = Math.max(0, Math.round(since.toSeconds() / 5.0) * 5);
+        long minutes = seconds / 60;
         return minutes == 0
-                ? Messages.get("checks.underAMinute")
-                : minutes < 60
-                        ? Messages.get("checks.minutes", String.valueOf(minutes))
-                        : Messages.get("checks.hours", String.valueOf(minutes / 60), String.valueOf(minutes % 60));
+                ? Messages.get("checks.seconds", String.valueOf(seconds))
+                : minutes < 60 && seconds % 60 != 0
+                        ? Messages.get("checks.minutesSeconds", String.valueOf(minutes), String.valueOf(seconds % 60))
+                        : minutes < 60
+                                ? Messages.get("checks.minutes", String.valueOf(minutes))
+                                : Messages.get(
+                                        "checks.hours", String.valueOf(minutes / 60), String.valueOf(minutes % 60));
     }
 
     /**
-     * How long something is expected to take still, {@code left}: {@code ~3m}, to the nearest minute, or
-     * {@code <1m}, also once it is past.
+     * How long something is expected to take still, {@code left}: {@code ~2m 5s}, to the nearest 5s, or
+     * {@code <5s}, also once it is past.
      */
     public static String left(Duration left) {
-        long minutes = Math.round(left.toSeconds() / 60.0);
-        return left.toSeconds() < 60
-                ? Messages.get("checks.underAMinute")
-                : Messages.get("checks.about", duration(Duration.ofMinutes(minutes)));
+        return Math.round(left.toSeconds() / 5.0) <= 0
+                ? Messages.get("checks.underFiveSeconds")
+                : Messages.get("checks.about", duration(left));
     }
 
     /**
