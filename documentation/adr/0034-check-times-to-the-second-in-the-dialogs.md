@@ -101,9 +101,10 @@ how they are drawn, and how often the dialogs read.
 - Up to six times as many calls while a dialog is open on checks that are not done.
 - The bottom line shows a read of the checks for about a second every 10s while one is not done.
 - Tested: how long down to 5s at any length, and what is left to the nearest, to 5s and to the minute from 5m on,
-  `<5s`, `due` past `~5s left` and `done any moment`, the minutes kept in the branches pane; when a tick reads, for checks that are and are not done,
-  and a tick that comes a few ms short of the minute, and every minute only after a read failed; that only `R` and the first read show the spinner, `R` during
-  a read by itself, and that a read by itself that fails marks the details stale; a draft changed while the dialog
-  reads by itself, with that read coming back before and after the change is done, dropped from the dialog and the
-  branches pane alike, also once the dialog was closed, and a dropped read that fails, which marks nothing stale and lets ticks read again; `R` while
-  a read to be dropped runs.
+  `<5s`, `due` past `~5s left` and `done any moment`, the minutes kept in the branches pane; when a tick reads, for
+  checks that are and are not done, and a tick that comes a few ms short of the minute, and every minute only after a
+  read failed; that only `R` and the first read show the spinner, `R` during a read by itself, and that a read by
+  itself that fails marks the details stale; a draft changed while the dialog reads by itself, with that read coming
+  back before and after the change is done, dropped from the dialog and the branches pane alike, also once the dialog
+  was closed, and a dropped read that fails, which marks nothing stale and lets ticks read again; `R` while a read to
+  be dropped runs.
