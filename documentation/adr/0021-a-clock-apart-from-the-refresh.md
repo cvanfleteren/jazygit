@@ -45,3 +45,6 @@ minutes, next to "last fetch failed". A branch committed to 37s ago says no more
 
 Amended by ADR 22: how long ago the remotes were fetched, or the pull requests read, counts in steps of 10s
 under a minute.
+
+The clock every 5s and the rounding to it are replaced by ADR 33: the model is told the exact time with every
+message, a clock every second, and the view rounds.

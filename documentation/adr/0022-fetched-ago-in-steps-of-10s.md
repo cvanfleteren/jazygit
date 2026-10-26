@@ -34,3 +34,6 @@ was fetched is anywhere, so now and then a fetch lands where that happens.
   time on the model (`withNow`).
 - Right after switching to another repository, the time is told once off the 5s beat of the clock, until the next
   clock. A fetch done in those 5s is timed off the beat too, and can stutter until the next fetch, a minute on.
+
+The rounding to whole clocks is replaced by ADR 33: the model is told the exact time, and `readAgo` rounds down to
+steps of 10s from it.
