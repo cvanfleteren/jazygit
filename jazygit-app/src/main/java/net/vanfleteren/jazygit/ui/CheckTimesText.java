@@ -9,8 +9,9 @@ import net.vanfleteren.jazygit.gh.timing.Eta;
 import net.vanfleteren.jazygit.i18n.Messages;
 
 /**
- * How long checks have run and are expected to take still (ADR 32): in the dialogs to the nearest 5s while that is
- * under 5m, else to the nearest minute (ADR 34); in the branches pane, which has no room for seconds, in whole minutes.
+ * How long checks have run and are expected to take still (ADR 32): in the dialogs to 5s while that is under 5m, else
+ * in minutes, how long rounded down and what is left to the nearest (ADR 34); in the branches pane, which has no room
+ * for seconds, in whole minutes.
  */
 public final class CheckTimesText {
 

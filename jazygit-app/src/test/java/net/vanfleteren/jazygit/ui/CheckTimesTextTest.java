@@ -5,6 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.CheckRun;
+import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.gh.timing.Eta;
 import org.junit.jupiter.api.Test;
 
@@ -70,5 +73,39 @@ class CheckTimesTextTest {
         assertEquals(
                 Option.of("taking longer than usual"),
                 CheckTimesText.together(new Eta.Expected(NOW.minusSeconds(61)), false, NOW));
+    }
+
+    @Test
+    void howACheckIsDoingAroundWhenItIsDue() {
+        Check running = check(Option.of(NOW.minusSeconds(90)));
+
+        assertEquals(
+                "running 1m 30s · ~5s left",
+                CheckTimesText.of(running, new Eta.Expected(NOW.plusSeconds(3)), false, NOW));
+        assertEquals(
+                "running 1m 30s · due", CheckTimesText.of(running, new Eta.Expected(NOW.plusSeconds(2)), false, NOW));
+        // Still due within the grace of a minute, overdue after it.
+        assertEquals(
+                "running 1m 30s · due", CheckTimesText.of(running, new Eta.Expected(NOW.minusSeconds(60)), false, NOW));
+        assertEquals(
+                "running 1m 30s · overdue",
+                CheckTimesText.of(running, new Eta.Expected(NOW.minusSeconds(61)), false, NOW));
+    }
+
+    @Test
+    void aQueuedCheckCanBeDue() {
+        assertEquals(
+                "queued · due",
+                CheckTimesText.of(check(Option.none()), new Eta.Expected(NOW.minusSeconds(10)), false, NOW));
+    }
+
+    /**
+     * A check of an Actions run that is not done, which started at {@code started}, or is queued without.
+     */
+    private static Check check(Option<Instant> started) {
+        return new Check(
+                "verify",
+                Checks.PENDING,
+                Option.of(new CheckRun(1, "Build", "", started, Option.none(), 1, NOW.minusSeconds(120), 1, "push")));
     }
 }
