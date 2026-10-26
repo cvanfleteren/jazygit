@@ -108,13 +108,6 @@ public record PullRequestPopup(
     }
 
     /**
-     * Whether its details can be read again: once the first read is done, and no other is running.
-     */
-    public boolean refreshable() {
-        return details.isDefined() && !refreshing();
-    }
-
-    /**
      * Whether its details are due to be read again by themselves at {@code now}: one of its checks is not done, as far
      * as the last read that did not fail tells, or the last read started {@link CheckTimings#READ_WHEN_DONE} ago or
      * more. After a read failed, the details shown are stale, so they are read every minute, as ADR 19 has a failing

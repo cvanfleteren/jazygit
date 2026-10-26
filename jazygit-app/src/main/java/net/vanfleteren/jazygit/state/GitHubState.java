@@ -117,10 +117,6 @@ public record GitHubState(
     }
 
     /**
-     * This state with the pull request {@code details} are about as they were just read: as it now is, or no
-     * longer listed once it is merged or closed. Unchanged when it is not listed.
-     */
-    /**
      * The state once the read with id {@link #nextRead} was given out.
      */
     public GitHubState withReadGivenOut() {
@@ -150,6 +146,10 @@ public record GitHubState(
         return withReadsFrom(readsFrom.put(number, nextRead));
     }
 
+    /**
+     * This state with the pull request {@code details} are about as they were just read: as it now is, or no
+     * longer listed once it is merged or closed. Unchanged when it is not listed.
+     */
     public GitHubState withRead(PullRequestDetails details) {
         return withPullRequests(pullRequests.map(open -> open.find(listed -> listed._2.number() == details.number())
                 .map(listed -> details.listed().fold(() -> open.remove(listed._1), now -> open.put(listed._1, now)))
