@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state;
 import static net.vanfleteren.jazygit.state.TestModels.errorText;
 import static net.vanfleteren.jazygit.state.TestModels.refused;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
@@ -726,6 +727,38 @@ class ProgramTest {
         assertEquals(java.util.List.of("third", "fourth"), heard);
     }
 
+    @Test
+    void everyCommandRunsUntilItIsDoneWhateverCameOfIt() {
+        settle();
+        java.util.List<String> ran = new ArrayList<>();
+        java.util.List<String> heard = new ArrayList<>();
+
+        program.dispatch(
+                new Asked(List.of(new Latest("first", ran, heard), new Throws(), new Latest("second", ran, heard))));
+        assertEquals(3, program.model().jobs().running().size());
+        settle();
+
+        // The first was skipped, as the second took its slot; the one that threw failed.
+        assertEquals(java.util.List.of("second"), ran);
+        assertEquals(HashMap.empty(), program.model().jobs().running());
+    }
+
+    /**
+     * A command that has a bug.
+     */
+    private record Throws() implements Cmd {
+
+        @Override
+        public Msg run(Env env) {
+            throw new IllegalStateException("bug");
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return new Asked(List.empty());
+        }
+    }
+
     /**
      * Notes in {@code ran} that it ran, then waits for {@code release}; it runs where {@code background} says, and
      * holds {@code guard}, if any.
@@ -834,6 +867,127 @@ class ProgramTest {
         settleWithout(io);
         assertEquals(HashSet.empty(), program.model().gitHub().reading());
         assertEquals(Option.of(HashMap.empty()), program.model().gitHub().pullRequests());
+    }
+
+    @Test
+    void theModelIsToldTheTimeOfEachMessageAndDrawsAgainOnlyOnceASecondWentBy() {
+        Instant start = Instant.parse("2026-10-26T10:00:00Z");
+        MovingClock clock = new MovingClock(start);
+        AtomicInteger changes = new AtomicInteger();
+        Queue<Runnable> queued = new ArrayDeque<>();
+        Program timed = Program.start(
+                new Env(provider, StubGitHub.empty()),
+                SettingsStore.Loaded.DEFAULT,
+                Option.none(),
+                Landing.START,
+                queued::add,
+                queued::add,
+                queued::add,
+                bug -> {},
+                changes::incrementAndGet,
+                () -> {},
+                clock);
+        // The first loads run from the start.
+        assertEquals(start, timed.model().now());
+        assertTrue(timed.model().jobs().running().nonEmpty());
+        assertTrue(timed.model()
+                .jobs()
+                .running()
+                .values()
+                .forAll(running -> running.started().equals(start)));
+        drain(queued);
+        int loaded = changes.get();
+
+        clock.at(start.plusMillis(200));
+        timed.dispatch(new Msg.Tick());
+        assertTrue(timed.model().jobs().running().nonEmpty());
+        assertTrue(timed.model()
+                .jobs()
+                .running()
+                .values()
+                .forAll(running -> running.started().equals(start.plusMillis(200))));
+        clock.at(start.plusMillis(700));
+        drain(queued);
+
+        // The loads brought nothing new, and the time moved on within the same second: nothing to draw.
+        assertEquals(loaded, changes.get());
+        assertEquals(start.plusMillis(700), timed.model().now());
+        assertEquals(HashMap.empty(), timed.model().jobs().running());
+
+        clock.at(start.plusMillis(1100));
+        timed.dispatch(new Msg.Clock());
+
+        assertEquals(loaded + 1, changes.get());
+    }
+
+    @Test
+    void aCommandThatIsDoneIsLoggedWithHowLongItRanAndWhatItReported() {
+        Instant start = Instant.parse("2026-10-26T10:00:00Z");
+        MovingClock clock = new MovingClock(start);
+        Queue<Runnable> queued = new ArrayDeque<>();
+        Program timed = Program.start(
+                new Env(provider, StubGitHub.empty()),
+                SettingsStore.Loaded.DEFAULT,
+                Option.none(),
+                Landing.START,
+                queued::add,
+                queued::add,
+                queued::add,
+                bug -> {},
+                () -> {},
+                () -> {},
+                clock);
+        drain(queued);
+        java.util.List<String> heard = new ArrayList<>();
+        Latest latest = new Latest("first", new ArrayList<>(), heard);
+
+        clock.at(start.plusMillis(200));
+        timed.dispatch(new Asked(List.of(latest)));
+        long id = timed.model()
+                .jobs()
+                .running()
+                .find(running -> running._2().cmd() == latest)
+                .get()
+                ._1();
+
+        assertEquals(
+                "Done ProgramTest.Latest 412ms → ProgramTest.Heard",
+                timed.described(new Msg.Done(id, Option.of(new Heard("first", heard))), start.plusMillis(612)));
+        assertEquals(
+                "Done ProgramTest.Latest 412ms",
+                timed.described(new Msg.Done(id, Option.none()), start.plusMillis(612)));
+        assertEquals("ProgramTest.Asked", timed.described(new Asked(List.empty()), start.plusMillis(612)));
+    }
+
+    /**
+     * A clock that tells the time it was set to.
+     */
+    private static final class MovingClock extends java.time.Clock {
+
+        private Instant now;
+
+        MovingClock(Instant now) {
+            this.now = now;
+        }
+
+        void at(Instant time) {
+            now = time;
+        }
+
+        @Override
+        public Instant instant() {
+            return now;
+        }
+
+        @Override
+        public java.time.ZoneId getZone() {
+            return java.time.ZoneOffset.UTC;
+        }
+
+        @Override
+        public java.time.Clock withZone(java.time.ZoneId zone) {
+            return this;
+        }
     }
 
     private void settle() {

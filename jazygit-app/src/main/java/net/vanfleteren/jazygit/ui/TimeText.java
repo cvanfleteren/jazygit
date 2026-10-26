@@ -16,9 +16,10 @@ public final class TimeText {
     public static final Duration SPINNER_FRAME = Duration.ofMillis(120);
 
     /**
-     * How often the model is told the time ({@code Msg.Clock}): a new minute shows at most this late.
+     * How often the model is woken up when nothing else happens ({@code Msg.Clock}), so that an age shows at most
+     * this late.
      */
-    public static final Duration CLOCK_INTERVAL = Duration.ofSeconds(5);
+    public static final Duration CLOCK_INTERVAL = Duration.ofSeconds(1);
 
     // The steps in which what is read every minute counts its age under a minute.
     private static final int READ_STEP_SECONDS = 10;
@@ -53,20 +54,17 @@ public final class TimeText {
     /**
      * How long ago something that is read every minute, like the remotes, was read {@code since}, to show in a
      * sentence: by 10s under a minute ("20s ago", or "just now" under 10s), and as {@link #ago(Duration)} from a
-     * minute on. Both when it was read and the time it is now are told by the clock, so {@code since} is a whole
-     * number of {@link #CLOCK_INTERVAL}s, give or take how late the clock ran: rounded to those, it counts up on every
-     * other clock, however late one runs.
+     * minute on. Both when it was read and the time it is now are exact (ADR 33), so each step shows from the moment
+     * it is reached.
      */
     public static String readAgo(Duration since) {
-        Duration clocks =
-                CLOCK_INTERVAL.multipliedBy(Math.round((double) since.toMillis() / CLOCK_INTERVAL.toMillis()));
-        long seconds = clocks.toSeconds() / READ_STEP_SECONDS * READ_STEP_SECONDS;
+        long seconds = Math.max(0, since.toSeconds()) / READ_STEP_SECONDS * READ_STEP_SECONDS;
         return seconds < READ_STEP_SECONDS
                 ? Messages.get("branches.age.justNow")
                 : seconds < 60
                         ? Messages.get(
                                 "branches.age.ago", Messages.get("branches.age.seconds", String.valueOf(seconds)))
-                        : ago(clocks);
+                        : ago(since);
     }
 
     /**

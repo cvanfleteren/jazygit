@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
-import java.time.Instant;
+import io.vavr.control.Option;
 
 /**
  * Everything that can happen to the {@link Model}, grouped by feature. A message knows how to
@@ -40,15 +40,27 @@ public interface Msg {
     }
 
     /**
-     * The time it is, told apart from the refresh: often enough that an age shown in minutes turns soon after it should.
-     *
-     * @param now the time it is
+     * A second went by, told apart from the refresh: every message tells the model the time it is
+     * ({@link Update#step}), and this one wakes it up when nothing else happens, so that the ages shown move on.
      */
-    record Clock(Instant now) implements Msg {
+    record Clock() implements Msg {
 
         @Override
         public Update.Next apply(Model model) {
-            return Update.Next.of(model.withNow(now));
+            return Update.Next.of(model);
+        }
+    }
+
+    /**
+     * The command {@code id} is done (ADR 33), and what it reported, if anything: one that a newer one for its slot
+     * cancelled may report nothing.
+     */
+    record Done(long id, Option<Msg> result) implements Msg {
+
+        @Override
+        public Update.Next apply(Model model) {
+            Model done = model.mapJobs(jobs -> jobs.withDone(id));
+            return result.map(msg -> msg.apply(done)).getOrElse(() -> Update.Next.of(done));
         }
     }
 

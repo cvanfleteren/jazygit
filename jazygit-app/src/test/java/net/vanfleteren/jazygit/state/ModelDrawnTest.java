@@ -50,4 +50,21 @@ class ModelDrawnTest {
 
         assertEquals(model.drawn(), loading.drawn());
     }
+
+    @Test
+    void theCommandsThatRunAreNotDrawnAsTheyOnlyShowOnceTheyRanAWhile() {
+        Model running = model.mapJobs(jobs -> jobs.withStarted(List.of(new Cmd.LoadStatus()), Instant.EPOCH));
+
+        assertEquals(model.drawn(), running.drawn());
+    }
+
+    @Test
+    void theTimeIsDrawnToTheSecond() {
+        Instant now = Instant.parse("2026-10-22T10:00:00Z");
+
+        assertEquals(
+                model.withNow(now).drawn(), model.withNow(now.plusMillis(999)).drawn());
+        assertNotEquals(
+                model.withNow(now).drawn(), model.withNow(now.plusSeconds(1)).drawn());
+    }
 }

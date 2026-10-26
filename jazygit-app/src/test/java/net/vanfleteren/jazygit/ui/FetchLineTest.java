@@ -98,13 +98,13 @@ class FetchLineTest {
     }
 
     @Test
-    void aClockThatRunsLateOrEarlyCountsTheSame() {
-        assertEquals("fetched 20s ago", fetchedAgo(Duration.ofMillis(20_300)));
-        assertEquals("fetched 20s ago", fetchedAgo(Duration.ofMillis(19_700)));
-        assertEquals("fetched 10s ago", fetchedAgo(Duration.ofMillis(15_300)));
-        assertEquals("fetched 10s ago", fetchedAgo(Duration.ofMillis(9_700)));
-        assertEquals("fetched just now", fetchedAgo(Duration.ofMillis(5_300)));
-        assertEquals("fetched 1m ago", fetchedAgo(Duration.ofMillis(59_700)));
+    void aStepShowsFromTheMomentItIsReachedAsTheTimesAreExact() {
+        assertEquals("fetched just now", fetchedAgo(Duration.ofMillis(9_999)));
+        assertEquals("fetched 10s ago", fetchedAgo(Duration.ofMillis(10_000)));
+        assertEquals("fetched 10s ago", fetchedAgo(Duration.ofMillis(19_999)));
+        assertEquals("fetched 20s ago", fetchedAgo(Duration.ofMillis(20_000)));
+        assertEquals("fetched 50s ago", fetchedAgo(Duration.ofMillis(59_999)));
+        assertEquals("fetched 1m ago", fetchedAgo(Duration.ofMillis(60_000)));
     }
 
     private static String fetchedAgo(Duration since) {

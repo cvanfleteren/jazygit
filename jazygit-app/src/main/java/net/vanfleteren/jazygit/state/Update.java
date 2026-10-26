@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -64,16 +65,52 @@ public final class Update {
      */
     public static Next init(
             String repositoryName, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, Landing landing) {
+        return init(Model.initial(repositoryName), settings, themeOverride, landing);
+    }
+
+    private static Next init(
+            Model initial, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, Landing landing) {
         // Commits are loaded once the first status tells us where HEAD is.
-        return refresh(Model.initial(repositoryName)
-                .mapRepoView(landing::applyTo)
+        return refresh(initial.mapRepoView(landing::applyTo)
                 .mapPreferences(preferences ->
                         preferences.withSettings(settings.settings()).withThemeOverride(themeOverride))
                 .mapOutcome(outcome -> outcome.withError(settings.problem().map(AppError.SettingsNotLoaded::new))));
     }
 
+    /**
+     * The start of a session as {@link #init(String, SettingsStore.Loaded, Option, Landing)} starts it, at
+     * {@code now}: the commands it asks for are stamped (ADR 33).
+     */
+    public static Step begin(
+            String repositoryName,
+            SettingsStore.Loaded settings,
+            Option<ThemeName> themeOverride,
+            Landing landing,
+            Instant now) {
+        return stamped(init(Model.initial(repositoryName).withNow(now), settings, themeOverride, landing), now);
+    }
+
     public static Next update(Model model, Msg msg) {
         return msg.apply(model);
+    }
+
+    /**
+     * What {@code msg}, handled at {@code now}, makes of {@code model}, as {@link #update(Model, Msg)}: the model is
+     * told the time first, and the commands it asks for are stamped (ADR 33).
+     */
+    public static Step step(Model model, Msg msg, Instant now) {
+        return stamped(update(model.withNow(now), msg), now);
+    }
+
+    /**
+     * {@code next}, with each of its commands given the next id and running from {@code now} on.
+     */
+    private static Step stamped(Next next, Instant now) {
+        long first = next.model().jobs().nextId();
+        return new Step(
+                next.model().mapJobs(jobs -> jobs.withStarted(next.cmds(), now)),
+                next.cmds().zipWithIndex().map(cmd -> new Launch(first + cmd._2(), cmd._1())),
+                next.quit());
     }
 
     /**
@@ -290,4 +327,16 @@ public final class Update {
             return new Next(model, List.of(cmds));
         }
     }
+
+    /**
+     * A command to run, with the id that tells it apart from every other one, also from an equal one.
+     */
+    public record Launch(long id, Cmd cmd) {}
+
+    /**
+     * The next model, and the commands to run for it, each with its id: what {@link Program} applies.
+     *
+     * @param quit whether the app stops once this is applied
+     */
+    public record Step(Model model, List<Launch> launches, boolean quit) {}
 }

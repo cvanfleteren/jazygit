@@ -398,17 +398,17 @@ finishes by itself once the app is gone.
 flowchart LR
     subgraph render["render thread"]
         Event["key / mouse event<br/>model tick"] --> Dispatch["Program.dispatch(msg)"]
-        Dispatch --> Update["msg.apply(model)<br/><i>pure</i>"]
-        Update --> Next["Next(model, cmds)"]
+        Dispatch --> Update["Update.step(model, msg, now)<br/><i>pure</i>"]
+        Update --> Next["Step(model, launches)"]
         Next --> Store["program.model = next.model"]
         Store -- "model.drawn() changed:<br/>modelChanged → Redraw" --> Render["JazygitApp.render()<br/>draws the Model"]
         Event -- "handled" --> Render
         Render -- "reports, after the frame" --> Dispatch
     end
     subgraph io["git-io thread"]
-        Perform["Program.perform(env, cmd)<br/>cmd.run(env)"] --> Result["Msg<br/><i>OperationMsg / LoadMsg / ...</i>"]
+        Perform["Program.perform(env, cmd)<br/>cmd.run(env)"] --> Result["Msg.Done(id, msg)<br/><i>OperationMsg / LoadMsg / ...</i>"]
     end
-    Next -- "each Cmd" --> Perform
+    Next -- "each Launch(id, cmd)" --> Perform
     Result -- "ui.execute" --> Dispatch
 ```
 
@@ -420,7 +420,8 @@ TamboUI's own 40 ms tick is turned off (`noTick()`), so a frame is only drawn wh
 - **An event that is handled**, or a resize: TamboUI draws after those by itself.
 - **A model that draws differently**: `Program` calls `modelChanged` when a message leaves a model whose
   `Model.drawn()` differs from the one before. `Model.drawn()` leaves out what only starts loads
-  (`Jobs.refreshing`, `Jobs.worktreeChangesRead`), so the periodic loads of an idle app draw nothing. This covers
+  (`Jobs.refreshing`, `Jobs.worktreeChangesRead`) and the commands that run (`Jobs.running`), and takes the time
+  to the second, so the periodic loads of an idle app draw nothing. This covers
   the outcome of commands, the model's ticks and the reports of the widgets.
 - **`JazygitApp.requestRedraw()`**, for what the model does not see: a turning spinner (every 120 ms while
   `Spinners.shown`), a frame that moved the focus (`redrawIfFocusMoves`), a mouse press (a click on nothing clears
@@ -466,11 +467,19 @@ stash's changes, the files' diff) each take a slot, so highlighting faster than 
 a load cancelled that way reports `LoadMsg.Skipped`, which takes it out of `refreshing`. See
 `documentation/adr/0031-preview-slots-and-retry-backoff.md`.
 
-The model is told the time apart from that, every 5 s, by `Msg.Clock`, which only sets `Model.now`: the ages it
-shows are in minutes ("now" under one), so a slow clock is enough, and an idle app draws a frame every 5 s. Only
-how long ago the remotes were fetched, or the pull requests read, counts in steps of 10 s under a minute; those
-reads are timed by the clock too, so each step shows for two clocks. See
-`documentation/adr/0021-a-clock-apart-from-the-refresh.md` and `documentation/adr/0022-fetched-ago-in-steps-of-10s.md`.
+Every message is handled at the time it is: `Program` hands it to `Update.step(model, msg, now)`, which sets
+`Model.now` before the message is applied. `Msg.Clock` comes every second, apart from that, only to wake the model up
+when nothing else happens, so the ages move on. The view rounds them: in minutes ("now" under one), and how long ago
+the remotes were fetched, or the pull requests read, in steps of 10 s under a minute. `Model.drawn()` takes the time
+to the second, so an idle app draws a frame a second. See `documentation/adr/0021-a-clock-apart-from-the-refresh.md`,
+`documentation/adr/0022-fetched-ago-in-steps-of-10s.md` and `documentation/adr/0033-show-that-work-is-being-done.md`.
+
+`Update.step` also stamps the commands the message asks for: each gets the next id (`Jobs.nextId`) and runs, in
+`Jobs.running`, from that time on, until `Program` reports it done with `Msg.Done(id, result)`: what it reported, the
+failure of a bug, or what a command that a newer one for its slot cancelled reports, if anything. `Msg.Done` takes it
+out of `running` and applies what it carries. The handlers never see an id: they return `Next(model, cmds)`, and
+`Program` only gets the stamped `Launch(id, cmd)`s of a `Step`. `Update.begin` stamps the first loads the same way.
+With `--debug`, each command that is done is logged with how long it ran and what it reported.
 
 Every minute a `FetchMsg.Tick` fetches from the remotes in the background, unless the previous fetch is
 still running. `FetchUpdate` lists the remotes (those `git fetch --all` would fetch) and fetches them one after

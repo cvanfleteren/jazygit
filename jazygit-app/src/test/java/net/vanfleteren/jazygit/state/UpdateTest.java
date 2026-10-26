@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state;
 import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -18,7 +19,9 @@ import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Loadable.Loading;
 import net.vanfleteren.jazygit.state.Msg.Tick;
+import net.vanfleteren.jazygit.state.Update.Launch;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.Update.Step;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -104,16 +107,98 @@ class UpdateTest {
     }
 
     @Test
-    void theClockOnlyTellsTheTime() {
+    void everyMessageTellsTheTimeAndTheClockNothingElse() {
         Model model = loaded();
         Instant now = Instant.parse("2026-10-22T10:00:00Z");
 
-        Next next = Update.update(model, new Msg.Clock(now));
+        Step step = Update.step(model, new Msg.Clock(), now);
 
-        assertEquals(model.withNow(now), next.model());
-        assertEquals(List.empty(), next.cmds());
-        // A tick reads the repository again, but leaves the time to the clock.
-        assertEquals(now, Update.update(next.model(), new Tick()).model().now());
+        assertEquals(model.withNow(now), step.model());
+        assertEquals(List.empty(), step.launches());
+    }
+
+    @Test
+    void theCommandsAskedForRunEachWithAnIdOfItsOwnFromTheTimeTheyWereAskedFor() {
+        Model model = loaded();
+        Instant now = Instant.parse("2026-10-22T10:00:00Z");
+        List<Cmd> asked = Update.update(model.withNow(now), new Tick()).cmds();
+
+        Step ticked = Update.step(model, new Tick(), now);
+
+        assertEquals(asked, ticked.launches().map(Launch::cmd));
+        assertEquals(List.range(0L, (long) asked.size()), ticked.launches().map(Launch::id));
+        assertEquals(
+                ticked.launches().map(launch -> new Jobs.Running(launch.cmd(), now)),
+                ticked.launches()
+                        .map(launch ->
+                                ticked.model().jobs().running().get(launch.id()).get()));
+    }
+
+    @Test
+    void anEqualCommandAskedForAgainGetsAnotherId() {
+        Instant now = Instant.parse("2026-10-22T10:00:00Z");
+        Step ticked = Update.step(loaded(), new Tick(), now);
+        Model done = ticked.launches()
+                .foldLeft(
+                        ticked.model(),
+                        (model, launch) -> Update.step(model, new Msg.Done(launch.id(), Option.none()), now)
+                                .model())
+                // What they reported would let the tick read them again.
+                .mapJobs(jobs -> jobs.withRefreshing(HashSet.empty()));
+
+        Step again = Update.step(done, new Tick(), now.plusSeconds(1));
+
+        assertEquals(ticked.launches().map(Launch::cmd), again.launches().map(Launch::cmd));
+        assertEquals(
+                ticked.launches().map(launch -> launch.id() + ticked.launches().size()),
+                again.launches().map(Launch::id));
+    }
+
+    @Test
+    void aCommandThatIsDoneStopsRunningAndWhatItReportedIsHandled() {
+        Model model = loaded();
+        Instant now = Instant.parse("2026-10-22T10:00:00Z");
+        Step ticked = Update.step(model, new Tick(), now);
+        Launch status = ticked.launches()
+                .find(launch -> launch.cmd() instanceof LoadStatus)
+                .get();
+        RepoStatus changed = new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("bbbb")), List.of());
+
+        Step done = Update.step(
+                ticked.model(), new Msg.Done(status.id(), Option.of(new LoadMsg.StatusLoaded(changed))), now);
+
+        assertFalse(done.model().jobs().running().containsKey(status.id()));
+        assertEquals(new Loaded<>(changed), done.model().repo().status());
+    }
+
+    @Test
+    void aCommandThatIsDoneWithoutReportingOnlyStopsRunning() {
+        Model model = loaded();
+        Instant now = Instant.parse("2026-10-22T10:00:00Z");
+        Step ticked = Update.step(model, new Tick(), now);
+        Launch first = ticked.launches().head();
+
+        Step done = Update.step(ticked.model(), new Msg.Done(first.id(), Option.none()), now);
+
+        assertEquals(
+                ticked.model().mapJobs(jobs -> jobs.withRunning(jobs.running().remove(first.id()))), done.model());
+        assertEquals(List.empty(), done.launches());
+    }
+
+    @Test
+    void theFirstLoadsRunFromTheStart() {
+        Instant now = Instant.parse("2026-10-22T10:00:00Z");
+
+        Step begun = Update.begin("repo", SettingsStore.Loaded.DEFAULT, Option.none(), Landing.START, now);
+
+        assertEquals(now, begun.model().now());
+        assertEquals(Update.init("repo").cmds(), begun.launches().map(Launch::cmd));
+        assertTrue(begun.model()
+                .jobs()
+                .running()
+                .values()
+                .forAll(running -> running.started().equals(now)));
+        assertEquals(begun.launches().size(), begun.model().jobs().running().size());
     }
 
     @Test

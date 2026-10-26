@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.collection.*;
 import io.vavr.control.Option;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.function.UnaryOperator;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.*;
@@ -23,7 +24,7 @@ import net.vanfleteren.jazygit.state.prs.PrOverview;
  * @param listCursor     where the user is in the list of the popup, if it has one
  * @param scrolled       where the areas of the content panel were scrolled to, by the id of the area
  * @param preferences    how the user wants things shown, kept from one session to the next or for this one only
- * @param now            the time as of the last {@link Msg.Clock}, which tells how long ago things happened
+ * @param now            the time the last message was handled at, which tells how long ago things happened
  */
 @With
 public record Model(
@@ -141,12 +142,17 @@ public record Model(
      * frame, what is left out too much would not be drawn when it changes.
      */
     public Model drawn() {
+        // A command that runs shows only once it ran a while, which the spinners' frames tell, not a message; the
+        // time shows to the second at most.
         return mapJobs(jobs -> jobs.withRefreshing(HashSet.empty())
-                .withFailed(HashSet.empty())
-                .withWorktreeChangesRead(Option.none())
-                .withReadAt(HashMap.empty())
-                .withTicks(0)
-                .withRetries(HashMap.empty()));
+                        .withFailed(HashSet.empty())
+                        .withWorktreeChangesRead(Option.none())
+                        .withReadAt(HashMap.empty())
+                        .withTicks(0)
+                        .withRetries(HashMap.empty())
+                        .withRunning(HashMap.empty())
+                        .withNextId(0))
+                .withNow(now.truncatedTo(ChronoUnit.SECONDS));
     }
 
     /**
