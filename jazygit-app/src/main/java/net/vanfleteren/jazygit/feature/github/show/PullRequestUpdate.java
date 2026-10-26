@@ -37,6 +37,9 @@ public final class PullRequestUpdate {
                 Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
             // The branches pane shows the pull request as it was just read too, also when the dialog is closed.
             // How long its checks take is learned from them too (ADR 32).
+            // A read dropped as it started before a draft change would show that change undone, here and on the branch.
+            case PullRequestMsg.DetailsLoaded(int number, var details)
+            when dropped(model, number) -> Next.of(shown(model, number, Either.right(details)));
             case PullRequestMsg.DetailsLoaded(int number, var details) ->
                 CheckTimesUpdate.read(
                         Next.of(shown(
@@ -82,7 +85,7 @@ public final class PullRequestUpdate {
                         .filter(popup -> draftChangeable(model, popup))
                         .flatMap(popup -> popup.draft()
                                 .map(draft -> Update.start(
-                                        model.clearError(),
+                                        model.openPopup(popup.droppingRead()).clearError(),
                                         new SetDraft(
                                                 popup.branch(),
                                                 popup.pullRequest().number(),
@@ -105,8 +108,13 @@ public final class PullRequestUpdate {
                 yield PrOverviewUpdate.reloadIfShown(
                         FetchUpdate.requested(PullRequestsUpdate.loadAnyway(new Next(ended, done.cmds()))));
             }
-            // Only the dialog itself is read again, not the one kept under a popup opened from it.
-            case PullRequestMsg.RefreshChosen() -> readAgain(model, popup -> true, Reading.ASKED);
+            // Only the dialog itself is read again, not the one kept under a popup opened from it. R while it reads by
+            // itself shows that read as asked for, rather than starting a second one.
+            case PullRequestMsg.RefreshChosen() ->
+                model.popup(PullRequestPopup.class)
+                        .filter(popup -> popup.reading() == Reading.BY_ITSELF)
+                        .map(popup -> Next.of(model.openPopup(popup.readingAgain(Reading.ASKED, popup.readAt()))))
+                        .getOrElse(() -> readAgain(model, popup -> true, Reading.ASKED));
             case PullRequestMsg.Tick() -> readAgain(model, popup -> popup.dueByItself(model.now()), Reading.BY_ITSELF);
             case PullRequestMsg.InfoClosed() -> Next.of(model.withoutPopup(PullRequestPopup.class));
         };
@@ -122,11 +130,20 @@ public final class PullRequestUpdate {
 
     /**
      * Whether the pull request {@code popup} shows can be turned into a draft, or marked ready for review: it is
-     * open, and its branch is not busy, e.g. with doing that already. Nor while it is read again: a read that
-     * started before the change could come back after it, and show it undone.
+     * open, and its branch is not busy, e.g. with doing that already. Nor while it is read again as the user asked:
+     * a read that started before the change could come back after it, and show it undone. A read the dialog does by
+     * itself is dropped instead (ADR 34).
      */
     static boolean draftChangeable(Model model, PullRequestPopup popup) {
-        return popup.open() && !popup.refreshing() && !busy(model, popup);
+        return popup.open() && popup.reading() != Reading.ASKED && !busy(model, popup);
+    }
+
+    /**
+     * Whether {@code R} reads the pull request {@code popup} shows again: when it can be read again, or the dialog
+     * reads it by itself, which then shows as asked for.
+     */
+    static boolean refreshChoosable(Model model, PullRequestPopup popup) {
+        return refreshable(model, popup) || popup.reading() == Reading.BY_ITSELF;
     }
 
     /**
@@ -149,6 +166,15 @@ public final class PullRequestUpdate {
                         model.openPopup(popup.readingAgain(reading, model.now())),
                         new LoadPullRequestDetails(popup.pullRequest().number())))
                 .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * Whether the read of pull request {@code number} that comes back is dropped by the dialog that shows it.
+     */
+    private static boolean dropped(Model model, int number) {
+        return model.popup(ShowsPullRequest.class)
+                .filter(popup -> popup.number() == number)
+                .exists(popup -> popup.pullRequestPopup().reading() == Reading.DROPPED);
     }
 
     private static boolean busy(Model model, PullRequestPopup popup) {

@@ -230,12 +230,26 @@ class ChecksUpdateTest {
 
         assertEquals(
                 List.empty(),
-                Update.update(read.withNow(Instant.EPOCH.plusSeconds(59)), new ChecksMsg.Tick())
+                Update.update(read.withNow(Instant.EPOCH.plusSeconds(54)), new ChecksMsg.Tick())
                         .cmds());
+        // The tick a minute on can come a few ms short of it.
         assertEquals(
                 List.of(new LoadChecks(FEATURE)),
-                Update.update(read.withNow(Instant.EPOCH.plusSeconds(60)), new ChecksMsg.Tick())
+                Update.update(read.withNow(Instant.EPOCH.plusSeconds(60).minusMillis(3)), new ChecksMsg.Tick())
                         .cmds());
+    }
+
+    @Test
+    void refreshingWhileTheyAreReadByThemselvesShowsThatReadAsAsked() {
+        Model read =
+                Update.update(shown(), new ChecksMsg.Loaded(FEATURE, RUNNING)).model();
+        Model quiet = Update.update(read.withNow(Instant.EPOCH.plusSeconds(10)), new ChecksMsg.Tick())
+                .model();
+
+        Next asked = Update.update(quiet, new ChecksMsg.RefreshChosen());
+
+        assertEquals(List.empty(), asked.cmds());
+        assertEquals(Reading.ASKED, asked.model().popup(ChecksPopup.class).get().reading());
     }
 
     @Test

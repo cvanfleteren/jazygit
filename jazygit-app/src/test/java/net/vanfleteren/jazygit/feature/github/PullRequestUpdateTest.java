@@ -1020,7 +1020,7 @@ class PullRequestUpdateTest {
 
         assertEquals(
                 List.empty(),
-                Update.update(shown.withNow(shown.now().plusSeconds(59)), new PullRequestMsg.Tick())
+                Update.update(shown.withNow(shown.now().plusSeconds(54)), new PullRequestMsg.Tick())
                         .cmds());
         Next again = Update.update(aMinuteOn(shown), new PullRequestMsg.Tick());
         assertEquals(List.of(new LoadPullRequestDetails(42)), again.cmds());
@@ -1034,6 +1034,42 @@ class PullRequestUpdateTest {
                         .popup(PullRequestPopup.class)
                         .get()
                         .reading());
+    }
+
+    @Test
+    void refreshingWhileTheDetailsAreReadByThemselvesShowsThatReadAsAsked() {
+        Model quiet = Update.update(aMinuteOn(showingDetails()), new PullRequestMsg.Tick())
+                .model();
+
+        Next asked = Update.update(quiet, new PullRequestMsg.RefreshChosen());
+
+        assertEquals(List.empty(), asked.cmds());
+        assertEquals(
+                Reading.ASKED, asked.model().popup(PullRequestPopup.class).get().reading());
+    }
+
+    @Test
+    void aDraftChangedWhileTheDetailsAreReadByThemselvesDropsWhatThatReadBrings() {
+        Model quiet = Update.update(aMinuteOn(showingDetails()), new PullRequestMsg.Tick())
+                .model();
+        PullRequestDetails before =
+                quiet.popup(PullRequestPopup.class).get().details().get().get();
+
+        Next drafting = Update.update(quiet, new PullRequestMsg.DraftChosen());
+        SetDraft cmd = (SetDraft) drafting.cmds().head();
+        assertEquals(new SetDraft(FEATURE, 42, true), cmd);
+        assertEquals(
+                Reading.DROPPED,
+                drafting.model().popup(PullRequestPopup.class).get().reading());
+
+        // The quiet read started before the change, and comes back after it, with how it was before.
+        Model drafted = Update.update(drafting.model(), cmd.run(env())).model();
+        PullRequestPopup popup = Update.update(drafted, new PullRequestMsg.DetailsLoaded(42, before))
+                .model()
+                .popup(PullRequestPopup.class)
+                .get();
+        assertEquals(Option.of(true), popup.draft());
+        assertEquals(Reading.NOT, popup.reading());
     }
 
     private static Model showingDetails() {

@@ -14,6 +14,10 @@ public enum Reading {
      */
     BY_ITSELF,
     /**
+     * It does by itself, but what it brings is dropped: it started before a change that it would show undone.
+     */
+    DROPPED,
+    /**
      * It does as the user asked, with {@code R}.
      */
     ASKED

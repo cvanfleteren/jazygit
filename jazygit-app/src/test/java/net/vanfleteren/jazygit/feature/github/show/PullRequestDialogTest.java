@@ -224,8 +224,9 @@ class PullRequestDialogTest {
                 .with(Either.right(withChecks(List.empty())));
 
         assertTrue(running.dueByItself(NOW.plusSeconds(10)));
-        assertFalse(done.dueByItself(NOW.plusSeconds(59)));
-        assertTrue(done.dueByItself(NOW.plusSeconds(60)));
+        assertFalse(done.dueByItself(NOW.plusSeconds(54)));
+        // The tick a minute on can come a few ms short of it.
+        assertTrue(done.dueByItself(NOW.plusSeconds(60).minusMillis(3)));
     }
 
     @Test

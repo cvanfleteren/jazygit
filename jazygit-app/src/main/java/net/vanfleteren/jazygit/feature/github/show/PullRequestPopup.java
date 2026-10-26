@@ -39,20 +39,24 @@ public record PullRequestPopup(
 
     /**
      * The popup showing {@code read}: the details, or why reading them failed. Details that were read already
-     * stay shown when reading them again fails, marked stale. How far the base moved on is read apart from the rest
+     * stay shown when reading them again fails, marked stale. A read that is dropped changes nothing but that it is
+     * done. How far the base moved on is read apart from the rest
      * and can fail alone: the count shown stays when the pull request is still open at the same commit on the same
      * base, where the base can only have moved on further.
      */
     public PullRequestPopup with(Either<Failure, PullRequestDetails> read) {
-        return read.isLeft() && detailsRead()
-                ? new PullRequestPopup(branch, pullRequest, details, Reading.NOT, Option.of(read.getLeft()), readAt)
-                : new PullRequestPopup(
-                        branch,
-                        pullRequest,
-                        Option.of(read.map(this::keepingBehindBase)),
-                        Reading.NOT,
-                        Option.none(),
-                        readAt);
+        return reading == Reading.DROPPED
+                ? new PullRequestPopup(branch, pullRequest, details, Reading.NOT, refreshFailed, readAt)
+                : read.isLeft() && detailsRead()
+                        ? new PullRequestPopup(
+                                branch, pullRequest, details, Reading.NOT, Option.of(read.getLeft()), readAt)
+                        : new PullRequestPopup(
+                                branch,
+                                pullRequest,
+                                Option.of(read.map(this::keepingBehindBase)),
+                                Reading.NOT,
+                                Option.none(),
+                                readAt);
     }
 
     private PullRequestDetails keepingBehindBase(PullRequestDetails read) {
@@ -73,6 +77,16 @@ public record PullRequestPopup(
      */
     PullRequestPopup readingAgain(Reading reading, Instant now) {
         return new PullRequestPopup(branch, pullRequest, details, reading, refreshFailed, now);
+    }
+
+    /**
+     * The popup dropping what the read it does by itself brings, as that started before a change it would show
+     * undone; as it is when it does not read by itself.
+     */
+    PullRequestPopup droppingRead() {
+        return reading == Reading.BY_ITSELF
+                ? new PullRequestPopup(branch, pullRequest, details, Reading.DROPPED, refreshFailed, readAt)
+                : this;
     }
 
     /**

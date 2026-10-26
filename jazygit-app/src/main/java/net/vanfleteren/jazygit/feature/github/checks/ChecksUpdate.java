@@ -41,7 +41,12 @@ public final class ChecksUpdate {
                         checks.of(branch.branch()));
             case ChecksMsg.Failed(RemoteBranch branch, Failure failure) ->
                 Next.of(shown(model, branch, Either.left(failure)));
-            case ChecksMsg.RefreshChosen() -> readAgain(model, popup -> true, Reading.ASKED);
+            // R while it reads by itself shows that read as asked for, rather than starting a second one.
+            case ChecksMsg.RefreshChosen() ->
+                model.popup(ChecksPopup.class)
+                        .filter(popup -> popup.reading() == Reading.BY_ITSELF)
+                        .map(popup -> Next.of(model.openPopup(popup.readingAgain(Reading.ASKED, popup.readAt()))))
+                        .getOrElse(() -> readAgain(model, popup -> true, Reading.ASKED));
             case ChecksMsg.Tick() -> readAgain(model, popup -> popup.dueByItself(model.now()), Reading.BY_ITSELF);
             case ChecksMsg.Closed() -> Next.of(model.withoutPopup(ChecksPopup.class));
         };
