@@ -46,6 +46,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
@@ -873,7 +874,7 @@ class PullRequestUpdateTest {
         Next shown = Update.update(withPr(), new PullRequestMsg.Requested(new BranchName("feature")));
 
         assertEquals(
-                Option.of(PullRequestPopup.loading(new BranchName("feature"), FEATURE_PR)),
+                Option.of(PullRequestPopup.loading(new BranchName("feature"), FEATURE_PR, Instant.EPOCH)),
                 shown.model().popup());
         assertEquals(List.of(new LoadPullRequestDetails(42)), shown.cmds());
     }
@@ -888,7 +889,7 @@ class PullRequestUpdateTest {
                 Update.update(shown, new LoadPullRequestDetails(42).run(env())).model();
 
         assertEquals(
-                Option.of(PullRequestPopup.loading(new BranchName("feature"), FEATURE_PR)
+                Option.of(PullRequestPopup.loading(new BranchName("feature"), FEATURE_PR, Instant.EPOCH)
                         .with(Either.right(details))),
                 loaded.popup());
     }
@@ -978,7 +979,7 @@ class PullRequestUpdateTest {
                 .model();
 
         assertEquals(
-                Option.of(PullRequestPopup.loading(new BranchName("feature"), FEATURE_PR)
+                Option.of(PullRequestPopup.loading(new BranchName("feature"), FEATURE_PR, Instant.EPOCH)
                         .with(Either.left(failure))),
                 failed.popup());
         assertEquals(Option.none(), failed.outcome().error());
@@ -1005,6 +1006,36 @@ class PullRequestUpdateTest {
     /**
      * The pull request of the feature branch shown, with its details read.
      */
+    /**
+     * {@code model} a minute after the pull request was read, when it is read again by itself also with its checks
+     * done (ADR 34).
+     */
+    private static Model aMinuteOn(Model model) {
+        return model.withNow(model.now().plus(CheckTimings.READ_WHEN_DONE));
+    }
+
+    @Test
+    void theTickReadsTheDetailsAgainByItselfAMinuteAfterTheLastReadWhenTheirChecksAreDone() {
+        Model shown = showingDetails();
+
+        assertEquals(
+                List.empty(),
+                Update.update(shown.withNow(shown.now().plusSeconds(59)), new PullRequestMsg.Tick())
+                        .cmds());
+        Next again = Update.update(aMinuteOn(shown), new PullRequestMsg.Tick());
+        assertEquals(List.of(new LoadPullRequestDetails(42)), again.cmds());
+        assertEquals(
+                Reading.BY_ITSELF,
+                again.model().popup(PullRequestPopup.class).get().reading());
+        assertEquals(
+                Reading.ASKED,
+                Update.update(shown, new PullRequestMsg.RefreshChosen())
+                        .model()
+                        .popup(PullRequestPopup.class)
+                        .get()
+                        .reading());
+    }
+
     private static Model showingDetails() {
         Model shown =
                 Update.update(withPr(), new PullRequestMsg.Requested(FEATURE)).model();
@@ -1038,7 +1069,8 @@ class PullRequestUpdateTest {
                 List.empty(), Update.update(reading, new PullRequestMsg.Tick()).cmds());
         assertEquals(
                 List.of(new LoadPullRequestDetails(42)),
-                Update.update(showingDetails(), new PullRequestMsg.Tick()).cmds());
+                Update.update(aMinuteOn(showingDetails()), new PullRequestMsg.Tick())
+                        .cmds());
         assertEquals(
                 List.empty(), Update.update(model(), new PullRequestMsg.Tick()).cmds());
     }
@@ -1117,7 +1149,7 @@ class PullRequestUpdateTest {
         Model done = Update.update(drafting.model(), cmd.run(env())).model();
         assertEquals(
                 List.of(new LoadPullRequestDetails(42)),
-                Update.update(done, new PullRequestMsg.Tick()).cmds());
+                Update.update(aMinuteOn(done), new PullRequestMsg.Tick()).cmds());
     }
 
     @Test
@@ -1146,7 +1178,7 @@ class PullRequestUpdateTest {
         Model failed = Update.update(shown, new PullRequestMsg.DetailsFailed(42, refused("gh: offline")))
                 .model();
 
-        Next again = Update.update(failed, new PullRequestMsg.Tick());
+        Next again = Update.update(aMinuteOn(failed), new PullRequestMsg.Tick());
         assertEquals(List.of(new LoadPullRequestDetails(42)), again.cmds());
 
         var second = refused("gh: not logged in");
@@ -1695,7 +1727,8 @@ class PullRequestUpdateTest {
         assertEquals(
                 Option.of(PullRequestPopup.loading(
                         new BranchName("patch-1"),
-                        new PullRequest(9, "patch-1", true, Checks.FAILING, Review.REQUIRED))),
+                        new PullRequest(9, "patch-1", true, Checks.FAILING, Review.REQUIRED),
+                        Instant.EPOCH)),
                 shown.model().popup(PullRequestPopup.class));
         assertEquals(List.of(new LoadPullRequestDetails(9)), shown.cmds());
     }

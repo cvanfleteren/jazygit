@@ -12,6 +12,7 @@ import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.feature.github.comment.CommentCmd.AddComment;
@@ -59,7 +60,7 @@ class CommentUpdateTest {
     private static final PullRequestDetails DETAILS =
             StubGitHub.empty().pullRequestDetails(42).get();
     private static final PullRequestPopup SHOWN =
-            PullRequestPopup.loading(FEATURE, FEATURE_PR).with(Either.right(DETAILS));
+            PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH).with(Either.right(DETAILS));
     private static final ExecutedCommand NVIM = ExecutedCommand.of("nvim", "PR_COMMENT.md");
 
     private static Model showing() {
@@ -84,7 +85,7 @@ class CommentUpdateTest {
 
     @Test
     void aClosedOrMergedPullRequestTakesCommentsToo() {
-        PullRequestPopup merged = PullRequestPopup.loading(FEATURE, FEATURE_PR)
+        PullRequestPopup merged = PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH)
                 .with(Either.right(new PullRequestDetails(
                         DETAILS.number(),
                         DETAILS.title(),
@@ -114,9 +115,9 @@ class CommentUpdateTest {
 
     @Test
     void noCommentBeforeTheDetailsAreRead() {
-        Model loading = loaded().openPopup(PullRequestPopup.loading(FEATURE, FEATURE_PR));
-        Model failed =
-                loaded().openPopup(PullRequestPopup.loading(FEATURE, FEATURE_PR).with(Either.left(refused("offline"))));
+        Model loading = loaded().openPopup(PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH));
+        Model failed = loaded().openPopup(PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH)
+                .with(Either.left(refused("offline"))));
 
         assertEquals(loading, Update.update(loading, new CommentMsg.Requested()).model());
         assertEquals(failed, Update.update(failed, new CommentMsg.Requested()).model());
@@ -176,13 +177,15 @@ class CommentUpdateTest {
 
     @Test
     void detailsReadWhileCommentingShowInThePullRequestGoneBackTo() {
-        Model commenting = loaded().openPopup(CommentPopup.on(PullRequestPopup.loading(FEATURE, FEATURE_PR)));
+        Model commenting =
+                loaded().openPopup(CommentPopup.on(PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH)));
 
         Model read = Update.update(commenting, new PullRequestMsg.DetailsLoaded(42, DETAILS))
                 .model();
 
         assertEquals(
-                Option.of(PullRequestPopup.loading(FEATURE, FEATURE_PR).with(Either.right(DETAILS))),
+                Option.of(PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH)
+                        .with(Either.right(DETAILS))),
                 read.popup(CommentPopup.class).map(CommentPopup::from));
         // Details of another pull request change nothing.
         assertEquals(

@@ -40,7 +40,8 @@ class ChecksDialogTest {
 
     private static final Instant NOW = Instant.parse("2026-10-25T12:00:00Z");
     private static final RemoteBranch MAIN = new RemoteBranch("origin", new BranchName("main"));
-    private static final ChecksPopup LOADING = ChecksPopup.loading(new BranchRef.Local(new BranchName("main")), MAIN);
+    private static final ChecksPopup LOADING =
+            ChecksPopup.loading(new BranchRef.Local(new BranchName("main")), MAIN, Instant.EPOCH);
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final ChecksDialog dialog = new ChecksDialog(dispatched::add, Clock.fixed(NOW, ZoneOffset.UTC));

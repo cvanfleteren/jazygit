@@ -12,6 +12,7 @@ import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.time.Instant;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
@@ -35,7 +36,9 @@ import org.junit.jupiter.api.Test;
 class CommentDialogTest {
 
     private static final PullRequestPopup SHOWN = PullRequestPopup.loading(
-                    new BranchName("feature"), new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED))
+                    new BranchName("feature"),
+                    new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED),
+                    Instant.EPOCH)
             .with(Either.right(StubGitHub.empty().pullRequestDetails(42).get()));
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();

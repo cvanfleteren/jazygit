@@ -2,34 +2,39 @@ package net.vanfleteren.jazygit.feature.github.show;
 
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.Reading;
 
 /**
  * Showing the pull request of {@code branch}.
  *
  * @param pullRequest   what is known of it from the list of pull requests
  * @param details       what was read about it, or why that failed; nothing while it is first being read
- * @param refreshing    whether it is being read again, while {@code details} stay shown
+ * @param reading       whether it is being read again, while {@code details} stay shown, and why
  * @param refreshFailed why reading it again failed the last time, so the details shown are stale; nothing once a
  *                      read succeeds
+ * @param readAt        when the last read of it started
  */
 public record PullRequestPopup(
         BranchName branch,
         PullRequest pullRequest,
         Option<Either<Failure, PullRequestDetails>> details,
-        boolean refreshing,
-        Option<Failure> refreshFailed)
+        Reading reading,
+        Option<Failure> refreshFailed,
+        Instant readAt)
         implements ShowsPullRequest {
 
     /**
-     * The popup while its details are being read.
+     * The popup while its details are being read, from {@code now}.
      */
-    public static PullRequestPopup loading(BranchName branch, PullRequest pullRequest) {
-        return new PullRequestPopup(branch, pullRequest, Option.none(), false, Option.none());
+    public static PullRequestPopup loading(BranchName branch, PullRequest pullRequest, Instant now) {
+        return new PullRequestPopup(branch, pullRequest, Option.none(), Reading.NOT, Option.none(), now);
     }
 
     /**
@@ -40,9 +45,14 @@ public record PullRequestPopup(
      */
     public PullRequestPopup with(Either<Failure, PullRequestDetails> read) {
         return read.isLeft() && detailsRead()
-                ? new PullRequestPopup(branch, pullRequest, details, false, Option.of(read.getLeft()))
+                ? new PullRequestPopup(branch, pullRequest, details, Reading.NOT, Option.of(read.getLeft()), readAt)
                 : new PullRequestPopup(
-                        branch, pullRequest, Option.of(read.map(this::keepingBehindBase)), false, Option.none());
+                        branch,
+                        pullRequest,
+                        Option.of(read.map(this::keepingBehindBase)),
+                        Reading.NOT,
+                        Option.none(),
+                        readAt);
     }
 
     private PullRequestDetails keepingBehindBase(PullRequestDetails read) {
@@ -59,17 +69,33 @@ public record PullRequestPopup(
     }
 
     /**
-     * The popup while its details are read again.
+     * The popup while its details are read again from {@code now}, as {@code reading} tells.
      */
-    PullRequestPopup readingAgain() {
-        return new PullRequestPopup(branch, pullRequest, details, true, refreshFailed);
+    PullRequestPopup readingAgain(Reading reading, Instant now) {
+        return new PullRequestPopup(branch, pullRequest, details, reading, refreshFailed, now);
+    }
+
+    /**
+     * Whether its details are read again, while they stay shown.
+     */
+    public boolean refreshing() {
+        return reading != Reading.NOT;
     }
 
     /**
      * Whether its details can be read again: once the first read is done, and no other is running.
      */
     public boolean refreshable() {
-        return details.isDefined() && !refreshing;
+        return details.isDefined() && !refreshing();
+    }
+
+    /**
+     * Whether its details are due to be read again by themselves at {@code now}: one of its checks is not done, or
+     * the last read started {@link CheckTimings#READ_WHEN_DONE} ago or more (ADR 34).
+     */
+    public boolean dueByItself(Instant now) {
+        return readDetails().exists(read -> read.checks().exists(check -> !check.done()))
+                || !now.isBefore(readAt.plus(CheckTimings.READ_WHEN_DONE));
     }
 
     /**
@@ -80,8 +106,9 @@ public record PullRequestPopup(
                 branch,
                 pullRequest,
                 details.map(read -> read.map(pr -> pr.withDraft(draft))),
-                refreshing,
-                refreshFailed);
+                reading,
+                refreshFailed,
+                readAt);
     }
 
     /**

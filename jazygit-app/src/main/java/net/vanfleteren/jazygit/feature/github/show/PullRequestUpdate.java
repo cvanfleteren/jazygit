@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.github.show;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import net.vanfleteren.jazygit.feature.fetch.FetchUpdate;
 import net.vanfleteren.jazygit.feature.github.browse.BrowsePullRequestCmd;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestUpdate;
@@ -105,13 +106,8 @@ public final class PullRequestUpdate {
                         FetchUpdate.requested(PullRequestsUpdate.loadAnyway(new Next(ended, done.cmds()))));
             }
             // Only the dialog itself is read again, not the one kept under a popup opened from it.
-            case PullRequestMsg.RefreshChosen(), PullRequestMsg.Tick() ->
-                model.popup(PullRequestPopup.class)
-                        .filter(popup -> refreshable(model, popup))
-                        .map(popup -> Next.of(
-                                model.openPopup(popup.readingAgain()),
-                                new LoadPullRequestDetails(popup.pullRequest().number())))
-                        .getOrElse(() -> Next.of(model));
+            case PullRequestMsg.RefreshChosen() -> readAgain(model, popup -> true, Reading.ASKED);
+            case PullRequestMsg.Tick() -> readAgain(model, popup -> popup.dueByItself(model.now()), Reading.BY_ITSELF);
             case PullRequestMsg.InfoClosed() -> Next.of(model.withoutPopup(PullRequestPopup.class));
         };
     }
@@ -140,6 +136,19 @@ public final class PullRequestUpdate {
      */
     static boolean refreshable(Model model, PullRequestPopup popup) {
         return popup.refreshable() && !busy(model, popup);
+    }
+
+    /**
+     * {@code model} reading the pull request shown again, as {@code reading} tells, when it can be and {@code due};
+     * else as it is.
+     */
+    private static Next readAgain(Model model, Predicate<PullRequestPopup> due, Reading reading) {
+        return model.popup(PullRequestPopup.class)
+                .filter(popup -> refreshable(model, popup) && due.test(popup))
+                .map(popup -> Next.of(
+                        model.openPopup(popup.readingAgain(reading, model.now())),
+                        new LoadPullRequestDetails(popup.pullRequest().number())))
+                .getOrElse(() -> Next.of(model));
     }
 
     private static boolean busy(Model model, PullRequestPopup popup) {
@@ -192,7 +201,8 @@ public final class PullRequestUpdate {
      */
     private static Next show(Model model, BranchName branch, PullRequest pullRequest) {
         return Next.of(
-                Update.ask(model, PullRequestPopup.loading(branch, pullRequest)).model(),
+                Update.ask(model, PullRequestPopup.loading(branch, pullRequest, model.now()))
+                        .model(),
                 new LoadPullRequestDetails(pullRequest.number()));
     }
 }

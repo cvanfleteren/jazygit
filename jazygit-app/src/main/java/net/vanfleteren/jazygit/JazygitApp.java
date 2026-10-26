@@ -59,6 +59,7 @@ import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
 import net.vanfleteren.jazygit.feature.worktree.WorktreeFeature;
 import net.vanfleteren.jazygit.gh.CliGitHub;
 import net.vanfleteren.jazygit.gh.GhToken;
+import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.git.CliGitInfoProvider;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.RepositoryIdentity;
@@ -92,8 +93,9 @@ public class JazygitApp extends ToolkitApp {
             new Timer(REFRESH_INTERVAL, Msg.Tick::new),
             new Timer(FETCH_INTERVAL, FetchMsg.Tick::new),
             new Timer(FETCH_INTERVAL, PrOverviewMsg.Tick::new),
-            new Timer(FETCH_INTERVAL, PullRequestMsg.Tick::new),
-            new Timer(FETCH_INTERVAL, ChecksMsg.Tick::new),
+            // The dialogs that list checks read them only while one is not done, or once a minute (ADR 34).
+            new Timer(CheckTimings.READ_WHILE_PENDING, PullRequestMsg.Tick::new),
+            new Timer(CheckTimings.READ_WHILE_PENDING, ChecksMsg.Tick::new),
             new Timer(MERGE_CHECK_INTERVAL, PullRequestMsg.MergeTick::new));
 
     // Rows of the command log panel, borders included.

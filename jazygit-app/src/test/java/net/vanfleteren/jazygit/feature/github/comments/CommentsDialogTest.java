@@ -41,7 +41,9 @@ import org.junit.jupiter.api.Test;
 class CommentsDialogTest {
 
     private static final PullRequestPopup SHOWN = PullRequestPopup.loading(
-                    new BranchName("feature"), new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED))
+                    new BranchName("feature"),
+                    new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED),
+                    Instant.EPOCH)
             .with(Either.right(StubGitHub.empty().pullRequestDetails(42).get()));
     private static final Size WIDE = new Size(140, 30);
     // Under 100 columns, the list is above the comment, a third of the popup high.
