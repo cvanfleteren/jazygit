@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.ui;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
@@ -104,11 +105,21 @@ final class BranchSegs {
      */
     static List<LoadableList.Seg> pullRequest(
             Option<PullRequest> pullRequest, Option<MergeStatus> merge, Option<String> eta) {
+        return pullRequest(pullRequest, merge, false, eta);
+    }
+
+    /**
+     * The pull request of a branch, as {@link #pullRequest(Option, Option, Option)}, with its checks waiting to start
+     * while they run and {@code waiting} (ADR 35).
+     */
+    private static List<LoadableList.Seg> pullRequest(
+            Option<PullRequest> pullRequest, Option<MergeStatus> merge, boolean waiting, Option<String> eta) {
         return pullRequest
                 .toList()
                 .flatMap(pr -> PullRequestSymbols.state(
                                 pr.stack(),
                                 pr.checks(),
+                                waiting,
                                 eta.map(text -> new PullRequestSymbols.Symbol(text, Theme.Classes.DIM)),
                                 pr.review(),
                                 merge)
@@ -149,10 +160,23 @@ final class BranchSegs {
      */
     static List<LoadableList.Seg> gitHub(
             Option<PullRequest> pullRequest, Option<MergeStatus> merge, Option<Checks> checks, Option<String> eta) {
+        return gitHub(pullRequest, merge, checks, false, eta);
+    }
+
+    /**
+     * How a branch is doing on GitHub, as {@link #gitHub(Option, Option, Option, Option)}, with its checks waiting to
+     * start while they run and {@code waiting}, and then {@code eta} how long they have waited (ADR 35).
+     */
+    static List<LoadableList.Seg> gitHub(
+            Option<PullRequest> pullRequest,
+            Option<MergeStatus> merge,
+            Option<Checks> checks,
+            boolean waiting,
+            Option<String> eta) {
         return pullRequest.isDefined()
-                ? pullRequest(pullRequest, merge, eta)
+                ? pullRequest(pullRequest, merge, waiting, eta)
                 : checks.toList()
-                        .flatMap(state -> PullRequestSymbols.checks(state)
+                        .flatMap(state -> PullRequestSymbols.checks(state, waiting)
                                 .map(BranchSegs::symbol)
                                 .toList()
                                 .appendAll(etaSeg(state, eta)));
@@ -162,8 +186,19 @@ final class BranchSegs {
      * When the checks of a branch are expected to be done, as the lists show it, from what {@code model} knows
      * (ADR 32).
      */
-    static Option<String> eta(Model model, Option<Eta> eta) {
+    private static Option<String> eta(Model model, Option<Eta> eta) {
         return eta.flatMap(known -> CheckTimesText.brief(known, model.gitHub().learningCheckTimes(), model.now()));
+    }
+
+    /**
+     * What shows after the symbol of the checks of a branch, from what {@code model} knows: while they all wait to
+     * start, {@code waiting}, how long they have, nothing for a re-run; else when they are expected to be done
+     * (ADR 35).
+     */
+    static Option<String> after(Model model, Option<Waiting> waiting, Option<Eta> eta) {
+        return waiting.map(known ->
+                        known.since().map(since -> CheckTimesText.waited(Duration.between(since, model.now()))))
+                .getOrElse(() -> eta(model, eta));
     }
 
     private static LoadableList.Seg symbol(PullRequestSymbols.Symbol symbol) {

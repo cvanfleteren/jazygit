@@ -127,6 +127,50 @@ class BranchChecksUpdateTest {
                         "push")));
     }
 
+    /**
+     * A check of workflow {@code Build} that waits to start, of attempt {@code attempt} of a run created at EPOCH.
+     */
+    private static PullRequestDetails.Check queued(String name, int attempt) {
+        return new PullRequestDetails.Check(
+                name,
+                Checks.PENDING,
+                Option.of(new CheckRun(
+                        name.length(), "Build", "", Option.none(), Option.none(), 1, Instant.EPOCH, attempt, "push")));
+    }
+
+    /**
+     * {@code model} with the checks on the pending branch {@code feature} read one by one as {@code checks}.
+     */
+    private static Model readOneByOne(List<PullRequestDetails.Check> checks) {
+        return Update.update(
+                        Update.update(loaded(), new BranchChecksMsg.Loaded(pending("feature")))
+                                .model(),
+                        new BranchChecksMsg.RunsLoaded(
+                                new PendingChecks("owner/repo", HashMap.of(new BranchName("feature"), checks))))
+                .model();
+    }
+
+    @Test
+    void aPendingBranchWaitsWhileNoneOfItsChecksThatAreNotDoneRuns() {
+        PullRequestDetails.Check passed = new PullRequestDetails.Check("lint", Checks.PASSING);
+
+        assertEquals(
+                Option.of(new Waiting(Option.of(Instant.EPOCH))),
+                readOneByOne(List.of(passed, queued("verify", 1))).gitHub().waiting(remote("origin", "feature")));
+        assertEquals(
+                Option.none(),
+                readOneByOne(List.of(queued("verify", 1), running("package")))
+                        .gitHub()
+                        .waiting(remote("origin", "feature")));
+        // GitHub does not say when a re-run started.
+        assertEquals(
+                Option.of(new Waiting(Option.none())),
+                readOneByOne(List.of(queued("verify", 2))).gitHub().waiting(remote("origin", "feature")));
+        assertEquals(
+                Option.none(),
+                readOneByOne(List.of(queued("verify", 1))).gitHub().waiting(remote("origin", "done")));
+    }
+
     @Test
     void theBranchesWhoseChecksArePendingAreReadOneByOneTheCheckedOutAndTheDefaultOneFirst() {
         Model model = TestModels.localBranchesRead(

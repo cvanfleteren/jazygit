@@ -138,6 +138,27 @@ class BranchSegsTest {
     }
 
     @Test
+    void checksThatAllWaitToStartSayHowLongTheyHave() {
+        PullRequest running = new PullRequest(38, "b", false, Checks.PENDING, Review.APPROVED);
+
+        assertEquals(
+                List.of(
+                        LoadableList.Seg.styled(" 💤", Theme.Classes.DIM),
+                        LoadableList.Seg.styled(" 3m", Theme.Classes.DIM)),
+                BranchSegs.gitHub(Option.none(), Option.none(), Option.of(Checks.PENDING), true, Option.of("3m")));
+        assertEquals(
+                List.of(
+                        LoadableList.Seg.styled(" #38", Theme.Classes.PULL_REQUEST),
+                        LoadableList.Seg.styled(" 💤", Theme.Classes.DIM),
+                        LoadableList.Seg.styled(" 👍", Theme.Classes.REVIEW_APPROVED)),
+                BranchSegs.gitHub(Option.of(running), Option.none(), Option.none(), true, Option.none()));
+        // Failed checks fail, also while another waits.
+        assertEquals(
+                List.of(LoadableList.Seg.styled(" ❌", Theme.Classes.CHECKS_FAILED)),
+                BranchSegs.gitHub(Option.none(), Option.none(), Option.of(Checks.FAILING), true, Option.of("3m")));
+    }
+
+    @Test
     void aBranchWhoseUpstreamIsGoneSaysSo() {
         assertEquals(
                 List.of(LoadableList.Seg.styled(" gone", Theme.Classes.GONE)),

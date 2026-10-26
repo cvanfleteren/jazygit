@@ -46,17 +46,27 @@ queued check of a first attempt shows how long it has been queued.
   does not say when an attempt started. Not: only for a workflow that waits, as a job waiting for a runner waits as
   much.
 - The estimate of a workflow that waits is not known, as no check of its own name has a history: the checks
-  together show `done in ?`, and the branches pane `⏳ ?`. Not: an estimate from the checks its workflow ran before,
-  which needs which checks a workflow has, and how long it waits is what is not known.
-- The branches pane does not tell queued from running: it has room for one symbol and a time.
+  together show `done in ?`. Not: an estimate from the checks its workflow ran before, which needs which checks a
+  workflow has, and how long it waits is what is not known.
+- In the branches pane, a pending branch whose checks that are not done all wait to start, as read one by one,
+  shows `💤`, as a queued check does in the dialogs, and how long since the first of their workflow runs was
+  created, in whole minutes as the pane has it (ADR 34) and rounded down: `main 💤 3m`, `💤 <1m`; of re-runs only
+  `💤`. Also next to the number of a pull request: `#146 💤 3m 👍`. While one of them runs it shows `⏳` and the
+  estimate, as before: something happens, and when it is done is what tells most. Failed checks show `❌`, also while
+  another waits. Not: `⌛` next to `⏳`, which look alike at a glance; `🕒` or `⏰`, which read as a time set or
+  late; nor `⏸`, which most terminals show one column wide and some two (ADR 32), and which reads as paused.
+- Without the checks read one by one, as for an eleventh pending branch (ADR 32), it shows `⏳`, as it does not know
+  better. The branch with a workflow that waits is pending, so it is read one by one, as the others.
 
 ## Consequences
 
-- One step: the queries, their jq and parsing, and the time a check is queued.
+- One step: the queries, their jq and parsing, the time a check is queued, and `💤` in the branches pane.
 - A workflow that waits is timed from when its run was created, so once it starts, its checks are expected later
   than they were before it waited, as ADR 32 has it; how long it waited is in what is learned from them too.
 - An app's suite that is left queued is not shown; one of Actions that is would show as queued for good.
 - Tested: the parsing of a branch with a workflow that waits, also next to failed checks and without a rollup; the
   line of a workflow that waits read one by one, in the branches and the pull request dialog; that it is queued and
-  never learned from; `queued 3m 20s` for a first attempt and `queued` for a re-run. The jq of the three queries is
+  never learned from; `queued 3m 20s` for a first attempt and `queued` for a re-run; in the branches pane, `💤` and
+  how long while all that is not done waits, with and without a pull request, `💤` alone for a re-run, `⏳` while
+  one runs and `❌` when one failed, and `<1m`, `3m` and `1h 5m`. The jq of the three queries is
   not run by the tests, as no other jq is; it was tried on what GitHub gives.

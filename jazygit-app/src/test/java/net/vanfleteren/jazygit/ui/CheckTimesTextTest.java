@@ -103,6 +103,13 @@ class CheckTimesTextTest {
     }
 
     @Test
+    void howLongChecksWaitedInTheBranchesPaneInWholeMinutes() {
+        assertEquals("<1m", CheckTimesText.waited(Duration.ofSeconds(59)));
+        assertEquals("3m", CheckTimesText.waited(Duration.ofSeconds(3 * 60 + 59)));
+        assertEquals("1h 5m", CheckTimesText.waited(Duration.ofMinutes(65)));
+    }
+
+    @Test
     void aQueuedCheckCanBeDue() {
         assertEquals(
                 "queued 2m · due",

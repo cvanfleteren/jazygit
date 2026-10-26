@@ -73,6 +73,14 @@ public final class CheckTimesText {
     }
 
     /**
+     * How long checks have waited to start, {@code since}, in the branches pane: in whole minutes, rounded down as it
+     * is exact, {@code 3m}, {@code 1h 5m}, or {@code <1m} (ADR 35).
+     */
+    public static String waited(Duration since) {
+        return since.toSeconds() < 60 ? Messages.get("checks.underAMinute") : minutes(since.toMinutes());
+    }
+
+    /**
      * {@code minutes}, one or more: {@code 2m}, {@code 1h}, {@code 1h 5m}; a whole hour without its {@code 0m}, as a
      * whole minute is without its {@code 0s}.
      */
