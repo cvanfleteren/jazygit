@@ -7,6 +7,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
+import java.time.Duration;
 import java.time.Instant;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -35,6 +36,8 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp;
  * @param running    every command that runs, by the id it was given when it was asked for, until it is done (ADR 33):
  *                   queued, waiting for its guard or running, the user waits for it all the same
  * @param nextId     the id the next command that is asked for gets
+ * @param lingering  what shows after the commands that showed are done, and until when, so that the indicator does
+ *                   not blink out between two commands
  */
 @With
 public record Jobs(
@@ -49,7 +52,8 @@ public record Jobs(
         long ticks,
         Map<Cmd.Load, Retry> retries,
         Map<Long, Running> running,
-        long nextId) {
+        long nextId,
+        Option<Lingering> lingering) {
 
     public static final Jobs IDLE = new Jobs(
             HashSet.empty(),
@@ -63,7 +67,19 @@ public record Jobs(
             0,
             HashMap.empty(),
             HashMap.empty(),
-            0);
+            0,
+            Option.none());
+
+    /**
+     * How long a command runs before it shows: the reads that take a few milliseconds, on every key and every tick,
+     * never do.
+     */
+    public static final Duration SHOWN_AFTER = Duration.ofMillis(300);
+
+    /**
+     * How long what showed stays once the commands that showed are done.
+     */
+    public static final Duration LINGER = Duration.ofMillis(300);
 
     /**
      * Caps how long a tick waits before trying a read that failed again at {@code 2^6} = 64 ticks, under a minute at
@@ -170,16 +186,42 @@ public record Jobs(
     }
 
     /**
-     * These jobs with the command {@code id} done.
+     * These jobs with the command {@code id} done at {@code now}. When it showed, and no other command that runs
+     * does, what it showed as lingers.
      */
-    public Jobs withDone(long id) {
-        return withRunning(running.remove(id));
+    public Jobs withDone(long id, Instant now) {
+        Jobs done = withRunning(running.remove(id));
+        return running.get(id)
+                .filter(command -> command.shown(now))
+                .filter(command -> done.running().values().forAll(other -> !other.shown(now)))
+                .map(command -> done.withLingering(Option.of(new Lingering(command.label(), now.plus(LINGER)))))
+                .getOrElse(done);
     }
 
     /**
      * A command that runs, asked for at {@code started}.
      */
-    public record Running(Cmd cmd, Instant started) {}
+    public record Running(Cmd cmd, Instant started) {
+
+        /**
+         * Whether it shows at {@code now}: once it ran {@link #SHOWN_AFTER}.
+         */
+        public boolean shown(Instant now) {
+            return !now.isBefore(started.plus(SHOWN_AFTER));
+        }
+
+        /**
+         * What it shows as.
+         */
+        public Label label() {
+            return cmd.label().getOrElse(Label.WORKING);
+        }
+    }
+
+    /**
+     * What shows as {@code label} until {@code until}, after the commands that showed are done.
+     */
+    public record Lingering(Label label, Instant until) {}
 
     /**
      * A read that failed {@code failures} times in a row, the last time on tick {@code tick}.

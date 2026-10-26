@@ -23,6 +23,17 @@ public interface OperationCmd extends Cmd {
     }
 
     /**
+     * The title of the operation, as the command log has it, and what it is done to, if its error names that.
+     */
+    @Override
+    default Option<Label> label() {
+        Label title = Label.of(operation().logTitleKey());
+        return Option.of(subject()
+                .map(subject -> Label.of("work.operation", title, subject))
+                .getOrElse(title));
+    }
+
+    /**
      * The branch that is marked busy while this runs, if any; it is released when this is done.
      */
     default Option<BranchRef> busyBranch() {

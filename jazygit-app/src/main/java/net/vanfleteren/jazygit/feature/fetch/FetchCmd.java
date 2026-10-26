@@ -4,6 +4,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Msg;
 
 /**
@@ -22,6 +23,11 @@ public sealed interface FetchCmd extends Cmd {
     record ListRemotes() implements FetchCmd {
 
         @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.remotes"));
+        }
+
+        @Override
         public Msg run(Env env) {
             return env.git().remotes().fold(this::failedWith, FetchMsg.RemotesListed::new);
         }
@@ -36,6 +42,11 @@ public sealed interface FetchCmd extends Cmd {
      * Fetches from {@code remote}.
      */
     record Fetch(String remote) implements FetchCmd {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.fetch", remote));
+        }
 
         @Override
         public Option<Guard> guard() {

@@ -116,10 +116,12 @@ public class JazygitApp extends ToolkitApp {
     // Quitting is up to the model, which may refuse; the runner stops on what the update returns.
     private final Consumer<Msg> dispatch =
             msg -> this.runtime.forEach(running -> running.program().dispatch(msg));
+    // Tells the time a frame is drawn at, which the spinners turn by.
+    private final Clock clock = Clock.systemUTC();
     private final ContentPanel contentPanel;
     private final FilesPanel filesPanel = new FilesPanel(dispatch, () -> openContent(FilesPanel.ID), this::highlight);
     private final BranchesPanel branchesPanel = new BranchesPanel(
-            dispatch, this::showBranchesTab, () -> openContent(BranchesPanel.ID), Clock.systemUTC(), this::highlight);
+            dispatch, this::showBranchesTab, () -> openContent(BranchesPanel.ID), clock, this::highlight);
     private final CommitsPanel commitsPanel =
             new CommitsPanel(dispatch, () -> openContent(CommitsPanel.ID), this::highlight);
     private final StashPanel stashPanel = new StashPanel(dispatch, () -> openContent(StashPanel.ID), this::highlight);
@@ -483,7 +485,7 @@ public class JazygitApp extends ToolkitApp {
      * A spinner turns by being drawn.
      */
     private void turnSpinners() {
-        if (Spinners.shown(model())) {
+        if (Spinners.shown(model(), clock.instant())) {
             requestRedraw();
         }
     }
@@ -508,7 +510,7 @@ public class JazygitApp extends ToolkitApp {
                 JazygitApp::logBug,
                 this::requestRedraw,
                 this::quit,
-                Clock.systemUTC());
+                clock);
         runtime = Option.of(new Runtime(io, background, program));
         runner.focusManager().setFocus(PopupSlot.focusedPane(program.model()));
         // The first tick of the fetch is a while off, so it fetches now; the pull requests show from the start, not
@@ -645,7 +647,9 @@ public class JazygitApp extends ToolkitApp {
                                 CommandLogPanel.render(model).length(COMMAND_LOG_HEIGHT))
                         .fill());
         // The fetch line keeps its row under the panes, also when nothing is fetched, so they do not move.
-        Element layout = column(panes.fill(), FetchLine.render(model).length(FetchLine.HEIGHT));
+        Element layout = column(
+                panes.fill(),
+                FetchLine.render(model, clock.instant(), screenWidth()).length(FetchLine.HEIGHT));
         borderDrag.shown(panes, left);
         // The open popup takes the focus, and gives it back to where it was opened from.
         List<Shown> shown = popups.map(slot -> new Shown(
@@ -750,6 +754,13 @@ public class JazygitApp extends ToolkitApp {
         if (!reports.isEmpty()) {
             runner().tuiRunner().runLater(() -> reports.forEach(dispatch));
         }
+    }
+
+    /**
+     * The columns of the screen; as many as there could be when that is not known.
+     */
+    private int screenWidth() {
+        return Try.of(() -> runner().tuiRunner().backend().size().width()).getOrElse(Integer.MAX_VALUE);
     }
 
     /**

@@ -101,6 +101,13 @@ public final class ChecksDialog implements PopupView {
     }
 
     /**
+     * Whether the dialog shows a spinner in {@code model}: while its checks are first read, or read again.
+     */
+    public static boolean showsSpinner(Model model) {
+        return model.popup(ChecksPopup.class).exists(popup -> popup.checks().isEmpty() || popup.refreshing());
+    }
+
+    /**
      * The branch; then a spinner while its checks are read again, or a mark when that failed.
      */
     private String title(ChecksPopup popup) {

@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.timing.CheckHistory;
@@ -83,6 +84,11 @@ public sealed interface CheckTimesCmd extends Cmd {
      * lock, so two jazygits do not both try.
      */
     record TopUpCheckTimes(String repository, Instant now) implements CheckTimesCmd {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.checkTimes"));
+        }
 
         @Override
         public Msg run(Env env) {

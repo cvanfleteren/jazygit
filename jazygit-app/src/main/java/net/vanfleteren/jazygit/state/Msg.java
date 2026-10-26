@@ -59,7 +59,7 @@ public interface Msg {
 
         @Override
         public Update.Next apply(Model model) {
-            Model done = model.mapJobs(jobs -> jobs.withDone(id));
+            Model done = model.mapJobs(jobs -> jobs.withDone(id, model.now()));
             return result.map(msg -> msg.apply(done)).getOrElse(() -> Update.Next.of(done));
         }
     }

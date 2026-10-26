@@ -265,6 +265,7 @@ class FilesPane:
         """Commits the staged changes. With nothing staged, it stages all files first, as the app offers to."""
         self.focus()
         nothing_staged = self.repo("diff", "--cached", "--name-only") == ""
+        commits = self._commits()
 
         def keys():
             self.app.press("c")
@@ -279,7 +280,12 @@ class FilesPane:
                 self.app.type(description)
                 self.app.press("ctrl+s")
 
-        self.ui.changing_repo(f"the commit {summary!r}", keys)
+        # Staging first changes the repository already, before the commit even starts: it is done once it made one.
+        self.ui.changing_repo(f"the commit {summary!r}", keys, lambda: self._commits() == commits + 1)
+
+    def _commits(self) -> int:
+        """How many commits HEAD has: none before the first."""
+        return int(self.repo("rev-list", "--count", "HEAD")) if self.repo.has_head() else 0
 
     def amend_last_commit(self):
         """Adds the staged changes to the last commit."""

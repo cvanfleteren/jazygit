@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Operation;
 
 /**
@@ -102,6 +103,11 @@ public sealed interface PullRequestCmd extends Cmd {
     record CheckMerge(int number, String id) implements PullRequestCmd {
 
         @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.checkMerge", String.valueOf(number)));
+        }
+
+        @Override
         public boolean background() {
             return true;
         }
@@ -176,6 +182,11 @@ public sealed interface PullRequestCmd extends Cmd {
      * Reads the details of pull request {@code number}, which the user is waiting for.
      */
     record LoadPullRequestDetails(int number) implements PullRequestCmd {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.pullRequest", String.valueOf(number)));
+        }
 
         @Override
         public Msg run(Env env) {

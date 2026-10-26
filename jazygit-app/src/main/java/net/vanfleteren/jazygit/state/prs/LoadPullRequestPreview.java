@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Msg;
 
 /**
@@ -13,6 +14,11 @@ import net.vanfleteren.jazygit.state.Msg;
  * for is skipped.
  */
 public record LoadPullRequestPreview(PullRequestSummary key) implements Cmd {
+
+    @Override
+    public Option<Label> label() {
+        return Option.of(Label.of("work.pullRequest", String.valueOf(key.number())));
+    }
 
     @Override
     public boolean background() {

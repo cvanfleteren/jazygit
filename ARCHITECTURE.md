@@ -481,6 +481,15 @@ out of `running` and applies what it carries. The handlers never see an id: they
 `Program` only gets the stamped `Launch(id, cmd)`s of a `Step`. `Update.begin` stamps the first loads the same way.
 With `--debug`, each command that is done is logged with how long it ran and what it reported.
 
+The line under everything else (`ui.FetchLine`) shows what runs, on its right, before how fresh the screen is: a
+spinner, the label of the command that ran longest of those that ran 300 ms (`Jobs.SHOWN_AFTER`), and how many more
+did, like `Fetching origin +2`. A command says what it shows as with `Cmd.label()`, a message key with its arguments
+(`Label`); an operation shows its command log title and what it is done to, and one without a label shows
+`Working…`. When the last command that showed is done, `Msg.Done` keeps its label in `Jobs.lingering` for 300 ms more,
+so the indicator does not blink out between two commands. Whether a command ran long enough is told by the clock the
+frame is drawn at, so `Jobs.running` is not drawn (`Model.drawn()`); `Spinners.shown` draws frames while a command
+runs or a label lingers. See `documentation/adr/0033-show-that-work-is-being-done.md`.
+
 Every minute a `FetchMsg.Tick` fetches from the remotes in the background, unless the previous fetch is
 still running. `FetchUpdate` lists the remotes (those `git fetch --all` would fetch) and fetches them one after
 the other with `git fetch --prune <remote>`, so branches deleted on the remote show as gone, whatever

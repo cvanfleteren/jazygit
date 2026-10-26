@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.settings;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.Label;
 
 /**
  * The IO of the settings.
@@ -15,6 +16,11 @@ public sealed interface SettingsPanelCmd extends Cmd {
      * GitHub to check the accounts.
      */
     record ReadGitHub(String executable) implements SettingsPanelCmd {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.gh"));
+        }
 
         @Override
         public boolean background() {
@@ -41,6 +47,11 @@ public sealed interface SettingsPanelCmd extends Cmd {
      * Checks that {@code executable}, none for the one on the PATH, is a gh that runs.
      */
     record CheckGhExecutable(Option<String> executable) implements SettingsPanelCmd {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.gh"));
+        }
 
         @Override
         public boolean background() {

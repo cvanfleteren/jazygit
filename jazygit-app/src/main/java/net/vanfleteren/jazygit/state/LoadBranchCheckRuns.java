@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.BranchName;
 
 /**
@@ -8,6 +9,11 @@ import net.vanfleteren.jazygit.git.model.BranchName;
  * pending (ADR 32). It runs in the background, as it talks to GitHub, and nobody waits for it.
  */
 public record LoadBranchCheckRuns(List<BranchName> branches) implements Cmd {
+
+    @Override
+    public Option<Label> label() {
+        return Option.of(Label.of("work.checks"));
+    }
 
     @Override
     public boolean background() {

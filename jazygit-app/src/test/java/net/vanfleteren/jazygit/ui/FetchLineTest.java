@@ -7,9 +7,15 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
-import net.vanfleteren.jazygit.state.Fetching;
+import net.vanfleteren.jazygit.feature.fetch.FetchCmd;
+import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd;
+import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Freshness;
-import net.vanfleteren.jazygit.state.LoadPullRequests;
+import net.vanfleteren.jazygit.state.Jobs;
+import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -17,41 +23,163 @@ import net.vanfleteren.jazygit.state.prs.PrOverview;
 import org.junit.jupiter.api.Test;
 
 /**
- * The line saying which remote is being fetched from, or that the pull requests are being read.
+ * The line saying what runs, and how fresh the screen is.
  */
 class FetchLineTest {
 
-    private static String rendered(Model model) throws Exception {
-        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> FetchLine.render(model))) {
-            return RenderedText.of(runner, () -> FetchLine.render(model)).strip();
+    private static final Instant START = Instant.parse("2026-10-26T10:00:00Z");
+
+    private static String rendered(Model model, Instant now, int width) throws Exception {
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> FetchLine.render(model, now, width))) {
+            return RenderedText.ofSize(runner, () -> FetchLine.render(model, now, width), width, 1)
+                    .strip();
         }
     }
 
-    @Test
-    void showsTheRemoteBeingFetchedFrom() throws Exception {
-        assertEquals(
-                "Fetching origin",
-                rendered(TestModels.loaded()
-                        .mapJobs(jobs ->
-                                jobs.withFetching(Option.of(new Fetching(Option.of("origin"), List.empty()))))));
+    private static String rendered(Model model, Instant now) throws Exception {
+        return rendered(model, now, 80);
+    }
+
+    private static Model running(Model model, Cmd cmd, Instant started) {
+        return model.mapJobs(jobs -> jobs.withStarted(List.of(cmd), started));
+    }
+
+    private static String spinning(Instant now, String text) {
+        return TimeText.spinnerFrame(now) + " " + text;
     }
 
     @Test
-    void showsThePullRequestsBeingReadWhenNoRemoteIsBeingFetchedFrom() throws Exception {
-        Model reading = TestModels.loaded()
-                .mapGitHub(gitHub -> gitHub.withReading(io.vavr.collection.HashSet.of(new LoadPullRequests())));
-
-        assertEquals("Reading pull requests from GitHub", rendered(reading));
-        assertEquals(
-                "Fetching origin",
-                rendered(reading.mapJobs(
-                        jobs -> jobs.withFetching(Option.of(new Fetching(Option.of("origin"), List.empty()))))));
+    void isBlankWhileNothingRuns() throws Exception {
+        assertEquals("", rendered(TestModels.loaded(), START));
     }
 
     @Test
-    void isBlankWhileNoRemoteIsBeingFetchedFrom() throws Exception {
-        assertEquals("", rendered(TestModels.loaded()));
-        assertEquals("", rendered(TestModels.loaded().mapJobs(jobs -> jobs.withFetching(Option.of(Fetching.LISTING)))));
+    void aCommandShowsOnlyOnceItRanAWhile() throws Exception {
+        Model fetching = running(TestModels.loaded(), new FetchCmd.Fetch("origin"), START);
+
+        assertEquals("", rendered(fetching, START.plusMillis(299)));
+        assertEquals(spinning(START.plusMillis(300), "Fetching origin"), rendered(fetching, START.plusMillis(300)));
+    }
+
+    @Test
+    void theCommandThatRanLongestShowsWithHowManyMoreDo() throws Exception {
+        Model model = running(
+                running(
+                        running(TestModels.loaded(), new FetchCmd.Fetch("origin"), START),
+                        new Cmd.LoadStatus(),
+                        START.plusMillis(100)),
+                new Cmd.LoadBranches(),
+                START.plusMillis(400));
+
+        // The branches ran too short to count.
+        assertEquals(spinning(START.plusMillis(500), "Fetching origin +1"), rendered(model, START.plusMillis(500)));
+    }
+
+    @Test
+    void whatShowedLingersOnceItIsDone() throws Exception {
+        Instant done = START.plusSeconds(1);
+        Model model = running(TestModels.loaded(), new FetchCmd.Fetch("origin"), START)
+                .mapJobs(jobs -> jobs.withDone(0, done));
+
+        assertEquals(spinning(done.plusMillis(299), "Fetching origin"), rendered(model, done.plusMillis(299)));
+        assertEquals("", rendered(model, done.plus(Jobs.LINGER)));
+    }
+
+    @Test
+    void aCommandThatShowedDoesNotLingerWhileAnotherShows() throws Exception {
+        Instant done = START.plusSeconds(1);
+        Model model = running(
+                        running(TestModels.loaded(), new FetchCmd.Fetch("origin"), START),
+                        new Cmd.LoadStatus(),
+                        START.plusMillis(100))
+                .mapJobs(jobs -> jobs.withDone(0, done));
+
+        assertEquals(Option.none(), model.jobs().lingering());
+        assertEquals(spinning(done, "Reading the status"), rendered(model, done));
+    }
+
+    @Test
+    void aCommandThatNeverShowedDoesNotLinger() {
+        Model model = running(TestModels.loaded(), new Cmd.LoadStatus(), START)
+                .mapJobs(jobs -> jobs.withDone(0, START.plusMillis(299)));
+
+        assertEquals(Option.none(), model.jobs().lingering());
+    }
+
+    @Test
+    void comesBeforeHowFreshTheScreenIsWhichIsCutLast() throws Exception {
+        Instant now = START.plusSeconds(1);
+        Model model = running(
+                TestModels.loaded()
+                        .withNow(now)
+                        .mapJobs(
+                                jobs -> jobs.withLastFetch(Freshness.NEVER.succeeded("origin", now.minusSeconds(120)))),
+                new FetchCmd.Fetch("origin"),
+                START);
+        String spinner = TimeText.spinnerFrame(now) + " ";
+
+        assertEquals(spinner + "Fetching origin · fetched 2m ago", rendered(model, now));
+        // Only the spinner, a few columns of the label and the freshness fit.
+        assertEquals(
+                spinner + "Fe… · fetched 2m ago",
+                rendered(model, now, TextWidth.of(spinner) + 3 + TextWidth.of(" · fetched 2m ago") + 3));
+    }
+
+    @Test
+    void theCherryPickKeepsTheLeftAndOnlyTheLabelIsCut() throws Exception {
+        Instant now = START.plusSeconds(1);
+        Commit copied = TestModels.FEATURE_COMMITS.head();
+        Model model = running(
+                TestModels.loaded()
+                        .withNow(now)
+                        .mapRepoView(view -> view.withCherryPick(Option.of(copied)))
+                        .mapJobs(
+                                jobs -> jobs.withLastFetch(Freshness.NEVER.succeeded("origin", now.minusSeconds(120)))),
+                new FetchCmd.Fetch("origin"),
+                START);
+        String cherryPick = "Copied " + copied.shortSha()
+                + " to cherry-pick · V to cherry-pick onto the checked out branch · Esc to cancel";
+        String spinner = TimeText.spinnerFrame(now) + " ";
+        String fresh = " · fetched 2m ago";
+
+        assertEquals(
+                cherryPick + "   " + spinner + "Fe…" + fresh,
+                rendered(model, now, TextWidth.of(cherryPick + "   " + spinner + "Fe…" + fresh)));
+    }
+
+    @Test
+    void howManyMoreRunIsKeptWholeAsTheLabelIsCut() throws Exception {
+        Instant now = START.plusSeconds(1);
+        Model model = running(
+                running(TestModels.loaded(), new FetchCmd.Fetch("origin"), START),
+                new Cmd.LoadStatus(),
+                START.plusMillis(100));
+        String spinner = TimeText.spinnerFrame(now) + " ";
+
+        assertEquals(spinner + "Fe… +1", rendered(model, now, TextWidth.of(" · " + spinner + "Fe… +1")));
+    }
+
+    @Test
+    void theLabelsOfCommandsAndOperations() {
+        assertEquals("Working…", FetchLine.labelText(Label.WORKING));
+        assertEquals(
+                "Fetching origin",
+                FetchLine.labelText(new FetchCmd.Fetch("origin").label().get()));
+        assertEquals("Reading pull request #12345", FetchLine.labelText(Label.of("work.pullRequest", "12345")));
+        BranchName feature = new BranchName("feature");
+        BranchRef base = new BranchRef.Local(new BranchName("main"));
+        assertEquals(
+                "Reading the title of feature",
+                FetchLine.labelText(new CreatePullRequestCmd.ReadTitle(feature, feature, List.empty(), base)
+                        .label()
+                        .get()));
+        assertEquals(
+                "Reading the title of feature",
+                FetchLine.labelText(new CreatePullRequestCmd.RereadTitle(feature, new BranchName("main"), base)
+                        .label()
+                        .get()));
+        assertEquals(
+                "Push feature", FetchLine.labelText(Label.of("work.operation", Label.of("log.title.push"), "feature")));
     }
 
     private static final Instant NOW = Instant.parse("2026-10-17T12:00:00Z");

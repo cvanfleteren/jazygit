@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Operation;
 
 /**
@@ -59,6 +60,11 @@ public sealed interface CreatePullRequestCmd extends Cmd {
 
         // Further away than this, a base is too far to tell apart from the others; it also bounds the walk.
         public static final int MAX_DISTANCE = 1000;
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.base", branch.value()));
+        }
 
         @Override
         public Msg run(Env env) {
@@ -110,6 +116,11 @@ public sealed interface CreatePullRequestCmd extends Cmd {
             implements CreatePullRequestCmd {
 
         @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.title", branch.value()));
+        }
+
+        @Override
         public Msg run(Env env) {
             return read(firstSubject(env, branch, baseRef));
         }
@@ -129,6 +140,11 @@ public sealed interface CreatePullRequestCmd extends Cmd {
      * picked instead, as {@link ReadTitle} does.
      */
     record RereadTitle(BranchName branch, BranchName base, BranchRef baseRef) implements CreatePullRequestCmd {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.title", branch.value()));
+        }
 
         @Override
         public Msg run(Env env) {

@@ -1,10 +1,12 @@
 package net.vanfleteren.jazygit.feature.github.checks;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PendingChecks;
 
@@ -13,6 +15,11 @@ import net.vanfleteren.jazygit.state.PendingChecks;
  * for.
  */
 public record LoadChecks(RemoteBranch branch) implements Cmd {
+
+    @Override
+    public Option<Label> label() {
+        return Option.of(Label.of("work.checksOf", branch.branch().value()));
+    }
 
     @Override
     public Msg run(Env env) {

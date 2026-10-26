@@ -76,6 +76,13 @@ public interface Cmd {
     }
 
     /**
+     * What this command shows as while it runs, once it ran a while (ADR 33); none for {@link Label#WORKING}.
+     */
+    default Option<Label> label() {
+        return Option.none();
+    }
+
+    /**
      * The slot this command takes, if it is only wanted until a newer one for that slot is asked for: the newer
      * one cancels it when it has not started yet, and it then reports only {@link #skipped()}. Only a command whose
      * result the model drops once a newer one is asked for may take one, as nothing else may wait for its answer.
@@ -194,6 +201,11 @@ public interface Cmd {
     record LoadStatus() implements Load {
 
         @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.status"));
+        }
+
+        @Override
         public Msg run(Env env) {
             return env.git().status().fold(this::failedWith, LoadMsg.StatusLoaded::new);
         }
@@ -203,6 +215,11 @@ public interface Cmd {
      * Reads the local and the remote-tracking branches, at once.
      */
     record LoadBranches() implements Load {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.branches"));
+        }
 
         @Override
         public Msg run(Env env) {
@@ -222,6 +239,11 @@ public interface Cmd {
         static final List<Load> GUARDED = List.of(new LoadBranches(), new LoadStashes(), new LoadWorktrees());
 
         @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.metadata"));
+        }
+
+        @Override
         public Msg run(Env env) {
             Option<GitMetadata> metadata = env.git().metadata();
             return new LoadMsg.MetadataChecked(List.of(
@@ -234,12 +256,22 @@ public interface Cmd {
     record LoadStashes() implements Load {
 
         @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.stashes"));
+        }
+
+        @Override
         public Msg run(Env env) {
             return env.git().stashes().fold(this::failedWith, LoadMsg.StashesLoaded::new);
         }
     }
 
     record LoadWorktrees() implements Load {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.worktrees"));
+        }
 
         @Override
         public Msg run(Env env) {
@@ -252,6 +284,11 @@ public interface Cmd {
      * out. It runs in the background, as it takes a git status per worktree, and nobody waits for it.
      */
     record LoadWorktreeChanges(List<String> worktrees) implements Load {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.worktreeChanges"));
+        }
 
         @Override
         public boolean background() {
@@ -277,6 +314,11 @@ public interface Cmd {
     record LoadCommits(LoadAhead ahead) implements Load {
 
         @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.commits"));
+        }
+
+        @Override
         public Msg run(Env env) {
             return env.git()
                     .commits()
@@ -288,6 +330,11 @@ public interface Cmd {
      * Reads the commits of the log of HEAD that {@code query} finds, leaving out those on {@code notOn}, if given.
      */
     record SearchCommits(CommitQuery query, Option<BranchRef> notOn) implements Load {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.search"));
+        }
 
         @Override
         public Msg run(Env env) {
@@ -307,6 +354,11 @@ public interface Cmd {
      * @param main  the main branch, once the branches are read and one is
      */
     record LoadAhead(Option<BranchRef> branch, Option<BranchName> named, Option<BranchName> main) implements Load {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.ahead"));
+        }
 
         @Override
         public Msg run(Env env) {
@@ -346,6 +398,11 @@ public interface Cmd {
     record LoadBranchLog(BranchRef branch, LoadAhead ahead) implements Load {
 
         @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.branchLog", branch.name()));
+        }
+
+        @Override
         public Option<Slot> slot() {
             return Option.of(Slot.BRANCH_LOG);
         }
@@ -364,6 +421,11 @@ public interface Cmd {
      * Reads the commits only on {@code branch} and the ones only on {@code other}.
      */
     record LoadDivergence(BranchName branch, BranchRef other) implements Load {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.divergence", branch.value(), other.name()));
+        }
 
         @Override
         public Msg run(Env env) {
@@ -388,6 +450,11 @@ public interface Cmd {
         }
 
         @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.commitDetail", sha.shortSha()));
+        }
+
+        @Override
         public Option<Slot> slot() {
             return Option.of(preview);
         }
@@ -403,6 +470,11 @@ public interface Cmd {
     record LoadStashDetail(Sha sha, DiffOptions options) implements DiffLoad {
 
         @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.stashDetail"));
+        }
+
+        @Override
         public Option<Slot> slot() {
             return Option.of(Slot.STASH_DETAIL);
         }
@@ -416,6 +488,11 @@ public interface Cmd {
     }
 
     record LoadFileDiff(List<FileEntry> files, DiffOptions options) implements DiffLoad {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.diff"));
+        }
 
         @Override
         public Option<Slot> slot() {

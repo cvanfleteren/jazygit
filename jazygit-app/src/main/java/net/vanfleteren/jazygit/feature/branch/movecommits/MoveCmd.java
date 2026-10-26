@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.OperationMsg;
@@ -36,6 +37,11 @@ public sealed interface MoveCmd extends Cmd {
      * {@code upstream} already.
      */
     record ReadRange(BranchName from, Sha oldest, Option<RemoteBranch> upstream) implements MoveCmd {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.range", from.value()));
+        }
 
         @Override
         public Msg run(Env env) {
