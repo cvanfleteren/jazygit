@@ -25,14 +25,16 @@ how they are drawn, and how often the dialogs read.
 
 ### Shown
 
-- In the checks popup and the pull request dialog, every time, how long a check runs or took and how long it is
-  expected to take still, is shown to 5s under 5m: `45s`, `2m 5s`, `2m`; from 5m on in whole minutes, as it was:
-  `7m`, `1h 5m`. Not: seconds on every time, which a long one does not need. Not: seconds only on how long a check
-  runs, as that is exact and an estimate is not: the `~` says the estimate is rough, and both moving on together is
-  what shows that something happens.
-- How long a check runs or took is rounded down, as it was, like a clock that counts up: a check that has run 7m 40s
-  shows `running 7m`, not `8m`, which it has not run yet. Under 5s it shows `<5s`, as the branches pane shows
-  `<1m`: `running <5s`. How long it is expected to take still is rounded to the nearest step, as it was.
+- In the checks popup and the pull request dialog, a time that is not estimated is shown to 5s, and an estimate to
+  5s only while it is under 5m.
+- How long a check runs or took is known exactly, so it is shown to 5s at any length: `45s`, `2m`, `7m 40s`,
+  `1h 5m 40s`. It is rounded down, as it was, like a clock that counts up: a check that has run 7m 41s shows
+  `running 7m 40s`, never a time it has not run yet. Under 5s it shows `<5s`, as the branches pane shows `<1m`:
+  `running <5s`.
+- How long it is expected to take still is an estimate, rounded to the nearest step, as it was: to 5s under 5m,
+  `~45s`, `~2m 5s`; from 5m on to the nearest minute, `~7m`. Not: seconds on a long estimate, which claims more than
+  is known. Not: an estimate in whole minutes also under 5m: the `~` says it is rough, and both times moving on
+  together is what shows that something happens.
 - Not padded: `2m 5s`, not `2m 05s`, as a duration and not a clock. The column the checks popup lines the times up
   in can grow by a column once a minute.
 - A check whose estimate rounds to no time left, or is past, but which is not overdue yet, shows `due`:
@@ -98,8 +100,8 @@ how they are drawn, and how often the dialogs read.
   `readAt`, and the quiet reads.
 - Up to six times as many calls while a dialog is open on checks that are not done.
 - The bottom line shows a read of the checks for about a second every 10s while one is not done.
-- Tested: how long down and what is left to the nearest, to 5s and to minutes, `<5s`, `due` past `~5s left` and
-  `done any moment`, the minutes kept in the branches pane; when a tick reads, for checks that are and are not done,
+- Tested: how long down to 5s at any length, and what is left to the nearest, to 5s and to the minute from 5m on,
+  `<5s`, `due` past `~5s left` and `done any moment`, the minutes kept in the branches pane; when a tick reads, for checks that are and are not done,
   and a tick that comes a few ms short of the minute, and every minute only after a read failed; that only `R` and the first read show the spinner, `R` during
   a read by itself, and that a read by itself that fails marks the details stale; a draft changed while the dialog
   reads by itself, with that read coming back before and after the change is done, dropped from the dialog and the
