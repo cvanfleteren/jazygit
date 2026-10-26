@@ -93,14 +93,56 @@ public final class CheckRows {
     public static List<StyledElement<?>> row(
             Check check, List<Check> all, Option<CheckTimes> times, Instant now, int nameWidth, boolean took) {
         List<StyledElement<?>> symbol = PullRequestSymbols.check(check).toList().map(CheckRows::symbol);
-        Option<String> doing = check.done()
-                ? Option.when(took, () -> took(check)).flatMap(o -> o)
-                : Option.of(CheckTimesText.of(check, eta(check, all, times), learning(times), now));
         TextElement name = text(" " + padded(check.name(), nameWidth) + "  ");
-        return symbol.appendAll(doing.map(text -> List.<StyledElement<?>>of(
+        return symbol.appendAll(doing(check, all, times, now, took)
+                .map(text -> List.<StyledElement<?>>of(
                         check.queued() ? name.addClass(Theme.Classes.DIM) : name,
                         text(text).addClass(Theme.Classes.DIM)))
                 .getOrElse(() -> List.of(text(" " + check.name()))));
+    }
+
+    /**
+     * {@code check}, one of the checks {@code all} of a commit, taking {@code width} columns: its symbol and its name
+     * on the left, cut to leave room, and how it is doing or how long it took on the right, in a column
+     * {@code doingWidth} wide, lined up on the right: {@code ✅ verify          2m}.
+     */
+    public static List<StyledElement<?>> filling(
+            Check check, List<Check> all, Option<CheckTimes> times, Instant now, int width, int doingWidth) {
+        List<PullRequestSymbols.Symbol> symbols =
+                PullRequestSymbols.check(check).toList();
+        int left =
+                width - symbols.map(symbol -> TextWidth.of(symbol.text())).sum().intValue() - 1;
+        return symbols.<StyledElement<?>>map(CheckRows::symbol)
+                .appendAll(doing(check, all, times, now, true)
+                        .map(text -> {
+                            TextElement name = text(" " + padded(check.name(), left - 2 - doingWidth) + "  ");
+                            return List.<StyledElement<?>>of(
+                                    check.queued() ? name.addClass(Theme.Classes.DIM) : name,
+                                    text(TextWidth.alignRight(text, doingWidth)).addClass(Theme.Classes.DIM));
+                        })
+                        .getOrElse(() -> List.of(text(" " + TextWidth.cut(check.name(), left)))));
+    }
+
+    /**
+     * How wide the column {@link #filling} shows how {@code listed}, some of the checks {@code all} of a commit, are
+     * doing in is: as wide as the widest.
+     */
+    public static int doingWidth(List<Check> listed, List<Check> all, Option<CheckTimes> times, Instant now) {
+        return listed.flatMap(check -> doing(check, all, times, now, true))
+                .map(TextWidth::of)
+                .max()
+                .getOrElse(0);
+    }
+
+    /**
+     * How {@code check}, one of the checks {@code all} of a commit, is doing when it is not done; when it is, how long
+     * it took when {@code took}.
+     */
+    private static Option<String> doing(
+            Check check, List<Check> all, Option<CheckTimes> times, Instant now, boolean took) {
+        return check.done()
+                ? Option.when(took, () -> took(check)).flatMap(o -> o)
+                : Option.of(CheckTimesText.of(check, eta(check, all, times), learning(times), now));
     }
 
     /**

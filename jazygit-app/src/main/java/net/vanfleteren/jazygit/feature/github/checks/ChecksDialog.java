@@ -40,6 +40,8 @@ public final class ChecksDialog implements PopupView {
     public static final String ID = "checks";
 
     private static final int WIDTH = 80;
+    // The columns inside the border, which the checks take to line up how they are doing on the right.
+    private static final int CONTENT_WIDTH = WIDTH - 2;
     // The checks listed at once; the others are scrolled to.
     private static final int VISIBLE_CHECKS = 16;
     // The counts, a blank line and the checks. The dialog is always this high, so it keeps its size when they arrive.
@@ -138,12 +140,13 @@ public final class ChecksDialog implements PopupView {
             return List.of(text(Messages.get("dialog.checks.none")).addClass(Theme.Classes.DIM));
         }
         List<Check> ordered = CheckRows.order(all, all, times);
-        int nameWidth = CheckRows.nameWidth(ordered);
+        // Over all the checks, not only those shown, so the column keeps its width while they scroll.
+        int doingWidth = CheckRows.doingWidth(ordered, all, times, now);
         return List.<StyledElement<?>>of(row(CheckRows.counts(all, times, now).toJavaArray(StyledElement[]::new)))
                 .append(text(""))
                 .appendAll(ordered.drop(first)
                         .take(VISIBLE_CHECKS)
-                        .map(check -> row(CheckRows.row(check, all, times, now, nameWidth, true)
+                        .map(check -> row(CheckRows.filling(check, all, times, now, CONTENT_WIDTH, doingWidth)
                                 .toJavaArray(StyledElement[]::new))));
     }
 
