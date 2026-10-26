@@ -45,3 +45,7 @@ waiting that second.
   failure is kept as `refreshFailed`, and cleared by the next read that succeeds.
 - When there were no details yet, as the first read failed, the new failure replaces the old one, as before.
 - No error is raised: a failing tick would raise one every minute.
+
+Amended by ADR 34: the dialog is told to read again every 10s, and reads while a check is not done or a minute
+after its last read; only a read asked for with `R` shows a spinner in the title. A draft can be changed while it
+reads by itself: each read has an id, and one that started before the change is not taken once it is done.
