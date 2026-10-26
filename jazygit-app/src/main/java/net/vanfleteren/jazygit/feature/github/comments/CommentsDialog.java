@@ -119,7 +119,7 @@ public final class CommentsDialog implements PopupView {
     }
 
     private Element dialog(CommentsPopup popup, Instant now, int width, int height) {
-        int contentWidth = width - DialogFrame.FRAME;
+        int contentWidth = DialogFrame.contentWidth(width);
         int contentHeight = Math.max(0, height - FRAME_HEIGHT);
         boolean narrow = width + 2 * MARGIN_X < NARROW;
         List<PullRequestComment> all = popup.all();

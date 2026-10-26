@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
@@ -27,8 +28,10 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PendingChecks;
 import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.ui.CheckRows;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
+import net.vanfleteren.jazygit.ui.Theme;
 import org.junit.jupiter.api.Test;
 
 class ChecksDialogTest {
@@ -56,6 +59,25 @@ class ChecksDialogTest {
                         took.map(seconds -> NOW.minusSeconds(started - seconds)),
                         1,
                         NOW.minusSeconds(started + 2),
+                        1,
+                        "push")));
+    }
+
+    /**
+     * A check of workflow {@code Build} that waits to be started.
+     */
+    private static Check queued(String name) {
+        return new Check(
+                name,
+                Checks.PENDING,
+                Option.of(new CheckRun(
+                        name.hashCode(),
+                        "Build",
+                        "",
+                        Option.none(),
+                        Option.none(),
+                        1,
+                        NOW.minusSeconds(10),
                         1,
                         "push")));
     }
@@ -105,21 +127,39 @@ class ChecksDialogTest {
     }
 
     @Test
-    void theTimingsKeepTheirColumnWhenTheWidestIsScrolledOutOfView() throws Exception {
-        // checka failed after 10m, the widest; the 16 others passed after 1m.
+    void longNamesAreCutAlikeWhenTheWidestTimingIsScrolledOutOfView() throws Exception {
+        // checka failed after 10m, the widest timing; the 16 others, with long names, passed after 1m.
         ChecksPopup popup = read(List.range(0, 17)
                 .map(i -> i == 0
                         ? check("checka", Checks.FAILING, 900, Option.of(600))
-                        : check("check" + (char) ('a' + i), Checks.PASSING, 300, Option.of(60))));
+                        : check("check" + (char) ('a' + i) + "z".repeat(80), Checks.PASSING, 300, Option.of(60))));
         Model model = TestModels.loaded().withNow(NOW).openPopup(popup);
 
         String top = screen(model);
         String scrolled = screen(model.withListCursor(ListCursor.START.at(1)));
 
+        // 78 columns: the symbol takes 2, a space 1, then the name 57 of which the last is the ellipsis, 2, and the
+        // timings 16, as wide as "failed after 10m" also when it is not shown.
+        String checkb = "checkb" + "z".repeat(50) + "…" + " ".repeat(2 + 14) + "1m│";
         assertTrue(top.contains("checka" + " ".repeat(53) + "failed after 10m│"), top);
-        assertTrue(top.contains("checkb" + " ".repeat(67) + "1m│"), top);
+        assertTrue(top.contains(checkb), top);
         assertFalse(scrolled.contains("checka"), scrolled);
-        assertTrue(scrolled.contains("checkb" + " ".repeat(67) + "1m│"), scrolled);
+        assertTrue(scrolled.contains(checkb), scrolled);
+    }
+
+    @Test
+    void aQueuedCheckIsDimmedAllAlongARunningOneOnlyInItsTime() {
+        List<Check> all = List.of(queued("acceptance"), check("verify", Checks.PENDING, 150, Option.none()));
+
+        // After the symbol, the name and how it is doing.
+        List<StyledElement<?>> queued =
+                CheckRows.filling(all.head(), all, Option.none(), NOW, 78, 20).tail();
+        List<StyledElement<?>> running =
+                CheckRows.filling(all.last(), all, Option.none(), NOW, 78, 20).tail();
+
+        assertTrue(queued.forAll(piece -> piece.cssClasses().contains(Theme.Classes.DIM)));
+        assertFalse(running.head().cssClasses().contains(Theme.Classes.DIM));
+        assertTrue(running.last().cssClasses().contains(Theme.Classes.DIM));
     }
 
     @Test
