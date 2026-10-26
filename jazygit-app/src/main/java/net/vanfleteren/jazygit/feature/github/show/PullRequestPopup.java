@@ -43,21 +43,24 @@ public record PullRequestPopup(
      * The popup showing {@code result}, of read {@code id}: the details, or why reading them failed. Details that
      * were read already stay shown when reading them again fails, marked stale. How far the base moved on is read
      * apart from the rest and can fail alone: the count shown stays when the pull request is still open at the same
-     * commit on the same base, where the base can only have moved on further. It still reads when {@code id} is not
-     * the read it waits for.
+     * commit on the same base, where the base can only have moved on further. Only the read it waits for changes it:
+     * one it did not start, like one of the dialog before it was opened again, is left to the pull requests listed
+     * (ADR 34).
      */
     public PullRequestPopup with(Either<Failure, PullRequestDetails> result, long id) {
-        Reading after = id == read ? Reading.NOT : reading;
-        return result.isLeft() && detailsRead()
-                ? new PullRequestPopup(branch, pullRequest, details, after, Option.of(result.getLeft()), readAt, read)
-                : new PullRequestPopup(
-                        branch,
-                        pullRequest,
-                        Option.of(result.map(this::keepingBehindBase)),
-                        after,
-                        Option.none(),
-                        readAt,
-                        read);
+        return id != read
+                ? this
+                : result.isLeft() && detailsRead()
+                        ? new PullRequestPopup(
+                                branch, pullRequest, details, Reading.NOT, Option.of(result.getLeft()), readAt, read)
+                        : new PullRequestPopup(
+                                branch,
+                                pullRequest,
+                                Option.of(result.map(this::keepingBehindBase)),
+                                Reading.NOT,
+                                Option.none(),
+                                readAt,
+                                read);
     }
 
     /**
@@ -86,7 +89,7 @@ public record PullRequestPopup(
     /**
      * The popup while its details are read again from {@code now} by read {@code id}, as {@code reading} tells.
      */
-    PullRequestPopup readingAgain(Reading reading, Instant now, long id) {
+    public PullRequestPopup readingAgain(Reading reading, Instant now, long id) {
         return new PullRequestPopup(branch, pullRequest, details, reading, refreshFailed, now, id);
     }
 

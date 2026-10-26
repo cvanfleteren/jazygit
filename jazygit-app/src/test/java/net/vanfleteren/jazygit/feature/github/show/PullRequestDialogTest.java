@@ -276,7 +276,7 @@ class PullRequestDialogTest {
         String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
                 .with(Either.right(DETAILS), 0)
                 .readingAgain(Reading.BY_ITSELF, NOW, 1)
-                .with(Either.left(refused("gh: offline")), 0));
+                .with(Either.left(refused("gh: offline")), 1));
 
         assertTrue(screen.contains("Pull request #42 · not up to date"), screen);
         assertTrue(screen.contains("Add rename support to the files panel"), screen);

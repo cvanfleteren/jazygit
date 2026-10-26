@@ -1236,6 +1236,31 @@ class PullRequestUpdateTest {
     }
 
     @Test
+    void aDialogOpenedAgainLeavesAnOlderReadThatComesBackFirstToTheBranches() {
+        Model quiet = Update.update(aMinuteOn(showingDetails()), new PullRequestMsg.Tick())
+                .model();
+        long older = lastRead(quiet);
+        PullRequestDetails details = StubGitHub.empty().pullRequestDetails(42).get();
+        Model reopened = Update.update(
+                        Update.update(quiet, new PullRequestMsg.InfoClosed()).model(),
+                        new PullRequestMsg.Requested(FEATURE))
+                .model();
+        PullRequestPopup loading = reopened.popup(PullRequestPopup.class).get();
+
+        // The older read is still taken, as nothing changed since, but the dialog waits for its own.
+        Model failed = Update.update(reopened, new PullRequestMsg.DetailsFailed(42, older, refused("gh: offline")))
+                .model();
+        assertEquals(Option.of(loading), failed.popup(PullRequestPopup.class));
+
+        Model read = Update.update(reopened, new PullRequestMsg.DetailsLoaded(42, older, details.withDraft(true)))
+                .model();
+        assertEquals(Option.of(loading), read.popup(PullRequestPopup.class));
+        assertEquals(
+                Option.of(new PullRequest(42, "feature", true, Checks.NONE, Review.NONE)),
+                read.gitHub().pullRequest(PUSHED));
+    }
+
+    @Test
     void aDialogOpenedAgainTakesItsOwnReadWhenItComesBackBeforeOneThatIsNoLongerTaken() {
         Model quiet = Update.update(aMinuteOn(showingDetails()), new PullRequestMsg.Tick())
                 .model();
