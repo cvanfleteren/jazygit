@@ -647,7 +647,7 @@ class PullRequestDialogTest {
         String screen = timedScreen(List.of(timed("acceptance", 500, Option.of(400))), learned());
 
         assertTrue(screen.contains("Checks  ⏳ 1 running · taking longer than usual"), screen);
-        assertTrue(screen.contains("⏳ acceptance  running 6m · overdue"), screen);
+        assertTrue(screen.contains("⏳ acceptance  running 6m 40s · overdue"), screen);
     }
 
     @Test

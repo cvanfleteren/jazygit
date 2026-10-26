@@ -9,26 +9,24 @@ import net.vanfleteren.jazygit.gh.timing.Eta;
 import net.vanfleteren.jazygit.i18n.Messages;
 
 /**
- * How long checks have run and are expected to take still (ADR 32): in the dialogs to 5s while that is under 5m, else
- * in minutes, how long rounded down and what is left to the nearest (ADR 34); in the branches pane, which has no room
- * for seconds, in whole minutes.
+ * How long checks have run and are expected to take still (ADR 32). In the dialogs how long they ran, which is
+ * exact, is rounded down to 5s; what is left, an estimate, to the nearest 5s while that is under 5m, else to the
+ * nearest minute (ADR 34). In the branches pane, which has no room for seconds, in whole minutes.
  */
 public final class CheckTimesText {
 
-    // From how long on a time in a dialog is shown in whole minutes, not to 5s.
+    // From how long on an estimate in a dialog is shown in whole minutes, not to 5s.
     private static final long TO_THE_SECOND = Duration.ofMinutes(5).toSeconds();
 
     private CheckTimesText() {}
 
     /**
-     * How long it is since {@code since}, in a dialog, rounded down as a clock that counts up: {@code <5s}, {@code 45s},
-     * {@code 2m}, {@code 2m 5s} to 5s; from 5m on in whole minutes, {@code 7m}, {@code 1h 5m}.
+     * How long it is since {@code since}, in a dialog, rounded down to 5s as a clock that counts up, as it is exact:
+     * {@code <5s}, {@code 45s}, {@code 2m}, {@code 7m 40s}, {@code 1h 5m 40s}.
      */
     public static String duration(Duration since) {
         long seconds = since.toSeconds();
-        return seconds < 5
-                ? Messages.get("checks.underFiveSeconds")
-                : seconds >= TO_THE_SECOND ? minutes(seconds / 60) : toFiveSeconds(seconds / 5 * 5);
+        return seconds < 5 ? Messages.get("checks.underFiveSeconds") : toFiveSeconds(seconds / 5 * 5);
     }
 
     /**
@@ -43,15 +41,23 @@ public final class CheckTimesText {
     }
 
     /**
-     * {@code seconds}, a step of 5s under 5m: {@code 45s}, {@code 2m}, {@code 2m 5s}.
+     * {@code seconds}, a step of 5s: {@code 45s}, {@code 2m}, {@code 2m 5s}, {@code 1h 5m 40s}.
      */
     private static String toFiveSeconds(long seconds) {
         return seconds < 60
                 ? Messages.get("checks.seconds", String.valueOf(seconds))
                 : seconds % 60 == 0
                         ? minutes(seconds / 60)
-                        : Messages.get(
-                                "checks.minutesSeconds", String.valueOf(seconds / 60), String.valueOf(seconds % 60));
+                        : seconds < 3600
+                                ? Messages.get(
+                                        "checks.minutesSeconds",
+                                        String.valueOf(seconds / 60),
+                                        String.valueOf(seconds % 60))
+                                : Messages.get(
+                                        "checks.hoursSeconds",
+                                        String.valueOf(seconds / 3600),
+                                        String.valueOf(seconds / 60 % 60),
+                                        String.valueOf(seconds % 60));
     }
 
     /**
