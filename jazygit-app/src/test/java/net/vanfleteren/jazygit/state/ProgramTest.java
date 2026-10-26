@@ -906,12 +906,13 @@ class ProgramTest {
                 .running()
                 .values()
                 .forAll(running -> running.started().equals(start.plusMillis(200))));
-        clock.at(start.plusMillis(700));
+        // Done before they ran long enough to show.
+        clock.at(start.plusMillis(400));
         drain(queued);
 
         // The loads brought nothing new, and the time moved on within the same second: nothing to draw.
         assertEquals(loaded, changes.get());
-        assertEquals(start.plusMillis(700), timed.model().now());
+        assertEquals(start.plusMillis(400), timed.model().now());
         assertEquals(HashMap.empty(), timed.model().jobs().running());
 
         clock.at(start.plusMillis(1100));

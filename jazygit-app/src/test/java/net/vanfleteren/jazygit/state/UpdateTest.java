@@ -186,6 +186,25 @@ class UpdateTest {
     }
 
     @Test
+    void aCommandThatShowedLingersOnceItIsDoneAndOneThatDidNotDoesNot() {
+        Instant now = Instant.parse("2026-10-22T10:00:00Z");
+        Step ticked = Update.step(loaded(), new Tick(), now);
+        Launch first = ticked.launches().head();
+        Launch second = ticked.launches().last();
+
+        Model quick = Update.step(ticked.model(), new Msg.Done(first.id(), Option.none()), now.plusMillis(299))
+                .model();
+        Model slow = Update.step(quick, new Msg.Done(second.id(), Option.none()), now.plusSeconds(1))
+                .model();
+
+        assertEquals(Option.none(), quick.jobs().lingering());
+        assertEquals(
+                Option.of(new Jobs.Lingering(
+                        second.cmd().label().get(), now.plusSeconds(1).plus(Jobs.LINGER))),
+                slow.jobs().lingering());
+    }
+
+    @Test
     void theFirstLoadsRunFromTheStart() {
         Instant now = Instant.parse("2026-10-22T10:00:00Z");
 
