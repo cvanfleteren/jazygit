@@ -167,6 +167,51 @@ class ChecksDialogTest {
     }
 
     @Test
+    void saysWhenTheChecksStartedAndHowLongTheyRun() throws Exception {
+        String screen = screen(read(List.of(
+                check("package", Checks.PASSING, 300, Option.of(60)),
+                check("verify", Checks.PENDING, 150, Option.none()))));
+
+        // From when the first run was created, 302s ago, to the second.
+        assertTrue(screen.contains("│started 11:54:58 · running 5m 2s "), screen);
+        assertFalse(screen.contains("ended"), screen);
+    }
+
+    @Test
+    void saysWhenTheChecksStartedAndEndedOnceAllAreDoneAFailedOneToo() throws Exception {
+        String screen = screen(read(List.of(
+                check("package", Checks.PASSING, 300, Option.of(60)),
+                check("lint", Checks.FAILING, 300, Option.of(90)),
+                new Check("ci/status", Checks.PASSING))));
+
+        assertTrue(screen.contains("│started 11:54:58 · ended 11:56:30 · took 1m 32s "), screen);
+    }
+
+    @Test
+    void aTimeOfAnotherDayHasItsDate() throws Exception {
+        String screen = screen(read(List.of(check("package", Checks.PASSING, 86_400 + 100, Option.of(60)))));
+
+        assertTrue(screen.contains("started 2026-10-24 11:58:18 · ended 2026-10-24 11:59:20 · took 1m 2s"), screen);
+    }
+
+    @Test
+    void commitStatusesAloneShowNoStartNorEnd() throws Exception {
+        String screen = screen(read(List.of(new Check("ci/status", Checks.PASSING))));
+
+        assertTrue(screen.contains("ci/status"), screen);
+        assertFalse(screen.contains("started"), screen);
+    }
+
+    @Test
+    void checksThatFailedToBeReadAgainKeepWhenTheyStarted() throws Exception {
+        String screen = screen(read(List.of(check("verify", Checks.PENDING, 150, Option.none())))
+                .with(Either.left(refused("offline"))));
+
+        assertTrue(screen.contains("Checks of main · not up to date"), screen);
+        assertTrue(screen.contains("started 11:57:28 · running 2m 32s"), screen);
+    }
+
+    @Test
     void aLongNameIsCutToLeaveRoomForTheTimingAtTheBorder() throws Exception {
         String longName = "x".repeat(80);
         String screen = screen(read(List.of(check(longName, Checks.PASSING, 300, Option.of(60)))));
@@ -239,7 +284,11 @@ class ChecksDialogTest {
         Model model = TestModels.loaded().withNow(NOW).openPopup(many());
 
         String top = screen(model);
+        // 16 at once, under when they started and ended.
+        assertTrue(top.contains("started"), top);
         assertTrue(top.contains("checka"), top);
+        assertTrue(top.contains("checkp"), top);
+        assertFalse(top.contains("checkq"), top);
         assertFalse(top.contains("checkt"), top);
 
         String bottom = screen(model.withListCursor(ListCursor.START.at(4)));

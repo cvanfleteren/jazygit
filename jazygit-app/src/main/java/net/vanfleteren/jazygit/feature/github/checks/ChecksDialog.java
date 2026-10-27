@@ -12,8 +12,12 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
+import net.vanfleteren.jazygit.gh.timing.CheckSpan;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -24,6 +28,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Reading;
 import net.vanfleteren.jazygit.ui.CheckRows;
+import net.vanfleteren.jazygit.ui.CheckTimesText;
 import net.vanfleteren.jazygit.ui.ErrorText;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.TimeText;
@@ -32,7 +37,7 @@ import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
 /**
  * Popup listing the checks on the tip of a branch one by one (ADR 32): how many are in each state and when they are
- * expected to be done; then each, the failed ones first, then the running, the queued and the passed ones, with how
+ * expected to be done; when they started and ended, and how long they took together (ADR 37); then each, the failed ones first, then the running, the queued and the passed ones, with how
  * long it took, or runs and is expected to take still. It scrolls when they do not all fit. While they are read
  * again, they stay shown, with a spinner in the title when the user asked for that (ADR 34); when that fails, the
  * title says they are stale.
@@ -46,8 +51,12 @@ public final class ChecksDialog implements PopupView {
     private static final int CONTENT_WIDTH = DialogFrame.contentWidth(WIDTH);
     // The checks listed at once; the others are scrolled to.
     private static final int VISIBLE_CHECKS = 16;
-    // The counts, a blank line and the checks. The dialog is always this high, so it keeps its size when they arrive.
-    private static final int CONTENT_HEIGHT = 1 + 1 + VISIBLE_CHECKS;
+    // The counts, when they started and ended, a blank line and the checks. The dialog is always this high, so it keeps
+    // its size when they arrive.
+    private static final int CONTENT_HEIGHT = 1 + 1 + 1 + VISIBLE_CHECKS;
+    // A time of day, of today; one of another day has its date before it.
+    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm:ss");
+    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final Consumer<Msg> dispatch;
     private final Clock clock;
@@ -60,7 +69,8 @@ public final class ChecksDialog implements PopupView {
     }
 
     /**
-     * @param clock animates the spinner; how long checks run is told by the time of the model
+     * @param clock animates the spinner, and its zone is the one times of day are shown in; how long checks run is
+     *              told by the time of the model
      */
     ChecksDialog(Consumer<Msg> dispatch, Clock clock) {
         this.dispatch = dispatch;
@@ -86,7 +96,8 @@ public final class ChecksDialog implements PopupView {
                             .checkTimes()
                             .filter(known -> known.repository().equals(read.repository())));
             List<StyledElement<?>> lines = popup.checks()
-                    .map(read -> read.fold(ChecksDialog::failed, checks -> checks(all, first, times, model.now())))
+                    .map(read -> read.fold(
+                            ChecksDialog::failed, checks -> checks(all, first, times, model.now(), clock.getZone())))
                     .getOrElse(this::loading);
             int blanks = CONTENT_HEIGHT - lines.size();
             return DialogFrame.withHint(
@@ -144,9 +155,10 @@ public final class ChecksDialog implements PopupView {
     }
 
     /**
-     * The counts, and the checks that fit from the {@code first} one shown.
+     * The counts, when they started and ended, and the checks that fit from the {@code first} one shown.
      */
-    private static List<StyledElement<?>> checks(List<Check> all, int first, Option<CheckTimes> times, Instant now) {
+    private static List<StyledElement<?>> checks(
+            List<Check> all, int first, Option<CheckTimes> times, Instant now, ZoneId zone) {
         if (all.isEmpty()) {
             return List.of(text(Messages.get("dialog.checks.none")).addClass(Theme.Classes.DIM));
         }
@@ -154,11 +166,48 @@ public final class ChecksDialog implements PopupView {
         // Over all the checks, not only those shown, so the column keeps its width while they scroll.
         int doingWidth = CheckRows.doingWidth(ordered, all, times, now, true);
         return List.<StyledElement<?>>of(row(CheckRows.counts(all, times, now).toJavaArray(StyledElement[]::new)))
+                .appendAll(CheckSpan.of(all).map(span -> span(span, now, zone)))
                 .append(text(""))
                 .appendAll(ordered.drop(first)
                         .take(VISIBLE_CHECKS)
                         .map(check -> row(CheckRows.filling(check, all, times, now, CONTENT_WIDTH, doingWidth, true)
                                 .toJavaArray(StyledElement[]::new))));
+    }
+
+    /**
+     * When the checks started, and when they ended and how long they took, or how long they run at {@code now}:
+     * {@code started 14:02:10 · ended 14:06:41 · took 4m 31s}, {@code started 14:02:10 · running 4m 31s}.
+     */
+    private static StyledElement<?> span(CheckSpan span, Instant now, ZoneId zone) {
+        String took = CheckTimesText.duration(span.took(now));
+        List<StyledElement<?>> ended = span.end()
+                .map(end -> List.<StyledElement<?>>of(
+                        label("dialog.checks.ended", " · "),
+                        text(timeOfDay(end, now, zone)),
+                        label("dialog.checks.took", " · "),
+                        text(took)))
+                .getOrElse(() -> List.of(label("checks.running", " · "), text(took)));
+        return row(
+                List.<StyledElement<?>>of(label("dialog.checks.started", ""), text(timeOfDay(span.start(), now, zone)))
+                        .appendAll(ended)
+                        .toJavaArray(StyledElement[]::new));
+    }
+
+    /**
+     * The label {@code key}, dimmed, after {@code before} and with a space after it.
+     */
+    private static StyledElement<?> label(String key, String before) {
+        return text(before + Messages.get(key) + " ").addClass(Theme.Classes.DIM);
+    }
+
+    /**
+     * {@code at} as a time of day in {@code zone}, with its date before it when it is not the day of {@code now}.
+     */
+    private static String timeOfDay(Instant at, Instant now, ZoneId zone) {
+        ZonedDateTime local = at.atZone(zone);
+        return local.toLocalDate().equals(now.atZone(zone).toLocalDate())
+                ? TIME.format(local)
+                : DATE_TIME.format(local);
     }
 
     /**

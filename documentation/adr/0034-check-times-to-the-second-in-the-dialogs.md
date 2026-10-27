@@ -125,3 +125,6 @@ how they are drawn, and how often the dialogs read.
   own read comes back before one that is no longer taken, and one whose first read still runs when an older read comes
   back, failing or not; the read after a comment is sent, which shows in the dialog; a read not taken that fails,
   which marks nothing stale and lets ticks read again; `R` while a read that is no longer taken runs.
+
+Amended by ADR 37: what is measured is shown to the second under an hour in both dialogs, `0s` in place of `<5s`;
+estimates stay rounded.

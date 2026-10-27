@@ -23,7 +23,7 @@ public sealed interface Eta {
             return new Done();
         }
         Option<Instant> fromRun = check.run()
-                .flatMap(run -> runStart(run, all))
+                .flatMap(run -> CheckSpan.runStart(run, all))
                 .flatMap(start ->
                         CheckSample.key(check).flatMap(history::finished).map(start::plus));
         Option<Instant> fromStart = check.run()
@@ -67,26 +67,13 @@ public sealed interface Eta {
                 .flatMap(run -> {
                     List<String> shown = all.filter(check -> check.run().exists(other -> other.runId() == run.runId()))
                             .flatMap(CheckSample::key);
-                    return runStart(run, all)
+                    return CheckSpan.runStart(run, all)
                             .toList()
                             .flatMap(start -> history.checksOf(run.workflow(), run.event())
                                     .filter(check -> !shown.contains(check))
                                     .flatMap(history::finished)
                                     .map(start::plus));
                 });
-    }
-
-    /**
-     * When the workflow run of {@code run} started: when it was created, for its first attempt; for a re-run, when
-     * the first of its checks among {@code all} started, as GitHub does not say when an attempt started.
-     */
-    private static Option<Instant> runStart(CheckRun run, List<Check> all) {
-        return run.runAttempt() == 1
-                ? Option.of(run.runCreatedAt())
-                : all.flatMap(Check::run)
-                        .filter(other -> other.runId() == run.runId())
-                        .flatMap(CheckRun::startedAt)
-                        .min();
     }
 
     /**
