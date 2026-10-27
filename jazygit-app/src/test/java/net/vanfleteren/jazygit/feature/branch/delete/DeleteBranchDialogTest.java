@@ -10,9 +10,12 @@ import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.Fixtures;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Msg;
@@ -113,8 +116,40 @@ class DeleteBranchDialogTest {
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(open))) {
             String screen = RenderedText.ofLarge(runner, () -> view(open));
             org.junit.jupiter.api.Assertions.assertTrue(screen.contains("(d) delete local branch"), screen);
-            org.junit.jupiter.api.Assertions.assertTrue(screen.contains("(b) delete local and remote branch"), screen);
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    screen.contains("(r) delete remote branch origin/feature/initial-layout"), screen);
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    screen.contains("(b) delete local branch and remote branch origin/feature/initial-layout"), screen);
             org.junit.jupiter.api.Assertions.assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
+        }
+    }
+
+    @Test
+    void aRemoteBranchUnderAnotherNameIsSaidToBeAnotherBranch() throws Exception {
+        Model model = TestModels.localBranchesRead(
+                        TestModels.loaded(new SampleData()),
+                        List.of(
+                                Fixtures.branch(new BranchName("x"), true, new Sha("1")),
+                                Fixtures.branch(
+                                        new BranchName("mine"),
+                                        false,
+                                        new Sha("2"),
+                                        java.time.Instant.EPOCH,
+                                        true,
+                                        false,
+                                        io.vavr.control.Option.of(new Upstream(
+                                                new BranchRef.Remote(
+                                                        new RemoteBranch("origin", new BranchName("develop"))),
+                                                0,
+                                                0)))))
+                .model();
+        Model asked = Update.update(model, new DeleteBranchMsg.Requested(new BranchName("mine")))
+                .model();
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(asked))) {
+            String screen = RenderedText.ofLarge(runner, () -> view(asked));
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    screen.contains("(r) delete remote branch origin/develop, which is not named mine"), screen);
         }
     }
 

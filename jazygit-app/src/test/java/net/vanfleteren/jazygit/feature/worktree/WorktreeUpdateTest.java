@@ -578,7 +578,10 @@ class WorktreeUpdateTest {
         Model asked =
                 Update.update(model(), new DeleteBranchMsg.Requested(TAKEN)).model();
 
-        assertEquals(Option.of(new DeleteBranchPopup(TAKEN, Option.of("app-taken"))), asked.popup());
+        assertEquals(
+                Option.of(new DeleteBranchPopup(
+                        TAKEN, new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, TAKEN), Option.of("app-taken"))),
+                asked.popup());
         // Deleting it locally on its own git would refuse.
         assertEquals(
                 List.of(),
@@ -626,7 +629,10 @@ class WorktreeUpdateTest {
         Worktree locked = new Worktree(LINKED.path(), LINKED.head(), false, false, Option.of("on a usb stick"), false);
         Model asked = Update.update(worktrees(MAIN, locked), new DeleteBranchMsg.Requested(TAKEN))
                 .model();
-        assertEquals(Option.of(new DeleteBranchPopup(TAKEN, Option.of("app-taken"))), asked.popup());
+        assertEquals(
+                Option.of(new DeleteBranchPopup(
+                        TAKEN, new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, TAKEN), Option.of("app-taken"))),
+                asked.popup());
 
         Next chosen = Update.update(asked, new DeleteBranchMsg.WithWorktreeChosen());
         UnlockWorktreePopup unlock = new UnlockWorktreePopup(TAKEN, "/repos/app-taken", "app-taken", "on a usb stick");

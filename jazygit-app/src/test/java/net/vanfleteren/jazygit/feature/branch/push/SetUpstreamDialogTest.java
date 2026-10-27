@@ -88,6 +88,22 @@ class SetUpstreamDialogTest {
     }
 
     @Test
+    void afterPushDefaultRefusedItSaysWhy() throws Exception {
+        open = TestModels.loaded()
+                .openPopupIfFree(SetUpstreamPopup.refused(
+                        new BranchName("feature"),
+                        new SetUpstreamPopup.Refusal(
+                                "simple",
+                                new net.vanfleteren.jazygit.git.model.RemoteBranch(
+                                        "origin", new BranchName("develop")))));
+        try (ToolkitTestRunner runner = start()) {
+            String screen = RenderedText.ofLarge(runner, this::view);
+            assertTrue(screen.contains("push.default=simple: not to origin/develop"), screen);
+            assertTrue(screen.contains("origin feature"), screen);
+        }
+    }
+
+    @Test
     void closedModelShowsNoPopup() {
         assertTrue(dialog.render(TestModels.loaded()).isEmpty());
     }

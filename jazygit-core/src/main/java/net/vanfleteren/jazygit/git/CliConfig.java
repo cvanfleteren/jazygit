@@ -52,6 +52,17 @@ final class CliConfig {
     }
 
     /**
+     * The value of {@code key} as git sees it: from the repository's configuration, the user's or the system's,
+     * whichever sets it last. Only looked up, so not logged.
+     */
+    static Either<ProcessError, Option<String>> effective(Path worktree, String key) {
+        // git config --get exits with 1, saying nothing, when the key is not set.
+        return GitProcess.ask(worktree, GitCommand.reading("config", "--get", key))
+                .map(answer -> answer.map(output -> output.stdout().strip()))
+                .mapLeft(GitFailure::error);
+    }
+
+    /**
      * Sets {@code key} to {@code value} in the repository's own configuration, or removes it for none; removing a
      * key that is not set does nothing.
      */

@@ -35,12 +35,12 @@ public final class DeleteBranchDialogs {
                             DeleteBranchDialogs::localDeletable),
                     new Choice<>(
                             'r',
-                            "dialog.deleteBranch.remote",
+                            popup -> remoteLabel("dialog.deleteBranch.remote", popup),
                             () -> new DeleteBranchMsg.Chosen(DeleteScope.REMOTE),
                             DeleteBranchDialogs::remoteDeletable),
                     new Choice<>(
                             'b',
-                            "dialog.deleteBranch.both",
+                            popup -> remoteLabel("dialog.deleteBranch.both", popup),
                             () -> new DeleteBranchMsg.Chosen(DeleteScope.BOTH),
                             (model, popup) -> localDeletable(model, popup) && remoteDeletable(model, popup)),
                     new Choice<DeleteBranchPopup>(
@@ -92,6 +92,17 @@ public final class DeleteBranchDialogs {
                 PopupSlot.returningTo(BranchesPanel.ID, new ChoiceDialog<>(DELETE_BRANCH, dispatch)),
                 PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(UNLOCK_WORKTREE, dispatch)),
                 PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(DELETE_REMOTE_BRANCH, dispatch)));
+    }
+
+    /**
+     * The label of a choice that deletes on the remote: it names the remote branch, and says so when that has another
+     * name than the local one (ADR 40).
+     */
+    private static String remoteLabel(String key, DeleteBranchPopup popup) {
+        return Messages.get(
+                popup.remoteNamedOtherwise() ? key + "OtherName" : key,
+                popup.remote().shortName(),
+                popup.branch().value());
     }
 
     private static boolean remoteDeletable(Model model, DeleteBranchPopup popup) {

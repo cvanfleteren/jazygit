@@ -268,7 +268,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> push(
             BranchName branch, RemoteBranch upstream, PushMode mode) {
         return CliPush.push(worktree, branch, upstream, mode, credentials.get());
     }

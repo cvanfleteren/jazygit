@@ -16,13 +16,20 @@ import net.vanfleteren.jazygit.ui.widgets.TextInputDialog;
 public final class PushDialogs {
 
     /**
-     * Asks where to push a branch without an upstream, as {@code <remote> <branch>}; it starts out with the
-     * branch of the same name on {@code origin}. What cannot be read that way keeps it open.
+     * Asks where to push a branch, as {@code <remote> <branch>}: one without an upstream, or one that
+     * {@code push.default} did not push, which the title then says. It starts out with the branch of the same name.
+     * What cannot be read that way keeps it open.
      */
     public static final TextInputDialog.Spec<SetUpstreamPopup> SET_UPSTREAM = new TextInputDialog.Spec<>(
             "set-upstream",
             SetUpstreamPopup.class,
-            popup -> Messages.get("dialog.setUpstream.title"),
+            popup -> popup.refused()
+                    .map(refused -> Messages.get(
+                            "dialog.setUpstream.refusedTitle",
+                            popup.branch().value(),
+                            refused.upstream().shortName(),
+                            refused.pushDefault()))
+                    .getOrElse(() -> Messages.get("dialog.setUpstream.title")),
             Option.none(),
             PushMsg.UpstreamConfirmed::new);
 

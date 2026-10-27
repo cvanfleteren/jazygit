@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.InProgress;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 
 /**
  * Why a git operation failed, as data. Turning it into text is up to the caller.
@@ -137,6 +138,15 @@ public sealed interface GitError {
      * @param message what it was stashed as
      */
     record StashGone(String message) implements GitError {}
+
+    /**
+     * {@code push.default} does not push the branch where it was asked to go: {@code simple} only pushes to a branch
+     * of the same name, and {@code nothing} pushes nothing unless told where.
+     *
+     * @param pushDefault the value of {@code push.default}, {@code simple} when it is not set
+     * @param upstream    the branch the pushed branch follows
+     */
+    record PushRefused(String pushDefault, RemoteBranch upstream) implements GitError {}
 
     /**
      * A temporary file git needed could not be written.

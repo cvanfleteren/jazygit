@@ -341,7 +341,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> push(
             BranchName branch, RemoteBranch upstream, PushMode mode) {
         return ran();
     }

@@ -107,7 +107,7 @@ class OperationUpdateTest {
     void aCommandThatThrowsIsReportedAsABugOfThatCommand() {
         GitInfoProvider throwing = new StubGitProvider() {
             @Override
-            public Either<GitFailure<GitError.ProcessError>, List<ExecutedCommand>> push(
+            public Either<GitFailure<GitError>, List<ExecutedCommand>> push(
                     BranchName branch, RemoteBranch upstream, PushMode mode) {
                 throw new IllegalStateException("unexpected");
             }
@@ -126,7 +126,7 @@ class OperationUpdateTest {
     void aCommandThatThrowsAnErrorStillAnswersSoItsBranchIsReleased() {
         GitInfoProvider throwing = new StubGitProvider() {
             @Override
-            public Either<GitFailure<GitError.ProcessError>, List<ExecutedCommand>> push(
+            public Either<GitFailure<GitError>, List<ExecutedCommand>> push(
                     BranchName branch, RemoteBranch upstream, PushMode mode) {
                 throw new StackOverflowError();
             }
