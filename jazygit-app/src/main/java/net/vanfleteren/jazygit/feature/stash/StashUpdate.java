@@ -31,7 +31,7 @@ public final class StashUpdate {
         return Update.withFiles(
                 model,
                 files -> files.isEmpty()
-                        ? Next.of(model.fail(new AppError.NothingToStash()))
+                        ? Next.of(model.fail(AppError.refused("error.stash.nothing")))
                         : Update.ask(model, new StashPopup()));
     }
 

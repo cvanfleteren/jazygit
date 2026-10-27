@@ -33,15 +33,14 @@ public final class PullUpdate {
                         .map(upstream -> known.current()
                                 ? Update.start(model.clearError(), new Pull(branch))
                                 : known.ahead() > 0
-                                        ? Next.of(model.fail(new AppError.UnpushedCommits(branch)))
+                                        ? Next.of(model.fail(
+                                                AppError.refused("error.fastForward.unpushed", branch.value())))
                                         : Branches.checkedOutElsewhere(model, PullCmd.FAST_FORWARD, branch)
                                                 .map(error -> Next.of(model.fail(error)))
                                                 .getOrElse(() -> Update.start(
                                                         model.clearError(),
                                                         new FastForward(branch, upstream.branch()))))
-                        .getOrElse(() -> Next.of(model.fail(known.goneUpstream()
-                                .<AppError>map(upstream -> new AppError.UpstreamGone(branch, upstream.name()))
-                                .getOrElse(() -> new AppError.NoUpstream(branch))))))
+                        .getOrElse(() -> Next.of(model.fail(AppError.noUpstream(known)))))
                 .getOrElse(() -> Next.of(model));
     }
 }

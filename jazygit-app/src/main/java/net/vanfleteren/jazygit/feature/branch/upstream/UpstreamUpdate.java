@@ -83,10 +83,12 @@ public final class UpstreamUpdate {
     private static Next baseDivergence(Model model, UpstreamPopup popup) {
         return popup.branch()
                 .map(branch -> branch.isDefault()
-                        ? Next.of(model.fail(new AppError.IsBaseBranch(branch.name())))
+                        ? Next.of(model.fail(AppError.refused(
+                                "error.divergence.isBase", branch.name().value())))
                         : popup.base()
                                 .map(base -> open(model, branch, base, Against.BASE))
-                                .getOrElse(() -> Next.of(model.fail(new AppError.NoBaseBranch(branch.name())))))
+                                .getOrElse(() -> Next.of(model.fail(AppError.refused(
+                                        "error.divergence.noBase", branch.name().value())))))
                 .getOrElse(() -> Next.of(model));
     }
 
@@ -108,7 +110,7 @@ public final class UpstreamUpdate {
                                 model, new ResetPopup(new ResetTarget.ToUpstream(upstream.branch()), upstream.ahead())))
                         .getOrElse(() -> Next.of(model.fail(AppError.noUpstream(branch)))))
                 .getOrElse(() ->
-                        detached(model) ? Next.of(model.fail(new AppError.NoBranchCheckedOut())) : Next.of(model));
+                        detached(model) ? Next.of(model.fail(AppError.refused("error.detached"))) : Next.of(model));
     }
 
     private static boolean detached(Model model) {

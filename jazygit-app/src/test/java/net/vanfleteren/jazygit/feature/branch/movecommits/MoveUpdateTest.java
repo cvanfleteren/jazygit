@@ -155,7 +155,7 @@ class MoveUpdateTest {
 
         assertEquals(List.of(), next.cmds());
         assertEquals(
-                Option.of(new AppError.NoBranchCheckedOut()),
+                Option.of(AppError.refused("error.detached")),
                 next.model().outcome().error());
     }
 
@@ -211,7 +211,12 @@ class MoveUpdateTest {
         assertEquals(Option.none(), refused.popup(MoveTargetPopup.class));
         assertEquals(Option.none(), refused.popup(MoveNamePopup.class));
         assertEquals(
-                Option.of(new AppError.MovedThroughMerge(MIDDLE.sha(), FEATURE, TIP.sha(), ROOT.sha())),
+                Option.of(AppError.refused(
+                        "error.moveCommits.throughMerge",
+                        MIDDLE.sha().shortSha(),
+                        FEATURE.value(),
+                        TIP.sha().shortSha(),
+                        ROOT.sha().shortSha())),
                 refused.outcome().error());
     }
 
@@ -255,7 +260,7 @@ class MoveUpdateTest {
 
         assertEquals(List.of(), next.cmds());
         assertEquals(
-                Option.of(new AppError.ChangesBeforeMove("main")),
+                Option.of(AppError.refused("error.moveCommits.changes", "main")),
                 next.model().outcome().error());
     }
 
@@ -265,7 +270,7 @@ class MoveUpdateTest {
 
         assertEquals(List.of(), next.cmds());
         assertEquals(
-                Option.of(new AppError.ChangesBeforeMove("origin/main")),
+                Option.of(AppError.refused("error.moveCommits.changes", "origin/main")),
                 next.model().outcome().error());
     }
 

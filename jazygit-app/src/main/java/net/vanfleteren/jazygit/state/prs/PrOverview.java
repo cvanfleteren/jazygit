@@ -89,6 +89,6 @@ public record PrOverview(
                 .getOrElse(() -> Either.left(
                         repository instanceof Loadable.Failed<PullRequestList>(Failure failure)
                                 ? new AppError.PullRequestsUnavailable(failure)
-                                : new AppError.PullRequestsNotRead()));
+                                : AppError.refused("error.pullRequest.notRead")));
     }
 }

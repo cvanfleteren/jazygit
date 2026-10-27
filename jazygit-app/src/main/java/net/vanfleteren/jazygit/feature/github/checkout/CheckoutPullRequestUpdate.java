@@ -78,7 +78,7 @@ public final class CheckoutPullRequestUpdate {
                 .orElse(() -> checkedOutElsewhere(model, pullRequest))
                 .orElse(() -> Option.when(
                         checkedOutHere(model, pullRequest),
-                        () -> new Readiness.Blocked(new AppError.PullRequestCheckedOutHere(name(pullRequest)))))
+                        () -> new Readiness.Blocked(AppError.refused("error.checkoutPr.here", name(pullRequest)))))
                 .orElse(() -> Option.when(busy(model, source), Readiness.Busy::new))
                 .getOrElse(Readiness.Ready::new);
     }
@@ -94,7 +94,8 @@ public final class CheckoutPullRequestUpdate {
         return ofThisRepository(model, pullRequest)
                 .orElse(() -> checkedOutElsewhere(model, pullRequest))
                 .orElse(() -> Option.when(
-                        changed, () -> new Readiness.Blocked(new AppError.ChangesBeforeCheckout(name(pullRequest)))))
+                        changed,
+                        () -> new Readiness.Blocked(AppError.refused("error.checkoutPr.changes", name(pullRequest)))))
                 .getOrElse(Readiness.Ready::new);
     }
 
@@ -107,7 +108,9 @@ public final class CheckoutPullRequestUpdate {
                 .fold(
                         unknown -> Option.of(new Readiness.Blocked(unknown)),
                         ofThis -> Option.when(
-                                !ofThis, () -> new Readiness.Blocked(new AppError.OtherRepository(name(pullRequest)))));
+                                !ofThis,
+                                () -> new Readiness.Blocked(
+                                        AppError.refused("error.checkoutPr.otherRepository", name(pullRequest)))));
     }
 
     /**

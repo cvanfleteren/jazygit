@@ -61,7 +61,7 @@ public final class PushUpdate {
                         .map(upstream -> diverged(known)
                                 ? Update.ask(model, new ForcePushPopup(branch))
                                 : known.behind() > 0
-                                        ? Next.of(model.fail(new AppError.BehindUpstream(branch)))
+                                        ? Next.of(model.fail(AppError.refused("error.push.behind", branch.value())))
                                         : Update.start(
                                                 model.clearError(), new Push(branch, upstream, PushMode.FAST_FORWARD)))
                         .getOrElse(() -> Update.ask(model, new SetUpstreamPopup(branch))))
@@ -78,7 +78,7 @@ public final class PushUpdate {
     private static Next upstreamConfirmed(Model model, String text) {
         Option<RemoteBranch> upstream = RemoteBranch.parse(text);
         return upstream.isEmpty()
-                ? Next.of(model.fail(new AppError.InvalidUpstream(text)))
+                ? Next.of(model.fail(AppError.refused("error.upstream.invalid", text.strip())))
                 : Update.confirm(
                         model,
                         SetUpstreamPopup.class,

@@ -127,7 +127,7 @@ public final class DeleteBranchUpdate {
      */
     private static Next remoteRequested(Model model, RemoteBranch branch) {
         return isDefault(model, branch)
-                ? Next.of(model.fail(new AppError.DefaultBranch(branch.shortName())))
+                ? Next.of(model.fail(AppError.refused("error.deleteBranch.default", branch.shortName())))
                 : Update.ask(
                         model, Option.when(remoteDeletable(model, branch), () -> new DeleteRemoteBranchPopup(branch)));
     }

@@ -68,13 +68,13 @@ class BrowseUpdateTest {
         Next local = Update.update(model(), new BrowseMsg.Requested(new BranchName("local")));
         assertEquals(List.empty(), local.cmds());
         assertEquals(
-                Option.of(new AppError.NotOnRemote(new BranchName("local"))),
+                Option.of(AppError.refused("error.browse.notOnRemote", "local")),
                 local.model().outcome().error());
 
         Next gone = Update.update(model(), new BrowseMsg.Requested(new BranchName("gone")));
         assertEquals(List.empty(), gone.cmds());
         assertEquals(
-                Option.of(new AppError.NotOnRemote(new BranchName("gone"))),
+                Option.of(AppError.refused("error.browse.notOnRemote", "gone")),
                 gone.model().outcome().error());
     }
 

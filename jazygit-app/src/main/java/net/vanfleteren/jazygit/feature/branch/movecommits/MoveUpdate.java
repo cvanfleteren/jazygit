@@ -73,7 +73,7 @@ public final class MoveUpdate {
                         .map(commit -> Next.of(
                                 model.clearError(), new MoveCmd.ReadRange(from.name(), sha, from.remoteUpstream())))
                         .getOrElse(() -> Next.of(model)))
-                .getOrElse(() -> Next.of(model.fail(new AppError.NoBranchCheckedOut())));
+                .getOrElse(() -> Next.of(model.fail(AppError.refused("error.detached"))));
     }
 
     /**
@@ -90,8 +90,12 @@ public final class MoveUpdate {
                         .map(commit -> range.mergedThrough()
                                 .flatMap(merge -> commit.parents()
                                         .headOption()
-                                        .map(parent -> Next.of(model.fail(
-                                                new AppError.MovedThroughMerge(oldest, from, merge, parent)))))
+                                        .map(parent -> Next.of(model.fail(AppError.refused(
+                                                "error.moveCommits.throughMerge",
+                                                oldest.shortSha(),
+                                                from.value(),
+                                                merge.shortSha(),
+                                                parent.shortSha())))))
                                 .getOrElse(() -> asked(
                                         model,
                                         new MoveRequest(
@@ -196,7 +200,7 @@ public final class MoveUpdate {
         boolean changed = Update.files(model).exists(file -> file.type() != ChangeType.UNTRACKED);
         return copiedOnto(target)
                 .filter(onto -> changed)
-                .map(onto -> Next.of(model.fail(new AppError.ChangesBeforeMove(onto))))
+                .map(onto -> Next.of(model.fail(AppError.refused("error.moveCommits.changes", onto))))
                 .getOrElse(() -> request.pushed()
                         ? Update.ask(model, new MovePushedPopup(request, target))
                         : Update.start(model.clearError(), move(request, target, false)));

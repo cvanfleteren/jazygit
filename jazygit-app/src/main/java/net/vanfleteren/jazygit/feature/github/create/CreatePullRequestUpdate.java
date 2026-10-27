@@ -155,7 +155,10 @@ public final class CreatePullRequestUpdate {
                 .map(upstream -> branch.ahead() == 0
                         ? ask(model, branch)
                         : branch.behind() > 0
-                                ? Next.of(model.fail(new AppError.Diverged(branch.name(), upstream)))
+                                ? Next.of(model.fail(AppError.refused(
+                                        "error.pullRequest.diverged",
+                                        branch.name().value(),
+                                        upstream.shortName())))
                                 : Update.ask(
                                         model, new PushFirstPopup(branch.name(), upstream, Option.of(branch.ahead()))))
                 .getOrElse(
@@ -199,7 +202,8 @@ public final class CreatePullRequestUpdate {
                 .map(first -> Next.of(
                         model,
                         new ReadTitle(branch.name(), branch.pushTarget().branch(), bases, baseRef(model, first))))
-                .getOrElse(() -> Next.of(model.fail(new AppError.NoBase(branch.name()))));
+                .getOrElse(() -> Next.of(model.fail(AppError.refused(
+                        "error.pullRequest.noBase", branch.name().value()))));
     }
 
     /**

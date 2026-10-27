@@ -30,30 +30,32 @@ class ErrorPopupTest {
 
     @Test
     void aRefusedRequestOpensTheErrorPopup() {
-        Model failed = loaded().fail(new AppError.NothingToCommit());
+        Model failed = loaded().fail(AppError.refused("error.commit.nothing"));
 
-        assertEquals(Option.of(new ErrorPopup(new AppError.NothingToCommit())), failed.popup());
+        assertEquals(Option.of(new ErrorPopup(AppError.refused("error.commit.nothing"))), failed.popup());
     }
 
     @Test
     void anOpenPopupIsNotReplacedByTheErrorPopup() {
         Model failed = loaded().openPopup(new SetUpstreamPopup(new BranchName("feature")))
-                .fail(new AppError.InvalidUpstream("x"));
+                .fail(AppError.refused("error.upstream.invalid", "x"));
 
         assertEquals(Option.of(new SetUpstreamPopup(new BranchName("feature"))), failed.popup());
         assertEquals(
-                Option.of(new AppError.InvalidUpstream("x")), failed.outcome().error());
+                Option.of(AppError.refused("error.upstream.invalid", "x")),
+                failed.outcome().error());
     }
 
     @Test
     void dismissingClosesThePopupAndKeepsTheErrorInTheCommandLog() {
-        Model failed = loaded().fail(new AppError.NothingToCommit());
+        Model failed = loaded().fail(AppError.refused("error.commit.nothing"));
 
         Model dismissed =
                 Update.update(failed, new Msg.PopupDismissed(ErrorPopup.class)).model();
 
         assertEquals(Option.none(), dismissed.popup());
         assertEquals(
-                Option.of(new AppError.NothingToCommit()), dismissed.outcome().error());
+                Option.of(AppError.refused("error.commit.nothing")),
+                dismissed.outcome().error());
     }
 }

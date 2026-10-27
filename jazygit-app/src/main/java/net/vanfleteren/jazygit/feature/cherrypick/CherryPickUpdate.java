@@ -48,7 +48,8 @@ public final class CherryPickUpdate {
         return model.repoView()
                 .cherryPick()
                 .map(commit -> model.repo().commit(commit.sha()).isDefined()
-                        ? Next.of(model.fail(new AppError.AlreadyPicked(commit.sha())))
+                        ? Next.of(model.fail(AppError.refused(
+                                "error.cherryPick.already", commit.sha().shortSha())))
                         : Update.ask(model, popup(model, commit)))
                 .getOrElse(() -> Next.of(model));
     }

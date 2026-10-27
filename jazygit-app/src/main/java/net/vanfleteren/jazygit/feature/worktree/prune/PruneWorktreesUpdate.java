@@ -29,7 +29,7 @@ public final class PruneWorktreesUpdate {
                 .toOption()
                 .map(worktrees -> worktrees.exists(Worktree::prunable)
                         ? Update.start(model.clearError(), new PruneWorktreesCmd())
-                        : Next.of(model.fail(new AppError.NothingToPrune())))
+                        : Next.of(model.fail(AppError.refused("error.pruneWorktrees.nothing"))))
                 .getOrElse(() -> Next.of(model));
     }
 }

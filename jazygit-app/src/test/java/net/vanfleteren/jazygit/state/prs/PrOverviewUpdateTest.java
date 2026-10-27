@@ -299,7 +299,8 @@ class PrOverviewUpdateTest {
     void whetherAPullRequestIsOfTheRepositoryIsNotKnownWhileItsPullRequestsAreReadOrWhenThatFailed() {
         var failure = refused("gh: not logged in");
 
-        assertEquals(Either.left(new AppError.PullRequestsNotRead()), PrOverview.INITIAL.ofThisRepository(NEW));
+        assertEquals(
+                Either.left(AppError.refused("error.pullRequest.notRead")), PrOverview.INITIAL.ofThisRepository(NEW));
         assertEquals(
                 Either.left(new AppError.PullRequestsUnavailable(failure)),
                 PrOverview.INITIAL

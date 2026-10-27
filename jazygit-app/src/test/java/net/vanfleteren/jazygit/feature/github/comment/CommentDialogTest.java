@@ -104,7 +104,7 @@ class CommentDialogTest {
     @Test
     void whileSendingItSaysSoAndAFailureSaysWhy() throws Exception {
         model = model.openPopup(CommentPopup.on(SHOWN).withText("Nice").withSending(true))
-                .fail(new AppError.NoBase(new BranchName("feature")));
+                .fail(AppError.refused("error.pullRequest.noBase", "feature"));
         try (ToolkitTestRunner runner = start()) {
             String sending = RenderedText.ofLarge(runner, this::view);
             assertTrue(sending.contains("Sending the comment…"), sending);

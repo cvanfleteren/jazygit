@@ -221,7 +221,8 @@ public final class LoadUpdate {
             case BASE ->
                 tipOf(model, view.other())
                         .filter(Option::isEmpty)
-                        .map(gone -> Option.of(new AppError.NoBaseBranch(view.branch())));
+                        .map(gone -> Option.of(AppError.refused(
+                                "error.divergence.noBase", view.branch().value())));
         };
     }
 

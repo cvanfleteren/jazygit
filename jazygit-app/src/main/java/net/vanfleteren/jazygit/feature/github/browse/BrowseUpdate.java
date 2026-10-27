@@ -23,7 +23,8 @@ public final class BrowseUpdate {
                         .branch(name)
                         .map(branch -> onRemote(branch)
                                 .map(remote -> Update.start(model.clearError(), new BrowseCmd(remote)))
-                                .getOrElse(() -> Next.of(model.fail(new AppError.NotOnRemote(name)))))
+                                .getOrElse(() -> Next.of(
+                                        model.fail(AppError.refused("error.browse.notOnRemote", name.value())))))
                         .getOrElse(() -> Next.of(model));
             case BrowseMsg.RemoteRequested(RemoteBranch branch) ->
                 Update.start(model.clearError(), new BrowseCmd(branch));

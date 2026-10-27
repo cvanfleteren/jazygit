@@ -39,7 +39,7 @@ public final class CommitUpdate {
                 files -> files.exists(FileEntry::staged)
                         ? Update.ask(model, new CommitPopup())
                         : files.isEmpty()
-                                ? Next.of(model.fail(new AppError.NothingToCommit()))
+                                ? Next.of(model.fail(AppError.refused("error.commit.nothing")))
                                 : Update.ask(model, new StageAllPopup()));
     }
 

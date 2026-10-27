@@ -5,8 +5,6 @@ import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.settings.SettingsProblem;
 import net.vanfleteren.jazygit.state.AppError;
@@ -27,12 +25,7 @@ public final class ErrorText {
                         subject.toList().<Object>map(s -> s).append(of(failure)).toJavaArray());
             case AppError.MergeFailed(BranchName branch, String message) ->
                 Messages.get("error.mergePr.failed", branch.value(), message);
-            case AppError.NothingToCommit() -> Messages.get("error.commit.nothing");
-            case AppError.NothingToAmend() -> Messages.get("error.amend.nothing");
-            case AppError.MergeNotAmendable() -> Messages.get("error.amendCommit.merge");
-            case AppError.NothingToStash() -> Messages.get("error.stash.nothing");
-            case AppError.AlreadyPicked(Sha sha) -> Messages.get("error.cherryPick.already", sha.shortSha());
-            case AppError.ConflictsRemain(int files) -> Messages.get("error.conflictsRemain", files);
+            case AppError.Refused(String key, var args) -> Messages.get(key, args.toJavaArray());
             case AppError.Unfinished(var operation, Option<String> subject, var inProgress, int conflicts) ->
                 Messages.get(
                         operation.errorKey(),
@@ -42,50 +35,12 @@ public final class ErrorText {
                                         .map(op -> Messages.get("error.inProgress", InProgressText.kind(op)))
                                         .getOrElse(() -> Messages.get("error.conflictsRemain", conflicts)))
                                 .toJavaArray());
-            case AppError.InvalidUpstream(String text) -> Messages.get("error.upstream.invalid", text.strip());
-            case AppError.BehindUpstream(BranchName branch) -> Messages.get("error.push.behind", branch.value());
-            case AppError.NoUpstream(BranchName branch) -> Messages.get("error.upstream.none", branch.value());
-            case AppError.UpstreamGone(BranchName branch, String upstream) ->
-                Messages.get("error.upstream.gone", branch.value(), upstream);
-            case AppError.NoBaseBranch(BranchName branch) -> Messages.get("error.divergence.noBase", branch.value());
-            case AppError.IsBaseBranch(BranchName branch) -> Messages.get("error.divergence.isBase", branch.value());
-            case AppError.NoBranchCheckedOut() -> Messages.get("error.detached");
-            case AppError.UnpushedCommits(BranchName branch) ->
-                Messages.get("error.fastForward.unpushed", branch.value());
             case AppError.CheckedOutElsewhere(var operation, BranchName branch, var worktree) ->
                 Messages.get(operation.errorKey(), branch.value(), Messages.get("error.checkedOutElsewhere", worktree));
-            case AppError.MainWorktreeNotRemovable(String worktree) ->
-                Messages.get("error.removeWorktree.main", worktree);
-            case AppError.ShownWorktreeNotRemovable(String worktree) ->
-                Messages.get("error.removeWorktree.shown", worktree);
             case AppError.WorktreeLocked(String worktree, String reason) ->
                 reason.isBlank()
                         ? Messages.get("error.removeWorktree.locked", worktree)
                         : Messages.get("error.removeWorktree.lockedBecause", worktree, reason);
-            case AppError.WorktreeShownAlready(String worktree) -> Messages.get("error.switchWorktree.shown", worktree);
-            case AppError.WorktreeMissing(String worktree) -> Messages.get("error.switchWorktree.missing", worktree);
-            case AppError.NothingToPrune() -> Messages.get("error.pruneWorktrees.nothing");
-            case AppError.MainWorktreeNotLockable() -> Messages.get("error.lockWorktree.main");
-            case AppError.Diverged(BranchName branch, RemoteBranch upstream) ->
-                Messages.get("error.pullRequest.diverged", branch.value(), upstream.shortName());
-            case AppError.NoBase(BranchName branch) -> Messages.get("error.pullRequest.noBase", branch.value());
-            case AppError.OtherRepository(String pullRequest) ->
-                Messages.get("error.checkoutPr.otherRepository", pullRequest);
-            case AppError.ChangesBeforeCheckout(String pullRequest) ->
-                Messages.get("error.checkoutPr.changes", pullRequest);
-            case AppError.PullRequestCheckedOutHere(String pullRequest) ->
-                Messages.get("error.checkoutPr.here", pullRequest);
-            case AppError.ChangesBeforeMove(String target) -> Messages.get("error.moveCommits.changes", target);
-            case AppError.MovedThroughMerge(Sha oldest, BranchName branch, Sha merge, Sha parent) ->
-                Messages.get(
-                        "error.moveCommits.throughMerge",
-                        oldest.shortSha(),
-                        branch.value(),
-                        merge.shortSha(),
-                        parent.shortSha());
-            case AppError.DefaultBranch(String branch) -> Messages.get("error.deleteBranch.default", branch);
-            case AppError.NotOnRemote(BranchName branch) -> Messages.get("error.browse.notOnRemote", branch.value());
-            case AppError.PullRequestsNotRead() -> Messages.get("error.pullRequest.notRead");
             case AppError.PullRequestsUnavailable(Failure failure) ->
                 Messages.get("error.pullRequest.unavailable", of(failure));
             case AppError.SettingsNotLoaded(SettingsProblem problem) -> of(problem);

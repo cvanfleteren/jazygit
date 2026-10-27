@@ -47,7 +47,7 @@ public final class InProgressUpdate {
                     return action != InProgressAction.CONTINUE
                             ? Update.ask(closed, new InProgressConfirmPopup(popup.inProgress(), action))
                             : popup.conflicts() > 0
-                                    ? Next.of(closed.fail(new AppError.ConflictsRemain(popup.conflicts())))
+                                    ? Next.of(closed.fail(AppError.refused("error.conflictsRemain", popup.conflicts())))
                                     : Update.start(closed.clearError(), new InProgressCmd(popup.inProgress(), action));
                 })
                 .getOrElse(() -> Next.of(model));

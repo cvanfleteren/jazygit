@@ -27,9 +27,9 @@ public final class SwitchWorktreeUpdate {
         return model.repo()
                 .worktree(location)
                 .map(worktree -> worktree.current()
-                        ? Next.of(model.fail(new AppError.WorktreeShownAlready(worktree.name())))
+                        ? Next.of(model.fail(AppError.refused("error.switchWorktree.shown", worktree.name())))
                         : worktree.prunable()
-                                ? Next.of(model.fail(new AppError.WorktreeMissing(worktree.name())))
+                                ? Next.of(model.fail(AppError.refused("error.switchWorktree.missing", worktree.name())))
                                 : Next.of(model.clearError(), RecentReposCmd.SwitchTo.worktree(location)))
                 .getOrElse(() -> Next.of(model));
     }

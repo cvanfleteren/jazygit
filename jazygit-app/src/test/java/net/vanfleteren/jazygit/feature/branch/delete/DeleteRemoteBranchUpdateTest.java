@@ -87,7 +87,7 @@ class DeleteRemoteBranchUpdateTest {
 
         assertEquals(List.empty(), asked.cmds());
         assertEquals(
-                Option.of(new AppError.DefaultBranch("origin/main")),
+                Option.of(AppError.refused("error.deleteBranch.default", "origin/main")),
                 asked.model().outcome().error());
     }
 

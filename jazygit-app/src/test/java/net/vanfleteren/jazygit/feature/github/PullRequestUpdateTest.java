@@ -121,7 +121,7 @@ class PullRequestUpdateTest {
         Next asked = Update.update(starting, new PullRequestMsg.Requested(new BranchName("feature")));
 
         assertEquals(
-                Option.of(new AppError.PullRequestsNotRead()),
+                Option.of(AppError.refused("error.pullRequest.notRead")),
                 asked.model().outcome().error());
         assertEquals(List.empty(), asked.cmds());
     }
@@ -188,7 +188,8 @@ class PullRequestUpdateTest {
         Next next = Update.update(none, new PullRequestMsg.Requested(FEATURE));
 
         assertEquals(
-                Option.of(new AppError.NoBase(FEATURE)), next.model().outcome().error());
+                Option.of(AppError.refused("error.pullRequest.noBase", FEATURE.value())),
+                next.model().outcome().error());
         assertEquals(List.empty(), next.cmds());
     }
 
@@ -210,7 +211,8 @@ class PullRequestUpdateTest {
         Next next = Update.update(left, new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(MAIN.name())));
 
         assertEquals(
-                Option.of(new AppError.NoBase(FEATURE)), next.model().outcome().error());
+                Option.of(AppError.refused("error.pullRequest.noBase", FEATURE.value())),
+                next.model().outcome().error());
         assertEquals(Option.none(), next.model().popup(NewPullRequestPopup.class));
         assertEquals(List.empty(), next.cmds());
     }
@@ -700,7 +702,8 @@ class PullRequestUpdateTest {
         Next refused = Update.update(starting, new PullRequestMsg.Requested(diverged.name()));
 
         assertEquals(
-                Option.of(new AppError.Diverged(diverged.name(), upstream)),
+                Option.of(AppError.refused(
+                        "error.pullRequest.diverged", diverged.name().value(), upstream.shortName())),
                 refused.model().outcome().error());
         assertTrue(refused.model().popup(PushFirstPopup.class).isEmpty());
         assertEquals(List.empty(), refused.cmds());
@@ -831,7 +834,10 @@ class PullRequestUpdateTest {
 
         assertTrue(confirmed.model().popup(PushFirstPopup.class).isEmpty());
         assertEquals(
-                Option.of(new AppError.Diverged(AHEAD.name(), new RemoteBranch("origin", AHEAD.name()))),
+                Option.of(AppError.refused(
+                        "error.pullRequest.diverged",
+                        AHEAD.name().value(),
+                        new RemoteBranch("origin", AHEAD.name()).shortName())),
                 confirmed.model().outcome().error());
         assertEquals(List.empty(), confirmed.cmds());
     }
@@ -2114,7 +2120,7 @@ class PullRequestUpdateTest {
 
         assertEquals(List.empty(), refused.cmds());
         assertEquals(
-                Option.of(new AppError.ChangesBeforeCheckout("owner/repo#9")),
+                Option.of(AppError.refused("error.checkoutPr.changes", "owner/repo#9")),
                 refused.model().outcome().error());
     }
 
@@ -2124,7 +2130,7 @@ class PullRequestUpdateTest {
 
         assertEquals(List.empty(), refused.cmds());
         assertEquals(
-                Option.of(new AppError.OtherRepository("other/repo#9")),
+                Option.of(AppError.refused("error.checkoutPr.otherRepository", "other/repo#9")),
                 refused.model().outcome().error());
     }
 
@@ -2136,7 +2142,7 @@ class PullRequestUpdateTest {
 
         assertEquals(List.empty(), refused.cmds());
         assertEquals(
-                Option.of(new AppError.PullRequestsNotRead()),
+                Option.of(AppError.refused("error.pullRequest.notRead")),
                 refused.model().outcome().error());
     }
 
@@ -2208,14 +2214,14 @@ class PullRequestUpdateTest {
         Next here = Update.update(onPatch, new CheckoutPullRequestMsg.WorktreeRequested(own("patch-1")));
         assertEquals(Option.none(), here.model().popup(NewWorktreePopup.class));
         assertEquals(
-                Option.of(new AppError.PullRequestCheckedOutHere("owner/repo#9")),
+                Option.of(AppError.refused("error.checkoutPr.here", "owner/repo#9")),
                 here.model().outcome().error());
 
         Next other = Update.update(
                 withMainWorktree(CLEAN), new CheckoutPullRequestMsg.WorktreeRequested(summary("other/repo")));
         assertEquals(Option.none(), other.model().popup(NewWorktreePopup.class));
         assertEquals(
-                Option.of(new AppError.OtherRepository("other/repo#9")),
+                Option.of(AppError.refused("error.checkoutPr.otherRepository", "other/repo#9")),
                 other.model().outcome().error());
     }
 

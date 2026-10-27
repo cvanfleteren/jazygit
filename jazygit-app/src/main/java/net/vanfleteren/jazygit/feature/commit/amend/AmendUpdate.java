@@ -42,7 +42,7 @@ public final class AmendUpdate {
                         () -> ask(model, new LastCommit()),
                         older -> model.commit(older)
                                 .map(commit -> commit.isMerge()
-                                        ? Next.of(model.fail(new AppError.MergeNotAmendable()))
+                                        ? Next.of(model.fail(AppError.refused("error.amendCommit.merge")))
                                         : ask(model, new Older(older)))
                                 .getOrElse(() -> Next.of(model)));
     }
@@ -51,7 +51,7 @@ public final class AmendUpdate {
         return Update.withFiles(
                 model,
                 files -> files.isEmpty()
-                        ? Next.of(model.fail(new AppError.NothingToAmend()))
+                        ? Next.of(model.fail(AppError.refused("error.amend.nothing")))
                         : Update.ask(model, new AmendPopup(target)));
     }
 

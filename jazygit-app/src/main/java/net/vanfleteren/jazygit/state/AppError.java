@@ -1,11 +1,10 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.InProgress;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.settings.SettingsProblem;
 
 /**
@@ -17,8 +16,15 @@ public sealed interface AppError {
      */
     static AppError noUpstream(Branch branch) {
         return branch.goneUpstream()
-                .<AppError>map(upstream -> new UpstreamGone(branch.name(), upstream.name()))
-                .getOrElse(() -> new NoUpstream(branch.name()));
+                .map(upstream -> refused("error.upstream.gone", branch.name().value(), upstream.name()))
+                .getOrElse(() -> refused("error.upstream.none", branch.name().value()));
+    }
+
+    /**
+     * What was asked for is refused, for the reason the message {@code key} gives with {@code args}.
+     */
+    static AppError refused(String key, Object... args) {
+        return new Refused(key, List.of(args));
     }
 
     /**
@@ -36,35 +42,13 @@ public sealed interface AppError {
     record MergeFailed(BranchName branch, String message) implements AppError {}
 
     /**
-     * A commit was asked for, but nothing has changed.
+     * What was asked for is refused up front, for the reason the message {@code key} gives with {@code args}, e.g.
+     * that nothing has changed to commit. The feature that refuses names the message, so a refusal that says no
+     * more than one message needs no record of its own.
+     *
+     * @param args what the message names, as they are shown
      */
-    record NothingToCommit() implements AppError {}
-
-    /**
-     * Amending was asked for, but nothing has changed to amend the commit with.
-     */
-    record NothingToAmend() implements AppError {}
-
-    /**
-     * Amending a merge commit was asked for, which is not possible.
-     */
-    record MergeNotAmendable() implements AppError {}
-
-    /**
-     * A stash was asked for, but nothing has changed.
-     */
-    record NothingToStash() implements AppError {}
-
-    /**
-     * The copied commit was asked to be cherry-picked, but the checked out branch already has it.
-     */
-    record AlreadyPicked(Sha sha) implements AppError {}
-
-    /**
-     * Continuing what the repository is in the middle of was asked for, but {@code files} files still have
-     * conflicts.
-     */
-    record ConflictsRemain(int files) implements AppError {}
+    record Refused(String key, List<Object> args) implements AppError {}
 
     /**
      * An operation was asked for that waits until the repository is in the middle of nothing, see
@@ -77,52 +61,6 @@ public sealed interface AppError {
             implements AppError {}
 
     /**
-     * The upstream entered for a push is not {@code <remote> <branch>}.
-     */
-    record InvalidUpstream(String text) implements AppError {}
-
-    /**
-     * A push was asked for, but the branch is only behind its upstream: there is nothing to push, and a force push
-     * would drop the commits of others.
-     */
-    record BehindUpstream(BranchName branch) implements AppError {}
-
-    /**
-     * A pull, or a reset onto the upstream, was asked for, but the branch has no upstream.
-     */
-    record NoUpstream(BranchName branch) implements AppError {}
-
-    /**
-     * A pull, or a reset onto the upstream, was asked for, but the upstream of the branch was deleted on the
-     * remote.
-     *
-     * @param upstream the short name the upstream had, e.g. {@code origin/feature}
-     */
-    record UpstreamGone(BranchName branch, String upstream) implements AppError {}
-
-    /**
-     * Comparing a branch with the main branch was asked for, but there is no main branch to compare it with:
-     * none is known, or it is gone.
-     */
-    record NoBaseBranch(BranchName branch) implements AppError {}
-
-    /**
-     * Comparing a branch with the main branch was asked for, but it is the main branch.
-     */
-    record IsBaseBranch(BranchName branch) implements AppError {}
-
-    /**
-     * An operation on the checked out branch was asked for, but HEAD is detached.
-     */
-    record NoBranchCheckedOut() implements AppError {}
-
-    /**
-     * A pull of a branch that is not checked out was asked for, but its commits not yet pushed keep it from
-     * being fast-forwarded.
-     */
-    record UnpushedCommits(BranchName branch) implements AppError {}
-
-    /**
      * An operation was asked for on a branch that is checked out in another worktree, which keeps git from
      * doing it here.
      *
@@ -131,110 +69,13 @@ public sealed interface AppError {
     record CheckedOutElsewhere(Operation operation, BranchName branch, String worktree) implements AppError {}
 
     /**
-     * The main worktree was asked to be removed, which holds the repository.
-     *
-     * @param worktree the name of its directory
-     */
-    record MainWorktreeNotRemovable(String worktree) implements AppError {}
-
-    /**
-     * The worktree shown was asked to be removed.
-     *
-     * @param worktree the name of its directory
-     */
-    record ShownWorktreeNotRemovable(String worktree) implements AppError {}
-
-    /**
-     * A locked worktree was asked to be removed, which its lock keeps git from doing.
+     * A locked worktree was asked to be removed, which its lock keeps git from doing. Unlike the other reasons a
+     * worktree is not removed, this one goes away once it is unlocked.
      *
      * @param worktree the name of its directory
      * @param reason   why it was locked; empty when no reason was given
      */
     record WorktreeLocked(String worktree, String reason) implements AppError {}
-
-    /**
-     * The worktree shown was asked to be switched to.
-     *
-     * @param worktree the name of its directory
-     */
-    record WorktreeShownAlready(String worktree) implements AppError {}
-
-    /**
-     * A worktree whose directory is gone was asked to be switched to.
-     *
-     * @param worktree the name of its directory
-     */
-    record WorktreeMissing(String worktree) implements AppError {}
-
-    /**
-     * Pruning the worktrees was asked for, but none has its directory gone.
-     */
-    record NothingToPrune() implements AppError {}
-
-    /**
-     * The main worktree was asked to be locked or unlocked, which git refuses.
-     */
-    record MainWorktreeNotLockable() implements AppError {}
-
-    /**
-     * A pull request was asked for, but the branch has diverged from {@code upstream}, which only a force push
-     * gets its commits onto.
-     */
-    record Diverged(BranchName branch, RemoteBranch upstream) implements AppError {}
-
-    /**
-     * A pull request was asked for, but no other branch is on the remote for it to merge into.
-     */
-    record NoBase(BranchName branch) implements AppError {}
-
-    /**
-     * The pull request {@code pullRequest}, as {@code owner/name#number}, cannot be checked out, as it is of
-     * another repository.
-     */
-    record OtherRepository(String pullRequest) implements AppError {}
-
-    /**
-     * The pull request {@code pullRequest}, as {@code owner/name#number}, is not checked out while the working tree
-     * has changes, which would come along.
-     */
-    record ChangesBeforeCheckout(String pullRequest) implements AppError {}
-
-    /**
-     * The pull request {@code pullRequest}, as {@code owner/name#number}, gets no worktree of its own, as its branch
-     * is checked out here, which git checks out in one worktree at a time.
-     */
-    record PullRequestCheckedOutHere(String pullRequest) implements AppError {}
-
-    /**
-     * Commits are not copied onto {@code target}, a branch, while the working tree has changes, which git would
-     * refuse to cherry-pick onto.
-     */
-    record ChangesBeforeMove(String target) implements AppError {}
-
-    /**
-     * The commits of {@code branch} from {@code oldest} up are not moved, as {@code oldest} came in through
-     * {@code merge} and so does its parent, {@code parent}: {@code branch} would be left on a commit of the merged
-     * branch instead of one on its own line.
-     */
-    record MovedThroughMerge(Sha oldest, BranchName branch, Sha merge, Sha parent) implements AppError {}
-
-    /**
-     * Deleting a remote branch was asked for, but it is the default branch of its remote.
-     *
-     * @param branch the short name of the remote branch, e.g. {@code origin/main}
-     */
-    record DefaultBranch(String branch) implements AppError {}
-
-    /**
-     * Opening a branch on GitHub was asked for, but the branch is on no remote, or its upstream is gone.
-     */
-    record NotOnRemote(BranchName branch) implements AppError {}
-
-    /**
-     * A pull request was asked for before the pull requests were read, so it is unknown whether the branch has
-     * one yet.
-     */
-    record PullRequestsNotRead() implements AppError {}
 
     /**
      * A pull request was asked for, but the pull requests could not be read, so it is unknown whether the branch
