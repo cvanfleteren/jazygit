@@ -19,22 +19,17 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.time.Clock;
-import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import net.vanfleteren.jazygit.feature.branch.BranchFeature;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.feature.cherrypick.CherryPickDialogs;
 import net.vanfleteren.jazygit.feature.commit.CommitFeature;
 import net.vanfleteren.jazygit.feature.discard.DiscardDialog;
 import net.vanfleteren.jazygit.feature.error.ErrorDialog;
-import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
 import net.vanfleteren.jazygit.feature.forcedelete.ForceDeleteDialog;
 import net.vanfleteren.jazygit.feature.github.GitHubFeature;
-import net.vanfleteren.jazygit.feature.github.checks.ChecksMsg;
-import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.feature.help.HelpDialog;
 import net.vanfleteren.jazygit.feature.inprogress.InProgressDialogs;
 import net.vanfleteren.jazygit.feature.repos.RecentReposDialog;
@@ -42,7 +37,6 @@ import net.vanfleteren.jazygit.feature.settings.SettingsPanelDialogs;
 import net.vanfleteren.jazygit.feature.stash.StashDialogs;
 import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
 import net.vanfleteren.jazygit.feature.worktree.WorktreeFeature;
-import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.settings.*;
 import net.vanfleteren.jazygit.state.*;
@@ -57,22 +51,6 @@ import net.vanfleteren.jazygit.ui.widgets.*;
  * background thread by the {@link Program}, which publishes new models on the render thread.
  */
 public class JazygitApp extends ToolkitApp {
-
-    // In milliseconds; the acceptance tests tick faster, as each of their steps waits for the app to see a change.
-    static final Duration REFRESH_INTERVAL = Duration.ofMillis(Long.getLong("jazygit.refreshInterval", 750));
-    static final Duration FETCH_INTERVAL = Duration.ofMinutes(1);
-    // How often GitHub is asked how the merges it does in the background are going (ADR 24).
-    static final Duration MERGE_CHECK_INTERVAL = Duration.ofSeconds(2);
-    // What is dispatched every so often: the time, the repository read again, and what the remotes and GitHub have.
-    static final List<Timer> TIMERS = List.of(
-            new Timer(TimeText.CLOCK_INTERVAL, Msg.Clock::new),
-            new Timer(REFRESH_INTERVAL, Msg.Tick::new),
-            new Timer(FETCH_INTERVAL, FetchMsg.Tick::new),
-            new Timer(FETCH_INTERVAL, PrOverviewMsg.Tick::new),
-            // The dialogs that list checks read them only while one is not done, or once a minute (ADR 34).
-            new Timer(CheckTimings.READ_WHILE_PENDING, PullRequestMsg.Tick::new),
-            new Timer(CheckTimings.READ_WHILE_PENDING, ChecksMsg.Tick::new),
-            new Timer(MERGE_CHECK_INTERVAL, PullRequestMsg.MergeTick::new));
 
     // Rows of the command log panel, borders included.
     private static final int COMMAND_LOG_HEIGHT = CommandLogPanel.VISIBLE_LINES + 2;
@@ -247,9 +225,7 @@ public class JazygitApp extends ToolkitApp {
         runner.eventRouter().addGlobalHandler(this::handleGlobalKey);
         runner.eventRouter().addGlobalHandler(this::handleMouse);
         session.start(settings, themeOverride);
-        TIMERS.forEach(timer ->
-                every(timer.interval(), () -> dispatch.accept(timer.msg().get())));
-        every(TimeText.SPINNER_FRAME, this::turnSpinners);
+        Timers.start(runner, dispatch, this::turnSpinners);
     }
 
     /**
@@ -293,14 +269,6 @@ public class JazygitApp extends ToolkitApp {
         }
         focusClicked(mouse);
         return EventResult.UNHANDLED;
-    }
-
-    /**
-     * Runs {@code action} on the render thread every {@code interval}.
-     */
-    private void every(Duration interval, Runnable action) {
-        ToolkitRunner runner = runner();
-        runner.scheduleRepeating(() -> runner.runOnRenderThread(action), interval);
     }
 
     /**
@@ -497,9 +465,4 @@ public class JazygitApp extends ToolkitApp {
      * Asks for a frame, as {@link #requestRedraw()} does.
      */
     private record Redraw() implements Event {}
-
-    /**
-     * Dispatches what {@code msg} makes every {@code interval}.
-     */
-    record Timer(Duration interval, Supplier<Msg> msg) {}
 }

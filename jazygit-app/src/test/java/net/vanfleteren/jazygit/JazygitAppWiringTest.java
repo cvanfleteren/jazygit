@@ -62,13 +62,13 @@ class JazygitAppWiringTest {
         assertEquals(
                 List.of(
                         Tuple.of(TimeText.CLOCK_INTERVAL, Msg.Clock.class),
-                        Tuple.of(JazygitApp.REFRESH_INTERVAL, Msg.Tick.class),
+                        Tuple.of(Timers.REFRESH_INTERVAL, Msg.Tick.class),
                         Tuple.of(Duration.ofMinutes(1), FetchMsg.Tick.class),
                         Tuple.of(Duration.ofMinutes(1), PrOverviewMsg.Tick.class),
                         Tuple.of(Duration.ofSeconds(10), PullRequestMsg.Tick.class),
                         Tuple.of(Duration.ofSeconds(10), ChecksMsg.Tick.class),
                         Tuple.of(Duration.ofSeconds(2), PullRequestMsg.MergeTick.class)),
-                JazygitApp.TIMERS.map(
+                Timers.ALL.map(
                         timer -> Tuple.of(timer.interval(), timer.msg().get().getClass())));
     }
 
