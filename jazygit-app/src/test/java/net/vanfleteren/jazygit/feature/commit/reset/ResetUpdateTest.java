@@ -127,7 +127,7 @@ class ResetUpdateTest {
         Model asking = Update.update(opened(withFiles(MODIFIED)), new ResetMsg.Chosen(ResetMode.HARD))
                 .model();
 
-        Next next = Update.update(asking, new ResetMsg.HardConfirmed());
+        Next next = Update.update(asking, new Msg.PopupConfirmed(HardResetPopup.class));
 
         assertEquals(List.of(new ResetCmd(new ResetTarget.ToCommit(ROOT.sha()), ResetMode.HARD)), next.cmds());
         assertEquals(Option.none(), next.model().popup());

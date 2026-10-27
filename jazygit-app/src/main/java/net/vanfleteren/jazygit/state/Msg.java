@@ -123,4 +123,16 @@ public interface Msg {
             return Update.Next.of(model.withoutPopup(type));
         }
     }
+
+    /**
+     * The user confirmed the open popup of type {@code type}: it closes, and the operation it asks about starts
+     * (ADR 38). When no such popup is open, or it asks about none as it stands, nothing happens.
+     */
+    record PopupConfirmed(Class<? extends ConfirmablePopup> type) implements Msg {
+
+        @Override
+        public Update.Next apply(Model model) {
+            return Update.confirm(model, type, ConfirmablePopup::confirm);
+        }
+    }
 }

@@ -31,9 +31,4 @@ public sealed interface RemoveWorktreeMsg extends Msg {
      * removing it would lose.
      */
     record NeedsForce(RemoveWorktreeCmd cmd, List<ExecutedCommand> commands) implements RemoveWorktreeMsg {}
-
-    /**
-     * The user agreed to lose the changes of the worktree by removing it anyway.
-     */
-    record ForceConfirmed() implements RemoveWorktreeMsg {}
 }

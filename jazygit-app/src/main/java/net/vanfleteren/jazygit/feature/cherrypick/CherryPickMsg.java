@@ -29,8 +29,6 @@ public sealed interface CherryPickMsg extends Msg {
      */
     record Requested() implements CherryPickMsg {}
 
-    record Confirmed() implements CherryPickMsg {}
-
     /**
      * The commit {@code cmd} cherry-picked is on the checked out branch now.
      */

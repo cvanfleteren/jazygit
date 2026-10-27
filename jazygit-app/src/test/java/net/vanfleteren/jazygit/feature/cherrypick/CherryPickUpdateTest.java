@@ -129,7 +129,7 @@ class CherryPickUpdateTest {
 
     @Test
     void confirmingPicksTheCopy() {
-        Next next = Update.update(asked(), new CherryPickMsg.Confirmed());
+        Next next = Update.update(asked(), new Msg.PopupConfirmed(CherryPickPopup.class));
 
         assertEquals(Option.none(), next.model().popup(CherryPickPopup.class));
         assertEquals(new CherryPickCmd(FIRST.sha()), next.cmds().head());
@@ -146,7 +146,8 @@ class CherryPickUpdateTest {
 
     @Test
     void pickingLetsGoOfTheCopy() {
-        Model running = Update.update(asked(), new CherryPickMsg.Confirmed()).model();
+        Model running = Update.update(asked(), new Msg.PopupConfirmed(CherryPickPopup.class))
+                .model();
         CherryPickCmd cmd = new CherryPickCmd(FIRST.sha());
 
         Model next = Update.update(running, cmd.succeeded(StubGitProvider.executed("git cherry-pick aaaa")))
@@ -157,7 +158,8 @@ class CherryPickUpdateTest {
 
     @Test
     void aFailureShowsTheErrorAndKeepsTheCopy() {
-        Model running = Update.update(asked(), new CherryPickMsg.Confirmed()).model();
+        Model running = Update.update(asked(), new Msg.PopupConfirmed(CherryPickPopup.class))
+                .model();
 
         Model next = Update.update(running, failed(new CherryPickCmd(FIRST.sha()), "conflict"))
                 .model();

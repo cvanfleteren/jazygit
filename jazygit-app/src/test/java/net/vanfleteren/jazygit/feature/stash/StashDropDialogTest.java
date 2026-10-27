@@ -45,7 +45,7 @@ class StashDropDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new StashMsg.DropConfirmed()), dispatched);
+        assertEquals(java.util.List.of(new Msg.PopupConfirmed(StashDropPopup.class)), dispatched);
     }
 
     @Test

@@ -26,11 +26,6 @@ public final class CherryPickUpdate {
             case CherryPickMsg.Dropped() ->
                 Next.of(model.mapRepoView(repoView -> repoView.withCherryPick(Option.none())));
             case CherryPickMsg.Requested() -> requested(model);
-            case CherryPickMsg.Confirmed() ->
-                Update.confirm(
-                        model,
-                        CherryPickPopup.class,
-                        popup -> Option.of(new CherryPickCmd(popup.commit().sha())));
             case CherryPickMsg.Picked(CherryPickCmd cmd, List<ExecutedCommand> commands) ->
                 OperationUpdate.succeeded(picked(model, cmd.sha()), cmd, commands);
         };

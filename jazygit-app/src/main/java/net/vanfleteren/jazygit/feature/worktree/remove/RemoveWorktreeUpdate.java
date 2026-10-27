@@ -45,11 +45,6 @@ public final class RemoveWorktreeUpdate {
                                         .worktree(cmd.location())
                                         .map(Worktree::name)
                                         .getOrElse(cmd.location()))));
-            case ForceConfirmed() ->
-                Update.confirm(
-                        model,
-                        ForceRemoveWorktreePopup.class,
-                        popup -> Option.of(popup.removal().forced()));
         };
     }
 

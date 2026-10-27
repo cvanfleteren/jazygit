@@ -3,9 +3,7 @@ package net.vanfleteren.jazygit.feature.commit.create;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.commit.create.CommitMsg.*;
-import net.vanfleteren.jazygit.feature.commit.create.CreateCommitCmd.Commit;
 import net.vanfleteren.jazygit.feature.commit.create.CreateCommitCmd.StageForCommit;
-import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.AppError;
@@ -29,7 +27,6 @@ public final class CommitUpdate {
                 Next staged = OperationUpdate.succeeded(model, cmd, commands);
                 yield new Next(staged.model().openPopupIfFree(new CommitPopup()), staged.cmds());
             }
-            case Confirmed() -> confirmed(model);
         };
     }
 
@@ -49,13 +46,5 @@ public final class CommitUpdate {
     private static Next stageAllConfirmed(Model model) {
         List<String> paths = FileEntry.paths(Update.files(model), FileEntry::unstaged);
         return Update.confirm(model, StageAllPopup.class, popup -> Option.of(new StageForCommit(paths)));
-    }
-
-    private static Next confirmed(Model model) {
-        // A blank summary keeps the dialog open.
-        return Update.confirm(model, CommitPopup.class, popup -> {
-            CommitMessage message = popup.message().stripped();
-            return Option.when(message.hasSummary(), () -> new Commit(message));
-        });
     }
 }

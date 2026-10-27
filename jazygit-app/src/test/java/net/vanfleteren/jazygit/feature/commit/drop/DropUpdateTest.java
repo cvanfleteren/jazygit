@@ -106,7 +106,7 @@ class DropUpdateTest {
         Model open = Update.update(withCommits(TIP, MIDDLE, ROOT), new DropMsg.Requested(MIDDLE.sha()))
                 .model();
 
-        Next next = Update.update(open, new DropMsg.Confirmed());
+        Next next = Update.update(open, new Msg.PopupConfirmed(DropPopup.class));
 
         assertEquals(List.of(new DropCmd(new Sha("c2"))), next.cmds());
         assertEquals(Option.none(), next.model().popup(DropPopup.class));

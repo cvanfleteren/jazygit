@@ -1,9 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch.newbranch;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.branch.BranchCmd;
-import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.CheckoutRemote;
-import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg.Requested;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -30,7 +27,6 @@ public final class NewBranchUpdate {
                                 .remoteBranch(remote)
                                 .map(known -> new NewBranchPopup(
                                         remote.trackingRef(), remote.shortName(), Option.of(remote.branch()))));
-            case Confirmed() -> confirmed(model);
         };
     }
 
@@ -39,16 +35,5 @@ public final class NewBranchUpdate {
                 model,
                 model.commit(sha)
                         .map(commit -> new NewBranchPopup(commit.sha().value(), commit.shortSha(), Option.none())));
-    }
-
-    private static Next confirmed(Model model) {
-        // A name that is no branch name, like a blank one, keeps the dialog open.
-        return Update.confirm(
-                model,
-                NewBranchPopup.class,
-                popup -> BranchName.parse(popup.name())
-                        .map(branch -> popup.following()
-                                .<BranchCmd>map(remote -> new CheckoutRemote(branch, remote))
-                                .getOrElse(() -> new NewBranchCmd(branch, popup.base(), popup.parent()))));
     }
 }

@@ -43,7 +43,7 @@ public final class InProgressDialogs {
     /**
      * Asks to confirm aborting or skipping, which throws work away.
      */
-    public static final ConfirmDialog.Spec<InProgressConfirmPopup> CONFIRM = new ConfirmDialog.Spec<>(
+    public static final ConfirmDialog.Spec<InProgressConfirmPopup> CONFIRM = ConfirmDialog.Spec.confirming(
             "in-progress-confirm",
             InProgressConfirmPopup.class,
             popup -> Messages.get(
@@ -55,8 +55,7 @@ public final class InProgressDialogs {
                     popup.action() == InProgressAction.SKIP
                             ? "dialog.inProgress.skipMessage"
                             : "dialog.inProgress.abortMessage",
-                    InProgressText.kind(popup.inProgress())),
-            InProgressMsg.Confirmed::new);
+                    InProgressText.kind(popup.inProgress())));
 
     private InProgressDialogs() {}
 

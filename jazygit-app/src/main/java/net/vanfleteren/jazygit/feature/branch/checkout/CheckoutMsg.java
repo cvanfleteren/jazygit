@@ -39,11 +39,6 @@ public sealed interface CheckoutMsg extends Msg {
     record NeedsStash(CheckoutCmd.Checkout cmd, List<ExecutedCommand> commands) implements CheckoutMsg {}
 
     /**
-     * The user agreed to stash the uncommitted changes, check out and pop them again.
-     */
-    record StashConfirmed() implements CheckoutMsg {}
-
-    /**
      * The user agreed to switch to the worktree that has the branch to check out checked out.
      */
     record SwitchWorktreeConfirmed() implements CheckoutMsg {}

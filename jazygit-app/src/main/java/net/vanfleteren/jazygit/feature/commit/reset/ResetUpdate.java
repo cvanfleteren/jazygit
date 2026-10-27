@@ -24,9 +24,6 @@ public final class ResetUpdate {
                 Update.ask(
                         model, model.commit(sha).map(commit -> new ResetPopup(new ResetTarget.ToCommit(commit.sha()))));
             case ResetMsg.Chosen(ResetMode mode) -> chosen(model, mode);
-            case ResetMsg.HardConfirmed() ->
-                Update.confirm(
-                        model, HardResetPopup.class, popup -> Option.of(new ResetCmd(popup.target(), ResetMode.HARD)));
         };
     }
 

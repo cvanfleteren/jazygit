@@ -24,7 +24,7 @@ public final class RebaseDialogs {
             List.of(new Choice<RebasePopup>(
                     's',
                     popup -> Messages.get("dialog.rebase.simple", popup.onto().value()),
-                    RebaseMsg.Chosen::new)));
+                    () -> new Msg.PopupConfirmed(RebasePopup.class))));
 
     private RebaseDialogs() {}
 

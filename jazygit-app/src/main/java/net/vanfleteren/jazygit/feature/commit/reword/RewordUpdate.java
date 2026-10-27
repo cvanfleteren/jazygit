@@ -1,9 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit.reword;
 
-import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.commit.reword.RewordMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordMsg.Requested;
-import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
@@ -19,7 +16,6 @@ public final class RewordUpdate {
     public static Next update(Model model, RewordMsg msg) {
         return switch (msg) {
             case Requested(var sha) -> requested(model, sha);
-            case Confirmed() -> confirmed(model);
         };
     }
 
@@ -28,14 +24,5 @@ public final class RewordUpdate {
      */
     private static Next requested(Model model, Sha sha) {
         return model.commit(sha).map(RewordPopup::new).transform(popup -> Update.ask(model, popup));
-    }
-
-    private static Next confirmed(Model model) {
-        // A blank summary keeps the dialog open.
-        return Update.confirm(model, RewordPopup.class, popup -> {
-            CommitMessage message = popup.message().stripped();
-            return Option.when(
-                    message.hasSummary(), () -> new RewordCmd(popup.commit().sha(), message));
-        });
     }
 }

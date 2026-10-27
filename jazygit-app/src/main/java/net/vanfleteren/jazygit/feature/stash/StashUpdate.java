@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.feature.stash;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.stash.StashCmd.Stash;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
@@ -18,13 +17,10 @@ public final class StashUpdate {
     public static Next update(Model model, StashMsg msg) {
         return switch (msg) {
             case StashMsg.Requested() -> requested(model);
-            case StashMsg.Confirmed() -> confirmed(model);
             case StashMsg.PopRequested(var stash) ->
                 listed(model, stash) ? Update.start(model.clearError(), new StashCmd.Pop(stash)) : Next.of(model);
             case StashMsg.DropRequested(var stash) ->
                 Update.ask(model, Option.when(listed(model, stash), () -> new StashDropPopup(stash)));
-            case StashMsg.DropConfirmed() ->
-                Update.confirm(model, StashDropPopup.class, popup -> Option.of(new StashCmd.Drop(popup.stash())));
         };
     }
 
@@ -47,12 +43,5 @@ public final class StashUpdate {
                 .stashes()
                 .getOrElse(List.empty())
                 .exists(listed -> listed.sha().equals(stash.sha()));
-    }
-
-    private static Next confirmed(Model model) {
-        return Update.confirm(
-                model,
-                StashPopup.class,
-                popup -> Option.of(new Stash(Option.of(popup.name().strip()).filter(text -> !text.isEmpty()))));
     }
 }

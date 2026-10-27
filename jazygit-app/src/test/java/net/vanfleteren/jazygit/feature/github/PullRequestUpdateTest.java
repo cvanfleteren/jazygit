@@ -31,7 +31,6 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.feature.github.show.ShowsPullRequest;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeCmd;
-import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg;
 import net.vanfleteren.jazygit.feature.worktree.add.NewWorktreePopup;
 import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource;
 import net.vanfleteren.jazygit.gh.GhError;
@@ -2185,7 +2184,8 @@ class PullRequestUpdateTest {
                 asked.model().popup());
         assertEquals(
                 List.of(new AddWorktreeCmd(new WorktreeSource.PullRequest(fork), "/repos/app-pr-9")),
-                Update.update(asked.model(), new AddWorktreeMsg.Confirmed()).cmds());
+                Update.update(asked.model(), new Msg.PopupConfirmed(NewWorktreePopup.class))
+                        .cmds());
 
         RepoStatus changed = new RepoStatus(
                 Head.onBranch(new BranchName("main"), new Sha("aaaa")),
@@ -2248,7 +2248,7 @@ class PullRequestUpdateTest {
         Model asked = Update.update(withMainWorktree(CLEAN), new CheckoutPullRequestMsg.WorktreeRequested(own))
                 .model();
 
-        Next adding = Update.update(asked, new AddWorktreeMsg.Confirmed());
+        Next adding = Update.update(asked, new Msg.PopupConfirmed(NewWorktreePopup.class));
         BranchRef login = new BranchRef.Local(new BranchName("feature/login"));
         assertEquals(
                 Option.of(AddWorktreeCmd.ADD_WORKTREE),

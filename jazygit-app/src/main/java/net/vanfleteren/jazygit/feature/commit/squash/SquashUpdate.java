@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.feature.commit.squash;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -18,11 +17,6 @@ public final class SquashUpdate {
     public static Next update(Model model, SquashMsg msg) {
         return switch (msg) {
             case SquashMsg.Requested(Sha sha) -> requested(model, sha);
-            case SquashMsg.Confirmed() ->
-                Update.confirm(
-                        model,
-                        SquashPopup.class,
-                        popup -> Option.of(new SquashCmd(popup.commit().sha(), SquashMode.SQUASH)));
         };
     }
 

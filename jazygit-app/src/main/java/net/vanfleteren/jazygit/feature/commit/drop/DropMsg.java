@@ -16,6 +16,4 @@ public sealed interface DropMsg extends Msg {
      * The user asked to drop the commit {@code sha} from the history of the checked out branch.
      */
     record Requested(Sha sha) implements DropMsg {}
-
-    record Confirmed() implements DropMsg {}
 }

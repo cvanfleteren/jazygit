@@ -8,9 +8,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
+import io.vavr.control.Option;
 import java.util.ArrayList;
+import net.vanfleteren.jazygit.state.ConfirmablePopup;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.OperationCmd;
 import net.vanfleteren.jazygit.state.Popup;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
@@ -97,7 +100,23 @@ class ConfirmDialogTest {
         return stack(text("background"), dialog.render(open()).get());
     }
 
+    @Test
+    void aConfirmingDialogConfirmsAndDismissesItsPopup() {
+        ConfirmDialog.Spec<SurePopup> spec =
+                ConfirmDialog.Spec.confirming("sure", SurePopup.class, popup -> "Sure", popup -> "Sure?");
+
+        assertEquals(new Msg.PopupConfirmed(SurePopup.class), spec.onConfirm().get());
+        assertEquals(new Msg.PopupDismissed(SurePopup.class), spec.onCancel().get());
+    }
+
     private record AskPopup(String thing) implements Popup {}
+
+    private record SurePopup() implements ConfirmablePopup {
+        @Override
+        public Option<OperationCmd> confirm() {
+            return Option.none();
+        }
+    }
 
     private record Yes() implements Msg {
         @Override

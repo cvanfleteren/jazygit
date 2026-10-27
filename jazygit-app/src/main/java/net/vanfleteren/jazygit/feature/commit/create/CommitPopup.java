@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit.create;
 
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.commit.MessagePopup;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 
@@ -20,5 +21,12 @@ public record CommitPopup(CommitMessage message) implements MessagePopup {
     @Override
     public CommitPopup withMessage(CommitMessage message) {
         return new CommitPopup(message);
+    }
+
+    @Override
+    public Option<CreateCommitCmd.Commit> confirm() {
+        // A blank summary keeps the dialog open.
+        CommitMessage stripped = message.stripped();
+        return Option.when(stripped.hasSummary(), () -> new CreateCommitCmd.Commit(stripped));
     }
 }

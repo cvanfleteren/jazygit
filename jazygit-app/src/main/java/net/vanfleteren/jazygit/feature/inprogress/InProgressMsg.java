@@ -21,9 +21,4 @@ public sealed interface InProgressMsg extends Msg {
      * The user chose what to do with it.
      */
     record Chosen(InProgressAction action) implements InProgressMsg {}
-
-    /**
-     * The user confirmed aborting or skipping.
-     */
-    record Confirmed() implements InProgressMsg {}
 }

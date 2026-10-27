@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit.drop;
 
 import io.vavr.collection.List;
-import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
@@ -18,11 +17,6 @@ public final class DropUpdate {
     public static Next update(Model model, DropMsg msg) {
         return switch (msg) {
             case DropMsg.Requested(Sha sha) -> requested(model, sha);
-            case DropMsg.Confirmed() ->
-                Update.confirm(
-                        model,
-                        DropPopup.class,
-                        popup -> Option.of(new DropCmd(popup.commit().sha())));
         };
     }
 

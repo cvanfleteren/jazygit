@@ -582,7 +582,9 @@ classDiagram
   the price of avoiding a central dispatch, and are kept on purpose.
 - **A popup closes by itself (ADR 38).** Escape on a dialog sends `Msg.PopupDismissed(type)`, which closes
   the open popup if it is of that type. The specs of the dialog widgets send it by default; a feature declares a
-  `Cancelled` message of its own, with `cancelledBy` on the spec, only when Escape does more than close.
+  `Cancelled` message of its own, with `cancelledBy` on the spec, only when Escape does more than close. Likewise,
+  a popup whose confirmation only starts its operation is a `ConfirmablePopup`: its `confirm()` makes the command,
+  and Enter sends `Msg.PopupConfirmed(type)`, which `Spec.confirming(...)` sets up.
 - **`Cmd` is immutable data** that knows how to run itself against an `Env` (the `GitInfoProvider` and the
   `GitHub`) and how to report failure:
   - `run` folds the provider's `Either` into a `Msg`.
@@ -639,7 +641,7 @@ Each feature package follows the same shape:
 
 | Type | Example (reword) | Role |
 |---|---|---|
-| `XxxMsg` | `RewordMsg` | Sealed set of messages, usually `Requested` and `Confirmed`, and `Cancelled` when Escape does more than close (ADR 38); a feature with several dialogs or outcomes names them after those (`StashMsg.DropRequested`, `PullRequestMsg.MergeChosen`). |
+| `XxxMsg` | `RewordMsg` | Sealed set of messages, usually `Requested`, with `Confirmed` and `Cancelled` only when Enter or Escape does more than start the popup's operation or close it (ADR 38); a feature with several dialogs or outcomes names them after those (`StashMsg.DropRequested`, `PullRequestMsg.MergeChosen`). |
 | `XxxUpdate` | `RewordUpdate` | Pure transitions for those messages; `Update.confirm` closes a popup and starts the operation made of it. |
 | `XxxCmd` | `RewordCmd` | The operation the feature asks for, an `OperationCmd`. |
 | `XxxPopup` | `RewordPopup` | What the open dialog is about; it lives in the model. |
@@ -882,8 +884,8 @@ sequenceDiagram
     Dialog-->>User: dialog prefilled with the commit's message
 
     User->>Dialog: edits the summary and submits
-    Dialog->>Program: dispatch(RewordMsg.Confirmed(message))
-    Program->>Update: confirmed(model, message)
+    Dialog->>Program: dispatch(Msg.PopupConfirmed(RewordPopup))
+    Program->>Update: confirm(model, RewordPopup, RewordPopup::confirm)
     Update-->>Program: Next(model - popup, [RewordCmd(sha, message)])
     Program->>IO: io.execute(perform(env, cmd))
 

@@ -70,7 +70,7 @@ class RevertUpdateTest {
 
     @Test
     void confirmingReverts() {
-        Next next = Update.update(asked(), new RevertMsg.Confirmed());
+        Next next = Update.update(asked(), new Msg.PopupConfirmed(RevertPopup.class));
 
         assertEquals(Option.none(), next.model().popup(RevertPopup.class));
         assertEquals(new RevertCmd(FIRST), next.cmds().head());
@@ -86,7 +86,8 @@ class RevertUpdateTest {
 
     @Test
     void aFailureShowsTheError() {
-        Model running = Update.update(asked(), new RevertMsg.Confirmed()).model();
+        Model running = Update.update(asked(), new Msg.PopupConfirmed(RevertPopup.class))
+                .model();
 
         Model next = Update.update(running, failed(new RevertCmd(FIRST), "nothing to commit"))
                 .model();

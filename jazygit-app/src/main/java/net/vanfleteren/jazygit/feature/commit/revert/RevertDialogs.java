@@ -16,15 +16,14 @@ public final class RevertDialogs {
     /**
      * Asks to revert a commit; for a merge, it says that is against its first parent.
      */
-    public static final ConfirmDialog.Spec<RevertPopup> REVERT = new ConfirmDialog.Spec<>(
+    public static final ConfirmDialog.Spec<RevertPopup> REVERT = ConfirmDialog.Spec.confirming(
             "revert-commit",
             RevertPopup.class,
             popup -> Messages.get("dialog.revert.title"),
             popup -> Messages.get(
                     popup.commit().isMerge() ? "dialog.revert.mergeMessage" : "dialog.revert.message",
                     popup.commit().shortSha(),
-                    popup.commit().message()),
-            RevertMsg.Confirmed::new);
+                    popup.commit().message()));
 
     private RevertDialogs() {}
 

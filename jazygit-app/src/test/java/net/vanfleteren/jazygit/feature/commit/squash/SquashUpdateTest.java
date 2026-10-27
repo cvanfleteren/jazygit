@@ -102,7 +102,7 @@ class SquashUpdateTest {
         Model open = Update.update(withCommits(TIP, MIDDLE, ROOT), new SquashMsg.Requested(TIP.sha()))
                 .model();
 
-        Next next = Update.update(open, new SquashMsg.Confirmed());
+        Next next = Update.update(open, new Msg.PopupConfirmed(SquashPopup.class));
 
         assertEquals(List.of(new SquashCmd(new Sha("c3"), SquashMode.SQUASH)), next.cmds());
         assertEquals(Option.none(), next.model().popup(SquashPopup.class));

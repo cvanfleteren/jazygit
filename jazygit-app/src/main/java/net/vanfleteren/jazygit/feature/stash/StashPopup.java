@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.stash;
 
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.state.ConfirmablePopup;
 import net.vanfleteren.jazygit.state.TextPopup;
 
 /**
@@ -7,7 +9,7 @@ import net.vanfleteren.jazygit.state.TextPopup;
  *
  * @param name the name as far as it was typed; a blank one asks git for a generated one
  */
-public record StashPopup(String name) implements TextPopup {
+public record StashPopup(String name) implements TextPopup, ConfirmablePopup {
 
     public StashPopup() {
         this("");
@@ -21,5 +23,10 @@ public record StashPopup(String name) implements TextPopup {
     @Override
     public StashPopup withText(String text) {
         return new StashPopup(text);
+    }
+
+    @Override
+    public Option<StashCmd.Stash> confirm() {
+        return Option.of(new StashCmd.Stash(Option.of(name.strip()).filter(text -> !text.isEmpty())));
     }
 }

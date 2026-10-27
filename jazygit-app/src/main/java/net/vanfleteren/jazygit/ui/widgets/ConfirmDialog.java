@@ -6,6 +6,7 @@ import io.vavr.control.Option;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.state.ConfirmablePopup;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
@@ -94,6 +95,14 @@ public final class ConfirmDialog<P extends Popup> implements PopupView {
                     onConfirm,
                     () -> new Msg.PopupDismissed(popupType),
                     "dialog.hint.confirmCancel");
+        }
+
+        /**
+         * A dialog for a popup that asks about one operation, which Enter starts and Escape only closes (ADR 38).
+         */
+        public static <P extends ConfirmablePopup> Spec<P> confirming(
+                String id, Class<P> popupType, Function<P, String> title, Function<P, String> message) {
+            return new Spec<>(id, popupType, title, message, () -> new Msg.PopupConfirmed(popupType));
         }
 
         /**

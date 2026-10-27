@@ -16,6 +16,4 @@ public sealed interface RevertMsg extends Msg {
      * The user asked to revert the commit {@code sha}.
      */
     record Requested(Sha sha) implements RevertMsg {}
-
-    record Confirmed() implements RevertMsg {}
 }

@@ -47,7 +47,7 @@ class DropDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new DropMsg.Confirmed()), dispatched);
+        assertEquals(java.util.List.of(new Msg.PopupConfirmed(DropPopup.class)), dispatched);
     }
 
     @Test

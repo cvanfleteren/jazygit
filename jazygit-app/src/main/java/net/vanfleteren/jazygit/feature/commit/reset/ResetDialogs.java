@@ -33,14 +33,13 @@ public final class ResetDialogs {
     /**
      * Asks to confirm a hard reset, which discards the uncommitted changes.
      */
-    public static final ConfirmDialog.Spec<HardResetPopup> HARD_RESET = new ConfirmDialog.Spec<>(
+    public static final ConfirmDialog.Spec<HardResetPopup> HARD_RESET = ConfirmDialog.Spec.confirming(
             "hard-reset",
             HardResetPopup.class,
             popup -> Messages.get("dialog.hardReset.title", popup.target().label()),
             popup -> popup.files()
                     .map(files -> Messages.get("dialog.hardReset.message", files))
-                    .getOrElse(() -> Messages.get("dialog.hardReset.messageUnknown")),
-            ResetMsg.HardConfirmed::new);
+                    .getOrElse(() -> Messages.get("dialog.hardReset.messageUnknown")));
 
     private ResetDialogs() {}
 

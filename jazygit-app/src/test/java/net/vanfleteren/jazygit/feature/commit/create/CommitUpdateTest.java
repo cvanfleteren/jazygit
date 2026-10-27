@@ -88,7 +88,8 @@ class CommitUpdateTest {
         Model open = Update.update(withCommits(commit("last", "")), new RewordMsg.Requested(new Sha("abc1234")))
                 .model();
 
-        Next next = Update.update(typed(open, new CommitMessage(" better ", "\nwhy\n")), new RewordMsg.Confirmed());
+        Next next = Update.update(
+                typed(open, new CommitMessage(" better ", "\nwhy\n")), new Msg.PopupConfirmed(RewordPopup.class));
 
         assertEquals(List.of(new RewordCmd(new Sha("abc1234"), new CommitMessage("better", "why"))), next.cmds());
         assertEquals(Option.none(), next.model().popup());
@@ -100,7 +101,7 @@ class CommitUpdateTest {
                 .model();
 
         Model typed = typed(open, new CommitMessage(" ", "why"));
-        Next next = Update.update(typed, new RewordMsg.Confirmed());
+        Next next = Update.update(typed, new Msg.PopupConfirmed(RewordPopup.class));
 
         assertEquals(List.of(), next.cmds());
         assertEquals(typed.popup(), next.model().popup());
@@ -183,8 +184,8 @@ class CommitUpdateTest {
         Model open = Update.update(withFiles(Fixtures.fileEntry("a.txt", ChangeType.ADDED)), new CommitMsg.Requested())
                 .model();
 
-        Next next =
-                Update.update(typed(open, new CommitMessage(" summary ", "\ndetails\n")), new CommitMsg.Confirmed());
+        Next next = Update.update(
+                typed(open, new CommitMessage(" summary ", "\ndetails\n")), new Msg.PopupConfirmed(CommitPopup.class));
 
         assertEquals(List.of(new CreateCommitCmd.Commit(new CommitMessage("summary", "details"))), next.cmds());
         assertFalse(next.model().popup(CommitPopup.class).isDefined());
@@ -195,7 +196,8 @@ class CommitUpdateTest {
         Model open = Update.update(withFiles(Fixtures.fileEntry("a.txt", ChangeType.ADDED)), new CommitMsg.Requested())
                 .model();
 
-        Next next = Update.update(typed(open, new CommitMessage("  ", "details")), new CommitMsg.Confirmed());
+        Next next = Update.update(
+                typed(open, new CommitMessage("  ", "details")), new Msg.PopupConfirmed(CommitPopup.class));
 
         assertEquals(List.of(), next.cmds());
         assertTrue(next.model().popup(CommitPopup.class).isDefined());

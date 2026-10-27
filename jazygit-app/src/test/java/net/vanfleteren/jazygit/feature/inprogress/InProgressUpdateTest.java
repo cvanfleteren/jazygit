@@ -104,7 +104,7 @@ class InProgressUpdateTest {
         Model confirming = Update.update(asked, new InProgressMsg.Chosen(InProgressAction.ABORT))
                 .model();
 
-        Next next = Update.update(confirming, new InProgressMsg.Confirmed());
+        Next next = Update.update(confirming, new Msg.PopupConfirmed(InProgressConfirmPopup.class));
 
         assertEquals(Option.none(), next.model().popup(InProgressConfirmPopup.class));
         assertEquals(List.of(new InProgressCmd(REBASING, InProgressAction.ABORT)), next.cmds());

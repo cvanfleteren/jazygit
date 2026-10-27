@@ -1,7 +1,5 @@
 package net.vanfleteren.jazygit.feature.commit.revert;
 
-import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.commit.revert.RevertMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.commit.revert.RevertMsg.Requested;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
@@ -19,8 +17,6 @@ public final class RevertUpdate {
     public static Next update(Model model, RevertMsg msg) {
         return switch (msg) {
             case Requested(var sha) -> requested(model, sha);
-            case Confirmed() ->
-                Update.confirm(model, RevertPopup.class, popup -> Option.of(new RevertCmd(popup.commit())));
         };
     }
 
