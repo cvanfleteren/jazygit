@@ -1,9 +1,12 @@
 package net.vanfleteren.jazygit.feature.worktree.add;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -44,6 +47,16 @@ public sealed interface AddWorktreeMsg extends Msg {
      * The user confirmed where the new worktree starts, as typed in the popup.
      */
     record StartConfirmed() implements AddWorktreeMsg {}
+
+    /**
+     * Git said which commit {@code typed}, where the new worktree is to start, names: {@code commit}, or none.
+     */
+    record StartResolved(String typed, Option<Sha> commit) implements AddWorktreeMsg {}
+
+    /**
+     * Asking git which commit {@code typed} names failed, for {@code failure}.
+     */
+    record StartNotResolved(String typed, Failure failure) implements AddWorktreeMsg {}
 
     /**
      * The user confirmed the name of the new branch, as typed in the popup.

@@ -6,6 +6,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg.*;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.git.model.Worktree;
@@ -43,6 +44,13 @@ public final class AddWorktreeUpdate {
                                 .map(current -> current.name().value())
                                 .getOrElse("HEAD")));
             case StartConfirmed() -> startConfirmed(model);
+            // What was typed starts the worktree once git said which commit it names (ADR 40).
+            case StartResolved(String typed, var commit) ->
+                commit.map(sha -> Update.ask(model, NewWorktreeBranchPopup.fromCommit(typed, sha)))
+                        .getOrElse(() -> Next.of(model.fail(new AppError.UnknownRevision(typed))));
+            case StartNotResolved(String typed, var failure) ->
+                Next.of(model.fail(new AppError.OperationFailed(
+                        AddWorktreeCmd.ADD_WORKTREE, io.vavr.control.Option.of(typed), failure)));
             case NameConfirmed() -> nameConfirmed(model);
             // The worktrees are shown, the new one among them, and switching to it is offered.
             case Added(var cmd, String location, var commands) -> {
@@ -97,21 +105,29 @@ public final class AddWorktreeUpdate {
         return model.popup(NewWorktreeStartPopup.class)
                 .map(popup -> popup.start().strip())
                 .filter(start -> !start.isEmpty() && !start.startsWith("-"))
-                .map(start -> Update.ask(
-                        model.withoutPopup(NewWorktreeStartPopup.class),
-                        switch (resolve(model, start)) {
-                            case Start.Local(BranchName branch) ->
-                                NewWorktreeBranchPopup.fromLocal(
-                                        branch,
-                                        Option.of(model.idleBranch(branch)
-                                                .filter(known -> !known.current() && !known.checkedOutElsewhere())
-                                                .<WorktreeSource>map(known -> new WorktreeSource.Existing(branch))
-                                                .getOrElse(() -> new WorktreeSource.Detached(start))));
-                            case Start.Remote(RemoteBranch followed) ->
-                                NewWorktreeBranchPopup.followingRemote(
-                                        followed, Option.of(new WorktreeSource.Detached(start)));
-                            case Start.Revision(String revision) -> NewWorktreeBranchPopup.fromRevision(revision);
-                        }))
+                .map(start -> {
+                    Model asked = model.withoutPopup(NewWorktreeStartPopup.class);
+                    return switch (resolve(model, start)) {
+                        case Start.Local(BranchName branch) ->
+                            Update.ask(
+                                    asked,
+                                    NewWorktreeBranchPopup.fromLocal(
+                                            branch,
+                                            Option.of(model.idleBranch(branch)
+                                                    .filter(known -> !known.current() && !known.checkedOutElsewhere())
+                                                    .<WorktreeSource>map(known -> new WorktreeSource.Existing(branch))
+                                                    .getOrElse(() -> new WorktreeSource.Detached(
+                                                            new BranchRef.Local(branch), start)))));
+                        case Start.Remote(RemoteBranch followed) ->
+                            Update.ask(
+                                    asked,
+                                    NewWorktreeBranchPopup.followingRemote(
+                                            followed,
+                                            Option.of(new WorktreeSource.Detached(followed.tracking(), start))));
+                        // Anything else is asked of git first.
+                        case Start.Revision(String revision) -> Next.of(asked, new ResolveStartCmd(revision));
+                    };
+                })
                 .getOrElse(() -> Next.of(model));
     }
 

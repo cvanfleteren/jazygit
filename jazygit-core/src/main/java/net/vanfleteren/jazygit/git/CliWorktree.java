@@ -12,6 +12,8 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.*;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Head;
+import net.vanfleteren.jazygit.git.model.NewBranchStart;
+import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -141,7 +143,7 @@ final class CliWorktree {
      * with {@code startPoint} checked out, on no branch.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> addDetached(
-            Path worktree, Path location, String startPoint) {
+            Path worktree, Path location, Revision startPoint) {
         return GitProcess.log(
                 worktree,
                 git(
@@ -150,31 +152,28 @@ final class CliWorktree {
                         "--quiet",
                         "--detach",
                         worktree.resolve(location).normalize().toString(),
-                        startPoint));
+                        startPoint.toArg()));
     }
 
     /**
-     * Runs {@code git worktree add --quiet [--track] -b <name> <location> <startPoint>} in {@code worktree}: a new
-     * branch, checked out in a new worktree. With {@code track}, the new branch follows {@code startPoint}, a
-     * remote-tracking branch. A {@code parent} is recorded as the branch it came from, as a new branch records it.
+     * Runs {@code git worktree add --quiet [--track] -b <name> <location> <start>} in {@code worktree}: a new branch,
+     * checked out in a new worktree. One {@link NewBranchStart.Following} a remote branch gets {@code --track}; for
+     * one {@link NewBranchStart.From} a revision, git's {@code branch.autoSetupMerge} says whether it follows it, and
+     * its parent is recorded as the branch it came from, as a new branch records it (ADR 40).
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> addNewBranch(
-            Path worktree,
-            Path location,
-            BranchName name,
-            String startPoint,
-            Option<BranchName> parent,
-            boolean track) {
+            Path worktree, Path location, BranchName name, NewBranchStart start) {
+        Option<BranchName> parent = start instanceof NewBranchStart.From(var from, var made) ? made : Option.none();
         return GitFailure.sequence(
                 () -> GitProcess.log(
                         worktree,
                         git(List.of("worktree", "add", "--quiet")
-                                .appendAll(Option.when(track, "--track"))
+                                .appendAll(Option.when(start instanceof NewBranchStart.Following, "--track"))
                                 .appendAll(List.of(
                                         "-b",
                                         name.value(),
                                         worktree.resolve(location).normalize().toString(),
-                                        startPoint)))),
+                                        start.start().toArg())))),
                 () -> parent.map(p -> CliCheckout.recordParent(worktree, name, p))
                         .getOrElse(GitFailure::nothing));
     }

@@ -103,10 +103,17 @@ public interface GitInfoProvider {
 
     /**
      * Creates the local branch {@code name} at {@code startPoint} and checks it out; records {@code parent} as the
-     * branch it came from, if given, as {@link #parentBranch} reads it.
+     * branch it came from, if given, as {@link #parentBranch} reads it. Whether it follows {@code startPoint} is up
+     * to git's {@code branch.autoSetupMerge} (ADR 40).
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(
-            BranchName name, String startPoint, Option<BranchName> parent);
+            BranchName name, Revision startPoint, Option<BranchName> parent);
+
+    /**
+     * The commit {@code text}, as the user typed it, names: a branch, a tag, a sha or any other revision; none when
+     * it names no commit. Git reads {@code text} as a revision even when it starts with {@code -}.
+     */
+    Either<GitFailure<ProcessError>, Option<Sha>> resolve(String text);
 
     /**
      * Creates the local branch {@code name} at the remote-tracking branch of {@code upstream}, following it, and
@@ -453,19 +460,18 @@ public interface GitInfoProvider {
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktree(Path location, BranchName branch);
 
     /**
-     * Checks {@code startPoint}, a branch, a commit or any other revision, out in a new worktree at
-     * {@code location}, taken as {@link #addWorktree} takes it, on no branch.
+     * Checks {@code startPoint} out in a new worktree at {@code location}, taken as {@link #addWorktree} takes it, on
+     * no branch.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> addDetachedWorktree(Path location, String startPoint);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> addDetachedWorktree(Path location, Revision startPoint);
 
     /**
-     * Creates the branch {@code name} at {@code startPoint} and checks it out in a new worktree at {@code location},
-     * taken as {@link #addWorktree} takes it. With {@code track}, the new branch follows {@code startPoint}, a
-     * remote-tracking branch; a {@code parent} is recorded as the branch it was made from. Git refuses a name that
-     * is a branch already.
+     * Creates the branch {@code name} where {@code start} says and checks it out in a new worktree at
+     * {@code location}, taken as {@link #addWorktree} takes it. A {@code parent} it gives is recorded as the branch it
+     * was made from. Git refuses a name that is a branch already.
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktreeWithNewBranch(
-            Path location, BranchName name, String startPoint, Option<BranchName> parent, boolean track);
+            Path location, BranchName name, NewBranchStart start);
 
     /**
      * Removes the linked worktree at {@code location}, its directory included; its branch stays. Without

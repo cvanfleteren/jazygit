@@ -10,7 +10,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.model.AllBranches;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Head;
+import net.vanfleteren.jazygit.git.model.NewBranchStart;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -278,15 +281,20 @@ class CliWorktreeTest {
         Path fromLocal = main.resolveSibling("from-local");
         Path fromRemote = main.resolveSibling("from-remote");
 
+        BranchName mainBranch = new BranchName("main");
         List<String> added = provider.addWorktreeWithNewBranch(
-                        fromLocal, new BranchName("topic"), "main", Option.of(new BranchName("main")), false)
+                        fromLocal,
+                        new BranchName("topic"),
+                        new NewBranchStart.From(new BranchRef.Local(mainBranch), Option.of(mainBranch)))
                 .get()
                 .map(ExecutedCommand::line);
         provider.addWorktreeWithNewBranch(
-                        fromRemote, new BranchName("shared"), "refs/remotes/origin/shared", Option.none(), true)
+                        fromRemote,
+                        new BranchName("shared"),
+                        new NewBranchStart.Following(new RemoteBranch("origin", new BranchName("shared"))))
                 .get();
 
-        assertEquals("git worktree add --quiet -b topic " + fromLocal + " main", added.head());
+        assertEquals("git worktree add --quiet -b topic " + fromLocal + " refs/heads/main", added.head());
         assertEquals(
                 List.of(
                         Option.of(new BranchName("main")),
@@ -329,7 +337,8 @@ class CliWorktreeTest {
         git(main, "branch", "topic");
         CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
 
-        assertTrue(provider.addDetachedWorktree(Path.of("../detached"), "topic").isRight());
+        assertTrue(provider.addDetachedWorktree(Path.of("../detached"), new BranchRef.Local(new BranchName("topic")))
+                .isRight());
 
         Worktree detached = provider.worktrees().get().last();
         assertEquals(main.resolveSibling("detached"), detached.path());

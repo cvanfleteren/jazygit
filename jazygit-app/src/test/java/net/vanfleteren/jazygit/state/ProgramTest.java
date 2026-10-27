@@ -57,6 +57,7 @@ import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.git.model.Stash;
@@ -148,7 +149,7 @@ class ProgramTest {
 
         @Override
         public Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(
-                BranchName name, String startPoint, Option<BranchName> parent) {
+                BranchName name, Revision startPoint, Option<BranchName> parent) {
             return switchTo(name, "git checkoutNewBranch");
         }
 

@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
@@ -40,7 +41,7 @@ final class CliMoveCommits {
                 () -> GitFailure.widen(CliCheckout.checkoutNewBranch(
                         worktree,
                         to,
-                        onto.map(BranchRef::toArg).getOrElse(from.value()),
+                        Option.<Revision>narrow(onto).getOrElse(() -> new BranchRef.Local(from)),
                         Option.of(onto.map(CliMoveCommits::name).getOrElse(from)))),
                 () -> onto.isDefined()
                         ? copy(worktree, from, oldest)

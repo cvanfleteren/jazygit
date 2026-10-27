@@ -4,6 +4,8 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.NewBranchStart;
+import net.vanfleteren.jazygit.git.model.Revision;
 
 /**
  * What a new worktree checks out.
@@ -51,7 +53,7 @@ public sealed interface WorktreeSource {
     /**
      * The new branch {@code name}, created as {@code from} says.
      */
-    record Created(BranchName name, NewBranch from) implements WorktreeSource {
+    record Created(BranchName name, NewBranchStart from) implements WorktreeSource {
 
         @Override
         public String label() {
@@ -70,18 +72,15 @@ public sealed interface WorktreeSource {
     }
 
     /**
-     * {@code start}, a branch, a commit or any other revision, on no branch.
+     * {@code start}, a branch or a commit, on no branch.
+     *
+     * @param label how the user typed it, e.g. a tag, which the directory is named after
      */
-    record Detached(String start) implements WorktreeSource {
-
-        @Override
-        public String label() {
-            return start;
-        }
+    record Detached(Revision start, String label) implements WorktreeSource {
 
         @Override
         public BranchName directory() {
-            return new BranchName(start);
+            return new BranchName(label);
         }
     }
 

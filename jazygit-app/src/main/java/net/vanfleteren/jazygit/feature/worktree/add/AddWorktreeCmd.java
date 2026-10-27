@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
@@ -56,11 +57,10 @@ public record AddWorktreeCmd(WorktreeSource source, String location) implements 
         Path path = WorktreeCmd.path(location);
         return switch (source) {
             case Existing(var branch) -> reported(env, git.addWorktree(path, branch));
-            case Created(var name, var from) ->
-                reported(env, git.addWorktreeWithNewBranch(path, name, from.start(), from.parent(), from.track()));
-            case Detached(var start) -> reported(env, git.addDetachedWorktree(path, start));
+            case Created(var name, var from) -> reported(env, git.addWorktreeWithNewBranch(path, name, from));
+            case Detached(var start, var label) -> reported(env, git.addDetachedWorktree(path, start));
             case PullRequest(var pullRequest) ->
-                git.addDetachedWorktree(path, "HEAD")
+                git.addDetachedWorktree(path, new Revision.Head())
                         .fold(
                                 this::failedWith,
                                 added -> checkout(git, env.gitHub(), path, pullRequest.number(), added)

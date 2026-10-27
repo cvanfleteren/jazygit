@@ -35,7 +35,11 @@ final class CliLog {
      */
     static Either<GitFailure<ProcessError>, Option<Sha>> resolve(Path worktree, String revision) {
         // rev-parse --verify --quiet exits with 1, saying nothing, when the revision names nothing.
-        return GitProcess.ask(worktree, GitCommand.reading("rev-parse", "--verify", "--quiet", revision + "^{commit}"))
+        // After --end-of-options, a revision typed with a leading - is still read as one.
+        return GitProcess.ask(
+                        worktree,
+                        GitCommand.reading(
+                                "rev-parse", "--verify", "--quiet", "--end-of-options", revision + "^{commit}"))
                 .flatMap(answer -> answer.fold(
                         () -> Either.right(Option.none()),
                         found -> GitOutput.sha(found.stdout())

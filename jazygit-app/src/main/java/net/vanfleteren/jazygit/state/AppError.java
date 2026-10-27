@@ -82,6 +82,11 @@ public sealed interface AppError {
     record InvalidUpstream(String text) implements AppError {}
 
     /**
+     * What the user typed as a revision names no commit.
+     */
+    record UnknownRevision(String text) implements AppError {}
+
+    /**
      * A push was asked for, but the branch is only behind its upstream: there is nothing to push, and a force push
      * would drop the commits of others.
      */
