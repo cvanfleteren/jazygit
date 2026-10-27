@@ -9,16 +9,19 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import net.vanfleteren.jazygit.feature.branch.BranchRefusal;
+import net.vanfleteren.jazygit.feature.worktree.WorktreeRefusal;
 import net.vanfleteren.jazygit.git.GitError.CommandFailed;
 import net.vanfleteren.jazygit.git.GitError.StashNotRestored;
+import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.state.AppError;
 import org.junit.jupiter.api.Test;
 
 class ErrorTextTest {
 
-    // A refusal names its message where it is made, as AppError.refused("error.x", ...).
-    private static final Pattern REFUSED = Pattern.compile("refused\\(\\s*\"([^\"]+)\"");
+    // The keys a refusal names its message with, as AppError.Refusal.key() returns them.
+    private static final Pattern KEY = Pattern.compile("\"(error\\.[\\w.]+)\"");
 
     @Test
     void aStashThatCouldNotBeRestoredSaysTheCheckoutHappened() {
@@ -28,8 +31,9 @@ class ErrorTextTest {
     }
 
     @Test
-    void aRefusalIsItsMessageWithWhatItNames() {
-        var error = AppError.refused("error.moveCommits.throughMerge", "aaaaaaa", "main", "bbbbbbb", "ccccccc");
+    void aCommitThatCameInThroughAMergeNamesTheMergeAndWhereTheBranchWouldBeLeft() {
+        var error = new BranchRefusal.MovedThroughMerge(
+                new Sha("aaaaaaaaaa"), new BranchName("main"), new Sha("bbbbbbbbbb"), new Sha("cccccccccc"));
 
         assertEquals(
                 "aaaaaaa can't be moved: it came into main through the merge bbbbbbb. It isn't one of main's own"
@@ -39,20 +43,34 @@ class ErrorTextTest {
     }
 
     @Test
+    void aLockedWorktreeSaysWhyItWasLockedWhenItWasGivenAReason() {
+        assertEquals(
+                Messages.get("error.removeWorktree.locked", "wt"),
+                ErrorText.of(new WorktreeRefusal.WorktreeLocked("wt", " ")));
+        assertEquals(
+                Messages.get("error.removeWorktree.lockedBecause", "wt", "on a USB drive"),
+                ErrorText.of(new WorktreeRefusal.WorktreeLocked("wt", "on a USB drive")));
+    }
+
+    @Test
     void everyRefusalHasAMessage() throws IOException {
         List<String> keys;
         try (Stream<Path> files = Files.walk(Path.of("src/main/java"))) {
-            keys = List.ofAll(files.filter(file -> file.toString().endsWith(".java")))
-                    .flatMap(ErrorTextTest::refusedKeys);
+            keys = List.ofAll(files.filter(ErrorTextTest::declaresRefusals)).flatMap(ErrorTextTest::keys);
         }
 
         assertFalse(keys.isEmpty());
         assertEquals(List.empty(), keys.filter(key -> Messages.find(key).isEmpty()));
     }
 
-    private static List<String> refusedKeys(Path file) {
+    private static boolean declaresRefusals(Path file) {
+        String name = file.getFileName().toString();
+        return name.endsWith("Refusal.java") || name.equals("AppError.java");
+    }
+
+    private static List<String> keys(Path file) {
         try {
-            return List.ofAll(REFUSED.matcher(Files.readString(file)).results()).map(match -> match.group(1));
+            return List.ofAll(KEY.matcher(Files.readString(file)).results()).map(match -> match.group(1));
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }

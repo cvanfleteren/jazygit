@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.feature.inprogress;
 
 import net.vanfleteren.jazygit.git.model.InProgressAction;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -47,7 +46,7 @@ public final class InProgressUpdate {
                     return action != InProgressAction.CONTINUE
                             ? Update.ask(closed, new InProgressConfirmPopup(popup.inProgress(), action))
                             : popup.conflicts() > 0
-                                    ? Next.of(closed.fail(AppError.refused("error.conflictsRemain", popup.conflicts())))
+                                    ? Next.of(closed.fail(new InProgressRefusal.ConflictsRemain(popup.conflicts())))
                                     : Update.start(closed.clearError(), new InProgressCmd(popup.inProgress(), action));
                 })
                 .getOrElse(() -> Next.of(model));

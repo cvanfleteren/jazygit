@@ -1,10 +1,10 @@
 package net.vanfleteren.jazygit.feature.github.browse;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.github.GitHubRefusal;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -23,8 +23,7 @@ public final class BrowseUpdate {
                         .branch(name)
                         .map(branch -> onRemote(branch)
                                 .map(remote -> Update.start(model.clearError(), new BrowseCmd(remote)))
-                                .getOrElse(() -> Next.of(
-                                        model.fail(AppError.refused("error.browse.notOnRemote", name.value())))))
+                                .getOrElse(() -> Next.of(model.fail(new GitHubRefusal.NotOnRemote(name)))))
                         .getOrElse(() -> Next.of(model));
             case BrowseMsg.RemoteRequested(RemoteBranch branch) ->
                 Update.start(model.clearError(), new BrowseCmd(branch));

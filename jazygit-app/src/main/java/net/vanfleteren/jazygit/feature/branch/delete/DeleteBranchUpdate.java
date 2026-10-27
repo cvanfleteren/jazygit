@@ -1,11 +1,13 @@
 package net.vanfleteren.jazygit.feature.branch.delete;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.branch.BranchRefusal;
 import net.vanfleteren.jazygit.feature.branch.Branches;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchCmd.DeleteBranch;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchCmd.DeleteRemoteBranch;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchMsg.Chosen;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchMsg.Requested;
+import net.vanfleteren.jazygit.feature.worktree.WorktreeRefusal;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeUpdate;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -14,7 +16,6 @@ import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Worktree;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -74,8 +75,8 @@ public final class DeleteBranchUpdate {
      */
     public static Option<Worktree> removableWorktree(Model model, BranchName branch) {
         return otherWorktree(model, branch)
-                .filter(worktree ->
-                        RemoveWorktreeUpdate.notRemovable(worktree).forAll(AppError.WorktreeLocked.class::isInstance));
+                .filter(worktree -> RemoveWorktreeUpdate.notRemovable(worktree)
+                        .forAll(WorktreeRefusal.WorktreeLocked.class::isInstance));
     }
 
     /**
@@ -127,7 +128,7 @@ public final class DeleteBranchUpdate {
      */
     private static Next remoteRequested(Model model, RemoteBranch branch) {
         return isDefault(model, branch)
-                ? Next.of(model.fail(AppError.refused("error.deleteBranch.default", branch.shortName())))
+                ? Next.of(model.fail(new BranchRefusal.DefaultBranch(branch.shortName())))
                 : Update.ask(
                         model, Option.when(remoteDeletable(model, branch), () -> new DeleteRemoteBranchPopup(branch)));
     }

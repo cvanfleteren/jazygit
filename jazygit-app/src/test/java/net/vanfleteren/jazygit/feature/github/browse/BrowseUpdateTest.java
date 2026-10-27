@@ -6,10 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.feature.github.GitHubRefusal;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
@@ -68,13 +68,13 @@ class BrowseUpdateTest {
         Next local = Update.update(model(), new BrowseMsg.Requested(new BranchName("local")));
         assertEquals(List.empty(), local.cmds());
         assertEquals(
-                Option.of(AppError.refused("error.browse.notOnRemote", "local")),
+                Option.of(new GitHubRefusal.NotOnRemote(new BranchName("local"))),
                 local.model().outcome().error());
 
         Next gone = Update.update(model(), new BrowseMsg.Requested(new BranchName("gone")));
         assertEquals(List.empty(), gone.cmds());
         assertEquals(
-                Option.of(AppError.refused("error.browse.notOnRemote", "gone")),
+                Option.of(new GitHubRefusal.NotOnRemote(new BranchName("gone"))),
                 gone.model().outcome().error());
     }
 

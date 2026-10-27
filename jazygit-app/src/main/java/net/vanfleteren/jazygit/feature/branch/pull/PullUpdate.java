@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch.pull;
 
+import net.vanfleteren.jazygit.feature.branch.BranchRefusal;
 import net.vanfleteren.jazygit.feature.branch.Branches;
 import net.vanfleteren.jazygit.feature.branch.pull.PullCmd.FastForward;
 import net.vanfleteren.jazygit.feature.branch.pull.PullCmd.Pull;
@@ -33,8 +34,7 @@ public final class PullUpdate {
                         .map(upstream -> known.current()
                                 ? Update.start(model.clearError(), new Pull(branch))
                                 : known.ahead() > 0
-                                        ? Next.of(model.fail(
-                                                AppError.refused("error.fastForward.unpushed", branch.value())))
+                                        ? Next.of(model.fail(new BranchRefusal.UnpushedCommits(branch)))
                                         : Branches.checkedOutElsewhere(model, PullCmd.FAST_FORWARD, branch)
                                                 .map(error -> Next.of(model.fail(error)))
                                                 .getOrElse(() -> Update.start(

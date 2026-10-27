@@ -2,11 +2,11 @@ package net.vanfleteren.jazygit.feature.commit.create;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.commit.CommitRefusal;
 import net.vanfleteren.jazygit.feature.commit.create.CommitMsg.*;
 import net.vanfleteren.jazygit.feature.commit.create.CreateCommitCmd.StageForCommit;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update;
@@ -39,7 +39,7 @@ public final class CommitUpdate {
                 files -> files.exists(FileEntry::staged)
                         ? Update.ask(model, new CommitPopup())
                         : files.isEmpty()
-                                ? Next.of(model.fail(AppError.refused("error.commit.nothing")))
+                                ? Next.of(model.fail(new CommitRefusal.NothingToCommit()))
                                 : Update.ask(model, new StageAllPopup()));
     }
 

@@ -5,6 +5,8 @@ import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.settings.SettingsProblem;
 import net.vanfleteren.jazygit.state.AppError;
@@ -25,7 +27,8 @@ public final class ErrorText {
                         subject.toList().<Object>map(s -> s).append(of(failure)).toJavaArray());
             case AppError.MergeFailed(BranchName branch, String message) ->
                 Messages.get("error.mergePr.failed", branch.value(), message);
-            case AppError.Refused(String key, var args) -> Messages.get(key, args.toJavaArray());
+            case AppError.Refusal refusal ->
+                Messages.get(refusal.key(), refusal.args().map(ErrorText::shown).toJavaArray());
             case AppError.Unfinished(var operation, Option<String> subject, var inProgress, int conflicts) ->
                 Messages.get(
                         operation.errorKey(),
@@ -37,10 +40,6 @@ public final class ErrorText {
                                 .toJavaArray());
             case AppError.CheckedOutElsewhere(var operation, BranchName branch, var worktree) ->
                 Messages.get(operation.errorKey(), branch.value(), Messages.get("error.checkedOutElsewhere", worktree));
-            case AppError.WorktreeLocked(String worktree, String reason) ->
-                reason.isBlank()
-                        ? Messages.get("error.removeWorktree.locked", worktree)
-                        : Messages.get("error.removeWorktree.lockedBecause", worktree, reason);
             case AppError.PullRequestsUnavailable(Failure failure) ->
                 Messages.get("error.pullRequest.unavailable", of(failure));
             case AppError.SettingsNotLoaded(SettingsProblem problem) -> of(problem);
@@ -118,6 +117,18 @@ public final class ErrorText {
                 Messages.get("git.editorNotStarted", editor, reason(cause));
             case GitError.EditorFailed(String editor, int exitCode) ->
                 Messages.get("git.editorFailed", editor, String.valueOf(exitCode));
+        };
+    }
+
+    /**
+     * How a value a refusal names is shown in its message: a commit by its short sha, a branch by its name.
+     */
+    static Object shown(Object value) {
+        return switch (value) {
+            case BranchName branch -> branch.value();
+            case RemoteBranch branch -> branch.shortName();
+            case Sha sha -> sha.shortSha();
+            default -> value;
         };
     }
 

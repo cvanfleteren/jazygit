@@ -16,15 +16,27 @@ public sealed interface AppError {
      */
     static AppError noUpstream(Branch branch) {
         return branch.goneUpstream()
-                .map(upstream -> refused("error.upstream.gone", branch.name().value(), upstream.name()))
-                .getOrElse(() -> refused("error.upstream.none", branch.name().value()));
+                .<AppError>map(upstream -> new UpstreamGone(branch.name(), upstream.name()))
+                .getOrElse(() -> new NoUpstream(branch.name()));
     }
 
     /**
-     * What was asked for is refused, for the reason the message {@code key} gives with {@code args}.
+     * What was asked for is refused up front, e.g. a commit while nothing has changed, for the reason one message
+     * gives. Each feature declares the refusals it makes, as records of its own, and so adds nothing here or to the
+     * view but the message.
      */
-    static AppError refused(String key, Object... args) {
-        return new Refused(key, List.of(args));
+    non-sealed interface Refusal extends AppError {
+        /**
+         * The key of the message that says why.
+         */
+        String key();
+
+        /**
+         * What the message names, in its order, as values; the view decides how they are shown.
+         */
+        default List<Object> args() {
+            return List.empty();
+        }
     }
 
     /**
@@ -40,15 +52,6 @@ public sealed interface AppError {
      * @param message why, as GitHub says it
      */
     record MergeFailed(BranchName branch, String message) implements AppError {}
-
-    /**
-     * What was asked for is refused up front, for the reason the message {@code key} gives with {@code args}, e.g.
-     * that nothing has changed to commit. The feature that refuses names the message, so a refusal that says no
-     * more than one message needs no record of its own.
-     *
-     * @param args what the message names, as they are shown
-     */
-    record Refused(String key, List<Object> args) implements AppError {}
 
     /**
      * An operation was asked for that waits until the repository is in the middle of nothing, see
@@ -69,13 +72,64 @@ public sealed interface AppError {
     record CheckedOutElsewhere(Operation operation, BranchName branch, String worktree) implements AppError {}
 
     /**
-     * A locked worktree was asked to be removed, which its lock keeps git from doing. Unlike the other reasons a
-     * worktree is not removed, this one goes away once it is unlocked.
-     *
-     * @param worktree the name of its directory
-     * @param reason   why it was locked; empty when no reason was given
+     * A pull, or a reset onto the upstream, was asked for, but the branch has no upstream.
      */
-    record WorktreeLocked(String worktree, String reason) implements AppError {}
+    record NoUpstream(BranchName branch) implements Refusal {
+        @Override
+        public String key() {
+            return "error.upstream.none";
+        }
+
+        @Override
+        public List<Object> args() {
+            return List.of(branch);
+        }
+    }
+
+    /**
+     * A pull, or a reset onto the upstream, was asked for, but the upstream of the branch was deleted on the
+     * remote.
+     *
+     * @param upstream the short name the upstream had, e.g. {@code origin/feature}
+     */
+    record UpstreamGone(BranchName branch, String upstream) implements Refusal {
+        @Override
+        public String key() {
+            return "error.upstream.gone";
+        }
+
+        @Override
+        public List<Object> args() {
+            return List.of(branch, upstream);
+        }
+    }
+
+    /**
+     * Comparing a branch with the main branch was asked for, but there is no main branch to compare it with:
+     * none is known, or it is gone.
+     */
+    record NoBaseBranch(BranchName branch) implements Refusal {
+        @Override
+        public String key() {
+            return "error.divergence.noBase";
+        }
+
+        @Override
+        public List<Object> args() {
+            return List.of(branch);
+        }
+    }
+
+    /**
+     * A pull request was asked for before the pull requests were read, so it is unknown whether the branch has
+     * one yet.
+     */
+    record PullRequestsNotRead() implements Refusal {
+        @Override
+        public String key() {
+            return "error.pullRequest.notRead";
+        }
+    }
 
     /**
      * A pull request was asked for, but the pull requests could not be read, so it is unknown whether the branch

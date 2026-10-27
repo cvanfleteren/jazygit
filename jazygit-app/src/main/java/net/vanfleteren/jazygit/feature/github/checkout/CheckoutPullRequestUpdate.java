@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.github.checkout;
 import io.vavr.control.Option;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.feature.branch.checkout.SwitchWorktreePopup;
+import net.vanfleteren.jazygit.feature.github.GitHubRefusal;
 import net.vanfleteren.jazygit.feature.github.checkout.CheckoutPullRequestMsg.Requested;
 import net.vanfleteren.jazygit.feature.github.checkout.CheckoutPullRequestMsg.WorktreeRequested;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeUpdate;
@@ -78,7 +79,7 @@ public final class CheckoutPullRequestUpdate {
                 .orElse(() -> checkedOutElsewhere(model, pullRequest))
                 .orElse(() -> Option.when(
                         checkedOutHere(model, pullRequest),
-                        () -> new Readiness.Blocked(AppError.refused("error.checkoutPr.here", name(pullRequest)))))
+                        () -> new Readiness.Blocked(new GitHubRefusal.PullRequestCheckedOutHere(name(pullRequest)))))
                 .orElse(() -> Option.when(busy(model, source), Readiness.Busy::new))
                 .getOrElse(Readiness.Ready::new);
     }
@@ -95,7 +96,7 @@ public final class CheckoutPullRequestUpdate {
                 .orElse(() -> checkedOutElsewhere(model, pullRequest))
                 .orElse(() -> Option.when(
                         changed,
-                        () -> new Readiness.Blocked(AppError.refused("error.checkoutPr.changes", name(pullRequest)))))
+                        () -> new Readiness.Blocked(new GitHubRefusal.ChangesBeforeCheckout(name(pullRequest)))))
                 .getOrElse(Readiness.Ready::new);
     }
 
@@ -109,8 +110,7 @@ public final class CheckoutPullRequestUpdate {
                         unknown -> Option.of(new Readiness.Blocked(unknown)),
                         ofThis -> Option.when(
                                 !ofThis,
-                                () -> new Readiness.Blocked(
-                                        AppError.refused("error.checkoutPr.otherRepository", name(pullRequest)))));
+                                () -> new Readiness.Blocked(new GitHubRefusal.OtherRepository(name(pullRequest)))));
     }
 
     /**

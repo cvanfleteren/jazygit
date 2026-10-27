@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.feature.branch.BranchRefusal;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchCmd.DeleteRemoteBranch;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.*;
@@ -87,7 +88,7 @@ class DeleteRemoteBranchUpdateTest {
 
         assertEquals(List.empty(), asked.cmds());
         assertEquals(
-                Option.of(AppError.refused("error.deleteBranch.default", "origin/main")),
+                Option.of(new BranchRefusal.DefaultBranch("origin/main")),
                 asked.model().outcome().error());
     }
 

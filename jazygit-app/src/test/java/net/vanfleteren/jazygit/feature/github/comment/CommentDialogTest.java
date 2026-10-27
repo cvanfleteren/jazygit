@@ -14,13 +14,13 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.ArrayList;
+import net.vanfleteren.jazygit.feature.github.GitHubRefusal;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.git.model.BranchName;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -104,7 +104,7 @@ class CommentDialogTest {
     @Test
     void whileSendingItSaysSoAndAFailureSaysWhy() throws Exception {
         model = model.openPopup(CommentPopup.on(SHOWN).withText("Nice").withSending(true))
-                .fail(AppError.refused("error.pullRequest.noBase", "feature"));
+                .fail(new GitHubRefusal.NoBase(new BranchName("feature")));
         try (ToolkitTestRunner runner = start()) {
             String sending = RenderedText.ofLarge(runner, this::view);
             assertTrue(sending.contains("Sending the comment…"), sending);

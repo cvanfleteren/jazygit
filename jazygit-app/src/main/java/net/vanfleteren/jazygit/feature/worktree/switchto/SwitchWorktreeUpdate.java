@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.feature.worktree.switchto;
 
 import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
+import net.vanfleteren.jazygit.feature.worktree.WorktreeRefusal;
 import net.vanfleteren.jazygit.feature.worktree.switchto.SwitchWorktreeMsg.Requested;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -27,9 +27,9 @@ public final class SwitchWorktreeUpdate {
         return model.repo()
                 .worktree(location)
                 .map(worktree -> worktree.current()
-                        ? Next.of(model.fail(AppError.refused("error.switchWorktree.shown", worktree.name())))
+                        ? Next.of(model.fail(new WorktreeRefusal.WorktreeShownAlready(worktree.name())))
                         : worktree.prunable()
-                                ? Next.of(model.fail(AppError.refused("error.switchWorktree.missing", worktree.name())))
+                                ? Next.of(model.fail(new WorktreeRefusal.WorktreeMissing(worktree.name())))
                                 : Next.of(model.clearError(), RecentReposCmd.SwitchTo.worktree(location)))
                 .getOrElse(() -> Next.of(model));
     }

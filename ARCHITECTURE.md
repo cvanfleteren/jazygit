@@ -301,8 +301,8 @@ request. The design and the steps still to come are in `prs.md`.
   stays while it is read. Enter moves the focus into it, Escape back to the pane it shows.
 - **Checking out**: space checks out a pull request of the repository in place, from a fork too, with
   `gh pr checkout <n>` (`CheckoutPullRequestCmd.CHECKOUT_PR`), which waits until the repository is in the middle of nothing. It is
-  refused up front when the working tree has changes, untracked files apart (`error.checkoutPr.changes`), and
-  for a pull request of another repository (`error.checkoutPr.otherRepository`). Which repository this is is known once its
+  refused up front when the working tree has changes, untracked files apart (`GitHubRefusal.ChangesBeforeCheckout`),
+  and for a pull request of another repository (`GitHubRefusal.OtherRepository`). Which repository this is is known once its
   pull requests were read; until then, checking out says they are still being read, or why they could not be.
 - Each screen keeps where its focus was: `Msg.Focused` goes to `Model.focusedPane` or `PrOverview.focusedPane`,
   whichever screen is shown (`Model.shownPane`), and `FocusKeeper` gives it back when the screen is shown again.
@@ -611,10 +611,12 @@ classDiagram
   - A branch that is busy (`Model.idleBranch`) takes no other operation until it is done.
 - **Errors are data until the view.** `Model.error` is an `Option<AppError>` and `Loadable.Failed` holds a
   `Failure`; `ErrorText` in `ui` turns them into text. What a feature refuses up front, e.g. a commit with nothing
-  changed, is an `AppError.Refused`: the key of its message and what the message names, made where it is refused
-  (`AppError.refused("error.commit.nothing")`), so a new refusal adds only its message. Only errors whose text is
-  more than one message, that carry a `Failure`, that the code tells apart (`WorktreeLocked`), or that are not
-  refusals (`MergeFailed`) have a record of their own. `Model.fail` stores the error, which the command log
+  changed, is an `AppError.Refusal`: a record the feature declares in its own `XRefusal` (`CommitRefusal`,
+  `WorktreeRefusal`, ...), which names the key of its message and the values the message shows. `ErrorText` shows
+  every refusal alike and decides how the values look (a `Sha` by its short sha, a `BranchName` by its name), so a
+  new refusal touches neither `state` nor `ui`. The refusals `state` makes itself (`NoUpstream`, `NoBaseBranch`,
+  ...) are in `AppError`, with the errors that are no refusal: a failed operation, or one whose text is more than
+  one message. `Model.fail` stores the error, which the command log
   shows, and opens an `ErrorPopup`, unless another popup is open, which then keeps what the user entered.
 - **Popups are part of the model.** `model.popup()` says which dialog is open. `JazygitApp` renders the
   dialog that matches it and moves the focus into it, then back to the pane it came from once

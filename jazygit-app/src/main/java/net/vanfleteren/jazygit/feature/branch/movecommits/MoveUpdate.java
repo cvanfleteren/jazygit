@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.branch.movecommits;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.branch.BranchRefusal;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.movecommits.MoveMsg.*;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
@@ -73,7 +74,7 @@ public final class MoveUpdate {
                         .map(commit -> Next.of(
                                 model.clearError(), new MoveCmd.ReadRange(from.name(), sha, from.remoteUpstream())))
                         .getOrElse(() -> Next.of(model)))
-                .getOrElse(() -> Next.of(model.fail(AppError.refused("error.detached"))));
+                .getOrElse(() -> Next.of(model.fail(new BranchRefusal.NoBranchCheckedOut())));
     }
 
     /**
@@ -90,12 +91,8 @@ public final class MoveUpdate {
                         .map(commit -> range.mergedThrough()
                                 .flatMap(merge -> commit.parents()
                                         .headOption()
-                                        .map(parent -> Next.of(model.fail(AppError.refused(
-                                                "error.moveCommits.throughMerge",
-                                                oldest.shortSha(),
-                                                from.value(),
-                                                merge.shortSha(),
-                                                parent.shortSha())))))
+                                        .map(parent -> Next.of(model.fail(
+                                                new BranchRefusal.MovedThroughMerge(oldest, from, merge, parent)))))
                                 .getOrElse(() -> asked(
                                         model,
                                         new MoveRequest(
@@ -200,7 +197,7 @@ public final class MoveUpdate {
         boolean changed = Update.files(model).exists(file -> file.type() != ChangeType.UNTRACKED);
         return copiedOnto(target)
                 .filter(onto -> changed)
-                .map(onto -> Next.of(model.fail(AppError.refused("error.moveCommits.changes", onto))))
+                .map(onto -> Next.of(model.fail(new BranchRefusal.ChangesBeforeMove(onto))))
                 .getOrElse(() -> request.pushed()
                         ? Update.ask(model, new MovePushedPopup(request, target))
                         : Update.start(model.clearError(), move(request, target, false)));

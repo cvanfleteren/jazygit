@@ -251,7 +251,7 @@ public final class PullRequestUpdate {
                                 ? Next.of(model.fail(model.gitHub()
                                         .pullRequestsFailure()
                                         .<AppError>map(AppError.PullRequestsUnavailable::new)
-                                        .getOrElse(() -> AppError.refused("error.pullRequest.notRead"))))
+                                        .getOrElse(AppError.PullRequestsNotRead::new)))
                                 : CreatePullRequestUpdate.askPushed(model, known)))
                 .getOrElse(() -> Next.of(model));
     }

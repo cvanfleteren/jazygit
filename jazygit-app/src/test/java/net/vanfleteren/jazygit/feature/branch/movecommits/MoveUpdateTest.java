@@ -8,6 +8,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
+import net.vanfleteren.jazygit.feature.branch.BranchRefusal;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -155,7 +156,7 @@ class MoveUpdateTest {
 
         assertEquals(List.of(), next.cmds());
         assertEquals(
-                Option.of(AppError.refused("error.detached")),
+                Option.of(new BranchRefusal.NoBranchCheckedOut()),
                 next.model().outcome().error());
     }
 
@@ -211,12 +212,7 @@ class MoveUpdateTest {
         assertEquals(Option.none(), refused.popup(MoveTargetPopup.class));
         assertEquals(Option.none(), refused.popup(MoveNamePopup.class));
         assertEquals(
-                Option.of(AppError.refused(
-                        "error.moveCommits.throughMerge",
-                        MIDDLE.sha().shortSha(),
-                        FEATURE.value(),
-                        TIP.sha().shortSha(),
-                        ROOT.sha().shortSha())),
+                Option.of(new BranchRefusal.MovedThroughMerge(MIDDLE.sha(), FEATURE, TIP.sha(), ROOT.sha())),
                 refused.outcome().error());
     }
 
@@ -260,7 +256,7 @@ class MoveUpdateTest {
 
         assertEquals(List.of(), next.cmds());
         assertEquals(
-                Option.of(AppError.refused("error.moveCommits.changes", "main")),
+                Option.of(new BranchRefusal.ChangesBeforeMove("main")),
                 next.model().outcome().error());
     }
 
@@ -270,7 +266,7 @@ class MoveUpdateTest {
 
         assertEquals(List.of(), next.cmds());
         assertEquals(
-                Option.of(AppError.refused("error.moveCommits.changes", "origin/main")),
+                Option.of(new BranchRefusal.ChangesBeforeMove("origin/main")),
                 next.model().outcome().error());
     }
 

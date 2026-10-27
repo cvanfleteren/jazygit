@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.feature.stash;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -31,7 +30,7 @@ public final class StashUpdate {
         return Update.withFiles(
                 model,
                 files -> files.isEmpty()
-                        ? Next.of(model.fail(AppError.refused("error.stash.nothing")))
+                        ? Next.of(model.fail(new StashRefusal.NothingToStash()))
                         : Update.ask(model, new StashPopup()));
     }
 
