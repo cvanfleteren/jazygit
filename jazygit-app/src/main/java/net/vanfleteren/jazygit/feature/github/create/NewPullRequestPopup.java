@@ -4,13 +4,14 @@ import io.vavr.collection.List;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.Popup;
 
 /**
  * Asking what the new pull request of {@code branch} says: which of {@code bases} it merges into, its title, its
  * body, and whether it is a draft.
  *
- * @param head        the name the branch has on its remote, which gh needs
+ * @param head        the branch on its remote that it pushes to, which gh needs
  * @param bases       the branches to choose from, the parent first
  * @param base        the one picked: the highlighted one, or the one highlighted last while the filter shows none
  * @param titleRead   the title read last, for a base: the subject of the oldest commit not on it
@@ -19,7 +20,7 @@ import net.vanfleteren.jazygit.state.Popup;
 @With
 public record NewPullRequestPopup(
         BranchName branch,
-        BranchName head,
+        RemoteBranch head,
         List<BranchName> bases,
         BranchName base,
         String titleRead,

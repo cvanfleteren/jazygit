@@ -143,6 +143,16 @@ class ArchitectureTest {
     // The dialogs of the features, which are views; nested classes included.
     private static final String DIALOGS = ".*Dialogs?(\\$.*)?";
     /**
+     * Only {@code OnGitHub} names a branch for gh, from the branch on its remote, so the name of a local branch is not
+     * handed to gh for it (ADR 40).
+     */
+    @ArchTest
+    static final ArchRule onlyOnGitHubNamesBranchesForGh = noClasses()
+            .that()
+            .doNotHaveFullyQualifiedName("net.vanfleteren.jazygit.feature.github.OnGitHub")
+            .should()
+            .callConstructor(net.vanfleteren.jazygit.gh.model.GhBranch.class, String.class);
+    /**
      * Rendering never talks to git or gh: the views only draw the model, and send messages.
      */
     @ArchTest

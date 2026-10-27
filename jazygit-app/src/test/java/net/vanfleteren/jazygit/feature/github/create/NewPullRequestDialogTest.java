@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Optional;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -48,7 +49,7 @@ class NewPullRequestDialogTest {
     private Model model = TestModels.loaded()
             .openPopup(new NewPullRequestPopup(
                     new BranchName("feature"),
-                    new BranchName("feature"),
+                    new RemoteBranch("origin", new BranchName("feature")),
                     List.of(new BranchName("main"), new BranchName("release"), new BranchName("ahead")),
                     new BranchName("main"),
                     "Add login",

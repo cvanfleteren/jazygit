@@ -31,7 +31,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
  * @param labels       its labels
  * @param reviewers    who reviewed it or is asked to
  * @param checks       its CI checks, one by one
- * @param head         the commit its branch is at, empty when not known
+ * @param head         the commit its branch is at, if known
  * @param stack        where it sits in its stack, if it is stacked
  * @param behindBase   how many commits its base branch has that its branch does not, as the base moved on since its
  *                     branch was made; empty when not known
@@ -58,7 +58,7 @@ public record PullRequestDetails(
         List<String> labels,
         List<Reviewer> reviewers,
         List<Check> checks,
-        String head,
+        Option<GhCommit> head,
         Option<PullRequestStack> stack,
         Option<Integer> behindBase,
         String repository) {
@@ -109,7 +109,7 @@ public record PullRequestDetails(
                 labels,
                 reviewers,
                 checks,
-                "",
+                Option.none(),
                 Option.none(),
                 Option.none(),
                 "");

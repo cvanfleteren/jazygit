@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Freshness;
@@ -174,7 +175,8 @@ class FetchLineTest {
         BranchRef base = new BranchRef.Local(new BranchName("main"));
         assertEquals(
                 "Reading the title of feature",
-                FetchLine.labelText(new CreatePullRequestCmd.ReadTitle(feature, feature, List.empty(), base)
+                FetchLine.labelText(new CreatePullRequestCmd.ReadTitle(
+                                feature, new RemoteBranch("origin", feature), List.empty(), base)
                         .label()
                         .get()));
         assertEquals(

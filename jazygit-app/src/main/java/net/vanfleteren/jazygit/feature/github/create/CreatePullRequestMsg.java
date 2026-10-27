@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
@@ -37,10 +38,10 @@ public sealed interface CreatePullRequestMsg extends Msg {
      * The title a new pull request of {@code branch} starts out with was read, for the first of {@code bases}: the
      * subject of its oldest commit not on it, if one was found.
      *
-     * @param head  the name the branch has on its remote
+     * @param head  the branch on its remote that it pushes to
      * @param bases the branches it can merge into, the one it was read for first
      */
-    record TitleRead(BranchName branch, BranchName head, List<BranchName> bases, Option<String> subject)
+    record TitleRead(BranchName branch, RemoteBranch head, List<BranchName> bases, Option<String> subject)
             implements CreatePullRequestMsg {}
 
     /**

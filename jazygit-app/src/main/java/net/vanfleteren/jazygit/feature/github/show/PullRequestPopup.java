@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.github.show;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
@@ -167,10 +168,10 @@ public record PullRequestPopup(
     }
 
     /**
-     * The commit its branch was at when it was read, which a merge is only done at; empty before it is read.
+     * The commit its branch was at when it was read, which a merge is only done at; none before it is read.
      */
-    public String head() {
-        return readDetails().map(PullRequestDetails::head).getOrElse("");
+    public Option<GhCommit> head() {
+        return readDetails().flatMap(PullRequestDetails::head);
     }
 
     /**

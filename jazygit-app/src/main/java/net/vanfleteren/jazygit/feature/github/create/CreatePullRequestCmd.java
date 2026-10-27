@@ -7,6 +7,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
+import net.vanfleteren.jazygit.feature.github.OnGitHub;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -16,6 +17,7 @@ import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Label;
@@ -47,7 +49,17 @@ public sealed interface CreatePullRequestCmd extends Cmd {
          * when it is not on one.
          */
         BranchName remoteName() {
-            return ref instanceof BranchRef.Remote remote ? remote.branch().branch() : name;
+            return remote().branch();
+        }
+
+        /**
+         * The branch on its remote, which gh merges into: the one it is, or the one of its name on the default
+         * remote when it is not on one.
+         */
+        RemoteBranch remote() {
+            return ref instanceof BranchRef.Remote(RemoteBranch remote)
+                    ? remote
+                    : new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, name);
         }
     }
 
@@ -112,7 +124,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
      * @param head  the name the branch has on its remote
      * @param bases the branches it can merge into, the one it is read for first
      */
-    record ReadTitle(BranchName branch, BranchName head, List<BranchName> bases, BranchRef baseRef)
+    record ReadTitle(BranchName branch, RemoteBranch head, List<BranchName> bases, BranchRef baseRef)
             implements CreatePullRequestCmd {
 
         @Override
@@ -201,7 +213,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
      * Creates a pull request from {@code branch}, as it is on its remote under the name {@code head}, into
      * {@code base}, the name that branch has on its remote, as {@code pullRequest} says.
      */
-    record CreatePullRequest(BranchName branch, BranchName head, BranchName base, NewPullRequest pullRequest)
+    record CreatePullRequest(BranchName branch, RemoteBranch head, RemoteBranch base, NewPullRequest pullRequest)
             implements CreatePullRequestCmd, OperationCmd {
 
         @Override
@@ -222,7 +234,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return env.gitHub()
-                    .createPullRequest(head.value(), base.value(), pullRequest)
+                    .createPullRequest(OnGitHub.branch(head), OnGitHub.branch(base), pullRequest)
                     .fold(
                             this::failedWith,
                             created -> new CreatePullRequestMsg.Created(
@@ -230,7 +242,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
                                     created.number()
                                             .map(number -> new PullRequest(
                                                     number,
-                                                    head.value(),
+                                                    head.branch().value(),
                                                     pullRequest.draft(),
                                                     Checks.NONE,
                                                     Review.NONE)),

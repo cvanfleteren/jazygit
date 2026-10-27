@@ -369,14 +369,14 @@ public final class CliGitHub implements GitHub {
      * The command that creates a pull request from {@code head} into {@code base}: with the title and the body
      * given, so gh does not ask for them, and as a draft if asked.
      */
-    static GhCommand createCommand(String head, String base, NewPullRequest pullRequest) {
+    static GhCommand createCommand(GhBranch head, GhBranch base, NewPullRequest pullRequest) {
         return gh(List.of(
                         "pr",
                         "create",
                         "--head",
-                        head,
+                        head.name(),
                         "--base",
-                        base,
+                        base.name(),
                         "--title",
                         pullRequest.title(),
                         "--body",
@@ -385,15 +385,15 @@ public final class CliGitHub implements GitHub {
                 .toJavaArray(String[]::new));
     }
 
-    static GhCommand browseCommand(String branch) {
-        return gh("browse", "--branch", branch);
+    static GhCommand browseCommand(GhBranch branch) {
+        return gh("browse", "--branch", branch.name());
     }
 
     /**
      * The command that has GitHub merge pull request {@code number} in the background, only while its branch is at
-     * {@code head}, unless that is empty. gh fills in the repository of the working tree for {owner} and {repo}.
+     * {@code head}, if given. gh fills in the repository of the working tree for {owner} and {repo}.
      */
-    static GhCommand mergeCommand(int number, String head, MergeMethod method) {
+    static GhCommand mergeCommand(int number, Option<GhCommit> head, MergeMethod method) {
         return gh(List.of(
                         "api",
                         "--method",
@@ -401,7 +401,7 @@ public final class CliGitHub implements GitHub {
                         "repos/{owner}/{repo}/pulls/" + number + "/merge-async",
                         "-f",
                         "merge_method=" + mergeMethod(method))
-                .appendAll(head.isEmpty() ? List.empty() : List.of("-f", "sha=" + head))
+                .appendAll(head.toList().flatMap(commit -> List.of("-f", "sha=" + commit.oid())))
                 .appendAll(List.of("--jq", MERGE_JQ))
                 .toJavaArray(String[]::new));
     }
@@ -627,7 +627,7 @@ public final class CliGitHub implements GitHub {
                                 labels,
                                 reviewers,
                                 checks,
-                                f.get(16),
+                                GhCommit.parse(f.get(16)),
                                 pullRequestStack,
                                 Option.none(),
                                 repository))
@@ -979,19 +979,18 @@ public final class CliGitHub implements GitHub {
                                 "--jq",
                                 DETAILS_JQ),
                         CliGitHub::parseDetails)
-                .map(details -> details.state() == PullRequestDetails.State.OPEN
-                                && !details.head().isEmpty()
-                        ? behindBase(details.baseBranch(), details.head())
-                                .map(details::withBehindBase)
-                                .getOrElse(details)
-                        : details);
+                .map(details -> details.head()
+                        .filter(head -> details.state() == PullRequestDetails.State.OPEN)
+                        .flatMap(head -> behindBase(details.baseBranch(), head))
+                        .map(details::withBehindBase)
+                        .getOrElse(details));
     }
 
     /**
      * How many commits base branch {@code base} has that commit {@code head} does not; none when that cannot be read,
      * also when the read fails, as the rest of the details read fine and come back without it.
      */
-    private Option<Integer> behindBase(String base, String head) {
+    private Option<Integer> behindBase(String base, GhCommit head) {
         return process.read(
                         gh(
                                 "api",
@@ -1003,7 +1002,7 @@ public final class CliGitHub implements GitHub {
                                 "-f",
                                 "base=refs/heads/" + base,
                                 "-f",
-                                "head=" + head,
+                                "head=" + head.oid(),
                                 "-f",
                                 "query=" + BEHIND_QUERY,
                                 "--jq",
@@ -1059,7 +1058,7 @@ public final class CliGitHub implements GitHub {
     }
 
     @Override
-    public Either<GhFailure, Created> createPullRequest(String head, String base, NewPullRequest pullRequest) {
+    public Either<GhFailure, Created> createPullRequest(GhBranch head, GhBranch base, NewPullRequest pullRequest) {
         return process.run(createCommand(head, base, pullRequest))
                 .map(output -> new Created(createdNumber(output.stdout()), output.log()));
     }
@@ -1075,7 +1074,7 @@ public final class CliGitHub implements GitHub {
     }
 
     @Override
-    public Either<GhFailure, List<ExecutedCommand>> browse(String branch) {
+    public Either<GhFailure, List<ExecutedCommand>> browse(GhBranch branch) {
         return process.log(browseCommand(branch));
     }
 
@@ -1090,7 +1089,7 @@ public final class CliGitHub implements GitHub {
     }
 
     @Override
-    public Either<GhFailure, Merging> mergePullRequest(int number, String head, MergeMethod method) {
+    public Either<GhFailure, Merging> mergePullRequest(int number, Option<GhCommit> head, MergeMethod method) {
         return process.run(mergeCommand(number, head, method))
                 .flatMap(output -> parseMergeStatus(output.stdout())
                         .map(status -> new Merging(status, output.log()))

@@ -21,6 +21,7 @@ import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.feature.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.feature.github.comments.CommentsMsg;
 import net.vanfleteren.jazygit.gh.model.CheckRun;
+import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -124,7 +125,7 @@ class PullRequestDialogTest {
                 DETAILS.labels(),
                 DETAILS.reviewers(),
                 DETAILS.checks(),
-                head,
+                GhCommit.parse(head),
                 Option.none(),
                 Option.none(),
                 "");
@@ -155,7 +156,7 @@ class PullRequestDialogTest {
                 READY.labels(),
                 READY.reviewers(),
                 checks,
-                "abc123",
+                Option.of(new GhCommit("abc123")),
                 Option.none(),
                 Option.none(),
                 "owner/repo");
@@ -375,7 +376,7 @@ class PullRequestDialogTest {
                 READY.labels(),
                 READY.reviewers(),
                 READY.checks(),
-                "abc123",
+                Option.of(new GhCommit("abc123")),
                 Option.of(stack),
                 Option.none(),
                 "");

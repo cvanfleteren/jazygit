@@ -122,7 +122,7 @@ public interface StubGitHub extends GitHub {
     }
 
     @Override
-    default Either<GhFailure, Created> createPullRequest(String head, String base, NewPullRequest pullRequest) {
+    default Either<GhFailure, Created> createPullRequest(GhBranch head, GhBranch base, NewPullRequest pullRequest) {
         return Either.right(new Created(
                 Option.none(),
                 List.of(CliGitHub.createCommand(head, base, pullRequest).executed())));
@@ -139,8 +139,8 @@ public interface StubGitHub extends GitHub {
     }
 
     @Override
-    default Either<GhFailure, List<ExecutedCommand>> browse(String branch) {
-        return Either.right(List.of(ExecutedCommand.of("gh", "browse", "--branch", branch)));
+    default Either<GhFailure, List<ExecutedCommand>> browse(GhBranch branch) {
+        return Either.right(List.of(ExecutedCommand.of("gh", "browse", "--branch", branch.name())));
     }
 
     @Override
@@ -154,7 +154,7 @@ public interface StubGitHub extends GitHub {
     }
 
     @Override
-    default Either<GhFailure, Merging> mergePullRequest(int number, String head, MergeMethod method) {
+    default Either<GhFailure, Merging> mergePullRequest(int number, Option<GhCommit> head, MergeMethod method) {
         return Either.right(new Merging(
                 new MergeStatus.Pending("merge-" + number),
                 List.of(CliGitHub.mergeCommand(number, head, method).executed())));
