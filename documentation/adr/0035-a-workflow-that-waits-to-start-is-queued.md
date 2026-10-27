@@ -28,9 +28,14 @@ queued check of a first attempt shows how long it has been queued.
 - A workflow that waits is a suite of a commit with a `workflowRun`, a `status` other than `COMPLETED`, and no check
   run. Not: a suite without a `workflowRun`, as an app leaves those queued for good; nor the suites of any status
   with no check run, as a workflow whose jobs were all skipped is `COMPLETED` with none.
-- The first 20 suites of a commit are read, next to its rollup, in the query of the branches, of the checks of
-  branches one by one and of the details of a pull request. Not in the query of the checks that ran lately: a
-  workflow that waits teaches nothing. The branches query still costs 1 point a page.
+- The first 20 suites of a commit are read, next to its rollup, in every query that reads checks: of the branches,
+  of the checks of branches one by one, of the details of a pull request, of the pull requests the branches pane
+  shows, and of the lists of the pull requests screen. Not in the query of the checks that ran lately: a workflow
+  that waits teaches nothing. The branches query still costs 1 point a page; each query of pull requests 1 more,
+  3 to 4 and 2 to 3, about 60 points an hour more of 5000 for the one read every minute.
+- Of a pull request, as of a branch, a workflow that waits is a pending state next to those of its checks. Not: the
+  queries of branches alone, as the branches pane shows the checks of the pull request of a branch that has one, and
+  so showed none, or `✅` next to an app's check that passed, while its dialog listed the workflow as queued.
 - In the branches, a branch with a workflow that waits is pending, unless its checks failed: its state is that of
   the rollup combined with a pending one. So `main` shows `⏳` and `c` opens the popup. Read one by one, a workflow
   that waits is a check of its own, queued, next to the check runs: `💤 Publish fat-jar and native image  queued 3m`.
@@ -61,12 +66,17 @@ queued check of a first attempt shows how long it has been queued.
 ## Consequences
 
 - One step: the queries, their jq and parsing, the time a check is queued, and `💤` in the branches pane.
+- The jq of the queries is run by tests, on what GitHub answers them, and what it prints parsed: a test without jq
+  is skipped, but not on CI, where jq is on the runner and a missing one fails it. jq is in the dev shell. gh runs
+  the filters with gojq, which differs from jq in nothing they use.
 - A workflow that waits is timed from when its run was created, so once it starts, its checks are expected later
   than they were before it waited, as ADR 32 has it; how long it waited is in what is learned from them too.
 - An app's suite that is left queued is not shown; one of Actions that is would show as queued for good.
-- Tested: the parsing of a branch with a workflow that waits, also next to failed checks and without a rollup; the
-  line of a workflow that waits read one by one, in the branches and the pull request dialog; that it is queued and
-  never learned from; `queued 3m 20s` for a first attempt and `queued` for a re-run; in the branches pane, `💤` and
-  how long while all that is not done waits, with and without a pull request, `💤` alone for a re-run, `⏳` while
-  one runs and `❌` when one failed, and `<1m`, `3m` and `1h 5m`. The jq of the three queries is
-  not run by the tests, as no other jq is; it was tried on what GitHub gives.
+- Tested: that every query that reads checks reads the suites; the jq of each on an answer with a workflow that
+  waits, an app's suite left queued and a workflow whose jobs were all skipped, and what is parsed of it: a branch
+  pending, also without a rollup, and failing next to failed checks, a pull request pending in the branches pane and
+  in the lists, also of a search, and the workflow as a queued check next to the check runs, one by one and in the
+  pull request dialog; that it is never learned from; `queued 3m 20s` for a first attempt and `queued` for a re-run;
+  in the branches pane, `💤` and how long while all that is not done waits, with and without a pull request, `💤`
+  alone for a re-run and not the estimate, `⏳` and the estimate while one runs and `❌` when one failed, and `<1m`,
+  `3m` and `1h 5m`.

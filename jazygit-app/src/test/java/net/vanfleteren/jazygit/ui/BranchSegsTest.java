@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.pull.PullCmd;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
@@ -12,9 +13,12 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.state.Waiting;
 import org.junit.jupiter.api.Test;
 
 class BranchSegsTest {
+
+    private static final Instant NOW = Instant.parse("2026-10-27T10:00:00Z");
 
     @Test
     void aPullRequestShowsItsNumberItsChecksAndItsReview() {
@@ -140,22 +144,49 @@ class BranchSegsTest {
     @Test
     void checksThatAllWaitToStartSayHowLongTheyHave() {
         PullRequest running = new PullRequest(38, "b", false, Checks.PENDING, Review.APPROVED);
+        Option<Waiting> waiting = Option.of(new Waiting(Option.of(NOW.minusSeconds(200))));
 
         assertEquals(
                 List.of(
                         LoadableList.Seg.styled(" 💤", Theme.Classes.DIM),
                         LoadableList.Seg.styled(" 3m", Theme.Classes.DIM)),
-                BranchSegs.gitHub(Option.none(), Option.none(), Option.of(Checks.PENDING), true, Option.of("3m")));
+                BranchSegs.gitHub(
+                        Option.none(), Option.none(), Option.of(Checks.PENDING), waiting, Option.of("~4m"), NOW));
         assertEquals(
                 List.of(
                         LoadableList.Seg.styled(" #38", Theme.Classes.PULL_REQUEST),
                         LoadableList.Seg.styled(" 💤", Theme.Classes.DIM),
+                        LoadableList.Seg.styled(" 3m", Theme.Classes.DIM),
                         LoadableList.Seg.styled(" 👍", Theme.Classes.REVIEW_APPROVED)),
-                BranchSegs.gitHub(Option.of(running), Option.none(), Option.none(), true, Option.none()));
+                BranchSegs.gitHub(Option.of(running), Option.none(), Option.none(), waiting, Option.of("~4m"), NOW));
         // Failed checks fail, also while another waits.
         assertEquals(
                 List.of(LoadableList.Seg.styled(" ❌", Theme.Classes.CHECKS_FAILED)),
-                BranchSegs.gitHub(Option.none(), Option.none(), Option.of(Checks.FAILING), true, Option.of("3m")));
+                BranchSegs.gitHub(
+                        Option.none(), Option.none(), Option.of(Checks.FAILING), waiting, Option.of("~4m"), NOW));
+    }
+
+    @Test
+    void checksThatWaitToStartForAReRunSayNotHowLongNorWhenTheyAreDone() {
+        assertEquals(
+                List.of(LoadableList.Seg.styled(" 💤", Theme.Classes.DIM)),
+                BranchSegs.gitHub(
+                        Option.none(),
+                        Option.none(),
+                        Option.of(Checks.PENDING),
+                        Option.of(new Waiting(Option.none())),
+                        Option.of("~4m"),
+                        NOW));
+    }
+
+    @Test
+    void checksThatDoNotAllWaitSayWhenTheyAreExpectedToBeDone() {
+        assertEquals(
+                List.of(
+                        LoadableList.Seg.styled(" ⏳", Theme.Classes.CHECKS_RUNNING),
+                        LoadableList.Seg.styled(" ~4m", Theme.Classes.DIM)),
+                BranchSegs.gitHub(
+                        Option.none(), Option.none(), Option.of(Checks.PENDING), Option.none(), Option.of("~4m"), NOW));
     }
 
     @Test

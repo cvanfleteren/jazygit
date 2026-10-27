@@ -712,8 +712,46 @@ class CliGitHubTest {
     }
 
     @Test
-    void theSuitesOfACommitAreReadNextToItsChecks() {
-        assertTrue(CliGitHub.branchCheckRunsQuery(1).contains("checkSuites(first: 20)"));
+    void theSuitesOfACommitAreReadWhereverItsChecksAre() {
+        // Without them, a workflow that waits to start reads as no checks (ADR 35).
+        List.of(
+                        CliGitHub.BRANCHES_QUERY,
+                        CliGitHub.branchCheckRunsQuery(1),
+                        CliGitHub.DETAILS_QUERY,
+                        CliGitHub.PRS_QUERY,
+                        CliGitHub.REPOSITORY_PRS_QUERY,
+                        CliGitHub.MY_PRS_QUERY)
+                .forEach(query -> assertTrue(query.contains("checkSuites(first: 20)"), query));
+    }
+
+    @Test
+    void aWorkflowRunThatWaitsToStartIsAQueuedCheckOfThePullRequestNextToItsOthers() {
+        String raw = "repo\tcvanfleteren/jazygit\n"
+                + "pr\t42\tAdd\tcvf\tOPEN\tfalse\tfeature\tmain\t2026-10-26T22:00:00Z\t2026-10-26T22:00:00Z\t1\t2\t3"
+                + "\tMERGEABLE\t\t0\tabc123\t1\n"
+                + "threads\t0\t0\t0\t0\n"
+                + "check\tci/status\tSUCCESS\t\t\t\t\t\t\t\t\t\n"
+                + "check\tPublish\tPENDING\t0\tPublish\t\t\t\t404\t2026-10-26T23:32:02Z\t1\tpush\n";
+
+        List<Check> checks = CliGitHub.parseDetails(raw).get().checks();
+
+        assertEquals(new Check("ci/status", Checks.PASSING), checks.head());
+        assertEquals(
+                new Check(
+                        "Publish",
+                        Checks.PENDING,
+                        Option.of(new CheckRun(
+                                0,
+                                "Publish",
+                                "",
+                                Option.none(),
+                                Option.none(),
+                                404,
+                                Instant.parse("2026-10-26T23:32:02Z"),
+                                1,
+                                "push"))),
+                checks.last());
+        assertTrue(checks.last().queued());
     }
 
     @Test

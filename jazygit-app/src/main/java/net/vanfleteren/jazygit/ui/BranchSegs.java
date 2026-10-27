@@ -164,41 +164,51 @@ final class BranchSegs {
     }
 
     /**
-     * How a branch is doing on GitHub, as {@link #gitHub(Option, Option, Option, Option)}, with its checks waiting to
-     * start while they run and {@code waiting}, and then {@code eta} how long they have waited (ADR 35).
+     * How a branch is doing on GitHub, as {@link #gitHub(Option, Option, Option, Option)}, but while its checks all
+     * wait to start, {@code waiting}, waiting and then how long they have at {@code now}: {@code 💤 3m}; only
+     * {@code 💤} for a re-run (ADR 35).
      */
     static List<LoadableList.Seg> gitHub(
             Option<PullRequest> pullRequest,
             Option<MergeStatus> merge,
             Option<Checks> checks,
+            Option<Waiting> waiting,
+            Option<String> eta,
+            Instant now) {
+        return gitHub(
+                pullRequest,
+                merge,
+                checks,
+                waiting.isDefined(),
+                waiting.map(known -> known.since().map(since -> CheckTimesText.waited(Duration.between(since, now))))
+                        .getOrElse(eta));
+    }
+
+    /**
+     * How a branch is doing on GitHub, with its checks waiting to start while they run and {@code waiting}, and
+     * {@code after} after their symbol.
+     */
+    private static List<LoadableList.Seg> gitHub(
+            Option<PullRequest> pullRequest,
+            Option<MergeStatus> merge,
+            Option<Checks> checks,
             boolean waiting,
-            Option<String> eta) {
+            Option<String> after) {
         return pullRequest.isDefined()
-                ? pullRequest(pullRequest, merge, waiting, eta)
+                ? pullRequest(pullRequest, merge, waiting, after)
                 : checks.toList()
                         .flatMap(state -> PullRequestSymbols.checks(state, waiting)
                                 .map(BranchSegs::symbol)
                                 .toList()
-                                .appendAll(etaSeg(state, eta)));
+                                .appendAll(etaSeg(state, after)));
     }
 
     /**
      * When the checks of a branch are expected to be done, as the lists show it, from what {@code model} knows
      * (ADR 32).
      */
-    private static Option<String> eta(Model model, Option<Eta> eta) {
+    static Option<String> eta(Model model, Option<Eta> eta) {
         return eta.flatMap(known -> CheckTimesText.brief(known, model.gitHub().learningCheckTimes(), model.now()));
-    }
-
-    /**
-     * What shows after the symbol of the checks of a branch, from what {@code model} knows: while they all wait to
-     * start, {@code waiting}, how long they have, nothing for a re-run; else when they are expected to be done
-     * (ADR 35).
-     */
-    static Option<String> after(Model model, Option<Waiting> waiting, Option<Eta> eta) {
-        return waiting.map(known ->
-                        known.since().map(since -> CheckTimesText.waited(Duration.between(since, model.now()))))
-                .getOrElse(() -> eta(model, eta));
     }
 
     private static LoadableList.Seg symbol(PullRequestSymbols.Symbol symbol) {
