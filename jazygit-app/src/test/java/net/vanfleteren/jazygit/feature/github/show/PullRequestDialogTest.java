@@ -631,7 +631,7 @@ class PullRequestDialogTest {
         assertTrue(screen.contains("⏳ package     running 1m 55s · due"), screen);
         assertTrue(screen.contains("⏳ verify      running 30s · ? left"), screen);
         assertTrue(screen.contains("⏳ ci/status   running"), screen);
-        assertTrue(screen.contains("💤 acceptance  queued · ~2m 15s left"), screen);
+        assertTrue(screen.contains("💤 acceptance  queued 2m · ~2m 15s left"), screen);
         // Running before queued, the soonest done first, those not known last.
         assertTrue(screen.indexOf("package") < screen.indexOf("verify"), screen);
         assertTrue(screen.indexOf("ci/status") < screen.indexOf("acceptance"), screen);

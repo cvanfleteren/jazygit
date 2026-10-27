@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.gh.timing.Eta;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -213,6 +214,28 @@ public record GitHubState(
                                 .filter(times -> times.repository().equals(pending.repository()))
                                 .map(times -> times.eta(checks))
                                 .getOrElse(() -> Eta.of(checks, CheckHistory.EMPTY))));
+    }
+
+    /**
+     * That the checks on the branch {@code branch} follows on GitHub all wait to start, while they are pending and
+     * were read one by one (ADR 35).
+     */
+    public Option<Waiting> waiting(Branch branch) {
+        return branch.remoteUpstream().flatMap(this::waiting);
+    }
+
+    /**
+     * That the checks on {@code remote}, a branch on GitHub, that are not done all wait to start, while they are
+     * pending and were read one by one (ADR 35): none while one of them runs.
+     */
+    public Option<Waiting> waiting(RemoteBranch remote) {
+        return checks(remote)
+                .filter(state -> state == Checks.PENDING)
+                .flatMap(state -> pendingChecks)
+                .flatMap(pending -> pending.byBranch().get(remote.branch()))
+                .map(checks -> checks.filter(check -> !check.done()))
+                .filter(notDone -> notDone.nonEmpty() && notDone.forAll(Check::queued))
+                .map(Waiting::of);
     }
 
     /**

@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.ui;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
@@ -104,11 +105,21 @@ final class BranchSegs {
      */
     static List<LoadableList.Seg> pullRequest(
             Option<PullRequest> pullRequest, Option<MergeStatus> merge, Option<String> eta) {
+        return pullRequest(pullRequest, merge, false, eta);
+    }
+
+    /**
+     * The pull request of a branch, as {@link #pullRequest(Option, Option, Option)}, with its checks waiting to start
+     * while they run and {@code waiting} (ADR 35).
+     */
+    private static List<LoadableList.Seg> pullRequest(
+            Option<PullRequest> pullRequest, Option<MergeStatus> merge, boolean waiting, Option<String> eta) {
         return pullRequest
                 .toList()
                 .flatMap(pr -> PullRequestSymbols.state(
                                 pr.stack(),
                                 pr.checks(),
+                                waiting,
                                 eta.map(text -> new PullRequestSymbols.Symbol(text, Theme.Classes.DIM)),
                                 pr.review(),
                                 merge)
@@ -149,13 +160,47 @@ final class BranchSegs {
      */
     static List<LoadableList.Seg> gitHub(
             Option<PullRequest> pullRequest, Option<MergeStatus> merge, Option<Checks> checks, Option<String> eta) {
+        return gitHub(pullRequest, merge, checks, false, eta);
+    }
+
+    /**
+     * How a branch is doing on GitHub, as {@link #gitHub(Option, Option, Option, Option)}, but while its checks all
+     * wait to start, {@code waiting}, waiting and then how long they have at {@code now}: {@code 💤 3m}; only
+     * {@code 💤} for a re-run (ADR 35).
+     */
+    static List<LoadableList.Seg> gitHub(
+            Option<PullRequest> pullRequest,
+            Option<MergeStatus> merge,
+            Option<Checks> checks,
+            Option<Waiting> waiting,
+            Option<String> eta,
+            Instant now) {
+        return gitHub(
+                pullRequest,
+                merge,
+                checks,
+                waiting.isDefined(),
+                waiting.map(known -> known.since().map(since -> CheckTimesText.waited(Duration.between(since, now))))
+                        .getOrElse(eta));
+    }
+
+    /**
+     * How a branch is doing on GitHub, with its checks waiting to start while they run and {@code waiting}, and
+     * {@code after} after their symbol.
+     */
+    private static List<LoadableList.Seg> gitHub(
+            Option<PullRequest> pullRequest,
+            Option<MergeStatus> merge,
+            Option<Checks> checks,
+            boolean waiting,
+            Option<String> after) {
         return pullRequest.isDefined()
-                ? pullRequest(pullRequest, merge, eta)
+                ? pullRequest(pullRequest, merge, waiting, after)
                 : checks.toList()
-                        .flatMap(state -> PullRequestSymbols.checks(state)
+                        .flatMap(state -> PullRequestSymbols.checks(state, waiting)
                                 .map(BranchSegs::symbol)
                                 .toList()
-                                .appendAll(etaSeg(state, eta)));
+                                .appendAll(etaSeg(state, after)));
     }
 
     /**
