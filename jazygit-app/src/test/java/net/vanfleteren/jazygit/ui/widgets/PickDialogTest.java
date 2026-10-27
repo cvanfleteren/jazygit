@@ -30,8 +30,7 @@ class PickDialogTest {
                     BranchPopup.class,
                     popup -> "Merge into",
                     popup -> popup.branches().map(PickDialog.Row::of),
-                    Picked::new,
-                    () -> new Picked("cancel")),
+                    Picked::new),
             cursor);
 
     @Test
@@ -63,7 +62,9 @@ class PickDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Picked("main"), new Picked("release"), new Picked("cancel")), dispatched);
+        assertEquals(
+                java.util.List.of(new Picked("main"), new Picked("release"), new Msg.PopupDismissed(BranchPopup.class)),
+                dispatched);
     }
 
     @Test
@@ -75,7 +76,6 @@ class PickDialogTest {
                         popup -> "Merge into",
                         popup -> popup.branches().map(PickDialog.Row::of),
                         Picked::new,
-                        () -> new Picked("cancel"),
                         Option.of("dialog.recentRepos.none")),
                 cursor);
         Supplier<Element> view = () -> stack(
@@ -93,7 +93,7 @@ class PickDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Picked("cancel")), dispatched);
+        assertEquals(java.util.List.of(new Msg.PopupDismissed(BranchPopup.class)), dispatched);
     }
 
     @Test
@@ -132,8 +132,7 @@ class PickDialogTest {
                                 .map(name -> new PickDialog.Row<>(
                                         name,
                                         List.of(PickDialog.Cell.of(name).capped(8), PickDialog.Cell.of("~/repos")))),
-                        Picked::new,
-                        () -> new Picked("cancel")),
+                        Picked::new),
                 cursor);
         Supplier<Element> view = () -> stack(
                 text("background"),
@@ -169,8 +168,7 @@ class PickDialogTest {
                                 .map(name -> new PickDialog.Row<>(
                                         name,
                                         List.of(PickDialog.Cell.of(name), PickDialog.Cell.of("~/" + name + "-dir")))),
-                        Picked::new,
-                        () -> new Picked("cancel")),
+                        Picked::new),
                 cursor);
         Supplier<Element> view = () -> stack(
                 text("background"),
@@ -245,7 +243,7 @@ class PickDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Picked("cancel")), dispatched);
+        assertEquals(java.util.List.of(new Msg.PopupDismissed(BranchPopup.class)), dispatched);
     }
 
     private static void type(ToolkitTestRunner runner, String keys) {

@@ -21,8 +21,7 @@ public final class ForceDeleteDialog {
                     popup.gone() ? "dialog.forceDeleteBranch.gone" : "dialog.forceDeleteBranch.message",
                     popup.lost(),
                     popup.branch().value()),
-            ForceDeleteMsg.Confirmed::new,
-            ForceDeleteMsg.Cancelled::new);
+            ForceDeleteMsg.Confirmed::new);
 
     private ForceDeleteDialog() {}
 

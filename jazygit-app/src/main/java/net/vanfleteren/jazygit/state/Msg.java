@@ -111,4 +111,16 @@ public interface Msg {
                     .getOrElse(model));
         }
     }
+
+    /**
+     * The user closed the open popup of type {@code type}, by Escape, without doing what it offers (ADR 38). A popup
+     * of another type, that opened in the meantime, stays open.
+     */
+    record PopupDismissed(Class<? extends Popup> type) implements Msg {
+
+        @Override
+        public Update.Next apply(Model model) {
+            return Update.Next.of(model.withoutPopup(type));
+        }
+    }
 }

@@ -50,6 +50,7 @@ import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
@@ -117,7 +118,7 @@ class WorktreeUpdateTest {
                 asked.model().popup());
         assertEquals(
                 Option.none(),
-                Update.update(asked.model(), new AddWorktreeMsg.Cancelled())
+                Update.update(asked.model(), new Msg.PopupDismissed(NewWorktreePopup.class))
                         .model()
                         .popup());
     }
@@ -216,7 +217,7 @@ class WorktreeUpdateTest {
                         .popup());
         assertEquals(
                 Option.none(),
-                Update.update(asked.model(), new AddWorktreeMsg.StartCancelled())
+                Update.update(asked.model(), new Msg.PopupDismissed(NewWorktreeStartPopup.class))
                         .model()
                         .popup());
     }
@@ -481,7 +482,7 @@ class WorktreeUpdateTest {
                 List.of(RecentReposCmd.SwitchTo.worktree("/repos/app-feature")),
                 Update.update(next.model(), new AddWorktreeMsg.SwitchConfirmed())
                         .cmds());
-        Next stayed = Update.update(next.model(), new AddWorktreeMsg.SwitchCancelled());
+        Next stayed = Update.update(next.model(), new Msg.PopupDismissed(SwitchToAddedPopup.class));
         assertEquals(List.of(), stayed.cmds());
         assertEquals(Option.none(), stayed.model().popup());
     }
@@ -532,7 +533,7 @@ class WorktreeUpdateTest {
                         .cmds());
         assertEquals(
                 Option.none(),
-                Update.update(asked.model(), new RemoveWorktreeMsg.Cancelled())
+                Update.update(asked.model(), new Msg.PopupDismissed(RemoveWorktreePopup.class))
                         .model()
                         .popup());
     }
@@ -639,7 +640,7 @@ class WorktreeUpdateTest {
                 confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());
 
-        Next cancelled = Update.update(chosen.model(), new DeleteBranchMsg.UnlockCancelled());
+        Next cancelled = Update.update(chosen.model(), new Msg.PopupDismissed(UnlockWorktreePopup.class));
         assertEquals(List.of(), cancelled.cmds());
         assertEquals(Option.none(), cancelled.model().popup());
     }
@@ -989,7 +990,7 @@ class WorktreeUpdateTest {
                         .cmds());
         assertEquals(
                 Option.none(),
-                Update.update(refused.model(), new RemoveWorktreeMsg.ForceCancelled())
+                Update.update(refused.model(), new Msg.PopupDismissed(ForceRemoveWorktreePopup.class))
                         .model()
                         .popup());
     }

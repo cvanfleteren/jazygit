@@ -42,11 +42,8 @@ public final class AddWorktreeUpdate {
                                 .currentBranch()
                                 .map(current -> current.name().value())
                                 .getOrElse("HEAD")));
-            case StartCancelled() -> Next.of(model.withoutPopup(NewWorktreeStartPopup.class));
             case StartConfirmed() -> startConfirmed(model);
-            case NameCancelled() -> Next.of(model.withoutPopup(NewWorktreeBranchPopup.class));
             case NameConfirmed() -> nameConfirmed(model);
-            case Cancelled() -> Next.of(model.withoutPopup(NewWorktreePopup.class));
             // A blank location keeps the dialog open.
             case Confirmed() ->
                 Update.confirm(
@@ -66,7 +63,6 @@ public final class AddWorktreeUpdate {
                                         new SwitchToAddedPopup(cmd.source().label(), location)),
                         succeeded.cmds());
             }
-            case SwitchCancelled() -> Next.of(model.withoutPopup(SwitchToAddedPopup.class));
             case SwitchConfirmed() ->
                 model.popup(SwitchToAddedPopup.class)
                         .map(popup -> Next.of(

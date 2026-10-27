@@ -21,8 +21,7 @@ public final class CheckoutDialogs {
             StashCheckoutPopup.class,
             popup -> Messages.get("dialog.stashCheckout.title", popup.branch().value()),
             popup -> Messages.get("dialog.stashCheckout.message"),
-            CheckoutMsg.StashConfirmed::new,
-            CheckoutMsg.StashCancelled::new);
+            CheckoutMsg.StashConfirmed::new);
 
     /**
      * Tells that the branch to check out is checked out in another worktree, and asks to switch to that one.
@@ -33,8 +32,7 @@ public final class CheckoutDialogs {
             popup -> Messages.get("dialog.switchWorktree.title", popup.branch().value()),
             popup ->
                     Messages.get("dialog.switchWorktree.message", popup.branch().value(), popup.worktree()),
-            CheckoutMsg.SwitchWorktreeConfirmed::new,
-            CheckoutMsg.SwitchWorktreeCancelled::new);
+            CheckoutMsg.SwitchWorktreeConfirmed::new);
 
     private CheckoutDialogs() {}
 

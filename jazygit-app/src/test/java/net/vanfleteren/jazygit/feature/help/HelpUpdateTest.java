@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.feature.theme.ThemeMsg;
 import net.vanfleteren.jazygit.feature.theme.ThemePopup;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,10 @@ class HelpUpdateTest {
         assertEquals(Option.of(new HelpPopup(Scopes.BRANCHES.id(), List.empty())), open.popup());
 
         assertEquals(
-                Option.none(), Update.update(open, new HelpMsg.Closed()).model().popup());
+                Option.none(),
+                Update.update(open, new Msg.PopupDismissed(HelpPopup.class))
+                        .model()
+                        .popup());
     }
 
     @Test

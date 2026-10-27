@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -136,7 +137,7 @@ class CherryPickUpdateTest {
 
     @Test
     void cancellingClosesThePopupAndKeepsTheCopy() {
-        Next next = Update.update(asked(), new CherryPickMsg.Cancelled());
+        Next next = Update.update(asked(), new Msg.PopupDismissed(CherryPickPopup.class));
 
         assertEquals(Option.none(), next.model().popup(CherryPickPopup.class));
         assertEquals(Option.of(FIRST), next.model().repoView().cherryPick());

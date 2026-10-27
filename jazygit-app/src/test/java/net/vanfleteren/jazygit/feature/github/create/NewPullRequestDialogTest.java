@@ -180,10 +180,10 @@ class NewPullRequestDialogTest {
 
         assertEquals(
                 java.util.List.of(
-                        new CreatePullRequestMsg.Cancelled(),
-                        new CreatePullRequestMsg.Cancelled(),
-                        new CreatePullRequestMsg.Cancelled(),
-                        new CreatePullRequestMsg.Cancelled()),
+                        new Msg.PopupDismissed(NewPullRequestPopup.class),
+                        new Msg.PopupDismissed(NewPullRequestPopup.class),
+                        new Msg.PopupDismissed(NewPullRequestPopup.class),
+                        new Msg.PopupDismissed(NewPullRequestPopup.class)),
                 dispatched);
     }
 
@@ -271,7 +271,7 @@ class NewPullRequestDialogTest {
             assertTrue(screen.contains("Into: release"), screen);
             assertTrue(screen.contains("main"), screen);
             assertTrue(!screen.contains("filter:"), screen);
-            assertTrue(dispatched.stream().noneMatch(CreatePullRequestMsg.Cancelled.class::isInstance), screen);
+            assertTrue(dispatched.stream().noneMatch(Msg.PopupDismissed.class::isInstance), screen);
         }
     }
 

@@ -26,7 +26,6 @@ public final class RemoveWorktreeUpdate {
                                         new RemoveWorktreePopup(
                                                 worktree.location(), worktree.name(), worktree.branch()))))
                         .getOrElse(() -> Next.of(model));
-            case Cancelled() -> Next.of(model.withoutPopup(RemoveWorktreePopup.class));
             case Chosen(boolean deleteBranch) ->
                 Update.confirm(
                         model,
@@ -46,7 +45,6 @@ public final class RemoveWorktreeUpdate {
                                         .worktree(cmd.location())
                                         .map(Worktree::name)
                                         .getOrElse(cmd.location()))));
-            case ForceCancelled() -> Next.of(model.withoutPopup(ForceRemoveWorktreePopup.class));
             case ForceConfirmed() ->
                 Update.confirm(
                         model,

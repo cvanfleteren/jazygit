@@ -29,8 +29,6 @@ public sealed interface CherryPickMsg extends Msg {
      */
     record Requested() implements CherryPickMsg {}
 
-    record Cancelled() implements CherryPickMsg {}
-
     record Confirmed() implements CherryPickMsg {}
 
     /**

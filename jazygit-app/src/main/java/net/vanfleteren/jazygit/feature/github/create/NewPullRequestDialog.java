@@ -248,7 +248,7 @@ public final class NewPullRequestDialog implements PopupView {
      */
     private EventResult keys(KeyEvent event) {
         if (event.code() == KeyCode.ESCAPE) {
-            dispatch.accept(new CreatePullRequestMsg.Cancelled());
+            dispatch.accept(new Msg.PopupDismissed(NewPullRequestPopup.class));
             return EventResult.HANDLED;
         }
         if (event.hasCtrl() && event.isChar(CONFIRM_KEY)) {

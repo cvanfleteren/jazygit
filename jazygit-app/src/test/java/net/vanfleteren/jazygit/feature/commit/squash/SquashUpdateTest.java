@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -112,7 +113,7 @@ class SquashUpdateTest {
         Model open = Update.update(withCommits(TIP, MIDDLE, ROOT), new SquashMsg.Requested(TIP.sha()))
                 .model();
 
-        Next next = Update.update(open, new SquashMsg.Cancelled());
+        Next next = Update.update(open, new Msg.PopupDismissed(SquashPopup.class));
 
         assertEquals(List.of(), next.cmds());
         assertEquals(Option.none(), next.model().popup(SquashPopup.class));

@@ -24,8 +24,6 @@ public final class InProgressUpdate {
                         model,
                         InProgressConfirmPopup.class,
                         popup -> Option.of(new InProgressCmd(popup.inProgress(), popup.action())));
-            case InProgressMsg.Cancelled() ->
-                Next.of(model.withoutPopup(InProgressPopup.class).withoutPopup(InProgressConfirmPopup.class));
         };
     }
 

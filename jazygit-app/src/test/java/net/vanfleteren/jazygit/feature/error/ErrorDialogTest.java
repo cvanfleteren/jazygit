@@ -11,6 +11,8 @@ import dev.tamboui.tui.event.KeyCode;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.ErrorPopup;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
@@ -42,7 +44,7 @@ class ErrorDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new ErrorMsg.Dismissed()), dispatched);
+        assertEquals(java.util.List.of(new Msg.PopupDismissed(ErrorPopup.class)), dispatched);
     }
 
     @Test
@@ -52,7 +54,7 @@ class ErrorDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new ErrorMsg.Dismissed()), dispatched);
+        assertEquals(java.util.List.of(new Msg.PopupDismissed(ErrorPopup.class)), dispatched);
     }
 
     @Test

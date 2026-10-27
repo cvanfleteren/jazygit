@@ -32,7 +32,5 @@ public sealed interface DiscardMsg extends Msg {
      */
     record Requested(List<FileEntry> files) implements DiscardMsg {}
 
-    record Cancelled() implements DiscardMsg {}
-
     record Chosen(Scope scope) implements DiscardMsg {}
 }

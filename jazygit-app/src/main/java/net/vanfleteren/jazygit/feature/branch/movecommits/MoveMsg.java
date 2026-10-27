@@ -39,29 +39,21 @@ public sealed interface MoveMsg extends Msg {
      */
     record TargetChosen(Option<BranchName> branch) implements MoveMsg {}
 
-    record TargetCancelled() implements MoveMsg {}
-
     /**
      * The user confirmed the name of the new branch typed in the popup.
      */
     record NameConfirmed() implements MoveMsg {}
-
-    record NameCancelled() implements MoveMsg {}
 
     /**
      * The user chose where the new branch starts.
      */
     record BaseChosen(MoveBase base) implements MoveMsg {}
 
-    record BaseCancelled() implements MoveMsg {}
-
     /**
      * The user agreed to move commits that are pushed already, and to force-push the branch they are taken off
      * afterwards, or not.
      */
     record PushedConfirmed(boolean forcePush) implements MoveMsg {}
-
-    record PushedCancelled() implements MoveMsg {}
 
     /**
      * {@code cmd} ran {@code commands} and moved the commits.

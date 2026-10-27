@@ -4,7 +4,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Predicate;
 import net.vanfleteren.jazygit.feature.discard.DiscardCmd.Discard;
-import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Chosen;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Requested;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Scope;
@@ -25,7 +24,6 @@ public final class DiscardUpdate {
     public static Next update(Model model, DiscardMsg msg) {
         return switch (msg) {
             case Requested(List<FileEntry> files) -> requested(model, files);
-            case Cancelled() -> Next.of(model.withoutPopup(DiscardPopup.class));
             case Chosen(Scope scope) -> chosen(model, scope);
         };
     }

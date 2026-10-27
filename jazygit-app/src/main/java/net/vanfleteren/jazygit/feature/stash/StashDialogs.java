@@ -24,8 +24,7 @@ public final class StashDialogs {
             StashPopup.class,
             popup -> Messages.get("dialog.stash.title"),
             Option.of(Messages.get("dialog.stash.placeholder")),
-            StashMsg.Confirmed::new,
-            StashMsg.Cancelled::new);
+            StashMsg.Confirmed::new);
 
     /**
      * Asks to drop a stash.
@@ -35,8 +34,7 @@ public final class StashDialogs {
             StashDropPopup.class,
             popup -> Messages.get("dialog.stashDrop.title"),
             popup -> Messages.get("dialog.stashDrop.message", popup.stash().message()),
-            StashMsg.DropConfirmed::new,
-            StashMsg.DropCancelled::new);
+            StashMsg.DropConfirmed::new);
 
     private StashDialogs() {}
 

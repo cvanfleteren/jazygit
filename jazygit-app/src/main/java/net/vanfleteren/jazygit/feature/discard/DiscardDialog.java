@@ -25,8 +25,7 @@ public final class DiscardDialog {
                             'u',
                             "dialog.discard.unstaged",
                             () -> new DiscardMsg.Chosen(Scope.UNSTAGED),
-                            (model, popup) -> popup.hasUnstaged())),
-            DiscardMsg.Cancelled::new);
+                            (model, popup) -> popup.hasUnstaged())));
 
     private DiscardDialog() {}
 

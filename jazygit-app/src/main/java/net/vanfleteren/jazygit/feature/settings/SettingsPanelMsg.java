@@ -24,13 +24,9 @@ public sealed interface SettingsPanelMsg extends Msg {
      */
     record GitHubRead(GitHubSetup gitHub) implements SettingsPanelMsg {}
 
-    record Closed() implements SettingsPanelMsg {}
-
     record ThemeRequested() implements SettingsPanelMsg {}
 
     record GhExecutableRequested() implements SettingsPanelMsg {}
-
-    record GhExecutableCancelled() implements SettingsPanelMsg {}
 
     /**
      * The user confirmed the gh executable typed in the popup; blank for the one on the PATH.
@@ -44,8 +40,6 @@ public sealed interface SettingsPanelMsg extends Msg {
             implements SettingsPanelMsg {}
 
     record AccountRequested() implements SettingsPanelMsg {}
-
-    record AccountCancelled() implements SettingsPanelMsg {}
 
     /**
      * The user chose the account the repository uses; none for gh's active one.

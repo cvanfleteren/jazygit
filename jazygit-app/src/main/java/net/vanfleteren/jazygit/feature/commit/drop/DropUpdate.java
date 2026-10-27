@@ -18,7 +18,6 @@ public final class DropUpdate {
     public static Next update(Model model, DropMsg msg) {
         return switch (msg) {
             case DropMsg.Requested(Sha sha) -> requested(model, sha);
-            case DropMsg.Cancelled() -> Next.of(model.withoutPopup(DropPopup.class));
             case DropMsg.Confirmed() ->
                 Update.confirm(
                         model,

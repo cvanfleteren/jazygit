@@ -50,7 +50,7 @@ class PushFirstDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new CreatePullRequestMsg.PushFirstCancelled()), dispatched);
+        assertEquals(java.util.List.of(new Msg.PopupDismissed(PushFirstPopup.class)), dispatched);
     }
 
     @Test

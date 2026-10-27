@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.feature.commit.create.StageAllPopup;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
@@ -58,7 +59,7 @@ class StageAllDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new CommitMsg.StageAllCancelled()), dispatched);
+        assertEquals(java.util.List.of(new Msg.PopupDismissed(StageAllPopup.class)), dispatched);
     }
 
     @Test

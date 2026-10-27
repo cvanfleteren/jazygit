@@ -51,8 +51,7 @@ public final class DeleteBranchDialogs {
                                     DeleteBranchMsg.WithWorktreeChosen::new,
                                     (model, popup) -> DeleteBranchUpdate.removableWorktree(model, popup.branch())
                                             .isDefined())
-                            .shownWhen((model, popup) -> popup.worktree().isDefined())),
-            DeleteBranchMsg.Cancelled::new);
+                            .shownWhen((model, popup) -> popup.worktree().isDefined())));
 
     /**
      * Asks whether to unlock the locked worktree that has the branch checked out, to remove it and delete the
@@ -72,8 +71,7 @@ public final class DeleteBranchDialogs {
                             popup.location(),
                             popup.branch().value(),
                             popup.reason()),
-            DeleteBranchMsg.UnlockConfirmed::new,
-            DeleteBranchMsg.UnlockCancelled::new);
+            DeleteBranchMsg.UnlockConfirmed::new);
 
     /**
      * Asks to confirm deleting a remote branch on its remote.
@@ -85,8 +83,7 @@ public final class DeleteBranchDialogs {
                     "dialog.deleteRemoteBranch.title", popup.branch().shortName()),
             popup -> Messages.get(
                     "dialog.deleteRemoteBranch.message", popup.branch().shortName()),
-            DeleteBranchMsg.RemoteConfirmed::new,
-            DeleteBranchMsg.RemoteCancelled::new);
+            DeleteBranchMsg.RemoteConfirmed::new);
 
     private DeleteBranchDialogs() {}
 

@@ -30,8 +30,7 @@ public final class CreatePullRequestDialogs {
                             "dialog.pushFirst.untracked",
                             popup.branch().value(),
                             popup.target().shortName())),
-            CreatePullRequestMsg.PushFirstConfirmed::new,
-            CreatePullRequestMsg.PushFirstCancelled::new);
+            CreatePullRequestMsg.PushFirstConfirmed::new);
 
     private CreatePullRequestDialogs() {}
 

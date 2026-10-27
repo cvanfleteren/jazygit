@@ -42,8 +42,7 @@ public final class UpstreamDialogs {
                     new Choice<UpstreamPopup>(
                             'g',
                             popup -> Messages.get("dialog.upstream.reset", upstreamName(popup.checkedOut())),
-                            UpstreamMsg.ResetChosen::new)),
-            UpstreamMsg.Cancelled::new);
+                            UpstreamMsg.ResetChosen::new)));
 
     private UpstreamDialogs() {}
 

@@ -30,8 +30,7 @@ public final class MergeDialogs {
                     new Choice<>(
                             'S',
                             "dialog.merge.squashAndCommit",
-                            () -> new MergeMsg.Chosen(MergeMode.SQUASH_AND_COMMIT))),
-            MergeMsg.Cancelled::new);
+                            () -> new MergeMsg.Chosen(MergeMode.SQUASH_AND_COMMIT))));
 
     private MergeDialogs() {}
 

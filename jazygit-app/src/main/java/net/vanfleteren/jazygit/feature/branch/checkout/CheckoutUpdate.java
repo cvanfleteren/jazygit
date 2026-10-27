@@ -37,11 +37,9 @@ public final class CheckoutUpdate {
             case CheckedOut(var cmd, var commands) ->
                 OperationUpdate.succeeded(
                         model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.LOCAL)), cmd, commands);
-            case StashCancelled() -> Next.of(model.withoutPopup(StashCheckoutPopup.class));
             case StashConfirmed() ->
                 Update.confirm(
                         model, StashCheckoutPopup.class, popup -> Option.of(new CheckoutWithStash(popup.branch())));
-            case SwitchWorktreeCancelled() -> Next.of(model.withoutPopup(SwitchWorktreePopup.class));
             // It is shown as a checkout here shows it: on the local branches, the focus where it was.
             case SwitchWorktreeConfirmed() ->
                 model.popup(SwitchWorktreePopup.class)

@@ -17,10 +17,6 @@ public sealed interface PushMsg extends Msg {
      */
     record Requested(BranchName branch) implements PushMsg {}
 
-    record ForceCancelled() implements PushMsg {}
-
-    record UpstreamCancelled() implements PushMsg {}
-
     /**
      * The user confirmed the upstream typed for a branch without one, which should be {@code <remote> <branch>}.
      */

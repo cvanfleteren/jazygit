@@ -58,7 +58,7 @@ class MergeDialogTest {
             SettledPilot.of(runner).press(KeyCode.ESCAPE);
             SettledPilot.of(runner).pause();
         }
-        assertEquals(java.util.List.of(new MergeMsg.Cancelled()), dispatched);
+        assertEquals(java.util.List.of(new Msg.PopupDismissed(MergePopup.class)), dispatched);
     }
 
     private List<Msg> pressing(char key) throws Exception {

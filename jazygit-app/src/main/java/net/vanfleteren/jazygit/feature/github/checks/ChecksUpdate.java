@@ -48,7 +48,6 @@ public final class ChecksUpdate {
                         .map(popup -> Next.of(model.openPopup(popup.readingAgain(Reading.ASKED, popup.readAt()))))
                         .getOrElse(() -> readAgain(model, popup -> true, Reading.ASKED));
             case ChecksMsg.Tick() -> readAgain(model, popup -> popup.dueByItself(model.now()), Reading.BY_ITSELF);
-            case ChecksMsg.Closed() -> Next.of(model.withoutPopup(ChecksPopup.class));
         };
     }
 

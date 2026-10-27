@@ -27,11 +27,6 @@ public sealed interface AmendMsg extends Msg {
         }
     }
 
-    /**
-     * The user cancelled either question, which leaves everything as it was.
-     */
-    record Cancelled() implements AmendMsg {}
-
     record Confirmed() implements AmendMsg {}
 
     /**

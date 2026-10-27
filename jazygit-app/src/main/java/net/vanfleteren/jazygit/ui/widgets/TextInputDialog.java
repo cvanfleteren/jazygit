@@ -15,6 +15,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Popup;
 import net.vanfleteren.jazygit.state.TextPopup;
 import net.vanfleteren.jazygit.ui.LineEditInput;
 
@@ -92,13 +93,33 @@ public final class TextInputDialog<P extends TextPopup> implements PopupView {
      * @param placeholder what the input shows while it is empty, if anything
      * @param onConfirm   the message for Enter; its update reads the text from the popup, and decides whether it
      *                    closes
-     * @param onCancel    the message for Escape
+     * @param onCancel    the message for Escape; by default a {@link Msg.PopupDismissed}
      */
-    public record Spec<P>(
+    public record Spec<P extends Popup>(
             String id,
             Class<P> popupType,
             Function<P, String> title,
             Option<String> placeholder,
             Supplier<Msg> onConfirm,
-            Supplier<Msg> onCancel) {}
+            Supplier<Msg> onCancel) {
+
+        /**
+         * A dialog which Escape only closes (ADR 38).
+         */
+        public Spec(
+                String id,
+                Class<P> popupType,
+                Function<P, String> title,
+                Option<String> placeholder,
+                Supplier<Msg> onConfirm) {
+            this(id, popupType, title, placeholder, onConfirm, () -> new Msg.PopupDismissed(popupType));
+        }
+
+        /**
+         * This dialog, sending {@code onCancel} for Escape, for a popup that does more than close then.
+         */
+        public Spec<P> cancelledBy(Supplier<Msg> onCancel) {
+            return new Spec<>(id, popupType, title, placeholder, onConfirm, onCancel);
+        }
+    }
 }

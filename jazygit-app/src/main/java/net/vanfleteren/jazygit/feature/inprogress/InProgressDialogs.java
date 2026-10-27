@@ -38,8 +38,7 @@ public final class InProgressDialogs {
                             's',
                             "dialog.inProgress.skip",
                             () -> new InProgressMsg.Chosen(InProgressAction.SKIP),
-                            (model, popup) -> popup.inProgress().skippable())),
-            InProgressMsg.Cancelled::new);
+                            (model, popup) -> popup.inProgress().skippable())));
 
     /**
      * Asks to confirm aborting or skipping, which throws work away.
@@ -57,8 +56,7 @@ public final class InProgressDialogs {
                             ? "dialog.inProgress.skipMessage"
                             : "dialog.inProgress.abortMessage",
                     InProgressText.kind(popup.inProgress())),
-            InProgressMsg.Confirmed::new,
-            InProgressMsg.Cancelled::new);
+            InProgressMsg.Confirmed::new);
 
     private InProgressDialogs() {}
 

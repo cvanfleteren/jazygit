@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.state.DivergenceView.Against;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.SelectionMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
@@ -343,7 +344,7 @@ class UpstreamUpdateTest {
 
     @Test
     void cancellingClosesThePopup() {
-        Next next = Update.update(opened(with(TRACKING)), new UpstreamMsg.Cancelled());
+        Next next = Update.update(opened(with(TRACKING)), new Msg.PopupDismissed(UpstreamPopup.class));
 
         assertEquals(Option.none(), next.model().popup());
         assertEquals(List.of(), next.cmds());

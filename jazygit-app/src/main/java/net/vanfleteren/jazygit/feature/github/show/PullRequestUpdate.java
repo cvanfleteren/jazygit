@@ -136,7 +136,6 @@ public final class PullRequestUpdate {
                         .map(popup -> Next.of(model.openPopup(popup.asked())))
                         .getOrElse(() -> readAgain(model, popup -> true, Reading.ASKED));
             case PullRequestMsg.Tick() -> readAgain(model, popup -> popup.dueByItself(model.now()), Reading.BY_ITSELF);
-            case PullRequestMsg.InfoClosed() -> Next.of(model.withoutPopup(PullRequestPopup.class));
         };
     }
 

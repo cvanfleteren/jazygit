@@ -53,7 +53,7 @@ class StashCheckoutDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new CheckoutMsg.StashCancelled()), dispatched);
+        assertEquals(java.util.List.of(new Msg.PopupDismissed(StashCheckoutPopup.class)), dispatched);
     }
 
     @Test

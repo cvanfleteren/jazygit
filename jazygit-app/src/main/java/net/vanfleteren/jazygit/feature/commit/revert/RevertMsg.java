@@ -17,7 +17,5 @@ public sealed interface RevertMsg extends Msg {
      */
     record Requested(Sha sha) implements RevertMsg {}
 
-    record Cancelled() implements RevertMsg {}
-
     record Confirmed() implements RevertMsg {}
 }

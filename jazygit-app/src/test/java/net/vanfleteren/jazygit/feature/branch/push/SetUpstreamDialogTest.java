@@ -84,7 +84,7 @@ class SetUpstreamDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new PushMsg.UpstreamCancelled()), dispatched);
+        assertEquals(java.util.List.of(new Msg.PopupDismissed(SetUpstreamPopup.class)), dispatched);
     }
 
     @Test

@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.feature.commit.amend;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.commit.amend.AmendMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendMsg.Requested;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendMsg.StageAllConfirmed;
@@ -27,7 +26,6 @@ public final class AmendUpdate {
     public static Next update(Model model, AmendMsg msg) {
         return switch (msg) {
             case Requested(Option<Sha> sha) -> requested(model, sha);
-            case Cancelled() -> Next.of(model.withoutPopup(AmendPopup.class).withoutPopup(AmendStageAllPopup.class));
             case Confirmed() -> confirmed(model);
             case StageAllConfirmed() -> stageAllConfirmed(model);
         };

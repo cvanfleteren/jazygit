@@ -23,8 +23,7 @@ public final class AddWorktreeDialogs {
             NewWorktreeStartPopup.class,
             popup -> Messages.get("dialog.newWorktreeStart.title"),
             Option.of(Messages.get("dialog.newWorktreeStart.placeholder")),
-            AddWorktreeMsg.StartConfirmed::new,
-            AddWorktreeMsg.StartCancelled::new);
+            AddWorktreeMsg.StartConfirmed::new);
 
     /**
      * Asks where the new worktree goes, starting out next to the main worktree. A blank location keeps it open.
@@ -34,8 +33,7 @@ public final class AddWorktreeDialogs {
             NewWorktreePopup.class,
             popup -> Messages.get("dialog.newWorktree.title", popup.source().label()),
             Option.of(Messages.get("dialog.newWorktree.placeholder")),
-            AddWorktreeMsg.Confirmed::new,
-            AddWorktreeMsg.Cancelled::new);
+            AddWorktreeMsg.Confirmed::new);
 
     /**
      * Asks for the name of the new branch to check out in a new worktree. A name that is no branch name keeps it
@@ -52,8 +50,7 @@ public final class AddWorktreeDialogs {
                             popup.label()))
                     .getOrElse(() -> Messages.get("dialog.newWorktreeBranch.title", popup.label())),
             Option.of(Messages.get("dialog.newBranch.placeholder")),
-            AddWorktreeMsg.NameConfirmed::new,
-            AddWorktreeMsg.NameCancelled::new);
+            AddWorktreeMsg.NameConfirmed::new);
 
     /**
      * Tells that the worktree was added, and asks to switch to it.
@@ -63,8 +60,7 @@ public final class AddWorktreeDialogs {
             SwitchToAddedPopup.class,
             popup -> Messages.get("dialog.switchToAddedWorktree.title", popup.label()),
             popup -> Messages.get("dialog.switchToAddedWorktree.message", popup.location()),
-            AddWorktreeMsg.SwitchConfirmed::new,
-            AddWorktreeMsg.SwitchCancelled::new);
+            AddWorktreeMsg.SwitchConfirmed::new);
 
     private AddWorktreeDialogs() {}
 

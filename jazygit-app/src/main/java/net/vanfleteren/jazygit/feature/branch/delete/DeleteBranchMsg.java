@@ -19,8 +19,6 @@ public sealed interface DeleteBranchMsg extends Msg {
      */
     record Requested(BranchName branch) implements DeleteBranchMsg {}
 
-    record Cancelled() implements DeleteBranchMsg {}
-
     record Chosen(DeleteScope scope) implements DeleteBranchMsg {}
 
     /**
@@ -35,14 +33,10 @@ public sealed interface DeleteBranchMsg extends Msg {
      */
     record UnlockConfirmed() implements DeleteBranchMsg {}
 
-    record UnlockCancelled() implements DeleteBranchMsg {}
-
     /**
      * The user asked to delete a remote branch; that is still to be confirmed.
      */
     record RemoteRequested(RemoteBranch branch) implements DeleteBranchMsg {}
-
-    record RemoteCancelled() implements DeleteBranchMsg {}
 
     record RemoteConfirmed() implements DeleteBranchMsg {}
 }

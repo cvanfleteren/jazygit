@@ -190,7 +190,7 @@ public final class HelpDialog implements PopupView {
 
     private EventResult handleKey(View view, KeyEvent event) {
         if (event.code() == KeyCode.ESCAPE || Keymap.HELP_KEY.equals(event.string())) {
-            dispatch.accept(new HelpMsg.Closed());
+            dispatch.accept(new Msg.PopupDismissed(HelpPopup.class));
             return EventResult.HANDLED;
         }
         if (event.isConfirm()) {

@@ -22,8 +22,7 @@ public final class CreateCommitDialogs {
             StageAllPopup.class,
             popup -> Messages.get("dialog.stageAll.title"),
             popup -> Messages.get("dialog.stageAll.message"),
-            CommitMsg.StageAllConfirmed::new,
-            CommitMsg.StageAllCancelled::new);
+            CommitMsg.StageAllConfirmed::new);
 
     private CreateCommitDialogs() {}
 

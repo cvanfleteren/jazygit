@@ -24,8 +24,7 @@ public final class RevertDialogs {
                     popup.commit().isMerge() ? "dialog.revert.mergeMessage" : "dialog.revert.message",
                     popup.commit().shortSha(),
                     popup.commit().message()),
-            RevertMsg.Confirmed::new,
-            RevertMsg.Cancelled::new);
+            RevertMsg.Confirmed::new);
 
     private RevertDialogs() {}
 

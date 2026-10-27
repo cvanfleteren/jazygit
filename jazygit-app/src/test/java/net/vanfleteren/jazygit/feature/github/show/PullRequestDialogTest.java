@@ -871,7 +871,8 @@ class PullRequestDialogTest {
         }
 
         assertEquals(
-                java.util.List.of(new PullRequestMsg.OpenConfirmed(), new PullRequestMsg.InfoClosed()), dispatched);
+                java.util.List.of(new PullRequestMsg.OpenConfirmed(), new Msg.PopupDismissed(PullRequestPopup.class)),
+                dispatched);
     }
 
     private String screen(PullRequestPopup popup) throws Exception {

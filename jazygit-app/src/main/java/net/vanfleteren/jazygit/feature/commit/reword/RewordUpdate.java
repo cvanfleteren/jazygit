@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit.reword;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.commit.reword.RewordMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordMsg.Requested;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
@@ -20,7 +19,6 @@ public final class RewordUpdate {
     public static Next update(Model model, RewordMsg msg) {
         return switch (msg) {
             case Requested(var sha) -> requested(model, sha);
-            case Cancelled() -> Next.of(model.withoutPopup(RewordPopup.class));
             case Confirmed() -> confirmed(model);
         };
     }

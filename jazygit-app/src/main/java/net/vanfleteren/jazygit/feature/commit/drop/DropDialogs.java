@@ -24,8 +24,7 @@ public final class DropDialogs {
                     "dialog.drop.message",
                     popup.commit().sha().shortSha(),
                     popup.commit().message()),
-            DropMsg.Confirmed::new,
-            DropMsg.Cancelled::new);
+            DropMsg.Confirmed::new);
 
     private DropDialogs() {}
 

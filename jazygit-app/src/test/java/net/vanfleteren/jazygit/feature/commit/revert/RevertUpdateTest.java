@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -77,7 +78,7 @@ class RevertUpdateTest {
 
     @Test
     void cancellingClosesThePopup() {
-        Next next = Update.update(asked(), new RevertMsg.Cancelled());
+        Next next = Update.update(asked(), new Msg.PopupDismissed(RevertPopup.class));
 
         assertEquals(Option.none(), next.model().popup(RevertPopup.class));
         assertEquals(List.of(), next.cmds());

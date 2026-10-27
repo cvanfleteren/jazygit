@@ -42,21 +42,17 @@ public final class MoveUpdate {
                 model.popup(MoveTargetPopup.class)
                         .map(popup -> targetChosen(model.withoutPopup(MoveTargetPopup.class), popup.request(), branch))
                         .getOrElse(() -> Next.of(model));
-            case TargetCancelled() -> Next.of(model.withoutPopup(MoveTargetPopup.class));
             case NameConfirmed() -> named(model);
-            case NameCancelled() -> Next.of(model.withoutPopup(MoveNamePopup.class));
             case BaseChosen(MoveBase base) ->
                 model.popup(MoveBasePopup.class)
                         .map(popup ->
                                 based(model.withoutPopup(MoveBasePopup.class), popup.request(), popup.name(), base))
                         .getOrElse(() -> Next.of(model));
-            case BaseCancelled() -> Next.of(model.withoutPopup(MoveBasePopup.class));
             case PushedConfirmed(boolean forcePush) ->
                 Update.confirm(
                         model,
                         MovePushedPopup.class,
                         popup -> Option.of(move(popup.request(), popup.target(), forcePush)));
-            case PushedCancelled() -> Next.of(model.withoutPopup(MovePushedPopup.class));
             case Moved(var cmd, var commands) -> moved(model, cmd, commands);
             case Stopped(var cmd, var commands, var notice) ->
                 Update.refresh(OperationUpdate.done(model, cmd, commands)

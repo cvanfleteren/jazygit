@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
@@ -56,7 +57,7 @@ class StashUpdateTest {
     void escapeClosesTheDialogWithoutStashing() {
         Model open = Update.update(withChanges(), new StashMsg.Requested()).model();
 
-        Next next = Update.update(open, new StashMsg.Cancelled());
+        Next next = Update.update(open, new Msg.PopupDismissed(StashPopup.class));
 
         assertEquals(Option.none(), next.model().popup());
         assertEquals(List.of(), next.cmds());
@@ -132,7 +133,7 @@ class StashUpdateTest {
                 .model();
         Model asked = Update.update(model, new StashMsg.DropRequested(STASH)).model();
 
-        Next cancelled = Update.update(asked, new StashMsg.DropCancelled());
+        Next cancelled = Update.update(asked, new Msg.PopupDismissed(StashDropPopup.class));
 
         assertEquals(Option.none(), cancelled.model().popup());
         assertEquals(List.of(), cancelled.cmds());

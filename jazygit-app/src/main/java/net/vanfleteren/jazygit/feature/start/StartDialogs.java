@@ -24,37 +24,38 @@ import net.vanfleteren.jazygit.ui.widgets.WithDetails;
 public final class StartDialogs {
 
     public static final ChoiceDialog.Spec<NoRepositoryPopup> NO_REPOSITORY = new ChoiceDialog.Spec<>(
-            "no-repository",
-            NoRepositoryPopup.class,
-            popup -> Messages.get(
-                    popup.exists() ? "dialog.start.notARepository" : "dialog.start.notFound",
-                    RecentReposDialog.shown(popup.directory())),
-            List.of(
-                    new Choice<NoRepositoryPopup>('i', "dialog.start.init", StartMsg.InitChosen::new)
-                            .shownWhen((model, popup) -> popup.exists()),
-                    new Choice<>('o', "dialog.start.openFolder", StartMsg.OpenFolderChosen::new),
-                    new Choice<NoRepositoryPopup>('r', "dialog.start.openRecent", StartMsg.OpenRecentChosen::new)
-                            .shownWhen((model, popup) -> popup.recent().nonEmpty()),
-                    new Choice<>('q', "dialog.start.quit", Msg.Quit::new)),
-            Msg.Quit::new);
+                    "no-repository",
+                    NoRepositoryPopup.class,
+                    popup -> Messages.get(
+                            popup.exists() ? "dialog.start.notARepository" : "dialog.start.notFound",
+                            RecentReposDialog.shown(popup.directory())),
+                    List.of(
+                            new Choice<NoRepositoryPopup>('i', "dialog.start.init", StartMsg.InitChosen::new)
+                                    .shownWhen((model, popup) -> popup.exists()),
+                            new Choice<>('o', "dialog.start.openFolder", StartMsg.OpenFolderChosen::new),
+                            new Choice<NoRepositoryPopup>(
+                                            'r', "dialog.start.openRecent", StartMsg.OpenRecentChosen::new)
+                                    .shownWhen((model, popup) -> popup.recent().nonEmpty()),
+                            new Choice<>('q', "dialog.start.quit", Msg.Quit::new)))
+            .cancelledBy(Msg.Quit::new);
 
     public static final TextInputDialog.Spec<OpenFolderPopup> OPEN_FOLDER = new TextInputDialog.Spec<>(
-            "open-folder",
-            OpenFolderPopup.class,
-            popup -> Messages.get(
-                    "dialog.start.openFolder.title",
-                    RecentReposDialog.shown(popup.outside().directory())),
-            Option.of(Messages.get("dialog.start.openFolder.placeholder")),
-            StartMsg.FolderConfirmed::new,
-            StartMsg.FolderCancelled::new);
+                    "open-folder",
+                    OpenFolderPopup.class,
+                    popup -> Messages.get(
+                            "dialog.start.openFolder.title",
+                            RecentReposDialog.shown(popup.outside().directory())),
+                    Option.of(Messages.get("dialog.start.openFolder.placeholder")),
+                    StartMsg.FolderConfirmed::new)
+            .cancelledBy(StartMsg.FolderCancelled::new);
 
     public static final PickDialog.Spec<OpenRecentPopup, String> OPEN_RECENT = new PickDialog.Spec<>(
-            "open-recent",
-            OpenRecentPopup.class,
-            popup -> Messages.get("dialog.recentRepos.title"),
-            popup -> popup.outside().recent().map(RecentReposDialog::row),
-            StartMsg.RecentPicked::new,
-            StartMsg.RecentCancelled::new);
+                    "open-recent",
+                    OpenRecentPopup.class,
+                    popup -> Messages.get("dialog.recentRepos.title"),
+                    popup -> popup.outside().recent().map(RecentReposDialog::row),
+                    StartMsg.RecentPicked::new)
+            .cancelledBy(StartMsg.RecentCancelled::new);
 
     private StartDialogs() {}
 

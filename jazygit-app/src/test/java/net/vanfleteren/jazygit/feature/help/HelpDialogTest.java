@@ -105,9 +105,11 @@ class HelpDialogTest {
     @Test
     void escapeAndQuestionMarkClose() throws Exception {
         assertEquals(
-                List.of(new HelpMsg.Closed()), press(r -> SettledPilot.of(r).press(KeyCode.ESCAPE)));
+                List.of(new Msg.PopupDismissed(HelpPopup.class)),
+                press(r -> SettledPilot.of(r).press(KeyCode.ESCAPE)));
         assertEquals(
-                List.of(new HelpMsg.Closed()), press(r -> SettledPilot.of(r).press('?')));
+                List.of(new Msg.PopupDismissed(HelpPopup.class)),
+                press(r -> SettledPilot.of(r).press('?')));
     }
 
     @Test
@@ -158,7 +160,7 @@ class HelpDialogTest {
     @Test
     void theGlobalKeysRunToo() throws Exception {
         int panelKeys = Keymap.standard().bindings(Scopes.BRANCHES.id()).size();
-        assertEquals(List.of(new HelpMsg.Chosen(new HelpMsg.Closed())), press(onFeature(), r -> {
+        assertEquals(List.of(new HelpMsg.Chosen(new Msg.PopupDismissed(HelpPopup.class))), press(onFeature(), r -> {
             for (int i = 0; i < panelKeys; i++) {
                 SettledPilot.of(r).press(KeyCode.DOWN);
             }

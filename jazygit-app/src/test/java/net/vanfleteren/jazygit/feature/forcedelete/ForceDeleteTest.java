@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.OperationMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
@@ -229,7 +230,7 @@ class ForceDeleteTest {
     void cancellingKeepsTheBranch() {
         Model asked = model().openPopup(new ForceDeleteBranchPopup(FEATURE, 3, false));
 
-        Next cancelled = Update.update(asked, new ForceDeleteMsg.Cancelled());
+        Next cancelled = Update.update(asked, new Msg.PopupDismissed(ForceDeleteBranchPopup.class));
 
         assertEquals(List.empty(), cancelled.cmds());
         assertEquals(Option.none(), cancelled.model().popup());

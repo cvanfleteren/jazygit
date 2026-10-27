@@ -17,7 +17,5 @@ public sealed interface DropMsg extends Msg {
      */
     record Requested(Sha sha) implements DropMsg {}
 
-    record Cancelled() implements DropMsg {}
-
     record Confirmed() implements DropMsg {}
 }

@@ -21,8 +21,6 @@ public sealed interface HelpMsg extends Msg {
      */
     record Requested(String scopeId, List<Option<Msg>> actions) implements HelpMsg {}
 
-    record Closed() implements HelpMsg {}
-
     /**
      * The user chose to run the key that sends {@code msg} from the help.
      */

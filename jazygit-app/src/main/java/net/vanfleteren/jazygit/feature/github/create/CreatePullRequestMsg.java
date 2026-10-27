@@ -59,14 +59,10 @@ public sealed interface CreatePullRequestMsg extends Msg {
      */
     record Confirmed() implements CreatePullRequestMsg {}
 
-    record Cancelled() implements CreatePullRequestMsg {}
-
     /**
      * The user confirmed pushing the branch before creating its pull request.
      */
     record PushFirstConfirmed() implements CreatePullRequestMsg {}
-
-    record PushFirstCancelled() implements CreatePullRequestMsg {}
 
     /**
      * The branch was pushed by running {@code commands}, so its pull request can be created now.

@@ -91,7 +91,7 @@ class NewBranchDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(new NewBranchMsg.Cancelled(), dispatched.getLast());
+        assertEquals(new Msg.PopupDismissed(NewBranchPopup.class), dispatched.getLast());
     }
 
     @Test

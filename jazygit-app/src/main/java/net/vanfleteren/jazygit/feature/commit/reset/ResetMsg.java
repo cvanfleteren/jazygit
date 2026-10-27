@@ -18,8 +18,6 @@ public sealed interface ResetMsg extends Msg {
      */
     record Requested(Sha sha) implements ResetMsg {}
 
-    record Cancelled() implements ResetMsg {}
-
     /**
      * The user chose how to reset.
      */
@@ -29,6 +27,4 @@ public sealed interface ResetMsg extends Msg {
      * The user confirmed discarding the uncommitted changes with a hard reset.
      */
     record HardConfirmed() implements ResetMsg {}
-
-    record HardCancelled() implements ResetMsg {}
 }

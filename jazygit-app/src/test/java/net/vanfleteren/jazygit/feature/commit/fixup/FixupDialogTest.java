@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
@@ -65,7 +66,7 @@ class FixupDialogTest {
             SettledPilot.of(runner).press(KeyCode.ESCAPE);
             SettledPilot.of(runner).pause();
         }
-        assertEquals(java.util.List.of(new FixupMsg.Cancelled()), dispatched);
+        assertEquals(java.util.List.of(new Msg.PopupDismissed(FixupPopup.class)), dispatched);
     }
 
     private List<Msg> pressing(char key) throws Exception {

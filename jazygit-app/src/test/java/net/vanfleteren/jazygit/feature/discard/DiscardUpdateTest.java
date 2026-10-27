@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -48,7 +49,7 @@ class DiscardUpdateTest {
     void cancellingClosesThePopup() {
         Model open = Update.update(loaded(), new DiscardMsg.Requested(ALL)).model();
 
-        Next next = Update.update(open, new DiscardMsg.Cancelled());
+        Next next = Update.update(open, new Msg.PopupDismissed(DiscardPopup.class));
 
         assertEquals(Option.none(), next.model().popup());
         assertEquals(List.of(), next.cmds());

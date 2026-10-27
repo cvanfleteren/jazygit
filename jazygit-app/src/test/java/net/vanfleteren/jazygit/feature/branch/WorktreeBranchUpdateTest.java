@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Landing;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -89,7 +90,7 @@ class WorktreeBranchUpdateTest {
         assertEquals(Option.none(), confirmed.model().popup());
         assertEquals(
                 Option.none(),
-                Update.update(asked.model(), new CheckoutMsg.SwitchWorktreeCancelled())
+                Update.update(asked.model(), new Msg.PopupDismissed(SwitchWorktreePopup.class))
                         .model()
                         .popup());
         // Without the popup open, confirming does nothing.

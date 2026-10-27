@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -182,8 +183,8 @@ class AmendUpdateTest {
         Model first = asked(List.of(UNSTAGED), Option.of(MIDDLE.sha()));
         Model second = Update.update(first, new AmendMsg.Confirmed()).model();
 
-        Next cancelFirst = Update.update(first, new AmendMsg.Cancelled());
-        Next cancelSecond = Update.update(second, new AmendMsg.Cancelled());
+        Next cancelFirst = Update.update(first, new Msg.PopupDismissed(AmendPopup.class));
+        Next cancelSecond = Update.update(second, new Msg.PopupDismissed(AmendStageAllPopup.class));
 
         assertEquals(List.of(), cancelFirst.cmds());
         assertEquals(Option.none(), cancelFirst.model().popup(AmendPopup.class));
