@@ -21,7 +21,6 @@ import io.vavr.control.Try;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -88,6 +87,8 @@ public class JazygitApp extends ToolkitApp {
     private final StyleEngine styleEngine;
     // Tells the time a frame is drawn at, which the spinners turn by.
     private final Clock clock = Clock.systemUTC();
+    // The terminal the app is shown on, which it hands over to an editor.
+    private final TerminalHandOver terminal = new TerminalHandOver(this::runner, this::requestRedraw);
     private final RepositorySession session;
     // Quitting is up to the model, which may refuse; the runner stops on what the update returns.
     private final Consumer<Msg> dispatch = this::send;
@@ -117,9 +118,6 @@ public class JazygitApp extends ToolkitApp {
                     HelpDialog.popups(dispatch),
                     ErrorDialog.popups(dispatch))
             .flatMap(Function.identity());
-    // How the terminal is set up, and the backend that hands it over to an editor, once the app is started.
-    private TuiConfig config = TuiConfig.defaults();
-    private Option<HandOverBackend> backend = Option.none();
     // The screen the last frame showed; when the model shows another one, its pane gets the focus back.
     private Screen shownScreen = Screen.REPOSITORY;
     // The border between the left column and the content panel, which the user drags.
@@ -139,7 +137,7 @@ public class JazygitApp extends ToolkitApp {
             Env env, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, StyleEngine styleEngine) {
         this.session = new RepositorySession(
                 env,
-                this::handOver,
+                terminal,
                 this::runner,
                 clock,
                 this::requestRedraw,
@@ -314,40 +312,9 @@ public class JazygitApp extends ToolkitApp {
         }
     }
 
-    /**
-     * Runs {@code program} with the terminal handed over to it, as {@link Terminal} asks; called on the thread of a
-     * command. The app keeps running meanwhile, but draws nothing and reads no keys, and is drawn anew afterwards.
-     */
-    private <T> T handOver(Supplier<T> program) {
-        return backend.fold(program, handing -> {
-            onRenderThread(() -> Try.run(() -> handing.leave(config)).get());
-            try {
-                return program.get();
-            } finally {
-                onRenderThread(() -> {
-                    Try.run(() -> handing.comeBack(config)).get();
-                    runner().tuiRunner().terminal().clear();
-                    requestRedraw();
-                });
-            }
-        });
-    }
-
-    /**
-     * Runs {@code action} on the render thread, between two frames, and waits for it.
-     */
-    private void onRenderThread(Runnable action) {
-        CompletableFuture.runAsync(action, runner()::runOnRenderThread).join();
-    }
-
     @Override
     protected TuiConfig configure() {
-        // Without a backend of its own, the app still runs, but cannot hand the terminal over.
-        backend = Try.of(HandOverBackend::system).onFailure(BugLog::log).toOption();
-        // Frames are drawn when something changed, not on ticks.
-        TuiConfig.Builder builder = TuiConfig.builder().mouseCapture(true).noTick();
-        config = backend.map(builder::backend).getOrElse(builder).build();
-        return config;
+        return terminal.configure();
     }
 
     @Override
