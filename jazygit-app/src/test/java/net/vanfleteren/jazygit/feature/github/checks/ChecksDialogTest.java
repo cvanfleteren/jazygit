@@ -185,9 +185,9 @@ class ChecksDialogTest {
         List<Check> done = List.of(check("verify", Checks.PASSING, 475, Option.of(60)));
 
         int widest = TextWidth.of(CheckTimesText.widestRunning());
-        assertEquals(widest, CheckRows.doingWidth(running, running, Option.none(), NOW));
-        assertEquals(widest, CheckRows.doingWidth(running, running, Option.none(), NOW.plusSeconds(5)));
-        assertEquals(TextWidth.of("1m"), CheckRows.doingWidth(done, done, Option.none(), NOW));
+        assertEquals(widest, CheckRows.doingWidth(running, running, Option.none(), NOW, true));
+        assertEquals(widest, CheckRows.doingWidth(running, running, Option.none(), NOW.plusSeconds(5), true));
+        assertEquals(TextWidth.of("1m"), CheckRows.doingWidth(done, done, Option.none(), NOW, true));
     }
 
     @Test
@@ -195,10 +195,10 @@ class ChecksDialogTest {
         List<Check> all = List.of(queued("acceptance"), check("verify", Checks.PENDING, 150, Option.none()));
 
         // After the symbol, the name and how it is doing.
-        List<StyledElement<?>> queued =
-                CheckRows.filling(all.head(), all, Option.none(), NOW, 78, 20).tail();
-        List<StyledElement<?>> running =
-                CheckRows.filling(all.last(), all, Option.none(), NOW, 78, 20).tail();
+        List<StyledElement<?>> queued = CheckRows.filling(all.head(), all, Option.none(), NOW, 78, 20, true)
+                .tail();
+        List<StyledElement<?>> running = CheckRows.filling(all.last(), all, Option.none(), NOW, 78, 20, true)
+                .tail();
 
         assertTrue(queued.forAll(piece -> piece.cssClasses().contains(Theme.Classes.DIM)));
         assertFalse(running.head().cssClasses().contains(Theme.Classes.DIM));

@@ -21,8 +21,6 @@ import net.vanfleteren.jazygit.state.CheckTimes;
  */
 public final class CheckRows {
 
-    // A longer name of a check is cut, to leave room for how long it runs.
-    private static final int NAME_WIDTH = 30;
     // The order of the checks by how they are doing: failed, running, queued, passed.
     private static final int FAILED = 0;
     private static final int RUNNING = 1;
@@ -76,44 +74,26 @@ public final class CheckRows {
     }
 
     /**
-     * How wide the names of {@code listed} are, to line up what follows them: as wide as the widest, up to a limit.
-     */
-    public static int nameWidth(List<Check> listed) {
-        return Math.min(
-                NAME_WIDTH,
-                listed.map(check -> TextWidth.of(check.name())).max().getOrElse(0));
-    }
-
-    /**
-     * {@code check}, one of the checks {@code all} of a commit: its symbol and its name, and for one that is not done
-     * how it is doing, dimmed: {@code ⏳ acceptance  running 2m 30s · ~1m 5s left}; a queued one is dimmed all along, as its
-     * emoji ignores dimming. One that is done shows how long it took when {@code took}: {@code ✅ verify  2m},
-     * {@code ❌ lint  failed after 1m 30s}.
-     */
-    public static List<StyledElement<?>> row(
-            Check check, List<Check> all, Option<CheckTimes> times, Instant now, int nameWidth, boolean took) {
-        List<StyledElement<?>> symbol = PullRequestSymbols.check(check).toList().map(CheckRows::symbol);
-        TextElement name = text(" " + padded(check.name(), nameWidth) + "  ");
-        return symbol.appendAll(doing(check, all, times, now, took)
-                .map(text -> List.<StyledElement<?>>of(
-                        check.queued() ? name.addClass(Theme.Classes.DIM) : name,
-                        text(text).addClass(Theme.Classes.DIM)))
-                .getOrElse(() -> List.of(text(" " + check.name()))));
-    }
-
-    /**
      * {@code check}, one of the checks {@code all} of a commit, taking {@code width} columns: its symbol and its name
      * on the left, cut to leave room, and how it is doing or how long it took on the right, in a column
-     * {@code doingWidth} wide, lined up on the right: {@code ✅ verify          2m}.
+     * {@code doingWidth} wide, lined up on the right: {@code ⏳ acceptance  running 2m 30s · ~1m 5s left}, dimmed; a
+     * queued one is dimmed all along, as its emoji ignores dimming. One that is done shows how long it took when
+     * {@code took}: {@code ✅ verify          2m}, {@code ❌ lint  failed after 1m 30s}.
      */
     public static List<StyledElement<?>> filling(
-            Check check, List<Check> all, Option<CheckTimes> times, Instant now, int width, int doingWidth) {
+            Check check,
+            List<Check> all,
+            Option<CheckTimes> times,
+            Instant now,
+            int width,
+            int doingWidth,
+            boolean took) {
         List<PullRequestSymbols.Symbol> symbols =
                 PullRequestSymbols.check(check).toList();
         int left =
                 width - symbols.map(symbol -> TextWidth.of(symbol.text())).sum().intValue() - 1;
         return symbols.<StyledElement<?>>map(CheckRows::symbol)
-                .appendAll(doing(check, all, times, now, true)
+                .appendAll(doing(check, all, times, now, took)
                         .map(text -> {
                             TextElement name = text(" " + padded(check.name(), left - 2 - doingWidth) + "  ");
                             return List.<StyledElement<?>>of(
@@ -126,10 +106,11 @@ public final class CheckRows {
     /**
      * How wide the column {@link #filling} shows how {@code listed}, some of the checks {@code all} of a commit, are
      * doing in is: as wide as the widest, and while one runs as wide as one that runs can get, so the names do not move
-     * as the seconds do (ADR 34).
+     * as the seconds do (ADR 34). How long those done took counts when {@code took}.
      */
-    public static int doingWidth(List<Check> listed, List<Check> all, Option<CheckTimes> times, Instant now) {
-        return listed.flatMap(check -> doing(check, all, times, now, true))
+    public static int doingWidth(
+            List<Check> listed, List<Check> all, Option<CheckTimes> times, Instant now, boolean took) {
+        return listed.flatMap(check -> doing(check, all, times, now, took))
                 .map(TextWidth::of)
                 .appendAll(Option.when(
                         listed.exists(check -> !check.done()), () -> TextWidth.of(CheckTimesText.widestRunning())))

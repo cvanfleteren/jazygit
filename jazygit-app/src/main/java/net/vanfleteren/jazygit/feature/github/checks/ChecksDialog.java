@@ -152,12 +152,12 @@ public final class ChecksDialog implements PopupView {
         }
         List<Check> ordered = CheckRows.order(all, all, times);
         // Over all the checks, not only those shown, so the column keeps its width while they scroll.
-        int doingWidth = CheckRows.doingWidth(ordered, all, times, now);
+        int doingWidth = CheckRows.doingWidth(ordered, all, times, now, true);
         return List.<StyledElement<?>>of(row(CheckRows.counts(all, times, now).toJavaArray(StyledElement[]::new)))
                 .append(text(""))
                 .appendAll(ordered.drop(first)
                         .take(VISIBLE_CHECKS)
-                        .map(check -> row(CheckRows.filling(check, all, times, now, CONTENT_WIDTH, doingWidth)
+                        .map(check -> row(CheckRows.filling(check, all, times, now, CONTENT_WIDTH, doingWidth, true)
                                 .toJavaArray(StyledElement[]::new))));
     }
 

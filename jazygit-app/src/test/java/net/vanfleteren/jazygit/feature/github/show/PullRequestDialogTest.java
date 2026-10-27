@@ -628,10 +628,10 @@ class PullRequestDialogTest {
 
         // verify and the status are not known, so neither is when they are all done.
         assertTrue(screen.contains("Checks  ⏳ 4 running · done in ?"), screen);
-        assertTrue(screen.contains("⏳ package     running 1m 55s · due"), screen);
-        assertTrue(screen.contains("⏳ verify      running 30s · ? left"), screen);
-        assertTrue(screen.contains("⏳ ci/status   running"), screen);
-        assertTrue(screen.contains("💤 acceptance  queued 2m · ~2m 15s left"), screen);
+        assertTrue(screen.contains("⏳ package" + " ".repeat(35) + "running 1m 55s · due│"), screen);
+        assertTrue(screen.contains("⏳ verify" + " ".repeat(36) + "running 30s · ? left│"), screen);
+        assertTrue(screen.contains("⏳ ci/status" + " ".repeat(46) + "running│"), screen);
+        assertTrue(screen.contains("💤 acceptance" + " ".repeat(28) + "queued 2m · ~2m 15s left│"), screen);
         // Running before queued, the soonest done first, those not known last.
         assertTrue(screen.indexOf("package") < screen.indexOf("verify"), screen);
         assertTrue(screen.indexOf("ci/status") < screen.indexOf("acceptance"), screen);
@@ -642,9 +642,9 @@ class PullRequestDialogTest {
         List<Check> all = List.of(timed("acceptance", 120, Option.none()), timed("package", 120, Option.of(118)));
 
         // After the symbol, the name and how it is doing.
-        List<StyledElement<?>> queued = CheckRows.row(all.head(), all, Option.of(learned()), NOW, 10, false)
+        List<StyledElement<?>> queued = CheckRows.filling(all.head(), all, Option.of(learned()), NOW, 65, 40, false)
                 .tail();
-        List<StyledElement<?>> running = CheckRows.row(all.last(), all, Option.of(learned()), NOW, 10, false)
+        List<StyledElement<?>> running = CheckRows.filling(all.last(), all, Option.of(learned()), NOW, 65, 40, false)
                 .tail();
 
         assertTrue(queued.forAll(piece -> piece.cssClasses().contains(Theme.Classes.DIM)));
@@ -659,7 +659,7 @@ class PullRequestDialogTest {
                 learned());
 
         assertTrue(screen.contains("❌ integration-tests-windows"), screen);
-        assertTrue(screen.contains("⏳ verify  running 30s · ? left"), screen);
+        assertTrue(screen.contains("⏳ verify" + " ".repeat(36) + "running 30s · ? left│"), screen);
     }
 
     @Test
@@ -675,7 +675,7 @@ class PullRequestDialogTest {
         String screen = timedScreen(List.of(timed("acceptance", 500, Option.of(400))), learned());
 
         assertTrue(screen.contains("Checks  ⏳ 1 running · taking longer than usual"), screen);
-        assertTrue(screen.contains("⏳ acceptance  running 6m 40s · overdue"), screen);
+        assertTrue(screen.contains("⏳ acceptance" + " ".repeat(28) + "running 6m 40s · overdue│"), screen);
     }
 
     @Test
@@ -684,7 +684,7 @@ class PullRequestDialogTest {
                 List.of(timed("verify", 120, Option.of(30))), learned().withTopUp(NOW));
 
         assertTrue(screen.contains("Checks  ⏳ 1 running · done in …"), screen);
-        assertTrue(screen.contains("⏳ verify  running 30s · … left"), screen);
+        assertTrue(screen.contains("⏳ verify" + " ".repeat(36) + "running 30s · … left│"), screen);
     }
 
     @Test
