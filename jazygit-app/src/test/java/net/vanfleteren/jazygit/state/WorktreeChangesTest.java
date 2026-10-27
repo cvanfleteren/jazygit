@@ -71,7 +71,8 @@ class WorktreeChangesTest {
 
     @Test
     void aTickDoesNotReadThemAgainWhileTheyAreBeingRead() {
-        Model reading = Update.refresh(onWorktreesTab(withWorktrees())).model();
+        Model reading = TestModels.started(Update.refresh(onWorktreesTab(withWorktrees())))
+                .model();
 
         assertFalse(Update.refresh(reading).cmds().exists(cmd -> cmd instanceof LoadWorktreeChanges));
     }
@@ -128,21 +129,23 @@ class WorktreeChangesTest {
 
     @Test
     void switchingToTheWorktreesReadsThemRightAway() {
-        Next next = Update.update(withWorktrees(), new BranchesTabMsg.Chosen(BranchesTab.WORKTREES));
+        Next next = TestModels.stepped(withWorktrees(), new BranchesTabMsg.Chosen(BranchesTab.WORKTREES));
 
         assertEquals(List.of(LOAD), next.cmds());
-        assertTrue(next.model().jobs().refreshing().contains(LOAD));
+        assertTrue(next.model().jobs().runs(LOAD));
     }
 
     @Test
     void whatWasReadReplacesWhatWasKnownAndTheShownWorktreeGoesByItsStatus() {
-        Model model = Update.update(
-                        Update.refresh(onWorktreesTab(withWorktrees())).model(),
+        Model model = TestModels.done(
+                        TestModels.started(Update.refresh(onWorktreesTab(withWorktrees())))
+                                .model(),
+                        LOAD,
                         new LoadMsg.WorktreeChangesLoaded(
                                 List.of(LINKED.toString()), HashMap.of(LINKED.toString(), true)))
                 .model();
 
-        assertFalse(model.jobs().refreshing().contains(LOAD));
+        assertFalse(model.jobs().runs(LOAD));
         assertEquals(Option.of(true), model.repo().hasChanges(worktree(LINKED, false, false)));
         assertEquals(Option.none(), model.repo().hasChanges(worktree(GONE, false, true)));
         assertEquals(Option.of(false), model.repo().hasChanges(worktree(HERE, true, false)));

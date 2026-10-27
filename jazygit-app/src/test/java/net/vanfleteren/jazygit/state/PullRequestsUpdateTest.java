@@ -94,29 +94,25 @@ class PullRequestsUpdateTest {
 
     @Test
     void aReadOfThePullRequestsIsKeptWhileItRunsAndNotStartedTwice() {
-        Next reading = Update.update(loaded(), new PullRequestsMsg.Refresh());
+        Next reading = TestModels.stepped(loaded(), new PullRequestsMsg.Refresh());
         assertEquals(
-                HashSet.of(new LoadPullRequests(), new LoadBranchChecks()),
-                reading.model().gitHub().reading());
+                HashSet.of(new LoadPullRequests(), new LoadBranchChecks()), TestModels.runningCmds(reading.model()));
 
         Next again = Update.update(reading.model(), new PullRequestsMsg.Refresh());
         assertEquals(List.empty(), again.cmds());
-        assertEquals(
-                HashSet.of(new LoadPullRequests(), new LoadBranchChecks()),
-                again.model().gitHub().reading());
 
         assertEquals(
                 HashSet.of(new LoadBranchChecks()),
-                Update.update(reading.model(), new PullRequestsMsg.Loaded(List.empty()))
-                        .model()
-                        .gitHub()
-                        .reading());
+                TestModels.runningCmds(TestModels.done(
+                                reading.model(), new LoadPullRequests(), new PullRequestsMsg.Loaded(List.empty()))
+                        .model()));
         assertEquals(
                 HashSet.of(new LoadBranchChecks()),
-                Update.update(reading.model(), new PullRequestsMsg.LoadFailed(refused("offline")))
-                        .model()
-                        .gitHub()
-                        .reading());
+                TestModels.runningCmds(TestModels.done(
+                                reading.model(),
+                                new LoadPullRequests(),
+                                new PullRequestsMsg.LoadFailed(refused("offline")))
+                        .model()));
     }
 
     @Test
@@ -131,7 +127,7 @@ class PullRequestsUpdateTest {
 
     @Test
     void aReadAskedForWhileOneRunsAsAChangeMayHaveBeenMissedStartsOnceThatOneIsDone() {
-        Next reading = Update.update(loaded(), new PullRequestsMsg.Refresh());
+        Next reading = TestModels.stepped(loaded(), new PullRequestsMsg.Refresh());
 
         // Asked for twice while the first runs, as after a push and then the creation of a pull request.
         Next asked = PullRequestsUpdate.loadAnyway(PullRequestsUpdate.loadAnyway(Next.of(reading.model())));
@@ -141,19 +137,19 @@ class PullRequestsUpdateTest {
                 HashSet.of(new LoadPullRequests(), new LoadBranchChecks()),
                 asked.model().gitHub().again());
 
-        Next done = Update.update(asked.model(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)));
+        Next done =
+                TestModels.done(asked.model(), new LoadPullRequests(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)));
 
         assertEquals(List.of(new LoadPullRequests()), done.cmds());
-        assertEquals(
-                HashSet.of(new LoadPullRequests(), new LoadBranchChecks()),
-                done.model().gitHub().reading());
+        assertEquals(HashSet.of(new LoadPullRequests(), new LoadBranchChecks()), TestModels.runningCmds(done.model()));
         assertEquals(HashSet.of(new LoadBranchChecks()), done.model().gitHub().again());
         // What the first read read shows until the one started after the change is done.
         assertEquals(
                 Option.of(FEATURE_PR),
                 done.model().gitHub().pullRequests().flatMap(open -> open.get(new BranchName("feature"))));
 
-        Next readAgain = Update.update(done.model(), new PullRequestsMsg.Loaded(List.empty()));
+        Next readAgain =
+                TestModels.done(done.model(), new LoadPullRequests(), new PullRequestsMsg.Loaded(List.empty()));
 
         assertEquals(List.empty(), readAgain.cmds());
         assertEquals(
@@ -163,10 +159,11 @@ class PullRequestsUpdateTest {
 
     @Test
     void aReadThatFailsStillStartsTheOneAskedForMeanwhile() {
-        Model asked = PullRequestsUpdate.loadAnyway(Update.update(loaded(), new PullRequestsMsg.Refresh()))
+        Model asked = PullRequestsUpdate.loadAnyway(TestModels.stepped(loaded(), new PullRequestsMsg.Refresh()))
                 .model();
 
-        Next failed = Update.update(asked, new PullRequestsMsg.LoadFailed(refused("offline")));
+        Next failed =
+                TestModels.done(asked, new LoadPullRequests(), new PullRequestsMsg.LoadFailed(refused("offline")));
 
         assertEquals(List.of(new LoadPullRequests()), failed.cmds());
         assertEquals(HashSet.empty(), failed.model().gitHub().again().filter(LoadPullRequests.class::isInstance));

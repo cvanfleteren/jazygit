@@ -56,7 +56,7 @@ class DeleteRemoteBranchUpdateTest {
         Model asked = Update.update(model(), new DeleteBranchMsg.RemoteRequested(ORIGIN_FEATURE))
                 .model();
 
-        Next confirmed = Update.update(asked, new DeleteBranchMsg.RemoteConfirmed());
+        Next confirmed = TestModels.stepped(asked, new DeleteBranchMsg.RemoteConfirmed());
 
         assertEquals(List.of(new DeleteRemoteBranch(ORIGIN_FEATURE)), confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());

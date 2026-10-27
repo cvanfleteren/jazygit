@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.gh.model.RepositoryPullRequests;
 import net.vanfleteren.jazygit.settings.UnseenPullRequests;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.Jobs;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Preview;
@@ -46,28 +47,28 @@ public final class PrOverviewUpdate {
             case PrOverviewMsg.Tick() ->
                 model.screen() == Screen.PULL_REQUESTS ? reload(Next.of(model)) : loaded(Next.of(model), HIDDEN_LOADS);
             default -> {
-                Step step = update(model.prOverview(), msg, model.now());
+                Step step = update(model.prOverview(), msg, model.now(), model.jobs());
                 yield new Next(model.withPrOverview(step.overview()), step.cmds());
             }
         };
     }
 
     /**
-     * What {@code msg} does to {@code overview} at {@code now}, whatever the rest of the model is.
+     * What {@code msg} does to {@code overview} at {@code now}, while {@code jobs} run, whatever the rest of the model
+     * is.
      */
-    static Step update(PrOverview overview, PrOverviewMsg msg, Instant now) {
+    static Step update(PrOverview overview, PrOverviewMsg msg, Instant now, Jobs jobs) {
         return switch (msg) {
             // What failed to read before is read again too.
             case PrOverviewMsg.Refresh() -> {
-                Step loaded = load(overview);
+                Step loaded = load(overview, LOADS, jobs);
                 yield overview.preview()
                         .filter(preview -> preview.value() instanceof Loadable.Failed)
                         .map(preview -> preview(loaded.overview(), preview.key(), loaded.cmds()))
                         .getOrElse(loaded);
             }
             case PrOverviewMsg.RepositoryLoaded(var read, var kept) -> {
-                PrOverview loaded = done(overview, new LoadRepositoryPullRequests())
-                        .withFreshness(overview.freshness().succeeded(REPOSITORY, now))
+                PrOverview loaded = overview.withFreshness(overview.freshness().succeeded(REPOSITORY, now))
                         .withRepository(overview.repository().reload(newestFirst(read.open())))
                         .withRepositoryName(Option.of(read.repository()));
                 // What was kept is only of use until the model has its own.
@@ -76,17 +77,14 @@ public final class PrOverviewUpdate {
                 yield kept(Step.of(loaded.withUnseen(Option.of(after))), before.contains(after));
             }
             case PrOverviewMsg.RepositoryLoadFailed(Failure failure) ->
-                Step.of(done(overview, new LoadRepositoryPullRequests())
-                        .withFreshness(overview.freshness().failed(REPOSITORY))
+                Step.of(overview.withFreshness(overview.freshness().failed(REPOSITORY))
                         .withRepository(failed(overview.repository(), failure)));
             case PrOverviewMsg.MineLoaded(var read) ->
-                Step.of(done(overview, new LoadMyPullRequests())
-                        .withFreshness(overview.freshness().succeeded(MINE, now))
+                Step.of(overview.withFreshness(overview.freshness().succeeded(MINE, now))
                         .withReviewRequested(overview.reviewRequested().reload(newestFirst(read.reviewRequested())))
                         .withAuthored(overview.authored().reload(newestFirst(read.authored()))));
             case PrOverviewMsg.MineLoadFailed(Failure failure) ->
-                Step.of(done(overview, new LoadMyPullRequests())
-                        .withFreshness(overview.freshness().failed(MINE))
+                Step.of(overview.withFreshness(overview.freshness().failed(MINE))
                         .withReviewRequested(failed(overview.reviewRequested(), failure))
                         .withAuthored(failed(overview.authored(), failure)));
             case PrOverviewMsg.Highlighted(PullRequestSummary pullRequest) -> {
@@ -125,18 +123,13 @@ public final class PrOverviewUpdate {
      * {@code next}, also running {@code loads}, but the ones still running.
      */
     private static Next loaded(Next next, List<Cmd> loads) {
-        Step step = load(next.model().prOverview(), loads);
+        Step step = load(next.model().prOverview(), loads, next.model().jobs());
         return new Next(
                 next.model().withPrOverview(step.overview()), next.cmds().appendAll(step.cmds()));
     }
 
-    private static Step load(PrOverview overview) {
-        return load(overview, LOADS);
-    }
-
-    private static Step load(PrOverview overview, List<Cmd> all) {
-        List<Cmd> loads = all.filter(load -> !overview.reading().contains(load));
-        return new Step(overview.withReading(overview.reading().addAll(loads)), loads);
+    private static Step load(PrOverview overview, List<Cmd> all, Jobs jobs) {
+        return new Step(overview, all.filter(load -> !jobs.runs(load)));
     }
 
     /**
@@ -199,10 +192,6 @@ public final class PrOverviewUpdate {
         return new Step(
                 overview.withPreview(Option.of(Preview.loading(key, overview.preview()))),
                 cmds.append(new LoadPullRequestPreview(key)));
-    }
-
-    private static PrOverview done(PrOverview overview, Cmd load) {
-        return overview.withReading(overview.reading().remove(load));
     }
 
     /**

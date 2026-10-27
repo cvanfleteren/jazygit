@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.HashMap;
-import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -33,6 +32,7 @@ import net.vanfleteren.jazygit.feature.commit.create.CommitMsg;
 import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordMsg;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordPopup;
+import net.vanfleteren.jazygit.feature.fetch.FetchCmd;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
 import net.vanfleteren.jazygit.feature.stage.StageMsg;
 import net.vanfleteren.jazygit.gh.StubGitHub;
@@ -614,7 +614,7 @@ class ProgramTest {
         settle();
 
         assertEquals(java.util.List.of("other"), provider.logLoads);
-        assertEquals(false, program.model().jobs().refreshing().contains(reload));
+        assertEquals(false, program.model().jobs().runs(reload));
     }
 
     /**
@@ -632,7 +632,7 @@ class ProgramTest {
         assertEquals(true, io.isEmpty());
         settle();
         assertEquals(2, provider.fetches);
-        assertEquals(Option.none(), program.model().jobs().fetching());
+        assertEquals(false, program.model().jobs().runs(FetchCmd.class::isInstance));
         // Not logged: it runs every few seconds.
         assertEquals(List.of(), program.model().outcome().commandLog());
     }
@@ -655,8 +655,7 @@ class ProgramTest {
 
         @Override
         public Update.Next apply(Model model) {
-            return Update.Next.of(
-                    model.mapJobs(jobs -> jobs.withRefreshing(jobs.refreshing().add(load))), load);
+            return Update.Next.of(model, load);
         }
     }
 
@@ -850,12 +849,12 @@ class ProgramTest {
 
         program.dispatch(new PullRequestsMsg.Refresh());
         settleWithout(background);
-        assertEquals(
-                HashSet.<Cmd>of(new LoadPullRequests(), new LoadBranchChecks()),
-                program.model().gitHub().reading());
+        assertEquals(true, program.model().jobs().runs(new LoadPullRequests()));
+        assertEquals(true, program.model().jobs().runs(new LoadBranchChecks()));
 
         settleWithout(io);
-        assertEquals(HashSet.empty(), program.model().gitHub().reading());
+        assertEquals(false, program.model().jobs().runs(new LoadPullRequests()));
+        assertEquals(false, program.model().jobs().runs(new LoadBranchChecks()));
         assertEquals(Option.of(HashMap.empty()), program.model().gitHub().pullRequests());
     }
 

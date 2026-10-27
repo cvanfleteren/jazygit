@@ -1,7 +1,9 @@
 package net.vanfleteren.jazygit.feature.fetch;
 
+import static net.vanfleteren.jazygit.state.TestModels.done;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static net.vanfleteren.jazygit.state.TestModels.refused;
+import static net.vanfleteren.jazygit.state.TestModels.stepped;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -10,7 +12,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
-import net.vanfleteren.jazygit.state.Fetching;
 import net.vanfleteren.jazygit.state.LoadPullRequests;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
@@ -22,36 +23,44 @@ import org.junit.jupiter.api.Test;
  */
 class FetchUpdateTest {
 
+    private static final FetchCmd.ListRemotes LIST = new FetchCmd.ListRemotes();
+
+    private static boolean fetching(Model model) {
+        return model.jobs().runs(FetchCmd.class::isInstance);
+    }
+
+    private static Model listing() {
+        return stepped(loaded(), new FetchMsg.Tick()).model();
+    }
+
     @Test
     void aTickListsTheRemotesUnlessAFetchIsStillRunning() {
-        Next started = Update.update(loaded(), new FetchMsg.Tick());
+        Next started = stepped(loaded(), new FetchMsg.Tick());
 
-        assertEquals(List.of(new FetchCmd.ListRemotes()), started.cmds());
-        assertEquals(Option.of(Fetching.LISTING), started.model().jobs().fetching());
+        assertEquals(List.of(LIST), started.cmds());
+        assertTrue(fetching(started.model()));
         assertEquals(
                 List.of(), Update.update(started.model(), new FetchMsg.Tick()).cmds());
     }
 
     @Test
     void theRemotesAreFetchedOneAfterTheOtherAndThenTheBranchesReload() {
-        Model listing = Update.update(loaded(), new FetchMsg.Tick()).model();
+        FetchCmd.Fetch fromOrigin = new FetchCmd.Fetch("origin", List.of("upstream"));
+        FetchCmd.Fetch fromUpstream = new FetchCmd.Fetch("upstream", List.empty());
 
-        Next origin = Update.update(listing, new FetchMsg.RemotesListed(List.of("origin", "upstream")));
-        assertEquals(List.of(new FetchCmd.Fetch("origin")), origin.cmds());
-        assertEquals(
-                Option.of(new Fetching(Option.of("origin"), List.of("upstream"))),
-                origin.model().jobs().fetching());
+        Next origin = done(listing(), LIST, new FetchMsg.RemotesListed(List.of("origin", "upstream")));
+        assertEquals(List.of(fromOrigin), origin.cmds());
 
         // A remote that cannot be fetched from does not stop the others.
-        Next upstream =
-                Update.update(origin.model(), new FetchMsg.FetchFailed("origin", refused("Could not resolve host")));
-        assertEquals(List.of(new FetchCmd.Fetch("upstream")), upstream.cmds());
-        assertEquals(
-                Option.of(new Fetching(Option.of("upstream"), List.empty())),
-                upstream.model().jobs().fetching());
+        Next upstream = done(
+                origin.model(),
+                fromOrigin,
+                new FetchMsg.FetchFailed("origin", List.of("upstream"), refused("Could not resolve host")));
+        assertEquals(List.of(fromUpstream), upstream.cmds());
+        assertTrue(fetching(upstream.model()));
 
-        Next done = Update.update(upstream.model(), new FetchMsg.Fetched("upstream"));
-        assertEquals(Option.none(), done.model().jobs().fetching());
+        Next done = done(upstream.model(), fromUpstream, new FetchMsg.Fetched("upstream", List.empty()));
+        assertFalse(fetching(done.model()));
         assertTrue(done.cmds().contains(new LoadBranches()));
         assertTrue(done.cmds().contains(new LoadPullRequests()));
         // Neither logged nor reported.
@@ -61,84 +70,74 @@ class FetchUpdateTest {
 
     @Test
     void withoutRemotesOrRemotesToListTheFetchIsOver() {
-        Model listing = Update.update(loaded(), new FetchMsg.Tick()).model();
-
-        assertEquals(
-                Option.none(),
-                Update.update(listing, new FetchMsg.RemotesListed(List.empty()))
-                        .model()
-                        .jobs()
-                        .fetching());
-        Model failed = Update.update(listing, new FetchMsg.ListingFailed(refused("boom")))
+        assertFalse(fetching(
+                done(listing(), LIST, new FetchMsg.RemotesListed(List.empty())).model()));
+        Model failed = done(listing(), LIST, new FetchMsg.ListingFailed(refused("boom")))
                 .model();
-        assertEquals(Option.none(), failed.jobs().fetching());
+        assertFalse(fetching(failed));
         assertEquals(Option.none(), failed.outcome().error());
-        assertEquals(
-                List.of(new FetchCmd.ListRemotes()),
-                Update.update(failed, new FetchMsg.Tick()).cmds());
+        assertEquals(List.of(LIST), Update.update(failed, new FetchMsg.Tick()).cmds());
     }
 
     @Test
     void aRequestedFetchStartsAtOnceWhenNoneIsRunning() {
         Next started = FetchUpdate.requested(Next.of(loaded()));
 
-        assertEquals(List.of(new FetchCmd.ListRemotes()), started.cmds());
-        assertEquals(Option.of(Fetching.LISTING), started.model().jobs().fetching());
+        assertEquals(List.of(LIST), started.cmds());
+        assertFalse(started.model().jobs().fetchAgain());
     }
 
     @Test
     void aFetchRequestedWhileOneRunsFollowsItOnceItIsDone() {
-        Model fetching = Update.update(
-                        Update.update(loaded(), new FetchMsg.Tick()).model(),
-                        new FetchMsg.RemotesListed(List.of("origin")))
+        FetchCmd.Fetch fromOrigin = new FetchCmd.Fetch("origin", List.empty());
+        Model fetching = done(listing(), LIST, new FetchMsg.RemotesListed(List.of("origin")))
                 .model();
 
         Next requested = FetchUpdate.requested(Next.of(fetching));
         assertEquals(List.of(), requested.cmds());
-        assertTrue(requested.model().jobs().fetching().exists(Fetching::again));
+        assertTrue(requested.model().jobs().fetchAgain());
 
-        Next done = Update.update(requested.model(), new FetchMsg.Fetched("origin"));
+        Next done = done(requested.model(), fromOrigin, new FetchMsg.Fetched("origin", List.empty()));
         assertTrue(done.cmds().contains(new LoadBranches()));
-        assertTrue(done.cmds().contains(new FetchCmd.ListRemotes()), done.cmds().toString());
-        assertEquals(Option.of(Fetching.LISTING), done.model().jobs().fetching());
+        assertTrue(done.cmds().contains(LIST), done.cmds().toString());
+        assertFalse(done.model().jobs().fetchAgain());
 
         // That one is not followed by another.
-        Model listed = Update.update(done.model(), new FetchMsg.RemotesListed(List.of("origin")))
+        Model listed = done(done.model(), LIST, new FetchMsg.RemotesListed(List.of("origin")))
                 .model();
-        assertEquals(
-                Option.none(),
-                Update.update(listed, new FetchMsg.Fetched("origin"))
-                        .model()
-                        .jobs()
-                        .fetching());
+        Next over = done(listed, fromOrigin, new FetchMsg.Fetched("origin", List.empty()));
+        assertFalse(over.cmds().contains(LIST));
+        assertFalse(fetching(over.model()));
     }
 
     @Test
     void aFetchRequestedWhileTheRemotesCouldNotBeListedStillRuns() {
-        Model listing = FetchUpdate.requested(
-                        Next.of(Update.update(loaded(), new FetchMsg.Tick()).model()))
-                .model();
+        Model listing = FetchUpdate.requested(Next.of(listing())).model();
 
-        Next failed = Update.update(listing, new FetchMsg.ListingFailed(refused("boom")));
+        Next failed = done(listing, LIST, new FetchMsg.ListingFailed(refused("boom")));
 
-        assertEquals(List.of(new FetchCmd.ListRemotes()), failed.cmds());
-        assertEquals(Option.of(Fetching.LISTING), failed.model().jobs().fetching());
+        assertEquals(List.of(LIST), failed.cmds());
+        assertFalse(failed.model().jobs().fetchAgain());
     }
 
     @Test
     void theLastFetchSaysWhenByTheClockARemoteWasFetchedFromAndWhichFailedSince() {
         Instant at = Instant.parse("2026-10-17T12:00:00Z");
-        Model listed = Update.update(
-                        Update.update(loaded(), new FetchMsg.Tick()).model(),
-                        new FetchMsg.RemotesListed(List.of("origin", "upstream")))
+        Model listed = done(listing(), LIST, new FetchMsg.RemotesListed(List.of("origin", "upstream")))
                 .model();
 
-        Model fetched = Update.update(listed.withNow(at), new FetchMsg.Fetched("origin"))
+        Model fetched = done(
+                        listed.withNow(at),
+                        new FetchCmd.Fetch("origin", List.of("upstream")),
+                        new FetchMsg.Fetched("origin", List.of("upstream")))
                 .model();
         assertEquals(Option.of(at), fetched.jobs().lastFetch().read());
         assertFalse(fetched.jobs().lastFetch().stale());
 
-        Model failed = Update.update(fetched, new FetchMsg.FetchFailed("upstream", refused("offline")))
+        Model failed = done(
+                        fetched,
+                        new FetchCmd.Fetch("upstream", List.empty()),
+                        new FetchMsg.FetchFailed("upstream", List.empty(), refused("offline")))
                 .model();
         assertEquals(Option.of(at), failed.jobs().lastFetch().read());
         assertTrue(failed.jobs().lastFetch().stale());

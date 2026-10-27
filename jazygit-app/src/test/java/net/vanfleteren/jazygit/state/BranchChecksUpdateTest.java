@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static net.vanfleteren.jazygit.state.TestModels.refused;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
@@ -190,14 +191,15 @@ class BranchChecksUpdateTest {
 
     @Test
     void theChecksOfPendingBranchesAreNotReadTwiceAtOnceSoAnOlderReadCannotReplaceANewerOne() {
-        Next first = Update.update(loaded(), new BranchChecksMsg.Loaded(pending("feature")));
+        Next first = TestModels.stepped(loaded(), new BranchChecksMsg.Loaded(pending("feature")));
         assertEquals(1, first.cmds().size());
 
         Next second = Update.update(first.model(), new BranchChecksMsg.Loaded(pending("feature")));
         assertEquals(List.empty(), second.cmds());
 
-        Model done = Update.update(
+        Model done = TestModels.done(
                         second.model(),
+                        first.cmds().head(),
                         new BranchChecksMsg.RunsLoaded(new PendingChecks(
                                 "owner/repo", HashMap.of(new BranchName("feature"), List.of(running("verify"))))))
                 .model();
@@ -206,7 +208,8 @@ class BranchChecksUpdateTest {
                 Update.update(done, new BranchChecksMsg.Loaded(pending("feature")))
                         .cmds()
                         .size());
-        Model failed = Update.update(second.model(), new BranchChecksMsg.RunsFailed(refused("offline")))
+        Model failed = TestModels.done(
+                        second.model(), first.cmds().head(), new BranchChecksMsg.RunsFailed(refused("offline")))
                 .model();
         assertEquals(
                 1,
@@ -303,34 +306,31 @@ class BranchChecksUpdateTest {
 
     @Test
     void aReadOfTheChecksIsKeptWhileItRunsAndNotStartedTwice() {
-        Next reading = BranchChecksUpdate.load(Next.of(loaded()));
+        Next reading = TestModels.started(BranchChecksUpdate.load(Next.of(loaded())));
         assertEquals(List.of(new LoadBranchChecks()), reading.cmds());
 
         Next again = BranchChecksUpdate.load(Next.of(reading.model()));
         assertEquals(List.empty(), again.cmds());
 
-        assertEquals(
-                HashSet.empty(),
-                Update.update(reading.model(), new BranchChecksMsg.Loaded(ON_ORIGIN))
-                        .model()
-                        .gitHub()
-                        .reading());
-        assertEquals(
-                HashSet.empty(),
-                Update.update(reading.model(), new BranchChecksMsg.LoadFailed(refused("offline")))
-                        .model()
-                        .gitHub()
-                        .reading());
+        assertFalse(TestModels.done(reading.model(), new LoadBranchChecks(), new BranchChecksMsg.Loaded(ON_ORIGIN))
+                .model()
+                .jobs()
+                .runs(new LoadBranchChecks()));
+        assertFalse(TestModels.done(
+                        reading.model(), new LoadBranchChecks(), new BranchChecksMsg.LoadFailed(refused("offline")))
+                .model()
+                .jobs()
+                .runs(new LoadBranchChecks()));
     }
 
     @Test
     void checksAskedForWhileARunningReadMayHaveMissedAChangeAreReadOnceThatOneIsDone() {
-        Next reading = BranchChecksUpdate.load(Next.of(loaded()));
+        Next reading = TestModels.started(BranchChecksUpdate.load(Next.of(loaded())));
 
         Next asked = BranchChecksUpdate.loadAnyway(Next.of(reading.model()));
         assertEquals(List.empty(), asked.cmds());
 
-        Next done = Update.update(asked.model(), new BranchChecksMsg.Loaded(ON_ORIGIN));
+        Next done = TestModels.done(asked.model(), new LoadBranchChecks(), new BranchChecksMsg.Loaded(ON_ORIGIN));
         assertEquals(List.of(new LoadBranchChecks()), done.cmds());
         assertEquals(Option.of(ON_ORIGIN), done.model().gitHub().branchChecks());
 

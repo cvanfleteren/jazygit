@@ -3,8 +3,9 @@ package net.vanfleteren.jazygit.state.prs;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static net.vanfleteren.jazygit.state.TestModels.refused;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.TreeSet;
 import io.vavr.control.Either;
@@ -23,6 +24,7 @@ import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Screen;
+import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -120,7 +122,7 @@ class PrOverviewUpdateTest {
         Model model = loaded();
 
         assertEquals(Screen.REPOSITORY, model.screen());
-        Next ticked = Update.update(model, new PrOverviewMsg.Tick());
+        Next ticked = TestModels.stepped(model, new PrOverviewMsg.Tick());
         assertEquals(List.of(new LoadRepositoryPullRequests()), ticked.cmds());
         assertEquals(
                 List.empty(),
@@ -272,12 +274,13 @@ class PrOverviewUpdateTest {
 
     @Test
     void aTickReadsAgainWhatIsNotStillBeingRead() {
-        Model shown = toggled(loaded()).model();
+        Model shown = TestModels.started(toggled(loaded())).model();
 
         assertEquals(
                 List.empty(), Update.update(shown, new PrOverviewMsg.Tick()).cmds());
 
-        Model read = Update.update(shown, repositoryRead(OLD)).model();
+        Model read = TestModels.done(shown, new LoadRepositoryPullRequests(), repositoryRead(OLD))
+                .model();
         assertEquals(
                 List.of(new LoadRepositoryPullRequests()),
                 Update.update(read, new PrOverviewMsg.Tick()).cmds());
@@ -285,12 +288,16 @@ class PrOverviewUpdateTest {
 
     @Test
     void theMostRecentlyUpdatedComeFirstAndTheRepositoryIsKnownOnceItsPullRequestsWereRead() {
-        PrOverview read = Update.update(toggled(loaded()).model(), repositoryRead(OLD, NEW))
-                .model()
-                .prOverview();
+        Model model = TestModels.done(
+                        TestModels.started(toggled(loaded())).model(),
+                        new LoadRepositoryPullRequests(),
+                        repositoryRead(OLD, NEW))
+                .model();
+        PrOverview read = model.prOverview();
 
         assertEquals(new Loadable.Loaded<>(new PullRequestList(List.of(NEW, OLD), 2)), read.repository());
-        assertEquals(HashSet.of(new LoadMyPullRequests()), read.reading());
+        assertTrue(model.jobs().runs(new LoadMyPullRequests()));
+        assertFalse(model.jobs().runs(new LoadRepositoryPullRequests()));
         assertEquals(Either.right(true), read.ofThisRepository(NEW));
         assertEquals(Either.right(false), read.ofThisRepository(ELSEWHERE));
     }

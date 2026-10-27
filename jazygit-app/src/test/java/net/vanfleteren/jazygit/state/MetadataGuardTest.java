@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
-import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.nio.file.Path;
@@ -40,7 +39,7 @@ class MetadataGuardTest {
 
     // Nothing running, so a tick asks for the check.
     private static Model idle() {
-        return loaded().mapJobs(jobs -> jobs.withRefreshing(HashSet.empty()));
+        return loaded();
     }
 
     /**
@@ -52,7 +51,8 @@ class MetadataGuardTest {
 
     private static Model finished(Model model, List<Cmd> loads) {
         return loads.foldLeft(
-                model, (done, load) -> Update.update(done, cameBack(load)).model());
+                model,
+                (done, load) -> TestModels.done(done, load, cameBack(load)).model());
     }
 
     private static Msg cameBack(Cmd cmd) {
@@ -74,11 +74,11 @@ class MetadataGuardTest {
 
     @Test
     void aTickChecksAgainOnceTheLastCheckCameBack() {
-        Next checking = Update.update(idle(), new Msg.Tick());
+        Next checking = TestModels.stepped(idle(), new Msg.Tick());
 
         assertFalse(Update.update(checking.model(), new Msg.Tick()).cmds().contains(new CheckMetadata()));
 
-        Model answered = finished(Update.update(checking.model(), checked("b1", "s1", "w1")));
+        Model answered = finished(TestModels.done(checking.model(), new CheckMetadata(), checked("b1", "s1", "w1")));
         assertTrue(Update.update(answered, new Msg.Tick()).cmds().contains(new CheckMetadata()));
     }
 
@@ -92,26 +92,26 @@ class MetadataGuardTest {
 
     @Test
     void onlyWhatChangedIsReadAgain() {
-        Next first = Update.update(idle(), checked("b1", "s1", "w1"));
+        Next first = TestModels.stepped(idle(), checked("b1", "s1", "w1"));
         assertEquals(List.of(BRANCHES, STASHES, WORKTREES), first.cmds());
 
-        Next same = Update.update(finished(first), checked("b1", "s1", "w1"));
+        Next same = TestModels.stepped(finished(first), checked("b1", "s1", "w1"));
         assertEquals(List.of(), same.cmds());
 
-        Next stashed = Update.update(finished(same), checked("b1", "s2", "w1"));
+        Next stashed = TestModels.stepped(finished(same), checked("b1", "s2", "w1"));
         assertEquals(List.of(STASHES), stashed.cmds());
-        assertTrue(stashed.model().jobs().refreshing().contains(STASHES));
+        assertTrue(stashed.model().jobs().runs(STASHES));
     }
 
     @Test
     void aLoadThatStillRunsIsLookedAtAgainOnTheNextCheck() {
-        Next running = Update.update(idle(), checked("b1", "s1", "w1"));
+        Next running = TestModels.stepped(idle(), checked("b1", "s1", "w1"));
 
         // It may have read before the branches changed.
-        Next whileRunning = Update.update(running.model(), checked("b2", "s1", "w1"));
+        Next whileRunning = TestModels.stepped(running.model(), checked("b2", "s1", "w1"));
         assertEquals(List.of(), whileRunning.cmds());
 
-        Next after = Update.update(finished(whileRunning.model(), running.cmds()), checked("b2", "s1", "w1"));
+        Next after = TestModels.stepped(finished(whileRunning.model(), running.cmds()), checked("b2", "s1", "w1"));
         assertEquals(List.of(BRANCHES), after.cmds());
     }
 
@@ -119,8 +119,8 @@ class MetadataGuardTest {
     void whatCannotBeToldIsReadEveryTime() {
         Msg unknown = new LoadMsg.MetadataChecked(CheckMetadata.GUARDED.map(load -> Tuple.of(load, Option.none())));
 
-        Next first = Update.update(idle(), unknown);
-        Next second = Update.update(finished(first), unknown);
+        Next first = TestModels.stepped(idle(), unknown);
+        Next second = TestModels.stepped(finished(first), unknown);
 
         assertEquals(CheckMetadata.GUARDED, first.cmds());
         assertEquals(CheckMetadata.GUARDED, second.cmds());
@@ -128,7 +128,7 @@ class MetadataGuardTest {
 
     @Test
     void aLoadThatFailedIsTriedAgainOnTheNextCheck() {
-        Model read = finished(Update.update(idle(), checked("b1", "s1", "w1")));
+        Model read = finished(TestModels.stepped(idle(), checked("b1", "s1", "w1")));
 
         Model failed = Update.update(read, new LoadMsg.Failed(BRANCHES, refused("boom")))
                 .model();
@@ -140,7 +140,7 @@ class MetadataGuardTest {
 
     @Test
     void aCheckThatFailedReadsWhatItGuards() {
-        Model read = finished(Update.update(idle(), checked("b1", "s1", "w1")));
+        Model read = finished(TestModels.stepped(idle(), checked("b1", "s1", "w1")));
 
         Next next = Update.update(read, new LoadMsg.Failed(new CheckMetadata(), refused("boom")));
 

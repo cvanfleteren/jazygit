@@ -1,8 +1,6 @@
 package net.vanfleteren.jazygit.feature.fetch;
 
 import io.vavr.collection.List;
-import io.vavr.control.Option;
-import net.vanfleteren.jazygit.state.Fetching;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.PullRequestsUpdate;
 import net.vanfleteren.jazygit.state.Update;
@@ -12,7 +10,8 @@ import net.vanfleteren.jazygit.state.Update.Next;
  * Fetching from the remotes in the background, one after the other, so the remote being fetched from can be
  * shown. Neither the commands nor the failures are: it runs every minute, also while offline. A remote
  * that cannot be fetched from does not keep the others from being fetched. When it last fetched, and whether
- * it failed since, is kept, as the line at the bottom says.
+ * it failed since, is kept, as the line at the bottom says. A fetch runs while one of its commands does (ADR 39): each
+ * fetch from a remote carries the remotes still to fetch from after it.
  */
 public final class FetchUpdate {
 
@@ -24,21 +23,18 @@ public final class FetchUpdate {
     public static Next update(Model model, FetchMsg msg) {
         return switch (msg) {
             // A fetch that is still running is not started again.
-            case FetchMsg.Tick() when model.jobs().fetching().isDefined() -> Next.of(model);
+            case FetchMsg.Tick() when fetching(model) -> Next.of(model);
             case FetchMsg.Tick() -> start(Next.of(model));
             case FetchMsg.RemotesListed(List<String> remotes) -> next(model, remotes);
             case FetchMsg.ListingFailed(var failure) -> {
-                Next stopped = Next.of(model.mapJobs(jobs -> jobs.withFetching(Option.none())
-                        .withLastFetch(jobs.lastFetch().failed(LISTING))));
-                yield model.jobs().fetching().exists(Fetching::again) ? start(stopped) : stopped;
+                Next stopped = Next.of(model.mapJobs(
+                        jobs -> jobs.withLastFetch(jobs.lastFetch().failed(LISTING))));
+                yield model.jobs().fetchAgain() ? start(stopped) : stopped;
             }
-            case FetchMsg.Fetched(String remote) ->
-                next(
-                        model.mapJobs(
-                                jobs -> jobs.withLastFetch(jobs.lastFetch().succeeded(remote, model.now()))),
-                        queued(model));
-            case FetchMsg.FetchFailed(String remote, var failure) ->
-                next(model.mapJobs(jobs -> jobs.withLastFetch(jobs.lastFetch().failed(remote))), queued(model));
+            case FetchMsg.Fetched(String remote, List<String> rest) ->
+                next(model.mapJobs(jobs -> jobs.withLastFetch(jobs.lastFetch().succeeded(remote, model.now()))), rest);
+            case FetchMsg.FetchFailed(String remote, List<String> rest, var failure) ->
+                next(model.mapJobs(jobs -> jobs.withLastFetch(jobs.lastFetch().failed(remote))), rest);
         };
     }
 
@@ -47,22 +43,22 @@ public final class FetchUpdate {
      * running, which may have missed it, once that one is done.
      */
     public static Next requested(Next next) {
-        return next.model()
-                .jobs()
-                .fetching()
-                .map(running -> new Next(
-                        next.model().mapJobs(jobs -> jobs.withFetching(Option.of(running.thenAgain()))), next.cmds()))
-                .getOrElse(() -> start(next));
+        return fetching(next.model())
+                ? new Next(next.model().mapJobs(jobs -> jobs.withFetchAgain(true)), next.cmds())
+                : start(next);
+    }
+
+    /**
+     * Whether a fetch runs: the remotes are listed, or one is fetched from.
+     */
+    private static boolean fetching(Model model) {
+        return model.jobs().runs(FetchCmd.class::isInstance);
     }
 
     private static Next start(Next next) {
         return new Next(
-                next.model().mapJobs(jobs -> jobs.withFetching(Option.of(Fetching.LISTING))),
+                next.model().mapJobs(jobs -> jobs.withFetchAgain(false)),
                 next.cmds().append(new FetchCmd.ListRemotes()));
-    }
-
-    private static List<String> queued(Model model) {
-        return model.jobs().fetching().map(Fetching::queued).getOrElse(List.empty());
     }
 
     /**
@@ -70,12 +66,8 @@ public final class FetchUpdate {
      * came in, and how their pull requests are doing now.
      */
     private static Next next(Model model, List<String> remotes) {
-        boolean again = model.jobs().fetching().exists(Fetching::again);
         return remotes.pop2Option()
-                .map(next -> Next.of(
-                        model.mapJobs(
-                                jobs -> jobs.withFetching(Option.of(new Fetching(Option.of(next._1), next._2, again)))),
-                        new FetchCmd.Fetch(next._1)))
+                .map(next -> Next.of(model, new FetchCmd.Fetch(next._1, next._2)))
                 .getOrElse(() -> done(model));
     }
 
@@ -83,8 +75,7 @@ public final class FetchUpdate {
      * The fetch is done; one that was asked for meanwhile starts right away.
      */
     private static Next done(Model model) {
-        boolean again = model.jobs().fetching().exists(Fetching::again);
-        Next done = PullRequestsUpdate.load(Update.refresh(model.mapJobs(jobs -> jobs.withFetching(Option.none()))));
-        return again ? start(done) : done;
+        Next done = PullRequestsUpdate.load(Update.refresh(model));
+        return model.jobs().fetchAgain() ? start(done) : done;
     }
 }

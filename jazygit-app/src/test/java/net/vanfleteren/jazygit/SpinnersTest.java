@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Reading;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.ui.BranchesPanel;
 import net.vanfleteren.jazygit.ui.TimeText;
 import org.junit.jupiter.api.Test;
 
@@ -49,10 +50,13 @@ class SpinnersTest {
 
     @Test
     void aBusyBranchShowsOneInTheListThatHasIt() {
-        Model busy = LOADED.withBusyBranch(FEATURE, PushCmd.PUSH);
+        Model busy = TestModels.busy(LOADED, FEATURE, PushCmd.PUSH);
 
         assertTrue(Spinners.shown(busy, NOW));
-        assertFalse(Spinners.shown(
+        assertFalse(BranchesPanel.showsSpinner(Update.update(busy, new BranchesTabMsg.Chosen(BranchesTab.REMOTE))
+                .model()));
+        // The line at the bottom still says that the push runs.
+        assertTrue(Spinners.shown(
                 Update.update(busy, new BranchesTabMsg.Chosen(BranchesTab.REMOTE))
                         .model(),
                 NOW));

@@ -55,7 +55,7 @@ class FetchLineTest {
 
     @Test
     void aCommandShowsOnlyOnceItRanAWhile() throws Exception {
-        Model fetching = running(TestModels.loaded(), new FetchCmd.Fetch("origin"), START);
+        Model fetching = running(TestModels.loaded(), new FetchCmd.Fetch("origin", List.empty()), START);
 
         assertEquals("", rendered(fetching, START.plusMillis(299)));
         assertEquals(spinning(START.plusMillis(300), "Fetching origin"), rendered(fetching, START.plusMillis(300)));
@@ -65,7 +65,7 @@ class FetchLineTest {
     void theCommandThatRanLongestShowsWithHowManyMoreDo() throws Exception {
         Model model = running(
                 running(
-                        running(TestModels.loaded(), new FetchCmd.Fetch("origin"), START),
+                        running(TestModels.loaded(), new FetchCmd.Fetch("origin", List.empty()), START),
                         new Cmd.LoadStatus(),
                         START.plusMillis(100)),
                 new Cmd.LoadBranches(),
@@ -78,8 +78,8 @@ class FetchLineTest {
     @Test
     void whatShowedLingersOnceItIsDone() throws Exception {
         Instant done = START.plusSeconds(1);
-        Model model = running(TestModels.loaded(), new FetchCmd.Fetch("origin"), START)
-                .mapJobs(jobs -> jobs.withDone(0, done));
+        Model model = running(TestModels.loaded(), new FetchCmd.Fetch("origin", List.empty()), START)
+                .mapJobs(jobs -> jobs.withDone(jobs.running().keySet().min().get(), done));
 
         assertEquals(spinning(done.plusMillis(299), "Fetching origin"), rendered(model, done.plusMillis(299)));
         assertEquals("", rendered(model, done.plus(Jobs.LINGER)));
@@ -89,10 +89,10 @@ class FetchLineTest {
     void aCommandThatShowedDoesNotLingerWhileAnotherShows() throws Exception {
         Instant done = START.plusSeconds(1);
         Model model = running(
-                        running(TestModels.loaded(), new FetchCmd.Fetch("origin"), START),
+                        running(TestModels.loaded(), new FetchCmd.Fetch("origin", List.empty()), START),
                         new Cmd.LoadStatus(),
                         START.plusMillis(100))
-                .mapJobs(jobs -> jobs.withDone(0, done));
+                .mapJobs(jobs -> jobs.withDone(jobs.running().keySet().min().get(), done));
 
         assertEquals(Option.none(), model.jobs().lingering());
         assertEquals(spinning(done, "Reading the status"), rendered(model, done));
@@ -114,7 +114,7 @@ class FetchLineTest {
                         .withNow(now)
                         .mapJobs(
                                 jobs -> jobs.withLastFetch(Freshness.NEVER.succeeded("origin", now.minusSeconds(120)))),
-                new FetchCmd.Fetch("origin"),
+                new FetchCmd.Fetch("origin", List.empty()),
                 START);
         String spinner = TimeText.spinnerFrame(now) + " ";
 
@@ -135,7 +135,7 @@ class FetchLineTest {
                         .mapRepoView(view -> view.withCherryPick(Option.of(copied)))
                         .mapJobs(
                                 jobs -> jobs.withLastFetch(Freshness.NEVER.succeeded("origin", now.minusSeconds(120)))),
-                new FetchCmd.Fetch("origin"),
+                new FetchCmd.Fetch("origin", List.empty()),
                 START);
         String cherryPick = "Copied " + copied.shortSha()
                 + " to cherry-pick · V to cherry-pick onto the checked out branch · Esc to cancel";
@@ -151,7 +151,7 @@ class FetchLineTest {
     void howManyMoreRunIsKeptWholeAsTheLabelIsCut() throws Exception {
         Instant now = START.plusSeconds(1);
         Model model = running(
-                running(TestModels.loaded(), new FetchCmd.Fetch("origin"), START),
+                running(TestModels.loaded(), new FetchCmd.Fetch("origin", List.empty()), START),
                 new Cmd.LoadStatus(),
                 START.plusMillis(100));
         String spinner = TimeText.spinnerFrame(now) + " ";
@@ -164,7 +164,8 @@ class FetchLineTest {
         assertEquals("Working…", FetchLine.labelText(Label.WORKING));
         assertEquals(
                 "Fetching origin",
-                FetchLine.labelText(new FetchCmd.Fetch("origin").label().get()));
+                FetchLine.labelText(
+                        new FetchCmd.Fetch("origin", List.empty()).label().get()));
         assertEquals("Reading pull request #12345", FetchLine.labelText(Label.of("work.pullRequest", "12345")));
         BranchName feature = new BranchName("feature");
         BranchRef base = new BranchRef.Local(new BranchName("main"));

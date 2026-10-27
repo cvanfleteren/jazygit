@@ -18,21 +18,18 @@ import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
  * What happens when something was read from the repository. The load is no longer running, whatever came of
- * it.
+ * it: {@link Msg.Done} took it out of what runs.
  */
 public final class LoadUpdate {
 
     private LoadUpdate() {}
 
     public static Next update(Model model, LoadMsg msg) {
-        Model done = model.mapJobs(jobs -> jobs.withRefreshing(jobs.refreshing().remove(msg.cmd()))
-                .withoutFailedRead(msg.cmd())
-                .withRead(msg.cmd(), msg instanceof LoadMsg.Failed));
+        Model done = model.mapJobs(
+                jobs -> jobs.withoutFailedRead(msg.cmd()).withRead(msg.cmd(), msg instanceof LoadMsg.Failed));
         return switch (msg) {
             // A skipped load read nothing, and is not a failure to try again later.
-            case Skipped(var cmd) ->
-                Next.of(model.mapJobs(
-                        jobs -> jobs.withRefreshing(jobs.refreshing().remove(cmd))));
+            case Skipped skipped -> Next.of(model);
             // What was read with other diff options than the ones now chosen is dropped, whatever came of it.
             case LoadMsg m when stale(done, m.cmd()) -> Next.of(done);
             case StatusLoaded(RepoStatus status) ->
@@ -131,16 +128,15 @@ public final class LoadUpdate {
      */
     private static Next metadataChecked(Model model, List<Tuple2<Cmd.Load, Option<MetadataStamp>>> stamps) {
         List<Tuple2<Cmd.Load, Option<MetadataStamp>>> changed = stamps.filter(
-                        stamp -> !model.jobs().refreshing().contains(stamp._1()))
+                        stamp -> !model.jobs().runs(stamp._1()))
                 .filter(stamp -> stamp._2().isEmpty()
                         || !model.jobs().readAt().get(stamp._1()).equals(stamp._2()));
         List<Cmd.Load> loads = changed.map(Tuple2::_1);
         return new Next(
-                model.mapJobs(jobs -> jobs.withRefreshing(jobs.refreshing().addAll(loads))
-                        .withReadAt(changed.foldLeft(
-                                jobs.readAt(),
-                                (readAt, stamp) -> stamp._2()
-                                        .fold(() -> readAt.remove(stamp._1()), now -> readAt.put(stamp._1(), now))))),
+                model.mapJobs(jobs -> jobs.withReadAt(changed.foldLeft(
+                        jobs.readAt(),
+                        (readAt, stamp) ->
+                                stamp._2().fold(() -> readAt.remove(stamp._1()), now -> readAt.put(stamp._1(), now))))),
                 List.narrow(loads));
     }
 

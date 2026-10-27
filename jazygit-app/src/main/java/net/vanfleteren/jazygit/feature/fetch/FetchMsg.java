@@ -26,9 +26,9 @@ public sealed interface FetchMsg extends Msg {
     record ListingFailed(Failure failure) implements FetchMsg {}
 
     /**
-     * {@code remote} was fetched from; the model's clock tells when.
+     * {@code remote} was fetched from, and {@code rest} are still to fetch from; the model's clock tells when.
      */
-    record Fetched(String remote) implements FetchMsg {}
+    record Fetched(String remote, List<String> rest) implements FetchMsg {}
 
-    record FetchFailed(String remote, Failure failure) implements FetchMsg {}
+    record FetchFailed(String remote, List<String> rest, Failure failure) implements FetchMsg {}
 }

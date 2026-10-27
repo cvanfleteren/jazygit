@@ -420,8 +420,8 @@ TamboUI's own 40 ms tick is turned off (`noTick()`), so a frame is only drawn wh
 - **An event that is handled**, or a resize: TamboUI draws after those by itself.
 - **A model that draws differently**: `Program` calls `modelChanged` when a message leaves a model whose
   `Model.drawn()` differs from the one before. `Model.drawn()` leaves out what only starts loads
-  (`Jobs.refreshing`, `Jobs.worktreeChangesRead`) and the commands that run (`Jobs.running`), and takes the time
-  to the second, so the periodic loads of an idle app draw nothing. This covers
+  (`Jobs.readAt`, `Jobs.worktreeChangesRead`) and the commands that run (`Jobs.running`), but for the operations
+  that keep a branch busy, whose spinner shows at once; and it takes the time to the second, so the periodic loads of an idle app draw nothing. This covers
   the outcome of commands, the model's ticks and the reports of the widgets.
 - **`JazygitApp.requestRedraw()`**, for what the model does not see: a turning spinner (every 120 ms while
   `Spinners.shown`), a frame that moved the focus (`redrawIfFocusMoves`), a mouse press (a click on nothing clears
@@ -458,13 +458,13 @@ and the worktrees are read from (`Cmd.CheckMetadata`). That check runs no git: i
 Only a load whose stamp differs from the one it was last started with (`Jobs.readAt`) runs again, so an idle app
 runs one git process per tick instead of four. An operation that is done reads all of them at once
 (`Update.refresh`), without waiting for the files to tell. That keeps the screen in sync with changes made outside
-the app. A periodic load is skipped while an equal one is still running: `Model.refreshing` holds the loads that are
-running. See `documentation/adr/0015-check-metadata-before-loading.md`.
+the app. A periodic load is skipped while an equal one is still running (`Jobs.runs`). See
+`documentation/adr/0015-check-metadata-before-loading.md`.
 
 A read that failed is tried again on a tick only once it waited 1, 2, 4… up to 64 ticks after each failure in a row
 (`Jobs.retries`, `Jobs.retryDue`); `Update.refresh` tries it at once. The previews (a branch's log, a commit's or a
 stash's changes, the files' diff) each take a slot, so highlighting faster than git answers only reads the last item;
-a load cancelled that way reports `LoadMsg.Skipped`, which takes it out of `refreshing`. See
+a load cancelled that way reports `LoadMsg.Skipped`, and is done like any other command. See
 `documentation/adr/0031-preview-slots-and-retry-backoff.md`.
 
 Every message is handled at the time it is: `Program` hands it to `Update.step(model, msg, now)`, which sets
@@ -481,6 +481,11 @@ out of `running` and applies what it carries. The handlers never see an id: they
 `Program` only gets the stamped `Launch(id, cmd)`s of a `Step`. `Update.begin` stamps the first loads the same way.
 With `--debug`, each command that is done is logged with how long it ran and what it reported.
 
+`Jobs.running` is all the model knows of what runs (ADR 39): whether a load or a read of GitHub runs already is
+`Jobs.runs(cmd)`, the branches an operation runs on are `Jobs.busy()`, from the `busyBranch()` of the
+`OperationCmd`s that run, and a fetch runs while a `FetchCmd` does. As a message's commands only run once it is
+handled, `Next` drops a command equal to one the same message asked for before.
+
 The line under everything else (`ui.FetchLine`) shows what runs, on its right, before how fresh the screen is: a
 spinner, the label of the command that ran longest of those that ran 300 ms (`Jobs.SHOWN_AFTER`), and how many more
 did, like `Fetching origin +2`. A command says what it shows as with `Cmd.label()`, a message key with its arguments
@@ -493,8 +498,9 @@ runs or a label lingers. See `documentation/adr/0033-show-that-work-is-being-don
 Every minute a `FetchMsg.Tick` fetches from the remotes in the background, unless the previous fetch is
 still running. `FetchUpdate` lists the remotes (those `git fetch --all` would fetch) and fetches them one after
 the other with `git fetch --prune <remote>`, so branches deleted on the remote show as gone, whatever
-`fetch.prune` says. `Model.fetching` holds the remote being fetched from, which the line at
-the bottom of the screen shows, and the remotes still queued. When the queue is empty, the branches reload.
+`fetch.prune` says. Each `FetchCmd.Fetch` carries the remotes still to fetch from after it, and its
+message hands them back; the one that runs shows at the bottom of the screen as its label. When none are left, the
+branches reload.
 `Model.lastFetch` (a `Freshness`) holds when a remote was last fetched from, as `FetchCmd.Fetch` timed it, and the
 remotes that failed the last time; the right of the line at the bottom says it, as "fetched 2m ago", with "last fetch
 failed" when one did.
@@ -502,12 +508,12 @@ Neither the commands nor the failures are shown, since fetching also runs while 
 doesn't stop the others. Once the fetch is done, the open pull requests are read again with `gh` (also once at
 startup), into `Model.pullRequests`, which is none until they were read once. That read lives in `state` (`PullRequestsUpdate`, `LoadPullRequests`),
 next to the other periodic reads, so the fetch does not depend on the GitHub feature. While it runs, the line
-at the bottom says so, and `Model.readingPullRequests` keeps another read from starting; a failure there is
+at the bottom says so, and another read does not start (`GitHubReads`); a failure there is
 not shown either, as gh may be missing or logged out.
 
 A change made on GitHub (creating, merging or closing a pull request) asks for a fetch at once, through
 `FetchUpdate.requested`, so the branches show it without waiting for the next tick. When a fetch is already
-running, it may have missed the change, so `Fetching.again` makes another one follow it. The pull requests are
+running, it may have missed the change, so `Jobs.fetchAgain` makes another one follow it. The pull requests are
 read again at once too, even when a read is running, as that one may have missed the change as well.
 
 ## Core types
@@ -553,7 +559,7 @@ classDiagram
         Option popup
         Option error
         List commandLog
-        Set refreshing
+        Jobs jobs
         ...
     }
     class Loadable {
@@ -592,7 +598,7 @@ classDiagram
     `GitError`, the commands that ran, and why the cleanup failed if it did), `Failure.GitHub` (the `GhError`
     and the commands that ran) or `Failure.Bug` (the command threw, which `Program.perform` catches).
 - **`Cmd.Load`** reads part of the repository into the model, as a `Loadable`. Every `LoadMsg` names its
-  load, so `LoadUpdate` marks it as no longer running in one place.
+  load, so `LoadUpdate` knows which read came back or failed; `Msg.Done` has taken it out of what runs.
 - **`OperationCmd`** changes the repository. It names its `Operation`, the branch it is done to, and the branch
   it keeps busy. An `Operation` is a record that the feature declares next to its commands (`DropCmd.DROP`,
   ...): the command log title, the error message, whether it waits until nothing is unfinished, and what a

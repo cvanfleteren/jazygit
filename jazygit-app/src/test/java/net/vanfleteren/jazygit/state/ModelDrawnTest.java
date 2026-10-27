@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.state;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
@@ -21,17 +20,10 @@ class ModelDrawnTest {
 
     @Test
     void aBusyBranchIsDrawn() {
-        Model busy = model.withBusyBranch(
-                new BranchRef.Local(new BranchName("main")), Operation.of("log.push", "error.push"));
+        Model busy = TestModels.busy(
+                model, new BranchRef.Local(new BranchName("main")), Operation.of("log.push", "error.push"));
 
         assertNotEquals(model.drawn(), busy.drawn());
-    }
-
-    @Test
-    void aFetchIsDrawn() {
-        Model fetching = model.mapJobs(jobs -> jobs.withFetching(Option.of(new Fetching(Option.none(), List.empty()))));
-
-        assertNotEquals(model.drawn(), fetching.drawn());
     }
 
     @Test
@@ -43,7 +35,7 @@ class ModelDrawnTest {
 
     @Test
     void theLoadsRunningAndWhenTheyReadAreNotDrawn() {
-        Model loading = model.mapJobs(jobs -> jobs.withRefreshing(HashSet.of(new Cmd.LoadStatus()))
+        Model loading = model.mapJobs(jobs -> jobs.withFetchAgain(true)
                 .withWorktreeChangesRead(Option.of(Instant.EPOCH))
                 .ticked()
                 .withRead(new Cmd.LoadStatus(), true));

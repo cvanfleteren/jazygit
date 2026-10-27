@@ -106,8 +106,10 @@ class BranchesPanelTest {
 
     @Test
     void aBranchBeingPushedOrPulledShowsWhatIsDoneLeftOfTheSpinner() throws Exception {
-        Model busy = before.withBusyBranch(new BranchRef.Local(new BranchName("feature")), PushCmd.PUSH)
-                .withBusyBranch(new BranchRef.Local(new BranchName("main")), PullCmd.PULL);
+        Model busy = TestModels.busy(
+                TestModels.busy(before, new BranchRef.Local(new BranchName("feature")), PushCmd.PUSH),
+                new BranchRef.Local(new BranchName("main")),
+                PullCmd.PULL);
         String frame = net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(java.time.Instant.EPOCH);
         BranchesPanel panel = new BranchesPanel(
                 msg -> {}, tab -> {}, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
@@ -121,7 +123,7 @@ class BranchesPanelTest {
     @Test
     void aBranchBeingDeletedShowsOnlyTheSpinner() throws Exception {
         Model deleting =
-                before.withBusyBranch(new BranchRef.Local(new BranchName("feature")), DeleteBranchCmd.DELETE_BRANCH);
+                TestModels.busy(before, new BranchRef.Local(new BranchName("feature")), DeleteBranchCmd.DELETE_BRANCH);
         String frame = net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(java.time.Instant.EPOCH);
         BranchesPanel panel = new BranchesPanel(
                 msg -> {}, tab -> {}, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
@@ -615,7 +617,7 @@ class BranchesPanelTest {
                 java.util.List.of(
                         new AheadMsg.Toggled(), new BranchCommitsMsg.Closed(), new BranchesTabMsg.Switched(1)),
                 dispatched);
-        assertFalse(BranchesPanel.showsSpinner(open.withBusyBranch(feature, PushCmd.PUSH)));
+        assertFalse(BranchesPanel.showsSpinner(TestModels.busy(open, feature, PushCmd.PUSH)));
     }
 
     /**

@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.state;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchCmd.DeleteBranch;
@@ -33,7 +34,7 @@ class RemoteRefsGuardTest {
 
     @Test
     void fetchingPullingAndPushingTakeIt() {
-        assertEquals(GUARDED, new FetchCmd.Fetch("origin").guard());
+        assertEquals(GUARDED, new FetchCmd.Fetch("origin", List.empty()).guard());
         assertEquals(GUARDED, new PullCmd.Pull(FEATURE).guard());
         assertEquals(GUARDED, new PullCmd.FastForward(FEATURE, new BranchRef.Remote(UPSTREAM)).guard());
         assertEquals(GUARDED, new PushCmd.Push(FEATURE, UPSTREAM, PushMode.FAST_FORWARD).guard());

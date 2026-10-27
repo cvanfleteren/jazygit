@@ -47,6 +47,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Reading;
 import net.vanfleteren.jazygit.state.Repositories;
 import net.vanfleteren.jazygit.state.Terminal;
+import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -150,7 +151,7 @@ class CommentUpdateTest {
     @Test
     void aCommentSentWhileTheDraftChangesLeavesTheBranchBusyUntilThatIsDone() {
         SetDraft drafting = new SetDraft(FEATURE, 42, true);
-        Model busy = commenting("Looks good").withBusyBranch(new BranchRef.Local(FEATURE), PullRequestCmd.DRAFT_PR);
+        Model busy = TestModels.running(commenting("Looks good"), drafting);
         Next sending = Update.update(busy, new CommentMsg.Confirmed());
         AddComment cmd = (AddComment) sending.cmds().head();
         Env env = env(new StubGitProvider() {}, StubGitHub.empty(), Terminal.NONE);
@@ -158,7 +159,7 @@ class CommentUpdateTest {
         Model sent = Update.update(sending.model(), cmd.run(env)).model();
 
         assertEquals(Option.of(PullRequestCmd.DRAFT_PR), sent.jobs().busy().get(new BranchRef.Local(FEATURE)));
-        Model drafted = Update.update(sent, drafting.run(env)).model();
+        Model drafted = TestModels.done(sent, drafting, drafting.run(env)).model();
         assertEquals(Option.none(), drafted.jobs().busy().get(new BranchRef.Local(FEATURE)));
     }
 

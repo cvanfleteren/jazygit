@@ -35,10 +35,10 @@ public final class BranchChecksUpdate {
             // How long the checks take is learned from them too.
             case BranchChecksMsg.RunsLoaded(PendingChecks checks) ->
                 CheckTimesUpdate.read(
-                        Next.of(runsDone(model).mapGitHub(gitHub -> gitHub.withPendingChecks(Option.of(checks)))),
+                        Next.of(model.mapGitHub(gitHub -> gitHub.withPendingChecks(Option.of(checks)))),
                         checks.repository(),
                         checks.byBranch().values().toList().flatMap(runs -> runs));
-            case BranchChecksMsg.RunsFailed(var failure) -> Next.of(runsDone(model));
+            case BranchChecksMsg.RunsFailed(var failure) -> Next.of(model);
         };
     }
 
@@ -48,19 +48,11 @@ public final class BranchChecksUpdate {
      * next read of the branch checks starts another when needed.
      */
     private static boolean readingRuns(Model model) {
-        return model.gitHub().reading().exists(read -> read instanceof LoadBranchCheckRuns);
+        return model.jobs().runs(LoadBranchCheckRuns.class::isInstance);
     }
 
     private static Next startRuns(Next next, LoadBranchCheckRuns read) {
-        return new Next(
-                next.model()
-                        .mapGitHub(gitHub -> gitHub.withReading(gitHub.reading().add(read))),
-                next.cmds().append(read));
-    }
-
-    private static Model runsDone(Model model) {
-        return model.mapGitHub(
-                gitHub -> gitHub.withReading(gitHub.reading().filter(read -> !(read instanceof LoadBranchCheckRuns))));
+        return new Next(next.model(), next.cmds().append(read));
     }
 
     /**

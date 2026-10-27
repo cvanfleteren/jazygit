@@ -115,7 +115,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule updatesArePure = noClasses()
             .that()
-            .haveNameMatching(".*\\.(\\w*(Update|Msg|Popup)|Model|Preview|Loadable|Fetching|AppError|Operation"
+            .haveNameMatching(".*\\.(\\w*(Update|Msg|Popup)|Model|Preview|Loadable|AppError|Operation"
                     + "|LogEntry|CommandLog)(\\$.*)?")
             .should()
             .dependOnClassesThat(effects())

@@ -1,7 +1,5 @@
 package net.vanfleteren.jazygit.state.prs;
 
-import io.vavr.collection.HashSet;
-import io.vavr.collection.Set;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import lombok.With;
@@ -10,7 +8,6 @@ import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.settings.UnseenPullRequests;
 import net.vanfleteren.jazygit.state.AppError;
-import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Freshness;
 import net.vanfleteren.jazygit.state.Loadable;
@@ -27,7 +24,6 @@ import net.vanfleteren.jazygit.state.Preview;
  * @param repositoryName  the repository on GitHub, as {@code owner/name}, once its pull requests were read
  * @param unseen          the pull requests of the repository that were opened and not seen yet, once they were
  *                        read (ADR 29)
- * @param reading         the reads that are running, so a tick does not start them again
  * @param freshness       when the pull requests were last read, and which reads failed the last time
  * @param highlighted     the pull request highlighted in the pane in use, once one is
  * @param preview         what the highlighted pull request says and changes, once one is highlighted
@@ -43,7 +39,6 @@ public record PrOverview(
         Loadable<PullRequestList> repository,
         Option<String> repositoryName,
         Option<UnseenPullRequests> unseen,
-        Set<Cmd> reading,
         Freshness freshness,
         Option<PullRequestSummary> highlighted,
         Option<Preview<PullRequestSummary, PullRequestPreview>> preview,
@@ -56,7 +51,6 @@ public record PrOverview(
             Loadable.loading(),
             Option.none(),
             Option.none(),
-            HashSet.empty(),
             Freshness.NEVER,
             Option.none(),
             Option.none(),

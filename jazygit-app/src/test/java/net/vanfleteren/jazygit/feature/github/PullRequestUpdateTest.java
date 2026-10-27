@@ -650,7 +650,7 @@ class PullRequestUpdateTest {
     private static Next confirmed(NewPullRequest pullRequest) {
         Model edited = Update.update(creating(), new CreatePullRequestMsg.PullRequestEdited(pullRequest))
                 .model();
-        return Update.update(edited, new CreatePullRequestMsg.Confirmed());
+        return TestModels.stepped(edited, new CreatePullRequestMsg.Confirmed());
     }
 
     /**
@@ -711,7 +711,7 @@ class PullRequestUpdateTest {
         Model asking = Update.update(model(), new PullRequestMsg.Requested(UNPUSHED.name()))
                 .model();
 
-        Next pushing = Update.update(asking, new CreatePullRequestMsg.PushFirstConfirmed());
+        Next pushing = TestModels.stepped(asking, new CreatePullRequestMsg.PushFirstConfirmed());
 
         assertEquals(
                 List.of(new PushFirst(
@@ -1398,7 +1398,7 @@ class PullRequestUpdateTest {
     @Test
     void theDetailsAreNotReadAgainWhileTheBranchIsBusy() {
         // A read running while it becomes a draft could miss that, and show it undone.
-        Next drafting = Update.update(showingDetails(), new PullRequestMsg.DraftChosen());
+        Next drafting = TestModels.stepped(showingDetails(), new PullRequestMsg.DraftChosen());
         SetDraft cmd = (SetDraft) drafting.cmds().head();
 
         assertEquals(
@@ -1409,7 +1409,7 @@ class PullRequestUpdateTest {
                 List.empty(),
                 Update.update(drafting.model(), new PullRequestMsg.Tick()).cmds());
 
-        Model done = Update.update(drafting.model(), cmd.run(env())).model();
+        Model done = TestModels.done(drafting.model(), cmd, cmd.run(env())).model();
         assertEquals(
                 List.of(new LoadPullRequestDetails(42, done.gitHub().nextRead())),
                 Update.update(aMinuteOn(done), new PullRequestMsg.Tick()).cmds());
@@ -1477,8 +1477,8 @@ class PullRequestUpdateTest {
                                 lastRead(shown),
                                 StubGitHub.empty().pullRequestDetails(42).get()))
                 .model();
-        Next merging = Update.update(read, new PullRequestMsg.MergeChosen(MergeMethod.SQUASH));
-        Next closing = Update.update(read, new PullRequestMsg.CloseChosen());
+        Next merging = TestModels.stepped(read, new PullRequestMsg.MergeChosen(MergeMethod.SQUASH));
+        Next closing = TestModels.stepped(read, new PullRequestMsg.CloseChosen());
 
         assertEquals(
                 List.of(new MergePullRequest(new BranchName("feature"), 42, "", MergeMethod.SQUASH)), merging.cmds());
@@ -1507,7 +1507,7 @@ class PullRequestUpdateTest {
                                 lastRead(shown),
                                 StubGitHub.empty().pullRequestDetails(42).get()))
                 .model();
-        Next drafting = Update.update(read, new PullRequestMsg.DraftChosen());
+        Next drafting = TestModels.stepped(read, new PullRequestMsg.DraftChosen());
 
         assertEquals(List.of(new SetDraft(FEATURE, 42, true)), drafting.cmds());
         assertTrue(drafting.model().popup(PullRequestPopup.class).isDefined());
@@ -1545,9 +1545,9 @@ class PullRequestUpdateTest {
     @Test
     void markingADraftReadyRunsGhPrReady() {
         SetDraft cmd = new SetDraft(FEATURE, 42, false);
-        Model marking = withPr().withBusyBranch(new BranchRef.Local(FEATURE), PullRequestCmd.READY_PR);
+        Model marking = TestModels.running(withPr(), cmd);
 
-        Next done = Update.update(marking, cmd.run(env()));
+        Next done = TestModels.done(marking, cmd, cmd.run(env()));
 
         assertEquals(
                 "gh pr ready 42",
@@ -1571,8 +1571,7 @@ class PullRequestUpdateTest {
      */
     private static Model asked(Model model) {
         MergePullRequest cmd = new MergePullRequest(FEATURE, 42, "abc123", MergeMethod.MERGE);
-        return Update.update(
-                        model.withBusyBranch(new BranchRef.Local(FEATURE), PullRequestCmd.MERGE_PR), cmd.run(env()))
+        return TestModels.done(TestModels.running(model, cmd), cmd, cmd.run(env()))
                 .model();
     }
 
@@ -1580,11 +1579,10 @@ class PullRequestUpdateTest {
     void aMergedPullRequestIsReadAgainOnceAnEarlierReadIsDone() {
         MergePullRequest cmd = new MergePullRequest(FEATURE, 42, "", MergeMethod.MERGE);
         // The running read started before the merge, and would list the pull request as still open.
-        Model merging = withPr().withBusyBranch(new BranchRef.Local(FEATURE), PullRequestCmd.MERGE_PR)
-                .mapGitHub(gitHub -> gitHub.withReading(io.vavr.collection.HashSet.of(new LoadPullRequests())));
+        Model merging = TestModels.running(withPr(), cmd, new LoadPullRequests());
 
-        Next done = Update.update(merging, cmd.run(new Env(new StubGitProvider() {}, mergingAtOnce())));
-        Next earlierRead = Update.update(done.model(), new PullRequestsMsg.Loaded(List.of()));
+        Next done = TestModels.done(merging, cmd, cmd.run(new Env(new StubGitProvider() {}, mergingAtOnce())));
+        Next earlierRead = TestModels.done(done.model(), new LoadPullRequests(), new PullRequestsMsg.Loaded(List.of()));
 
         assertFalse(done.cmds().contains(new LoadPullRequests()), done.cmds().toString());
         assertTrue(
@@ -1595,9 +1593,9 @@ class PullRequestUpdateTest {
     @Test
     void aPullRequestGitHubMergedAtOnceShowsMergedUntilThePullRequestsAreReadAgain() {
         MergePullRequest cmd = new MergePullRequest(FEATURE, 42, "", MergeMethod.MERGE);
-        Model merging = withPr().withBusyBranch(new BranchRef.Local(FEATURE), PullRequestCmd.MERGE_PR);
+        Model merging = TestModels.running(withPr(), cmd);
 
-        Next done = Update.update(merging, cmd.run(new Env(new StubGitProvider() {}, mergingAtOnce())));
+        Next done = TestModels.done(merging, cmd, cmd.run(new Env(new StubGitProvider() {}, mergingAtOnce())));
 
         assertEquals(Option.of(FEATURE_PR), done.model().gitHub().pullRequests().flatMap(open -> open.get(FEATURE)));
         assertEquals(Option.of(new MergeStatus.Merged()), done.model().gitHub().merge(42));
@@ -1950,7 +1948,7 @@ class PullRequestUpdateTest {
                 new CreatePullRequest(FEATURE, FEATURE, MAIN.name(), new NewPullRequest("Login", "", true));
         Model creating = confirmed(cmd.pullRequest()).model();
 
-        Next done = Update.update(creating, cmd.run(new Env(new StubGitProvider() {}, StubGitHub.empty())));
+        Next done = TestModels.done(creating, cmd, cmd.run(new Env(new StubGitProvider() {}, StubGitHub.empty())));
 
         assertTrue(done.cmds().contains(new LoadPullRequests()), done.cmds().toString());
         assertEquals(Option.none(), done.model().jobs().busy().get(new BranchRef.Local(new BranchName("feature"))));
@@ -2248,7 +2246,7 @@ class PullRequestUpdateTest {
         Model asked = Update.update(withMainWorktree(CLEAN), new CheckoutPullRequestMsg.WorktreeRequested(own))
                 .model();
 
-        Next adding = Update.update(asked, new Msg.PopupConfirmed(NewWorktreePopup.class));
+        Next adding = TestModels.stepped(asked, new Msg.PopupConfirmed(NewWorktreePopup.class));
         BranchRef login = new BranchRef.Local(new BranchName("feature/login"));
         assertEquals(
                 Option.of(AddWorktreeCmd.ADD_WORKTREE),

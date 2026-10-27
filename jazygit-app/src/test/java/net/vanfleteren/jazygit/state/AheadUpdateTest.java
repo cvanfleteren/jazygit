@@ -159,12 +159,13 @@ class AheadUpdateTest {
                         loaded().mapRepo(repo -> repo.withAhead(Loadable.loading())),
                         new LoadMsg.Failed(load, refused("boom")))
                 .model();
-        Model retrying = Update.update(failed, new Msg.Tick()).model();
-        assertTrue(retrying.jobs().refreshing().contains(load));
+        Model retrying = TestModels.stepped(failed, new Msg.Tick()).model();
+        assertTrue(retrying.jobs().runs(load));
 
-        Model retried = Update.update(retrying, new LoadMsg.AheadLoaded(load, Option.of(ahead(HEAD, origin("main")))))
+        Model retried = TestModels.done(
+                        retrying, load, new LoadMsg.AheadLoaded(load, Option.of(ahead(HEAD, origin("main")))))
                 .model();
-        assertFalse(retried.jobs().refreshing().contains(load));
+        assertFalse(retried.jobs().runs(load));
     }
 
     @Test
