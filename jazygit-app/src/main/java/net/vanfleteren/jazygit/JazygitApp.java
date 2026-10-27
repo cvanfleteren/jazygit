@@ -16,17 +16,12 @@ import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.collection.List;
-import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
-import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -49,8 +44,6 @@ import net.vanfleteren.jazygit.feature.stash.StashDialogs;
 import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
 import net.vanfleteren.jazygit.feature.worktree.WorktreeFeature;
 import net.vanfleteren.jazygit.gh.timing.CheckTimings;
-import net.vanfleteren.jazygit.git.CliGitInfoProvider;
-import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.settings.*;
 import net.vanfleteren.jazygit.state.*;
@@ -69,8 +62,6 @@ public class JazygitApp extends ToolkitApp {
     // In milliseconds; the acceptance tests tick faster, as each of their steps waits for the app to see a change.
     static final Duration REFRESH_INTERVAL = Duration.ofMillis(Long.getLong("jazygit.refreshInterval", 750));
     static final Duration FETCH_INTERVAL = Duration.ofMinutes(1);
-    // How long after a repository opens its pull requests are first read, for the new ones (ADR 29).
-    static final Duration FIRST_PULL_REQUESTS_TICK = Duration.ofSeconds(3);
     // How often GitHub is asked how the merges it does in the background are going (ADR 24).
     static final Duration MERGE_CHECK_INTERVAL = Duration.ofSeconds(2);
     // What is dispatched every so often: the time, the repository read again, and what the remotes and GitHub have.
@@ -91,19 +82,15 @@ public class JazygitApp extends ToolkitApp {
     private static final int COMMITS_PERCENT = 30;
     // A border around a single blank line.
     private static final int MIN_STASH_HEIGHT = 3;
-    // How many background commands run at once: a fetch, the pull requests and a preview, but not so many git or
-    // gh processes that a burst of them slows the machine down or eats into GitHub's rate limit.
-    private static final int BACKGROUND_THREADS = 4;
 
-    private final Env env;
     private final SettingsStore.Loaded settings;
     private final Option<ThemeName> themeOverride;
     private final StyleEngine styleEngine;
-    // Quitting is up to the model, which may refuse; the runner stops on what the update returns.
-    private final Consumer<Msg> dispatch =
-            msg -> this.runtime.forEach(running -> running.program().dispatch(msg));
     // Tells the time a frame is drawn at, which the spinners turn by.
     private final Clock clock = Clock.systemUTC();
+    private final RepositorySession session;
+    // Quitting is up to the model, which may refuse; the runner stops on what the update returns.
+    private final Consumer<Msg> dispatch = this::send;
     private final ContentPanel contentPanel;
     private final FilesPanel filesPanel = new FilesPanel(dispatch, () -> openContent(FilesPanel.ID), this::highlight);
     private final BranchesPanel branchesPanel = new BranchesPanel(
@@ -130,8 +117,6 @@ public class JazygitApp extends ToolkitApp {
                     HelpDialog.popups(dispatch),
                     ErrorDialog.popups(dispatch))
             .flatMap(Function.identity());
-    // What runs while the app is started.
-    private Option<Runtime> runtime = Option.none();
     // How the terminal is set up, and the backend that hands it over to an editor, once the app is started.
     private TuiConfig config = TuiConfig.defaults();
     private Option<HandOverBackend> backend = Option.none();
@@ -152,7 +137,14 @@ public class JazygitApp extends ToolkitApp {
      */
     public JazygitApp(
             Env env, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, StyleEngine styleEngine) {
-        this.env = env.withApp(this::switchTo, this::handOver);
+        this.session = new RepositorySession(
+                env,
+                this::handOver,
+                this::runner,
+                clock,
+                this::requestRedraw,
+                this::quit,
+                model -> runner().focusManager().setFocus(PopupSlot.focusedPane(model)));
         this.settings = settings;
         this.themeOverride = themeOverride;
         this.styleEngine = styleEngine;
@@ -164,31 +156,10 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
-     * Drops what {@code running} has queued, and stops its background commands, like a fetch, half-way; the git
-     * command that runs is not interrupted, which would kill it half-way, say in the middle of a rebase.
+     * Hands {@code msg} to the program of the repository shown.
      */
-    private static void stop(Runtime running) {
-        running.program().stop();
-        running.io().getQueue().clear();
-        running.io().shutdown();
-        running.background().shutdownNow();
-    }
-
-    private static ThreadPoolExecutor singleThread(String name) {
-        return threads(1, Thread.ofPlatform().name(name));
-    }
-
-    /**
-     * {@code size} threads named after {@code name}, taking what they cannot run yet in turn.
-     */
-    private static ThreadPoolExecutor threads(int size, Thread.Builder.OfPlatform name) {
-        return new ThreadPoolExecutor(
-                size,
-                size,
-                0,
-                TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<>(),
-                name.daemon().factory());
+    private void send(Msg msg) {
+        session.dispatch(msg);
     }
 
     /**
@@ -277,7 +248,7 @@ public class JazygitApp extends ToolkitApp {
         runner.eventRouter().addGlobalHandler(this::handleRedraw);
         runner.eventRouter().addGlobalHandler(this::handleGlobalKey);
         runner.eventRouter().addGlobalHandler(this::handleMouse);
-        startRuntime(env, settings, themeOverride, Landing.START);
+        session.start(settings, themeOverride);
         TIMERS.forEach(timer ->
                 every(timer.interval(), () -> dispatch.accept(timer.msg().get())));
         every(TimeText.SPINNER_FRAME, this::turnSpinners);
@@ -344,70 +315,6 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
-     * Starts showing the repository {@code env} reads, from scratch, where {@code landing} says.
-     */
-    private void startRuntime(
-            Env env, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, Landing landing) {
-        ToolkitRunner runner = runner();
-        ThreadPoolExecutor io = singleThread("git-io");
-        ThreadPoolExecutor background =
-                threads(BACKGROUND_THREADS, Thread.ofPlatform().name("git-background-", 1));
-        Program program = Program.start(
-                env,
-                settings,
-                themeOverride,
-                landing,
-                io,
-                background,
-                runner::runOnRenderThread,
-                BugLog::log,
-                this::requestRedraw,
-                this::quit,
-                clock);
-        runtime = Option.of(new Runtime(io, background, program));
-        runner.focusManager().setFocus(PopupSlot.focusedPane(program.model()));
-        // The first tick of the fetch is a while off, so it fetches now; the pull requests show from the start, not
-        // only once the fetch is done.
-        dispatch.accept(new FetchMsg.Tick());
-        dispatch.accept(new PullRequestsMsg.Refresh());
-        // The new pull requests show soon after the repository opens, not a minute later, but after the first reads
-        // (ADR 29); not to a repository switched away from meanwhile.
-        runner.schedule(
-                () -> runner.runOnRenderThread(() -> runtime.filter(running -> running.program() == program)
-                        .forEach(running -> program.dispatch(new PrOverviewMsg.Tick()))),
-                FIRST_PULL_REQUESTS_TICK);
-    }
-
-    /**
-     * Opens the repository containing {@code directory} in place of the one shown, as {@link Repositories} asks;
-     * called on the thread of a command.
-     */
-    private Either<GitError, Path> switchTo(Path directory, Landing landing) {
-        return CliGitInfoProvider.open(directory)
-                .peek(provider -> runner().runOnRenderThread(() -> show(provider, landing)))
-                .map(CliGitInfoProvider::worktree);
-    }
-
-    /**
-     * Shows the repository {@code git} reads instead of the one shown, as if the app had been started there, where
-     * {@code landing} says; the theme and the settings stay as they are in this session.
-     */
-    private void show(CliGitInfoProvider git, Landing landing) {
-        runtime.forEach(running -> {
-            Model last = running.program().model();
-            // Not waiting for the command that runs keeps the UI going. It finishes by itself, in the other
-            // repository, and its outcome goes to the old program, which nobody looks at anymore.
-            stop(running);
-            startRuntime(
-                    RepositoryEnv.reopen(env, git, last.preferences().settings()),
-                    new SettingsStore.Loaded(last.preferences().settings(), Option.none()),
-                    last.preferences().themeOverride(),
-                    landing);
-            requestRedraw();
-        });
-    }
-
-    /**
      * Runs {@code program} with the terminal handed over to it, as {@link Terminal} asks; called on the thread of a
      * command. The app keeps running meanwhile, but draws nothing and reads no keys, and is drawn anew afterwards.
      */
@@ -445,24 +352,14 @@ public class JazygitApp extends ToolkitApp {
 
     @Override
     protected void onStop() {
-        runtime.forEach(running -> {
-            // The git command that runs is given a moment to finish, and else finishes by itself once the app is
-            // gone.
-            stop(running);
-            Try.of(() -> running.io().awaitTermination(2, TimeUnit.SECONDS))
-                    .onFailure(
-                            InterruptedException.class,
-                            e -> Thread.currentThread().interrupt());
-        });
-        runtime = Option.none();
+        session.close();
     }
 
     /**
      * The model of the running program; the initial one before it runs.
      */
     Model model() {
-        return runtime.map(running -> running.program().model())
-                .getOrElse(() -> Model.initial(env.git().repositoryName()));
+        return session.model();
     }
 
     @Override
@@ -623,15 +520,6 @@ public class JazygitApp extends ToolkitApp {
                         - height * (FILES_PERCENT + BRANCHES_PERCENT + COMMITS_PERCENT) / 100)
                 .map(share -> Math.max(MIN_STASH_HEIGHT, Math.min(rows + 2, share)));
     }
-
-    /**
-     * The program and the threads it runs git on, which exist from the start of the app to its stop, or until
-     * another repository is opened in its place.
-     *
-     * @param io         where git is called
-     * @param background where the background commands run, like talking to the remotes and to GitHub
-     */
-    private record Runtime(ThreadPoolExecutor io, ThreadPoolExecutor background, Program program) {}
 
     /**
      * A popup as rendered: its dialog while it is open.
