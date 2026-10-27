@@ -1,0 +1,4 @@
+/*
+ * No styling at all: every element takes the terminal's own colours and the borders tamboui draws by default.
+ * The highlighted row of the pane in use is reversed, and what is behind a popup is dimmed by the terminal.
+ */

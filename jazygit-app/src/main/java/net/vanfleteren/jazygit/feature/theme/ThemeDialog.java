@@ -35,7 +35,9 @@ public final class ThemeDialog {
             'i',
             ThemeName.LIANTIS,
             'n',
-            ThemeName.LIANTIS_DARK);
+            ThemeName.LIANTIS_DARK,
+            'o',
+            ThemeName.NONE);
 
     /**
      * The themes, opening at the one in use, so the arrow keys preview the others from there.
