@@ -216,7 +216,7 @@ public final class ChecksDialog implements PopupView {
      */
     private EventResult keys(KeyEvent event, ListCursor cursor, int first, int last) {
         if (event.code() == KeyCode.ESCAPE || event.code() == KeyCode.ENTER) {
-            dispatch.accept(new ChecksMsg.Closed());
+            dispatch.accept(new Msg.PopupDismissed(ChecksPopup.class));
         } else if (event.isChar('R')) {
             dispatch.accept(new ChecksMsg.RefreshChosen());
         } else if (event.isChar('j') || event.code() == KeyCode.DOWN) {

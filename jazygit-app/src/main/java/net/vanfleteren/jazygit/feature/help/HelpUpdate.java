@@ -18,7 +18,6 @@ public final class HelpUpdate {
         return switch (msg) {
             case HelpMsg.Requested(String scopeId, List<Option<Msg>> actions) ->
                 Next.of(model.openPopup(new HelpPopup(scopeId, actions)));
-            case HelpMsg.Closed() -> Next.of(model.withoutPopup(HelpPopup.class));
             // Closed and run in one step, so a popup the key opens replaces the help without a frame in between.
             case HelpMsg.Chosen(Msg chosen) -> Update.update(model.withoutPopup(HelpPopup.class), chosen);
         };

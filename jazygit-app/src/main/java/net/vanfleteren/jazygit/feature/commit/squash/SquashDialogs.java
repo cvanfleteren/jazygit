@@ -21,8 +21,7 @@ public final class SquashDialogs {
             SquashPopup.class,
             popup -> Messages.get("dialog.squash.title"),
             popup -> Messages.get("dialog.squash.message"),
-            SquashMsg.Confirmed::new,
-            SquashMsg.Cancelled::new);
+            SquashMsg.Confirmed::new);
 
     private SquashDialogs() {}
 

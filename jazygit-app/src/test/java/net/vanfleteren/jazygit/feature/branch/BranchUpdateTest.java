@@ -37,6 +37,7 @@ import net.vanfleteren.jazygit.state.Cmd.LoadStashes;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -210,7 +211,7 @@ class BranchUpdateTest {
                         new CheckoutMsg.NeedsStash(new CheckoutCmd.Checkout(new BranchName("feature")), List.empty()))
                 .model();
 
-        Next next = Update.update(asked, new CheckoutMsg.StashCancelled());
+        Next next = Update.update(asked, new Msg.PopupDismissed(StashCheckoutPopup.class));
 
         assertEquals(List.of(), next.cmds());
         assertEquals(Option.none(), next.model().popup());
@@ -265,7 +266,7 @@ class BranchUpdateTest {
                 io.vavr.collection.HashSet.of(new BranchRef.Local(new BranchName("feature"))),
                 confirmed.model().jobs().busy().keySet());
 
-        Next cancelled = Update.update(asked.model(), new PushMsg.UpstreamCancelled());
+        Next cancelled = Update.update(asked.model(), new Msg.PopupDismissed(SetUpstreamPopup.class));
         assertEquals(List.of(), cancelled.cmds());
         assertEquals(Option.none(), cancelled.model().popup());
     }
@@ -396,7 +397,7 @@ class BranchUpdateTest {
                 io.vavr.collection.HashSet.of(new BranchRef.Local(new BranchName("feature"))),
                 confirmed.model().jobs().busy().keySet());
 
-        Next cancelled = Update.update(asked.model(), new PushMsg.ForceCancelled());
+        Next cancelled = Update.update(asked.model(), new Msg.PopupDismissed(ForcePushPopup.class));
         assertEquals(List.of(), cancelled.cmds());
         assertEquals(Option.none(), cancelled.model().popup());
     }
@@ -620,7 +621,7 @@ class BranchUpdateTest {
                 .model();
         assertEquals(Option.of(new NewBranchPopup(new BranchName("feature"))), open.popup());
 
-        Next cancelled = Update.update(open, new NewBranchMsg.Cancelled());
+        Next cancelled = Update.update(open, new Msg.PopupDismissed(NewBranchPopup.class));
         assertEquals(Option.none(), cancelled.model().popup());
         assertEquals(List.of(), cancelled.cmds());
     }
@@ -685,7 +686,7 @@ class BranchUpdateTest {
                 .model();
         assertEquals(Option.of(new RenameBranchPopup(new BranchName("feature"))), open.popup());
 
-        Next cancelled = Update.update(open, new RenameBranchMsg.Cancelled());
+        Next cancelled = Update.update(open, new Msg.PopupDismissed(RenameBranchPopup.class));
         assertEquals(Option.none(), cancelled.model().popup());
         assertEquals(List.of(), cancelled.cmds());
     }
@@ -906,7 +907,7 @@ class BranchUpdateTest {
         Model open = Update.update(loaded(), new DeleteBranchMsg.Requested(new BranchName("feature")))
                 .model();
 
-        Next next = Update.update(open, new DeleteBranchMsg.Cancelled());
+        Next next = Update.update(open, new Msg.PopupDismissed(DeleteBranchPopup.class));
 
         assertEquals(List.of(), next.cmds());
         assertEquals(Option.none(), next.model().popup());

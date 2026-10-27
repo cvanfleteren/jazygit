@@ -9,6 +9,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -137,7 +138,7 @@ class ResetUpdateTest {
         Model asking = Update.update(opened(withFiles(MODIFIED)), new ResetMsg.Chosen(ResetMode.HARD))
                 .model();
 
-        Next next = Update.update(asking, new ResetMsg.HardCancelled());
+        Next next = Update.update(asking, new Msg.PopupDismissed(HardResetPopup.class));
 
         assertEquals(List.of(), next.cmds());
         assertEquals(Option.none(), next.model().popup());
@@ -145,7 +146,7 @@ class ResetUpdateTest {
 
     @Test
     void cancellingTheChoiceClosesThePopup() {
-        Next next = Update.update(opened(withFiles()), new ResetMsg.Cancelled());
+        Next next = Update.update(opened(withFiles()), new Msg.PopupDismissed(ResetPopup.class));
 
         assertEquals(List.of(), next.cmds());
         assertEquals(Option.none(), next.model().popup());

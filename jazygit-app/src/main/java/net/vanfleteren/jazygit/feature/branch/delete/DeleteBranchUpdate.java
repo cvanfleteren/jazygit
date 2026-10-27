@@ -4,7 +4,6 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.Branches;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchCmd.DeleteBranch;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchCmd.DeleteRemoteBranch;
-import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchMsg.Chosen;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchMsg.Requested;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeCmd;
@@ -30,10 +29,8 @@ public final class DeleteBranchUpdate {
     public static Next update(Model model, DeleteBranchMsg msg) {
         return switch (msg) {
             case Requested(BranchName branch) -> requested(model, branch);
-            case Cancelled() -> Next.of(model.withoutPopup(DeleteBranchPopup.class));
             case Chosen(DeleteScope scope) -> chosen(model, scope);
             case DeleteBranchMsg.WithWorktreeChosen() -> withWorktreeChosen(model);
-            case DeleteBranchMsg.UnlockCancelled() -> Next.of(model.withoutPopup(UnlockWorktreePopup.class));
             case DeleteBranchMsg.UnlockConfirmed() ->
                 Update.confirm(
                         model,
@@ -43,7 +40,6 @@ public final class DeleteBranchUpdate {
                                 .map(worktree -> new RemoveWorktreeCmd(
                                         worktree.location(), false, Option.of(popup.branch()), worktree.locked())));
             case DeleteBranchMsg.RemoteRequested(RemoteBranch branch) -> remoteRequested(model, branch);
-            case DeleteBranchMsg.RemoteCancelled() -> Next.of(model.withoutPopup(DeleteRemoteBranchPopup.class));
             case DeleteBranchMsg.RemoteConfirmed() ->
                 Update.confirm(
                         model,

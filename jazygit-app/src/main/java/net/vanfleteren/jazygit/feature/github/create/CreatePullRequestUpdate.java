@@ -76,7 +76,6 @@ public final class CreatePullRequestUpdate {
                                         popup.head(),
                                         new Base(popup.base(), baseRef(model, popup.base())).remoteName(),
                                         stripped(popup.pullRequest()))));
-            case Cancelled() -> Next.of(model.withoutPopup(NewPullRequestPopup.class));
             // The branches may have been read again while the user was asked: with nothing to push any more, it was
             // pushed meanwhile or has diverged since, so it is asked about again as it is now.
             case PushFirstConfirmed() ->
@@ -88,7 +87,6 @@ public final class CreatePullRequestUpdate {
                                 model,
                                 PushFirstPopup.class,
                                 popup -> model.idleBranch(popup.branch()).flatMap(CreatePullRequestUpdate::pushFirst)));
-            case PushFirstCancelled() -> Next.of(model.withoutPopup(PushFirstPopup.class));
             // Done like any push. Asking needs the other branches and the name the branch has on its remote, which is
             // where it was just pushed to, so it does not wait for the branches to be read again.
             case Pushed(PushFirst cmd, var commands) -> {

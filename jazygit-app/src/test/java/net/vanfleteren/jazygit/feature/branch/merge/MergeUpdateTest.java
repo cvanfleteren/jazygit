@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadStashes;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -56,7 +57,7 @@ class MergeUpdateTest {
         assertEquals(List.of(new MergeCmd(new BranchName("feature"), MergeMode.SQUASH)), chosen.cmds());
         assertEquals(Option.none(), chosen.model().popup());
 
-        Next cancelled = Update.update(asked, new MergeMsg.Cancelled());
+        Next cancelled = Update.update(asked, new Msg.PopupDismissed(MergePopup.class));
         assertEquals(List.of(), cancelled.cmds());
         assertEquals(Option.none(), cancelled.model().popup());
 

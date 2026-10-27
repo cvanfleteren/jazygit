@@ -34,8 +34,7 @@ class ChoiceDialogTest {
                                     'b',
                                     "dialog.discard.unstaged",
                                     () -> new Picked("b"),
-                                    (model, popup) -> popup.second())),
-                    () -> new Picked("cancel")),
+                                    (model, popup) -> popup.second()))),
             cursor);
 
     private static Model open(boolean second) {
@@ -98,7 +97,7 @@ class ChoiceDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Picked("cancel")), dispatched);
+        assertEquals(java.util.List.of(new Msg.PopupDismissed(PickPopup.class)), dispatched);
     }
 
     @Test
@@ -121,8 +120,7 @@ class ChoiceDialogTest {
                         List.of(
                                 new Choice<>('a', "dialog.discard.all", () -> new Picked("a")),
                                 new Choice<PickPopup>('b', "dialog.discard.unstaged", () -> new Picked("b"))
-                                        .shownWhen((model, popup) -> popup.second())),
-                        () -> new Picked("cancel")),
+                                        .shownWhen((model, popup) -> popup.second()))),
                 cursor);
         Supplier<Element> view = () ->
                 stack(text("background"), leaving.render(cursor.on(open(false))).get());
@@ -181,8 +179,7 @@ class ChoiceDialogTest {
                                 new Choice<>('m', "dialog.reset.mixed", () -> new Picked("m")),
                                 new Choice<>('a', "dialog.discard.all", () -> new Picked("a")),
                                 new Choice<>('b', "dialog.discard.unstaged", () -> new Picked("b")),
-                                new Choice<>('c', "dialog.discard.title", () -> new Picked("c"))),
-                        () -> new Picked("cancel")),
+                                new Choice<>('c', "dialog.discard.title", () -> new Picked("c")))),
                 cursor);
         Supplier<Element> view = () ->
                 stack(text("background"), four.render(cursor.on(open(true))).get());
@@ -233,7 +230,7 @@ class ChoiceDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Picked("cancel")), dispatched);
+        assertEquals(java.util.List.of(new Msg.PopupDismissed(PickPopup.class)), dispatched);
     }
 
     @Test
@@ -261,8 +258,7 @@ class ChoiceDialogTest {
                                         .withHeading("dialog.help.global"),
                                 new Choice<PickPopup>('b', "dialog.discard.unstaged", () -> new Picked("b"))
                                         .withHeading("dialog.help.legend")
-                                        .withPreview(() -> new Picked("preview b"))),
-                        () -> new Picked("cancel")),
+                                        .withPreview(() -> new Picked("preview b")))),
                 cursor);
         Supplier<Element> view = () ->
                 stack(text("background"), grouped.render(cursor.on(open(true))).get());
@@ -292,8 +288,7 @@ class ChoiceDialogTest {
                                 new Choice<PickPopup>('a', "dialog.discard.all", () -> new Picked("a"))
                                         .withHeading("dialog.help.global"),
                                 new Choice<PickPopup>('b', "dialog.discard.unstaged", () -> new Picked("b"))
-                                        .withHeading("dialog.help.legend")),
-                        () -> new Picked("cancel")),
+                                        .withHeading("dialog.help.legend"))),
                 cursor);
         Supplier<Element> view = () ->
                 stack(text("background"), grouped.render(cursor.on(open(true))).get());

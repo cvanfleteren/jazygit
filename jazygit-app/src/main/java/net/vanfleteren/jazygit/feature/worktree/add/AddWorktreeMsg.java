@@ -40,21 +40,15 @@ public sealed interface AddWorktreeMsg extends Msg {
      */
     record StartRequested() implements AddWorktreeMsg {}
 
-    record StartCancelled() implements AddWorktreeMsg {}
-
     /**
      * The user confirmed where the new worktree starts, as typed in the popup.
      */
     record StartConfirmed() implements AddWorktreeMsg {}
 
-    record NameCancelled() implements AddWorktreeMsg {}
-
     /**
      * The user confirmed the name of the new branch, as typed in the popup.
      */
     record NameConfirmed() implements AddWorktreeMsg {}
-
-    record Cancelled() implements AddWorktreeMsg {}
 
     /**
      * The user confirmed where the new worktree goes, as typed in the popup.
@@ -70,9 +64,4 @@ public sealed interface AddWorktreeMsg extends Msg {
      * The user agreed to switch to the worktree that was added.
      */
     record SwitchConfirmed() implements AddWorktreeMsg {}
-
-    /**
-     * The user stays in the worktree shown.
-     */
-    record SwitchCancelled() implements AddWorktreeMsg {}
 }

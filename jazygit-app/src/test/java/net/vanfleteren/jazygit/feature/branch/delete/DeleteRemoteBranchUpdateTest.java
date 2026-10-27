@@ -9,6 +9,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchCmd.DeleteRemoteBranch;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -74,7 +75,7 @@ class DeleteRemoteBranchUpdateTest {
         Model asked = Update.update(model(), new DeleteBranchMsg.RemoteRequested(ORIGIN_FEATURE))
                 .model();
 
-        Next cancelled = Update.update(asked, new DeleteBranchMsg.RemoteCancelled());
+        Next cancelled = Update.update(asked, new Msg.PopupDismissed(DeleteRemoteBranchPopup.class));
 
         assertEquals(Option.none(), cancelled.model().popup());
         assertEquals(List.empty(), cancelled.cmds());

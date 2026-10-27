@@ -53,6 +53,7 @@ import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
@@ -475,8 +476,8 @@ class PullRequestUpdateTest {
 
     @Test
     void aTitleReadAfterThePopupClosedOpensNothing() {
-        Model closed =
-                Update.update(creating(), new CreatePullRequestMsg.Cancelled()).model();
+        Model closed = Update.update(creating(), new Msg.PopupDismissed(NewPullRequestPopup.class))
+                .model();
 
         assertEquals(
                 Option.none(),
@@ -626,8 +627,8 @@ class PullRequestUpdateTest {
 
     @Test
     void anEditAfterThePopupClosedIsIgnored() {
-        Model closed =
-                Update.update(creating(), new CreatePullRequestMsg.Cancelled()).model();
+        Model closed = Update.update(creating(), new Msg.PopupDismissed(NewPullRequestPopup.class))
+                .model();
 
         assertEquals(
                 closed,
@@ -639,7 +640,7 @@ class PullRequestUpdateTest {
     void cancellingTheNewPullRequestClosesThePopup() {
         assertEquals(
                 Option.none(),
-                Update.update(creating(), new CreatePullRequestMsg.Cancelled())
+                Update.update(creating(), new Msg.PopupDismissed(NewPullRequestPopup.class))
                         .model()
                         .popup());
     }
@@ -739,7 +740,7 @@ class PullRequestUpdateTest {
         Model asking = Update.update(model(), new PullRequestMsg.Requested(UNPUSHED.name()))
                 .model();
 
-        Next cancelled = Update.update(asking, new CreatePullRequestMsg.PushFirstCancelled());
+        Next cancelled = Update.update(asking, new Msg.PopupDismissed(PushFirstPopup.class));
 
         assertEquals(Option.none(), cancelled.model().popup());
         assertEquals(List.empty(), cancelled.cmds());
@@ -928,7 +929,8 @@ class PullRequestUpdateTest {
                 .model();
         // Also when the dialog was closed meanwhile.
         Model closed = Update.update(
-                        Update.update(shown, new PullRequestMsg.InfoClosed()).model(),
+                        Update.update(shown, new Msg.PopupDismissed(PullRequestPopup.class))
+                                .model(),
                         new PullRequestMsg.DetailsLoaded(42, lastRead(shown), failing))
                 .model();
 
@@ -996,7 +998,8 @@ class PullRequestUpdateTest {
                 .model();
         assertEquals(shown.popup(), other.popup());
         assertEquals(shown.gitHub().pullRequests(), other.gitHub().pullRequests());
-        Model closed = Update.update(shown, new PullRequestMsg.InfoClosed()).model();
+        Model closed = Update.update(shown, new Msg.PopupDismissed(PullRequestPopup.class))
+                .model();
         assertEquals(Option.none(), closed.popup());
         Model late = Update.update(closed, new PullRequestMsg.DetailsLoaded(42, lastRead(closed), details))
                 .model();
@@ -1221,7 +1224,8 @@ class PullRequestUpdateTest {
         Model drafted = Update.update(
                         drafting.model(), ((SetDraft) drafting.cmds().head()).run(env()))
                 .model();
-        Model closed = Update.update(drafted, new PullRequestMsg.InfoClosed()).model();
+        Model closed = Update.update(drafted, new Msg.PopupDismissed(PullRequestPopup.class))
+                .model();
         // The pull requests read again after the change list it as a draft.
         Model listed = Update.update(
                         closed,
@@ -1242,7 +1246,8 @@ class PullRequestUpdateTest {
         long older = lastRead(quiet);
         PullRequestDetails details = StubGitHub.empty().pullRequestDetails(42).get();
         Model reopened = Update.update(
-                        Update.update(quiet, new PullRequestMsg.InfoClosed()).model(),
+                        Update.update(quiet, new Msg.PopupDismissed(PullRequestPopup.class))
+                                .model(),
                         new PullRequestMsg.Requested(FEATURE))
                 .model();
         PullRequestPopup loading = reopened.popup(PullRequestPopup.class).get();
@@ -1272,7 +1277,8 @@ class PullRequestUpdateTest {
                         drafting.model(), ((SetDraft) drafting.cmds().head()).run(env()))
                 .model();
         Model reopened = Update.update(
-                        Update.update(drafted, new PullRequestMsg.InfoClosed()).model(),
+                        Update.update(drafted, new Msg.PopupDismissed(PullRequestPopup.class))
+                                .model(),
                         new PullRequestMsg.Requested(FEATURE))
                 .model();
 

@@ -25,8 +25,7 @@ public final class SettingsPanelDialogs {
             GhExecutablePopup.class,
             popup -> Messages.get("dialog.settings.gh.title"),
             Option.of(Messages.get("dialog.settings.gh.placeholder")),
-            SettingsPanelMsg.GhExecutableEntered::new,
-            SettingsPanelMsg.GhExecutableCancelled::new);
+            SettingsPanelMsg.GhExecutableEntered::new);
     /**
      * Asks which account the repository uses: gh's active one, or one of the others gh is logged in to on the
      * repository's host.
@@ -37,8 +36,7 @@ public final class SettingsPanelDialogs {
             popup ->
                     Messages.get("dialog.settings.account.title", popup.gitHub().host()),
             popup -> accounts(popup.gitHub()).map(PickDialog.Row::of),
-            shown -> new SettingsPanelMsg.AccountChosen(user(shown)),
-            SettingsPanelMsg.AccountCancelled::new);
+            shown -> new SettingsPanelMsg.AccountChosen(user(shown)));
     // Wide enough for the usual gh executable and account, so it does not grow once they are read.
     private static final int WIDTH = 80;
     /**
@@ -68,7 +66,6 @@ public final class SettingsPanelDialogs {
                             SettingsPanelMsg.AccountRequested::new,
                             (model, popup) -> popup.gitHub()
                                     .exists(gitHub -> gitHub.logins().isRight()))),
-            SettingsPanelMsg.Closed::new,
             WIDTH);
     // How a warning starts.
     private static final String WARNING = "⚠ ";

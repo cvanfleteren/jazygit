@@ -28,10 +28,12 @@ class ConfirmDialogTest {
     }
 
     private ConfirmDialog<AskPopup> dialog(String message) {
-        return new ConfirmDialog<>(
-                new ConfirmDialog.Spec<>(
-                        "ask", AskPopup.class, popup -> "Delete " + popup.thing(), popup -> message, Yes::new, No::new),
-                dispatched::add);
+        return new ConfirmDialog<>(spec(message), dispatched::add);
+    }
+
+    private static ConfirmDialog.Spec<AskPopup> spec(String message) {
+        return new ConfirmDialog.Spec<>(
+                "ask", AskPopup.class, popup -> "Delete " + popup.thing(), popup -> message, Yes::new);
     }
 
     @Test
@@ -70,7 +72,18 @@ class ConfirmDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Yes(), new No()), dispatched);
+        assertEquals(java.util.List.of(new Yes(), new Msg.PopupDismissed(AskPopup.class)), dispatched);
+    }
+
+    @Test
+    void escapeSendsWhatTheDialogIsCancelledBy() throws Exception {
+        ConfirmDialog<AskPopup> dialog = new ConfirmDialog<>(spec("Sure?").cancelledBy(No::new), dispatched::add);
+        try (ToolkitTestRunner runner = start(dialog)) {
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new No()), dispatched);
     }
 
     private ToolkitTestRunner start(ConfirmDialog<AskPopup> dialog) throws Exception {

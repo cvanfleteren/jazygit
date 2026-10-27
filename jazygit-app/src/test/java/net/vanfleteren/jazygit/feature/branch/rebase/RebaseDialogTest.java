@@ -51,7 +51,7 @@ class RebaseDialogTest {
     @Test
     void escapeCancels() throws Exception {
         assertEquals(
-                List.of(new RebaseMsg.Cancelled()),
+                List.of(new Msg.PopupDismissed(RebasePopup.class)),
                 pressing(r -> SettledPilot.of(r).press(KeyCode.ESCAPE)));
     }
 

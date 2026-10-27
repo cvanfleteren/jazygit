@@ -18,7 +18,6 @@ public final class RecentReposUpdate {
             case RecentReposMsg.Requested() when model.popup().isDefined() -> Next.of(model);
             case RecentReposMsg.Requested() -> Next.of(model, new RecentReposCmd.ListRecent());
             case RecentReposMsg.Listed(var repos) -> Next.of(model.openPopupIfFree(new RecentReposPopup(repos)));
-            case RecentReposMsg.Cancelled() -> Next.of(model.withoutPopup(RecentReposPopup.class));
             case RecentReposMsg.Chosen(String directory)
             when model.popup(RecentReposPopup.class).isDefined() ->
                 Next.of(

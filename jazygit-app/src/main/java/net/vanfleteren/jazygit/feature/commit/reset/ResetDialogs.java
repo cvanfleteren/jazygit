@@ -28,8 +28,7 @@ public final class ResetDialogs {
             List.of(
                     new Choice<>('m', "dialog.reset.mixed", () -> new ResetMsg.Chosen(ResetMode.MIXED)),
                     new Choice<>('s', "dialog.reset.soft", () -> new ResetMsg.Chosen(ResetMode.SOFT)),
-                    new Choice<>('h', "dialog.reset.hard", () -> new ResetMsg.Chosen(ResetMode.HARD))),
-            ResetMsg.Cancelled::new);
+                    new Choice<>('h', "dialog.reset.hard", () -> new ResetMsg.Chosen(ResetMode.HARD))));
 
     /**
      * Asks to confirm a hard reset, which discards the uncommitted changes.
@@ -41,8 +40,7 @@ public final class ResetDialogs {
             popup -> popup.files()
                     .map(files -> Messages.get("dialog.hardReset.message", files))
                     .getOrElse(() -> Messages.get("dialog.hardReset.messageUnknown")),
-            ResetMsg.HardConfirmed::new,
-            ResetMsg.HardCancelled::new);
+            ResetMsg.HardConfirmed::new);
 
     private ResetDialogs() {}
 

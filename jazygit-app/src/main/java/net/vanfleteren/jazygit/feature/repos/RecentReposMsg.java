@@ -23,8 +23,6 @@ public sealed interface RecentReposMsg extends Msg {
      */
     record Listed(List<RecentRepo> repos) implements RecentReposMsg {}
 
-    record Cancelled() implements RecentReposMsg {}
-
     record Chosen(String directory) implements RecentReposMsg {}
 
     /**

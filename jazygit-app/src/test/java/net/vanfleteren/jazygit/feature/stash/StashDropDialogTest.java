@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
@@ -54,7 +55,7 @@ class StashDropDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new StashMsg.DropCancelled()), dispatched);
+        assertEquals(java.util.List.of(new Msg.PopupDismissed(StashDropPopup.class)), dispatched);
     }
 
     @Test

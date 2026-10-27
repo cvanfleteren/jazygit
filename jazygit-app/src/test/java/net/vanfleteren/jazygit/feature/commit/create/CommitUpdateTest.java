@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.feature.commit.reword.RewordPopup;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -112,7 +113,9 @@ class CommitUpdateTest {
 
         assertEquals(
                 Option.none(),
-                Update.update(open, new RewordMsg.Cancelled()).model().popup());
+                Update.update(open, new Msg.PopupDismissed(RewordPopup.class))
+                        .model()
+                        .popup());
     }
 
     @Test
@@ -169,7 +172,7 @@ class CommitUpdateTest {
                         withFiles(Fixtures.fileEntry("a.txt", ChangeType.MODIFIED)), new CommitMsg.Requested())
                 .model();
 
-        assertFalse(Update.update(asking, new CommitMsg.StageAllCancelled())
+        assertFalse(Update.update(asking, new Msg.PopupDismissed(StageAllPopup.class))
                 .model()
                 .popup(StageAllPopup.class)
                 .isDefined());
@@ -203,7 +206,7 @@ class CommitUpdateTest {
         Model open = Update.update(withFiles(Fixtures.fileEntry("a.txt", ChangeType.ADDED)), new CommitMsg.Requested())
                 .model();
 
-        assertFalse(Update.update(open, new CommitMsg.Cancelled())
+        assertFalse(Update.update(open, new Msg.PopupDismissed(CommitPopup.class))
                 .model()
                 .popup(CommitPopup.class)
                 .isDefined());

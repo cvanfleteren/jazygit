@@ -36,7 +36,6 @@ public final class UpstreamUpdate {
                                 highlighted.flatMap(b -> base(model)),
                                 model.repo().currentBranch()));
             }
-            case UpstreamMsg.Cancelled() -> Next.of(model.withoutPopup(UpstreamPopup.class));
             case UpstreamMsg.ResetChosen() -> chosen(model, UpstreamUpdate::resetChosen);
             case UpstreamMsg.UpstreamDivergenceChosen() -> chosen(model, UpstreamUpdate::upstreamDivergence);
             case UpstreamMsg.BaseDivergenceChosen() -> chosen(model, UpstreamUpdate::baseDivergence);

@@ -35,8 +35,7 @@ public final class RemoveWorktreeDialogs {
                                                     .getOrElse("")),
                                     () -> new RemoveWorktreeMsg.Chosen(true),
                                     (model, popup) -> RemoveWorktreeUpdate.branchDeletable(model, popup))
-                            .shownWhen((model, popup) -> popup.branch().isDefined())),
-            RemoveWorktreeMsg.Cancelled::new);
+                            .shownWhen((model, popup) -> popup.branch().isDefined())));
 
     /**
      * Warns that a worktree has changes, and asks to remove it anyway.
@@ -47,8 +46,7 @@ public final class RemoveWorktreeDialogs {
             popup -> Messages.get("dialog.removeWorktree.title", popup.name()),
             popup -> Messages.get(
                     "dialog.forceRemoveWorktree.message", popup.removal().location()),
-            RemoveWorktreeMsg.ForceConfirmed::new,
-            RemoveWorktreeMsg.ForceCancelled::new);
+            RemoveWorktreeMsg.ForceConfirmed::new);
 
     private RemoveWorktreeDialogs() {}
 

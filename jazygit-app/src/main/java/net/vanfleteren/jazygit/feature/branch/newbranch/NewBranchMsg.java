@@ -29,8 +29,6 @@ public sealed interface NewBranchMsg extends Msg {
      */
     record RequestedAtRemote(RemoteBranch branch) implements NewBranchMsg {}
 
-    record Cancelled() implements NewBranchMsg {}
-
     /**
      * The user confirmed the name typed in the popup.
      */

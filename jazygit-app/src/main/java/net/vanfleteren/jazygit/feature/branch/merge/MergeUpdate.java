@@ -18,7 +18,6 @@ public final class MergeUpdate {
     public static Next update(Model model, MergeMsg msg) {
         return switch (msg) {
             case MergeMsg.Requested(BranchName branch) -> requested(model, branch);
-            case MergeMsg.Cancelled() -> Next.of(model.withoutPopup(MergePopup.class));
             case MergeMsg.Chosen(MergeMode mode) ->
                 Update.confirm(model, MergePopup.class, popup -> Option.of(new MergeCmd(popup.branch(), mode)));
         };

@@ -24,13 +24,11 @@ public final class CommitUpdate {
     public static Next update(Model model, CommitMsg msg) {
         return switch (msg) {
             case Requested() -> requested(model);
-            case StageAllCancelled() -> Next.of(model.withoutPopup(StageAllPopup.class));
             case StageAllConfirmed() -> stageAllConfirmed(model);
             case StagedForCommit(var cmd, List<ExecutedCommand> commands) -> {
                 Next staged = OperationUpdate.succeeded(model, cmd, commands);
                 yield new Next(staged.model().openPopupIfFree(new CommitPopup()), staged.cmds());
             }
-            case Cancelled() -> Next.of(model.withoutPopup(CommitPopup.class));
             case Confirmed() -> confirmed(model);
         };
     }

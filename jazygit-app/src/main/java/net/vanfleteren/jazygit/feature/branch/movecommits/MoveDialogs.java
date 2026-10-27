@@ -44,8 +44,7 @@ public final class MoveDialogs {
                             List.of(
                                     PickDialog.Cell.of(Messages.get("dialog.moveCommitsTarget.newBranch")),
                                     PickDialog.Cell.of("")))),
-            MoveMsg.TargetChosen::new,
-            MoveMsg.TargetCancelled::new);
+            MoveMsg.TargetChosen::new);
 
     /**
      * Asks for the name of the new branch. A blank name, or that of a branch that exists, keeps it open.
@@ -58,8 +57,7 @@ public final class MoveDialogs {
                     popup.request().range().commits(),
                     popup.request().from().value()),
             Option.of(Messages.get("dialog.newBranch.placeholder")),
-            MoveMsg.NameConfirmed::new,
-            MoveMsg.NameCancelled::new);
+            MoveMsg.NameConfirmed::new);
 
     /**
      * Asks where the new branch starts: where the commits are, the first option, or a branch they are copied onto.
@@ -71,8 +69,7 @@ public final class MoveDialogs {
             popup -> popup.request()
                     .bases()
                     .map(base -> new PickDialog.Row<>(base, List.of(PickDialog.Cell.of(label(popup, base))))),
-            MoveMsg.BaseChosen::new,
-            MoveMsg.BaseCancelled::new);
+            MoveMsg.BaseChosen::new);
 
     /**
      * Warns that commits are pushed already, and asks whether to force-push the branch they are taken off.
@@ -101,8 +98,7 @@ public final class MoveDialogs {
                             popup -> Messages.get(
                                     "dialog.moveCommitsPushed.moveOnly",
                                     popup.request().from().value()),
-                            () -> new MoveMsg.PushedConfirmed(false))),
-            MoveMsg.PushedCancelled::new);
+                            () -> new MoveMsg.PushedConfirmed(false))));
 
     private MoveDialogs() {}
 

@@ -23,12 +23,10 @@ public final class ResetUpdate {
             case ResetMsg.Requested(Sha sha) ->
                 Update.ask(
                         model, model.commit(sha).map(commit -> new ResetPopup(new ResetTarget.ToCommit(commit.sha()))));
-            case ResetMsg.Cancelled() -> Next.of(model.withoutPopup(ResetPopup.class));
             case ResetMsg.Chosen(ResetMode mode) -> chosen(model, mode);
             case ResetMsg.HardConfirmed() ->
                 Update.confirm(
                         model, HardResetPopup.class, popup -> Option.of(new ResetCmd(popup.target(), ResetMode.HARD)));
-            case ResetMsg.HardCancelled() -> Next.of(model.withoutPopup(HardResetPopup.class));
         };
     }
 

@@ -139,11 +139,11 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
      * @param popupType the popup that makes the dialog show
      * @param title     the title, from the popup
      * @param choices   the options, in order, each with a letter of its own
-     * @param onCancel  the message for cancelling, by Escape
+     * @param onCancel  the message for cancelling, by Escape; by default a {@link Msg.PopupDismissed}
      * @param minWidth  the width it takes at least, borders included, so it does not grow as the options change
      * @param opensAt   the key of the option highlighted when the dialog opens, given the popup; else the first
      */
-    public record Spec<P>(
+    public record Spec<P extends Popup>(
             String id,
             Class<P> popupType,
             Function<P, String> title,
@@ -153,34 +153,37 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
             Function<P, Option<Character>> opensAt) {
 
         /**
-         * A dialog that opens with its first option highlighted.
+         * A dialog that opens with its first option highlighted, which Escape only closes (ADR 38).
          */
-        public Spec(
-                String id,
-                Class<P> popupType,
-                Function<P, String> title,
-                List<Choice<P>> choices,
-                Supplier<Msg> onCancel,
-                int minWidth) {
-            this(id, popupType, title, choices, onCancel, minWidth, popup -> Option.none());
+        public Spec(String id, Class<P> popupType, Function<P, String> title, List<Choice<P>> choices, int minWidth) {
+            this(
+                    id,
+                    popupType,
+                    title,
+                    choices,
+                    () -> new Msg.PopupDismissed(popupType),
+                    minWidth,
+                    popup -> Option.none());
         }
 
         /**
          * A dialog as wide as a list, or its widest option.
          */
-        public Spec(
-                String id,
-                Class<P> popupType,
-                Function<P, String> title,
-                List<Choice<P>> choices,
-                Supplier<Msg> onCancel) {
-            this(id, popupType, title, choices, onCancel, DialogFrame.LIST_WIDTH);
+        public Spec(String id, Class<P> popupType, Function<P, String> title, List<Choice<P>> choices) {
+            this(id, popupType, title, choices, DialogFrame.LIST_WIDTH);
         }
 
         /**
          * This dialog, opening with the option of the key {@code opensAt} gives highlighted.
          */
         public Spec<P> openingAt(Function<P, Option<Character>> opensAt) {
+            return new Spec<>(id, popupType, title, choices, onCancel, minWidth, opensAt);
+        }
+
+        /**
+         * This dialog, sending {@code onCancel} for Escape, for a popup that does more than close then.
+         */
+        public Spec<P> cancelledBy(Supplier<Msg> onCancel) {
             return new Spec<>(id, popupType, title, choices, onCancel, minWidth, opensAt);
         }
     }

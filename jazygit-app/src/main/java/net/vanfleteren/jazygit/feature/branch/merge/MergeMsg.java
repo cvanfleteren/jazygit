@@ -18,8 +18,6 @@ public sealed interface MergeMsg extends Msg {
      */
     record Requested(BranchName branch) implements MergeMsg {}
 
-    record Cancelled() implements MergeMsg {}
-
     /**
      * The user chose how to merge.
      */

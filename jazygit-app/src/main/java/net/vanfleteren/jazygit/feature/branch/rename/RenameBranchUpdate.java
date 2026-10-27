@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.branch.rename;
 
-import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchMsg.Requested;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -19,7 +18,6 @@ public final class RenameBranchUpdate {
         return switch (msg) {
             case Requested(BranchName branch) ->
                 Update.ask(model, model.idleBranch(branch).map(known -> new RenameBranchPopup(branch)));
-            case Cancelled() -> Next.of(model.withoutPopup(RenameBranchPopup.class));
             case Confirmed() -> confirmed(model);
         };
     }

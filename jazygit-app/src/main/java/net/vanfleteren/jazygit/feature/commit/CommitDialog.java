@@ -64,7 +64,6 @@ public final class CommitDialog implements PopupView {
     private final String descriptionId;
     private final Class<? extends MessagePopup> popupType;
     private final Supplier<Msg> confirmed;
-    private final Supplier<Msg> cancelled;
     private final Consumer<Msg> dispatch;
 
     private CommitDialog(
@@ -72,13 +71,11 @@ public final class CommitDialog implements PopupView {
             String descriptionId,
             Class<? extends MessagePopup> popupType,
             Supplier<Msg> confirmed,
-            Supplier<Msg> cancelled,
             Consumer<Msg> dispatch) {
         this.summaryId = summaryId;
         this.descriptionId = descriptionId;
         this.popupType = popupType;
         this.confirmed = confirmed;
-        this.cancelled = cancelled;
         this.dispatch = dispatch;
     }
 
@@ -88,7 +85,7 @@ public final class CommitDialog implements PopupView {
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public CommitDialog(Consumer<Msg> dispatch) {
-        this(ID, DESCRIPTION_ID, CommitPopup.class, CommitMsg.Confirmed::new, CommitMsg.Cancelled::new, dispatch);
+        this(ID, DESCRIPTION_ID, CommitPopup.class, CommitMsg.Confirmed::new, dispatch);
     }
 
     /**
@@ -98,12 +95,7 @@ public final class CommitDialog implements PopupView {
      */
     public static CommitDialog reword(Consumer<Msg> dispatch) {
         return new CommitDialog(
-                REWORD_ID,
-                REWORD_DESCRIPTION_ID,
-                RewordPopup.class,
-                RewordMsg.Confirmed::new,
-                RewordMsg.Cancelled::new,
-                dispatch);
+                REWORD_ID, REWORD_DESCRIPTION_ID, RewordPopup.class, RewordMsg.Confirmed::new, dispatch);
     }
 
     /**
@@ -217,6 +209,6 @@ public final class CommitDialog implements PopupView {
     }
 
     private void cancel() {
-        dispatch.accept(cancelled.get());
+        dispatch.accept(new Msg.PopupDismissed(popupType));
     }
 }

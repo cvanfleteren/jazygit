@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.forcedelete;
 
-import net.vanfleteren.jazygit.feature.forcedelete.ForceDeleteMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.forcedelete.ForceDeleteMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.forcedelete.ForceDeleteMsg.NotFullyMerged;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -29,7 +28,6 @@ public final class ForceDeleteUpdate {
                                         .branch(branch)
                                         .flatMap(Branch::goneUpstream)
                                         .isDefined())));
-            case Cancelled() -> Next.of(model.withoutPopup(ForceDeleteBranchPopup.class));
             // Only a branch that is still there, not checked out here and that nothing runs on is deleted. One
             // checked out in another worktree is left to git to refuse: after removing a worktree the model still
             // lists the branch there until the refresh lands.

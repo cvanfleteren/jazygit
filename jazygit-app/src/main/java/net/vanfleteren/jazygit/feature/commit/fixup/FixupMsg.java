@@ -19,8 +19,6 @@ public sealed interface FixupMsg extends Msg {
      */
     record Requested(Sha sha) implements FixupMsg {}
 
-    record Cancelled() implements FixupMsg {}
-
     /**
      * The user chose which message to keep: {@link SquashMode#FIXUP} or {@link SquashMode#FIXUP_KEEP_MESSAGE}.
      */

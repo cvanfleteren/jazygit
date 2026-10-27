@@ -46,8 +46,8 @@ public final class ThemeDialog {
                     "theme",
                     ThemePopup.class,
                     popup -> Messages.get("dialog.theme.title"),
-                    KEYS.toList().map(theme -> choice(theme._1, theme._2)),
-                    ThemeMsg.Cancelled::new)
+                    KEYS.toList().map(theme -> choice(theme._1, theme._2)))
+            .cancelledBy(ThemeMsg.Cancelled::new)
             .openingAt(popup -> KEYS.find(theme -> theme._2 == popup.current()).map(theme -> theme._1));
 
     private ThemeDialog() {}

@@ -39,6 +39,4 @@ public sealed interface ChecksMsg extends Msg {
      * Periodic prompt to read the checks again, while they are shown.
      */
     record Tick() implements ChecksMsg {}
-
-    record Closed() implements ChecksMsg {}
 }

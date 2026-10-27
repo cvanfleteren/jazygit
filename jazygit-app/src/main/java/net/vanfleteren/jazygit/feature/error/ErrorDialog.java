@@ -19,8 +19,8 @@ public final class ErrorDialog {
             ErrorPopup.class,
             popup -> Messages.get("dialog.error.title"),
             popup -> ErrorText.of(popup.error()),
-            ErrorMsg.Dismissed::new,
-            ErrorMsg.Dismissed::new,
+            () -> new Msg.PopupDismissed(ErrorPopup.class),
+            () -> new Msg.PopupDismissed(ErrorPopup.class),
             "dialog.hint.close");
 
     private ErrorDialog() {}

@@ -18,13 +18,11 @@ public final class StashUpdate {
     public static Next update(Model model, StashMsg msg) {
         return switch (msg) {
             case StashMsg.Requested() -> requested(model);
-            case StashMsg.Cancelled() -> Next.of(model.withoutPopup(StashPopup.class));
             case StashMsg.Confirmed() -> confirmed(model);
             case StashMsg.PopRequested(var stash) ->
                 listed(model, stash) ? Update.start(model.clearError(), new StashCmd.Pop(stash)) : Next.of(model);
             case StashMsg.DropRequested(var stash) ->
                 Update.ask(model, Option.when(listed(model, stash), () -> new StashDropPopup(stash)));
-            case StashMsg.DropCancelled() -> Next.of(model.withoutPopup(StashDropPopup.class));
             case StashMsg.DropConfirmed() ->
                 Update.confirm(model, StashDropPopup.class, popup -> Option.of(new StashCmd.Drop(popup.stash())));
         };

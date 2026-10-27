@@ -15,6 +15,7 @@ import java.util.function.Supplier;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
@@ -80,7 +81,7 @@ class AmendDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new AmendMsg.Cancelled()), dispatched);
+        assertEquals(java.util.List.of(new Msg.PopupDismissed(AmendPopup.class)), dispatched);
     }
 
     @Test
@@ -116,7 +117,9 @@ class AmendDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new AmendMsg.StageAllConfirmed(), new AmendMsg.Cancelled()), dispatched);
+        assertEquals(
+                java.util.List.of(new AmendMsg.StageAllConfirmed(), new Msg.PopupDismissed(AmendStageAllPopup.class)),
+                dispatched);
     }
 
     @Test

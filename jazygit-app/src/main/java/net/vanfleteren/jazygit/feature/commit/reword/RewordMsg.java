@@ -17,8 +17,6 @@ public sealed interface RewordMsg extends Msg {
      */
     record Requested(Sha sha) implements RewordMsg {}
 
-    record Cancelled() implements RewordMsg {}
-
     /**
      * The user confirmed the message typed in the popup.
      */

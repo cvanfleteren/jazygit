@@ -101,6 +101,4 @@ public sealed interface PullRequestMsg extends Msg {
      * Periodic prompt to read the pull request again, while it is shown.
      */
     record Tick() implements PullRequestMsg {}
-
-    record InfoClosed() implements PullRequestMsg {}
 }

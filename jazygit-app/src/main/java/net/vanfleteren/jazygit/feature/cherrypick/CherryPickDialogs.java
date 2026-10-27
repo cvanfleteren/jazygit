@@ -25,8 +25,7 @@ public final class CherryPickDialogs {
                             "dialog.cherryPick.message", popup.commit().shortSha(), branch.value()))
                     .getOrElse(() -> Messages.get(
                             "dialog.cherryPick.messageDetached", popup.commit().shortSha())),
-            CherryPickMsg.Confirmed::new,
-            CherryPickMsg.Cancelled::new);
+            CherryPickMsg.Confirmed::new);
 
     private CherryPickDialogs() {}
 

@@ -28,8 +28,9 @@ public final class FixupDialogs {
             List.of(
                     new Choice<>('f', "dialog.fixup.fixup", () -> new FixupMsg.Chosen(SquashMode.FIXUP)),
                     new Choice<>(
-                            'C', "dialog.fixup.keepMessage", () -> new FixupMsg.Chosen(SquashMode.FIXUP_KEEP_MESSAGE))),
-            FixupMsg.Cancelled::new);
+                            'C',
+                            "dialog.fixup.keepMessage",
+                            () -> new FixupMsg.Chosen(SquashMode.FIXUP_KEEP_MESSAGE))));
 
     private FixupDialogs() {}
 

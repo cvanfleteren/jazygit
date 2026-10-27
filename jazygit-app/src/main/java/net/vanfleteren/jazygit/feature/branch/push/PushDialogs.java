@@ -24,8 +24,7 @@ public final class PushDialogs {
             SetUpstreamPopup.class,
             popup -> Messages.get("dialog.setUpstream.title"),
             Option.none(),
-            PushMsg.UpstreamConfirmed::new,
-            PushMsg.UpstreamCancelled::new);
+            PushMsg.UpstreamConfirmed::new);
 
     /**
      * Warns that a branch has diverged from its remote branch, and asks to force push it.
@@ -35,8 +34,7 @@ public final class PushDialogs {
             ForcePushPopup.class,
             popup -> Messages.get("dialog.forcePush.title", popup.branch().value()),
             popup -> Messages.get("dialog.forcePush.message"),
-            PushMsg.ForceConfirmed::new,
-            PushMsg.ForceCancelled::new);
+            PushMsg.ForceConfirmed::new);
 
     private PushDialogs() {}
 

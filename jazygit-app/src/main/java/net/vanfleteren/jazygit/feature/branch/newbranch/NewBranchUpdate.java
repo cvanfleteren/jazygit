@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.feature.branch.newbranch;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.CheckoutRemote;
-import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg.Cancelled;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg.Requested;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -31,7 +30,6 @@ public final class NewBranchUpdate {
                                 .remoteBranch(remote)
                                 .map(known -> new NewBranchPopup(
                                         remote.trackingRef(), remote.shortName(), Option.of(remote.branch()))));
-            case Cancelled() -> Next.of(model.withoutPopup(NewBranchPopup.class));
             case Confirmed() -> confirmed(model);
         };
     }

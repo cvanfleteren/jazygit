@@ -18,8 +18,6 @@ public sealed interface UpstreamMsg extends Msg {
      */
     record Requested(Option<BranchName> branch) implements UpstreamMsg {}
 
-    record Cancelled() implements UpstreamMsg {}
-
     /**
      * The user chose to reset the checked out branch onto its upstream; how is still to be chosen.
      */

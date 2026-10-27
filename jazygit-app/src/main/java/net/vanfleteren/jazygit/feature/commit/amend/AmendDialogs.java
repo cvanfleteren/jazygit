@@ -20,8 +20,7 @@ public final class AmendDialogs {
             AmendPopup.class,
             popup -> Messages.get(amendKey(popup.target()) + ".title"),
             popup -> Messages.get(amendKey(popup.target()) + ".message"),
-            AmendMsg.Confirmed::new,
-            AmendMsg.Cancelled::new);
+            AmendMsg.Confirmed::new);
 
     /**
      * Asks whether to amend a commit with all files, because none is staged.
@@ -31,8 +30,7 @@ public final class AmendDialogs {
             AmendStageAllPopup.class,
             popup -> Messages.get("dialog.amend.stageAll.title"),
             popup -> Messages.get("dialog.amend.stageAll.message"),
-            AmendMsg.StageAllConfirmed::new,
-            AmendMsg.Cancelled::new);
+            AmendMsg.StageAllConfirmed::new);
 
     private AmendDialogs() {}
 

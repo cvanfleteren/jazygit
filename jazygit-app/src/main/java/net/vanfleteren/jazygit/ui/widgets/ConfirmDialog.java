@@ -65,10 +65,10 @@ public final class ConfirmDialog<P extends Popup> implements PopupView {
      * @param title     the title, from the popup
      * @param message   the question, from the popup; it is wrapped at the dialog's width
      * @param onConfirm the message for Enter
-     * @param onCancel  the message for Escape
+     * @param onCancel  the message for Escape; by default a {@link Msg.PopupDismissed}
      * @param hintKey   the message key of the hint about the keys
      */
-    public record Spec<P>(
+    public record Spec<P extends Popup>(
             String id,
             Class<P> popupType,
             Function<P, String> title,
@@ -78,16 +78,29 @@ public final class ConfirmDialog<P extends Popup> implements PopupView {
             String hintKey) {
 
         /**
-         * A dialog with the hint that Enter confirms and Escape cancels.
+         * A dialog with the hint that Enter confirms and Escape cancels, which Escape only closes (ADR 38).
          */
         public Spec(
                 String id,
                 Class<P> popupType,
                 Function<P, String> title,
                 Function<P, String> message,
-                Supplier<Msg> onConfirm,
-                Supplier<Msg> onCancel) {
-            this(id, popupType, title, message, onConfirm, onCancel, "dialog.hint.confirmCancel");
+                Supplier<Msg> onConfirm) {
+            this(
+                    id,
+                    popupType,
+                    title,
+                    message,
+                    onConfirm,
+                    () -> new Msg.PopupDismissed(popupType),
+                    "dialog.hint.confirmCancel");
+        }
+
+        /**
+         * This dialog, sending {@code onCancel} for Escape, for a popup that does more than close then.
+         */
+        public Spec<P> cancelledBy(Supplier<Msg> onCancel) {
+            return new Spec<>(id, popupType, title, message, onConfirm, onCancel, hintKey);
         }
     }
 }

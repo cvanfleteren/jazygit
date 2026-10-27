@@ -580,10 +580,9 @@ classDiagram
   `apply` delegates to that feature's update class (`RewordUpdate`). Adding a feature therefore needs
   no change to `Update` or `Msg`. The one-line `apply` overrides, one per feature message interface, are
   the price of avoiding a central dispatch, and are kept on purpose.
-- **Every dialog has its own `Cancelled`.** Cancelling is a one-liner,
-  `Next.of(model.withoutPopup(X.class))`, so there is no `Update.cancel` helper. A generic
-  `PopupMsg.Closed(type)` sent by the dialog widgets would remove some 20 `Cancelled` records, at the cost
-  of a message that is not about a feature.
+- **A popup closes by itself (ADR 38).** Escape on a dialog sends `Msg.PopupDismissed(type)`, which closes
+  the open popup if it is of that type. The specs of the dialog widgets send it by default; a feature declares a
+  `Cancelled` message of its own, with `cancelledBy` on the spec, only when Escape does more than close.
 - **`Cmd` is immutable data** that knows how to run itself against an `Env` (the `GitInfoProvider` and the
   `GitHub`) and how to report failure:
   - `run` folds the provider's `Either` into a `Msg`.
@@ -640,7 +639,7 @@ Each feature package follows the same shape:
 
 | Type | Example (reword) | Role |
 |---|---|---|
-| `XxxMsg` | `RewordMsg` | Sealed set of messages, usually `Requested`, `Confirmed` and `Cancelled`; a feature with several dialogs or outcomes names them after those (`StashMsg.DropRequested`, `PullRequestMsg.MergeChosen`). |
+| `XxxMsg` | `RewordMsg` | Sealed set of messages, usually `Requested` and `Confirmed`, and `Cancelled` when Escape does more than close (ADR 38); a feature with several dialogs or outcomes names them after those (`StashMsg.DropRequested`, `PullRequestMsg.MergeChosen`). |
 | `XxxUpdate` | `RewordUpdate` | Pure transitions for those messages; `Update.confirm` closes a popup and starts the operation made of it. |
 | `XxxCmd` | `RewordCmd` | The operation the feature asks for, an `OperationCmd`. |
 | `XxxPopup` | `RewordPopup` | What the open dialog is about; it lives in the model. |

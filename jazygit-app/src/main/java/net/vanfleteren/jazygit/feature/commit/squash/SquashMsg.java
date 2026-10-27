@@ -17,7 +17,5 @@ public sealed interface SquashMsg extends Msg {
      */
     record Requested(Sha sha) implements SquashMsg {}
 
-    record Cancelled() implements SquashMsg {}
-
     record Confirmed() implements SquashMsg {}
 }

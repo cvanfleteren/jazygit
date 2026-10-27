@@ -37,7 +37,6 @@ public final class SettingsPanelUpdate {
                         .map(panel -> model.openPopup(
                                 new SettingsPanelPopup(panel.theme(), panel.ghExecutable(), Option.of(gitHub))))
                         .getOrElse(model));
-            case SettingsPanelMsg.Closed() -> Next.of(model.withoutPopup(SettingsPanelPopup.class));
             case SettingsPanelMsg.ThemeRequested() ->
                 ThemeUpdate.update(model.withoutPopup(SettingsPanelPopup.class), new ThemeMsg.Requested());
             case SettingsPanelMsg.GhExecutableRequested() ->
@@ -45,7 +44,6 @@ public final class SettingsPanelUpdate {
                         .map(panel -> model.openPopup(
                                 new GhExecutablePopup(panel.ghExecutable().getOrElse(""))))
                         .getOrElse(model));
-            case SettingsPanelMsg.GhExecutableCancelled() -> Next.of(model.withoutPopup(GhExecutablePopup.class));
             case SettingsPanelMsg.GhExecutableEntered() ->
                 model.popup(GhExecutablePopup.class)
                         .map(popup -> Option.of(popup.executable().strip()).filter(path -> !path.isEmpty()))
@@ -67,7 +65,6 @@ public final class SettingsPanelUpdate {
                         .filter(gitHub -> gitHub.logins().isRight())
                         .map(gitHub -> model.openPopup(new GitHubAccountPopup(gitHub)))
                         .getOrElse(model));
-            case SettingsPanelMsg.AccountCancelled() -> Next.of(model.withoutPopup(GitHubAccountPopup.class));
             case SettingsPanelMsg.AccountChosen(Option<String> user) ->
                 model.popup(GitHubAccountPopup.class)
                         .map(popup -> popup.gitHub().user().equals(user)

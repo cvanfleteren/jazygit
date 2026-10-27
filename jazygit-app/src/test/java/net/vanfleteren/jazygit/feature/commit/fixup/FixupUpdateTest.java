@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -109,7 +110,7 @@ class FixupUpdateTest {
 
     @Test
     void cancellingClosesThePopup() {
-        Next next = Update.update(opened(), new FixupMsg.Cancelled());
+        Next next = Update.update(opened(), new Msg.PopupDismissed(FixupPopup.class));
 
         assertEquals(List.of(), next.cmds());
         assertEquals(Option.none(), next.model().popup(FixupPopup.class));

@@ -26,7 +26,6 @@ public final class CherryPickUpdate {
             case CherryPickMsg.Dropped() ->
                 Next.of(model.mapRepoView(repoView -> repoView.withCherryPick(Option.none())));
             case CherryPickMsg.Requested() -> requested(model);
-            case CherryPickMsg.Cancelled() -> Next.of(model.withoutPopup(CherryPickPopup.class));
             case CherryPickMsg.Confirmed() ->
                 Update.confirm(
                         model,

@@ -67,7 +67,7 @@ class DiscardDialogTest {
     @Test
     void escapeCancels() throws Exception {
         assertEquals(
-                List.of(new DiscardMsg.Cancelled()),
+                List.of(new Msg.PopupDismissed(DiscardPopup.class)),
                 pressing(open(MODIFIED), r -> SettledPilot.of(r).press(KeyCode.ESCAPE)));
     }
 

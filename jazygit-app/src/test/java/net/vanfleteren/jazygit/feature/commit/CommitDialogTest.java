@@ -179,7 +179,9 @@ class CommitDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new CommitMsg.Cancelled(), new CommitMsg.Cancelled()), dispatched);
+        assertEquals(
+                java.util.List.of(new Msg.PopupDismissed(CommitPopup.class), new Msg.PopupDismissed(CommitPopup.class)),
+                dispatched);
     }
 
     @Test

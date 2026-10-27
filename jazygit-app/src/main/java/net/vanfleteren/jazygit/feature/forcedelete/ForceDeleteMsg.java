@@ -25,8 +25,6 @@ public sealed interface ForceDeleteMsg extends Msg {
     record NotFullyMerged(OperationCmd cmd, BranchName branch, int lost, List<ExecutedCommand> commands)
             implements ForceDeleteMsg {}
 
-    record Cancelled() implements ForceDeleteMsg {}
-
     /**
      * The user agreed to lose the commits only the branch has by deleting it anyway.
      */

@@ -22,8 +22,6 @@ public final class PushUpdate {
     public static Next update(Model model, PushMsg msg) {
         return switch (msg) {
             case PushMsg.Requested(BranchName branch) -> requested(model, branch);
-            case PushMsg.ForceCancelled() -> Next.of(model.withoutPopup(ForcePushPopup.class));
-            case PushMsg.UpstreamCancelled() -> Next.of(model.withoutPopup(SetUpstreamPopup.class));
             case PushMsg.UpstreamConfirmed() ->
                 model.popup(SetUpstreamPopup.class)
                         .map(popup -> upstreamConfirmed(model, popup.upstream()))

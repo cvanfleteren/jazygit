@@ -4,7 +4,7 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import net.vanfleteren.jazygit.feature.cherrypick.CherryPickMsg;
 import net.vanfleteren.jazygit.feature.diff.DiffOptionsMsg;
-import net.vanfleteren.jazygit.feature.help.HelpMsg;
+import net.vanfleteren.jazygit.feature.help.HelpPopup;
 import net.vanfleteren.jazygit.feature.inprogress.InProgressMsg;
 import net.vanfleteren.jazygit.feature.layout.LayoutMsg;
 import net.vanfleteren.jazygit.feature.layout.LayoutUpdate;
@@ -23,7 +23,10 @@ final class GlobalKeys {
     static Keymap register(Keymap keys) {
         // The panels show their help for ? themselves; run from the help, it closes it, as pressing it there does.
         return keys.global(new Keymap.Global.Dispatching(
-                        Keymap.HELP_KEY, "help.global.help", event -> false, HelpMsg.Closed::new))
+                        Keymap.HELP_KEY,
+                        "help.global.help",
+                        event -> false,
+                        () -> new Msg.PopupDismissed(HelpPopup.class)))
                 .global(new Keymap.Global.Dispatching(
                         "ctrl+r",
                         "help.global.recentRepos",

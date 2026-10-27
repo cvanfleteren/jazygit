@@ -154,7 +154,8 @@ class ChecksUpdateTest {
 
     @Test
     void whatIsReadAfterClosingIsLearnedFromWithoutShowingItAgain() {
-        Model closed = Update.update(shown(), new ChecksMsg.Closed()).model();
+        Model closed = Update.update(shown(), new Msg.PopupDismissed(ChecksPopup.class))
+                .model();
 
         Next next = Update.update(closed, new ChecksMsg.Loaded(FEATURE, READ));
 
@@ -183,7 +184,9 @@ class ChecksUpdateTest {
         assertEquals(ListCursor.START.at(3), readAgain.listCursor());
 
         Model shownAgain = Update.update(
-                        Update.update(readAgain, new ChecksMsg.Closed()).model(), new ChecksMsg.Requested(MINE))
+                        Update.update(readAgain, new Msg.PopupDismissed(ChecksPopup.class))
+                                .model(),
+                        new ChecksMsg.Requested(MINE))
                 .model();
         assertEquals(ListCursor.START, shownAgain.listCursor());
     }
@@ -288,6 +291,8 @@ class ChecksUpdateTest {
     void closingHidesThePopup() {
         assertEquals(
                 Option.none(),
-                Update.update(shown(), new ChecksMsg.Closed()).model().popup(ChecksPopup.class));
+                Update.update(shown(), new Msg.PopupDismissed(ChecksPopup.class))
+                        .model()
+                        .popup(ChecksPopup.class));
     }
 }

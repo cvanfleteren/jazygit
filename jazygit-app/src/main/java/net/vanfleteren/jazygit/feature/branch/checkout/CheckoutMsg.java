@@ -44,14 +44,7 @@ public sealed interface CheckoutMsg extends Msg {
     record StashConfirmed() implements CheckoutMsg {}
 
     /**
-     * The user cancelled the checkout that needed the changes stashed.
-     */
-    record StashCancelled() implements CheckoutMsg {}
-
-    /**
      * The user agreed to switch to the worktree that has the branch to check out checked out.
      */
     record SwitchWorktreeConfirmed() implements CheckoutMsg {}
-
-    record SwitchWorktreeCancelled() implements CheckoutMsg {}
 }

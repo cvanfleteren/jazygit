@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.settings.RecentRepositories;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -82,7 +83,9 @@ class RecentReposUpdateTest {
 
         assertEquals(
                 Option.none(),
-                Update.update(open, new RecentReposMsg.Cancelled()).model().popup());
+                Update.update(open, new Msg.PopupDismissed(RecentReposPopup.class))
+                        .model()
+                        .popup());
     }
 
     @Test

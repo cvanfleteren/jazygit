@@ -17,8 +17,6 @@ public sealed interface RebaseMsg extends Msg {
      */
     record Requested(BranchName onto) implements RebaseMsg {}
 
-    record Cancelled() implements RebaseMsg {}
-
     /**
      * The user chose a plain rebase.
      */

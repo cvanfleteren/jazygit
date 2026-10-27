@@ -21,8 +21,6 @@ public sealed interface RemoveWorktreeMsg extends Msg {
      */
     record Requested(String location) implements RemoveWorktreeMsg {}
 
-    record Cancelled() implements RemoveWorktreeMsg {}
-
     /**
      * The user chose to remove the worktree, and with {@code deleteBranch} to delete its branch too.
      */
@@ -33,8 +31,6 @@ public sealed interface RemoveWorktreeMsg extends Msg {
      * removing it would lose.
      */
     record NeedsForce(RemoveWorktreeCmd cmd, List<ExecutedCommand> commands) implements RemoveWorktreeMsg {}
-
-    record ForceCancelled() implements RemoveWorktreeMsg {}
 
     /**
      * The user agreed to lose the changes of the worktree by removing it anyway.

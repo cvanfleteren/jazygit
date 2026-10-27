@@ -304,10 +304,10 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
      * @param title     the title, from the popup
      * @param rows      the rows to pick from, from the popup
      * @param onPick    the message for picking a row, from what it stands for
-     * @param onCancel  the message for cancelling, by Escape
+     * @param onCancel  the message for cancelling, by Escape; by default a {@link Msg.PopupDismissed}
      * @param emptyKey  the message key of the line shown when there are no rows to pick, if any
      */
-    public record Spec<P, T>(
+    public record Spec<P extends Popup, T>(
             String id,
             Class<P> popupType,
             Function<P, String> title,
@@ -317,7 +317,7 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
             Option<String> emptyKey) {
 
         /**
-         * A dialog that shows no line when there are no rows to pick.
+         * A dialog which Escape only closes (ADR 38).
          */
         public Spec(
                 String id,
@@ -325,8 +325,27 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
                 Function<P, String> title,
                 Function<P, List<Row<T>>> rows,
                 Function<T, Msg> onPick,
-                Supplier<Msg> onCancel) {
-            this(id, popupType, title, rows, onPick, onCancel, Option.none());
+                Option<String> emptyKey) {
+            this(id, popupType, title, rows, onPick, () -> new Msg.PopupDismissed(popupType), emptyKey);
+        }
+
+        /**
+         * A dialog which Escape only closes, that shows no line when there are no rows to pick.
+         */
+        public Spec(
+                String id,
+                Class<P> popupType,
+                Function<P, String> title,
+                Function<P, List<Row<T>>> rows,
+                Function<T, Msg> onPick) {
+            this(id, popupType, title, rows, onPick, Option.none());
+        }
+
+        /**
+         * This dialog, sending {@code onCancel} for Escape, for a popup that does more than close then.
+         */
+        public Spec<P, T> cancelledBy(Supplier<Msg> onCancel) {
+            return new Spec<>(id, popupType, title, rows, onPick, onCancel, emptyKey);
         }
     }
 }

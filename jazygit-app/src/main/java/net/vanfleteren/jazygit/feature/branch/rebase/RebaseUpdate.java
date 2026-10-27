@@ -17,7 +17,6 @@ public final class RebaseUpdate {
     public static Next update(Model model, RebaseMsg msg) {
         return switch (msg) {
             case RebaseMsg.Requested(BranchName onto) -> requested(model, onto);
-            case RebaseMsg.Cancelled() -> Next.of(model.withoutPopup(RebasePopup.class));
             case RebaseMsg.Chosen() ->
                 Update.confirm(model, RebasePopup.class, popup -> Option.of(new RebaseCmd(popup.onto())));
         };

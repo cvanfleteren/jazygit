@@ -27,7 +27,6 @@ public final class RecentReposDialog {
             popup -> Messages.get("dialog.recentRepos.title"),
             popup -> popup.repos().map(RecentReposDialog::row),
             RecentReposMsg.Chosen::new,
-            RecentReposMsg.Cancelled::new,
             Option.of("dialog.recentRepos.none"));
     // The characters of a name or a branch shown at most, so that long ones do not push the rest away.
     private static final int CAP = 30;
