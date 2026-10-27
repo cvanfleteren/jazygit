@@ -17,7 +17,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.time.Clock;
-import java.util.Objects;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.keys.Keymap;
@@ -27,7 +26,8 @@ import net.vanfleteren.jazygit.ui.*;
 import net.vanfleteren.jazygit.ui.widgets.*;
 
 /**
- * Entry point for jazygit, a lazygit-style terminal UI for Git built with TamboUI.
+ * jazygit, a lazygit-style terminal UI for Git built with TamboUI: lays out the panes, the content and the open
+ * popup of the {@link Model}, and routes what the user does to it.
  *
  * <p>Rendering never touches git: it only draws the current {@link Model}. Git is read on a
  * background thread by the {@link Program}, which publishes new models on the render thread.
@@ -47,17 +47,14 @@ public class JazygitApp extends ToolkitApp {
     private final RepositorySession session;
     // Quitting is up to the model, which may refuse; the runner stops on what the update returns.
     private final Consumer<Msg> dispatch = this::send;
-    private final ContentPanel contentPanel;
-    private final LeftColumn leftColumn;
     private final Popups popups = new Popups(dispatch);
-    // The screen the last frame showed; when the model shows another one, its pane gets the focus back.
-    private Screen shownScreen = Screen.REPOSITORY;
+    private final ContentPanel contentPanel;
+    private final FocusKeeper focus;
+    private final LeftColumn leftColumn;
     // The border between the left column and the content panel, which the user drags.
     private final BorderDrag borderDrag = new BorderDrag(dispatch);
     // Whether a Redraw is queued that no frame has been drawn since; only touched on the render thread.
     private boolean redrawPending;
-    // The focus the last frame was drawn with that was not empty, which a click on nothing that takes it clears.
-    private Option<String> lastFocus = Option.none();
 
     /**
      * @param env           what the repository the app starts in is read with; it opens other repositories in
@@ -67,14 +64,6 @@ public class JazygitApp extends ToolkitApp {
      */
     public JazygitApp(
             Env env, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, StyleEngine styleEngine) {
-        this.session = new RepositorySession(
-                env,
-                terminal,
-                this::runner,
-                clock,
-                this::requestRedraw,
-                this::quit,
-                model -> runner().focusManager().setFocus(PopupSlot.focusedPane(model)));
         this.settings = settings;
         this.themeOverride = themeOverride;
         this.styleEngine = styleEngine;
@@ -83,7 +72,10 @@ public class JazygitApp extends ToolkitApp {
                 this::leaveScrollArea,
                 id -> runner().focusManager().setFocus(id),
                 dispatch);
-        this.leftColumn = new LeftColumn(dispatch, styleEngine, clock, this::openContent, this::showBranchesTab);
+        this.focus = new FocusKeeper(this::runner, this::model, contentPanel, popups, this::requestRedraw);
+        this.leftColumn = new LeftColumn(dispatch, styleEngine, clock, focus::openContent, this::showBranchesTab);
+        this.session = new RepositorySession(
+                env, terminal, this::runner, clock, this::requestRedraw, this::quit, focus::moveToPaneOf);
     }
 
     /**
@@ -94,54 +86,18 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
-     * The left pane in use, whose highlighted row shows: the one with the focus, also while the content it
-     * selects has the focus, or a popup that has it.
+     * Gives the focus back to the pane whose content has it, and says whether there was one.
      */
-    private String activePane(Model model, String focusedId) {
-        return Option.of(focusedId)
-                .filter(id -> !popups.owns(id))
-                .orElse(model.shownPane())
-                .map(id -> contentPanel.paneOfArea(model, id).getOrElse(id))
-                .getOrNull();
-    }
-
-    /**
-     * Moves the focus to the content shown for the pane {@code paneId}, so it can be scrolled by key.
-     */
-    private void openContent(String paneId) {
-        contentPanel
-                .areaOfPane(model(), paneId)
-                .forEach(id -> runner().focusManager().setFocus(id));
+    private boolean leaveScrollArea() {
+        return focus.leaveScrollArea();
     }
 
     /**
      * Moves the focus to the branches pane, as a click on it does, and shows the list {@code tab} in it.
      */
     private void showBranchesTab(BranchesTab tab) {
-        runner().focusManager().setFocus(BranchesPanel.ID);
+        focus.moveTo(BranchesPanel.ID);
         dispatch.accept(new BranchesTabMsg.Chosen(tab));
-    }
-
-    /**
-     * Gives the focus to the pane or area a left click lands on, which then handles the click as usual. TamboUI only
-     * does so for a click that no element handles, but the layout around the panes hands the click to the pane, which
-     * does. An open popup keeps the focus.
-     */
-    private void focusClicked(MouseEvent event) {
-        String focused = runner().focusManager().focusedId();
-        if (event.kind() == MouseEventKind.PRESS && event.isLeftButton() && !popups.owns(focused)) {
-            runner().focusManager().focusAt(event.x(), event.y());
-        }
-    }
-
-    /**
-     * Gives the focus back to the pane whose content has it, and says whether there was one.
-     */
-    private boolean leaveScrollArea() {
-        Option<String> pane =
-                contentPanel.paneOfArea(model(), runner().focusManager().focusedId());
-        pane.forEach(runner().focusManager()::setFocus);
-        return pane.isDefined();
     }
 
     /**
@@ -206,7 +162,7 @@ public class JazygitApp extends ToolkitApp {
         if (borderDrag.handle(mouse, model()).isHandled()) {
             return EventResult.HANDLED;
         }
-        focusClicked(mouse);
+        focus.clicked(mouse);
         return EventResult.UNHANDLED;
     }
 
@@ -241,17 +197,8 @@ public class JazygitApp extends ToolkitApp {
         redrawPending = false;
         Model model = model();
         Theme.activate(styleEngine, model.preferences().theme());
-        // A click on nothing that takes the focus cleared it; what had it keeps it.
-        if (runner().focusManager().focusedId() == null) {
-            lastFocus.forEach(runner().focusManager()::setFocus);
-        }
-        if (model.screen() != shownScreen) {
-            shownScreen = model.screen();
-            runner().focusManager().setFocus(PopupSlot.focusedPane(model));
-        }
-        String focusedId = runner().focusManager().focusedId();
-        lastFocus = Option.of(focusedId).orElse(lastFocus);
-        String activeId = activePane(model, focusedId);
+        String focusedId = focus.settle(model);
+        String activeId = focus.activePane(model, focusedId);
         // The left column is the screen without the fetch line.
         Option<Integer> leftHeight = Try.of(
                         () -> runner().tuiRunner().backend().size().height() - FetchLine.HEIGHT)
@@ -273,26 +220,13 @@ public class JazygitApp extends ToolkitApp {
         // The framework knows no focus before the first render.
         Popups.Rendered shown = popups.render(model, Option.of(focusedId));
         report(reports());
-        shown.moveTo().forEach(runner().focusManager()::setFocus);
-        redrawIfFocusMoves(focusedId);
+        shown.moveTo().forEach(focus::moveTo);
+        focus.redrawIfMoves(focusedId);
         // What is behind an open popup is dimmed, so the popup stands out.
         Element screen = shown.dialog()
                 .<Element>map(d -> stack(new Dimmed(layout, Theme.backdrop(styleEngine)), d))
                 .getOrElse(layout);
         return new SelectedTextColoured(screen, Theme.selectedText(styleEngine));
-    }
-
-    /**
-     * Asks for another frame once the frame being rendered is drawn, if the focus is no longer {@code drawnWith} by
-     * then: a popup that opens or closes moves it, and TamboUI focuses the first pane after a frame drawn with no
-     * focus or with one that is gone. The model does not know the focus, so does not ask for the frame.
-     */
-    private void redrawIfFocusMoves(String drawnWith) {
-        runner().tuiRunner().runLater(() -> {
-            if (!Objects.equals(runner().focusManager().focusedId(), drawnWith)) {
-                requestRedraw();
-            }
-        });
     }
 
     /**
@@ -302,15 +236,10 @@ public class JazygitApp extends ToolkitApp {
      */
     List<Msg> reports() {
         Model model = model();
-        String focusedId = runner().focusManager().focusedId();
-        String activeId = activePane(model, focusedId);
-        List<Msg> selections = leftColumn.selectionChanges(model, activeId);
-        // The framework knows no focus before the first render.
-        Option<Msg> focused = Option.of(focusedId)
-                .filter(id -> !popups.owns(id))
-                .filter(id -> !model.shownPane().contains(id))
-                .map(id -> new Msg.Focused(id, ContentPanel.isArea(id)));
-        return selections.appendAll(focused);
+        String focusedId = focus.focusedId();
+        return leftColumn
+                .selectionChanges(model, focus.activePane(model, focusedId))
+                .appendAll(focus.report(model, focusedId));
     }
 
     /**
