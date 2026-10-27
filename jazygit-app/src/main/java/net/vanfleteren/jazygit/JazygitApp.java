@@ -15,7 +15,6 @@ import dev.tamboui.tui.event.Event;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
-import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -53,8 +52,6 @@ import net.vanfleteren.jazygit.feature.settings.SettingsPanelDialogs;
 import net.vanfleteren.jazygit.feature.stash.StashDialogs;
 import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
 import net.vanfleteren.jazygit.feature.worktree.WorktreeFeature;
-import net.vanfleteren.jazygit.gh.CliGitHub;
-import net.vanfleteren.jazygit.gh.GhToken;
 import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.git.CliGitInfoProvider;
 import net.vanfleteren.jazygit.git.GitError;
@@ -161,15 +158,7 @@ public class JazygitApp extends ToolkitApp {
      */
     public JazygitApp(
             Env env, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, StyleEngine styleEngine) {
-        this.env = new Env(
-                env.git(),
-                env.gitHub(),
-                env.settings(),
-                env.recent(),
-                env.unseen(),
-                env.checkTimings(),
-                this::switchTo,
-                this::handOver);
+        this.env = env.withApp(this::switchTo, this::handOver);
         this.settings = settings;
         this.themeOverride = themeOverride;
         this.styleEngine = styleEngine;
@@ -178,32 +167,6 @@ public class JazygitApp extends ToolkitApp {
                 this::leaveScrollArea,
                 id -> runner().focusManager().setFocus(id),
                 dispatch);
-    }
-
-    /**
-     * What commands run against for the repository {@code git} reads: gh at the executable {@code settings} name,
-     * and both gh and git as the account configured for the repository, if any.
-     */
-    private static Env env(
-            CliGitInfoProvider git,
-            Settings settings,
-            SettingsStore store,
-            RecentRepositories recent,
-            UnseenPullRequestsStore unseen,
-            CheckTimingsStore checkTimings,
-            Repositories repositories,
-            Terminal terminal) {
-        GhToken token = new GhToken(git.worktree(), settings.gh(), () -> GitHubAccount.configured(git));
-        // Without the token, git still talks to the remotes, as the credential helper's own account.
-        return new Env(
-                git.withCredentials(() -> token.environment().getOrElse(HashMap.empty())),
-                new CliGitHub(git.worktree(), settings.gh(), token),
-                store,
-                recent,
-                unseen,
-                checkTimings,
-                repositories,
-                terminal);
     }
 
     /**
@@ -261,7 +224,7 @@ public class JazygitApp extends ToolkitApp {
                     return open(start, recent, loaded, options.theme(), engine)
                             .map(opened -> opened.map(provider -> {
                                 recent.opened(provider.worktree()).onFailure(BugLog::log);
-                                Env env = env(
+                                Env env = RepositoryEnv.of(
                                         provider,
                                         loaded.settings(),
                                         settings,
@@ -526,15 +489,7 @@ public class JazygitApp extends ToolkitApp {
             // repository, and its outcome goes to the old program, which nobody looks at anymore.
             stop(running);
             startRuntime(
-                    env(
-                            git,
-                            last.preferences().settings(),
-                            env.settings(),
-                            env.recent(),
-                            env.unseen(),
-                            env.checkTimings(),
-                            env.repositories(),
-                            env.terminal()),
+                    RepositoryEnv.reopen(env, git, last.preferences().settings()),
                     new SettingsStore.Loaded(last.preferences().settings(), Option.none()),
                     last.preferences().themeOverride(),
                     landing);

@@ -75,4 +75,11 @@ public record Env(
     public Env(GitInfoProvider git, GitHub gitHub, SettingsStore settings) {
         this(git, gitHub, settings, RecentRepositories.NONE, Repositories.NONE);
     }
+
+    /**
+     * As this, opening other repositories in {@code repositories} and shown on {@code terminal}.
+     */
+    public Env withApp(Repositories repositories, Terminal terminal) {
+        return new Env(git, gitHub, settings, recent, unseen, checkTimings, repositories, terminal);
+    }
 }

@@ -125,9 +125,7 @@ final class StartApp extends ToolkitApp {
      */
     private void launch(StartCmd cmd) {
         io.execute(() -> {
-            Msg outcome = Try.of(cmd::run)
-                    .onFailure(BugLog::log)
-                    .getOrElseGet(bug -> cmd.failed(new Failure.Bug(bug)));
+            Msg outcome = Try.of(cmd::run).onFailure(BugLog::log).getOrElseGet(bug -> cmd.failed(new Failure.Bug(bug)));
             Option.of(runner()).forEach(running -> running.runOnRenderThread(() -> dispatch(outcome)));
         });
     }
