@@ -16,7 +16,7 @@
     <description>A lazygit-style terminal UI for Git, built with TamboUI</description>
 
     <properties>
-        <main.class>net.vanfleteren.jazygit.JazygitApp</main.class>
+        <main.class>net.vanfleteren.jazygit.Launcher</main.class>
     </properties>
 
     <dependencies>
