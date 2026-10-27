@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Errors open a popup, which closing leaves the error in the command log.
  */
-class ErrorUpdateTest {
+class ErrorPopupTest {
 
     @Test
     void aFailedOperationOpensTheErrorPopup() {

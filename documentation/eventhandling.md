@@ -92,7 +92,7 @@ and supplies the message, such as `RecentReposMsg.Requested`.
 
 While the help popup is open, its list has the focus, so `HelpDialog.handleKey` gets the key first:
 
-- Escape or `?` dispatches `HelpMsg.Closed`.
+- Escape or `?` dispatches `Msg.PopupDismissed(HelpPopup.class)` (ADR 38).
 - Enter runs the highlighted row; up and down move between the rows.
 - Any other key runs the row it matches: the panel's bindings first (`Binding.matches`), then the global keys
   (`Global.handle`).
