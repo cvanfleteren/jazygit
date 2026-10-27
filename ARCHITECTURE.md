@@ -34,7 +34,7 @@ app's tests.
 
 ```mermaid
 graph TD
-    App["JazygitApp<br/><i>entry point, layout, popups, focus</i>"]
+    App["JazygitApp, Launcher, RepositorySession, ...<br/><i>start, session, layout, popups, focus</i>"]
     UI["ui<br/><i>panels and widgets: render a Model</i>"]
     Keys["keys<br/><i>Keymap: every shortcut, declared once</i>"]
     Feature["feature.*<br/><i>branch, commit, stage, stash, discard,<br/>github, fetch, error, help, theme, repos,<br/>settings, worktree, inprogress, edit, start</i>"]
@@ -93,7 +93,7 @@ inside `jazygit-core`, `CoreArchitectureTest` does; and the core cannot reach th
 
 | Package | Responsibility |
 |---|---|
-| `JazygitApp` | Opens the repository, starts the `Program`, lays out the panes, shows the open popup and moves the focus. |
+| `JazygitApp` | Lays out the panes and the content, shows the open popup and routes the keys and the mouse to the model. Next to it: `Launcher` reads the command line and opens the repository; `RepositorySession` runs the `Program` and its threads, and opens another repository in its place; `TerminalHandOver` sets the terminal up and hands it to an editor; `Timers` dispatches what happens every so often; `Popups` lists the popups of the features; `FocusKeeper` keeps where the focus is; `ui.LeftColumn` lays out the panes of the screen shown. |
 | `ui` | Panels (`FilesPanel`, `BranchesPanel`, `CommitsPanel`, `ContentPanel`, `CommandLogPanel`, ...) that render a `Model` and turn key events into `Msg`s; the dialog widgets (`ConfirmDialog`, `ChoiceDialog`, `TextInputDialog`, `PickDialog`) and the `DialogFrame` they are drawn in, with `WithDetails` for a box of details under one; `ErrorText`, the only place that turns errors into text. |
 | `keys` | `Keymap`: the keys of each panel (`Scope`) and the global keys. Panels react to keys from it, and the help popup lists them from it. |
 | `feature.*` | One package per feature. Each one holds the feature's messages, its update functions, its commands, and its popups, dialogs and keys. |
@@ -156,7 +156,7 @@ recorded meanwhile stays. A file that cannot be read gives none, and is written 
 shown, as the list is only a convenience.
 
 Ctrl+R lists the others, leaving out the ones whose directory is gone, which are forgotten too. Choosing one
-runs `RecentReposCmd.SwitchTo`, which asks `Env.repositories()` to open it. `JazygitApp` does that: it opens
+runs `RecentReposCmd.SwitchTo`, which asks `Env.repositories()` to open it. `RepositorySession` does that: it opens
 the repository on the thread of the command and then, on the render thread, stops the runtime of the old one
 without waiting for the git command that runs, and starts a new `Program` for the new one from scratch. The
 theme and the settings of the session stay. A repository that cannot be opened is forgotten, and the error is
@@ -164,7 +164,7 @@ shown in the one still open.
 
 ## Starting outside a repository
 
-When the start directory is in no repository, or does not exist, `main` runs `StartApp` before `JazygitApp`
+When the start directory is in no repository, or does not exist, `Launcher` runs `StartApp` before `JazygitApp`
 (`feature.start`, see `documentation/adr/0028-start-outside-a-repository.md`). It asks what to open instead:
 
 - `i` makes the folder a repository with a plain `git init` (`CliGitInfoProvider.init`), unless it does not exist;
@@ -284,7 +284,7 @@ request. The design and the steps still to come are in `prs.md`.
   most 100: another `gh api graphql`, apart from the read for the branches pane, which also tells which repository
   it is (`PrOverview.repositoryName`). The three share one fragment and one parser
   (`CliGitHub.parseLists`), with the checks of the last commit of each.
-- They are read when the screen is shown, every minute while it is shown (`PrOverviewMsg.Tick`, from `JazygitApp`),
+- They are read when the screen is shown, every minute while it is shown (`PrOverviewMsg.Tick`, from `Timers`),
   with `r`, and after a pull request was merged, closed or turned into a draft. Failing to read them again keeps the
   ones read; `PrOverview.freshness` keeps when they were last read and which read failed since, which the line at the
   bottom says on this screen ("read 2m ago · last read failed"). gh runs as the account of the repository, so the lists are that account's.
@@ -305,7 +305,7 @@ request. The design and the steps still to come are in `prs.md`.
   for a pull request of another repository (`AppError.OtherRepository`). Which repository this is is known once its
   pull requests were read; until then, checking out says they are still being read, or why they could not be.
 - Each screen keeps where its focus was: `Msg.Focused` goes to `Model.focusedPane` or `PrOverview.focusedPane`,
-  whichever screen is shown (`Model.shownPane`), and `JazygitApp` gives it back when the screen is shown again.
+  whichever screen is shown (`Model.shownPane`), and `FocusKeeper` gives it back when the screen is shown again.
 
 ## Diff options
 
@@ -344,8 +344,8 @@ model has. The dialog stays open meanwhile, and a failing editor
 leaves it as it was.
 
 The editor needs the terminal, which the TUI owns. `Env.terminal()` (`state.Terminal`) hands it over: `EditCmd`
-and `MessageEditorCmd` run the editor inside `terminal().handOver(...)`, on the `git-io` thread. `JazygitApp`
-implements it with `HandOverBackend`, the TamboUI backend it gives the runner. It wraps the backend TamboUI picks
+and `MessageEditorCmd` run the editor inside `terminal().handOver(...)`, on the `git-io` thread. `TerminalHandOver`
+implements it with `HandOverBackend`, the TamboUI backend the app gives the runner. It wraps the backend TamboUI picks
 by itself (`BackendFactory.create()`, so `tamboui.backend` or `TAMBOUI_BACKEND` still chooses), and forwards to it:
 
 - **Leaving**, on the render thread between two frames: it stops reading keys, then puts the terminal back as it
@@ -365,7 +365,7 @@ the terminal, which would take the first key typed in the editor.
 
 ## The runtime loop
 
-`Program` holds the current `Model`. `JazygitApp` gives it three executors:
+`Program` holds the current `Model`. `RepositorySession` gives it three executors:
 
 - **ui**: the TamboUI render thread. It is the only thread that reads or replaces the model.
 - **io**: a single `git-io` thread, so the commands the user asks for never run concurrently.
@@ -614,7 +614,7 @@ classDiagram
 - **Popups are part of the model.** `model.popup()` says which dialog is open. `JazygitApp` renders the
   dialog that matches it and moves the focus into it, then back to the pane it came from once
   the popup closes. Each feature lists its dialogs, with the pane they give the focus back to, as
-  `PopupSlot`s in `XxxDialogs.popups(dispatch)`; `JazygitApp` only names the features.
+  `PopupSlot`s in `XxxDialogs.popups(dispatch)`; `Popups` only names the features.
   A popup that comes up by itself (`Model.openPopupIfFree`), like the outcome of a command or the theme key, does not replace a dialog the user is typing in.
 - **The cursors of the panes and the focus are view state.** The highlighted row of a pane lives in its TamboUI
   list, not in the `Model`: no update needs to know where it is. What the model needs is the item highlighted,
@@ -647,13 +647,13 @@ Each feature package follows the same shape:
 | `XxxDialogs` | `SquashDialogs.SQUASH`, `CommitDialog.reword` | The popups, mostly as data (`ConfirmDialog.Spec`, `ChoiceDialog.Spec`, `TextInputDialog.Spec`, `PickDialog.Spec`) that `popups(dispatch)` turns into widgets, as the `PopupSlot`s `JazygitApp` shows; `XxxDialog` for a feature with one, or a dialog of its own. |
 | `XxxKeys` | `StashKeys` | Adds the feature's keys to the immutable `Keymap`. |
 | `XxxAction` | `DropAction` | In the features split into operations, an operation's keys and popups together, a `FeatureAction` its `XxxFeature` lists. |
-| `XxxFeature` | `CommitFeature` | The operations of such a feature: what `Keymap` and `JazygitApp` know of it. |
+| `XxxFeature` | `CommitFeature` | The operations of such a feature: what `Keymap` and `Popups` know of it. |
 
 The commit, branch, github and worktree features give each of their operations a subpackage of its own, which holds
 all of it: its `XxxMsg`, `XxxUpdate` and popups, its command (`DropCmd`, with its `Operation`), its dialogs
 (`DropDialogs`) and its keys, which its `XxxAction` (`DropAction.ACTION`, a `FeatureAction`) brings together. The
 feature's `XxxFeature` lists the actions, in the order their keys are listed in a panel, and is what `Keymap` and
-`JazygitApp` know of it; adding an operation is adding its subpackage and one line there. A few keys that belong to
+`Popups` know of it; adding an operation is adding its subpackage and one line there. A few keys that belong to
 no operation, like switching the lists of the branches pane from the worktrees, are listed there too.
 
 - **commit:** `create`, `amend`, `reword`, `squash`, `fixup`, `drop`, `reset`. They share the message dialog that
