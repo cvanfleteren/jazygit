@@ -21,13 +21,9 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -70,7 +66,6 @@ import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.ui.*;
 import net.vanfleteren.jazygit.ui.widgets.*;
-import org.slf4j.LoggerFactory;
 
 /**
  * Entry point for jazygit, a lazygit-style terminal UI for Git built with TamboUI.
@@ -105,8 +100,6 @@ public class JazygitApp extends ToolkitApp {
     private static final int COMMITS_PERCENT = 30;
     // A border around a single blank line.
     private static final int MIN_STASH_HEIGHT = 3;
-    // Where the commands that threw are written down.
-    private static final Path BUG_LOG = Path.of(System.getProperty("java.io.tmpdir"), "jazygit-bugs.log");
     // How many background commands run at once: a fetch, the pull requests and a preview, but not so many git or
     // gh processes that a burst of them slows the machine down or eats into GitHub's rate limit.
     private static final int BACKGROUND_THREADS = 4;
@@ -242,21 +235,6 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
-     * Writes how a command threw to {@link #BUG_LOG}, as the terminal is the TUI's; failing that, it is lost. The
-     * debug log gets it too, after what led up to it.
-     */
-    static void logBug(Throwable bug) {
-        LoggerFactory.getLogger(JazygitApp.class).error("A command threw", bug);
-        StringWriter trace = new StringWriter();
-        bug.printStackTrace(new PrintWriter(trace));
-        Try.run(() -> Files.writeString(
-                BUG_LOG,
-                Instant.now() + " " + trace + System.lineSeparator(),
-                StandardOpenOption.CREATE,
-                StandardOpenOption.APPEND));
-    }
-
-    /**
      * @param args as {@link StartupCli} reads them; {@code --help} lists them
      */
     static void main(String[] args) {
@@ -282,7 +260,7 @@ public class JazygitApp extends ToolkitApp {
                     SettingsStore.Loaded loaded = settings.load();
                     return open(start, recent, loaded, options.theme(), engine)
                             .map(opened -> opened.map(provider -> {
-                                recent.opened(provider.worktree()).onFailure(JazygitApp::logBug);
+                                recent.opened(provider.worktree()).onFailure(BugLog::log);
                                 Env env = env(
                                         provider,
                                         loaded.settings(),
@@ -509,7 +487,7 @@ public class JazygitApp extends ToolkitApp {
                 io,
                 background,
                 runner::runOnRenderThread,
-                JazygitApp::logBug,
+                BugLog::log,
                 this::requestRedraw,
                 this::quit,
                 clock);
@@ -593,7 +571,7 @@ public class JazygitApp extends ToolkitApp {
     @Override
     protected TuiConfig configure() {
         // Without a backend of its own, the app still runs, but cannot hand the terminal over.
-        backend = Try.of(HandOverBackend::system).onFailure(JazygitApp::logBug).toOption();
+        backend = Try.of(HandOverBackend::system).onFailure(BugLog::log).toOption();
         // Frames are drawn when something changed, not on ticks.
         TuiConfig.Builder builder = TuiConfig.builder().mouseCapture(true).noTick();
         config = backend.map(builder::backend).getOrElse(builder).build();

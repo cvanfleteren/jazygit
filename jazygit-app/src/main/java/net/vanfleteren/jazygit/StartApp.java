@@ -112,7 +112,7 @@ final class StartApp extends ToolkitApp {
                         launch(start);
                     } else {
                         // Only the app has what another command runs against; asking for one here is a bug.
-                        JazygitApp.logBug(new IllegalStateException("Not a command of the start: " + cmd));
+                        BugLog.log(new IllegalStateException("Not a command of the start: " + cmd));
                     }
                 });
             }
@@ -126,7 +126,7 @@ final class StartApp extends ToolkitApp {
     private void launch(StartCmd cmd) {
         io.execute(() -> {
             Msg outcome = Try.of(cmd::run)
-                    .onFailure(JazygitApp::logBug)
+                    .onFailure(BugLog::log)
                     .getOrElseGet(bug -> cmd.failed(new Failure.Bug(bug)));
             Option.of(runner()).forEach(running -> running.runOnRenderThread(() -> dispatch(outcome)));
         });
