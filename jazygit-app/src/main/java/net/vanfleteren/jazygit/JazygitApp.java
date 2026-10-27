@@ -3,12 +3,10 @@ package net.vanfleteren.jazygit;
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.css.engine.StyleEngine;
-import dev.tamboui.style.Style;
 import dev.tamboui.toolkit.app.ToolkitApp;
 import dev.tamboui.toolkit.app.ToolkitRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Column;
-import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.TuiConfig;
 import dev.tamboui.tui.event.Event;
@@ -25,7 +23,6 @@ import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.settings.*;
 import net.vanfleteren.jazygit.state.*;
-import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.ui.*;
 import net.vanfleteren.jazygit.ui.widgets.*;
 
@@ -39,11 +36,6 @@ public class JazygitApp extends ToolkitApp {
 
     // Rows of the command log panel, borders included.
     private static final int COMMAND_LOG_HEIGHT = CommandLogPanel.VISIBLE_LINES + 2;
-    private static final int FILES_PERCENT = 25;
-    private static final int BRANCHES_PERCENT = 20;
-    private static final int COMMITS_PERCENT = 30;
-    // A border around a single blank line.
-    private static final int MIN_STASH_HEIGHT = 3;
 
     private final SettingsStore.Loaded settings;
     private final Option<ThemeName> themeOverride;
@@ -56,14 +48,7 @@ public class JazygitApp extends ToolkitApp {
     // Quitting is up to the model, which may refuse; the runner stops on what the update returns.
     private final Consumer<Msg> dispatch = this::send;
     private final ContentPanel contentPanel;
-    private final FilesPanel filesPanel = new FilesPanel(dispatch, () -> openContent(FilesPanel.ID), this::highlight);
-    private final BranchesPanel branchesPanel = new BranchesPanel(
-            dispatch, this::showBranchesTab, () -> openContent(BranchesPanel.ID), clock, this::highlight);
-    private final CommitsPanel commitsPanel =
-            new CommitsPanel(dispatch, () -> openContent(CommitsPanel.ID), this::highlight);
-    private final StashPanel stashPanel = new StashPanel(dispatch, () -> openContent(StashPanel.ID), this::highlight);
-    private final List<PullRequestsPanel> pullRequestsPanels =
-            PullRequestsPanel.all(dispatch, this::openContent, this::highlight);
+    private final LeftColumn leftColumn;
     private final Popups popups = new Popups(dispatch);
     // The screen the last frame showed; when the model shows another one, its pane gets the focus back.
     private Screen shownScreen = Screen.REPOSITORY;
@@ -98,6 +83,7 @@ public class JazygitApp extends ToolkitApp {
                 this::leaveScrollArea,
                 id -> runner().focusManager().setFocus(id),
                 dispatch);
+        this.leftColumn = new LeftColumn(dispatch, styleEngine, clock, this::openContent, this::showBranchesTab);
     }
 
     /**
@@ -105,13 +91,6 @@ public class JazygitApp extends ToolkitApp {
      */
     private void send(Msg msg) {
         session.dispatch(msg);
-    }
-
-    /**
-     * How the active theme highlights the selected row of a left pane, in use or not.
-     */
-    private Style highlight(boolean active) {
-        return Theme.highlights(styleEngine).of(active);
     }
 
     /**
@@ -141,13 +120,6 @@ public class JazygitApp extends ToolkitApp {
     private void showBranchesTab(BranchesTab tab) {
         runner().focusManager().setFocus(BranchesPanel.ID);
         dispatch.accept(new BranchesTabMsg.Chosen(tab));
-    }
-
-    /**
-     * Shows {@code screen}, as clicking its name in the title of the status pane does.
-     */
-    private void showScreen(Screen screen) {
-        dispatch.accept(new PrOverviewMsg.Chosen(screen));
     }
 
     /**
@@ -280,9 +252,12 @@ public class JazygitApp extends ToolkitApp {
         String focusedId = runner().focusManager().focusedId();
         lastFocus = Option.of(focusedId).orElse(lastFocus);
         String activeId = activePane(model, focusedId);
-        Column left = (model.screen() == Screen.PULL_REQUESTS
-                        ? pullRequestPanes(model, focusedId, activeId)
-                        : repositoryPanes(model, focusedId, activeId))
+        // The left column is the screen without the fetch line.
+        Option<Integer> leftHeight = Try.of(
+                        () -> runner().tuiRunner().backend().size().height() - FetchLine.HEIGHT)
+                .toOption();
+        Column left = leftColumn
+                .render(model, focusedId, activeId, leftHeight)
                 .percent(model.preferences().leftWidth(model.screen()));
         var panes = row(
                 left,
@@ -321,37 +296,6 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
-     * The left column of the repository screen: the status, the files, the branches, the commits and the stashes.
-     */
-    private Column repositoryPanes(Model model, String focusedId, String activeId) {
-        Panel branches = branchesPanel.render(model, focusedId, activeId);
-        Panel stash = stashPanel.render(model, focusedId, activeId);
-        Option<Integer> stashHeight = stashHeight(model);
-        return column(
-                StatusPanel.render(model, Theme.spanStyles(styleEngine), this::showScreen),
-                filesPanel.render(model, focusedId, activeId).percent(FILES_PERCENT),
-                branches.percent(BRANCHES_PERCENT),
-                // With the stash sized to its content, the commits take what is left, which is
-                // their share when the stash is as tall as it may get.
-                stashHeight.isDefined()
-                        ? commitsPanel.render(model, focusedId, activeId).fill()
-                        : commitsPanel.render(model, focusedId, activeId).percent(COMMITS_PERCENT),
-                stashHeight.map(stash::length).getOrElse(stash::fill));
-    }
-
-    /**
-     * The left column of the pull requests screen: the status, the pull requests of the repository, the ones that ask
-     * for the user's review, and the ones they opened, sharing the height.
-     */
-    private Column pullRequestPanes(Model model, String focusedId, String activeId) {
-        List<Panel> panes = pullRequestsPanels.map(
-                pane -> pane.render(model, focusedId, activeId).fill());
-        return column(panes.<Element>map(pane -> pane)
-                .prepend(StatusPanel.render(model, Theme.spanStyles(styleEngine), this::showScreen))
-                .toJavaArray(Element[]::new));
-    }
-
-    /**
      * What the widgets know that the model, which they were last rendered from, does not: the item highlighted in each
      * pane, which the content panel shows the preview of, and where the focus is outside the popups, which a closing
      * popup gives it back to. Empty once the model agrees with them. Called on the render thread.
@@ -360,17 +304,7 @@ public class JazygitApp extends ToolkitApp {
         Model model = model();
         String focusedId = runner().focusManager().focusedId();
         String activeId = activePane(model, focusedId);
-        List<Msg> selections = model.screen() == Screen.PULL_REQUESTS
-                // The content panel shows the pull request highlighted in the pane in use.
-                ? pullRequestsPanels
-                        .filter(pane -> pane.id().equals(activeId))
-                        .flatMap(pane -> pane.selectionChange(model))
-                : List.of(
-                                branchesPanel.selectionChange(model),
-                                commitsPanel.selectionChange(model),
-                                filesPanel.selectionChange(model),
-                                stashPanel.selectionChange(model))
-                        .flatMap(change -> change);
+        List<Msg> selections = leftColumn.selectionChanges(model, activeId);
         // The framework knows no focus before the first render.
         Option<Msg> focused = Option.of(focusedId)
                 .filter(id -> !popups.owns(id))
@@ -394,22 +328,6 @@ public class JazygitApp extends ToolkitApp {
      */
     private int screenWidth() {
         return Try.of(() -> runner().tuiRunner().backend().size().width()).getOrElse(Integer.MAX_VALUE);
-    }
-
-    /**
-     * The height of the stash pane: just its rows, but at most the share of the left column that is
-     * left once the other panes have theirs, and at least an empty pane (a blank line in a border).
-     * Empty when the terminal size is not known.
-     */
-    private Option<Integer> stashHeight(Model model) {
-        int rows = Math.max(1, model.repo().stashes().getOrElse(List.empty()).size());
-        // The left column is the screen without the fetch line.
-        return Try.of(() -> runner().tuiRunner().backend().size().height() - FetchLine.HEIGHT)
-                .toOption()
-                .map(height -> height
-                        - StatusPanel.HEIGHT
-                        - height * (FILES_PERCENT + BRANCHES_PERCENT + COMMITS_PERCENT) / 100)
-                .map(share -> Math.max(MIN_STASH_HEIGHT, Math.min(rows + 2, share)));
     }
 
     /**
