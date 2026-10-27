@@ -8,6 +8,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -350,4 +351,23 @@ class UpdateTest {
     }
 
     private record OtherPopup() implements Popup {}
+
+    @Test
+    void aCommandAskedForTwiceInOneMessageIsAskedForOnce() {
+        assertEquals(
+                List.of(new LoadStatus(), new LoadBranches()),
+                new Next(loaded(), List.of(new LoadStatus(), new LoadBranches(), new LoadStatus())).cmds());
+    }
+
+    @Test
+    void aBusyBranchIsReleasedOnceItsCommandIsDoneWhateverItReported() {
+        BranchRef feature = new BranchRef.Local(new BranchName("feature"));
+        Model busy = TestModels.busy(loaded(), feature, Operation.of("log.push", "error.push"));
+        long id = busy.jobs().running().keySet().max().get();
+
+        Model done = Update.update(busy, new Msg.Done(id, Option.none())).model();
+
+        assertTrue(busy.jobs().busy().containsKey(feature));
+        assertFalse(done.jobs().busy().containsKey(feature));
+    }
 }

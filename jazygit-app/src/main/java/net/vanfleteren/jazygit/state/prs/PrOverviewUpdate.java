@@ -61,11 +61,11 @@ public final class PrOverviewUpdate {
         return switch (msg) {
             // What failed to read before is read again too.
             case PrOverviewMsg.Refresh() -> {
-                Step loaded = load(overview, LOADS, jobs);
+                List<Cmd> loads = notRunning(LOADS, jobs);
                 yield overview.preview()
                         .filter(preview -> preview.value() instanceof Loadable.Failed)
-                        .map(preview -> preview(loaded.overview(), preview.key(), loaded.cmds()))
-                        .getOrElse(loaded);
+                        .map(preview -> preview(overview, preview.key(), loads))
+                        .getOrElse(() -> new Step(overview, loads));
             }
             case PrOverviewMsg.RepositoryLoaded(var read, var kept) -> {
                 PrOverview loaded = overview.withFreshness(overview.freshness().succeeded(REPOSITORY, now))
@@ -123,13 +123,16 @@ public final class PrOverviewUpdate {
      * {@code next}, also running {@code loads}, but the ones still running.
      */
     private static Next loaded(Next next, List<Cmd> loads) {
-        Step step = load(next.model().prOverview(), loads, next.model().jobs());
         return new Next(
-                next.model().withPrOverview(step.overview()), next.cmds().appendAll(step.cmds()));
+                next.model(),
+                next.cmds().appendAll(notRunning(loads, next.model().jobs())));
     }
 
-    private static Step load(PrOverview overview, List<Cmd> all, Jobs jobs) {
-        return new Step(overview, all.filter(load -> !jobs.runs(load)));
+    /**
+     * Those of {@code loads} that do not run in {@code jobs}.
+     */
+    private static List<Cmd> notRunning(List<Cmd> loads, Jobs jobs) {
+        return loads.filter(load -> !jobs.runs(load));
     }
 
     /**

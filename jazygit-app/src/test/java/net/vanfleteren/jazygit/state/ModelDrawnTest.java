@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.feature.worktree.prune.PruneWorktreesCmd;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import org.junit.jupiter.api.Test;
@@ -34,13 +35,20 @@ class ModelDrawnTest {
     }
 
     @Test
-    void theLoadsRunningAndWhenTheyReadAreNotDrawn() {
+    void whatOnlyStartsLoadsIsNotDrawn() {
         Model loading = model.mapJobs(jobs -> jobs.withFetchAgain(true)
                 .withWorktreeChangesRead(Option.of(Instant.EPOCH))
                 .ticked()
                 .withRead(new Cmd.LoadStatus(), true));
 
         assertEquals(model.drawn(), loading.drawn());
+    }
+
+    @Test
+    void anOperationThatKeepsNoBranchBusyIsNotDrawn() {
+        Model running = TestModels.running(model, new PruneWorktreesCmd());
+
+        assertEquals(model.drawn(), running.drawn());
     }
 
     @Test

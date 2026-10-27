@@ -88,6 +88,13 @@ class FetchUpdateTest {
     }
 
     @Test
+    void aFetchRequestedTwiceInOneMessageListsTheRemotesOnce() {
+        Next twice = FetchUpdate.requested(FetchUpdate.requested(Next.of(loaded())));
+
+        assertEquals(List.of(LIST), twice.cmds());
+    }
+
+    @Test
     void aFetchRequestedWhileOneRunsFollowsItOnceItIsDone() {
         FetchCmd.Fetch fromOrigin = new FetchCmd.Fetch("origin", List.empty());
         Model fetching = done(listing(), LIST, new FetchMsg.RemotesListed(List.of("origin")))
