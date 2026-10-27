@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.state.Loadable.Loading;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Preview;
 import net.vanfleteren.jazygit.state.SelectionMsg;
+import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -163,13 +164,10 @@ class DiffOptionsUpdateTest {
      * longer running.
      */
     private static void assertDropped(Model model, LoadMsg msg) {
-        Model running =
-                model.mapJobs(jobs -> jobs.withRefreshing(jobs.refreshing().add(msg.cmd())));
-
-        Next next = Update.update(running, msg);
+        Next next = TestModels.done(TestModels.running(model, msg.cmd()), msg.cmd(), msg);
 
         assertEquals(model.repoView(), next.model().repoView());
-        assertFalse(next.model().jobs().refreshing().contains(msg.cmd()));
+        assertFalse(next.model().jobs().runs(msg.cmd()));
         assertEquals(List.of(), next.cmds());
     }
 

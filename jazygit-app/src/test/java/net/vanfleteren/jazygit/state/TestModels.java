@@ -82,7 +82,10 @@ public final class TestModels {
      * A model with the sample status, branches and commits loaded and nothing running.
      */
     public static Model loaded() {
-        return Update.update(branchesRead(), commitsLoaded(COMMITS)).model();
+        Model read = branchesRead();
+        // The log was asked for when the status came, before the branches were known.
+        Cmd commits = runningCmds(read).find(Cmd.LoadCommits.class::isInstance).getOrElse(TestModels::loadCommits);
+        return done(read, commits, commitsLoaded(COMMITS)).model();
     }
 
     /**
@@ -103,14 +106,17 @@ public final class TestModels {
     }
 
     /**
-     * The sample model before its log is read.
+     * The sample model before its log is read, as {@link Program} has it.
      */
     private static Model branchesRead() {
-        Model model = Update.init("repo").model();
-        model = Update.update(model, new LoadMsg.StatusLoaded(CLEAN)).model();
-        model = Update.update(model, new LoadMsg.BranchesLoaded(new AllBranches(BRANCHES, List.empty())))
+        Model model = started(Update.init("repo")).model();
+        model = done(model, new Cmd.LoadStatus(), new LoadMsg.StatusLoaded(CLEAN))
                 .model();
-        return Update.update(model, new LoadMsg.StashesLoaded(io.vavr.collection.List.of()))
+        model = done(model, new Cmd.LoadBranches(), new LoadMsg.BranchesLoaded(new AllBranches(BRANCHES, List.empty())))
+                .model();
+        model = done(model, new Cmd.LoadStashes(), new LoadMsg.StashesLoaded(io.vavr.collection.List.of()))
+                .model();
+        return done(model, new Cmd.LoadWorktrees(), new LoadMsg.WorktreesLoaded(io.vavr.collection.List.of()))
                 .model();
     }
 
@@ -254,5 +260,75 @@ public final class TestModels {
      */
     public static Model typed(Model model, CommitMessage message) {
         return Update.update(model, new MessageEdited(message)).model();
+    }
+
+    /**
+     * {@code model} with {@code cmds} running, asked for at its time: what {@link Update#step} makes of the commands
+     * a message asks for.
+     */
+    public static Model running(Model model, Cmd... cmds) {
+        return model.mapJobs(jobs -> jobs.withStarted(List.of(cmds), model.now()));
+    }
+
+    /**
+     * {@code model} with {@code operation} running on {@code branch}, which is busy until it is done.
+     */
+    public static Model busy(Model model, BranchRef branch, Operation operation) {
+        return running(model, new Busy(branch, operation));
+    }
+
+    /**
+     * What {@code msg} makes of {@code model} as {@link Program} handles it: the commands it asks for run.
+     */
+    public static Update.Next stepped(Model model, Msg msg) {
+        return started(Update.update(model, msg));
+    }
+
+    /**
+     * {@code next} as {@link Program} applies it: the commands it asks for run.
+     */
+    public static Update.Next started(Update.Next next) {
+        return new Update.Next(
+                next.model()
+                        .mapJobs(jobs ->
+                                jobs.withStarted(next.cmds(), next.model().now())),
+                next.cmds(),
+                next.quit());
+    }
+
+    /**
+     * The commands that run in {@code model}.
+     */
+    public static io.vavr.collection.Set<Cmd> runningCmds(Model model) {
+        return model.jobs().running().values().map(Jobs.Running::cmd).toSet();
+    }
+
+    /**
+     * {@code model} with the command {@code cmd} that runs done, as {@link Program} reports it, with what it
+     * reported; the commands that asks for run.
+     */
+    public static Update.Next done(Model model, Cmd cmd, Msg result) {
+        long id = model.jobs()
+                .running()
+                .find(running -> running._2().cmd().equals(cmd))
+                .map(running -> running._1())
+                .getOrElseThrow(() -> new AssertionError(cmd + " does not run"));
+        return stepped(model, new Msg.Done(id, Option.of(result)));
+    }
+
+    /**
+     * An operation that keeps {@code branch} busy while it runs, like a push.
+     */
+    public record Busy(BranchRef branch, Operation operation) implements OperationCmd {
+
+        @Override
+        public Option<BranchRef> busyBranch() {
+            return Option.of(branch);
+        }
+
+        @Override
+        public Msg run(Env env) {
+            return succeeded(List.empty());
+        }
     }
 }

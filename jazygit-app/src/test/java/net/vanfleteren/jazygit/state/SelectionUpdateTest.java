@@ -150,12 +150,12 @@ class SelectionUpdateTest {
 
     @Test
     void aSkippedLoadIsNoLongerRunningAndIsNoFailure() {
-        Model running = failedDetail(failedDetail(selectedCommit()))
-                .mapJobs(jobs -> jobs.withRefreshing(jobs.refreshing().add(DETAIL)));
+        Model running = TestModels.running(failedDetail(failedDetail(selectedCommit())), DETAIL);
 
-        Model skipped = Update.update(running, new LoadMsg.Skipped(DETAIL)).model();
+        Model skipped =
+                TestModels.done(running, DETAIL, new LoadMsg.Skipped(DETAIL)).model();
 
-        assertFalse(skipped.jobs().refreshing().contains(DETAIL));
+        assertFalse(skipped.jobs().runs(DETAIL));
         // The backoff of a retry that a newer highlight skipped stays.
         assertEquals(running.jobs().retries(), skipped.jobs().retries());
         assertNotEquals(HashMap.empty(), skipped.jobs().retries());
@@ -352,12 +352,15 @@ class SelectionUpdateTest {
                 .model();
         Model failed = Update.update(selected, new LoadMsg.Failed(TestModels.loadBranchLog(feature), refused("boom")))
                 .model();
-        Model retrying = Update.update(failed, new Tick()).model();
-        assertTrue(retrying.jobs().refreshing().contains(TestModels.loadBranchLog(feature)));
+        Model retrying = TestModels.stepped(failed, new Tick()).model();
+        assertTrue(retrying.jobs().runs(TestModels.loadBranchLog(feature)));
 
-        Model retried = Update.update(retrying, TestModels.branchLogLoaded(feature, FEATURE_COMMITS))
+        Model retried = TestModels.done(
+                        retrying,
+                        TestModels.loadBranchLog(feature),
+                        TestModels.branchLogLoaded(feature, FEATURE_COMMITS))
                 .model();
-        assertFalse(retried.jobs().refreshing().contains(TestModels.loadBranchLog(feature)));
+        assertFalse(retried.jobs().runs(TestModels.loadBranchLog(feature)));
     }
 
     @Test

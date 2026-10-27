@@ -3,12 +3,12 @@ package net.vanfleteren.jazygit.state;
 import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -93,14 +93,15 @@ class UpdateTest {
 
     @Test
     void tickDoesNotRepeatLoadsThatAreStillRunning() {
-        Model model = Update.init("repo").model();
+        Model model = TestModels.started(Update.init("repo")).model();
 
         // Started anew, the repository is read at once; a tick then only checks the files.
         assertEquals(
                 List.of(new Cmd.CheckMetadata()),
                 Update.update(model, new Tick()).cmds());
 
-        Model statusDone = Update.update(model, new LoadMsg.StatusLoaded(CLEAN)).model();
+        Model statusDone = TestModels.done(model, new LoadStatus(), new LoadMsg.StatusLoaded(CLEAN))
+                .model();
         assertEquals(
                 List.of(new LoadStatus(), new Cmd.CheckMetadata()),
                 Update.update(statusDone, new Tick()).cmds());
@@ -126,7 +127,8 @@ class UpdateTest {
         Step ticked = Update.step(model, new Tick(), now);
 
         assertEquals(asked, ticked.launches().map(Launch::cmd));
-        assertEquals(List.range(0L, (long) asked.size()), ticked.launches().map(Launch::id));
+        long first = model.jobs().nextId();
+        assertEquals(List.range(first, first + asked.size()), ticked.launches().map(Launch::id));
         assertEquals(
                 ticked.launches().map(launch -> new Jobs.Running(launch.cmd(), now)),
                 ticked.launches()
@@ -142,9 +144,7 @@ class UpdateTest {
                 .foldLeft(
                         ticked.model(),
                         (model, launch) -> Update.step(model, new Msg.Done(launch.id(), Option.none()), now)
-                                .model())
-                // What they reported would let the tick read them again.
-                .mapJobs(jobs -> jobs.withRefreshing(HashSet.empty()));
+                                .model());
 
         Step again = Update.step(done, new Tick(), now.plusSeconds(1));
 
@@ -189,11 +189,16 @@ class UpdateTest {
     void aCommandThatShowedLingersOnceItIsDoneAndOneThatDidNotDoesNot() {
         Instant now = Instant.parse("2026-10-22T10:00:00Z");
         Step ticked = Update.step(loaded(), new Tick(), now);
-        Launch first = ticked.launches().head();
         Launch second = ticked.launches().last();
 
-        Model quick = Update.step(ticked.model(), new Msg.Done(first.id(), Option.none()), now.plusMillis(299))
-                .model();
+        // All but the last are done before they show.
+        Model quick = ticked.launches()
+                .init()
+                .foldLeft(
+                        ticked.model(),
+                        (model, launch) -> Update.step(
+                                        model, new Msg.Done(launch.id(), Option.none()), now.plusMillis(299))
+                                .model());
         Model slow = Update.step(quick, new Msg.Done(second.id(), Option.none()), now.plusSeconds(1))
                 .model();
 
@@ -308,12 +313,12 @@ class UpdateTest {
     void aRetryThatIsStillRunningIsNotStartedAgain() {
         Model failed = Update.update(loaded(), new LoadMsg.Failed(TestModels.loadCommits(), refused("boom")))
                 .model();
-        Model retrying = Update.update(failed, new Tick()).model();
+        Model retrying = TestModels.stepped(failed, new Tick()).model();
 
         assertFalse(Update.update(retrying, new Tick()).cmds().contains(TestModels.loadCommits()));
-        Model retried =
-                Update.update(retrying, TestModels.commitsLoaded(COMMITS)).model();
-        assertFalse(retried.jobs().refreshing().contains(TestModels.loadCommits()));
+        Model retried = TestModels.done(retrying, TestModels.loadCommits(), TestModels.commitsLoaded(COMMITS))
+                .model();
+        assertFalse(retried.jobs().runs(TestModels.loadCommits()));
     }
 
     @Test
@@ -346,4 +351,23 @@ class UpdateTest {
     }
 
     private record OtherPopup() implements Popup {}
+
+    @Test
+    void aCommandAskedForTwiceInOneMessageIsAskedForOnce() {
+        assertEquals(
+                List.of(new LoadStatus(), new LoadBranches()),
+                new Next(loaded(), List.of(new LoadStatus(), new LoadBranches(), new LoadStatus())).cmds());
+    }
+
+    @Test
+    void aBusyBranchIsReleasedOnceItsCommandIsDoneWhateverItReported() {
+        BranchRef feature = new BranchRef.Local(new BranchName("feature"));
+        Model busy = TestModels.busy(loaded(), feature, Operation.of("log.push", "error.push"));
+        long id = busy.jobs().running().keySet().max().get();
+
+        Model done = Update.update(busy, new Msg.Done(id, Option.none())).model();
+
+        assertTrue(busy.jobs().busy().containsKey(feature));
+        assertFalse(done.jobs().busy().containsKey(feature));
+    }
 }

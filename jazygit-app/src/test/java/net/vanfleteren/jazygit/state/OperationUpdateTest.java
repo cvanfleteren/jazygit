@@ -19,7 +19,6 @@ import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.BranchName;
-import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.git.model.PushMode;
@@ -42,10 +41,9 @@ class OperationUpdateTest {
 
     @Test
     void aSuccessLogsItsCommandsReleasesItsBranchClearsTheErrorAndReadsTheRepositoryAgain() {
-        Model pushing = TestModels.withCheckoutError(loaded(), "foo", "boom")
-                .withBusyBranch(new BranchRef.Local(new BranchName("feature")), PushCmd.PUSH);
+        Model pushing = TestModels.running(TestModels.withCheckoutError(loaded(), "foo", "boom"), PUSH);
 
-        Next next = Update.update(pushing, succeeded(PUSH, "git push origin feature"));
+        Next next = TestModels.done(pushing, PUSH, succeeded(PUSH, "git push origin feature"));
 
         assertEquals(
                 List.of(new LogEntry(PushCmd.PUSH, executed("git push origin feature"))),
@@ -57,6 +55,7 @@ class OperationUpdateTest {
                         new LoadStatus(),
                         new LoadBranches(),
                         new LoadStashes(),
+                        new Cmd.LoadWorktrees(),
                         new LoadPullRequests(),
                         new LoadBranchChecks()),
                 next.cmds());
@@ -68,7 +67,8 @@ class OperationUpdateTest {
 
         Next next = Update.update(loaded(), succeeded(pull, "git pull"));
 
-        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new LoadStashes()), next.cmds());
+        assertEquals(
+                List.of(new LoadStatus(), new LoadBranches(), new LoadStashes(), new Cmd.LoadWorktrees()), next.cmds());
     }
 
     @Test
@@ -76,9 +76,7 @@ class OperationUpdateTest {
         Failure failure = new Failure.Git(
                 new GitError.CommandFailed("rejected", 1), executed("git push origin feature"), Option.none());
 
-        Next next = Update.update(
-                loaded().withBusyBranch(new BranchRef.Local(new BranchName("feature")), PushCmd.PUSH),
-                new OperationMsg.Failed(PUSH, failure));
+        Next next = TestModels.done(TestModels.running(loaded(), PUSH), PUSH, new OperationMsg.Failed(PUSH, failure));
 
         assertEquals(
                 List.of(new LogEntry(PushCmd.PUSH, executed("git push origin feature"))),
@@ -181,7 +179,8 @@ class OperationUpdateTest {
                 next.model().outcome().commandLog());
         assertEquals(Option.none(), next.model().outcome().error());
         assertEquals(Option.of(notice), next.model().outcome().notice());
-        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new LoadStashes()), next.cmds());
+        assertEquals(
+                List.of(new LoadStatus(), new LoadBranches(), new LoadStashes(), new Cmd.LoadWorktrees()), next.cmds());
     }
 
     @Test

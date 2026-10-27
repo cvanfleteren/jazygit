@@ -153,7 +153,7 @@ class BranchUpdateTest {
 
     @Test
     void aBusyBranchIsNotCheckedOutMergedRebasedOrBranchedFrom() {
-        Model pushing = tracking().withBusyBranch(new BranchRef.Local(new BranchName("feature")), PushCmd.PUSH);
+        Model pushing = TestModels.busy(tracking(), new BranchRef.Local(new BranchName("feature")), PushCmd.PUSH);
 
         assertEquals(
                 List.of(),
@@ -256,8 +256,8 @@ class BranchUpdateTest {
         assertEquals(
                 io.vavr.collection.HashSet.empty(), asked.model().jobs().busy().keySet());
 
-        Next confirmed =
-                Update.update(typed(asked.model(), "  upstream   shared/feature "), new PushMsg.UpstreamConfirmed());
+        Next confirmed = TestModels.stepped(
+                typed(asked.model(), "  upstream   shared/feature "), new PushMsg.UpstreamConfirmed());
         assertEquals(
                 List.of(new PushCmd.PushSettingUpstream(
                         new BranchName("feature"), new RemoteBranch("upstream", new BranchName("shared/feature")))),
@@ -334,7 +334,7 @@ class BranchUpdateTest {
                                 "boom"))
                 .model();
 
-        Next next = Update.update(failedBefore, new PushMsg.Requested(new BranchName("feature")));
+        Next next = TestModels.stepped(failedBefore, new PushMsg.Requested(new BranchName("feature")));
 
         assertEquals(
                 List.of(new PushCmd.Push(
@@ -386,7 +386,7 @@ class BranchUpdateTest {
         assertEquals(
                 io.vavr.collection.HashSet.empty(), asked.model().jobs().busy().keySet());
 
-        Next confirmed = Update.update(asked.model(), new PushMsg.ForceConfirmed());
+        Next confirmed = TestModels.stepped(asked.model(), new PushMsg.ForceConfirmed());
         assertEquals(
                 List.of(new PushCmd.Push(
                         new BranchName("feature"),
@@ -517,7 +517,7 @@ class BranchUpdateTest {
         Model failedBefore = Update.update(pullable(2, 0), failed(new PullCmd.Pull(new BranchName("main")), "boom"))
                 .model();
 
-        Next next = Update.update(failedBefore, new PullMsg.Requested(new BranchName("main")));
+        Next next = TestModels.stepped(failedBefore, new PullMsg.Requested(new BranchName("main")));
 
         assertEquals(List.of(new PullCmd.Pull(new BranchName("main"))), next.cmds());
         assertEquals(Option.none(), next.model().outcome().error());
@@ -533,7 +533,7 @@ class BranchUpdateTest {
 
     @Test
     void pullRequestOfAnotherBranchFastForwardsIt() {
-        Next next = Update.update(pullable(0, 0), new PullMsg.Requested(new BranchName("feature")));
+        Next next = TestModels.stepped(pullable(0, 0), new PullMsg.Requested(new BranchName("feature")));
 
         assertEquals(
                 List.of(new PullCmd.FastForward(
@@ -694,7 +694,7 @@ class BranchUpdateTest {
 
     @Test
     void theCheckedOutBranchCanBeRenamedButNotABusyOrUnknownOne() {
-        Model pushing = loaded().withBusyBranch(new BranchRef.Local(new BranchName("feature")), PushCmd.PUSH);
+        Model pushing = TestModels.busy(loaded(), new BranchRef.Local(new BranchName("feature")), PushCmd.PUSH);
 
         assertEquals(
                 Option.of(new RenameBranchPopup(new BranchName("main"))),
@@ -842,7 +842,7 @@ class BranchUpdateTest {
         Model open = Update.update(withRemote, new DeleteBranchMsg.Requested(new BranchName("feature")))
                 .model();
 
-        Next next = Update.update(open, new DeleteBranchMsg.Chosen(DeleteScope.REMOTE));
+        Next next = TestModels.stepped(open, new DeleteBranchMsg.Chosen(DeleteScope.REMOTE));
 
         assertEquals(
                 List.of(new DeleteBranchCmd.DeleteBranch(
@@ -858,7 +858,7 @@ class BranchUpdateTest {
 
     @Test
     void aBranchBeingDeletedIsBusyUntilTheDeleteIsDone() {
-        Model deleting = Update.update(
+        Model deleting = TestModels.stepped(
                         Update.update(tracking(), new DeleteBranchMsg.Requested(new BranchName("feature")))
                                 .model(),
                         new DeleteBranchMsg.Chosen(DeleteScope.BOTH))
@@ -875,10 +875,13 @@ class BranchUpdateTest {
                         .model()
                         .popup());
 
+        DeleteBranchCmd.DeleteBranch both = new DeleteBranchCmd.DeleteBranch(
+                new BranchName("feature"), new RemoteBranch("origin", new BranchName("feature")), DeleteScope.BOTH);
         assertEquals(
                 io.vavr.collection.HashSet.empty(),
-                Update.update(
+                TestModels.done(
                                 deleting,
+                                both,
                                 succeeded(new DeleteBranchCmd.DeleteBranch(
                                         new BranchName("feature"),
                                         new RemoteBranch("origin", new BranchName("feature")),
@@ -889,8 +892,9 @@ class BranchUpdateTest {
                         .keySet());
         assertEquals(
                 io.vavr.collection.HashSet.empty(),
-                Update.update(
+                TestModels.done(
                                 deleting,
+                                both,
                                 failed(
                                         new DeleteBranchCmd.DeleteBranch(
                                                 new BranchName("feature"),
@@ -935,7 +939,11 @@ class BranchUpdateTest {
                 loaded(), succeeded(new CheckoutCmd.Checkout(new BranchName("feature")), "git checkout feature"));
 
         assertEquals(
-                List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadStashes()),
+                List.of(
+                        new LoadStatus(),
+                        new LoadBranches(),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
                 next.cmds());
         assertEquals(Option.none(), next.model().outcome().error());
     }
@@ -948,7 +956,13 @@ class BranchUpdateTest {
 
         assertEquals(
                 Option.of("Checkout of feature failed: local changes would be overwritten"), errorText(next.model()));
-        assertEquals(List.of(new LoadStatus(), new LoadBranches(), new LoadStashes()), next.cmds());
+        assertEquals(
+                List.of(
+                        new LoadStatus(),
+                        new LoadBranches(),
+                        new LoadStashes(),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
+                next.cmds());
     }
 
     @Test

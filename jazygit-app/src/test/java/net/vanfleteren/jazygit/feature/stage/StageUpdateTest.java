@@ -142,14 +142,22 @@ class StageUpdateTest {
     @Test
     void toggledReloadsAndFailureIsReported() {
         assertEquals(
-                List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadStashes()),
+                List.of(
+                        new LoadStatus(),
+                        new LoadBranches(),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
                 Update.update(loaded(), succeeded(new StageCmd.Stage(List.of())))
                         .cmds());
 
         Next failed = Update.update(loaded(), failed(new StageCmd.Stage(List.of()), "fatal: pathspec"));
         assertEquals(Option.of("Staging failed: fatal: pathspec"), errorText(failed.model()));
         assertEquals(
-                List.of(new LoadStatus(), new LoadBranches(), new net.vanfleteren.jazygit.state.Cmd.LoadStashes()),
+                List.of(
+                        new LoadStatus(),
+                        new LoadBranches(),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
                 failed.cmds());
     }
 }

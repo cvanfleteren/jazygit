@@ -17,14 +17,14 @@ final class GitHubReads {
      * {@code next}, also running {@code read}, unless it runs already.
      */
     static Next load(Next next, Cmd read) {
-        return next.model().gitHub().reading().contains(read) ? next : start(next, read);
+        return next.model().jobs().runs(read) ? next : start(next, read);
     }
 
     /**
      * {@code next}, also running {@code read}; when it runs already, once it is done.
      */
     static Next loadAnyway(Next next, Cmd read) {
-        return next.model().gitHub().reading().contains(read)
+        return next.model().jobs().runs(read)
                 ? new Next(
                         next.model()
                                 .mapGitHub(gitHub ->
@@ -38,16 +38,11 @@ final class GitHubReads {
      * meanwhile.
      */
     static Next done(Model model, Cmd read) {
-        Model done =
-                model.mapGitHub(gitHub -> gitHub.withReading(gitHub.reading().remove(read))
-                        .withAgain(gitHub.again().remove(read)));
+        Model done = model.mapGitHub(gitHub -> gitHub.withAgain(gitHub.again().remove(read)));
         return model.gitHub().again().contains(read) ? start(Next.of(done), read) : Next.of(done);
     }
 
     private static Next start(Next next, Cmd read) {
-        return new Next(
-                next.model()
-                        .mapGitHub(gitHub -> gitHub.withReading(gitHub.reading().add(read))),
-                next.cmds().append(read));
+        return new Next(next.model(), next.cmds().append(read));
     }
 }

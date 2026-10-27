@@ -26,8 +26,6 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
  * @param pullRequestsFailure why the pull requests could not be read the last time, if they could not
  * @param branchChecks        how the CI checks are doing on the branches on GitHub; none until they were read once,
  *                            and the ones read last when reading them again failed
- * @param reading             the reads from GitHub that are running; the line at the bottom says when the pull
- *                            requests are read
  * @param again               the running reads to start again once they are done, as they may have missed a change
  *                            just made; see {@link GitHubReads}
  * @param merges              the merges GitHub was asked for, by the number of their pull request, kept apart from
@@ -47,7 +45,6 @@ public record GitHubState(
         Option<Map<BranchName, PullRequest>> pullRequests,
         Option<Failure> pullRequestsFailure,
         Option<GitHubChecks> branchChecks,
-        Set<Cmd> reading,
         Set<Cmd> again,
         Map<Integer, PullRequestMerge> merges,
         Option<CheckTimes> checkTimes,
@@ -59,7 +56,6 @@ public record GitHubState(
             Option.none(),
             Option.none(),
             Option.none(),
-            HashSet.empty(),
             HashSet.empty(),
             HashMap.empty(),
             Option.none(),

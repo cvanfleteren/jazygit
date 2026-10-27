@@ -114,17 +114,11 @@ public final class Update {
     }
 
     /**
-     * Starts {@code cmd}: its branch, if it has one, is busy until it is done. One that waits until the repository
-     * is in the middle of nothing is not started while it is, which the user is told instead.
+     * Starts {@code cmd}: its branch, if it has one, is busy until it is done ({@link Jobs#busy()}). One that waits
+     * until the repository is in the middle of nothing is not started while it is, which the user is told instead.
      */
     public static Next start(Model model, OperationCmd cmd) {
-        return unfinished(model, cmd)
-                .map(error -> Next.of(model.fail(error)))
-                .getOrElse(() -> Next.of(
-                        cmd.busyBranch()
-                                .map(branch -> model.withBusyBranch(branch, cmd.operation()))
-                                .getOrElse(model),
-                        cmd));
+        return unfinished(model, cmd).map(error -> Next.of(model.fail(error))).getOrElse(() -> Next.of(model, cmd));
     }
 
     private static Option<AppError> unfinished(Model model, OperationCmd cmd) {
@@ -193,15 +187,12 @@ public final class Update {
     private static Next reload(Model model, List<Cmd.Load> periodic, Predicate<Cmd.Load> due) {
         List<Cmd.Load> retries = retries(model);
         List<Cmd.Load> loads = periodic.appendAll(retries.filter(due))
-                .filter(cmd -> !model.jobs().refreshing().contains(cmd))
+                .filter(cmd -> !model.jobs().runs(cmd))
                 .appendAll(worktreeChanges(model)
                         .filter(load -> model.jobs()
                                 .worktreeChangesRead()
                                 .forAll(read -> !model.now().isBefore(read.plus(WORKTREE_CHANGES_INTERVAL)))));
-        return new Next(
-                model.mapJobs(jobs ->
-                        jobs.withRefreshing(jobs.refreshing().addAll(loads)).retainingRetries(retries.toSet())),
-                List.narrow(loads));
+        return new Next(model.mapJobs(jobs -> jobs.retainingRetries(retries.toSet())), List.narrow(loads));
     }
 
     /**
@@ -254,9 +245,7 @@ public final class Update {
      * pane shows the worktrees and that is not being read already.
      */
     public static Next readWorktreeChanges(Model model) {
-        Option<Cmd.Load> load = worktreeChanges(model);
-        return new Next(
-                model.mapJobs(jobs -> jobs.withRefreshing(jobs.refreshing().addAll(load))), List.narrow(load.toList()));
+        return new Next(model, List.narrow(worktreeChanges(model).toList()));
     }
 
     /**
@@ -269,7 +258,7 @@ public final class Update {
                 .filter(load -> model.screen() == Screen.REPOSITORY
                         && model.repoView().branchesTab() == BranchesTab.WORKTREES
                         && others.nonEmpty()
-                        && !model.jobs().refreshing().exists(running -> running instanceof LoadWorktreeChanges));
+                        && !model.jobs().runs(LoadWorktreeChanges.class::isInstance));
     }
 
     /**
@@ -285,11 +274,8 @@ public final class Update {
                         .toOption()
                         .exists(status -> status.files().containsAll(d.key())))
                 .map(d -> new LoadFileDiff(d.key(), model.preferences().diffOptions()))
-                .filter(cmd -> !model.jobs().refreshing().contains(cmd))
-                .map(cmd -> new Next(
-                        model.mapJobs(
-                                jobs -> jobs.withRefreshing(jobs.refreshing().add(cmd))),
-                        cmds.append(cmd)))
+                .filter(cmd -> !model.jobs().runs(cmd))
+                .map(cmd -> new Next(model, cmds.append(cmd)))
                 .getOrElse(() -> new Next(model, cmds));
     }
 
@@ -306,11 +292,16 @@ public final class Update {
     }
 
     /**
-     * The next model, and the commands to run for it.
+     * The next model, and the commands to run for it. A command is asked for once: one equal to one asked for before
+     * it is dropped, as the model only knows what runs once the message is handled (ADR 39).
      *
      * @param quit whether the app stops once this is applied
      */
     public record Next(Model model, List<Cmd> cmds, boolean quit) {
+
+        public Next {
+            cmds = cmds.distinct();
+        }
 
         public Next(Model model, List<Cmd> cmds) {
             this(model, cmds, false);

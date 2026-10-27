@@ -91,7 +91,7 @@ class RemoteBranchUpdateTest {
 
     @Test
     void checkingOutARemoteBranchWithoutALocalOneCreatesOneThatFollowsIt() {
-        Next next = Update.update(withRemotes(), new CheckoutMsg.RemoteRequested(ORIGIN_NEW));
+        Next next = TestModels.stepped(withRemotes(), new CheckoutMsg.RemoteRequested(ORIGIN_NEW));
 
         assertEquals(List.of(new CheckoutRemote(new BranchName("new"), ORIGIN_NEW)), next.cmds());
         // The remote branch shows as busy, as the local one is not there yet.

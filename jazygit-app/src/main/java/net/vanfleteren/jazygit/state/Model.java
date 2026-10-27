@@ -142,15 +142,17 @@ public record Model(
      * frame, what is left out too much would not be drawn when it changes.
      */
     public Model drawn() {
-        // A command that runs shows only once it ran a while, which the spinners' frames tell, not a message; the
-        // time shows to the second at most.
-        return mapJobs(jobs -> jobs.withRefreshing(HashSet.empty())
-                        .withFailed(HashSet.empty())
+        // A command that runs shows only once it ran a while, which the spinners' frames tell, not a message, but for
+        // the branch it keeps busy, which shows at once; the time shows to the second at most.
+        return mapJobs(jobs -> jobs.withFailed(HashSet.empty())
+                        .withFetchAgain(false)
                         .withWorktreeChangesRead(Option.none())
                         .withReadAt(HashMap.empty())
                         .withTicks(0)
                         .withRetries(HashMap.empty())
-                        .withRunning(HashMap.empty())
+                        .withRunning(jobs.running()
+                                .filterValues(command -> command.cmd() instanceof OperationCmd operation
+                                        && operation.busyBranch().isDefined()))
                         .withNextId(0))
                 .withNow(now.truncatedTo(ChronoUnit.SECONDS));
     }
@@ -202,20 +204,6 @@ public record Model(
     public Model fail(AppError error) {
         Model failed = mapOutcome(outcome -> outcome.failing(error));
         return popup.isDefined() ? failed : failed.openPopup(new ErrorPopup(error));
-    }
-
-    /**
-     * This model with {@code operation} running on {@code branch}.
-     */
-    public Model withBusyBranch(BranchRef branch, Operation operation) {
-        return mapJobs(jobs -> jobs.withBusyBranch(branch, operation));
-    }
-
-    /**
-     * This model with the operation on {@code branch} done.
-     */
-    public Model withoutBusyBranch(BranchRef branch) {
-        return mapJobs(jobs -> jobs.withoutBusyBranch(branch));
     }
 
     /**

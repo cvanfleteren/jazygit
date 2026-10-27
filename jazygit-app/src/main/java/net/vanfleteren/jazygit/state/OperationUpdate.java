@@ -45,7 +45,6 @@ public final class OperationUpdate {
      * The model once {@code cmd} ran {@code commands}.
      */
     public static Model done(Model model, OperationCmd cmd, List<ExecutedCommand> commands) {
-        Model released = cmd.busyBranch().map(model::withoutBusyBranch).getOrElse(model);
-        return CommandLog.append(released, cmd.operation(), commands);
+        return CommandLog.append(model, cmd.operation(), commands);
     }
 }

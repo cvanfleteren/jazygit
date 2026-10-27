@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.fetch;
 
+import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
@@ -39,9 +40,9 @@ public sealed interface FetchCmd extends Cmd {
     }
 
     /**
-     * Fetches from {@code remote}.
+     * Fetches from {@code remote}, and then from {@code rest}, one after the other.
      */
-    record Fetch(String remote) implements FetchCmd {
+    record Fetch(String remote, List<String> rest) implements FetchCmd {
 
         @Override
         public Option<Label> label() {
@@ -55,12 +56,12 @@ public sealed interface FetchCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.git().fetch(remote).fold(this::failedWith, commands -> new FetchMsg.Fetched(remote));
+            return env.git().fetch(remote).fold(this::failedWith, commands -> new FetchMsg.Fetched(remote, rest));
         }
 
         @Override
         public Msg failed(Failure failure) {
-            return new FetchMsg.FetchFailed(remote, failure);
+            return new FetchMsg.FetchFailed(remote, rest, failure);
         }
     }
 }

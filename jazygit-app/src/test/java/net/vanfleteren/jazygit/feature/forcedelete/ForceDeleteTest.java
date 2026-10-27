@@ -10,7 +10,6 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchCmd;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchCmd.DeleteBranch;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeCmd;
 import net.vanfleteren.jazygit.gh.StubGitHub;
@@ -166,10 +165,12 @@ class ForceDeleteTest {
 
     @Test
     void theRefusalAsksToDeleteAnywayLogsWhatRanAndReleasesTheBranch() {
-        Model deleting = model().withBusyBranch(new BranchRef.Local(FEATURE), DeleteBranchCmd.DELETE_BRANCH);
+        Model deleting = TestModels.running(model(), DELETE_BOTH);
 
-        Model asked = Update.update(
-                        deleting, new ForceDeleteMsg.NotFullyMerged(DELETE_BOTH, FEATURE, 3, NOT_MERGED.commands()))
+        Model asked = TestModels.done(
+                        deleting,
+                        DELETE_BOTH,
+                        new ForceDeleteMsg.NotFullyMerged(DELETE_BOTH, FEATURE, 3, NOT_MERGED.commands()))
                 .model();
 
         assertEquals(Option.of(new ForceDeleteBranchPopup(FEATURE, 3, false)), asked.popup());
@@ -217,7 +218,7 @@ class ForceDeleteTest {
     void confirmingDeletesTheBranchWithForce() {
         Model asked = model().openPopup(new ForceDeleteBranchPopup(FEATURE, 3, false));
 
-        Next confirmed = Update.update(asked, new ForceDeleteMsg.Confirmed());
+        Next confirmed = TestModels.stepped(asked, new ForceDeleteMsg.Confirmed());
 
         assertEquals(List.of(new ForceDeleteCmd(FEATURE)), confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());

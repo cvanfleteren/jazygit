@@ -417,7 +417,7 @@ class WorktreeUpdateTest {
 
     @Test
     void unknownOrBusyBranchesGetNoWorktree() {
-        Model busy = model().withBusyBranch(new BranchRef.Local(FEATURE), PushCmd.PUSH);
+        Model busy = TestModels.busy(model(), new BranchRef.Local(FEATURE), PushCmd.PUSH);
 
         assertEquals(
                 Option.none(),
@@ -450,7 +450,8 @@ class WorktreeUpdateTest {
                 List.of(),
                 Update.update(typed(asked, "  "), new Msg.PopupConfirmed(NewWorktreePopup.class))
                         .cmds());
-        Next confirmed = Update.update(typed(asked, " ~/elsewhere "), new Msg.PopupConfirmed(NewWorktreePopup.class));
+        Next confirmed =
+                TestModels.stepped(typed(asked, " ~/elsewhere "), new Msg.PopupConfirmed(NewWorktreePopup.class));
 
         assertEquals(
                 List.of(new AddWorktreeCmd(new WorktreeSource.Existing(FEATURE), "~/elsewhere")), confirmed.cmds());
@@ -559,9 +560,11 @@ class WorktreeUpdateTest {
                 List.of(),
                 Update.update(asked, new RemoveWorktreeMsg.Chosen(true)).cmds());
 
-        Model busy = Update.update(model(), new RemoveWorktreeMsg.Requested("/repos/app-taken"))
-                .model()
-                .withBusyBranch(new BranchRef.Local(TAKEN), PushCmd.PUSH);
+        Model busy = TestModels.busy(
+                Update.update(model(), new RemoveWorktreeMsg.Requested("/repos/app-taken"))
+                        .model(),
+                new BranchRef.Local(TAKEN),
+                PushCmd.PUSH);
         assertEquals(
                 List.of(),
                 Update.update(busy, new RemoveWorktreeMsg.Chosen(true)).cmds());

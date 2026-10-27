@@ -9,6 +9,7 @@ import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.function.Predicate;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.MetadataStamp;
@@ -16,12 +17,10 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp;
 /**
  * What runs in the background, and when the remotes were last fetched from.
  *
- * @param refreshing periodic loads that have been started and not finished yet, so a tick does not queue them again
  * @param failed     the reads of the log of HEAD, and of what is ahead on its base, that failed, whatever was kept of
  *                   them: a tick reads them again, as what is kept may be that of another HEAD
- * @param busy       the branches a git operation runs on right now, like a push or a delete, and that operation:
- *                   they show a spinner, and take no other operation until it is done
- * @param fetching   the background fetch from the remotes that is running, if any; the next one waits
+ * @param fetchAgain whether to fetch from the remotes again once the fetch that runs is done, as something changed on
+ *                   a remote meanwhile that it may have missed
  * @param lastFetch  when a remote was last fetched from, and the remotes that failed the last time
  * @param worktreeChangesRead when reading which worktrees have changes last finished, whatever came of it
  * @param readAt     for each load that {@link Cmd.CheckMetadata} guards, what the files it reads looked like when it
@@ -34,17 +33,17 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp;
  * @param retries    the reads that failed the last time they ran, with how often they failed in a row and the tick
  *                   they last failed on: a tick only tries one again once it waited longer the more it failed
  * @param running    every command that runs, by the id it was given when it was asked for, until it is done (ADR 33):
- *                   queued, waiting for its guard or running, the user waits for it all the same
+ *                   queued, waiting for its guard or running, the user waits for it all the same. It is all the
+ *                   model knows of what runs (ADR 39): a load that is not started again while it runs, a busy branch
+ *                   and a fetch are told from it
  * @param nextId     the id the next command that is asked for gets
  * @param lingering  what shows after the commands that showed are done, and until when, so that the indicator does
  *                   not blink out between two commands
  */
 @With
 public record Jobs(
-        Set<Cmd.Load> refreshing,
         Set<Cmd.Load> failed,
-        Map<BranchRef, Operation> busy,
-        Option<Fetching> fetching,
+        boolean fetchAgain,
         Freshness lastFetch,
         Option<Instant> worktreeChangesRead,
         Map<Cmd.Load, MetadataStamp> readAt,
@@ -57,9 +56,7 @@ public record Jobs(
 
     public static final Jobs IDLE = new Jobs(
             HashSet.empty(),
-            HashSet.empty(),
-            HashMap.empty(),
-            Option.none(),
+            false,
             Freshness.NEVER,
             Option.none(),
             HashMap.empty(),
@@ -162,17 +159,31 @@ public record Jobs(
     }
 
     /**
-     * These jobs with {@code operation} running on {@code branch}.
+     * Whether {@code cmd}, or one equal to it, runs.
      */
-    public Jobs withBusyBranch(BranchRef branch, Operation operation) {
-        return withBusy(busy.put(branch, operation));
+    public boolean runs(Cmd cmd) {
+        return runs(cmd::equals);
     }
 
     /**
-     * These jobs with the operation on {@code branch} done.
+     * Whether a command that {@code which} tells runs.
      */
-    public Jobs withoutBusyBranch(BranchRef branch) {
-        return withBusy(busy.remove(branch));
+    public boolean runs(Predicate<? super Cmd> which) {
+        return running.values().exists(command -> which.test(command.cmd()));
+    }
+
+    /**
+     * The branches a git operation runs on, like a push or a delete, and that operation: they show a spinner, and take
+     * no other operation until it is done.
+     */
+    public Map<BranchRef, Operation> busy() {
+        return running.values()
+                .toList()
+                .map(Running::cmd)
+                .filter(OperationCmd.class::isInstance)
+                .map(OperationCmd.class::cast)
+                .flatMap(cmd -> cmd.busyBranch().map(branch -> Tuple.of(branch, cmd.operation())))
+                .toMap(entry -> entry);
     }
 
     /**
