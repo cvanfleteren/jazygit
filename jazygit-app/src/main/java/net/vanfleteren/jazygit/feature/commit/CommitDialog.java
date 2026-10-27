@@ -155,7 +155,7 @@ public final class CommitDialog implements PopupView {
     }
 
     private void confirm() {
-        // A blank summary keeps the popup open, see CommitUpdate and RewordUpdate.
+        // A blank summary keeps the popup open, see CommitPopup.confirm and RewordPopup.confirm.
         dispatch.accept(new Msg.PopupConfirmed(popupType));
     }
 
