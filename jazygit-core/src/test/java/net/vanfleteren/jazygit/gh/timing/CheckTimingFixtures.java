@@ -31,19 +31,33 @@ public final class CheckTimingFixtures {
 
     public static Check check(
             String name, long runId, int attempt, Option<Integer> started, Option<Integer> completed) {
+        return check("Build", "pull_request", name, runId, attempt, started, completed);
+    }
+
+    /**
+     * A check of {@code workflow}, of a run started by {@code event}.
+     */
+    public static Check check(
+            String workflow,
+            String event,
+            String name,
+            long runId,
+            int attempt,
+            Option<Integer> started,
+            Option<Integer> completed) {
         return new Check(
                 name,
                 completed.isDefined() ? Checks.PASSING : Checks.PENDING,
                 Option.of(new CheckRun(
                         name.hashCode() * 31L + runId,
-                        "Build",
+                        workflow,
                         completed.isDefined() ? "SUCCESS" : "",
                         started.map(CheckTimingFixtures::at),
                         completed.map(CheckTimingFixtures::at),
                         runId,
                         T0,
                         attempt,
-                        "pull_request")));
+                        event)));
     }
 
     public static Check queued(String name) {
@@ -59,13 +73,21 @@ public final class CheckTimingFixtures {
      * {@code finished} after their run was created.
      */
     public static List<CheckSample> samples(String name, int[] durations, int[] finished, Instant at) {
+        return samples("Build", "pull_request", name, durations, finished, at);
+    }
+
+    /**
+     * Runs of check {@code <workflow>/<name>}, of runs started by {@code event}.
+     */
+    public static List<CheckSample> samples(
+            String workflow, String event, String name, int[] durations, int[] finished, Instant at) {
         return List.range(0, durations.length)
                 .map(i -> new CheckSample(
-                        CheckSample.key("Build", name),
-                        name.hashCode() * 1000L + i,
+                        CheckSample.key(workflow, name),
+                        CheckSample.key(workflow, name).hashCode() * 1000L + i,
                         Duration.ofSeconds(durations[i]),
                         Duration.ofSeconds(finished[i]),
-                        "pull_request",
+                        event,
                         at.minusSeconds(i)));
     }
 }

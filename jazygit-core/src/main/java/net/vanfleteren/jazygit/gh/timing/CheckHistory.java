@@ -57,6 +57,18 @@ public record CheckHistory(Map<String, List<CheckSample>> samples) {
         return median(check, CheckSample::finished);
     }
 
+    /**
+     * The checks of {@code workflow} that its runs started by {@code event} have, by {@link CheckSample#key}: those
+     * with at least {@link CheckTimings#MIN_SAMPLES} runs started by it (ADR 36).
+     */
+    public List<String> checksOf(String workflow, String event) {
+        String prefix = CheckSample.key(workflow, "");
+        return List.ofAll(samples.filter((check, runs) -> check.startsWith(prefix)
+                                && runs.count(run -> run.event().equals(event)) >= CheckTimings.MIN_SAMPLES)
+                        .keySet())
+                .sorted();
+    }
+
     private Option<Duration> median(String check, Function<CheckSample, Duration> of) {
         return samples.get(check)
                 .filter(runs -> runs.size() >= CheckTimings.MIN_SAMPLES)

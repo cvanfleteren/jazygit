@@ -43,6 +43,18 @@ class CheckHistoryTest {
     }
 
     @Test
+    void theChecksOfAWorkflowWithEnoughRunsOfAnEvent() {
+        CheckHistory history = CheckHistory.EMPTY
+                .with(samples("verify", new int[] {1, 2, 3}, new int[] {1, 2, 3}, T0), T0)
+                .with(samples("package", new int[] {1, 2}, new int[] {1, 2}, T0), T0)
+                .with(samples("Build", "push", "snapshot", new int[] {1, 2, 3}, new int[] {1, 2, 3}, T0), T0)
+                .with(samples("Builder", "pull_request", "z", new int[] {1, 2, 3}, new int[] {1, 2, 3}, T0), T0);
+
+        assertEquals(List.of("Build/verify"), history.checksOf("Build", "pull_request"));
+        assertEquals(List.of("Build/snapshot"), history.checksOf("Build", "push"));
+    }
+
+    @Test
     void aRunIsLearnedOnce() {
         List<CheckSample> runs = samples("verify", new int[] {100, 60}, new int[] {110, 70}, T0);
 
