@@ -46,7 +46,9 @@ request dialog; what is estimated is rounded as before.
 - The start is the one the estimate counts from (ADR 32): the earliest of the commit's workflow runs, a run by its
   `runCreatedAt`, a re-run by the earliest `startedAt` of its checks, and a check of an app other than Actions by its
   `startedAt`. So the queueing before the first job counts, and how long it ran and `done in ~1m` add up. Commit
-  statuses are left out. Not: the earliest `startedAt` of any check, which leaves the queueing out.
+  statuses are left out. Not: the earliest `startedAt` of any check, which leaves the queueing out. Until the check
+  runs of apps other than Actions are read with their timing (ADR 32's last step), they have none, and count as a
+  commit status does.
 - The end is the latest `completedAt`, once every check is done, passed or failed. While one is not done there is no
   end. Not: the expected end as a time of day, `~14:06:40`, which says again what `done in ~1m 5s` says.
 - How long they took is from the start to the end, or to now while one is not done: the time on the clock, not the

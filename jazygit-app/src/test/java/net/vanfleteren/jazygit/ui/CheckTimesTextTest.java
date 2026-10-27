@@ -16,22 +16,15 @@ class CheckTimesTextTest {
     private static final Instant NOW = Instant.parse("2026-10-25T10:00:00Z");
 
     @Test
-    void howLongDownToFiveSecondsUnderFiveMinutes() {
-        assertEquals("<5s", CheckTimesText.duration(Duration.ofSeconds(4)));
-        assertEquals("<5s", CheckTimesText.duration(Duration.ofSeconds(-5)));
-        assertEquals("5s", CheckTimesText.duration(Duration.ofSeconds(5)));
-        assertEquals("45s", CheckTimesText.duration(Duration.ofSeconds(49)));
-        assertEquals("55s", CheckTimesText.duration(Duration.ofSeconds(59)));
+    void howLongToTheSecondUnderAnHour() {
+        assertEquals("0s", CheckTimesText.duration(Duration.ofMillis(999)));
+        assertEquals("0s", CheckTimesText.duration(Duration.ofSeconds(-5)));
+        assertEquals("4s", CheckTimesText.duration(Duration.ofSeconds(4)));
+        assertEquals("49s", CheckTimesText.duration(Duration.ofSeconds(49)));
         assertEquals("1m", CheckTimesText.duration(Duration.ofSeconds(60)));
-        assertEquals("2m 5s", CheckTimesText.duration(Duration.ofSeconds(129)));
-        assertEquals("4m 55s", CheckTimesText.duration(Duration.ofSeconds(299)));
-    }
-
-    @Test
-    void howLongDownToFiveSecondsAlsoFromFiveMinutesOn() {
-        assertEquals("5m", CheckTimesText.duration(Duration.ofSeconds(300)));
-        assertEquals("7m 40s", CheckTimesText.duration(Duration.ofSeconds(7 * 60 + 41)));
-        assertEquals("59m 55s", CheckTimesText.duration(Duration.ofSeconds(3599)));
+        assertEquals("2m 9s", CheckTimesText.duration(Duration.ofSeconds(129)));
+        assertEquals("7m 41s", CheckTimesText.duration(Duration.ofSeconds(7 * 60 + 41)));
+        assertEquals("59m 59s", CheckTimesText.duration(Duration.ofMillis(3_599_999)));
     }
 
     @Test

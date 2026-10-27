@@ -628,7 +628,7 @@ class PullRequestDialogTest {
 
         // verify and the status are not known, so neither is when they are all done.
         assertTrue(screen.contains("Checks  ⏳ 4 running · done in ?"), screen);
-        assertTrue(screen.contains("⏳ package" + " ".repeat(35) + "running 1m 55s · due│"), screen);
+        assertTrue(screen.contains("⏳ package" + " ".repeat(35) + "running 1m 58s · due│"), screen);
         assertTrue(screen.contains("⏳ verify" + " ".repeat(36) + "running 30s · ? left│"), screen);
         assertTrue(screen.contains("⏳ ci/status" + " ".repeat(46) + "running│"), screen);
         assertTrue(screen.contains("💤 acceptance" + " ".repeat(28) + "queued 2m · ~2m 15s left│"), screen);

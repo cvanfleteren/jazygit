@@ -10,8 +10,9 @@ import net.vanfleteren.jazygit.i18n.Messages;
 
 /**
  * How long checks have run and are expected to take still (ADR 32). In the dialogs how long they ran, which is
- * exact, is rounded down to 5s, from an hour on to the minute; what is left, an estimate, to the nearest 5s while that is under 5m, else to the
- * nearest minute (ADR 34). In the branches pane, which has no room for seconds, in whole minutes.
+ * exact, is shown to the second, from an hour on to the minute (ADR 37); what is left, an estimate, to the nearest 5s
+ * while that is under 5m, else to the nearest minute (ADR 34). In the branches pane, which has no room for seconds, in
+ * whole minutes.
  */
 public final class CheckTimesText {
 
@@ -21,14 +22,12 @@ public final class CheckTimesText {
     private CheckTimesText() {}
 
     /**
-     * How long it is since {@code since}, in a dialog, rounded down as a clock that counts up, as it is exact: to 5s,
-     * {@code <5s}, {@code 45s}, {@code 2m}, {@code 7m 40s}; from an hour on to the minute, {@code 1h 5m}.
+     * How long it is since {@code since}, in a dialog, rounded down as a clock that counts up, as it is exact: to the
+     * second, {@code 0s}, {@code 47s}, {@code 2m}, {@code 7m 41s}; from an hour on to the minute, {@code 1h 5m}.
      */
     public static String duration(Duration since) {
-        long seconds = since.toSeconds();
-        return seconds < 5
-                ? Messages.get("checks.underFiveSeconds")
-                : seconds >= 3600 ? minutes(seconds / 60) : toFiveSeconds(seconds / 5 * 5);
+        long seconds = Math.max(0, since.toSeconds());
+        return seconds >= 3600 ? minutes(seconds / 60) : minutesAndSeconds(seconds);
     }
 
     /**
@@ -39,13 +38,13 @@ public final class CheckTimesText {
         long seconds = Math.round(left.toSeconds() / 5.0) * 5;
         return Messages.get(
                 "checks.about",
-                seconds >= TO_THE_SECOND ? minutes(Math.round(left.toSeconds() / 60.0)) : toFiveSeconds(seconds));
+                seconds >= TO_THE_SECOND ? minutes(Math.round(left.toSeconds() / 60.0)) : minutesAndSeconds(seconds));
     }
 
     /**
-     * {@code seconds}, a step of 5s under an hour: {@code 45s}, {@code 2m}, {@code 2m 5s}.
+     * {@code seconds}, under an hour: {@code 45s}, {@code 2m}, {@code 2m 5s}.
      */
-    private static String toFiveSeconds(long seconds) {
+    private static String minutesAndSeconds(long seconds) {
         return seconds < 60
                 ? Messages.get("checks.seconds", String.valueOf(seconds))
                 : seconds % 60 == 0
@@ -93,7 +92,7 @@ public final class CheckTimesText {
     }
 
     /**
-     * How a check that runs shows how it is doing at its widest, {@code running 59m 55s · ~4m 55s left}, so a column
+     * How a check that runs shows how it is doing at its widest, {@code running 59m 59s · ~4m 55s left}, so a column
      * of them can keep its width while their seconds move on.
      */
     public static String widestRunning() {
