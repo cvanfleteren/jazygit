@@ -14,15 +14,19 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.gh.model.CheckRun;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
+import net.vanfleteren.jazygit.gh.timing.CheckHistory;
+import net.vanfleteren.jazygit.gh.timing.CheckSample;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.state.CheckTimes;
 import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -115,6 +119,31 @@ class ChecksDialogTest {
                 .with(Either.left(refused("offline"))));
 
         assertTrue(screen.contains("Checks of main · not up to date"), screen);
+    }
+
+    @Test
+    void waitsForTheChecksThatDoNotShowYetWithoutListingThem() throws Exception {
+        // package runs 60s; acceptance waits for it, so GitHub makes it once package is done, 254s into its run.
+        List<CheckSample> samples = List.range(0, 3)
+                .flatMap(i -> List.of(
+                        new CheckSample(
+                                "Build/package", i, Duration.ofSeconds(60), Duration.ofSeconds(60), "push", NOW),
+                        new CheckSample(
+                                "Build/acceptance",
+                                10 + i,
+                                Duration.ofSeconds(190),
+                                Duration.ofSeconds(254),
+                                "push",
+                                NOW)));
+        CheckTimes times = CheckTimes.of("owner/repo", CheckHistory.EMPTY.with(samples, NOW), Option.none());
+
+        String screen = screen(TestModels.loaded()
+                .withNow(NOW)
+                .mapGitHub(gitHub -> gitHub.withCheckTimes(Option.of(times)))
+                .openPopup(read(List.of(check("package", Checks.PENDING, 30, Option.none())))));
+
+        assertTrue(screen.contains("⏳ 1 running · done in ~3m 40s"), screen);
+        assertFalse(screen.contains("acceptance"), screen);
     }
 
     @Test

@@ -671,6 +671,15 @@ class PullRequestDialogTest {
     }
 
     @Test
+    void waitsForTheChecksThatDoNotShowYetWithoutListingThem() throws Exception {
+        // acceptance waits for package, so GitHub makes it once package is done; it is done 254s into its run.
+        String screen = timedScreen(List.of(timed("package", 120, Option.of(118))), learned());
+
+        assertTrue(screen.contains("Checks  ⏳ 1 running · done in ~2m 15s"), screen);
+        assertFalse(screen.contains("acceptance"), screen);
+    }
+
+    @Test
     void aCheckPastItsEstimateIsOverdue() throws Exception {
         String screen = timedScreen(List.of(timed("acceptance", 500, Option.of(400))), learned());
 

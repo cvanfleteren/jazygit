@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Duration;
+import net.vanfleteren.jazygit.gh.model.CheckRun;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
 import org.junit.jupiter.api.Test;
@@ -78,6 +79,104 @@ class EtaTest {
     void theChecksTogetherAreDoneWhenAllAre() {
         assertEquals(new Eta.Done(), Eta.of(List.of(check("package", Option.of(2), Option.of(60))), HISTORY));
         assertEquals(new Eta.Done(), Eta.of(List.empty(), HISTORY));
+    }
+
+    @Test
+    void aRunWaitsForTheChecksItHasThatDoNotShowYet() {
+        // acceptance needs package, so GitHub makes it only once package is done.
+        assertEquals(new Eta.Expected(at(254)), Eta.of(List.of(running("package", 2)), HISTORY));
+    }
+
+    @Test
+    void aRunDoesNotWaitForTheChecksOfAnotherEvent() {
+        CheckHistory history = HISTORY.with(
+                samples("Build", "push", "snapshot", new int[] {170, 170, 170}, new int[] {458, 458, 458}, T0), T0);
+
+        assertEquals(new Eta.Expected(at(254)), Eta.of(List.of(running("package", 2)), history));
+    }
+
+    @Test
+    void aRunDoesNotWaitForAMissingCheckWithTooLittleHistory() {
+        CheckHistory history = HISTORY.with(samples("snapshot", new int[] {170, 170}, new int[] {458, 458}, T0), T0);
+
+        assertEquals(new Eta.Expected(at(254)), Eta.of(List.of(queued("acceptance")), history));
+    }
+
+    @Test
+    void aMissingCheckIsNotComingOnceTheChecksOfItsRunAreDone() {
+        assertEquals(new Eta.Done(), Eta.of(List.of(check("package", Option.of(2), Option.of(60))), HISTORY));
+    }
+
+    @Test
+    void aSkippedCheckIsNotMissing() {
+        Check skipped = new Check(
+                "acceptance",
+                Checks.PASSING,
+                queued("acceptance")
+                        .run()
+                        .map(run -> new CheckRun(
+                                run.id(),
+                                run.workflow(),
+                                "SKIPPED",
+                                Option.of(at(60)),
+                                Option.of(at(60)),
+                                run.runId(),
+                                run.runCreatedAt(),
+                                run.runAttempt(),
+                                run.event())));
+
+        assertEquals(new Eta.Expected(at(62)), Eta.of(List.of(running("package", 2), skipped), HISTORY));
+    }
+
+    @Test
+    void aReRunWaitsForItsMissingChecksFromWhenItsFirstCheckStarted() {
+        assertEquals(
+                new Eta.Expected(at(1254)),
+                Eta.of(List.of(check("package", 9, 2, Option.of(1000), Option.none())), HISTORY));
+    }
+
+    @Test
+    void eachRunOfACommitWaitsForItsOwnMissingChecks() {
+        CheckHistory history = HISTORY.with(
+                        samples("Review", "pull_request", "review", new int[] {30, 30, 30}, new int[] {35, 35, 35}, T0),
+                        T0)
+                .with(
+                        samples(
+                                "Review",
+                                "pull_request",
+                                "summary",
+                                new int[] {9, 9, 9},
+                                new int[] {400, 400, 400},
+                                T0),
+                        T0);
+        List<Check> buildDone = List.of(
+                check("package", Option.of(2), Option.of(60)), check("acceptance", Option.of(62), Option.of(250)));
+        Check reviewing = check("Review", "pull_request", "review", 2, 1, Option.of(5), Option.none());
+        Check summarized = check("Review", "pull_request", "summary", 2, 1, Option.of(5), Option.of(20));
+
+        // Build is done, so it waits for nothing; Review still waits for its summary.
+        assertEquals(new Eta.Expected(at(400)), Eta.of(buildDone.append(reviewing), history));
+        // Review is done without its review, so it waits for nothing; Build still waits for acceptance.
+        assertEquals(new Eta.Expected(at(254)), Eta.of(List.of(running("package", 2), summarized), history));
+    }
+
+    @Test
+    void aCheckThatShowsInOneRunOfAWorkflowIsStillMissingInAnother() {
+        List<Check> first = List.of(
+                check("package", 1, 1, Option.of(2), Option.of(60)),
+                check("acceptance", 1, 1, Option.of(62), Option.of(250)));
+
+        assertEquals(
+                new Eta.Expected(at(254)),
+                Eta.of(first.append(check("package", 2, 1, Option.of(2), Option.none())), HISTORY));
+    }
+
+    @Test
+    void aWorkflowThatWaitsToStartIsStillNotKnown() {
+        // ADR 35: a workflow run without check runs yet is a queued check named after its workflow.
+        Check waiting = check("Build", "pull_request", "Build", 1, 1, Option.none(), Option.none());
+
+        assertEquals(new Eta.Unknown(), Eta.of(List.of(waiting), HISTORY));
     }
 
     @Test

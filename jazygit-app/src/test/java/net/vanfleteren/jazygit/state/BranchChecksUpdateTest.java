@@ -10,6 +10,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.time.Duration;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.StubGitHub;
@@ -19,6 +20,8 @@ import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.timing.CheckHistory;
+import net.vanfleteren.jazygit.gh.timing.CheckSample;
 import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.gh.timing.Eta;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
@@ -243,6 +246,35 @@ class BranchChecksUpdateTest {
                 List.of(new CheckTimesCmd.RecordCheckTimes(
                         "owner/repo", List.empty(), read.model().now(), true)),
                 read.cmds());
+    }
+
+    @Test
+    void aPendingBranchWaitsForTheChecksThatDoNotShowYet() {
+        // package runs 60s; acceptance waits for it, so GitHub makes it once package is done, 254s into its run.
+        List<CheckSample> samples = List.range(0, 3)
+                .flatMap(i -> List.of(
+                        new CheckSample(
+                                "Build/package",
+                                i,
+                                Duration.ofSeconds(60),
+                                Duration.ofSeconds(60),
+                                "push",
+                                Instant.EPOCH.plusSeconds(i)),
+                        new CheckSample(
+                                "Build/acceptance",
+                                10 + i,
+                                Duration.ofSeconds(190),
+                                Duration.ofSeconds(254),
+                                "push",
+                                Instant.EPOCH.plusSeconds(i))));
+        CheckTimes times = CheckTimes.of("owner/repo", CheckHistory.EMPTY.with(samples, Instant.EPOCH), Option.none());
+
+        Model model =
+                readOneByOne(List.of(running("package"))).mapGitHub(gitHub -> gitHub.withCheckTimes(Option.of(times)));
+
+        assertEquals(
+                Option.of(new Eta.Expected(Instant.EPOCH.plusSeconds(254))),
+                model.gitHub().eta(remote("origin", "feature")));
     }
 
     @Test

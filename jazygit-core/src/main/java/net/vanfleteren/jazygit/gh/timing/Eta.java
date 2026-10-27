@@ -39,7 +39,8 @@ public sealed interface Eta {
 
     /**
      * When the checks {@code all} of a commit are expected to be done together: done when they all are, not known
-     * when one that is not done is not known, as they are not done before it is.
+     * when one that is not done is not known, as they are not done before it is. A workflow run with a check that is
+     * not done also waits for the checks it has that GitHub did not make yet (ADR 36).
      */
     static Eta of(List<Check> all, CheckHistory history) {
         List<Eta> pending = all.filter(check -> !check.done()).map(check -> of(check, all, history));
@@ -50,7 +51,29 @@ public sealed interface Eta {
                 pending.flatMap(eta -> eta instanceof Expected(Instant at) ? List.of(at) : List.empty());
         return expected.size() < pending.size()
                 ? new Unknown()
-                : new Expected(expected.max().get());
+                : new Expected(expected.appendAll(missing(all, history)).max().get());
+    }
+
+    /**
+     * When the checks that the workflow runs among {@code all} have, as {@code history} tells, but that their run does
+     * not show among {@code all} yet, are expected done: as a queued check of their run, while the run has a check that
+     * is not done. A job that needs others is made only once those are done; when none of its run is left, it is not
+     * coming.
+     */
+    private static List<Instant> missing(List<Check> all, CheckHistory history) {
+        return all.filter(check -> !check.done())
+                .flatMap(Check::run)
+                .distinctBy(CheckRun::runId)
+                .flatMap(run -> {
+                    List<String> shown = all.filter(check -> check.run().exists(other -> other.runId() == run.runId()))
+                            .flatMap(CheckSample::key);
+                    return runStart(run, all)
+                            .toList()
+                            .flatMap(start -> history.checksOf(run.workflow(), run.event())
+                                    .filter(check -> !shown.contains(check))
+                                    .flatMap(history::finished)
+                                    .map(start::plus));
+                });
     }
 
     /**
