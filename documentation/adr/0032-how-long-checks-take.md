@@ -168,3 +168,6 @@ whole minutes. Every time of an hour or more is written `1h 5m`, or `1h`, in the
 
 Amended by ADR 36: a workflow run also waits for the checks its history says it has and that GitHub has not made
 yet, like a job that `needs` others, while one of its checks is not done.
+
+Amended by ADR 37: the checks popup shows, under its counts, when the checks started, ended and how long they took
+together.
