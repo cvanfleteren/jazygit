@@ -33,7 +33,11 @@ public enum ThemeName {
     /**
      * The liantis theme turned over: white and lavender on the deep purple of Liantis.
      */
-    LIANTIS_DARK("liantis-dark");
+    LIANTIS_DARK("liantis-dark"),
+    /**
+     * No styling at all: the terminal's own colours, as the UI is drawn without a theme.
+     */
+    NONE("none");
 
     private final String id;
 

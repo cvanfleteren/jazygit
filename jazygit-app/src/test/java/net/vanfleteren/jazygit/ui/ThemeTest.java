@@ -53,7 +53,7 @@ class ThemeTest {
 
     @Test
     void everyThemeBordersPopupsLikeTheFocusedPanel() {
-        for (ThemeName name : ThemeName.values()) {
+        for (ThemeName name : styledThemes()) {
             var engine = Theme.createEngine().get();
             Theme.activate(engine, name);
 
@@ -69,7 +69,7 @@ class ThemeTest {
 
     @Test
     void everyThemeStylesTheMarkdownInItsOwnColours() {
-        for (ThemeName name : ThemeName.values()) {
+        for (ThemeName name : styledThemes()) {
             var engine = Theme.createEngine().get();
             Theme.activate(engine, name);
             var markdown = engine.resolve(new Node("MarkdownElement", Set.of()));
@@ -94,7 +94,7 @@ class ThemeTest {
 
     @Test
     void everyThemeStylesThePanelBorders() {
-        for (ThemeName name : ThemeName.values()) {
+        for (ThemeName name : styledThemes()) {
             var engine = Theme.createEngine().get();
             Theme.activate(engine, name);
 
@@ -104,7 +104,7 @@ class ThemeTest {
 
     @Test
     void everyThemeHidesTheSelectionOfThePanesNotInUseAndOnlyColoursTheBackgroundOfTheOne() {
-        for (ThemeName name : ThemeName.values()) {
+        for (ThemeName name : styledThemes()) {
             var engine = Theme.createEngine().get();
             Theme.activate(engine, name);
             Theme.Highlights highlights = Theme.highlights(engine);
@@ -118,7 +118,7 @@ class ThemeTest {
 
     @Test
     void everyThemeGivesPlainTextBehindAPopupAColourOfItsOwn() {
-        for (ThemeName name : ThemeName.values()) {
+        for (ThemeName name : styledThemes()) {
             var engine = Theme.createEngine().get();
             Theme.activate(engine, name);
             Theme.Backdrop backdrop = Theme.backdrop(engine);
@@ -130,7 +130,7 @@ class ThemeTest {
 
     @Test
     void everyThemeShowsTheCurrentBranchInBoldAndAColourThatStaysBehindAPopup() {
-        for (ThemeName name : ThemeName.values()) {
+        for (ThemeName name : styledThemes()) {
             var engine = Theme.createEngine().get();
             Theme.activate(engine, name);
             Style current = engine.resolve(new Node("Text", Set.of(Theme.Classes.CURRENT)))
@@ -166,6 +166,28 @@ class ThemeTest {
     }
 
     @Test
+    void theNoneThemeLeavesEverythingToTheTerminal() {
+        var engine = Theme.createEngine().get();
+        Theme.activate(engine, ThemeName.NONE);
+
+        assertEquals(
+                Style.EMPTY,
+                engine.resolve(new Node("Panel", Set.of(Theme.Classes.FOCUSED))).toStyle());
+        // Only attributes, which no terminal colour can show: the focused pane's border, and the disabled entries.
+        assertTrue(engine.resolve(new Node("Panel", Set.of(Theme.Classes.FOCUSED)))
+                .borderType()
+                .isPresent());
+        assertTrue(engine.resolve(new Node("Panel", Set.of())).borderType().isEmpty());
+        assertEquals(
+                Style.EMPTY.crossedOut(),
+                engine.resolve(new Node("Text", Set.of("disabled"))).toStyle());
+        assertEquals(Style.EMPTY, Theme.spanStyles(engine).of(Theme.Classes.DIFF_ADDED));
+        assertEquals(Style.EMPTY.reversed(), Theme.highlights(engine).of(true));
+        assertEquals(Theme.Backdrop.DIM_ONLY, Theme.backdrop(engine));
+        assertEquals(Theme.SelectedText.UNCHANGED, Theme.selectedText(engine));
+    }
+
+    @Test
     void theLightThemeKeepsPlainTextOnTheHighlightedRowAsItIs() {
         var engine = Theme.createEngine().get();
         Theme.activate(engine, ThemeName.LIGHT);
@@ -190,6 +212,13 @@ class ThemeTest {
         engine.setActiveStylesheet("dimmed");
 
         assertEquals(Style.EMPTY.dim(), Theme.highlights(engine).of(false));
+    }
+
+    // Every theme but none, which styles nothing.
+    private static java.util.List<ThemeName> styledThemes() {
+        return java.util.Arrays.stream(ThemeName.values())
+                .filter(name -> name != ThemeName.NONE)
+                .toList();
     }
 
     private record Node(String styleType, Set<String> cssClasses) implements Styleable {
