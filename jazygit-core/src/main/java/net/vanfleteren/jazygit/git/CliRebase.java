@@ -68,7 +68,8 @@ final class CliRebase {
      * @return the command lines that were run
      */
     static Either<GitFailure<GitError>, List<ExecutedCommand>> onto(Path worktree, BranchName onto) {
-        return rebase(worktree, git(REBASE.append("--no-autosquash").append(new BranchRef.Local(onto).toArg())));
+        return rebase(
+                worktree, git(REBASE.append("--no-autosquash").append(GitArgs.revision(new BranchRef.Local(onto)))));
     }
 
     /**

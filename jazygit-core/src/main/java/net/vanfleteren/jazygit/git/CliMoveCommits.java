@@ -83,7 +83,7 @@ final class CliMoveCommits {
                         "cherry-pick",
                         "--empty=drop",
                         "--allow-empty",
-                        parent(oldest) + ".." + new BranchRef.Local(from).toArg()),
+                        parent(oldest) + ".." + GitArgs.revision(new BranchRef.Local(from))),
                 left -> Option.when(left.picking(), ABORT));
     }
 
@@ -100,14 +100,14 @@ final class CliMoveCommits {
      * {@code git checkout <branch>}: checks out {@code branch} again, which the working tree came from.
      */
     private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkout(Path worktree, BranchName branch) {
-        return GitProcess.log(worktree, git("checkout", "--quiet", branch.value(), "--"));
+        return GitProcess.log(worktree, git("checkout", "--quiet", GitArgs.name(branch), "--"));
     }
 
     /**
      * {@code git branch -D <branch>}: deletes the new {@code branch}, which got none of the commits.
      */
     private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> delete(Path worktree, BranchName branch) {
-        return GitProcess.log(worktree, git("branch", "-D", branch.value()));
+        return GitProcess.log(worktree, git("branch", "-D", GitArgs.name(branch)));
     }
 
     /**
@@ -116,7 +116,8 @@ final class CliMoveCommits {
      */
     private static Either<GitFailure<GitError>, List<ExecutedCommand>> moveBack(
             Path worktree, BranchName branch, Sha oldest) {
-        return GitFailure.widen(GitProcess.log(worktree, git("branch", "--force", branch.value(), parent(oldest))));
+        return GitFailure.widen(
+                GitProcess.log(worktree, git("branch", "--force", GitArgs.name(branch), parent(oldest))));
     }
 
     /**

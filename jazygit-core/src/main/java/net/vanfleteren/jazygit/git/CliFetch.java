@@ -59,7 +59,7 @@ final class CliFetch {
             Path worktree, BranchName name, String remote, BranchName branch, Map<String, String> credentials) {
         return CliRemote.run(
                 worktree,
-                git("fetch", remote, new BranchRef.Local(branch).toArg() + ":" + new BranchRef.Local(name).toArg()),
+                git("fetch", remote, GitArgs.refspec(new BranchRef.Local(branch), new BranchRef.Local(name))),
                 credentials);
     }
 }

@@ -5,7 +5,15 @@ import io.vavr.control.Option;
 /**
  * The name of a branch, e.g. {@code main} or {@code feature/login}: of a local one, or of one on a remote.
  */
-public record BranchName(String value) {
+public record BranchName(String value) implements Comparable<BranchName> {
+
+    /**
+     * Ordered by name, as git lists branches.
+     */
+    @Override
+    public int compareTo(BranchName other) {
+        return value.compareTo(other.value);
+    }
 
     /**
      * The name {@code text} spells, ignoring surrounding whitespace; none when it is blank or has whitespace

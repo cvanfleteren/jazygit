@@ -1653,7 +1653,7 @@ class CliGitInfoProviderTest {
         git("config", "push.default", "upstream");
 
         assertEquals(
-                List.of("git push --set-upstream mirror main:refs/heads/shared"),
+                List.of("git push --set-upstream mirror refs/heads/main:refs/heads/shared"),
                 provider.pushSettingUpstream(
                                 new BranchName("main"), new RemoteBranch("mirror", new BranchName("shared")))
                         .get()
@@ -1667,7 +1667,7 @@ class CliGitInfoProviderTest {
 
         git("commit", "-q", "--allow-empty", "-m", "local");
         assertEquals(
-                List.of("git push mirror main:refs/heads/shared"),
+                List.of("git push mirror refs/heads/main:refs/heads/shared"),
                 provider.push(new BranchName("main"), main.pushTarget(), PushMode.FAST_FORWARD)
                         .get()
                         .map(ExecutedCommand::line));
@@ -1682,6 +1682,24 @@ class CliGitInfoProviderTest {
         assertEquals(
                 Option.none(),
                 provider.allBranches().map(AllBranches::local).get().head().upstream());
+    }
+
+    @Test
+    void aTagOfTheSameNameDoesNotKeepABranchFromBeingPushed() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        RemoteBranch main = new RemoteBranch("origin", new BranchName("main"));
+        provider.pushSettingUpstream(new BranchName("main"), main).get();
+        git("tag", "main", "HEAD");
+        git("commit", "-q", "--allow-empty", "-m", "local");
+
+        assertEquals(
+                List.of("git push origin refs/heads/main:refs/heads/main"),
+                provider.push(new BranchName("main"), main, PushMode.FAST_FORWARD)
+                        .get()
+                        .map(ExecutedCommand::line));
+        assertEquals(List.of(0, 0), counts("main"));
     }
 
     @Test

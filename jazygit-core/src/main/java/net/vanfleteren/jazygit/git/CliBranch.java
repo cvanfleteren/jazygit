@@ -49,7 +49,7 @@ final class CliBranch {
     private static final Comparator<Branch> ORDER = Comparator.comparing(Branch::current)
             .reversed()
             .thenComparing(Comparator.comparing(Branch::tipTime).reversed())
-            .thenComparing(branch -> branch.name().value());
+            .thenComparing(Branch::name);
 
     private static final Comparator<RemoteRef> REMOTE_ORDER = Comparator.comparing(RemoteRef::tipTime)
             .reversed()
@@ -86,7 +86,7 @@ final class CliBranch {
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> rename(
             Path worktree, BranchName name, BranchName newName) {
-        return GitProcess.log(worktree, git("branch", "--move", "--", name.value(), newName.value()));
+        return GitProcess.log(worktree, git("branch", "--move", "--", GitArgs.name(name), GitArgs.name(newName)));
     }
 
     /**
@@ -96,7 +96,7 @@ final class CliBranch {
      * would delete the branch
      */
     static Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocal(Path worktree, BranchName name) {
-        return GitProcess.log(worktree, git("branch", "--delete", "--", name.value()))
+        return GitProcess.log(worktree, git("branch", "--delete", "--", GitArgs.name(name)))
                 .mapLeft(failure -> failure.map(CliBranch::classify));
     }
 
@@ -104,7 +104,7 @@ final class CliBranch {
      * Runs {@code git branch -D <name>} in {@code worktree}.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocal(Path worktree, BranchName name) {
-        return GitProcess.log(worktree, git("branch", "--delete", "--force", "--", name.value()));
+        return GitProcess.log(worktree, git("branch", "--delete", "--force", "--", GitArgs.name(name)));
     }
 
     /**
@@ -116,9 +116,9 @@ final class CliBranch {
         return CliLog.count(
                 worktree,
                 List.of(
-                        new BranchRef.Local(name).toArg(),
+                        GitArgs.revision(new BranchRef.Local(name)),
                         "--not",
-                        "--exclude=" + name.value(),
+                        "--exclude=" + GitArgs.name(name),
                         "--branches",
                         "--remotes",
                         "--tags"));
@@ -136,9 +136,7 @@ final class CliBranch {
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemote(
             Path worktree, RemoteBranch remote, Map<String, String> credentials) {
         return CliRemote.run(
-                worktree,
-                git("push", remote.remote(), "--delete", remote.branch().value()),
-                credentials);
+                worktree, git("push", remote.remote(), "--delete", GitArgs.name(remote.branch())), credentials);
     }
 
     static Either<UnexpectedOutput, AllBranches> parseAll(String raw) {
@@ -281,7 +279,10 @@ final class CliBranch {
          * or the one of the same name on {@code origin} without one, or when it follows a local branch.
          */
         String pushedTo(BranchName branch) {
-            return upstreamRef.filter(ref -> ref.startsWith(REMOTES)).getOrElse(() -> ORIGIN + branch.value());
+            return upstreamRef
+                    .filter(ref -> ref.startsWith(REMOTES))
+                    .getOrElse(
+                            () -> GitArgs.revision(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, branch).tracking()));
         }
 
         /**

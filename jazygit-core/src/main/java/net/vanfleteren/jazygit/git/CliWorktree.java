@@ -135,7 +135,7 @@ final class CliWorktree {
                         "add",
                         "--quiet",
                         worktree.resolve(location).normalize().toString(),
-                        branch.value()));
+                        GitArgs.name(branch)));
     }
 
     /**
@@ -152,7 +152,7 @@ final class CliWorktree {
                         "--quiet",
                         "--detach",
                         worktree.resolve(location).normalize().toString(),
-                        startPoint.toArg()));
+                        GitArgs.revision(startPoint)));
     }
 
     /**
@@ -171,9 +171,9 @@ final class CliWorktree {
                                 .appendAll(Option.when(start instanceof NewBranchStart.Following, "--track"))
                                 .appendAll(List.of(
                                         "-b",
-                                        name.value(),
+                                        GitArgs.name(name),
                                         worktree.resolve(location).normalize().toString(),
-                                        start.start().toArg())))),
+                                        GitArgs.revision(start.start()))))),
                 () -> parent.map(p -> CliCheckout.recordParent(worktree, name, p))
                         .getOrElse(GitFailure::nothing));
     }

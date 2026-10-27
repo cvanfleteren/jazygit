@@ -24,8 +24,6 @@ final class CliReset {
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> reset(
             Path worktree, ResetTarget target, ResetMode mode) {
-        return GitProcess.log(
-                worktree,
-                git("reset", "--quiet", mode.option(), target.revision().toArg()));
+        return GitProcess.log(worktree, git("reset", "--quiet", mode.option(), GitArgs.revision(target.revision())));
     }
 }
